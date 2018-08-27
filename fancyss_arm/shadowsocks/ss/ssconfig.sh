@@ -247,6 +247,8 @@ resolv_server_ip(){
 	else
 		IFIP=`echo $ss_basic_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 		if [ -z "$IFIP" ];then
+			# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
+			echo "server=/$ss_basic_server/114.114.114.114#53" > /jffs/configs/dnsmasq.d/ss_server.conf
 			echo_date 尝试解析SS服务器的ip地址
 			server_ip=`nslookup "$ss_basic_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
 			if [ "$?" == "0" ];then
@@ -262,9 +264,10 @@ resolv_server_ip(){
 
 			if [ -n "$server_ip" ];then
 				echo_date SS服务器的ip地址解析成功：$server_ip
-				#echo "address=/$ss_basic_server/$server_ip" > /jffs/configs/dnsmasq.d/ss_host.conf
+				# 解析并记录一次ip，方便插件触发重启设定工作
 				echo "address=/$ss_basic_server/$server_ip" > /tmp/ss_host.conf
-				ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
+				# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
+				#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
 				ss_basic_server="$server_ip"
 				ss_basic_server_ip="$server_ip"
 				dbus set ss_basic_server_ip="$server_ip"
@@ -1285,6 +1288,8 @@ creat_v2ray_json(){
 				echo_date "检测到你的json配置的v2ray服务器：$v2ray_server不是ip格式！"
 				echo_date "为了确保v2ray的正常工作，建议配置ip格式的v2ray服务器地址！"
 				echo_date "尝试解析v2ray服务器的ip地址..."
+				# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
+				echo "server=/$v2ray_server/114.114.114.114#53" > /jffs/configs/dnsmasq.d/ss_server.conf
 				v2ray_server_ip=`nslookup "$v2ray_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
 				if [ "$?" == "0" ]; then
 					v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
@@ -1299,9 +1304,10 @@ creat_v2ray_json(){
 
 				if [ -n "$v2ray_server_ip" ];then
 					echo_date "v2ray服务器的ip地址解析成功：$v2ray_server_ip"
-					#echo "address=/$v2ray_server/$v2ray_server_ip" > /jffs/configs/dnsmasq.d/ss_host.conf
+					# 解析并记录一次ip，方便插件触发重启设定工作
 					echo "address=/$v2ray_server/$v2ray_server_ip" > /tmp/ss_host.conf
-					ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
+					# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
+					#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
 					ss_basic_server_ip="$v2ray_server_ip"
 				else
 					echo_date "v2ray服务器的ip地址解析失败!插件将继续运行，域名解析将由v2ray自己进行！"
@@ -1723,7 +1729,7 @@ apply_nat_rules(){
 	[ "$ss_basic_mode" == "3" ] && iptables -t mangle -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
 	# 重定所有流量到 SHADOWSOCKS
 	KP_NU=`iptables -nvL PREROUTING -t nat |sed 1,2d | sed -n '/KOOLPROXY/='|head -n1`
-	[ -z "$KP_NU" ] && KP_NU=0
+	[ "$KP_NU" == "" ] && KP_NU=0
 	INSET_NU=`expr "$KP_NU" + 1`
 	iptables -t nat -I PREROUTING "$INSET_NU" -p tcp -j SHADOWSOCKS
 	[ "$mangle" == "1" ] && iptables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS
@@ -1774,33 +1780,6 @@ write_numbers(){
 set_ulimit(){
 	ulimit -n 16384
 }
-
-# 4.0.2后删除此功能，因为在v2ray服务器填域名时，删除ss_host.conf会造成解析错误而导致问题
-# remove_dnsmasq_restart_delay(){
-# 	# 为避免90秒内用户再次重启插件，先清理一次之前的90秒后重启dnsmasq任务
-# 	#cru d ss_dnsmasq_restart >/dev/null 2>&1
-# 	sed -i '/ss_dnsmasq_restart/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
-# }
-# 
-# set_dnsmasq_restart_delay(){
-# 	# 插件启动完成的90秒后重启一次dnsmasq
-# 	
-# 	#echo `date "+%Y-%m-%d %H:%M:%S"`
-# 	second_now=`date +%s`
-# 	second_future=`expr $second_now + 90`
-# 	
-# 	#date_future=`date -d @$second_future "+%Y-%m-%d %H:%M:%S"`
-# 	day_future=`date -d @$second_future "+%d"`
-# 	hour_future=`date -d @$second_future "+%H"`
-# 	min_future=`date -d @$second_future "+%M"`
-# 	
-# 	#echo date_future: $date_future
-# 	#echo day_future: $day_future
-# 	#echo hour_future: $hour_future
-# 	#echo min_future: $min_future
-# 
-# 	cru a ss_dnsmasq_restart "$min_future $hour_future $day_future * * /koolshare/scripts/ss_dnsmasq_restart_delay.sh restart"
-# }
 
 remove_ss_reboot_job(){
 	if [ -n "`cru l|grep ss_reboot`" ]; then
@@ -1913,15 +1892,6 @@ ss_pre_stop(){
 }
 
 detect(){
-	# 检测是否为路由模式，因为ss工作在nat下，所以其他模式均无法工作
-	if [ "`nvram get sw_mode`" != "1" ];then
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "+     你的路由器未设置为无线路由器模式，科学上网插件无法正常工作！     +"
-		echo_date "+      请前往【系统管理】-【操作模式】内设置为无线路由器模式！！      +"
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		close_in_five
-	fi 
-	
 	# 检测jffs2脚本是否开启，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf）
 	if [ "`nvram get jffs2_scripts`" != "1" ];then
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -1967,7 +1937,6 @@ disable_ss(){
 	dbus remove ss_basic_server_ip
 	nvram commit
 	kill_process
-	#remove_dnsmasq_restart_delay
 	remove_ss_trigger_job
 	remove_ss_reboot_job
 	restore_conf
@@ -1989,10 +1958,10 @@ apply_ss(){
 	dbus set dns2socks=0
 	nvram commit
 	kill_process
-	#remove_dnsmasq_restart_delay
 	remove_ss_trigger_job
 	remove_ss_reboot_job
 	restore_conf
+	# restart dnsmasq when ss server is not ip or on router boot
 	restart_dnsmasq
 	flush_nat
 	kill_cron_job
@@ -2010,7 +1979,7 @@ apply_ss(){
 	start_jitterentropy
 	sleep 1
 	#get_status
-	# do not re generate json on router start or router wan restart, use old one
+	# do not re generate json on router start, use old one
 	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ] && creat_ss_json
 	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "3" ] && creat_v2ray_json
 	[ "$ss_basic_type" == "0" ] || [ "$ss_basic_type" == "1" ] && start_ss_redir
@@ -2028,7 +1997,6 @@ apply_ss(){
 	set_ss_trigger_job
 	# post-start
 	ss_post_start
-	#set_dnsmasq_restart_delay
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
 }
 
