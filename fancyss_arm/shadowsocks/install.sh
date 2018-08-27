@@ -208,8 +208,8 @@ dbus set softcenter_module_shadowsocks_description="科学上网"
 dbus set softcenter_module_shadowsocks_home_url=Main_Ss_Content.asp
 
 # v2ray 版本号
-dbus set ss_basic_v2ray_version="v3.35"
-dbus set ss_basic_v2ray_date="20180809"
+dbus set ss_basic_v2ray_version="v3.36"
+dbus set ss_basic_v2ray_date="20180823"
 
 # 删除该定时计划，以便升级后不影响解析（4.0.1）
 SS_VERSION_OLD=`dbus get ss_basic_version_local`
