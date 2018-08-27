@@ -11,8 +11,8 @@ Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 
 4.0.2
    - fix	修复v2ray使用域名时因无法解析导致代理不通的问题；
-   - update	ks开发组停止维护此插件，此次更新后将会马上看到4.0.3的更新，4.0.3的更新会将插件完全转到新的项目：https://github.com/hq450/fancyss，
-   软件中心内科学上网相关内容将在48小时内彻底删除。请尽快更新到4.0.3，以确保插件以后可以得到在线更新等维护。
+   - update	ks开发组停止维护此插件，此次更新后将会马上看到4.0.3的更新，更新4.0.3会将插件完全转到新的项目：https://github.com/hq450/fancyss
+		软件中心内科学上网相关内容将在48小时内彻底删除。请尽快更新到4.0.3，以确保插件以后可以得到在线更新等维护。
 
 4.0.1
    - fix	修复在节点页面无法通过vmess://链接添加v2ray节点的bug；
