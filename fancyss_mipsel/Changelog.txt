@@ -1,0 +1,99 @@
+Koolshare Asuswrt-Merlin shadowsocks_mips Changelog
+===========================================
+
+shadowsocks merlin 插件于2017年07月17日下架软件中心，就此封版，以后不再更新。
+
+===========================================
+3.0.4
+   - fix	fix layout of load Main_Ss_LoadBlance.asp and Main_SsLocal_Content.asp
+
+3.0.3
+   - fix	修复SS访问控制，默认模式有几率变为空值，导致显示双working但是不能翻墙的问题。
+   - fix 	修复可能的浏览器兼容问题，导致不显示节点列表的问题。
+
+3.0.2
+   - fix	修复在X7.5固件下自定义dnsmasq,IP/CIDR白名单,域名白名单,IP/CIDR黑名单,域名黑名单内容在IE浏览器下显示乱码的问题;
+   		该问题是由X7.5固件浏览器兼容性的更改造成的，导致用IE浏览器提交后，ss不正常工作。
+
+3.0.1
+   - update	更新ssr-libev到最新，修复udp问题。
+3.0.0
+   - update	大版本更新已经推送，更新后除了游戏模式/V2、Pcap_DNSproxy、KCPTUN功能外，其余和arm机型一致。
+   		支持最新ss，各种新加密方式，混淆等；支持最新ssr各种协议、加密方式、混淆等；支持负载均衡;....
+   		此处不再做过多说明，如果需要查看一些具体更新变化，可以参考arm机型的更新日志：（从2.8.9开始到3.4.9）
+   		https://github.com/koolshare/koolshare.github.io/blob/acelan_softcenter_ui/shadowsocks/Changelog.txt
+
+2.8.8
+   - fix	fix redchn mode:
+
+2.8.8
+   - fix	sync with arm and fix minor issue
+
+2.8.3
+   - fix	fix overall mode
+   - fix	fix wrong address of changelog
+
+
+2.8.2
+   - update	sync with arm shadowsocks 2.8.2
+1.4.6
+   - fix	修复节点ping测试和web连通性测试不能保存的bug
+   - add	节点恢复增加对json格式导入的支持
+   		现在用json文件导入，会在已有节点基础上增加，不会覆盖
+   		而用备份文件导入，会和以前一样进行覆盖写入
+   		支持的json必须包含"password", "method", "server_port", "server", "remarks"字段
+   		实际测试用了枫叶主机的json原文件，windows纸飞机客户端的json文件通过，
+   		其它运营商的json文件如果包括以上字段应该也不会有问题
+   		shadowsocks-R的json文件，仅支持导入节点信息，不支持导入混淆信息等
+   		基本格式如下：
+			{
+    			  "password": "xxxxx",
+    			  "method": "rc4-md5",
+    			  "server_port": "65533",
+    			  "remarks": "日本节点",
+    			  "server": "aaa.bbb.com"
+    			},
+    			 {
+    			  "password": "xxxxx",
+    			  "method": "rc4-md5",
+    			  "server_port": "65533",
+    			  "remarks": "美国节点",
+    			  "server": "aaa.bbb.com"
+    			},
+
+1.4.5
+   - change	更新shadowsocks-libev客户端到2.4.6
+   - change	更新shadowsocks-libev-ssr客户端为最新，支持tls1.2_ticket_auth自定义参数(不支持多个域名)
+   - fix	增加ssr中http_simple的自定义参数
+   - fix	增加socks5页面的chacha20-ietf加密方式
+
+1.4.4
+   - fix	更新ssr客户端为最新，支持tls1.2_ticket_auth
+   - fix	修复pdnsd运行权限问题
+   - add	增加未开启Enable JFFS custom scripts and configs选项提醒
+   - add	增加节点google、youtube连通性测试
+   - add	增加节点ping测试和丢包测试
+   - add	增加大陆白名单模式pdnsd解析软件选项
+   - add	增加gfwlist模式pdnsd解析软件选项
+
+1.4.3
+   - fix	修改版本号显示前缀，以区分ARM机型和mipsel机型
+
+1.4.2
+   - fix	更新dnscrypt-proxy解析列表，和arm机型保持一致
+   - fix	因为mipsel机型性能原因，增大大陆白名单提交时间到45秒
+
+1.4.1
+   - fix	fix dns2socks won't work
+
+1.4.0
+   - fix	fix install.sh
+
+1.3.9
+   - fix	fix tab older
+
+1.3.8
+   - add	add 'raw.githubusercontent.com' to router ipset for better online version check
+
+1.3.7
+   - add	add koolshare shadowsocks mipsel support

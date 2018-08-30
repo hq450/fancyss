@@ -1,0 +1,2 @@
+# recommend using corntab running update_rules.sh regularly
+cru a rule_update "0 2 * * * /bin/sh update_rules.sh"
