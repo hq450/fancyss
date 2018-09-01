@@ -14,7 +14,7 @@ Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 4.0.3
    - update	本项目(https://github.com/hq450/fancyss)接手ks开发组的科学上网插件的维护，
    		将对应的插件、规则、二进制更新链接更换为本仓库的链接，以保证更新服务正常。
-   - fix	同步最新规则；
+   - update	同步最新规则；
    - update	更新v2ray二进制：v3.36
 
 ===========================================

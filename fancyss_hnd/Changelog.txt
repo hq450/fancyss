@@ -1,0 +1,175 @@
+Koolshare Asuswrt-Merlin shadowsocks Changelog
+===========================================
+1.3.8
+   - update	本项目(https://github.com/hq450/fancyss)接手ks开发组的科学上网插件(ARM架构，hnd平台，linux内核：4.1.27 梅林/官改固件)的维护，
+   		将对应的插件、规则、二进制更新链接更换为本仓库的链接，以保证更新服务正常。
+   - add	【附加功能】添加插件定时重启功能（实验）；
+   - add	【附加功能】添加插件触发重启功能（实验），可以在设定的时间间隔下解析服务器IP地址，如果IP发生改变，则重启插件或dnsmasq；
+   - fix	修复v2ray使用域名时因无法解析导致代理不通的问题；
+   - fix	修复一系列订阅问题，包括订阅成功后节点可能又马上被删掉的问题；
+   - fix	修复一些回国模式的问题；
+   - update	更新udp2raw-tunnel二进制，git version:d77271540f    build date:Sep  1 2018 23:51:16；
+   - update 更新udpspeederv2二进制，git version: 8db00a87f4    build date: Sep  1 2018 23:47:26；
+   - update	udpspeederv2添加关闭数据包验证功能；
+   - update	同步最新规则；
+   - update	更新v2ray二进制：v3.36
+   - update 优化一些脚本和界面；
+
+===========================================
+以下为原ks开发组维护版本的更新日志:
+
+1.3.7
+   - fix	修复在节点页面无法通过vmess://链接添加v2ray节点的bug；
+   - update	ks开发组停止维护此插件，1.3.7作为一个过度版本，更新后将会马上看到1.3.8的更新，
+   		更新1.3.8会将插件完全转到新的项目：https://github.com/hq450/fancyss，以后由此项目接手科学上网的维护。
+   		ks软件中心项目（rogsoftt）内科学上网相关内容将在72小时内彻底删除。请尽快更新到1.3.7并过度到1.3.8，以确保插件以后可以得到在线更新等维护。
+
+1.3.6
+   - fix	修复官改机型提示未开启jffs2_scripts的提示，实际上官改没有jffs2_scripts开关并且也不需要，merlin才需要打开；
+   - fix	修复86U ROG官改更新后可能还是普通皮肤而不是ROG皮肤的问题；
+   - fix	修复某些机器开机启动后iptables规则可能被多次添加，影响如koolproxy等其它插件的启动；
+   - fix	修复【内部网络(lan)】-【DHCP服务器】-【DNS 及 WINS 服务器设置】内DNS Server 2无法清空的问题；
+   - fix	修复通过vmess://链接添加v2ray节点时无法添加tls信息的bug；
+   - add	添加域名黑白名单格式检查，错误格式的域名不会添加进对应名单并给予相应提示；
+   - update	同步最新规则：gfwlist.conf, chnroute.txt, cdn.txt；
+   - update	更新v2ray二进制版本为v3.35；
+   - update	更新kcptun二进制版本为20180810
+
+1.3.5
+   - fix	修复访问控制配置出国模式后，实际走全局模式的bug、
+   - update	增加对86U机型 Enable JFFS custom scripts and configs选项是否开启的检测；
+   - update	优化一些日志显示。
+
+1.3.4
+   - fix	修复重启/关闭插件kcptun进程不会重启/关闭的问题；
+
+1.3.3
+   - fix	订阅：修复订阅部分机场时节点重复添加的问题；
+   - fix	订阅：修复订阅时选择走ss，但是却走常规网络下载的问题；
+   - add	v2ray：现在json配置栏里能使用vmess://xxx的链接来添加节点，添加后会自动解析为非json配置；
+   - fix	v2ray：修复非json配置tcp + tls下无法工作的问题；
+   - fix	v2ray：修复非json配置ws + path不配置host时不工作的问题；
+   - fix	v2ray：修复服务器使用域名可能导致出现不工作的问题；
+   - fix	v2ray：修复插件重启速度可能变得极慢的问题；
+   - fix	修复插件开机启动nat加载可能过早的问题；
+   
+1.3.2
+   - fix	修复v2ray非json配置在ws/h2协议下，不配置path和host不能工作的问题；
+
+1.3.1
+   - 说明	此次更新主要针对v2ray非json配置的调整，配置逻辑参照v2rayN windows客户端；
+   - update	为了避免混淆，将v2ray 传输协议 (network) 设置ws和ws_header选项合并；
+   - update	v2ray非json配置传输协议增加h2协议；
+   - update	为v2ray非json配置的所有配置选项写了说明，详情鼠标点击左侧黄色文字；
+
+1.3.0
+   - fix	修复v2ray使用非json配置ws_header时，配置文件不通过的问题；
+   - fix	修复v2ray json配置时使用vmess以外的传出协议时候，检测不到v2ray服务器ip地址；
+   - fix	修复v2ray在添加节点时候勾选多路复用 (Mux)，但是切换到帐号设置页面该节点并没有勾选的问题；
+   - fix	修复插件检查更新，如果没有更新会出现flock错误，并且窗口无法自动关闭的问题；
+   - fix	修复有时访问ss服务器本身服务器也走代理的问题；
+
+1.2.9
+   - update	提高v2ray使用json配置的成功率；
+   - update	优化国内dns设定时的一些判断；
+   - add	添加v2ray dns支持（仅在使用v2ray时可用）；
+   - fix	修复负载均衡页面添加节点时数据不全导致表格错位的问题；
+   - update	v2ray二进制同步到v3.21版本。
+
+1.2.7 - 1.2.8
+   - update	更新v2ray二进制到3.20；
+   - add	增加v2ray二进制更新功能；
+   - add	增加https_dns_proxy国外解析方案，DNS over HTTPS (DoH)，使用cloudflare服务，拒绝一切污染~；
+   - fix	修复chinadns2有时候无法启动的问题；
+
+1.2.5 - 1.2.6
+   - fix	修复v2ray设置【传输协议】和【底层传输安全】无效的问题
+   - fix	修复传输协议设置为tls时，tlsSettings项缺失的问题
+
+1.2.3 - 1.2.4
+   - add	修复GT-AC5300安装1.2.2后皮肤不是ROG皮肤的问题。
+
+1.2.2
+   - add	增加v2ray支持。
+   - update	优化一些web和shell代码。
+
+1.2.1 
+   - fix	强烈建议更新：修复大陆白名单、游戏模式下被墙网站无法打开或者出现证书错误的问题。
+
+1.2.0
+   - fix	修复负载均衡提交可能被卡住的问题。
+
+1.1.9
+   - update	更新shadowsocks-libev到最新3.1.3，simple-obfs更新到最新 （2018年04月15日 编译）；
+   - update	更新kcptun到20180316
+
+1.1.8
+   - fix	脚本：修复使用ss混淆节点，重启路由后不会启用混淆的问题。
+
+1.1.7
+   - add	加入ss_post_start功能，可以在SS服务运行完毕后触发用户自己的脚本；
+    		加入ss_pre_stop功能，可以在SS服务开始关闭前触发用户自己的脚本；
+     		* 例如在/koolshare/ss/postscripts/下放入两个脚本:P01V2ray.sh, P99Brook.sh
+     		* SS插件运行后货自动按照数字从小到大顺序运行 P01V2ray.sh start, P99Brook.sh start
+     		* SS插件关闭前会自动按照数字从大到小顺序运行 P99Brook.sh stop, P01V2ray.sh stop
+   - update	同步最新规则。
+   - fix	脚本：修复gfwlist模式下国内DNS解析的国内cdn问题。
+   - readme	其它功能和二进制无任何变化。
+
+1.1.6
+   - fix	修复chinans2有时候不启动的问题。
+
+1.1.3 - 1.1.5
+   - fix	修复开机后nat可能不加载的问题。
+   - fix	修复有时候状态一直为waitting的问题。
+   - add	添加GT-AC5300支持。
+
+1.0.9 - 1.1.2
+   - fix	修复kcptun重启失败。
+   - fix	修复chinadns2某些情况下开启失败的问题。
+   - fix	修复cdns方案下一些国内域名解析到国外ip的问题。
+   - update	更新5个国外DNS方案的说明，增加推荐等级。
+
+1.0.8
+   - fix	修复dns劫持功能失效导致自定义过DNS的出现问题。
+   - fix	修复chinadns2有时候启动失败的问题。
+   - revert	恢复原chinadns方案，为了区分命名为chinadns1，其中国dns使用【国内DNS设置的值】，上游方案固定为dns2socks。
+   - update	为了保证成功率，默认国外方案更换为dns2socks。
+
+1.0.7
+   - fix	修复规则更新按钮；
+
+1.0.5 - 1.0.6
+   - 说明	此次精简优化插件，为了提升DNS解析能力，移除了一些旧dns解析方案，
+		增加了更加科学好用的DNS解析方案，且设置上对小白非常友好。
+   - add	新增cdns解析方案，支持EDNS，自带国内外cdn（默认）
+   - add	新增chinadns2解析方案，支持EDNS，自带国内外cdn
+   - remove	移除dnscrypt-proxy解析方案
+   - remove	移除旧的chinadns解析方案
+   - remove	移除Pcap_DNSproxy解析方案
+   - remove	移除DNS偏好选择，改为后台自动判断优化
+   - remove	移除chromecast设置，为了更好防dns污染，现在默认开启
+   - remove	移除ss节点解析设置，改为后台自动判断优化
+   - remove	移除国内cdn加速设置，因为现在dns方案具有cdn加速了
+   - remove	移除黑科技按钮，以后需要截图请自行打码
+   - remove	移除插件开机启动延迟
+   - update	优化启动脚本，现在提交ss能在2s左右完成
+
+1.0.4
+   - fix	修复使用Pcap_DNSproxy，cdn.txt加载的问题；
+   - fix	修复web的一些小问题。
+
+1.0.3
+   - add	添加Pcap_DNSproxy，版本4.9.5
+   - update	更新chinadns二进制文件（更换AM382工具链编译）
+
+1.0.2
+   - fix	修复详细状态部分信息显示错误。
+
+1.0.1
+   - update	修复版本回滚说明。
+   - fix	修复插件内置在线更新地址。
+
+1.0.0
+   - add	添加科学上网插件，该插件目前仅适用于AM382 4.1.27内核代码且非ROG皮肤的机器。
+   		和AM380 2.6.36内核机器（X6.?, X7.?）相比，少了pdnsd和Pcap_DNSproxy和webtest功能，其它几乎一致。
