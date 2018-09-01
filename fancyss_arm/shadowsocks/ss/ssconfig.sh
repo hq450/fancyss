@@ -111,6 +111,7 @@ restore_conf(){
 	rm -rf /jffs/configs/dnsmasq.d/custom.conf
 	rm -rf /jffs/configs/dnsmasq.d/wblist.conf
 	rm -rf /jffs/configs/dnsmasq.d/ss_host.conf
+	rm -rf /jffs/configs/dnsmasq.d/ss_server.conf
 	rm -rf /jffs/configs/dnsmasq.conf.add
 	rm -rf /jffs/scripts/dnsmasq.postconf
 	rm -rf /tmp/sscdn.conf
@@ -761,6 +762,7 @@ create_dnsmasq_conf(){
 		ln -sf /koolshare/ss/rules/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 	elif [ "$ss_basic_mode" == "2" ] || [ "$ss_basic_mode" == "3" ];then
 		if [ -n "$gfw_on" ];then
+			echo_date 创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
 			ln -sf /koolshare/ss/rules/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 		fi
 	elif [ "$ss_basic_mode" == "6" ];then
