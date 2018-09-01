@@ -41,6 +41,7 @@ cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
 cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
 cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
+cp /koolshare/bin/jitterentropy-rngd $TARGET_FOLDER/bin/
 cp /koolshare/webs/Main_Ss_Content.asp $TARGET_FOLDER/webs/
 cp /koolshare/webs/Main_Ss_LoadBlance.asp $TARGET_FOLDER/webs/
 cp /koolshare/webs/Main_SsLocal_Content.asp $TARGET_FOLDER/webs/

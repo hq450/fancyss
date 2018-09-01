@@ -432,7 +432,6 @@ function openssHint(itemNum) {
 		statusmenu += "</br></br>请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
 		statusmenu += "</br></br>更多信息，请参考<a href='https://github.com/koolshare/shadowsocks-rss/blob/master/ssr.md' target='_blank'><u><font color='#00F'>ShadowsocksR 协议插件文档</font></u></a>"
 		_caption = "自定义参数 (obfs_param)";
-		//return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, " ", CLOSETITLE, '');
 	} else if (itemNum == 12) {
 		width = "500px";
 		statusmenu = "此处显示你的SS插件当前的版本号，当前版本：<% dbus_get_def("ss_basic_version_local", "未知"); %>,如果需要回滚SS版本，请参考以下操作步骤：";

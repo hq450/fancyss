@@ -515,7 +515,7 @@ start_dns(){
 		echo_date 开启dns2socks，用于chinadns1上游...
 		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 > /dev/null 2>&1 &
 		echo_date 开启chinadns1，用于dns解析...
-		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -m -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
+		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
 	fi
 
 	#start https_dns_proxy

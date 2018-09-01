@@ -94,7 +94,7 @@ start_update(){
 				echo_date 检测到chnroute本地版本号和在线版本号相同，不进行更新!
 			fi
 		else
-			echo_date file chnroute文件下载失败！
+			echo_date chnroute文件下载失败！
 		fi
 	else
 		echo_date 然而你并没有勾选chnroute更新！
@@ -122,7 +122,7 @@ start_update(){
 				echo_date 检测到cdn名单本地版本号和在线版本号相同，不进行更新!
 			fi
 		else
-			echo_date file cdn名单文件下载失败！
+			echo_date cdn名单文件下载失败！
 		fi
 	else
 		echo_date 然而你并没有勾选cdn名单更新！

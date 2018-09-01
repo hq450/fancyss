@@ -140,7 +140,6 @@ update_now(){
 	if [ "$md5sum_ok=1" ] && [ "$v2ray_ok=1" ] && [ "$v2ctl_ok=1" ];then
 		check_md5sum
 	else
-		echo_date "目前还没有任何备用服务器！"
 		echo_date "使用备用服务器下载..."
 		update_now_backup $1
 	fi
