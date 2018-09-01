@@ -66,6 +66,7 @@ set_ss_trigger_job(){
 		else
 			echo_date 设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启dnsmasq...
 		fi
+		echo_date 科学上网插件触发重启功能的日志将显示再系统日志内。
 		cru d ss_tri_check  >/dev/null 2>&1
 		cru a ss_tri_check "*/$ss_basic_tri_reboot_time * * * * /koolshare/scripts/ss_reboot_job.sh check_ip"
 	fi
