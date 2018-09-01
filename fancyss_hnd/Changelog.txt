@@ -9,11 +9,12 @@ Koolshare Asuswrt-Merlin shadowsocks Changelog
    - fix	修复一系列订阅问题，包括订阅成功后节点可能又马上被删掉的问题；
    - fix	修复一些回国模式的问题；
    - update	更新udp2raw-tunnel二进制，git version:d77271540f    build date:Sep  1 2018 23:51:16；
-   - update 更新udpspeederv2二进制，git version: 8db00a87f4    build date: Sep  1 2018 23:47:26；
+   - update	更新udpspeederv2二进制，git version: 8db00a87f4    build date: Sep  1 2018 23:47:26；
    - update	udpspeederv2添加关闭数据包验证功能；
    - update	同步最新规则；
+   - update	去掉chinadns1的-m参数，以兼容更多的使用环境。
    - update	更新v2ray二进制：v3.36
-   - update 优化一些脚本和界面；
+   - update	优化一些脚本和界面；
 
 ===========================================
 以下为原ks开发组维护版本的更新日志:
