@@ -8,8 +8,7 @@ source /koolshare/scripts/base.sh
 source helper.sh
 # Variable definitions
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
-ss_basic_version_local=`cat /koolshare/ss/version`
-dbus set ss_basic_version_local=$ss_basic_version_local
+dbus set ss_basic_version_local=`cat /koolshare/ss/version`
 LOG_FILE=/tmp/upload/ss_log.txt
 CONFIG_FILE=/koolshare/ss/ss.json
 V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
@@ -112,18 +111,22 @@ restore_conf(){
 	rm -rf /jffs/configs/dnsmasq.d/custom.conf
 	rm -rf /jffs/configs/dnsmasq.d/wblist.conf
 	rm -rf /jffs/configs/dnsmasq.d/ss_host.conf
+	rm -rf /jffs/configs/dnsmasq.d/ss_server.conf
 	rm -rf /jffs/configs/dnsmasq.conf.add
 	rm -rf /jffs/scripts/dnsmasq.postconf
 	rm -rf /tmp/sscdn.conf
 	rm -rf /tmp/custom.conf
 	rm -rf /tmp/wblist.conf
+	rm -rf /tmp/ss_host.conf
 }
 
 kill_process(){
 	v2ray_process=`pidof v2ray`
 	if [ -n "$v2ray_process" ];then 
 		echo_date 关闭V2Ray进程...
+		# 有时候killall杀不了v2ray进程，所以用不同方式杀两次
 		killall v2ray >/dev/null 2>&1
+		kill -9 "$v2ray_process" >/dev/null 2>&1
 	fi
 	ssredir=`pidof ss-redir`
 	if [ -n "$ssredir" ];then 
@@ -248,6 +251,8 @@ resolv_server_ip(){
 	else
 		IFIP=`echo $ss_basic_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 		if [ -z "$IFIP" ];then
+			# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
+			echo "server=/$ss_basic_server/114.114.114.114#53" > /jffs/configs/dnsmasq.d/ss_server.conf
 			echo_date 尝试解析SS服务器的ip地址
 			server_ip=`nslookup "$ss_basic_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
 			if [ "$?" == "0" ];then
@@ -263,7 +268,10 @@ resolv_server_ip(){
 
 			if [ -n "$server_ip" ];then
 				echo_date SS服务器的ip地址解析成功：$server_ip
-				echo "address=/$ss_basic_server/$server_ip" > /jffs/configs/dnsmasq.d/ss_host.conf
+				# 解析并记录一次ip，方便插件触发重启设定工作
+				echo "address=/$ss_basic_server/$server_ip" > /tmp/ss_host.conf
+				# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
+				#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
 				ss_basic_server="$server_ip"
 				ss_basic_server_ip="$server_ip"
 				dbus set ss_basic_server_ip="$server_ip"
@@ -352,7 +360,7 @@ creat_ss_json(){
 	
 	if [ "$ss_basic_udp2raw_boost_enable" == "1" ] || [ "$ss_basic_udp_boost_enable" == "1" ];then
 		if [ "$ss_basic_udp_upstream_mtu" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ];then
-			echo_date 设定UDP为 $ss_basic_udp_upstream_mtu_value
+			echo_date 设定MTU为 $ss_basic_udp_upstream_mtu_value
 			cat /koolshare/ss/ss.json | jq --argjson MTU $ss_basic_udp_upstream_mtu_value '. + {MTU: $MTU}' > /koolshare/ss/ss_tmp.json
 			mv /koolshare/ss/ss_tmp.json /koolshare/ss/ss.json
 		fi
@@ -424,6 +432,11 @@ start_sslocal(){
 }
 
 start_dns(){
+	if [ "$ss_basic_mode" == "6" -a "$ss_foreign_dns" != "8" ];then
+		ss_foreign_dns="8"
+		dbus set ss_foreign_dns="8"
+	fi
+	
 	# Start ss-local
 	[ "$ss_basic_type" != "3" ] && start_sslocal
 	
@@ -504,7 +517,7 @@ start_dns(){
 		echo_date 开启dns2socks，用于chinadns1上游...
 		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 > /dev/null 2>&1 &
 		echo_date 开启chinadns1，用于dns解析...
-		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -m -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
+		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
 	fi
 
 	#start https_dns_proxy
@@ -539,24 +552,52 @@ start_dns(){
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
 		fi
 	fi
+
+	# direct
+	if [ "$ss_foreign_dns" == "8" ];then
+		if [ "$ss_basic_mode" == "6" ];then
+			echo_date 回国模式，国外dns采用直连方案。
+		else
+			echo_date 非回国模式，国外dns不能使用，自动切换到dns2socks方案。
+			dbus set ss_foreign_dns=3
+			echo_date 开启dns2socks，用于dns解析...
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+		fi
+	fi
+	
 }
 #--------------------------------------------------------------------------------------
 
+detect_domain(){
+	domain1=`echo $1|grep -E "^https://|^http://"`
+	domain2=`echo $1|grep -E "\."`
+	if [ -n "$domain1" ] || [ -z "$domain2" ];then
+		return 1
+	else
+		return 0
+	fi
+}
+
 create_dnsmasq_conf(){
 	if [ "$ss_dns_china" == "1" ];then
-		if [ -n "$IFIP_DNS1" ];then
-			# 用chnroute去判断运营商DNS是否为局域网(国外)ip地址，有些二级路由的是局域网ip地址，会被ChinaDNS 判断为国外dns服务器，这个时候用取代之
-			ipset test chnroute $IFIP_DNS1 > /dev/null 2>&1
-			if [ "$?" != "0" ];then
-				# 运营商DNS：ISP_DNS1是局域网(国外)ip
-				CDN="114.114.114.114"
-			else
-				# 运营商DNS：ISP_DNS1是国内ip
-				CDN="$ISP_DNS1"
-			fi
-		else
-			# 运营商DNS：ISP_DNS1不是ip格式，用114取代之
+		if [ "$ss_basic_mode" == "6" ];then
+			# 使用回国模式的时候，ISP dns是国外的，所以这里直接用114取代
 			CDN="114.114.114.114"
+		else
+			if [ -n "$IFIP_DNS1" ];then
+				# 用chnroute去判断运营商DNS是否为局域网(国外)ip地址，有些二级路由的是局域网ip地址，会被ChinaDNS 判断为国外dns服务器，这个时候用114取代之
+				ipset test chnroute $IFIP_DNS1 > /dev/null 2>&1
+				if [ "$?" != "0" ];then
+					# 运营商DNS：ISP_DNS1是局域网(国外)ip
+					CDN="114.114.114.114"
+				else
+					# 运营商DNS：ISP_DNS1是国内ip
+					CDN="$ISP_DNS1"
+				fi
+			else
+				# 运营商DNS：ISP_DNS1不是ip格式，用114取代之
+				CDN="114.114.114.114"
+			fi
 		fi
 	fi
 	[ "$ss_dns_china" == "2" ] && CDN="223.5.5.5"
@@ -577,30 +618,12 @@ create_dnsmasq_conf(){
 	rm -rf /tmp/sscdn.conf
 	rm -rf /tmp/custom.conf
 	rm -rf /tmp/wblist.conf
+	rm -rf /tmp/gfwlist.conf
 	rm -rf /jffs/configs/dnsmasq.d/custom.conf
 	rm -rf /jffs/configs/dnsmasq.d/wblist.conf
 	rm -rf /jffs/configs/dnsmasq.d/cdn.conf
 	rm -rf /jffs/configs/dnsmasq.d/gfwlist.conf
 	rm -rf /jffs/scripts/dnsmasq.postconf
-
-	# generate cdn.txt for china site accelerate
-	if [ "$ss_basic_mode" == "1" ] && [ -z "$chn_on" ] && [ -z "$all_on" ];then
-		# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
-		echo_date 自动判断使用国内优先模式，不加载cdn.txt
-	else
-		# 其它情况，均使用国外优先模式
-		if [ "$ss_foreign_dns" != "2" ] && [ "$ss_foreign_dns" != "5" ];then
-			# 因为chinadns1 chinadns2自带国内cdn，所以也不需要cdn.txt
-			echo_date 自动判断dns解析使用国外优先模式...
-			echo_date 你选择的解析方案【$(get_dns_name $ss_foreign_dns)】无国内cdn，需要加载cdn.txt，路由器开销较大...
-			echo_date 生成cdn加速列表到/tmp/sscdn.conf，加速用的dns：$CDN
-			echo "#for china site CDN acclerate" >> /tmp/sscdn.conf
-			cat /koolshare/ss/rules/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/sscdn.conf
-		else
-			echo_date 自动判断dns解析使用国外优先模式...
-			echo_date 你选择解析方案【$(get_dns_name $ss_foreign_dns)】自带国内cdn，不许需要加载cdn.txt，路由器开销小...
-		fi
-	fi
 	
 	# custom dnsmasq settings by user
 	if [ -n "$ss_dnsmasq" ];then
@@ -635,9 +658,14 @@ create_dnsmasq_conf(){
 		echo_date 应用域名白名单
 		echo "#for white_domain" >> /tmp/wblist.conf
 		for wan_white_domain in $wanwhitedomain
-		do 
-			echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
-			echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
+		do
+			detect_domain "$wan_white_domain"
+			if [ "$?" == "0" ];then
+				echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
+				echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
+			else
+				echo_date ！！检测到域名白名单内的【"$wan_white_domain"】不是域名格式！！此条将不会添加！！
+			fi
 		done
 	fi
 	
@@ -655,10 +683,65 @@ create_dnsmasq_conf(){
 		echo_date 应用域名黑名单
 		echo "#for black_domain" >> /tmp/wblist.conf
 		for wan_black_domain in $wanblackdomain
-		do 
-			echo "$wan_black_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" >> /tmp/wblist.conf
-			echo "$wan_black_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/black_list/g" >> /tmp/wblist.conf
+		do
+			detect_domain "$wan_black_domain"
+			if [ "$?" == "0" ];then
+				echo "$wan_black_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" >> /tmp/wblist.conf
+				echo "$wan_black_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/black_list/g" >> /tmp/wblist.conf
+			else
+				echo_date ！！检测到域名黑名单内的【"$wan_black_domain"】不是域名格式！！此条将不会添加！！
+			fi
 		done
+	fi
+
+	# 使用cdn.txt和gfwlist的策略
+	# cdn.txt的作用：cdn.txt内包含了4万多条国内的网站，基本包含了普通人的所有国内上网需求，使用cdn.txt会让里面指定的网站强制走中国DNS的解析
+	# gfwlist的主用：gfwlist内包含了已知的被墙网站，大部分人的翻墙需求（google, youtube, netflix, etc...），能得到满足，使用gfwlist会让里面指定的网站走国外的dns解析（墙内出去需要防污染，墙外进来直连即可）
+	# 1.1 在国内优先模式下（在墙内出去），dnsmasq的全局dns是中国的，所以不需要cdn.txt，此时对路由的dnsmasq的负担也较小，但是为了保证国外被墙的网站解析无污染，使用gfwlist来解析国外被墙网站（此处需要防污染的软件来获得正确dns，如dns2socks的转发方式，chinadns的过滤方式，cdns的edns的特殊获取方式等），这样如果遇到gfwlist漏掉的，或者上普通未被墙的国外网站可能速度较慢；
+	# 1.2 在国内优先模式下（在墙外回来），dnsmasq的全局dns是中国的，所以不需要cdn.txt，此时对路由的dnsmasq的负担也较小，但是为了保证国外被墙的网站解析无污染，使用gfwlist来解析国外被墙网站（因为本来身在国外，直连国外当地dns即可，如果转发，则会让这些请求在国内vps上去做，导致污染，如果使用chinadns过滤，则无需指定通过转发的），但是这样会导致很多国外网站的访问是从国内的vps发起的，导致一些国外网站的体验不好
+	
+	# 2.1 在国外优先的模式下（在墙内出去），dnsmasq的全局dns是国外的（此处需要使用防污染的软件来获得正确的dns），但是要保证国内的网站的解析效果，只好引入cdn.txt，此时路由的负担也会较大，这样国内的网站解析效果完全靠cdn.tx，一般来说能普通人的所有国内上网需求
+	# 2.2 在国外优先的模式下（在墙外回来），dnsmasq的全局dns是国外的（此处只需要直连国外当地的dns服务器即可！），但是要保证国内的网站的解析效果，只好引入cdn.txt，此时路由的负担也会较大，这样国内的网站解析效果完全靠cdn.txt，一般来说翻墙回来都是看国内影视剧和音乐等需要，cdn.txt应该能够满足。
+
+	# 总结
+	# 国内优先模式，使用gfwlist，不用cdn.txt，国内cdn好，国外cdn差，路由器负担小
+	# 国外优先模式，不用gfwlist，使用cdn.txt，国内cdn好，国外cdn好，路由器负担大（dns2socks ss-tunnel，cdns）
+	# 国外优先模式，如果dns自带了国内cdn，不用gfwlist，不用cdn.txt，国内cdn好，国外cdn好，路由器负小（chinadns1 chinadns2）
+
+	# 使用场景 
+	# 1.1 gfwlist模式：该模式的特点就是只有gfwlist内的网站走代理，所以dns部分也应该是相同的策略，即国内优先模式。
+	# 1.2 在gfwlist模式下，如果访问控制内有主机走chnroute模式，那么怎么办？也许这台主机希望获得更好的国外访问效果？原来ks的策略是如果检测到这种情况则切换到国外优先，并且保持gfwlist存在（因为主模式下的主机在iptables内必须匹配gfwlist的ipset）；
+	# 2.1 chnroute模式：除了国内的IP不走代理，其余都应该走代理，即使是某个国外的网站未被墙，因为用户的初衷是为了获得更好的国外访问效果才使用chnroute模式，所以dns部分也应该是类似的策略，即国外优先模式：
+	# 2.2 在chnroute模式下，如果访问控制内有主机走gfwlist模式，那么怎么办？这台机器应该指望着获得更好的国内访问效果？原来ks的策略是如果检测这种情况，保持国外优先不变的情况下，再引入gfwlist（因为这些gfwlist的主机在iptables内必须匹配gfwlist的ipset）；
+	# 对于访问控制存在上面的情况，都是向着国外优先
+
+	# 指定策略
+	# 1 一刀切的自动方案：和原KS方案相同，不过对于回国模式需要做出修改，国外的dns不能由软件转发等，直连就行了（fix）
+	# 2 用户自己选择，一刀切的方案很多情况下都会走到国外优先上去，这对路由器的负担是很大的，而多数人的上网需求国内优先就足够了，一些人需要国外访问快（代理够快的情况下），可以自行选择国外优先（todo）
+	# 3 所以最终保留自动方案，增加国内优先和国外优先的选择方案（todo）
+
+	if [ "$ss_basic_mode" == "6" ];then
+		# 回国模式中，因为国外DNS无论如何都不会污染的，所以采取的策略是直连就行，默认国内优先即可
+		echo_date 自动判断在回国模式中使用国内优先模式，不加载cdn.txt
+	else
+		if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" ] || [ "$ss_basic_mode" == "6" ];then
+			# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
+			# 回国模式下自动判断使用国内优先
+			echo_date 自动判断使用国内优先模式，不加载cdn.txt
+		else
+			# 其它情况，均使用国外优先模式
+			if [ "$ss_foreign_dns" != "2" ] && [ "$ss_foreign_dns" != "5" ];then
+				# 因为chinadns1 chinadns2自带国内cdn，所以也不需要cdn.txt
+				echo_date 自动判断dns解析使用国外优先模式...
+				echo_date 你选择的解析方案【$(get_dns_name $ss_foreign_dns)】无国内cdn，需要加载cdn.txt，路由器开销较大...
+				echo_date 生成cdn加速列表到/tmp/sscdn.conf，加速用的dns：$CDN
+				echo "#for china site CDN acclerate" >> /tmp/sscdn.conf
+				cat /koolshare/ss/rules/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/sscdn.conf
+			else
+				echo_date 自动判断dns解析使用国外优先模式...
+				echo_date 你选择解析方案【$(get_dns_name $ss_foreign_dns)】自带国内cdn，不许需要加载cdn.txt，路由器开销小...
+			fi
+		fi
 	fi
 
 	#ln_conf
@@ -684,6 +767,17 @@ create_dnsmasq_conf(){
 			echo_date 创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
 			ln -sf /koolshare/ss/rules/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 		fi
+	elif [ "$ss_basic_mode" == "6" ];then
+		# 回国模式下默认方案是国内优先，所以gfwlist里的网站不能由127.0.0.1#7913来解析了，应该是国外当地直连
+		if [ -n "`echo $ss_direct_user|grep :`" ];then
+			echo_date 国外直连dns设定格式错误，将自动更正为8.8.8.8#53.
+			ss_direct_user="8.8.8.8#53"
+			dbus set ss_direct_user="8.8.8.8#53"
+		fi
+		echo_date 创建回国模式专用gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
+		[ -z "$ss_direct_user" ] && ss_direct_user="8.8.8.8#53"
+		cat /koolshare/ss/rules/gfwlist.conf|sed "s/127.0.0.1#7913/$ss_direct_user/g" > /tmp/gfwlist.conf
+		ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 	fi
 
 	#echo_date 创建dnsmasq.postconf软连接到/jffs/scripts/文件夹.
@@ -765,6 +859,7 @@ start_speeder(){
 			elif [ "$ss_basic_udp_software" == "2" ];then
 				echo_date 开启UDPspeederV2进程.
 				[ "$ss_basic_udpv2_disableobscure" == "1" ] && disable_obscure="--disable-obscure" || disable_obscure=""
+				[ "$ss_basic_udpv2_disablechecksum" == "1" ] && disable_checksum="--disable-checksum" || disable_checksum=""
 				[ -n "$ss_basic_udpv2_timeout" ] && timeout="--timeout $ss_basic_udpv2_timeout" || timeout=""
 				[ -n "$ss_basic_udpv2_mode" ] && mode="--mode $ss_basic_udpv2_mode" || mode=""
 				[ -n "$ss_basic_udpv2_report" ] && report="--report $ss_basic_udpv2_report" || report=""
@@ -778,11 +873,11 @@ start_speeder(){
 				if [ "$ss_basic_udp2raw_boost_enable" == "1" ];then
 					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
 					speederv2 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key2 \
-					$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
+					$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
 					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
 				else
 					speederv2 -c -l 0.0.0.0:1092 -r $ss_basic_udpv2_rserver:$ss_basic_udpv2_rport $key2 \
-					$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
+					$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
 				fi
 			fi
 		fi
@@ -1228,6 +1323,8 @@ creat_v2ray_json(){
 				echo_date "检测到你的json配置的v2ray服务器：$v2ray_server不是ip格式！"
 				echo_date "为了确保v2ray的正常工作，建议配置ip格式的v2ray服务器地址！"
 				echo_date "尝试解析v2ray服务器的ip地址..."
+				# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
+				echo "server=/$v2ray_server/114.114.114.114#53" > /jffs/configs/dnsmasq.d/ss_server.conf
 				v2ray_server_ip=`nslookup "$v2ray_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
 				if [ "$?" == "0" ]; then
 					v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
@@ -1242,7 +1339,10 @@ creat_v2ray_json(){
 
 				if [ -n "$v2ray_server_ip" ];then
 					echo_date "v2ray服务器的ip地址解析成功：$v2ray_server_ip"
-					echo "address=/$v2ray_server/$v2ray_server_ip" > /jffs/configs/dnsmasq.d/ss_host.conf
+					# 解析并记录一次ip，方便插件触发重启设定工作
+					echo "address=/$v2ray_server/$v2ray_server_ip" > /tmp/ss_host.conf
+					# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
+					#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
 					ss_basic_server_ip="$v2ray_server_ip"
 				else
 					echo_date "v2ray服务器的ip地址解析失败!插件将继续运行，域名解析将由v2ray自己进行！"
@@ -1372,7 +1472,13 @@ flush_nat(){
 	echo_date 清除iptables规则和ipset...
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	# flush rules and set if any
-	iptables -t nat -D PREROUTING -p tcp -j SHADOWSOCKS >/dev/null 2>&1
+	nat_indexs=`iptables -nvL PREROUTING -t nat |sed 1,2d | sed -n '/SHADOWSOCKS/='|sort -r`
+	for nat_index in $nat_indexs
+	do
+		iptables -t nat -D PREROUTING $nat_index >/dev/null 2>&1
+	done
+	#iptables -t nat -D PREROUTING -p tcp -j SHADOWSOCKS >/dev/null 2>&1
+	
 	iptables -t nat -F SHADOWSOCKS > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS > /dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_EXT > /dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_GFW > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GFW > /dev/null 2>&1
@@ -1380,7 +1486,14 @@ flush_nat(){
 	iptables -t nat -F SHADOWSOCKS_GAM > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GAM > /dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_GLO > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GLO > /dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_HOM > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_HOM > /dev/null 2>&1
-	iptables -t mangle -D PREROUTING -p udp -j SHADOWSOCKS >/dev/null 2>&1
+
+	mangle_indexs=`iptables -nvL PREROUTING -t mangle |sed 1,2d | sed -n '/SHADOWSOCKS/='|sort -r`
+	for mangle_index in $mangle_indexs
+	do
+		iptables -t mangle -D PREROUTING $mangle_index >/dev/null 2>&1
+	done
+	#iptables -t mangle -D PREROUTING -p udp -j SHADOWSOCKS >/dev/null 2>&1
+	
 	iptables -t mangle -F SHADOWSOCKS >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS >/dev/null 2>&1
 	iptables -t mangle -F SHADOWSOCKS_GAM > /dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GAM > /dev/null 2>&1
 	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 >/dev/null 2>&1
@@ -1424,11 +1537,13 @@ creat_ipset(){
 
 add_white_black_ip(){
 	# black ip/cidr
-	ip_tg="149.154.0.0/16 91.108.4.0/22 91.108.56.0/24 109.239.140.0/24 67.198.55.0/24"
-	for ip in $ip_tg
-	do
-		ipset -! add black_list $ip >/dev/null 2>&1
-	done
+	if [ "$ss_basic_mode" != "6" ];then
+		ip_tg="149.154.0.0/16 91.108.4.0/22 91.108.56.0/24 109.239.140.0/24 67.198.55.0/24"
+		for ip in $ip_tg
+		do
+			ipset -! add black_list $ip >/dev/null 2>&1
+		done
+	fi
 	
 	if [ -n "$ss_wan_black_ip" ];then
 		ss_wan_black_ip=`dbus get ss_wan_black_ip|base64_decode|sed '/\#/d'`
@@ -1704,19 +1819,66 @@ set_ulimit(){
 	ulimit -n 16384
 }
 
-disable_ss(){
-	echo_date ======================= 梅林固件 - 【科学上网】 ========================
-	echo_date
-	echo_date ------------------------- 关闭【科学上网】 -----------------------------
-	nvram set ss_mode=0
-	dbus set dns2socks=0
-	nvram commit
-	kill_process
-	restore_conf
-	restart_dnsmasq
-	flush_nat
-	kill_cron_job
-	echo_date ------------------------ 【科学上网】已关闭 ----------------------------
+remove_ss_reboot_job(){
+	if [ -n "`cru l|grep ss_reboot`" ]; then
+		echo_date 删除插件自动重启定时任务...
+		#cru d ss_reboot >/dev/null 2>&1
+		sed -i '/ss_reboot/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
+	fi
+}
+
+set_ss_reboot_job(){
+	if [[ "${ss_reboot_check}" == "0" ]]; then
+		remove_ss_reboot_job
+	elif [[	"${ss_reboot_check}" ==	"1"	]];	then
+		echo_date 设置每天${ss_basic_time_hour}时${ss_basic_time_min}分重启插件...
+		cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour}"	* *	* /koolshare/ss/ssconfig.sh	restart"
+	elif [[	"${ss_reboot_check}" ==	"2"	]];	then
+		echo_date 设置每周${ss_basic_week}的${ss_basic_time_hour}时${ss_basic_time_min}分重启插件...
+		cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour}"	* *	"${ss_basic_week}" /koolshare/ss/ssconfig.sh restart"
+	elif [[	"${ss_reboot_check}" ==	"3"	]];	then
+		echo_date 设置每月${ss_basic_day}日${ss_basic_time_hour}时${ss_basic_time_min}分重启插件...
+		cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour} ${ss_basic_day}"	* *	/koolshare/ss/ssconfig.sh restart"
+	elif [[	"${ss_reboot_check}" ==	"4"	]];	then
+		if [[ "${ss_basic_inter_pre}" == "1" ]]; then
+			echo_date 设置每隔${ss_basic_inter_min}分钟重启插件...
+			cru	a ss_reboot	"*/"${ss_basic_inter_min}" * * * * /koolshare/ss/ssconfig.sh restart"
+		elif [[	"${ss_basic_inter_pre}"	== "2" ]]; then
+			echo_date 设置每隔${ss_basic_inter_hour}小时重启插件...
+			cru	a ss_reboot	"0 */"${ss_basic_inter_hour}" *	* *	/koolshare/ss/ssconfig.sh restart"
+		elif [[	"${ss_basic_inter_pre}"	== "3" ]]; then
+			echo_date 设置每隔${ss_basic_inter_day}天${ss_basic_inter_hour}小时${ss_basic_time_min}分钟重启插件...
+			cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour}"	*/"${ss_basic_inter_day} " * * /koolshare/ss/ssconfig.sh restart"
+		fi
+	elif [[	"${ss_reboot_check}" ==	"5"	]];	then
+		check_custom_time=`dbus	get	ss_basic_custom	| base64_decode`
+		echo_date 设置每天${check_custom_time}时的${ss_basic_time_min}分重启插件...
+		cru	a ss_reboot	${ss_basic_time_min} ${check_custom_time}" * * * /koolshare/ss/ssconfig.sh restart"
+	else
+		remove_ss_reboot_job
+	fi
+}
+
+remove_ss_trigger_job(){
+	if [ -n "`cru l|grep ss_tri_check`" ]; then
+		echo_date 删除插件触发重启定时任务...
+		#cru d ss_tri_check >/dev/null 2>&1
+		sed -i '/ss_tri_check/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
+	fi
+}
+
+set_ss_trigger_job(){
+	if [ "$ss_basic_tri_reboot_time" == "0" ] || [ -z "$ss_basic_tri_reboot_time" ];then
+		remove_ss_trigger_job
+	else
+		if [ "$ss_basic_tri_reboot_policy" == "1" ];then
+			echo_date 设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启科学上网插件...
+		else
+			echo_date 设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启dnsmasq...
+		fi
+		cru d ss_tri_check  >/dev/null 2>&1
+		cru a ss_tri_check "*/$ss_basic_tri_reboot_time * * * * /koolshare/scripts/ss_reboot_job.sh check_ip"
+	fi
 }
 
 load_nat(){
@@ -1806,9 +1968,27 @@ detect(){
 		nvram commit
 	fi
 	if [ -n "`nvram get dhcp_dns2_x`" ];then
-		nvram unset dhcp_dns1_x
+		nvram unset dhcp_dns2_x
 		nvram commit
 	fi
+}
+
+disable_ss(){
+	echo_date ======================= 梅林固件 - 【科学上网】 ========================
+	echo_date
+	echo_date ------------------------- 关闭【科学上网】 -----------------------------
+	nvram set ss_mode=0
+	dbus set dns2socks=0
+	dbus remove ss_basic_server_ip
+	nvram commit
+	kill_process
+	remove_ss_trigger_job
+	remove_ss_reboot_job
+	restore_conf
+	restart_dnsmasq
+	flush_nat
+	kill_cron_job
+	echo_date ------------------------ 【科学上网】已关闭 ----------------------------
 }
 
 apply_ss(){
@@ -1823,6 +2003,8 @@ apply_ss(){
 	dbus set dns2socks=0
 	nvram commit
 	kill_process
+	remove_ss_trigger_job
+	remove_ss_reboot_job
 	restore_conf
 	# restart dnsmasq when ss server is not ip or on router boot
 	restart_dnsmasq
@@ -1836,6 +2018,7 @@ apply_ss(){
 	detect
 	resolv_server_ip
 	ss_arg
+	load_module
 	creat_ipset
 	create_dnsmasq_conf
 	# do not re generate json on router start, use old one
@@ -1846,16 +2029,17 @@ apply_ss(){
 	[ "$ss_basic_type" == "3" ] && start_v2ray
 	[ "$ss_basic_type" != "2" ] && start_kcp
 	[ "$ss_basic_type" != "2" ] && start_dns
-	load_module
 	#===load nat start===
 	load_nat
 	#===load nat end===
 	restart_dnsmasq
 	auto_start
 	write_cron_job
-	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
+	set_ss_reboot_job
+	set_ss_trigger_job
 	# post-start
 	ss_post_start
+	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
 }
 
 # for debug
@@ -1899,7 +2083,6 @@ start)
 		set_ulimit >> "$LOG_FILE"
 		apply_ss >> "$LOG_FILE"
 		write_numbers >> "$LOG_FILE"
-		#[ ! -f "/tmp/shadowsocks.nat_lock" ] && touch /tmp/shadowsocks.nat_lock
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
 	fi
@@ -1927,9 +2110,12 @@ restart)
 	echo_date "Across the Great Wall we can reach every corner in the world!"
 	echo_date
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
-	# creat nat locker
-	# [ ! -f "/tmp/shadowsocks.nat_lock" ] && touch /tmp/shadowsocks.nat_lock
 	#get_status >> /tmp/ss_start.txt
+	unset_lock
+	;;
+flush_nat)
+	set_lock
+	flush_nat
 	unset_lock
 	;;
 start_nat)

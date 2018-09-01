@@ -8,6 +8,8 @@ Koolshare Asuswrt-Merlin shadowsocks Changelog
    - fix	修复v2ray使用域名时因无法解析导致代理不通的问题；
    - fix	修复一系列订阅问题，包括订阅成功后节点可能又马上被删掉的问题；
    - fix	修复一些回国模式的问题；
+   - fix	修复某些机器开机启动后iptables规则被多次添加，影响如koolproxy等其它插件的启动；
+   - fix	修复【内部网络(lan)】-【DHCP服务器】-【DNS 及 WINS 服务器设置】内DNS Server 2无法清空的问题；
    - update	更新udp2raw-tunnel二进制，git version:d77271540f    build date:Sep  1 2018 23:51:16；
    - update	更新udpspeederv2二进制，git version: 8db00a87f4    build date: Sep  1 2018 23:47:26；
    - update	udpspeederv2添加关闭数据包验证功能；
