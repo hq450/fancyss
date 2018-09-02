@@ -936,13 +936,13 @@ start_ss_redir(){
 		echo_date 开启ssr-redir进程，用于透明代理.
 		BIN=rss-redir
 		ARG_OBFS=""
-		# ss-libev需要大于160的熵才能正常工作
-		start_jitterentropy
 	elif  [ "$ss_basic_type" == "0" ];then
 		echo_date 开启ss-redir进程，用于透明代理.
 		if [ "$ss_basic_ss_obfs" == "0" ];then
 			BIN=ss-redir
 			ARG_OBFS=""
+			# ss-libev需要大于160的熵才能正常工作
+			start_jitterentropy
 		else
 			BIN=ss-redir
 		fi
