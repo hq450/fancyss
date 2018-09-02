@@ -221,7 +221,7 @@ kill_process(){
 		killall https_dns_proxy >/dev/null 2>&1
 	fi
 	haveged_process=`pidof haveged`
-	if [ -n "$https_dns_proxy_process" ];then 
+	if [ -n "$haveged_process" ];then 
 		echo_date 关闭haveged进程...
 		killall haveged >/dev/null 2>&1
 	fi
