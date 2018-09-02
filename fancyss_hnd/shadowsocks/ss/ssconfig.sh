@@ -220,6 +220,11 @@ kill_process(){
 		echo_date 关闭https_dns_proxy进程...
 		killall https_dns_proxy >/dev/null 2>&1
 	fi
+	haveged_process=`pidof haveged`
+	if [ -n "$https_dns_proxy_process" ];then 
+		echo_date 关闭haveged进程...
+		killall haveged >/dev/null 2>&1
+	fi
 }
 
 # ================================= ss prestart ===========================
@@ -784,6 +789,10 @@ create_dnsmasq_conf(){
 	[ ! -L "/jffs/scripts/dnsmasq.postconf" ] && ln -sf /koolshare/ss/rules/dnsmasq.postconf /jffs/scripts/dnsmasq.postconf
 }
 
+start_haveged(){
+	haveged >/dev/null 2>&1
+}
+
 auto_start(){
 	[ ! -L "/koolshare/init.d/S99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/S99shadowsocks.sh
 	[ ! -L "/koolshare/init.d/N99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/N99shadowsocks.sh
@@ -906,6 +915,8 @@ start_ss_redir(){
 		if [ "$ss_basic_ss_obfs" == "0" ];then
 			BIN=ss-redir
 			ARG_OBFS=""
+			# ss-libev需要大于160的熵才能正常工作
+			start_haveged
 		else
 			BIN=ss-redir
 		fi
