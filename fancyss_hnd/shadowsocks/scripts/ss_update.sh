@@ -23,7 +23,7 @@ install_ss(){
 }
 
 update_ss(){
-	echo_date 更新过程中请不要做奇怪的事，不然可能导致问题！
+	echo_date 更新过程中请不要刷新本页面或者关闭路由等，不然可能导致问题！
 	echo_date 开启SS检查更新：使用主服务器：github
 	echo_date 检测主服务器在线版本号...
 	ss_basic_version_web1=`curl --connect-timeout 5 -s "$main_url"/version | sed -n 1p`
@@ -50,13 +50,13 @@ update_ss(){
 			fi
 		else
 			echo_date 主服务器在线版本号："$ss_basic_version_web1" 和本地版本号："$ss_basic_version_local" 相同！
-			echo_date 那还更新个毛啊，关闭更新进程!
+			echo_date 退出插件更新!
 			sleep 1
 			echo XU6J03M6
 			exit
 		fi
 	else
-		echo_date 没有检测到主服务器在线版本号,访问github服务器有点问题哦~
+		echo_date 没有检测到主服务器在线版本号,访问github服务器可能有点问题！
 		sleep 1
 		echo_date 更换备用备用更新地址，请稍后...
 		sleep 1
@@ -105,7 +105,7 @@ update_ss2(){
 # 			exit
 # 		fi
 # 	else
-# 		echo_date 没有检测到备用服务器在线版本号,访问备用服务器有点问题哦，你网络很差欸~
+# 		echo_date 没有检测到备用服务器在线版本号,访问备用服务器可能有问题！
 # 		sleep 1
 # 		echo_date 然而只有这一台备用更更新服务器，请尝试离线手动安装...
 # 		sleep 1

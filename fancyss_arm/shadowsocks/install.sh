@@ -107,7 +107,7 @@ upgrade_ss_conf(){
 }
 
 if [ "$ss_basic_enable" == "1" ];then
-	echo_date 先关闭ss，保证文件更新成功!
+	echo_date 先关闭科学上网插件，保证文件更新成功!
 	sh /koolshare/ss/ssconfig.sh stop
 fi
 
@@ -165,13 +165,13 @@ echo_date 如果长时间没有日志刷新，请等待2分钟后进入插件看
 cp -rf /tmp/shadowsocks/bin/* /koolshare/bin/
 chmod 755 /koolshare/bin/*
 
-echo_date 复制ss的脚本文件！
+echo_date 复制相关的脚本文件！
 cp -rf /tmp/shadowsocks/ss/* /koolshare/ss/
 cp -rf /tmp/shadowsocks/scripts/* /koolshare/scripts/
 cp -rf /tmp/shadowsocks/install.sh /koolshare/scripts/ss_install.sh
 cp -rf /tmp/shadowsocks/uninstall.sh /koolshare/scripts/uninstall_shadowsocks.sh
 
-echo_date 复制网页文件！
+echo_date 复制相关的网页文件！
 cp -rf /tmp/shadowsocks/webs/* /koolshare/webs/
 cp -rf /tmp/shadowsocks/res/* /koolshare/res/
 
@@ -227,7 +227,7 @@ dbus set ss_basic_v2ray_date="20180823"
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
 dbus set ss_basic_install_status="0"
-echo_date 插件安装成功，你为什么这么屌？！
+echo_date 科学上网插件安装成功！
 
 if [ "$ss_basic_enable" == "1" ];then
 	echo_date 重启ss！
@@ -235,3 +235,4 @@ if [ "$ss_basic_enable" == "1" ];then
 	sh /koolshare/ss/ssconfig.sh restart
 fi
 echo_date 更新完毕，请等待网页自动刷新！
+

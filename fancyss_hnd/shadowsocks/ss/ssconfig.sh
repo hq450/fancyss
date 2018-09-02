@@ -569,7 +569,7 @@ start_dns(){
 #--------------------------------------------------------------------------------------
 
 detect_domain(){
-	domain1=`echo $1|grep -E "^https://|^http://"`
+	domain1=`echo $1|grep -E "^https://|^http://|www|/"`
 	domain2=`echo $1|grep -E "\."`
 	if [ -n "$domain1" ] || [ -z "$domain2" ];then
 		return 1

@@ -23,7 +23,7 @@ esac
 
 # 先关闭ss
 if [ "$ss_basic_enable" == "1" ];then
-	echo_date 先关闭ss，保证文件更新成功!
+	echo_date 先关闭科学上网插件，保证文件更新成功!
 	[ -f "/koolshare/ss/stop.sh" ] && sh /koolshare/ss/stop.sh stop_all || sh /koolshare/ss/ssconfig.sh stop
 fi
 
@@ -68,17 +68,17 @@ find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 echo_date 开始复制文件！
 cd /tmp
 
-echo_date 复制相关二进制文件！
+echo_date 复制相关二进制文件！此步时间可能较长！
 cp -rf /tmp/shadowsocks/bin/* /koolshare/bin/
 
 
-echo_date 复制ss的脚本文件！
+echo_date 复制相关的脚本文件！
 cp -rf /tmp/shadowsocks/ss/* /koolshare/ss/
 cp -rf /tmp/shadowsocks/scripts/* /koolshare/scripts/
 cp -rf /tmp/shadowsocks/install.sh /koolshare/scripts/ss_install.sh
 cp -rf /tmp/shadowsocks/uninstall.sh /koolshare/scripts/uninstall_shadowsocks.sh
 
-echo_date 复制网页文件！
+echo_date 复制相关的网页文件！
 cp -rf /tmp/shadowsocks/webs/* /koolshare/webs/
 cp -rf /tmp/shadowsocks/res/* /koolshare/res/
 if [ "`nvram get model`" == "GT-AC5300" ] || [ -n "`nvram get extendno | grep koolshare`" -a "`nvram get productid`" == "RT-AC86U" ];then
@@ -116,14 +116,14 @@ dbus set softcenter_module_shadowsocks_version="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_title="科学上网"
 dbus set softcenter_module_shadowsocks_description="科学上网"
 
-# v2ray 版本号
+# 设置v2ray 版本号
 dbus set ss_basic_v2ray_version="v3.36"
 dbus set ss_basic_v2ray_date="20180823"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
 
-echo_date 插件安装成功，你为什么这么屌？！
+echo_date 科学上网插件安装成功！
 
 if [ "$ss_basic_enable" == "1" ];then
 	echo_date 重启ss！
@@ -131,10 +131,4 @@ if [ "$ss_basic_enable" == "1" ];then
 fi
 
 echo_date 更新完毕，请等待网页自动刷新！
-
-
-
-
-
-
 

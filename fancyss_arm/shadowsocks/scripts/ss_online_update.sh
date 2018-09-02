@@ -425,6 +425,17 @@ get_oneline_rule_now(){
 
 	#虽然为0但是还是要检测下是否下载到正确的内容
 	if [ "$?" == "0" ];then
+		#订阅地址有跳转
+		blank=`cat /tmp/ssr_subscribe_file.txt|grep -E " |Redirecting|301"`
+		if [ -n "$blank" ];then
+			echo_date 订阅链接可能有跳转，尝试更换wget进行下载...
+			rm /tmp/ssr_subscribe_file.txt
+			if [ "`echo $ssr_subscribe_link|grep ^https`" ];then
+				wget --no-check-certificate -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
+			else
+				wget -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
+			fi
+		fi
 		#下载为空...
 		if [ -z "`cat /tmp/ssr_subscribe_file.txt`" ];then
 			echo_date 下载为空...
@@ -435,13 +446,6 @@ get_oneline_rule_now(){
 		wrong2=`cat /tmp/ssr_subscribe_file.txt|grep "<"`
 		if [ -n "$wrong1" -o -n "$wrong2" ];then
 			return 2
-		fi
-		#订阅地址有跳转
-		blank=`cat /tmp/ssr_subscribe_file.txt|grep -E " |Redirecting|301"`
-		if [ -n "$blank" ];then
-			echo_date 订阅链接有跳转，尝试更换wget进行下载...
-			rm /tmp/ssr_subscribe_file.txt
-			wget -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
 		fi
 	else
 		return 1
