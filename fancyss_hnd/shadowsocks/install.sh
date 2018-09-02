@@ -55,6 +55,7 @@ rm -rf /koolshare/bin/udp2raw
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/https_dns_proxy
+rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/all.png

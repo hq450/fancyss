@@ -790,7 +790,7 @@ create_dnsmasq_conf(){
 }
 
 start_haveged(){
-	haveged >/dev/null 2>&1
+	haveged -w 1024 >/dev/null 2>&1
 }
 
 auto_start(){

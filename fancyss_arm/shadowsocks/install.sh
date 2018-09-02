@@ -143,6 +143,8 @@ rm -rf /koolshare/bin/udp2raw
 rm -rf /koolshare/bin/speeder*
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
+rm -rf /koolshare/bin/jitterentropy-rngd
+rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/res/layer
 rm -rf /koolshare/res/shadowsocks.css
 rm -rf /koolshare/res/icon-shadowsocks.png

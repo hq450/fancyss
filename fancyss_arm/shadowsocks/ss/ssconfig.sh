@@ -215,9 +215,10 @@ kill_process(){
 		echo_date 关闭ud2raw进程...
 		killall udp2raw >/dev/null 2>&1
 	fi
-	if [ -n "`pidof jitterentropy-rngd`" ];then
-		echo_date 关闭jitterentropy-rngd进程...
-		killall jitterentropy-rngd >/dev/null 2>&1
+	haveged_process=`pidof haveged`
+	if [ -n "$https_dns_proxy_process" ];then 
+		echo_date 关闭haveged进程...
+		killall haveged >/dev/null 2>&1
 	fi
 }
 
@@ -783,8 +784,8 @@ create_dnsmasq_conf(){
 	[ ! -L "/jffs/scripts/dnsmasq.postconf" ] && ln -sf /koolshare/ss/rules/dnsmasq.postconf /jffs/scripts/dnsmasq.postconf
 }
 
-start_jitterentropy(){
-	jitterentropy-rngd >/dev/null 2>&1
+start_haveged(){
+	haveged -w 1024 >/dev/null 2>&1
 }
 
 auto_start(){
@@ -942,7 +943,7 @@ start_ss_redir(){
 			BIN=ss-redir
 			ARG_OBFS=""
 			# ss-libev需要大于160的熵才能正常工作
-			start_jitterentropy
+			start_haveged
 		else
 			BIN=ss-redir
 		fi
