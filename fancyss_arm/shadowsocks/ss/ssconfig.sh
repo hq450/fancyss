@@ -216,6 +216,7 @@ kill_process(){
 		killall udp2raw >/dev/null 2>&1
 	fi
 	if [ -n "`pidof jitterentropy-rngd`" ];then
+		echo_date 关闭jitterentropy-rngd进程...
 		killall jitterentropy-rngd >/dev/null 2>&1
 	fi
 }
@@ -935,6 +936,8 @@ start_ss_redir(){
 		echo_date 开启ssr-redir进程，用于透明代理.
 		BIN=rss-redir
 		ARG_OBFS=""
+		# ss-libev需要大于160的熵才能正常工作
+		start_jitterentropy
 	elif  [ "$ss_basic_type" == "0" ];then
 		echo_date 开启ss-redir进程，用于透明代理.
 		if [ "$ss_basic_ss_obfs" == "0" ];then
@@ -2047,7 +2050,6 @@ apply_ss(){
 	load_module
 	creat_ipset
 	create_dnsmasq_conf
-	start_jitterentropy
 	sleep 1
 	#get_status
 	# do not re generate json on router start, use old one
