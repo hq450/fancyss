@@ -1,5 +1,11 @@
 Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 ===========================================
+4.0.7 （尚未推送）
+   - fix	修复订阅链接有跳转情况下，有时候无法订阅的问题；
+   - update	为了避免因定义了错误的黑白名单，导致分流出现错误，更新了更加严格的域名格式检查；
+   - update	更改jitterentropy-rngd程序为haveged，以提供足够的熵来快速生成高质量的随机数，保证ss-libev启动；
+   - update	更改了脚本中一些逗逼的日志；
+
 4.0.6
    - fix	修复一个因获取到错误的base64字符串长度而导致订阅节点信息错误，最终导致订阅完成后部分节点被删除的bug
    - update	去掉chinadns1的-m参数，以兼容更多的使用环境。
