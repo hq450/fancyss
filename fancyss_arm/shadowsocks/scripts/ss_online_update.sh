@@ -262,13 +262,15 @@ update_config(){
 	else
 		# 如果在本地的订阅节点中没找到该节点，检测下配置是否更改，如果更改，则更新配置
 		index=$(cat /tmp/all_localservers| grep $group_base64 | grep $server_base64 |awk '{print $3}'|head -n1)
+		local_remarks=$(dbus get ssconf_basic_name_$index)
 		local_server_port=$(dbus get ssconf_basic_port_$index)
 		local_protocol=$(dbus get ssconf_basic_rss_protocol_$index)
+		local_protocol_param=$(dbus get ssconf_basic_rss_protocol_param_$index)
 		local_encrypt_method=$(dbus get ssconf_basic_method_$index)
 		local_obfs=$(dbus get ssconf_basic_rss_obfs_$index)
 		local_password=$(dbus get ssconf_basic_password_$index)
-		local_remarks=$(dbus get ssconf_basic_name_$index)
-		local_group=$(dbus get ssconf_basic_group_$index)
+		#local_group=$(dbus get ssconf_basic_group_$index)
+		
 		#echo update $index
 		local i=0
 		[ "$ssr_subscribe_obfspara" == "0" ] && dbus remove ssconf_basic_rss_obfs_param_$index
@@ -278,12 +280,12 @@ update_config(){
 		[ "$local_remarks" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks
 		[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index=$server_port && let i+=1
 		[ "$local_protocol" != "$protocol" ] && dbus set ssconf_basic_rss_protocol_$index=$protocol && let i+=1
+		[ "$local_protocol_param"x != "$protoparam"x ] && dbus set ssconf_basic_rss_protocol_param_$index=$protoparam && let i+=1
 		[ "$local_encrypt_method" != "$encrypt_method" ] && dbus set ssconf_basic_method_$index=$encrypt_method && let i+=1
 		[ "$local_obfs" != "$obfs" ] && dbus set ssconf_basic_rss_obfs_$index=$obfs && let i+=1
 		[ "$local_password" != "$password" ] && dbus set ssconf_basic_password_$index=$password && let i+=1
 		if [ "$i" -gt "0" ];then
-			echo_date 修改SSR节点：【$remarks】 && 
-			let updatenum+=1
+			echo_date 修改SSR节点：【$remarks】 && let updatenum+=1
 		else
 			echo_date SSR节点：【$remarks】 参数未发生变化，跳过！
 		fi
