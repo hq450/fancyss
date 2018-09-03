@@ -8,7 +8,7 @@ todo
 
 # 机型/固件支持
 ### fancyss_arm
-fancyss_arm离线安装包仅适用于merlin koolshare arm机型改版固件（linux内核版本：2.6.36），版本号≥X7.2的固件（订阅功能需要版本号≥X7.7），固件下载地址：[固件下载地址](http://koolshare.cn/forum-96-1.html)。请注意，<b>RT-AC86U</b>和<b>GT-AC5300</b>两款机器不能使用fancyss_arm！因为这两款机器的是新架构！
+fancyss_arm离线安装包仅适用于merlin koolshare arm机型改版固件（linux内核版本：2.6.36），版本号≥X7.2的固件（订阅功能需要版本号≥X7.7），固件下载地址：[固件下载地址](http://koolshare.cn/forum-96-1.html)。请注意，<b>RT-AC86U</b>和<b>GT-AC5300</b>两款机器不能使用fancyss_arm！因为这两款机器的是新架构！RT-AC66U和RT-N66U也不能使用fancyss_arm！因为这两款机器的是mipsel架构！
 
 ### fancyss_hnd
 fancyss_hnd适用于ARM架构，hnd平台路由器，linux内核为4.1.27的[RT-AC86U merlin改版固件](http://koolshare.cn/thread-127878-1-1.html)，[RT-AC86U 官改固件](http://koolshare.cn/thread-139965-1-1.html)，[GT-AC5300 官改固件](http://koolshare.cn/thread-130902-1-1.html)。其它arm架构和mipsel架构的merlin固件不能使用fancyss_hnd！
