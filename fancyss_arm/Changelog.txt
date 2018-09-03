@@ -1,8 +1,10 @@
 Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 ===========================================
-4.0.7 （尚未推送）
-   - fix	修复订阅链接有跳转情况下，有时候无法订阅的问题；
-   - fix	修复订阅节点的协议协议参数 (protocol_param)有更新时，订阅完后本地却没有更新的问题；
+4.0.7
+   - fix	订阅：修复订阅链接有跳转情况下，有时候无法订阅的问题；
+   - fix	订阅：修复订阅节点的协议协议参数 (protocol_param)有更新时，订阅完后本地却没有更新的问题；
+   - update	v2ray：修复使用v2ray节点，重启路由，插件不能自启的问题（现在自启不检测虚拟内存）；
+   - update	v2ray：现在总内存在500Mb以上，且可用内存在200Mb以上的机器，不再强制要求虚拟内存；
    - update	为了避免因定义了错误的黑白名单，导致分流出现错误，更新了更加严格的域名格式检查；
    - update	更改jitterentropy-rngd程序为haveged，以提供足够的熵来快速生成高质量的随机数，保证ss-libev启动；
    - update	更改了脚本中一些逗逼的日志；

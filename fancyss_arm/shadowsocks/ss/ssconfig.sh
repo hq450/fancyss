@@ -215,10 +215,8 @@ kill_process(){
 		echo_date 关闭ud2raw进程...
 		killall udp2raw >/dev/null 2>&1
 	fi
-	haveged_process=`pidof haveged`
-	if [ -n "$haveged_process" ];then 
-		echo_date 关闭haveged进程...
-		killall haveged >/dev/null 2>&1
+	if [ -n "`pidof jitterentropy-rngd`" ];then
+		killall jitterentropy-rngd >/dev/null 2>&1
 	fi
 }
 
@@ -569,7 +567,7 @@ start_dns(){
 #--------------------------------------------------------------------------------------
 
 detect_domain(){
-	domain1=`echo $1|grep -E "^https://|^http://|www|/"`
+	domain1=`echo $1|grep -E "^https://|^http://"`
 	domain2=`echo $1|grep -E "\."`
 	if [ -n "$domain1" ] || [ -z "$domain2" ];then
 		return 1
@@ -784,8 +782,8 @@ create_dnsmasq_conf(){
 	[ ! -L "/jffs/scripts/dnsmasq.postconf" ] && ln -sf /koolshare/ss/rules/dnsmasq.postconf /jffs/scripts/dnsmasq.postconf
 }
 
-start_haveged(){
-	haveged -w 1024 >/dev/null 2>&1
+start_jitterentropy(){
+	jitterentropy-rngd >/dev/null 2>&1
 }
 
 auto_start(){
@@ -942,8 +940,6 @@ start_ss_redir(){
 		if [ "$ss_basic_ss_obfs" == "0" ];then
 			BIN=ss-redir
 			ARG_OBFS=""
-			# ss-libev需要大于160的熵才能正常工作
-			start_haveged
 		else
 			BIN=ss-redir
 		fi
@@ -1429,7 +1425,7 @@ creat_v2ray_json(){
 
 start_v2ray(){
 	cd /koolshare/bin
-	export GOGC=30
+	#export GOGC=30
 	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
 	
 	local i=10
@@ -1977,18 +1973,26 @@ detect(){
 		close_in_five
 	fi
 	
-	#检测v2ray模式下是否启用虚拟内存
-	if [ "$ss_basic_type" == "3" ];then
-		SWAPSTATUS=`free|grep Swap|awk '{print $2}'`
-		if [ "$SWAPSTATUS" != "0" ];then
-			echo_date "你选择了v2ray节点，当前系统已经启用虚拟内存！！符合启动条件！"
+	# v2ray模式下检测系统内存和虚拟内存
+	# 在开机启动/wan重启触发插件重启的时候，不检测内存和虚拟内存
+	# WAN_ACTION=`ps|grep /jffs/scripts/wan-start|grep -v grep`
+	if [ "$ss_basic_type" == "3" -a -z "$WAN_ACTION" ];then
+		TOTAL_MEM=`free|grep Mem|awk '{print $2}'`
+		FREE_MEM=`free|grep Mem|awk '{print $4}'`
+		if [ "$TOTAL_MEM" -gt "500000" -a "$FREE_MEM" -gt "200000" ];then
+			echo_date "总内存大于500M，且可用内存大于200M，v2ray符合启动条件！"
 		else
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date "+          你选择了v2ray节点，而当前系统未启用虚拟内存！               +"
-			echo_date "+        v2ray程序对路由器开销极大，请挂载虚拟内存后再开启！            +"
-			echo_date "+       如果使用 ws + tls + web 方案，建议1G虚拟内存，以保证稳定！     +"
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			close_in_five
+			SWAPSTATUS=`free|grep Swap|awk '{print $2}'`
+			if [ "$SWAPSTATUS" != "0" ];then
+				echo_date "你选择了v2ray节点，当前系统已经启用虚拟内存！！符合启动条件！"
+			else
+				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+				echo_date "+          你选择了v2ray节点，而当前系统未启用虚拟内存！               +"
+				echo_date "+        v2ray程序对路由器开销极大，请挂载虚拟内存后再开启！            +"
+				echo_date "+       如果使用 ws + tls + web 方案，建议1G虚拟内存，以保证稳定！     +"
+				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+				close_in_five
+			fi
 		fi
 	fi
 	
@@ -2051,6 +2055,7 @@ apply_ss(){
 	load_module
 	creat_ipset
 	create_dnsmasq_conf
+	start_jitterentropy
 	sleep 1
 	#get_status
 	# do not re generate json on router start, use old one

@@ -1957,7 +1957,7 @@ detect(){
 	fi
 	
 	#检测v2ray模式下是否启用虚拟内存
-	if [ "$ss_basic_type" == "3" ];then
+	if [ "$ss_basic_type" == "3" -a -z "$WAN_ACTION" ];then
 		SWAPSTATUS=`free|grep Swap|awk '{print $2}'`
 		if [ "$MODEL" != "GT-AC5300" ];then
 			if [ "$SWAPSTATUS" != "0" ];then
