@@ -3756,7 +3756,7 @@ function set_cron(action) {
 															<option value="1">cdns</option>
 															<option value="5">chinadns1</option>
 															<option value="2">chinadns2</option>
-															<!--<option value="6">https_dns_proxy</option>-->
+															<option value="6">https_dns_proxy</option>
 															<option value="7">v2ray_dns</option>
 															<option value="8">直连</option>
 														</select>
