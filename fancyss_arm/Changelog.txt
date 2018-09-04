@@ -3,7 +3,7 @@ Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 4.0.8
    - fix	修复之前一个提交错误，导致4.0.7更新日志中第5、6项实际没得到更新的问题；
    - add	arm机型添加https_dns_proxy国外解析，https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！
-   		插件默认使用了cloudflare的服务（1.1.1.1和1.0.0.1），因为是直链cloudflare的服务，如果到1.1.1.1和1.0.0.1丢包较多不建议使用。
+   		插件默认使用了cloudflare的服务（1.1.1.1和1.0.0.1），因为是直链cloudflare，如果到1.1.1.1和1.0.0.1丢包较多或者ping较高不建议使用。
 
 4.0.7
    - fix	订阅：修复订阅链接有跳转情况下，有时候无法订阅的问题；
