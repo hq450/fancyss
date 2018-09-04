@@ -1365,7 +1365,6 @@ function refresh_html() {
 		html = html + '<td style="width:90px;" id="ss_node_server_' + c["node"] + '"> ' + c["server"] + '</td>';
 		html = html + '<td id="ss_node_port_' + c["node"] + '" style="width:37px;">' + c["port"] + '</td>';
 		html = html + '<td id="ss_node_method_' + c["node"] + '" style="width:90px;"> ' + c["method"] + '</td>';
-		html = html + '<td id="ss_node_ping_' + c["node"] + '" style="width:78px;" class="ping" id="ping_test_td_' + c["node"] + '" style="text-align: center;">' + c["ping"] + '</td>';
 		if(!c["ping"]){
 			html = html + '<td id="ss_node_ping_' + c["node"] + '" style="width:78px;" class="ping" id="ping_test_td_' + c["node"] + '" style="text-align: center;">' + "不支持" + '</td>';
 		}else{
