@@ -1402,7 +1402,7 @@ creat_v2ray_json(){
 
 start_v2ray(){
 	cd /koolshare/bin
-	export GOGC=30
+	#export GOGC=30
 	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
 	
 	local i=10
@@ -1780,7 +1780,6 @@ apply_nat_rules(){
 	[ "$KP_NU" == "" ] && KP_NU=0
 	INSET_NU=`expr "$KP_NU" + 1`
 	iptables -t nat -I PREROUTING "$INSET_NU" -p tcp -j SHADOWSOCKS
-	#iptables -t nat -I PREROUTING 1 -p tcp -j SHADOWSOCKS
 	[ "$mangle" == "1" ] && iptables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS
 	# QOS开启的情况下
 	QOSO=`iptables -t mangle -S | grep -o QOSO | wc -l`

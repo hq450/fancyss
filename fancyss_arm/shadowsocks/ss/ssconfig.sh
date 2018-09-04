@@ -215,8 +215,15 @@ kill_process(){
 		echo_date 关闭ud2raw进程...
 		killall udp2raw >/dev/null 2>&1
 	fi
-	if [ -n "`pidof jitterentropy-rngd`" ];then
-		killall jitterentropy-rngd >/dev/null 2>&1
+	https_dns_proxy_process=`pidof https_dns_proxy`
+	if [ -n "$https_dns_proxy_process" ];then 
+		echo_date 关闭https_dns_proxy进程...
+		killall https_dns_proxy >/dev/null 2>&1
+	fi
+	haveged_process=`pidof haveged`
+	if [ -n "$haveged_process" ];then 
+		echo_date 关闭haveged进程...
+		killall haveged >/dev/null 2>&1
 	fi
 }
 
@@ -567,7 +574,7 @@ start_dns(){
 #--------------------------------------------------------------------------------------
 
 detect_domain(){
-	domain1=`echo $1|grep -E "^https://|^http://"`
+	domain1=`echo $1|grep -E "^https://|^http://|www|/"`
 	domain2=`echo $1|grep -E "\."`
 	if [ -n "$domain1" ] || [ -z "$domain2" ];then
 		return 1
@@ -782,8 +789,8 @@ create_dnsmasq_conf(){
 	[ ! -L "/jffs/scripts/dnsmasq.postconf" ] && ln -sf /koolshare/ss/rules/dnsmasq.postconf /jffs/scripts/dnsmasq.postconf
 }
 
-start_jitterentropy(){
-	jitterentropy-rngd >/dev/null 2>&1
+start_haveged(){
+	haveged -w 1024 >/dev/null 2>&1
 }
 
 auto_start(){
@@ -940,6 +947,8 @@ start_ss_redir(){
 		if [ "$ss_basic_ss_obfs" == "0" ];then
 			BIN=ss-redir
 			ARG_OBFS=""
+			# ss-libev需要大于160的熵才能正常工作
+			start_haveged
 		else
 			BIN=ss-redir
 		fi
@@ -2055,9 +2064,6 @@ apply_ss(){
 	load_module
 	creat_ipset
 	create_dnsmasq_conf
-	start_jitterentropy
-	sleep 1
-	#get_status
 	# do not re generate json on router start, use old one
 	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ] && creat_ss_json
 	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "3" ] && creat_v2ray_json
