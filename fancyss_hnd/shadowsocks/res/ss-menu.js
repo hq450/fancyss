@@ -512,7 +512,7 @@ function openssHint(itemNum) {
 		//https_dns_proxy
 		statusmenu += "</br><font color='#CC0066'><b>6:https_dns_proxy：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！此处默认使用了cloudflare的服务（1.1.1.1和1.0.0.1）";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直连cloudflare服务器，国外cdn很好；国内cdn由cdn.txt提供，对cpu负担稍大。。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直连cloudflare服务器，所以到cloudflare服务器的网络连接至关重要；国内cdn由cdn.txt提供，对cpu负担稍大。</b>";
 		//v2ray dns
 		statusmenu += "</br><font color='#CC0066'><b>7:v2ray dns：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;v2ray自带的dns，通过在v2ray的json配置文件中添加一个新的传入连接来转发dns请求，使用效果应该和ss/ssr下使用ss-tunnel一样";

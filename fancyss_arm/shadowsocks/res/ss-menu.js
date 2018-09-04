@@ -513,6 +513,10 @@ function openssHint(itemNum) {
 		statusmenu += "</br><font color='#CC0066'><b>5:chinadns2：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;支持ECS，并且chinadns2根据本地公网ip和ss服务器ip，发送两个带EDNS标签的请求，dns服务器会根据此信息选择离你最近的解析结果返回给你，因此具有非常好的cdn效果！需要上游DNS服务器支持ECS，所以此处固定为直连谷歌DNS，如果你的网络到谷歌DNS丢包严重、不通或你的上级路由开了国外代理，请不要使用此方案";
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直链谷歌DNS服务器，国外cdn很好；不需要cdn.txt作为国内加速，对cpu负担小，国内cdn较好，但是有时候国内网站会解析到香港网站。</b>";
+		//https_dns_proxy
+		statusmenu += "</br><font color='#CC0066'><b>6:https_dns_proxy：</b></font>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！此处默认使用了cloudflare的服务（1.1.1.1和1.0.0.1）";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直连cloudflare服务器，所以到cloudflare服务器的网络连接至关重要；国内cdn由cdn.txt提供，对cpu负担稍大。</b>";
 		//v2ray dns
 		statusmenu += "</br><font color='#CC0066'><b>7:v2ray dns：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;v2ray自带的dns，通过在v2ray的json配置文件中添加一个新的传入连接来转发dns请求，使用效果应该和ss/ssr下使用ss-tunnel一样";
