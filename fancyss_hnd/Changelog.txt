@@ -1,6 +1,6 @@
 Koolshare Asuswrt-Merlin shadowsocks Changelog
 ===========================================
-1.4.0 (尚未推送)
+1.4.0
    - add	【附加功能】内添加dnsmasq-fastlookup替换功能，可以将原来遍历查询的dnsmasq替换为hash查询的dnsmasq，极大的降低cpu消耗，加快dns查询速度。
    		相关链接：https://www.v2ex.com/t/172010，http://koolshare.cn/thread-65484-1-1.html
 
