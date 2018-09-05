@@ -1,5 +1,9 @@
 Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 ===========================================
+4.0.9 (尚未推送)
+   - add	【附加功能】内添加dnsmasq-fastlookup替换功能，可以将原来遍历查询的dnsmasq替换为hash查询的dnsmasq，极大的降低cpu消耗，加快dns查询速度。
+   		相关链接：https://www.v2ex.com/t/172010，http://koolshare.cn/thread-65484-1-1.html
+
 4.0.8
    - fix	修复之前一个提交错误，导致4.0.7更新日志中第5、6项实际没得到更新的问题；
    - add	arm机型添加https_dns_proxy国外解析，https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！
