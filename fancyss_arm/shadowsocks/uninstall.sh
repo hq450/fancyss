@@ -6,6 +6,16 @@
 sh /koolshare/ss/ssconfig.sh stop
 sh /koolshare/scripts/ss_conf_remove.sh
 sleep 1
+
+# 如果dnsmasq是mounted状态，先恢复
+MOUNTED=`mount|grep -o dnsmasq`
+if [ -n "$MOUNTED" ];then
+	echo_date 恢复dnsmasq-fastlookup为原版dnsmasq
+	killall dnsmasq >/dev/null 2>&1
+	umount /usr/sbin/dnsmasq
+	service restart_dnsmasq >/dev/null 2>&1
+fi
+
 rm -rf /koolshare/ss/*
 rm -rf /koolshare/scripts/ss_*
 rm -rf /koolshare/webs/Main_Ss*
@@ -34,6 +44,8 @@ rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/jitterentropy-rngd
 rm -rf /koolshare/bin/haveged
+rm -rf /koolshare/bin/https_dns_proxy
+rm -rf /koolshare/bin/dnsmasq
 rm -rf /koolshare/res/layer
 rm -rf /koolshare/res/shadowsocks.css
 rm -rf /koolshare/res/icon-shadowsocks.png

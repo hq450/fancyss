@@ -42,6 +42,8 @@ cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
 cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
 cp /koolshare/bin/haveged $TARGET_FOLDER/bin/
+cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
+cp /koolshare/bin/dnsmasq $TARGET_FOLDER/bin/
 cp /koolshare/webs/Main_Ss_Content.asp $TARGET_FOLDER/webs/
 cp /koolshare/webs/Main_Ss_LoadBlance.asp $TARGET_FOLDER/webs/
 cp /koolshare/webs/Main_SsLocal_Content.asp $TARGET_FOLDER/webs/

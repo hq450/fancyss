@@ -2016,6 +2016,73 @@ detect(){
 	fi
 }
 
+mount_dnsmasq(){
+	killall dnsmasq >/dev/null 2>&1
+	mount --bind /koolshare/bin/dnsmasq /usr/sbin/dnsmasq
+	#service restart_dnsmasq >/dev/null 2>&
+}
+
+umount_dnsmasq(){
+	killall dnsmasq >/dev/null 2>&1
+	umount /usr/sbin/dnsmasq
+}
+
+
+mount_dnsmasq_now(){
+	MOUNTED=`mount|grep -o dnsmasq`
+	case $ss_basic_dnsmasq_fastlookup in
+	0)
+		if [ -n "$MOUNTED" ];then
+			echo_date "【dnsmasq替换】：从dnsmasq-fastlookup切换为原版dnsmasq"
+			umount_dnsmasq
+		fi
+		;;
+	1|3)
+		if [ -n "$MOUNTED" ];then
+			echo_date "【dnsmasq替换】：dnsmasq-fastlookup已经替换过了！"
+		else
+			echo_date "【dnsmasq替换】：用dnsmasq-fastlookup替换原版dnsmasq！"
+			mount_dnsmasq
+		fi
+		;;
+	2)
+		if [ -L "/jffs/configs/cdn.conf" ];then
+			if [ -z "$MOUNTED" ];then
+				echo_date "【dnsmasq替换】：检测到cdn.conf，用dnsmasq-fastlookup替换原版dnsmasq！"
+				mount_dnsmasq
+			fi
+		else
+			if [ -n "$MOUNTED" ];then
+				echo_date "【dnsmasq替换】：没有检测到cdn.conf，从dnsmasq-fastlookup切换为原版dnsmasq"
+				umount_dnsmasq
+			else
+				echo_date "【dnsmasq替换】：没有检测到cdn.conf，不替换dnsmasq-fastlookup"
+			fi
+		fi
+		;;
+	esac
+}
+
+umount_dnsmasq_now(){
+	MOUNTED=`mount|grep -o dnsmasq`
+	case $ss_basic_dnsmasq_fastlookup in
+	0|1|2)
+		if [ -n "$MOUNTED" ];then
+			echo_date "【dnsmasq替换】：从dnsmasq-fastlookup切换为原版dnsmasq"
+			umount_dnsmasq
+		fi
+		;;
+	3)
+		if [ -n "$MOUNTED" ];then
+			echo_date "【dnsmasq替换】：dnsmasq-fastlookup已经替换过了，插件关闭后保持替换！"
+		else
+			echo_date "【dnsmasq替换】：用dnsmasq-fastlookup替换原版dnsmasq！且插件关闭后保持替换！"
+			mount_dnsmasq
+		fi
+		;;
+	esac
+}
+
 disable_ss(){
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
@@ -2028,6 +2095,7 @@ disable_ss(){
 	remove_ss_trigger_job
 	remove_ss_reboot_job
 	restore_conf
+	umount_dnsmasq_now
 	restart_dnsmasq
 	flush_nat
 	kill_cron_job
@@ -2075,6 +2143,7 @@ apply_ss(){
 	#===load nat start===
 	load_nat
 	#===load nat end===
+	mount_dnsmasq_now
 	restart_dnsmasq
 	auto_start
 	write_cron_job
