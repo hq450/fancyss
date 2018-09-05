@@ -4859,7 +4859,7 @@ taobao.com
 													<td>
 														<select	id="ss_basic_dnsmasq_fastlookup" name="ss_basic_dnsmasq_fastlookup" style="margin:0px 0px 0px 2px;" class="input_option" onclick="update_visibility();">
 															<option	value="0" selected>【0】不替换</option>
-															<option	value="1" selected>【1】插件开启后替换，插件关闭后恢复原版dnsmasq</option>
+															<option	value="1">【1】插件开启后替换，插件关闭后恢复原版dnsmasq</option>
 															<option	value="2">【2】在用到cdn.conf时替换，插件关闭后恢复原版dnsmasq</option>
 															<option	value="3">【3】插件开启后替换，插件关闭后保持替换，不恢复原版dnsmasq</option>
 														</select>
