@@ -1304,6 +1304,10 @@ creat_v2ray_json(){
 		echo "$ss_basic_v2ray_json" | base64_decode > "$V2RAY_CONFIG_FILE_TMP"
 
 		OUTBOUND=`cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound`
+		#JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.log)'`
+		#INBOUND_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
+		#INBOUND_DETOUR_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
+		
 		local TEMPLATE="{
 						\"log\": {
 							\"access\": \"/dev/null\",
@@ -1337,6 +1341,8 @@ creat_v2ray_json(){
 		#local TEMPLATE=`cat /koolshare/ss/rules/v2ray_template.json`
 		echo_date 解析V2Ray配置文件...
 		echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbound: $args}' > "$V2RAY_CONFIG_FILE"
+		#echo $TEMPLATE | jq --argjson args "$JSON_INFO" '. + $args' > "$V2RAY_CONFIG_FILE"
+		
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
 		#close_in_five
 		
