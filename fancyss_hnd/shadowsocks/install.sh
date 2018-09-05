@@ -27,6 +27,20 @@ if [ "$ss_basic_enable" == "1" ];then
 	[ -f "/koolshare/ss/stop.sh" ] && sh /koolshare/ss/stop.sh stop_all || sh /koolshare/ss/ssconfig.sh stop
 fi
 
+if [ -n "`ls /koolshare/ss/postscripts/P*.sh 2>/dev/null`" ];then
+	echo_date 备份触发脚本!
+	find /koolshare/ss/postscripts -name "P*.sh" | xargs -i mv {} -f /tmp/ss_backup
+fi
+
+# 如果dnsmasq是mounted状态，先恢复
+MOUNTED=`mount|grep -o dnsmasq`
+if [ -n "$MOUNTED" ];then
+	echo_date 恢复dnsmasq-fastlookup为原版dnsmasq
+	killall dnsmasq >/dev/null 2>&1
+	umount /usr/sbin/dnsmasq
+	service restart_dnsmasq >/dev/null 2>&1
+fi
+
 #升级前先删除无关文件
 echo_date 清理旧文件
 rm -rf /koolshare/ss/*
@@ -56,6 +70,8 @@ rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/haveged
+rm -rf /koolshare/bin/https_dns_proxy
+rm -rf /koolshare/bin/dnsmassq
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/all.png
@@ -93,8 +109,13 @@ chmod 755 /koolshare/ss/*
 chmod 755 /koolshare/scripts/ss*
 chmod 755 /koolshare/bin/*
 
-echo_date 创建一些二进制文件的软链接！
+if [ -n "`ls /tmp/ss_backup/P*.sh 2>/dev/null`" ];then
+	echo_date 恢复触发脚本!
+	mkdir -p /koolshare/ss/postscripts
+	find /tmp/ss_backup -name "P*.sh" | xargs -i mv {} -f /koolshare/ss/postscripts
+fi
 
+echo_date 创建一些二进制文件的软链接！
 [ ! -L "/koolshare/bin/rss-tunnel" ] && ln -sf /koolshare/bin/rss-local /koolshare/bin/rss-tunnel
 [ ! -L "/koolshare/init.d/S99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/S99shadowsocks.sh
 [ ! -L "/koolshare/init.d/N99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/N99shadowsocks.sh

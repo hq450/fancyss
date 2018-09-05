@@ -52,6 +52,7 @@ backup_tar(){
 	cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/haveged $TARGET_FOLDER/bin/
+	cp /koolshare/bin/dnsmasq $TARGET_FOLDER/bin/
 	cp /koolshare/webs/Module_shadowsocks*.asp $TARGET_FOLDER/webs/
 	cp /koolshare/res/icon-shadowsocks.png $TARGET_FOLDER/res/
 	cp /koolshare/res/ss-menu.js $TARGET_FOLDER/res/
