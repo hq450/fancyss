@@ -69,6 +69,7 @@ update_ss2(){
 	echo_date "历史版本下载地址：https://github.com/hq450/fancyss/tree/master/fancyss_arm/history"
 	echo_date "下载后请将下载包名字改为：shadowsocks.tar.gz，再使用离线安装进行安装"
 	sleep 1
+	echo XU6J03M6
 	exit
 }
 
