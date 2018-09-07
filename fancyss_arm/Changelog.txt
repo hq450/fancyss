@@ -1,5 +1,10 @@
 Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 ===========================================
+4.1.0 （尚未推送）
+   - add	【更新管理】订阅功能添加v2ray支持；
+   - add	【更新管理】链接解析添加节点支持vmess://链接；
+   - update	同步安装包内置v2ray二进制版本v3.39；
+
 4.0.9
    - add	【附加功能】内添加dnsmasq-fastlookup替换功能，可以将原来遍历查询的dnsmasq替换为hash查询的dnsmasq，极大的降低cpu消耗，加快dns查询速度。
    		相关链接：https://www.v2ex.com/t/172010，http://koolshare.cn/thread-65484-1-1.html
