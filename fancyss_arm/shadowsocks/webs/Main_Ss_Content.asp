@@ -4439,17 +4439,17 @@ taobao.com
 											<table id="conf_table1" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<thead>
 												<tr>
-													<td colspan="3">SSR订阅设置</td>
+													<td colspan="3">SSR/v2ray订阅设置</td>
 												</tr>
 												</thead>
 												<tr>
-													<th width="35%">订阅地址管理</th>
+													<th width="35%">订阅地址管理（支持SSR/v2ray）</th>
 													<td>
-														<textarea placeholder="填入需要订阅的地址，多个地址分行填写" rows=5 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_online_links" name="ss_online_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+														<textarea placeholder="填入需要订阅的地址，多个地址分行填写" rows=8 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_online_links" name="ss_online_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 													</td>
 												</tr>
 												<tr>
-													<th width="35%">订阅节点模式设定</th>
+													<th width="35%">订阅节点模式设定（SSR/v2ray）</th>
 													<td>
 														<select id="ssr_subscribe_mode" name="ssr_subscribe_mode" class="input_option" onchange="update_visibility();" >
 															<option value="1">【1】 gfwlist模式</option>
@@ -4461,7 +4461,7 @@ taobao.com
 													</td>
 												</tr>
 												<tr>
-													<th width="35%">订阅节点混淆参数设定</th>
+													<th width="35%">订阅节点混淆参数设定（SSR）</th>
 													<td>
 														<select id="ssr_subscribe_obfspara" name="ssr_subscribe_obfspara" class="input_option" onchange="update_visibility();" >
 															<option value="0">留空</option>
@@ -4472,11 +4472,11 @@ taobao.com
 													</td>
 												</tr>
 												<tr>
-													<th width="35%">下载订阅时走SS网络</th>
+													<th width="35%">下载订阅时走SS/SSR/v2ray代理网络</th>
 													<td>
 														<select id="ss_basic_online_links_goss" name="ss_basic_online_links_goss" class="input_option" onchange="update_visibility();" >
-															<option value="0" selected="">不走SS</option>
-															<option value="1">走SS</option>
+															<option value="0" selected="">不走代理</option>
+															<option value="1">走代理</option>
 														</select>
 													</td>
 												</tr>
@@ -4520,13 +4520,13 @@ taobao.com
 											<table style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<thead>
 												<tr>
-													<td colspan="3">通过SS/SSR链接添加服务器</td>
+													<td colspan="3">通过SS/SSR/vmess链接添加服务器</td>
 												</tr>
 												</thead>
 												<tr>
-													<th width="35%">SS/SSR链接</th>
+													<th width="35%">SS/SSR/vmess链接</th>
 													<td>
-														<textarea placeholder="填入需要解析的以ss://或者ssr://开头的链接，多个分行填写" rows=9 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_base64_links" name="ss_base64_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+														<textarea placeholder="填入以ss://或者ssr://或者vmess://开头的链接，多个链接请分行填写" rows=9 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_base64_links" name="ss_base64_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 													</td>
 												</tr>
 												<tr>
