@@ -219,8 +219,9 @@ function save() {
 	var dbus = {};
 	//key define
 	var params_input = ["ssconf_basic_node", "ss_basic_mode", "ss_basic_server", "ss_basic_port", "ss_basic_method", "ss_basic_koolgame_udp", "ss_basic_ss_obfs", "ss_basic_ss_obfs_host", "ss_basic_rss_protocol", "ss_basic_rss_protocol_param", "ss_basic_rss_obfs", "ss_basic_rss_obfs_param", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "$ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_base64_links", "ss_basic_refreshrate", "ss_acl_default_port", "ss_online_action", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_basic_v2ray_uuid", "ss_basic_v2ray_alterid", "ss_basic_v2ray_security", "ss_basic_v2ray_network", "ss_basic_v2ray_headtype_tcp", "ss_basic_v2ray_headtype_kcp", "ss_basic_v2ray_network_path", "ss_basic_v2ray_network_host", "ss_basic_v2ray_network_security", "ss_basic_v2ray_mux_concurrency", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_tri_reboot_policy", "ss_basic_dnsmasq_fastlookup"];
-	var params_check = ["ss_basic_enable", "ss_basic_use_kcp", "ss_basic_gfwlist_update", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_v2ray_use_json", "ss_basic_v2ray_mux_enable"];
-	var params_base64 = ["ss_basic_password", "ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
+	var params_check = ["ss_basic_enable", "ss_basic_use_kcp", "ss_basic_gfwlist_update", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_v2ray_use_json", "ss_basic_v2ray_mux_enable"];
+	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
+	var params_base64_b = ["ss_basic_password", "ss_basic_custom"];
 	// collect data from input
 	for (var i = 0; i < params_input.length; i++) {
 		if (E(params_input[i])) {
@@ -231,26 +232,23 @@ function save() {
 	for (var i = 0; i < params_check.length; i++) {
 		dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
 	}
-	// data need base64 encode
-	for (var i = 0; i < params_base64.length; i++) {
-		if (!E(params_base64[i]).value) {
-			dbus[params_base64[i]] = "";
+	// data need base64 encode:format a with "."
+	for (var i = 0; i < params_base64_a.length; i++) {
+		if (!E(params_base64_a[i]).value || E(params_base64_a[i]).value.indexOf(".") != -1) {
+			dbus[params_base64_a[i]] = Base64.encode(E(params_base64_a[i]).value);
 		} else {
-			if (E(params_base64[i]).value.indexOf(".") != -1) {
-				dbus[params_base64[i]] = Base64.encode(E(params_base64[i]).value);
-			} else {
-				//乱码了
-				dbus[params_base64[i]] = "";
-			}
-			dbus["ss_basic_password"] = Base64.encode(E("ss_basic_password").value);
-			dbus["ss_basic_custom"] = Base64.encode(E("ss_basic_custom").value);
+			//乱码了或者格式不对！
+			console.log("格式不正确")
+			dbus[params_base64_a[i]] = "";
 		}
+	}
+	// data need base64 encode, format b with plain text
+	for (var i = 0; i < params_base64_b.length; i++) {
+		dbus[params_base64_b[i]] = Base64.encode(E(params_base64_b[i]).value);
 	}
 	// for v2ray json, we need to process first: parse vmess:// format, encode json format
 	if(E('ss_basic_v2ray_json').value.indexOf("vmess://") != -1){
 		var vmess_node = JSON.parse(Base64.decode(E('ss_basic_v2ray_json').value.split("//")[1]));
-		console.log("use v2ray vmess://")
-		console.log(vmess_node)
 		dbus["ss_basic_server"] = vmess_node.add;
 		dbus["ss_basic_port"] = vmess_node.port;
 		dbus["ss_basic_v2ray_uuid"] = vmess_node.id;
@@ -274,26 +272,23 @@ function save() {
 		dbus["ss_basic_v2ray_use_json"] = 0;
 		dbus["ss_basic_v2ray_json"] = "";
 	}else{
-		console.log("use v2ray json")
 		dbus["ss_basic_v2ray_json"] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
 	}
 
-	// write node data under using from the main pannel incase of data change
+	// node data: write node data under using from the main pannel incase of data change
 	var params = ["server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
 	for (var i = 0; i < params.length; i++) {
 		dbus["ssconf_basic_" + params[i] + "_" + node_sel] = E("ss_basic_" + params[i]).value;
 	}
-	// checkbox
+	// node data: checkbox
 	dbus["ssconf_basic_use_kcp_" + node_sel] = E("ss_basic_use_kcp").checked ? '1' : '0';
 	dbus["ssconf_basic_v2ray_use_json_" + node_sel] = E("ss_basic_v2ray_use_json").checked ? '1' : '0';
 	dbus["ssconf_basic_v2ray_mux_enable_" + node_sel] = E("ss_basic_v2ray_mux_enable").checked ? '1' : '0';
-	// base64
+	// node data: base64
 	dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 	// for v2ray json, we need to process first: parse vmess:// format, encode json format
 	if(E('ss_basic_v2ray_json').value.indexOf("vmess://") != -1){
 		var vmess_node = JSON.parse(Base64.decode(E('ss_basic_v2ray_json').value.split("//")[1]));
-		console.log("use v2ray vmess://")
-		console.log(vmess_node)
 		dbus["ssconf_basic_server_" + node_sel] = vmess_node.add;
 		dbus["ssconf_basic_port_" + node_sel] = vmess_node.port;
 		dbus["ssconf_basic_v2ray_uuid_" + node_sel] = vmess_node.id;
@@ -317,20 +312,20 @@ function save() {
 		dbus["ssconf_basic_v2ray_use_json_" + node_sel] = 0;
 		dbus["ssconf_basic_v2ray_json"] = "";
 	}else{
-		console.log("use v2ray json")
 		dbus["ssconf_basic_v2ray_json_" + node_sel] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
 	}
-	
 	// collect values in acl table
 	maxid = parseInt($("#ACL_table > tbody > tr:eq(-2) > td:nth-child(2) > input").attr("id").split("_")[3]);
-	for ( var i = 1; i <= maxid; ++i ) {
-		if (E("ss_acl_name_" + i)){
-			dbus["ss_acl_name_" + i] = E("ss_acl_name_" + i).value;
-			dbus["ss_acl_mode_" + i] = E("ss_acl_mode_" + i).value;
-			dbus["ss_acl_port_" + i] = E("ss_acl_port_" + i).value;
+	if(maxid){
+		for ( var i = 1; i <= maxid; ++i ) {
+			if (E("ss_acl_name_" + i)){
+				dbus["ss_acl_name_" + i] = E("ss_acl_name_" + i).value;
+				dbus["ss_acl_mode_" + i] = E("ss_acl_mode_" + i).value;
+				dbus["ss_acl_port_" + i] = E("ss_acl_port_" + i).value;
+			}
 		}
 	}
-	// adjust some value
+	// adjust some value when switch node between ss ssr v2ray koolgame
 	if (typeof(db_ss["ssconf_basic_rss_protocol_" + node_sel]) != "undefined"){
 		var remove_ssr = [ "ss_obfs", "ss_obfs_host", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 		//console.log("use ssr");
@@ -387,7 +382,30 @@ function save() {
 	} else {
 		db_ss["ss_basic_action"] = "0";
 	}
-	push_data("ss_config.sh", "start",  dbus);
+	// 对象db_ss是已经存在skipd中的，对象dbus是要存进去的
+	// 1 做一个检测，把dbus中与db_ss相同的值给剔除掉
+	// 2 并且，如果一个field在db_ss中是没有（undefined），并且在dbus中是空值（""）的话，也需要剔除掉
+	// 3 两次剔除后剩下的对象用于提交，减少skipd数据写入量
+	// console.log("db_ss:", db_ss);
+	// console.log("dbus:", dbus);
+	var post_dbus = {};
+	for (var key in dbus) {
+		//console.log(key);
+		if(db_ss[key] && dbus[key] && db_ss[key] == dbus[key]){
+			//console.log("0", key, db_ss[key], dbus[key]);
+			continue;
+		}else if(db_ss[key] == undefined && (dbus[key] == "")){
+			//console.log("1", key, db_ss[key], dbus[key]);
+			continue;
+		}else{
+			//console.log("2", key, db_ss[key], dbus[key]);
+			post_dbus[key] = dbus[key];
+		}
+	}
+
+	console.log("post_dbus", post_dbus);
+	
+	push_data("ss_config.sh", "start",  post_dbus);
 }
 
 function push_data(script, arg, obj){
