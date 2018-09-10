@@ -1,7 +1,7 @@
 #!/bin/sh
 # 导入skipd数据
 eval `dbus export ss`
-
+ss_basic_dnslookup_server="114.114.114.114"
 # 引用环境变量等
 source /koolshare/scripts/base.sh
 username=`nvram get http_username`

@@ -1,5 +1,10 @@
 Koolshare Asuswrt-Merlin shadowsocks Changelog
 ===========================================
+1.4.2 （尚未推送）
+   - add	添加v2ray订阅ver1格式的支持，现在不会再出现因检测到旧的v2ray配置而订阅不到节点的情况；
+   - update	用usleep替换sleep，缩短订阅节点的时间；
+   - fix	修复负载均衡模式下，使用域名作为节点解析错误的问题；
+
 1.4.1
    - add	【更新管理】订阅功能添加v2ray支持；
    - add	【更新管理】链接解析添加节点支持vmess://链接；
