@@ -513,6 +513,7 @@ start_dns(){
 		elif [ "$ss_basic_type" == "3" ];then
 			echo_date V2Ray下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
+			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
 		fi
@@ -554,7 +555,7 @@ start_dns(){
 		else
 			echo_date $(get_type_name $ss_basic_type)下不支持v2ray dns，改用dns2socks！
 			dbus set ss_foreign_dns=3
-			[ "$ss_basic_type" != "3" ] && start_sslocal
+			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
 		fi
@@ -567,6 +568,7 @@ start_dns(){
 		else
 			echo_date 非回国模式，国外dns不能使用，自动切换到dns2socks方案。
 			dbus set ss_foreign_dns=3
+			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
 		fi
