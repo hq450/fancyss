@@ -544,7 +544,7 @@ start_dns(){
 			# ss服务器可能是域名且没有正确解析
 			ss_real_server_ip="8.8.8.8"
 		fi
-		https_dns_proxy -u nobody -p 7913 -b 1.1.1.1,1.0.0.1 -e $ss_real_server_ip/16 -r "https://cloudflare-dns.com/dns-query?ct=application/dns-json&" -d
+		https_dns_proxy -u nobody -p 7913 -b 8.8.8.8,1.1.1.1,8.8.4.4,1.0.0.1,145.100.185.15,145.100.185.16,185.49.141.37 -e $ss_real_server_ip/16 -r "https://cloudflare-dns.com/dns-query?ct=application/dns-json&" -d
 	fi
 	
 	# start v2ray DNS_PORT
@@ -966,7 +966,6 @@ start_ss_redir(){
 		if [ "$ss_basic_ss_obfs" == "0" ];then
 			BIN=ss-redir
 			ARG_OBFS=""
-
 		else
 			BIN=ss-redir
 		fi
