@@ -443,7 +443,7 @@ start_dns(){
 	fi
 	
 	# Start ss-local
-	[ "$ss_basic_type" != "3" ] && start_sslocal
+	# [ "$ss_basic_type" != "3" ] && start_sslocal
 	
 	# Start cdns
 	if [ "$ss_foreign_dns" == "1" ];then
@@ -493,6 +493,7 @@ start_dns(){
 	# Start DNS2SOCKS (default)
 	if [ "$ss_foreign_dns" == "3" ] || [ -z "$ss_foreign_dns" ];then
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
+		start_sslocal
 		echo_date 开启dns2socks，用于dns解析...
 		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
 	fi
@@ -519,6 +520,7 @@ start_dns(){
 	
 	#start chinadns1
 	if [ "$ss_foreign_dns" == "5" ];then
+		start_sslocal
 		echo_date 开启dns2socks，用于chinadns1上游...
 		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 > /dev/null 2>&1 &
 		echo_date 开启chinadns1，用于dns解析...

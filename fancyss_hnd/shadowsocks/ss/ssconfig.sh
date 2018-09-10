@@ -443,7 +443,7 @@ start_dns(){
 	fi
 	
 	# Start ss-local
-	[ "$ss_basic_type" != "3" ] && start_sslocal
+	# [ "$ss_basic_type" != "3" ] && start_sslocal
 	
 	# Start cdns
 	if [ "$ss_foreign_dns" == "1" ];then
@@ -493,6 +493,7 @@ start_dns(){
 	# Start DNS2SOCKS (default)
 	if [ "$ss_foreign_dns" == "3" ] || [ -z "$ss_foreign_dns" ];then
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
+		start_sslocal
 		echo_date 开启dns2socks，用于dns解析...
 		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
 	fi
@@ -519,6 +520,7 @@ start_dns(){
 	
 	#start chinadns1
 	if [ "$ss_foreign_dns" == "5" ];then
+		start_sslocal
 		echo_date 开启dns2socks，用于chinadns1上游...
 		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 > /dev/null 2>&1 &
 		echo_date 开启chinadns1，用于dns解析...
@@ -1272,6 +1274,10 @@ creat_v2ray_json(){
 		echo "$ss_basic_v2ray_json" | base64_decode > "$V2RAY_CONFIG_FILE_TMP"
 
 		OUTBOUND=`cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound`
+		#JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.log)'`
+		#INBOUND_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
+		#INBOUND_DETOUR_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
+		
 		local TEMPLATE="{
 						\"log\": {
 							\"access\": \"/dev/null\",
@@ -1305,6 +1311,8 @@ creat_v2ray_json(){
 		#local TEMPLATE=`cat /koolshare/ss/rules/v2ray_template.json`
 		echo_date 解析V2Ray配置文件...
 		echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbound: $args}' > "$V2RAY_CONFIG_FILE"
+		#echo $TEMPLATE | jq --argjson args "$JSON_INFO" '. + $args' > "$V2RAY_CONFIG_FILE"
+		
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
 		#close_in_five
 		
