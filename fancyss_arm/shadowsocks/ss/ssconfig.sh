@@ -668,22 +668,30 @@ create_dnsmasq_conf(){
 		do
 			detect_domain "$wan_white_domain"
 			if [ "$?" == "0" ];then
-				echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
-				echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
+				# 回国模式下，用外国DNS，否则用中国DNS。
+				if [ "$ss_basic_mode" != "6" ];then
+					echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
+					echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
+				else
+					echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$ss_direct_user/g" >> /tmp/wblist.conf
+					echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
+				fi
 			else
 				echo_date ！！检测到域名白名单内的【"$wan_white_domain"】不是域名格式！！此条将不会添加！！
 			fi
 		done
 	fi
 	
-	# apple 和 microsoft不能走ss
-	echo "#for special site" >> /tmp/wblist.conf
-	for wan_white_domain2 in "apple.com" "microsoft.com"
-	do 
-		echo "$wan_white_domain2" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
-		echo "$wan_white_domain2" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
-	done
-	
+	# 非回国模式下，apple 和 microsoft不能走ss
+	if [ "$ss_basic_mode" != "6" ];then
+		echo "#for special site" >> /tmp/wblist.conf
+		for wan_white_domain2 in "apple.com" "microsoft.com"
+		do 
+			echo "$wan_white_domain2" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
+			echo "$wan_white_domain2" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
+		done
+	fi
+
 	# append black domain list, through ss
 	wanblackdomain=$(echo $ss_wan_black_domain | base64_decode)
 	if [ -n "$ss_wan_black_domain" ];then
