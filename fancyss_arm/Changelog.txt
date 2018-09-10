@@ -1,8 +1,12 @@
 Koolshare Asuswrt-Merlin shadowsocks for arm router Changelog
 ===========================================
-4.1.0 （尚未推送）
+4.1.0
    - add	【更新管理】订阅功能添加v2ray支持；
    - add	【更新管理】链接解析添加节点支持vmess://链接；
+   - fix	修复回国模式的黑白名单的一些问题(#63)；thx to huming2207；
+   - update	为了减少skipd的数据写量，现在只有更改过的参数才会提交到skipd；
+   - update	更新https_dns_proxy中的解析doh域名的dns；
+   - update	现在端口为23456的socks5代理会按需启动，而不是常开(#60)；
    - update	同步安装包内置v2ray二进制版本v3.39；
 
 4.0.9
