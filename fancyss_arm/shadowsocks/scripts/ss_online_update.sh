@@ -166,7 +166,7 @@ decode_url_link(){
 }
 
 add_ssr_servers(){
-	sleep 1
+	usleep 250000
 	ssrindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
 	dbus set ssconf_basic_name_$ssrindex=$remarks
 	[ -z "$1" ] && dbus set ssconf_basic_group_$ssrindex=$group
@@ -297,7 +297,6 @@ update_config(){
 get_v2ray_remote_config(){
 	decode_link="$1"
 	v2ray_group="$2"
-	
 	v2ray_v=$(echo "$decode_link" |jq -r .v)
 	v2ray_ps=$(echo "$decode_link" |jq -r .ps)
 	v2ray_add=$(echo "$decode_link" |jq -r .add)
@@ -306,15 +305,48 @@ get_v2ray_remote_config(){
 	v2ray_aid=$(echo "$decode_link" |jq -r .aid)
 	v2ray_net=$(echo "$decode_link" |jq -r .net)
 	v2ray_type=$(echo "$decode_link" |jq -r .type)
-	v2ray_path=$(echo "$decode_link" |jq -r .path)
-	v2ray_host=$(echo "$decode_link" |jq -r .host)
 	v2ray_tls_tmp=$(echo "$decode_link" |jq -r .tls)
-	[ -n "$v2ray_tls_tmp" ] && v2ray_tls="tls" || v2ray_tls="none"
+	[ "$v2ray_tls_tmp"x == "tls"x ] && v2ray_tls="tls" || v2ray_tls="none"
+	
+	if [ "$v2ray_v" == "2" ];then
+		#echo_date "new format"
+		v2ray_path=$(echo "$decode_link" |jq -r .path)
+		v2ray_host=$(echo "$decode_link" |jq -r .host)
+	else
+		#echo_date "old format"
+		case $v2ray_net in
+		tcp)
+			v2ray_host=$(echo "$decode_link" |jq -r .host)
+			v2ray_path=""
+			;;
+		kcp)
+			v2ray_host=""
+			v2ray_path=""
+			;;
+		ws)
+			v2ray_host_tmp=$(echo "$decode_link" |jq -r .host)
+			if [ -n "$v2ray_host_tmp" ];then
+				format_ws=`echo $v2ray_host_tmp|grep -E ";"`
+				if [ -n "$format_ws" ];then
+					v2ray_host=`echo $v2ray_host_tmp|cut -d ";" -f1`
+					v2ray_path=`echo $v2ray_host_tmp|cut -d ";" -f1`
+				else
+					v2ray_host=""
+					v2ray_path=$v2ray_host
+				fi
+			fi
+			;;
+		h2)
+			v2ray_host=""
+			v2ray_path=$(echo "$decode_link" |jq -r .path)
+			;;
+		esac
+	fi
 
 	#把全部服务器节点编码后写入文件 /usr/share/shadowsocks/serverconfig/all_onlineservers
 	[ -n "$v2ray_group" ] && group_base64=`echo $v2ray_group | base64_encode | sed 's/ -//g'`
 	[ -n "$v2ray_add" ] && server_base64=`echo $v2ray_add | base64_encode | sed 's/ -//g'`	
-	[ -n "$v2ray_group" ] && [ -n "$v2ray_ps" ] && echo $server_base64 $group_base64 >> /tmp/all_onlineservers
+	[ -n "$v2ray_group" ] && [ -n "$v2ray_add" ] && echo $server_base64 $group_base64 >> /tmp/all_onlineservers
 
 	#echo ------
 	#echo v2ray_v: $v2ray_v
@@ -328,50 +360,43 @@ get_v2ray_remote_config(){
 	#echo v2ray_path: $v2ray_path
 	#echo v2ray_tls: $v2ray_tls
 	#echo ------
-	[ "$v2ray_v" == "2" ] && return 0 || return 1
+	
+	[ -z "$v2ray_ps" -o -z "$v2ray_add" -o -z "$v2ray_port" -o -z "$v2ray_id" -o -z "$v2ray_aid" -o -z "$v2ray_net" -o -z "$v2ray_type" ] && return 1 || return 0
 }
 
 add_v2ray_servers(){
-	sleep 1
+	usleep 250000
 	v2rayindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
-	if [ "$v2ray_v" == "2" ];then
-		# new format
-		[ -z "$1" ] && dbus set ssconf_basic_group_$v2rayindex=$v2ray_group
-		dbus set ssconf_basic_type_$v2rayindex=3
-		dbus set ssconf_basic_v2ray_mux_enable_$v2rayindex=0
-		dbus set ssconf_basic_v2ray_use_json_$v2rayindex=0
-		dbus set ssconf_basic_v2ray_security_$v2rayindex="auto"
-		dbus set ssconf_basic_mode_$v2rayindex=$ssr_subscribe_mode
-		dbus set ssconf_basic_name_$v2rayindex=$v2ray_ps
-		dbus set ssconf_basic_port_$v2rayindex=$v2ray_port
-		dbus set ssconf_basic_server_$v2rayindex=$v2ray_add
-		dbus set ssconf_basic_v2ray_uuid_$v2rayindex=$v2ray_id
-		dbus set ssconf_basic_v2ray_alterid_$v2rayindex=$v2ray_aid
-		dbus set ssconf_basic_v2ray_network_security_$v2rayindex=$v2ray_tls
-		dbus set ssconf_basic_v2ray_network_$v2rayindex=$v2ray_net
-		case $v2ray_net in
-		tcp)
-			# tcp协议设置【 tcp伪装类型 (type)】和【伪装域名 (host)】
-			dbus set ssconf_basic_v2ray_headtype_tcp_$v2rayindex=$v2ray_type
-			[ -n "$v2ray_host" ] && dbus set ssconf_basic_v2ray_network_host_$v2rayindex=$v2ray_host
-			;;
-		kcp)
-			# kcp协议设置【 kcp伪装类型 (type)】
-			dbus set ssconf_basic_v2ray_headtype_kcp_$v2rayindex=$v2ray_type
-			;;
-		ws|h2)
-			# ws/h2协议设置【 伪装域名 (host))】和【路径 (path)】
-			[ -n "$v2ray_host" ] && dbus set ssconf_basic_v2ray_network_host_$v2rayindex=$v2ray_host
-			[ -n "$v2ray_path" ] && dbus set ssconf_basic_v2ray_network_path_$v2rayindex=$v2ray_path
-			;;
-		esac
-		
-		echo_date v2ray节点：新增加 【$v2ray_ps】 到节点列表第 $v2rayindex 位。
-		
-	#elif [ "$v2ray_v"x == "null"x ];then
-	else
-		echo_date 检测到旧的v2ray配置！暂不支持旧的v2ray配置订阅！跳过！
-	fi
+	[ -z "$1" ] && dbus set ssconf_basic_group_$v2rayindex=$v2ray_group
+	dbus set ssconf_basic_type_$v2rayindex=3
+	dbus set ssconf_basic_v2ray_mux_enable_$v2rayindex=0
+	dbus set ssconf_basic_v2ray_use_json_$v2rayindex=0
+	dbus set ssconf_basic_v2ray_security_$v2rayindex="auto"
+	dbus set ssconf_basic_mode_$v2rayindex=$ssr_subscribe_mode
+	dbus set ssconf_basic_name_$v2rayindex=$v2ray_ps
+	dbus set ssconf_basic_port_$v2rayindex=$v2ray_port
+	dbus set ssconf_basic_server_$v2rayindex=$v2ray_add
+	dbus set ssconf_basic_v2ray_uuid_$v2rayindex=$v2ray_id
+	dbus set ssconf_basic_v2ray_alterid_$v2rayindex=$v2ray_aid
+	dbus set ssconf_basic_v2ray_network_security_$v2rayindex=$v2ray_tls
+	dbus set ssconf_basic_v2ray_network_$v2rayindex=$v2ray_net
+	case $v2ray_net in
+	tcp)
+		# tcp协议设置【 tcp伪装类型 (type)】和【伪装域名 (host)】
+		dbus set ssconf_basic_v2ray_headtype_tcp_$v2rayindex=$v2ray_type
+		[ -n "$v2ray_host" ] && dbus set ssconf_basic_v2ray_network_host_$v2rayindex=$v2ray_host
+		;;
+	kcp)
+		# kcp协议设置【 kcp伪装类型 (type)】
+		dbus set ssconf_basic_v2ray_headtype_kcp_$v2rayindex=$v2ray_type
+		;;
+	ws|h2)
+		# ws/h2协议设置【 伪装域名 (host))】和【路径 (path)】
+		[ -n "$v2ray_host" ] && dbus set ssconf_basic_v2ray_network_host_$v2rayindex=$v2ray_host
+		[ -n "$v2ray_path" ] && dbus set ssconf_basic_v2ray_network_path_$v2rayindex=$v2ray_path
+		;;
+	esac
+	echo_date v2ray节点：新增加 【$v2ray_ps】 到节点列表第 $v2rayindex 位。
 }
 
 update_v2ray_config(){
@@ -528,7 +553,7 @@ remove_node_gap(){
 				[ -n "$(dbus get ssconf_basic_v2ray_mux_concurrency_$nu)" ] && dbus set ssconf_basic_v2ray_mux_concurrency_"$y"="$(dbus get ssconf_basic_v2ray_mux_concurrency_$nu)" && dbus remove ssconf_basic_v2ray_mux_concurrency_$nu
 				[ -n "$(dbus get ssconf_basic_v2ray_json_$nu)" ] && dbus set ssconf_basic_v2ray_json_"$y"="$(dbus get ssconf_basic_v2ray_json_$nu)" && dbus remove ssconf_basic_v2ray_json_$nu
 				[ -n "$(dbus get ssconf_basic_type_$nu)" ] && dbus set ssconf_basic_type_"$y"="$(dbus get ssconf_basic_type_$nu)" && dbus remove ssconf_basic_type_$nu
-				sleep 1
+				usleep 250000
 				# change node nu
 				if [ "$nu" == "$ssconf_basic_node" ];then
 					dbus set ssconf_basic_node="$y"
@@ -699,8 +724,8 @@ get_oneline_rule_now(){
 					decode_link=$(decode_url_link $link)
 					decode_link=$(echo $decode_link|jq -c .)
 					if [ -n "$decode_link" ];then
-						get_v2ray_remote_config $decode_link $v2ray_group_tmp
-						[ "$?" == "0" ] && update_v2ray_config || echo_date "检测到旧的v2ray配置，跳过！"
+						get_v2ray_remote_config "$decode_link" "$v2ray_group_tmp"
+						[ "$?" == "0" ] && update_v2ray_config || echo_date "检测到一个错误节点，已经跳过！"
 					else
 						echo_date "解析失败！！！"
 					fi
@@ -738,7 +763,7 @@ start_update(){
 	rm -rf /tmp/all_onlineservers >/dev/null 2>&1
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
-	sleep 1
+	usleep 250000
 	echo_date 收集本地节点名到文件
 	LOCAL_NODES=`dbus list ssconf_basic_|grep _group_|cut -d "_" -f 4|cut -d "=" -f 1|sort -n`
 	if [ -n "$LOCAL_NODES" ];then
@@ -778,21 +803,21 @@ start_update(){
 			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
 			let DEL_SUBSCRIBE+=1
 			sleep 2
-			echo_date 退出订阅程序...
+			echo_date "退出订阅程序..."
 			;;
 		3)
 			echo_date "该订阅链接不包含任何节点信息！请检查你的服务商是否更换了订阅链接！"
 			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
 			let DEL_SUBSCRIBE+=1
 			sleep 2
-			echo_date 退出订阅程序...
+			echo_date "退出订阅程序..."
 			;;
 		1|*)
 			echo_date "下载订阅失败...请检查你的网络..."
 			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
 			let DEL_SUBSCRIBE+=1
 			sleep 2
-			echo_date 退出订阅程序...
+			echo_date "退出订阅程序..."
 			;;
 		esac
 	done
@@ -857,7 +882,7 @@ start_update(){
 					need_adjust=1
 				fi
 			done
-			sleep 1
+			usleep 250000
 			# 再次排序
 			if [ "$need_adjust" == "1" ];then
 				echo_date 因为进行了删除订阅节点操作，需要对节点顺序进行检查！
@@ -882,7 +907,7 @@ start_update(){
 			kill $sslocal  >/dev/null 2>&1
 		fi
 	fi
-	sleep 1
+	usleep 250000
 	echo_date "一点点清理工作..."
 	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
@@ -906,7 +931,7 @@ get_ss_config(){
 
 add() {
 	echo_date "==================================================================="
-	sleep 1
+	usleep 250000
 	echo_date 通过SS/SSR/v2ray链接添加节点...
 	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
