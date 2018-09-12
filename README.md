@@ -26,7 +26,7 @@ PS: arm机型的固件下载地址: [http://koolshare.cn/forum-96-1.html](http:/
 
 ----
 ### [fancyss_hnd](https://github.com/hq450/fancyss/tree/master/fancyss_hnd)
-**fancyss_hnd**离线安装包仅适用于merlin koolshare hnd平台机型改版固件（arm架构，linux内核版本：4.1.27，bcm490X系列cpu）
+**fancyss_hnd**离线安装包仅适用于asus/merlin koolshare hnd平台机型改版固件（arm架构，linux内核版本：4.1.27，bcm490X系列cpu）
 
 **fancyss_hnd**支持机型/固件：
  * [RT-AC86U merlin改版固件](http://koolshare.cn/thread-127878-1-1.html)
