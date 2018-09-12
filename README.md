@@ -1,5 +1,5 @@
 # fancyss - 科学上网
-Fancyss is a project providing tools to across the GFW on asuswrt/merlin based route. 
+Fancyss is a project providing tools to across the GFW on asuswrt/merlin based router. 
 
 此项目提供用于asuswrt/merlin路由器科学上网。
 
