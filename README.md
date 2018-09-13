@@ -8,7 +8,7 @@ todo
 
 # 机型/固件支持
 
-### [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
+## [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
 **fancyss_arm**离线安装包仅适用于merlin koolshare arm架构机型改版固件（arm架构，linux内核版本：2.6.36.4，，bcm470X系列cpu）
 
 **fancyss_arm**支持机型（需刷梅林koolshare改版固件）：
@@ -27,7 +27,7 @@ todo
 #### arm机型的固件下载地址: [http://koolshare.cn/forum-96-1.html](http://koolshare.cn/forum-96-1.html)
 
 ----
-### [fancyss_hnd](https://github.com/hq450/fancyss/tree/master/fancyss_hnd)
+## [fancyss_hnd](https://github.com/hq450/fancyss/tree/master/fancyss_hnd)
 **fancyss_hnd**离线安装包仅适用于asus/merlin koolshare hnd平台机型改版固件（arm架构，linux内核版本：4.1.27，bcm490X系列cpu）
 
 **fancyss_hnd**支持机型/固件：
