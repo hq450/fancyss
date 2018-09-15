@@ -71,7 +71,7 @@ detect(){
 		unset lock
 		exit 1
 	else
-		echo_date 检测到X7.7固件，支持订阅！
+		echo_date 检测到$firmware_version固件，支持订阅！
 	fi
 }
 
@@ -606,6 +606,9 @@ get_type_name() {
 get_oneline_rule_now(){
 	# ss订阅
 	ssr_subscribe_link="$1"
+	LINK_FORMAT=`echo "$ssr_subscribe_link" | grep -E "^http://|^https://"`
+	[ -z "$LINK_FORMAT" ] && return 4
+	
 	echo_date "开始更新在线订阅列表..." 
 	echo_date "开始下载订阅链接到本地临时文件，请稍等..."
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
@@ -807,6 +810,13 @@ start_update(){
 			;;
 		3)
 			echo_date "该订阅链接不包含任何节点信息！请检查你的服务商是否更换了订阅链接！"
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			let DEL_SUBSCRIBE+=1
+			sleep 2
+			echo_date "退出订阅程序..."
+			;;
+		4)
+			echo_date "订阅地址错误！检测到你输入的订阅地址并不是标准网址格式！"
 			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
 			let DEL_SUBSCRIBE+=1
 			sleep 2
