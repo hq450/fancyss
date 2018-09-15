@@ -47,6 +47,6 @@ todo
 **fancyss_mipsel**支持机型（需刷梅林koolshare改版固件）：
 * 华硕系列：`RT-N66U` `RT-AC66U（非RT-AC66U-B1）`
 
-#### hnd机型的科学上网离线包:[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel)
+#### mipsel机型的科学上网离线包:[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel)
 
 #### mipsel机型的固件下载地址: [http://koolshare.cn/forum-96-1.html](http://koolshare.cn/forum-96-1.html)
