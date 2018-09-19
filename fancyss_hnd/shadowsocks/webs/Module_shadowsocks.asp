@@ -202,7 +202,7 @@ function pop_tip(){
 }
 
 function isJSON(str) {
-	if (typeof str == 'string') {
+	if (typeof str == 'string' && str) {
 		try {
 			var obj = JSON.parse(str);
 			if (typeof obj == 'object' && obj) {
@@ -215,7 +215,7 @@ function isJSON(str) {
 			return false;
 		}
 	}
-	console.log('It is not a string!')
+	//console.log('It is not a string!')
 }
 
 function save() {
@@ -305,22 +305,24 @@ function save() {
 		dbus["ss_basic_v2ray_json"] = "";
 		dbus["ssconf_basic_v2ray_json"] = "";
 	}else{
-		if(isJSON(E('ss_basic_v2ray_json').value)){
-			if(E('ss_basic_v2ray_json').value.indexOf("outbound") != -1){
-				dbus["ss_basic_v2ray_json"] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
-				dbus["ssconf_basic_v2ray_json_" + node_sel] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
-				var param_v2 = ["server", "port", "v2ray_uuid", "v2ray_security", "v2ray_alterid", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_host", "v2ray_network_path", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency"];
-				for (var i = 0; i < param_v2.length; i++) {
-					dbus["ss_basic_" + param_v2[i]] = "";
-					dbus["ssconf_basic_" + param_v2[i] + "_" + node_sel] = "";
+		if (typeof(db_ss["ssconf_basic_v2ray_use_json_" + node_sel]) != "undefined"){
+			if(isJSON(E('ss_basic_v2ray_json').value)){
+				if(E('ss_basic_v2ray_json').value.indexOf("outbound") != -1){
+					dbus["ss_basic_v2ray_json"] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
+					dbus["ssconf_basic_v2ray_json_" + node_sel] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
+					var param_v2 = ["server", "port", "v2ray_uuid", "v2ray_security", "v2ray_alterid", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_host", "v2ray_network_path", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency"];
+					for (var i = 0; i < param_v2.length; i++) {
+						dbus["ss_basic_" + param_v2[i]] = "";
+						dbus["ssconf_basic_" + param_v2[i] + "_" + node_sel] = "";
+					}
+				}else{
+					alert("错误！你的json配置文件有误！\n正确格式请参考:https://www.v2ray.com/chapter_02/01_overview.html");
+					return false;
 				}
 			}else{
-				alert("错误！你的json配置文件有误！\n正确格式请参考:https://www.v2ray.com/chapter_02/01_overview.html");
+				alert("错误！检测到你输入的v2ray配置不是标准json格式！");
 				return false;
 			}
-		}else{
-			alert("错误！检测到你输入的v2ray配置不是标准json格式！");
-			return false;
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
