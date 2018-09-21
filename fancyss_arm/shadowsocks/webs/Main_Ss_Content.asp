@@ -1357,22 +1357,22 @@ function refresh_html() {
 			E("ss_node_list_table_btn").style.top = "995px";
 		} else {
 			E("ss_node_list_table_th").style.top = "272px";
-			E("ss_node_list_table_td").style.top = "318px";
-			E("ss_node_list_table_btn").style.top = "843px";
+			E("ss_node_list_table_td").style.top = "315px";
+			E("ss_node_list_table_btn").style.top = "840px";
 		}
 		$("#ss_node_list_table_th")[0].style.display = '';
-		$("#ss_node_list_table_th")[0].style.width = '749.71px';
-		$("#ss_node_list_table_td")[0].style.width = '749.71px';
+		$("#ss_node_list_table_th")[0].style.width = '748px';
+		$("#ss_node_list_table_td")[0].style.width = '749px';
 		$("#ss_node_list_table_td")[0].style.height = '520px';
 		$("#ss_node_list_table_td")[0].style.overflow = 'hidden';
 		$("#ss_node_list_table_td")[0].style.position = 'absolute';
 		$("#hide_when_folw")[0].style.display = 'none'
-		$("#ss_node_list_table_main")[0].style["width"] = '749.71px';
+		$("#ss_node_list_table_main")[0].style["width"] = '748px';
 		$("#ss_node_list_table_main")[0].style["height"] = '520px';
 		$("#ss_node_list_table_main")[0].style["overflow-x"] = 'hidden';
 		$("#ss_node_list_table_main")[0].style["overflow-y"] = 'scroll';
 		$("#ss_node_list_table_main")[0].style["padding-right"] = '30px';
-		$("#ss_node_list_table_btn")[0].style.width = '749.71px';
+		$("#ss_node_list_table_btn")[0].style.width = '748px';
 		$("#ss_node_list_table_btn")[0].style.position = 'absolute';
 		$("#ss_node_list_table_btn")[0].style.margin = '';
 	} else { //当节点数量小于等于13个的是否，显示为absolute，节点不可滚动
@@ -1380,6 +1380,7 @@ function refresh_html() {
 		$("#ss_node_list_table_td")[0].style.top = '';
 		$("#ss_node_list_table_btn")[0].style.top = '';
 		$("#ss_node_list_table_th")[0].style.display = 'none';
+		$("#ss_node_list_table_td")[0].style.width = '748px';
 		$("#ss_node_list_table_td")[0].style.height = '';
 		$("#ss_node_list_table_td")[0].style.overflow = '';
 		$("#ss_node_list_table_td")[0].style.position = '';
@@ -3721,7 +3722,7 @@ function set_cron(action) {
 											</table>
 										</div>
 										<div id="ss_node_list_table_td" style="display: none;">
-											<div id="ss_node_list_table_main" style="width:749.71px;">
+											<div id="ss_node_list_table_main" style="width:748px;">
 												<table id="ss_node_list_table" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable1">
 													<tr id="hide_when_folw" height="40px" style="display: none;">
 														<th style="width:40px;"><a class="hintstyle" href="javascript:void(0);" onclick="openssHint(16)">模式</a></th>
