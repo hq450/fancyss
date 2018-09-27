@@ -1884,6 +1884,7 @@ write_numbers(){
 
 set_ulimit(){
 	ulimit -n 16384
+	echo 1 > /proc/sys/vm/overcommit_memory
 }
 
 remove_ss_reboot_job(){
