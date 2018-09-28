@@ -1,6 +1,7 @@
 fancyss_hnd Changelog
 ===========================================
-1.4.3
+1.4.3 - 1.4.4
+   - fix	修复使用v2ray gui配置提示json格式不对的问题。（fixed in 1.4.4）
    - update	优化web和订阅脚本；
    - update	将内核参数overcommit_memory设置为1，以避免v2ray等golang程序因申请过大内存而无法运行等问题；
    - update	同步v2ray二进制v3.44；
