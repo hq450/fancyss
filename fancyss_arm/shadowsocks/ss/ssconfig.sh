@@ -2014,8 +2014,8 @@ detect(){
 	if [ "$ss_basic_type" == "3" -a -z "$WAN_ACTION" ];then
 		TOTAL_MEM=`free|grep Mem|awk '{print $2}'`
 		FREE_MEM=`free|grep Mem|awk '{print $4}'`
-		if [ "$TOTAL_MEM" -gt "500000" -a "$FREE_MEM" -gt "200000" ];then
-			echo_date "总内存大于500M，且可用内存大于200M，v2ray符合启动条件！"
+		if [ "$TOTAL_MEM" -gt "250000" -a "$FREE_MEM" -gt "150000" ];then
+			echo_date "总内存大于250M，且可用内存大于150M，v2ray符合启动条件！"
 		else
 			SWAPSTATUS=`free|grep Swap|awk '{print $2}'`
 			if [ "$SWAPSTATUS" != "0" ];then

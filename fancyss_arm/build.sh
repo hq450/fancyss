@@ -44,12 +44,14 @@ do_build() {
 	DATE=`date +%Y-%m-%d_%H:%M:%S`
 	cat > ./config.json.js <<-EOF
 	{
-	"version":"$VERSION",
-	"md5":"$md5value",
-	"home_url":"$HOME_URL",
-	"title":"$TITLE",
-	"description":"$DESCRIPTION",
 	"build_date":"$DATE"
+	"description":"$DESCRIPTION",
+	"home_url":"$HOME_URL",
+	"md5":"$md5value",
+	"name":"$MODULE",
+	"tar_url": "https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_arm/shadowsocks.tar.gz", 
+	"title":"$TITLE",
+	"version":"$VERSION",
 	}
 	EOF
 }

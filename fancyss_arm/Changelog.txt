@@ -1,5 +1,13 @@
 fancyss_arm Changelog
 ===========================================
+4.1.2
+   - notes	建议大家将固件版本升级到X7.9.1，X7.9.1使用skipdv3作为插件的数据储存，可以大大避免插件出现一些莫名的问题 #62。
+   - update	优化web和订阅脚本；
+   - update	将内核参数overcommit_memory设置为1，以避免v2ray等golang程序因申请过大内存而无法运行等问题；
+   - update	降低v2ray启动要求：现在总内存大于250M，且可用内存大于150M，即符合启动条件！
+   - update	同步v2ray二进制v3.44；
+   - update	同步最新规则；
+
 4.1.1
    - add	添加v2ray订阅ver1格式的支持，现在不会再出现因检测到旧的v2ray配置而订阅不到节点的情况；
    - update	用usleep替换sleep，缩短订阅节点的时间；

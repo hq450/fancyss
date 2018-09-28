@@ -234,8 +234,8 @@ dbus set softcenter_module_shadowsocks_description="科学上网"
 dbus set softcenter_module_shadowsocks_home_url="Main_Ss_Content.asp"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v3.41"
-dbus set ss_basic_v2ray_date="20180914"
+dbus set ss_basic_v2ray_version="v3.44"
+dbus set ss_basic_v2ray_date="20180927"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
