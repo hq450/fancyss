@@ -324,7 +324,7 @@ function save() {
 		dbus["ss_basic_v2ray_json"] = "";
 		dbus["ssconf_basic_v2ray_json"] = "";
 	}else{
-		if (typeof(db_ss["ssconf_basic_v2ray_use_json_" + node_sel]) != "undefined"){
+		if (E("ss_basic_v2ray_use_json").checked == true){
 			if(isJSON(E('ss_basic_v2ray_json').value)){
 				if(E('ss_basic_v2ray_json').value.indexOf("outbound") != -1){
 					dbus["ss_basic_v2ray_json"] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
@@ -1283,17 +1283,18 @@ function add_ss_node_conf(flag) { //点击添加按钮动作
 				ns[p + "_v2ray_use_json_" + node_global_max] = 0;
 				ns[p + "_v2ray_json_" + node_global_max] = "";
 			}else{
-				console.log("use v2ray json")
-				if(isJSON(E('ss_node_table_v2ray_json').value)){
-					if(E('ss_node_table_v2ray_json').value.indexOf("outbound") != -1){
-						ns[p + "_v2ray_json_" + node_global_max] = Base64.encode(pack_js(E('ss_node_table_v2ray_json').value));
+				if (E("ss_node_table_v2ray_use_json").checked == true){
+					if(isJSON(E('ss_node_table_v2ray_json').value)){
+						if(E('ss_node_table_v2ray_json').value.indexOf("outbound") != -1){
+							ns[p + "_v2ray_json_" + node_global_max] = Base64.encode(pack_js(E('ss_node_table_v2ray_json').value));
+						}else{
+							alert("错误！你的json配置文件有误！\n正确格式请参考:https://www.v2ray.com/chapter_02/01_overview.html");
+							return false;
+						}
 					}else{
-						alert("错误！你的json配置文件有误！\n正确格式请参考:https://www.v2ray.com/chapter_02/01_overview.html");
+						alert("错误！检测到你输入的v2ray配置不是标准json格式！");
 						return false;
 					}
-				}else{
-					alert("错误！检测到你输入的v2ray配置不是标准json格式！");
-					return false;
 				}
 			}
 		}
