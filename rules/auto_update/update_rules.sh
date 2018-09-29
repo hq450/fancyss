@@ -5,16 +5,15 @@ CurrentDate=`date +%Y-%m-%d`
 ./fwlist.py gfwlist_download.conf
 
 if [ -f "gfwlist_download.conf" ];then
-	cat gfwlist_download.conf gfwlist_koolshare.conf | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed "s/ipset=\/\.//g" | sed "s/ipset=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sed '/^\./d' | sort | sed '$!N; /^\(.*\)\n\1$/!P; D' | sed '/^#/d' | sed '1d' | sed "s/,/\n/g" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" > gfwlist_merge.conf
-	cat gfwlist_download.conf gfwlist_koolshare.conf | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed "s/ipset=\/\.//g" | sed "s/ipset=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sed '/^\./d' | sort | sed '$!N; /^\(.*\)\n\1$/!P; D' | sed '/^#/d' | sed '1d' | sed "s/,/\n/g" | sed "s/^/ipset=&\/./g" | sed "s/$/\/gfwlist/g" >> gfwlist_merge.conf
+	cat gfwlist_download.conf gfwlist_koolshare.conf | grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" > gfwlist_merge.conf
+	cat gfwlist_download.conf gfwlist_koolshare.conf | sed "s/^/ipset=&\/./g" | sed "s/$/\/gfwlist/g" >> gfwlist_merge.conf
 fi
 
 sort -k 2 -t. -u gfwlist_merge.conf > gfwlist1.conf
 rm gfwlist_merge.conf
 
-# delete site below if any
+# delete site below
 sed -i '/m-team/d' "gfwlist1.conf"
-sed -i '/85.17.73.31/d' "gfwlist1.conf"
 sed -i '/windowsupdate/d' "gfwlist1.conf"
 sed -i '/v2ex/d' "gfwlist1.conf"
 

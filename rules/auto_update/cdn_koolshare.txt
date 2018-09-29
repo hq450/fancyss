@@ -1630,7 +1630,6 @@ cn.download.nvidia.com
 cn.img.stb.s-msn.com
 cn.msn.com
 cn.windowssearch.com
-cn
 cn029.com
 cnaaa.com
 cnad.com
