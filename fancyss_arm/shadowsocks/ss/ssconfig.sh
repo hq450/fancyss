@@ -819,7 +819,7 @@ auto_start(){
 	if [ ! -f /jffs/scripts/nat-start ]; then
 	cat > /jffs/scripts/nat-start <<-EOF
 		#!/bin/sh
-		dbus fire onnatstart
+		/usr/bin/onnatstart.sh
 		
 		EOF
 	fi
@@ -836,7 +836,7 @@ auto_start(){
 	if [ ! -f /jffs/scripts/wan-start ]; then
 		cat > /jffs/scripts/wan-start <<-EOF
 			#!/bin/sh
-			dbus fire onwanstart
+			/usr/bin/onwanstart.sh
 			
 			EOF
 	fi
