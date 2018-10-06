@@ -284,15 +284,15 @@ update_config(){
 get_v2ray_remote_config(){
 	decode_link="$1"
 	v2ray_group="$2"
-	v2ray_v=$(echo "$decode_link" |jq -r .v)
-	v2ray_ps=$(echo "$decode_link" |jq -r .ps)
-	v2ray_add=$(echo "$decode_link" |jq -r .add)
-	v2ray_port=$(echo "$decode_link" |jq -r .port)
-	v2ray_id=$(echo "$decode_link" |jq -r .id)
-	v2ray_aid=$(echo "$decode_link" |jq -r .aid)
-	v2ray_net=$(echo "$decode_link" |jq -r .net)
-	v2ray_type=$(echo "$decode_link" |jq -r .type)
-	v2ray_tls_tmp=$(echo "$decode_link" |jq -r .tls)
+	v2ray_v=$(echo "$decode_link" | jq -r .v)
+	v2ray_ps=$(echo "$decode_link" | jq -r .ps | sed 's/[ \t]*//g')
+	v2ray_add=$(echo "$decode_link" | jq -r .add | sed 's/[ \t]*//g')
+	v2ray_port=$(echo "$decode_link" | jq -r .port | sed 's/[ \t]*//g')
+	v2ray_id=$(echo "$decode_link" | jq -r .id | sed 's/[ \t]*//g')
+	v2ray_aid=$(echo "$decode_link" | jq -r .aid | sed 's/[ \t]*//g')
+	v2ray_net=$(echo "$decode_link" | jq -r .net)
+	v2ray_type=$(echo "$decode_link" | jq -r .type)
+	v2ray_tls_tmp=$(echo "$decode_link" | jq -r .tls)
 	[ "$v2ray_tls_tmp"x == "tls"x ] && v2ray_tls="tls" || v2ray_tls="none"
 	
 	if [ "$v2ray_v" == "2" ];then
