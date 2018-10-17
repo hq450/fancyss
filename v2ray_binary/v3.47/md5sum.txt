@@ -1,0 +1,3 @@
+14cdf12eb2a6702da1bec0dc7066fa47  v2ctl
+a2a9f71bac118f6047d44bcd7769f15d  v2ray
+f7f051c7d02b84e750ac03a902b8a6ad  v2ray_armv7
