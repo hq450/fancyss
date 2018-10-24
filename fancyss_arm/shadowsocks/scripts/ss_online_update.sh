@@ -66,7 +66,7 @@ detect(){
 	# 检测版本号
 	firmware_version=`nvram get extendno|cut -d "X" -f2|cut -d "-" -f1|cut -d "_" -f1`
 	firmware_comp=`versioncmp $firmware_version 7.7`
-	if [ "$firmware_comp" == "0" -a "$firmware_comp" == "-1" ];then
+	if [ "$firmware_comp" == "0" -o "$firmware_comp" == "-1" ];then
 		echo_date 检测到$firmware_version固件，支持订阅！
 	else
 		echo_date 订阅功能不支持X7.7以下的固件，当前固件版本$firmware_version，请更新固件！
