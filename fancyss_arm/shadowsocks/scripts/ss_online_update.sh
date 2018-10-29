@@ -65,7 +65,12 @@ unset_lock(){
 detect(){
 	# 检测版本号
 	firmware_version=`nvram get extendno|cut -d "X" -f2|cut -d "-" -f1|cut -d "_" -f1`
-	firmware_comp=`versioncmp $firmware_version 7.7`
+	if [ -f "/usr/bin/versioncmp" ];then
+		firmware_comp=`versioncmp $firmware_version 7.7`
+	else
+		firmware_comp="1"
+	fi
+	
 	if [ "$firmware_comp" == "0" -a "$firmware_comp" == "-1" ];then
 		echo_date 检测到$firmware_version固件，支持订阅！
 	else
