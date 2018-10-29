@@ -1,5 +1,13 @@
 fancyss_arm Changelog
 ===========================================
+4.1.4
+   - fix	修复订阅对固件版本判断错误的问题；
+   - fix	修复订阅因服务商一些错误的空格，可能导致订阅后界面死掉的问题；
+   - remove	移除v2ray在arm机型上虚拟内存的需求（原因：https://www.v2ray.com/chapter_02/env.html#buffer-size），不过对于256M内存的机器，仍然建议使用虚拟内存，但是不强制。
+   - update	同步v2ray二进制v3.47；
+   - update	同步最新规则；
+
+
 4.1.2 - 4.1.3
    - fix	修复使用v2ray gui配置提示json格式不对的问题。（fixed in 4.1.3）
    - notes	建议大家将固件版本升级到X7.9.1，X7.9.1使用skipdv3作为插件的数据储存，可以大大避免插件出现一些莫名的问题 #62。
