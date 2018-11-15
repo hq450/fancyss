@@ -1,5 +1,9 @@
 fancyss_hnd Changelog
 ===========================================
+1.4.5
+   - update	更新安装包内置v2ray二进制v4.3；
+   - update	同步最新规则；
+
 1.4.3 - 1.4.4
    - fix	修复使用v2ray gui配置提示json格式不对的问题。（fixed in 1.4.4）
    - update	优化web和订阅脚本；
