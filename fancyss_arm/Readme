@@ -1,0 +1,8 @@
+this is for meilin_route systecm
+in your route device's cmd mode
+
+cd /tmp
+wget --no-check-certificate https://github.com/hq450/fancyss/blob/master/fancyss_arm/shadowsocks.tar.gz
+tar -zxvf /tmp/shadowsocks.tar.gz
+chmod +x /tmp/shadowsocks/install.sh
+sh /tmp/shadowsocks/install.sh
