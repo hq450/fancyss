@@ -1,5 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
+1.4.6
+   - add	DNS劫持（原chromecast功能）添加是否启用的开关；
+   - add	增加节点域名解析DNS服务器功能，现在服务器域名解析的DNS可以自己定义，而不是之前写死的114dns；
+   - fix	修复原chromecast规则在关闭插件后，iptables规则无法被正常清除的问题；
+   - update	更新oneDNS服务器地址；
+   - update	同步最新规则；
+
 1.4.5
    - update	更新安装包内置v2ray二进制v4.3；
    - update	同步最新规则；

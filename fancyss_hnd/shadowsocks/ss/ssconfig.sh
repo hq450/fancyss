@@ -71,6 +71,30 @@ get_wan0_cidr(){
 	fi
 }
 
+get_server_resolver(){
+	if [ "$ss_basic_server_resolver" == "1" ];then
+		if [ -n "$IFIP_DNS1" ];then
+			RESOLVER="$ISP_DNS1"
+		else
+			RESOLVER="114.114.114.114"
+		fi
+	fi
+	[ "$ss_basic_server_resolver" == "2" ] && RESOLVER="223.5.5.5"
+	[ "$ss_basic_server_resolver" == "3" ] && RESOLVER="223.6.6.6"
+	[ "$ss_basic_server_resolver" == "4" ] && RESOLVER="114.114.114.114"
+	[ "$ss_basic_server_resolver" == "5" ] && RESOLVER="114.114.115.115"
+	[ "$ss_basic_server_resolver" == "6" ] && RESOLVER="1.2.4.8"
+	[ "$ss_basic_server_resolver" == "7" ] && RESOLVER="210.2.4.8"
+	[ "$ss_basic_server_resolver" == "8" ] && RESOLVER="117.50.11.11"
+	[ "$ss_basic_server_resolver" == "9" ] && RESOLVER="117.50.22.22"
+	[ "$ss_basic_server_resolver" == "10" ] && RESOLVER="180.76.76.76"
+	[ "$ss_basic_server_resolver" == "11" ] && RESOLVER="119.29.29.29"
+	[ "$ss_basic_server_resolver" == "12" ] && {
+		[ -n "$ss_basic_server_resolver" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
+	}
+	echo $RESOLVER
+}
+
 set_lock(){
 	exec 1000>"$LOCK_FILE"
 	flock -x 1000
@@ -257,14 +281,14 @@ resolv_server_ip(){
 		IFIP=`echo $ss_basic_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 		if [ -z "$IFIP" ];then
 			# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
-			echo "server=/$ss_basic_server/114.114.114.114#53" > /jffs/configs/dnsmasq.d/ss_server.conf
-			echo_date 尝试解析SS服务器的ip地址
-			server_ip=`nslookup "$ss_basic_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
+			echo "server=/$ss_basic_server/$(get_server_resolver)#53" > /jffs/configs/dnsmasq.d/ss_server.conf
+			echo_date 尝试解析SS服务器的ip地址，DNS：$(get_server_resolver)
+			server_ip=`nslookup "$ss_basic_server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
 			if [ "$?" == "0" ];then
 				server_ip=`echo $server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 			else
 				echo_date SS服务器域名解析失败！
-				echo_date 尝试用resolveip方式解析...
+				echo_date 尝试用resolveip方式解析，DNS：系统
 				server_ip=`resolveip -4 -t 2 $ss_basic_server|awk 'NR==1{print}'`
 				if [ "$?" == "0" ];then
 			    	server_ip=`echo $server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
@@ -615,8 +639,8 @@ create_dnsmasq_conf(){
 	[ "$ss_dns_china" == "5" ] && CDN="114.114.115.115"
 	[ "$ss_dns_china" == "6" ] && CDN="1.2.4.8"
 	[ "$ss_dns_china" == "7" ] && CDN="210.2.4.8"
-	[ "$ss_dns_china" == "8" ] && CDN="112.124.47.27"
-	[ "$ss_dns_china" == "9" ] && CDN="114.215.126.16"
+	[ "$ss_dns_china" == "8" ] && CDN="117.50.11.11"
+	[ "$ss_dns_china" == "9" ] && CDN="117.50.22.22"
 	[ "$ss_dns_china" == "10" ] && CDN="180.76.76.76"
 	[ "$ss_dns_china" == "11" ] && CDN="119.29.29.29"
 	[ "$ss_dns_china" == "12" ] && {
@@ -1358,15 +1382,15 @@ creat_v2ray_json(){
 			else
 				echo_date "检测到你的json配置的v2ray服务器：$v2ray_server不是ip格式！"
 				echo_date "为了确保v2ray的正常工作，建议配置ip格式的v2ray服务器地址！"
-				echo_date "尝试解析v2ray服务器的ip地址..."
+				echo_date "尝试解析v2ray服务器的ip地址，DNS：$(get_server_resolver)"
 				# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
-				echo "server=/$v2ray_server/114.114.114.114#53" > /jffs/configs/dnsmasq.d/ss_server.conf
-				v2ray_server_ip=`nslookup "$v2ray_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
+				echo "server=/$v2ray_server/$(get_server_resolver)#53" > /jffs/configs/dnsmasq.d/ss_server.conf
+				v2ray_server_ip=`nslookup "$v2ray_server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
 				if [ "$?" == "0" ]; then
 					v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 				else
 					echo_date v2ray服务器域名解析失败！
-					echo_date 尝试用resolveip方式解析...
+					echo_date 尝试用resolveip方式解析，DNS：系统
 					v2ray_server_ip=`resolveip -4 -t 2 $ss_basic_server|awk 'NR==1{print}'`
 					if [ "$?" == "0" ];then
 						v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
@@ -1506,7 +1530,6 @@ load_tproxy(){
 
 flush_nat(){
 	echo_date 清除iptables规则和ipset...
-	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	# flush rules and set if any
 	nat_indexs=`iptables -nvL PREROUTING -t nat |sed 1,2d | sed -n '/SHADOWSOCKS/='|sort -r`
 	for nat_index in $nat_indexs
@@ -1536,6 +1559,7 @@ flush_nat(){
 	iptables -t nat -F OUTPUT > /dev/null 2>&1
 	iptables -t nat -X SHADOWSOCKS_EXT > /dev/null 2>&1
 	#iptables -t nat -D PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
+	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	[ -n "$chromecast_nu" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1
 	iptables -t mangle -D QOSO0 -m mark --mark "$ip_prefix_hex" -j RETURN >/dev/null 2>&1
 	# flush ipset
@@ -1594,7 +1618,7 @@ add_white_black_ip(){
 	[ -n "$ss_basic_server_ip" ] && SERVER_IP="$ss_basic_server_ip" || SERVER_IP=""
 	[ -n "$IFIP_DNS1" ] && ISP_DNS_a="$ISP_DNS1" || ISP_DNS_a=""
 	[ -n "$IFIP_DNS2" ] && ISP_DNS_b="$ISP_DNS2" || ISP_DNS_a=""
-	ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 112.124.47.27 114.215.126.16 180.76.76.76 119.29.29.29 $ISP_DNS_a $ISP_DNS_b $SERVER_IP $(get_wan0_cidr)"
+	ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 $ISP_DNS_a $ISP_DNS_b $SERVER_IP $(get_wan0_cidr)"
 	for ip in $ip_lan
 	do
 		ipset -! add white_list $ip >/dev/null 2>&1
@@ -1816,11 +1840,15 @@ apply_nat_rules(){
 
 chromecast(){
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
-	if [ -z "$chromecast_nu" ]; then
-		iptables -t nat -A PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
-		echo_date 开启chromecast功能（DNS劫持功能）
+	if [ "$ss_basic_dns_hijack" == "1" ];then
+		if [ -z "$chromecast_nu" ]; then
+			iptables -t nat -A PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
+			echo_date 开启DNS劫持功能功能，防止DNS污染...
+		else
+			echo_date DNS劫持规则已经添加，跳过~
+		fi
 	else
-		echo_date DNS劫持规则已经添加，跳过~
+		echo_date DNS劫持功能未开启，建议开启！
 	fi
 }
 # -----------------------------------nat part end--------------------------------------------------------
