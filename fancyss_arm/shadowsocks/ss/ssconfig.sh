@@ -90,7 +90,7 @@ get_server_resolver(){
 	[ "$ss_basic_server_resolver" == "10" ] && RESOLVER="180.76.76.76"
 	[ "$ss_basic_server_resolver" == "11" ] && RESOLVER="119.29.29.29"
 	[ "$ss_basic_server_resolver" == "12" ] && {
-		[ -n "$ss_basic_server_resolver" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
+		[ -n "$ss_basic_server_resolver_user" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
 	}
 	echo $RESOLVER
 }
