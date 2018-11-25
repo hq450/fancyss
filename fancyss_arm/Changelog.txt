@@ -1,5 +1,13 @@
 fancyss_arm Changelog
 ===========================================
+4.1.7
+   - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
+   - update	更新shadowsocksrr-libev到最新，支持auth_akarin_rand和auth_akarin_spec_a协议 （2018年11月25日 编译）；
+   - update	更新kcptun到20181114
+   - update	更新v2ray制v4.6.4；
+   - update	同步最新规则；
+   - fix	修复自定义服务器解析DNS的一个问题；
+
 4.1.6
    - add	【DNS设定】DNS劫持（原chromecast功能）添加是否启用的开关；
    - add	【DNS设定】增加节点域名解析DNS服务器功能，现在服务器域名解析的DNS可以自己定义，而不是之前写死的114dns；

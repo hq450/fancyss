@@ -83,19 +83,19 @@ echo_version(){
 	echo ① 程序版本（插件版本：$SOFVERSION）：
 	echo -----------------------------------------------------------
 	echo "程序			版本		备注"
-	echo "ss-redir		3.1.3		2018年04月15日编译"
-	echo "ss-tunnel		3.1.3 		2018年04月15日编译"
-	echo "ss-local		3.1.3		2018年04月15日编译"
-	echo "obfs-local		0.0.5		2018年04月15日编译"
-	echo "ssrr-redir		3.5.3 		2018年05月03日编译"
-	echo "ssrr-tunnel		3.5.3 		2018年05月03日编译"
-	echo "ssrr-local		3.5.3 		2018年05月03日编译"
+	echo "ss-redir		3.2.1		2018年11月25日编译"
+	echo "ss-tunnel		3.2.1		2018年11月25日编译"
+	echo "ss-local		3.2.1		2018年11月25日编译"
+	echo "obfs-local		0.0.5		2018年11月25日编译"
+	echo "ssrr-redir		3.5.3 		2018年11月25日编译"
+	echo "ssrr-tunnel		3.5.3 		2018年11月25日编译"
+	echo "ssrr-local		3.5.3 		2018年11月25日编译"
 	echo "haproxy			1.8.8 		2018年05月03日编译"
 	echo "dns2socks		V2.0 	"
 	echo "cdns			1.0 		2017年12月09日编译"
 	echo "chinadns1		1.3.2 		2017年12月09日编译"
 	echo "chinadns2		2.0.0 		2017年12月09日编译"
-	echo "client_linux_arm5	20180810	kcptun"
+	echo "client_linux_arm5	20181114	kcptun"
 	echo "v2ray			$ss_basic_v2ray_version		$ss_basic_v2ray_date"
 	echo -----------------------------------------------------------
 }

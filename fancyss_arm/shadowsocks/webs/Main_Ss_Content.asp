@@ -3275,6 +3275,8 @@ function set_cron(action) {
 																		<option value="auth_chain_d">auth_chain_d</option>
 																		<option value="auth_chain_e">auth_chain_e</option>
 																		<option value="auth_chain_f">auth_chain_f</option>
+																		<option value="auth_akarin_rand">auth_akarin_rand</option>
+																		<option value="auth_akarin_spec_a">auth_akarin_spec_a</option>
 																	</select>
 																</td>
 															</tr>
@@ -3550,6 +3552,8 @@ function set_cron(action) {
 															<option value="auth_chain_d">auth_chain_d</option>
 															<option value="auth_chain_e">auth_chain_e</option>
 															<option value="auth_chain_f">auth_chain_f</option>
+															<option value="auth_akarin_rand">auth_akarin_rand</option>
+															<option value="auth_akarin_spec_a">auth_akarin_spec_a</option>
 														</select>
 														<span id="ss_basic_rss_protocol_alert" style="margin-left:5px;margin-top:-20px;margin-bottom:0px"></span>
 													</td>

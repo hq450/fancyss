@@ -1,5 +1,13 @@
 fancyss_hnd Changelog
 ===========================================
+1.4.8
+   - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
+   - update	更新shadowsocksrr-libev到最新，支持auth_akarin_rand和auth_akarin_spec_a协议 （2018年11月25日 编译）；
+   - update	更新kcptun到20181114
+   - update	更新v2ray制v4.6.4；
+   - update	同步最新规则；
+   - fix	修复自定义服务器解析DNS的一个问题；
+
 1.4.7
    - fix	修复rog皮肤机型在1.4.6中添加的功能实际没有的问题
 
