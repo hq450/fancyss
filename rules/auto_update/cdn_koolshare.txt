@@ -1,6 +1,7 @@
 koolshare.cn
 koolddns.com
 ddnsto.com
+ngrok.wang
 baidu.com
 taobao.com
 tmall.com
