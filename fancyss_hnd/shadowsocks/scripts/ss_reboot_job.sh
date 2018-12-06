@@ -6,6 +6,10 @@
 eval `dbus export ss`
 source /koolshare/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
+ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
+IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 # -------------------
 
 remove_ss_reboot_job(){
@@ -72,44 +76,129 @@ set_ss_trigger_job(){
 	fi
 }
 
-check_ip(){
-	if [ -f "/tmp/ss_host.conf" ];then
-		HOST=`cat /tmp/ss_host.conf | cut -d "/" -f2`
-		OLD_IP=`cat /tmp/ss_host.conf | cut -d "/" -f3`
-		if [ -n "$HOST" ] && [ -n "$OLD_IP" ];then
-			NEW_IP=`nslookup "$HOST" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
-			if [ "$?" == "0" ];then
-				NEW_IP=`echo $NEW_IP|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-			else
-				logger 【科学上网插件触发重启功能】：SS服务器域名解析失败！
-			fi
+get_server_resolver(){
+	if [ "$ss_basic_server_resolver" == "1" ];then
+		if [ -n "$IFIP_DNS1" ];then
+			RESOLVER="$ISP_DNS1"
+		else
+			RESOLVER="114.114.114.114"
+		fi
+	fi
+	[ "$ss_basic_server_resolver" == "2" ] && RESOLVER="223.5.5.5"
+	[ "$ss_basic_server_resolver" == "3" ] && RESOLVER="223.6.6.6"
+	[ "$ss_basic_server_resolver" == "4" ] && RESOLVER="114.114.114.114"
+	[ "$ss_basic_server_resolver" == "5" ] && RESOLVER="114.114.115.115"
+	[ "$ss_basic_server_resolver" == "6" ] && RESOLVER="1.2.4.8"
+	[ "$ss_basic_server_resolver" == "7" ] && RESOLVER="210.2.4.8"
+	[ "$ss_basic_server_resolver" == "8" ] && RESOLVER="117.50.11.11"
+	[ "$ss_basic_server_resolver" == "9" ] && RESOLVER="117.50.22.22"
+	[ "$ss_basic_server_resolver" == "10" ] && RESOLVER="180.76.76.76"
+	[ "$ss_basic_server_resolver" == "11" ] && RESOLVER="119.29.29.29"
+	[ "$ss_basic_server_resolver" == "12" ] && {
+		[ -n "$ss_basic_server_resolver_user" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
+	}
+	echo $RESOLVER
+}
 
-			if [ "$OLD_IP"x == "$NEW_IP"x ];then
-				logger 【科学上网插件触发重启功能】：服务器ip地址未发生变化，不进行任何操作！
-			else
-				logger 【科学上网插件触发重启功能】：服务器ip地址发生变化，旧ip：【"$OLD_IP"】，新ip：【"$NEW_IP"】
-				#写入新的解析文件
-				echo "address=/$HOST/$NEW_IP" > /tmp/ss_host.conf
-				if [ "$ss_basic_tri_reboot_policy" == "1" ];then
-					logger 【科学上网插件触发重启功能】：重启整个插件，以应用新的ip
-					sh /koolshare/ss/ssconfig.sh restart
+resolve_ip(){
+	domain1=`echo $1|grep -E "^https://|^http://|/"`
+	domain2=`echo $1|grep -E "\."`
+	domian3=`echo $1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+	if [ -n "$domian3" ];then
+		# ip format
+		echo $SERVER
+	elif [ -n "$domain1" ] || [ -z "$domain2" ];then
+		# not ip, not domain
+		echo ""
+	else
+		# domain format
+		SERVER_IP=`nslookup $1 $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}' 2>/dev/null`
+		if [ "$?" == "0" ];then
+			SERVER_IP=`echo $SERVER_IP|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+			echo "$SERVER_IP"
+		else
+			echo ""
+		fi
+	fi
+}
+
+check_ip(){
+	if [ "$ss_lb_enable" == "1" ] && [ `dbus get ss_basic_server | grep -o "127.0.0.1"` ] && [ `dbus get ss_basic_port` == `dbus get ss_lb_port` ];then
+		#负载均衡模式下检查/koolshare/configs/haproxy.cfg
+		logger ===========================================================================
+		logger 【科学上网插件触发重启功能】：当前处于负载均衡状态，使用DNS:$(get_server_resolver)检查负载均衡节点IP是否更换...
+		if [ -f /koolshare/configs/haproxy.cfg ] && [ -n `pidof haproxy` ];then
+			SERVER_INFO=$(cat /koolshare/configs/haproxy.cfg | grep -E "^\s\s\s\sserver"|sed 's/:/ /g'|awk '{print $2}')
+			ADDR_INFO=$(cat /koolshare/configs/haproxy.cfg | grep -E "^\s\s\s\sserver"|sed 's/:/ /g'|awk '{print $4}')
+			INFO_LINE=$(cat /koolshare/configs/haproxy.cfg | grep -E "^\s\s\s\sserver"|sed 's/:/ /g'|awk '{print $2" "$4}'|wc -l)
+			i=1
+			j=1
+			while [ $i -le $INFO_LINE ]
+			do
+				local HOST=`echo $SERVER_INFO | cut -d " " -f $i`
+				local OLD_IP=`echo $ADDR_INFO | cut -d " " -f $i`
+				local NEW_IP=$(resolve_ip "$HOST")
+				if [ -z "$NEW_IP" ];then
+					logger 【科学上网插件触发重启功能】：负载均衡节点服务器：$HOST解析失败！不进行任何进一步操作！
 				else
-					logger 【科学上网插件触发重启功能】：重启dnsmasq，以应用新的ip
-					[ -L "/jffs/configs/dnsmasq.d/ss_host.conf" ] && rm -rf /jffs/configs/dnsmasq.d/ss_host.conf
-					service restart_dnsmasq >/dev/null 2>&1
+					if [ "$OLD_IP"x == "$NEW_IP"x ];then
+						logger 【科学上网插件触发重启功能】：负载均衡节点：$HOST的ip地址："$NEW_IP"未发生变化，不进行任何操作！
+					else
+						logger 【科学上网插件触发重启功能】：负载均衡节点：$HOST的ip地址发生变化，旧ip：【"$OLD_IP"】，新ip：【"$NEW_IP"】
+						let j+=1
+					fi
 				fi
+				let i+=1
+			done
+
+			if [ $j -gt 1 ];then
+				logger 【科学上网插件触发重启功能】：重启负载均衡脚本，以应用新的ip
+				sh /koolshare/scripts/ss_lb_config.sh
 			fi
 		else
-			logger 【科学上网插件触发重启功能】：未找到你当前节点的服务器地址，可能插件提交时未正确解析！
-			logger 【科学上网插件触发重启功能】：请尝试直接使用ip地址作为服务器地址！
+			logger 【科学上网插件触发重启功能】：检测失败！可能是haproxy未运行导致？
 		fi
+		logger ===========================================================================
 	else
-		if [ -n "$ss_basic_server_ip" ];then
-			IFIP=`echo $ss_basic_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-			logger 【科学上网插件触发重启功能】：当前节点的服务器地址已经是IP格式！不进行任何操作！
+		logger ===========================================================================
+		logger 【科学上网插件触发重启功能】：使用DNS:$(get_server_resolver)检查服务器IP是否更换...
+		if [ -f "/tmp/ss_host.conf" ];then
+			HOST=`cat /tmp/ss_host.conf | cut -d "/" -f2`
+			OLD_IP=`cat /tmp/ss_host.conf | cut -d "/" -f3`
+			if [ -n "$HOST" ] && [ -n "$OLD_IP" ];then
+				NEW_IP=$(resolve_ip "$HOST")
+				if [ -z "$NEW_IP" ];then
+					logger 【科学上网插件触发重启功能】：SS服务器域名解析失败！
+				else
+					if [ "$OLD_IP"x == "$NEW_IP"x ];then
+						logger 【科学上网插件触发重启功能】：服务器：$HOST的ip地址："$NEW_IP"未发生变化，不进行任何操作！
+					else
+						logger 【科学上网插件触发重启功能】：服务器：$HOST的ip地址发生变化，旧ip：【"$OLD_IP"】，新ip：【"$NEW_IP"】
+						#写入新的解析文件
+						echo "address=/$HOST/$NEW_IP" > /tmp/ss_host.conf
+						if [ "$ss_basic_tri_reboot_policy" == "1" ];then
+							logger 【科学上网插件触发重启功能】：重启整个插件，以应用新的ip
+							sh /koolshare/ss/ssconfig.sh restart
+						else
+							logger 【科学上网插件触发重启功能】：重启dnsmasq，以应用新的ip
+							[ -L "/jffs/configs/dnsmasq.d/ss_host.conf" ] && rm -rf /jffs/configs/dnsmasq.d/ss_host.conf
+							service restart_dnsmasq >/dev/null 2>&1
+						fi
+					fi
+				fi
+			else
+				logger 【科学上网插件触发重启功能】：未找到你当前节点的服务器地址，可能插件提交时未正确解析！
+				logger 【科学上网插件触发重启功能】：请尝试直接使用ip地址作为服务器地址！
+			fi
 		else
-			logger 【科学上网插件触发重启功能】：未找到你当前节点的服务器地址，可能已是IP格式！不进行任何操作！
+			if [ -n "$ss_basic_server_ip" ];then
+				IFIP=`echo $ss_basic_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+				logger 【科学上网插件触发重启功能】：当前节点的服务器地址已经是IP格式：$IFIP！不进行任何操作！
+			else
+				logger 【科学上网插件触发重启功能】：未找到你当前节点的服务器地址，可能已是IP格式！不进行任何操作！
+			fi
 		fi
+		logger ===========================================================================
 	fi
 }
 # -------------------

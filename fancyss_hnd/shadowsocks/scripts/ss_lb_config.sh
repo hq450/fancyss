@@ -6,6 +6,34 @@ ss_basic_dnslookup_server="114.114.114.114"
 source /koolshare/scripts/base.sh
 username=`nvram get http_username`
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
+ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
+IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+
+get_server_resolver(){
+	if [ "$ss_basic_server_resolver" == "1" ];then
+		if [ -n "$IFIP_DNS1" ];then
+			RESOLVER="$ISP_DNS1"
+		else
+			RESOLVER="114.114.114.114"
+		fi
+	fi
+	[ "$ss_basic_server_resolver" == "2" ] && RESOLVER="223.5.5.5"
+	[ "$ss_basic_server_resolver" == "3" ] && RESOLVER="223.6.6.6"
+	[ "$ss_basic_server_resolver" == "4" ] && RESOLVER="114.114.114.114"
+	[ "$ss_basic_server_resolver" == "5" ] && RESOLVER="114.114.115.115"
+	[ "$ss_basic_server_resolver" == "6" ] && RESOLVER="1.2.4.8"
+	[ "$ss_basic_server_resolver" == "7" ] && RESOLVER="210.2.4.8"
+	[ "$ss_basic_server_resolver" == "8" ] && RESOLVER="117.50.11.11"
+	[ "$ss_basic_server_resolver" == "9" ] && RESOLVER="117.50.22.22"
+	[ "$ss_basic_server_resolver" == "10" ] && RESOLVER="180.76.76.76"
+	[ "$ss_basic_server_resolver" == "11" ] && RESOLVER="119.29.29.29"
+	[ "$ss_basic_server_resolver" == "12" ] && {
+		[ -n "$ss_basic_server_resolver_user" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
+	}
+	echo $RESOLVER
+}
 
 write_haproxy_cfg(){
 	echo_date 生成haproxy配置文件到/koolshare/configs目录.
@@ -73,12 +101,17 @@ if [ "$ss_lb_heartbeat" == "1" ];then
 				IFIP=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 				if [ -z "$IFIP" ];then
 					echo_date 检测到【"$nick_name"】节点域名格式，将尝试进行解析...
-					if [ "$ss_basic_dnslookup" == "1" ];then
-						echo_date 使用nslookup方式解析SS服务器的ip地址，解析dns：$ss_basic_dnslookup_server
-						server=`nslookup "$server" $ss_basic_dnslookup_server | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
+					echo_date 使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)
+					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
+					if [ "$?" == "0" ];then
+						server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 					else
-						echo_date 使用resolveip方式解析SS服务器的ip地址.
+						echo_date 域名【"$nick_name"】解析失败！
+						echo_date 尝试用resolveip方式解析，DNS：系统
 						server=`resolveip -4 -t 2 $server|awk 'NR==1{print}'`
+						if [ "$?" == "0" ];then
+							server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+						fi
 					fi
 
 					if [ ! -z "$server" ];then
@@ -137,12 +170,17 @@ else
 				IFIP=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 				if [ -z "$IFIP" ];then
 					echo_date 检测到【"$nick_name"】节点域名格式，将尝试进行解析...
-					if [ "$ss_basic_dnslookup" == "1" ];then
-						echo_date 使用nslookup方式解析SS服务器的ip地址，解析dns：$ss_basic_dnslookup_server
-						server=`nslookup "$server" $ss_basic_dnslookup_server | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
+					echo_date 使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)
+					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
+					if [ "$?" == "0" ];then
+						server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 					else
-						echo_date 使用resolveip方式解析SS服务器的ip地址.
+						echo_date 域名【"$nick_name"】解析失败！
+						echo_date 尝试用resolveip方式解析，DNS：系统
 						server=`resolveip -4 -t 2 $server|awk 'NR==1{print}'`
+						if [ "$?" == "0" ];then
+							server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+						fi
 					fi
 
 					if [ ! -z "$server" ];then

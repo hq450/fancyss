@@ -1386,7 +1386,7 @@ creat_v2ray_json(){
 				# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
 				echo "server=/$v2ray_server/$(get_server_resolver)#53" > /jffs/configs/dnsmasq.d/ss_server.conf
 				v2ray_server_ip=`nslookup "$v2ray_server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
-				if [ "$?" == "0" ]; then
+				if [ "$?" == "0" ];then
 					v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 				else
 					echo_date v2ray服务器域名解析失败！
@@ -1482,7 +1482,7 @@ write_cron_job(){
 			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * * /koolshare/scripts/ss_online_update.sh 3"
 			echo_date "设置订阅服务器自动更新订阅服务器在每天 $ss_basic_node_update_hr 点。"
 		else
-			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * ss_basic_node_update_day /koolshare/scripts/ss_online_update.sh 3"
+			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * $ss_basic_node_update_day /koolshare/scripts/ss_online_update.sh 3"
 			echo_date "设置订阅服务器自动更新订阅服务器在星期 $ss_basic_node_update_day 的 $ss_basic_node_update_hr 点。"
 		fi
 	fi

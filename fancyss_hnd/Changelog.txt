@@ -1,5 +1,13 @@
 fancyss_hnd Changelog
 ===========================================
+1.4.9
+   - fix	更新ssrr-libev二进制，修复ssrr-libev的速度降低问题，详情:https://github.com/hq450/fancyss/issues/238；
+   - remove	移除auth_akarin_rand和auth_akarin_spec_a协议支持，原因同上；
+   - update	更新haproxy程序到最新稳定版本：1.8.14；
+   - fix	修复负载均衡节点无法使用nslookup解析节点的问题；
+   - add	现在【插件触发重启设定（实验）】支持负载均衡节点的域名检查，如果检测到节点IP更换，会重启负载均衡部分以应用变化；
+   - fix	修复订阅计划任务选择周日以外的周次无效的问题。
+   
 1.4.8
    - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
    - update	更新shadowsocksrr-libev到最新，支持auth_akarin_rand和auth_akarin_spec_a协议 （2018年11月25日 编译）；
