@@ -7,6 +7,7 @@ fancyss_hnd Changelog
    - fix	修复负载均衡节点无法使用nslookup解析节点的问题；
    - add	现在【插件触发重启设定（实验）】支持负载均衡节点的域名检查，如果检测到节点IP更换，会重启负载均衡部分以应用变化；
    - fix	修复订阅计划任务选择周日以外的周次无效的问题。
+   - update	更新v2ray制v4.7.0；
    
 1.4.8
    - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
