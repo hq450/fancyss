@@ -514,6 +514,11 @@ function count_down_close() {
 								<tr>
 									<td bgcolor="#4D595D" colspan="3" valign="top">
 										<div>&nbsp;</div>
+										<div class="formfonttitle"><% nvram_get("productid"); %> 科学上网插件 - 负载均衡</div>
+										<div style="float:right; width:15px; height:25px;margin-top:-20px">
+											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
+										</div>
+										<div style="margin:10px 0 25px 5px;" class="splitLine"></div>
 										<table width="100%" height="150px" style="border-collapse:collapse;">
                                             <tr>
                                                 <td colspan="5" class="cloud_main_radius">
@@ -549,112 +554,115 @@ function count_down_close() {
                                                 <td colspan="3"></td>
                                             </tr>
                                         </table>
-										<table style="margin:-20px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="routing_table">
-											<thead>
-											<tr>
-												<td colspan="2">开关设置</td>
-											</tr>
-											</thead>
-											<tr id="switch_tr">
-												<th>
-													<label>是否启用负载均衡</label>
-												</th>
-												<td colspan="2">
-													<div class="switch_field" style="display:table-cell">
-														<label for="ss_lb_enable">
-															<input id="ss_lb_enable" class="switch" type="checkbox" style="display: none;">
-															<div class="switch_container" >
-																<div class="switch_bar"></div>
-																<div class="switch_circle transition_style">
-																	<div></div>
+										<div style="margin:-25px 0px 0px 0px;border:1px solid #91071f">
+											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="routing_table">
+												<thead>
+												<tr>
+													<td colspan="2">开关设置</td>
+												</tr>
+												</thead>
+												<tr id="switch_tr">
+													<th>
+														<label>是否启用负载均衡</label>
+													</th>
+													<td colspan="2">
+														<div class="switch_field" style="display:table-cell">
+															<label for="ss_lb_enable">
+																<input id="ss_lb_enable" class="switch" type="checkbox" style="display: none;">
+																<div class="switch_container" >
+																	<div class="switch_bar"></div>
+																	<div class="switch_circle transition_style">
+																		<div></div>
+																	</div>
 																</div>
-															</div>
-														</label>
-													</div>
-												</td>
-											</tr>
-                                			<tr>
-                                			   <th style="width:25%;">Haproxy控制台</th>
-                                			   <td>
-                                			      <div style="padding-top:5px;">
-                                			         <a id="link4.1" href="http://aria2.me/glutton/" target="_blank"></a>
-													&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-													登录帐号：<i><% nvram_get("http_username"); %></i>
-													&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-													登录密码：
-												  	<input type="password" maxlength="64" id="ss_lb_passwd" name="ss_lb_passwd" value="<% nvram_get("http_passwd"); %>" class="input_ss_table" style="width:80px;" autocorrect="off" autocapitalize="off" readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute('readonly');"/>
-                                			      </div>
-                                			    </td>
-                                			</tr>
-											<tr>
-												<th>Haproxy端口(用于ss监听)</th>
-												<td>
-												  	<input type="text" maxlength="64" id="ss_lb_port" name="ss_lb_port" value="1181" class="input_ss_table" style="width:60px;" autocorrect="off" autocapitalize="off"/>
-												</td>
-											</tr>
+															</label>
+														</div>
+													</td>
+												</tr>
+                                				<tr>
+                                				   <th style="width:25%;">Haproxy控制台</th>
+                                				   <td>
+                                				      <div style="padding-top:5px;">
+                                				         <a id="link4.1" href="http://aria2.me/glutton/" target="_blank"></a>
+														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+														登录帐号：<i><% nvram_get("http_username"); %></i>
+														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+														登录密码：
+													  	<input type="password" maxlength="64" id="ss_lb_passwd" name="ss_lb_passwd" value="<% nvram_get("http_passwd"); %>" class="input_ss_table" style="width:80px;" autocorrect="off" autocapitalize="off" readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute('readonly');"/>
+                                				      </div>
+                                				    </td>
+                                				</tr>
+												<tr>
+													<th>Haproxy端口(用于ss监听)</th>
+													<td>
+													  	<input type="text" maxlength="64" id="ss_lb_port" name="ss_lb_port" value="1181" class="input_ss_table" style="width:60px;" autocorrect="off" autocapitalize="off"/>
+													</td>
+												</tr>
 
-											<tr>
-												<th>Haproxy故障检测心跳</th>
-												<td>
-													<select id="ss_lb_heartbeat" name="ss_lb_heartbeat" style="width:70px;margin:0px 0px 0px 2px;" class="input_option" onchange="update_visibility();">
-														<option value="0">不启用</option>
-														<option value="1" selected>启用</option>
-													</select>
-													<span id="heartbeat_detai">
-													&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-													成功:
-												  	<input type="text" maxlength="64" id="ss_lb_up" name="ss_lb_up" value="2" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
-													次;
-													&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-													失败:
-												  	<input type="text" maxlength="64" id="ss_lb_down" name="ss_lb_down" value="3" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
-													次;
-													&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-													心跳间隔:
-												  	<input type="text" maxlength="64" id="ss_lb_interval" name="ss_lb_interval" value="2000" class="input_ss_table" style="width:40px;" autocorrect="off" autocapitalize="off"/>
-													ms
-													</span>
-												</td>
-											</tr>
-											<tr>
-												<th>节点名（添加到ss节点列表）</th>
-												<td>
-												  	<input type="text" maxlength="64" id="ss_lb_name" name="ss_lb_name" value="负载均衡" class="input_ss_table" style="width:80px;" autocorrect="off" autocapitalize="off"/>
-												</td>
-											</tr>
-											<tr>
-												<th>服务器添加</th>
-                                        		<td>
-                                        		    <select id="ss_lb_node" name="ss_lb_node" style="width:130px;margin:0px 0px 0px 2px;" class="input_option" >
-                                        		    </select>
-                                        		    &nbsp;&nbsp;&nbsp;&nbsp;
-                                        		    权重:
-													<input type="text" class="input_ss_table" style="width:30px" id="ss_lb_weight" name="ss_lb_weight" maxlength="100" value="50"/>
-                                        		    &nbsp;&nbsp;&nbsp;&nbsp;
-													属性:
-													<select id="ss_lb_mode" name="ss_lb_mode" style="width:90px;margin:0px 0px 0px 2px;" class="input_option" onchange="update_visibility();">
-														<option value="1" selected>负载均衡</option>
-														<option value="2">主用节点</option>
-														<option value="3">备用节点</option>
-													</select>
-													
-                                        		    <input style="float:left;margin-top:-28px;margin-left:370px;" type="button" class="add_btn" onclick="addTr()" value=""/>
-                                        		</td>
-											</tr>
-                                    	</table>
-
-										<table style="margin:10px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="lb_node_table">
-											<tr>
-												<th style="width:70px;">服务器别名</th>
-												<th style="width:90px;">服务器</th>
-												<th style="width:90px;">服务器端口</th>
-												<th style="width:90px;">密码</th>
-												<th style="width:90px;">加密方式</th>
-												<th style="width:35px;">属性</th>
-												<th style="width:35px;">权重</th>
-												<th style="width:35px;">删除</th>
-											</tr>
-										</table>
+												<tr>
+													<th>Haproxy故障检测心跳</th>
+													<td>
+														<select id="ss_lb_heartbeat" name="ss_lb_heartbeat" style="width:70px;margin:0px 0px 0px 2px;" class="input_option" onchange="update_visibility();">
+															<option value="0">不启用</option>
+															<option value="1" selected>启用</option>
+														</select>
+														<span id="heartbeat_detai">
+														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+														成功:
+													  	<input type="text" maxlength="64" id="ss_lb_up" name="ss_lb_up" value="2" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
+														次;
+														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+														失败:
+													  	<input type="text" maxlength="64" id="ss_lb_down" name="ss_lb_down" value="3" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
+														次;
+														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+														心跳间隔:
+													  	<input type="text" maxlength="64" id="ss_lb_interval" name="ss_lb_interval" value="2000" class="input_ss_table" style="width:40px;" autocorrect="off" autocapitalize="off"/>
+														ms
+														</span>
+													</td>
+												</tr>
+												<tr>
+													<th>节点名（添加到ss节点列表）</th>
+													<td>
+													  	<input type="text" maxlength="64" id="ss_lb_name" name="ss_lb_name" value="负载均衡" class="input_ss_table" style="width:80px;" autocorrect="off" autocapitalize="off"/>
+													</td>
+												</tr>
+												<tr>
+													<th>服务器添加</th>
+                                        			<td>
+                                        			    <select id="ss_lb_node" name="ss_lb_node" style="width:130px;margin:0px 0px 0px 2px;" class="input_option" >
+                                        			    </select>
+                                        			    &nbsp;&nbsp;&nbsp;&nbsp;
+                                        			    权重:
+														<input type="text" class="input_ss_table" style="width:30px" id="ss_lb_weight" name="ss_lb_weight" maxlength="100" value="50"/>
+                                        			    &nbsp;&nbsp;&nbsp;&nbsp;
+														属性:
+														<select id="ss_lb_mode" name="ss_lb_mode" style="width:90px;margin:0px 0px 0px 2px;" class="input_option" onchange="update_visibility();">
+															<option value="1" selected>负载均衡</option>
+															<option value="2">主用节点</option>
+															<option value="3">备用节点</option>
+														</select>
+														
+                                        			    <input style="float:left;margin-top:-28px;margin-left:370px;" type="button" class="add_btn" onclick="addTr()" value=""/>
+                                        			</td>
+												</tr>
+                                    		</table>
+										</div>
+										<div style="margin:20px 0px 0px 0px;border:1px solid #91071f">
+											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="lb_node_table">
+												<tr>
+													<th style="width:70px;background: rgb(104,5,22);">服务器别名</th>
+													<th style="width:90px;background: rgb(104,5,22);">服务器</th>
+													<th style="width:90px;background: rgb(104,5,22);">服务器端口</th>
+													<th style="width:90px;background: rgb(104,5,22);">密码</th>
+													<th style="width:90px;background: rgb(104,5,22);">加密方式</th>
+													<th style="width:35px;background: rgb(104,5,22);">属性</th>
+													<th style="width:35px;background: rgb(104,5,22);">权重</th>
+													<th style="width:35px;background: rgb(104,5,22);">删除</th>
+												</tr>
+											</table>
+										</div>
                                     	<div id="log_content" style="margin-top:10px;display: none;">
 											<textarea cols="63" rows="21" wrap="off" readonly="readonly" id="log_content1" style="width:99%; font-family:'Lucida Console'; font-size:11px;background:#475A5F;color:#FFFFFF;"></textarea>
 										</div>
@@ -662,8 +670,6 @@ function count_down_close() {
 										<div class="apply_gen">
 											<input id="cmdBtn" class="button_gen" type="button" onclick="save()" value="提交">
 										</div>
-										<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
-
 									</td>
 								</tr>
 							</table>

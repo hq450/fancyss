@@ -189,124 +189,127 @@ function update_visibility(){
 							<table width="760px" border="0" cellpadding="5" cellspacing="0" bordercolor="#6b8fa3" class="FormTitle" id="FormTitle">
 								<tr>
 									<td bgcolor="#4D595D" colspan="3" valign="top"><div>&nbsp;</div>
-										<div class="formfonttitle">Shadowsocks - Socks5代理设置</div>
-										<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
+										<div class="formfonttitle"><% nvram_get("productid"); %> 科学上网插件 - Socks5代理设置</div>
+										<div style="float:right; width:15px; height:25px;margin-top:-20px">
+											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
+										</div>
+										<div style="margin:10px 0 10px 5px;" class="splitLine"></div>
 										<div class="SimpleNote">
 											<li><i>说明：</i>此页面允许配置第二个shadosocks账号，功能仅限于在路由器上打开一个连接到shadowsocks服务器的socks5端口。如果你使用chrome浏览器，你可以使用SwitchyOmega插件去连接这个socks5代理。</li>
 										</div>
-										<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
-										<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-											<thead>
+										<div style="margin:5px 0px 0px 0px">
+											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+												<thead>
+													<tr>
+														<td colspan="2">Shadowsocks - ss-local - 高级设置</td>
+													</tr>
+												</thead>
+                                        		<tr id="switch_tr">
+                                        		    <th>
+                                        		        <label>开关</label>
+                                        		    </th>
+                                        		    <td colspan="2">
+                                        		        <div class="switch_field" style="display:table-cell;float: left;">
+                                        		            <label for="ss_local_enable">
+                                        		                <input id="ss_local_enable" class="switch" type="checkbox" style="display: none;">
+                                        		                <div class="switch_container" >
+                                        		                    <div class="switch_bar"></div>
+                                        		                    <div class="switch_circle transition_style">
+                                        		                        <div></div>
+                                        		                    </div>
+                                        		                </div>
+                                        		            </label>
+                                        		        </div>
+                                        		    </td>
+                                        		</tr>
 												<tr>
-													<td colspan="2">Shadowsocks - ss-local - 高级设置</td>
-												</tr>
-											</thead>
-                                        	<tr id="switch_tr">
-                                        	    <th>
-                                        	        <label>开关</label>
-                                        	    </th>
-                                        	    <td colspan="2">
-                                        	        <div class="switch_field" style="display:table-cell;float: left;">
-                                        	            <label for="ss_local_enable">
-                                        	                <input id="ss_local_enable" class="switch" type="checkbox" style="display: none;">
-                                        	                <div class="switch_container" >
-                                        	                    <div class="switch_bar"></div>
-                                        	                    <div class="switch_circle transition_style">
-                                        	                        <div></div>
-                                        	                    </div>
-                                        	                </div>
-                                        	            </label>
-                                        	        </div>
-                                        	    </td>
-                                        	</tr>
-											<tr>
-												<th width="20%">服务器(建议填写IP地址)</th>
-												<td>
-													<input style="background-image: none;background-color: #576d73;border:1px solid gray" type="text" class="ssconfig input_ss_table" id="ss_local_server" name="ss_local_server" maxlength="100" value="">
-												</td>
-											</tr>
-											<tr>
-												<th width="20%">服务器端口</th>
-												<td>
-													<input type="text" class="ssconfig input_ss_table" id="ss_local_port" name="ss_local_port" maxlength="100" value="">
-												</td>
-											</tr>
-											<tr>
-												<th width="20%">密码</th>
+													<th width="20%">服务器(建议填写IP地址)</th>
 													<td>
-														<input type="password" class="ssconfig input_ss_table" id="ss_local_password" name="ss_local_password" maxlength="100" value="" onBlur="switchType(this, false);" onFocus="switchType(this, true);">
-												</td>
-											</tr>
-											<tr>
-												<th width="20%">加密方法</th>
-												<td>
-													<select id="ss_local_method" name="ss_local_method" style="width:165px;margin:0px 0px 0px 2px;" class="input_option">
-														<option value="rc4-md5">rc4-md5</option>
-														<option value="aes-128-gcm">aes-128-gcm</option>
-														<option value="aes-192-gcm">aes-192-gcm</option>
-														<option value="aes-256-gcm">aes-256-gcm</option>
-														<option value="aes-128-cfb">aes-128-cfb</option>
-														<option value="aes-192-cfb">aes-192-cfb</option>
-														<option value="aes-256-cfb" selected>aes-256-cfb</option>
-														<option value="aes-128-ctr">aes-128-ctr</option>
-														<option value="aes-192-ctr">aes-192-ctr</option>
-														<option value="aes-256-ctr">aes-256-ctr</option>
-														<option value="camellia-128-cfb">camellia-128-cfb</option>
-														<option value="camellia-192-cfb">camellia-192-cfb</option>
-														<option value="camellia-256-cfb">camellia-256-cfb</option>
-														<option value="bf-cfb">bf-cfb</option>
-														<option value="salsa20">salsa20</option>
-														<option value="chacha20">chacha20</option>
-														<option value="chacha20-poly1305">chacha20-poly1305</option>
-														<option value="chacha20-ietf">chacha20-ietf</option>
-														<option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
-													</select>
-												</td>
-											</tr>
-											<tr>
-												<th width="20%">超时时间</th>
-												<td>
-													<input type="text" class="ssconfig input_ss_table" id="ss_local_timeout" name="ss_local_timeout" maxlength="100" value="600">
-												</td>
-											</tr>
-											<tr>
-												<th width="20%">本地代理端口</th>
-												<td>
-													<input type="text" class="ssconfig input_ss_table" id="ss_local_proxyport" name="ss_local_proxyport" maxlength="100" value="1082">												
-												</td>
-											</tr>
-											<tr id="ss_obfs">
-												<th width="35%">混淆 (obfs)</th>
-												<td>
-													<select id="ss_local_obfs" name="ss_local_obfs" style="width:164px;margin:0px 0px 0px 2px;" class="input_option"  onchange="update_visibility();" >
-														<option class="content_input_fd" value="0">关闭</option>
-														<option class="content_input_fd" value="tls">tls</option>
-														<option class="content_input_fd" value="http">http</option>
-													</select>
-												</td>
-											</tr>
-											<tr id="ss_obfs_host">
-												<th width="35%">混淆主机名 (obfs_host)</th>
-												<td>
-													<input type="text" name="ss_local_obfs_host" id="ss_local_obfs_host" placeholder="bing.com"  class="ssconfig input_ss_table" maxlength="100" value=""></input>
-												</td>
-											</tr>
-											<tr id="acl_support">
-												<th>ACL控制</th>
-												<td>
-													<select name="ss_local_acl" id="ss_local_acl" class="input_option" style="width:165px;margin:0px 0px 0px 2px;">
-														<option value="0" selected>不使用</option>
-														<option value="1">gfwlist.pac</option>
-														<option value="2">chn.pac</option>
-													</select>
-												</td>
-											</tr>
-										</table>
+														<input type="text" class="input_ss_table" id="ss_local_server" name="ss_local_server" maxlength="100" value="">
+													</td>
+												</tr>
+												<tr>
+													<th width="20%">服务器端口</th>
+													<td>
+														<input type="text" class="input_ss_table" id="ss_local_port" name="ss_local_port" maxlength="100" value="">
+													</td>
+												</tr>
+												<tr>
+													<th width="20%">密码</th>
+														<td>
+															<input type="password" name="ss_local_password" id="ss_local_password" class="input_ss_table" autocomplete="off" autocorrect="off" autocapitalize="off" maxlength="100" value="" readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute('readonly');"/>
+													</td>
+												</tr>
+												<tr>
+													<th width="20%">加密方法</th>
+													<td>
+														<select id="ss_local_method" name="ss_local_method" style="width:165px;margin:0px 0px 0px 2px;" class="input_option">
+															<option value="rc4-md5">rc4-md5</option>
+															<option value="aes-128-gcm">aes-128-gcm</option>
+															<option value="aes-192-gcm">aes-192-gcm</option>
+															<option value="aes-256-gcm">aes-256-gcm</option>
+															<option value="aes-128-cfb">aes-128-cfb</option>
+															<option value="aes-192-cfb">aes-192-cfb</option>
+															<option value="aes-256-cfb" selected>aes-256-cfb</option>
+															<option value="aes-128-ctr">aes-128-ctr</option>
+															<option value="aes-192-ctr">aes-192-ctr</option>
+															<option value="aes-256-ctr">aes-256-ctr</option>
+															<option value="camellia-128-cfb">camellia-128-cfb</option>
+															<option value="camellia-192-cfb">camellia-192-cfb</option>
+															<option value="camellia-256-cfb">camellia-256-cfb</option>
+															<option value="bf-cfb">bf-cfb</option>
+															<option value="salsa20">salsa20</option>
+															<option value="chacha20">chacha20</option>
+															<option value="chacha20-poly1305">chacha20-poly1305</option>
+															<option value="chacha20-ietf">chacha20-ietf</option>
+															<option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
+														</select>
+													</td>
+												</tr>
+												<tr>
+													<th width="20%">超时时间</th>
+													<td>
+														<input type="text" class="input_ss_table" id="ss_local_timeout" name="ss_local_timeout" maxlength="100" value="600">
+													</td>
+												</tr>
+												<tr>
+													<th width="20%">本地代理端口</th>
+													<td>
+														<input type="text" class="input_ss_table" id="ss_local_proxyport" name="ss_local_proxyport" maxlength="100" value="1082">												
+													</td>
+												</tr>
+												<tr id="ss_obfs">
+													<th width="35%">混淆 (obfs)</th>
+													<td>
+														<select id="ss_local_obfs" name="ss_local_obfs" style="width:164px;margin:0px 0px 0px 2px;" class="input_option"  onchange="update_visibility();" >
+															<option class="content_input_fd" value="0">关闭</option>
+															<option class="content_input_fd" value="tls">tls</option>
+															<option class="content_input_fd" value="http">http</option>
+														</select>
+													</td>
+												</tr>
+												<tr id="ss_obfs_host">
+													<th width="35%">混淆主机名 (obfs_host)</th>
+													<td>
+														<input type="text" name="ss_local_obfs_host" id="ss_local_obfs_host" placeholder="bing.com"  class="input_ss_table" maxlength="100" value=""></input>
+													</td>
+												</tr>
+												<tr id="acl_support">
+													<th>ACL控制</th>
+													<td>
+														<select name="ss_local_acl" id="ss_local_acl" class="input_option" style="width:165px;margin:0px 0px 0px 2px;">
+															<option value="0" selected>不使用</option>
+															<option value="1">gfwlist.pac</option>
+															<option value="2">chn.pac</option>
+														</select>
+													</td>
+												</tr>
+											</table>
+										</div>
 										<div id="warning" style="font-size:14px;margin:20px auto;"></div>
 										<div class="apply_gen">
 											<input class="button_gen" id="cmdBtn" onClick="save()" type="button" value="提交" />
 										</div>
-										<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 									</td>
 								</tr>
 							</table>
