@@ -87,7 +87,7 @@ echo_date 检测jffs分区剩余空间...
 SPACE_AVAL=$(df|grep jffs | awk '{print $4}')
 SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
 if [ "$SPACE_AVAL" -gt "$SPACE_NEED" ];then
-	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空满满足，继续安装！
+	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空间满足，继续安装！
 else
 	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空间不足！
 	echo_date 退出安装！
