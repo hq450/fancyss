@@ -9,7 +9,7 @@ todo
 # 机型/固件支持
 
 ## [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
-**fancyss_arm**离线安装包仅适用于merlin koolshare arm架构机型改版固件（arm架构，linux内核版本：2.6.36.4，，bcm470X系列cpu）
+**fancyss_arm**离线安装包仅适用于merlin koolshare arm架构机型改版固件（armV7架构，linux内核版本：2.6.36.4，，bcm470X系列cpu）
 
 **fancyss_arm**支持机型（需刷梅林koolshare改版固件）：
 * 华硕系列：`RT-AC56U` `RT-AC68U` `RT-AC66U-B1` `RT-AC1900P` `RT-AC87U` `RT-AC88U` `RT-AC3100` `RT-AC3200` `RT-AC5300`
@@ -30,7 +30,7 @@ todo
 
 ----
 ## [fancyss_hnd](https://github.com/hq450/fancyss/tree/master/fancyss_hnd)
-**fancyss_hnd**离线安装包仅适用于asus/merlin koolshare hnd平台机型改版固件（arm架构，linux内核版本：4.1.27，bcm490X系列cpu）
+**fancyss_hnd**离线安装包仅适用于asus/merlin koolshare hnd平台机型改版固件（armV8架构，linux内核版本：4.1.27，bcm490X系列cpu）
 
 **fancyss_hnd**支持机型/固件：
  * [RT-AC86U merlin改版固件](http://koolshare.cn/thread-127878-1-1.html)
