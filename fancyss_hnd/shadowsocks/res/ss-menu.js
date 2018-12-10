@@ -402,7 +402,7 @@ function openssHint(itemNum) {
 		//overall
 		statusmenu += "<span><b><font color='#CC0066'>【5】回国模式:</font></b></br>"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;提供给国外的朋友，通过在中间服务器翻回来，以享受一些视频、音乐等网络服务。</br>"
-		statusmenu += "<b><font color='#669900'>优点：</font></b>建议设置cdns或者chinadns2作为dns解析方案~</br>"
+		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~</br>"
 		_caption = "模式说明";
 		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 2) {
