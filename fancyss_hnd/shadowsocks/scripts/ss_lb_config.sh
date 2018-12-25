@@ -1,7 +1,6 @@
 #!/bin/sh
 # 导入skipd数据
 eval `dbus export ss`
-ss_basic_dnslookup_server="114.114.114.114"
 # 引用环境变量等
 source /koolshare/scripts/base.sh
 username=`nvram get http_username`
@@ -100,28 +99,17 @@ if [ "$ss_lb_heartbeat" == "1" ];then
 				server=`dbus get ssconf_basic_server_$node`
 				IFIP=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 				if [ -z "$IFIP" ];then
-					echo_date 检测到【"$nick_name"】节点域名格式，将尝试进行解析...
-					echo_date 使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)
-					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
-					if [ "$?" == "0" ];then
-						server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+					echo_date "检测到【"$nick_name"】节点域名格式，将尝试进行解析..."
+					echo_date "使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)"
+					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v : | awk 'NR==1{print}' | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:" 2>/dev/null`
+					if [ -n "$server" ];then
+						echo_date "【"$nick_name"】节点ip地址解析成功：$server"
 					else
-						echo_date 域名【"$nick_name"】解析失败！
-						echo_date 尝试用resolveip方式解析，DNS：系统
-						server=`resolveip -4 -t 2 $server|awk 'NR==1{print}'`
-						if [ "$?" == "0" ];then
-							server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-						fi
-					fi
-
-					if [ ! -z "$server" ];then
-						echo_date 【"$nick_name"】节点ip地址解析成功：$server
-					else
-						echo_date【警告】：【"$nick_name"】节点ip解析失败，将由haproxy自己尝试解析.
-						server=`dbus get ssconf_basic_server_$node`
+						echo_date "【警告】：【"$nick_name"】节点ip解析失败，将不会添加到负载均衡列表！"
+						continue
 					fi
 				else
-					echo_date 检测到【"$nick_name"】节点已经是IP格式，跳过解析... 
+					echo_date "检测到【"$nick_name"】节点已经是IP格式，跳过解析... "
 				fi
 			fi
 			weight=`dbus get ssconf_basic_weight_$node`
@@ -169,28 +157,17 @@ else
 				server=`dbus get ssconf_basic_server_$node`
 				IFIP=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 				if [ -z "$IFIP" ];then
-					echo_date 检测到【"$nick_name"】节点域名格式，将尝试进行解析...
-					echo_date 使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)
-					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
-					if [ "$?" == "0" ];then
-						server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+					echo_date "检测到【"$nick_name"】节点域名格式，将尝试进行解析..."
+					echo_date "使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)"
+					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v : | awk 'NR==1{print}' | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:" 2>/dev/null`
+					if [ -n "$server" ];then
+						echo_date "【"$nick_name"】节点ip地址解析成功：$server"
 					else
-						echo_date 域名【"$nick_name"】解析失败！
-						echo_date 尝试用resolveip方式解析，DNS：系统
-						server=`resolveip -4 -t 2 $server|awk 'NR==1{print}'`
-						if [ "$?" == "0" ];then
-							server=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-						fi
-					fi
-
-					if [ ! -z "$server" ];then
-						echo_date 【"$nick_name"】节点ip地址解析成功：$server
-					else
-						echo_date 【"$nick_name"】节点ip解析失败，将由haproxy自己尝试解析...
-						server=`dbus get ssconf_basic_server_$node`
+						echo_date "【警告】：【"$nick_name"】节点ip解析失败，将不会添加到负载均衡列表！"
+						continue
 					fi
 				else
-					echo_date 检测到【"$nick_name"】节点已经是IP格式，跳过解析... 
+					echo_date "检测到【"$nick_name"】节点已经是IP格式，跳过解析... "
 				fi
 			fi
 			port=`dbus get ssconf_basic_port_$node`
