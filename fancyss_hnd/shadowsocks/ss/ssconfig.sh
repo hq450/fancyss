@@ -7,6 +7,7 @@ eval `dbus export ss`
 source /koolshare/scripts/base.sh
 source helper.sh
 # Variable definitions
+THREAD=$(grep -c '^processor' /proc/cpuinfo)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 dbus set ss_basic_version_local=`cat /koolshare/ss/version`
 LOG_FILE=/tmp/upload/ss_log.txt
@@ -45,6 +46,11 @@ ARG_OBFS=""
 			fi
 		fi
 	fi
+}
+
+cmd() {
+	echo_date "$*" 2>&1
+	"$@"
 }
 
 get_lan_cidr(){
@@ -166,13 +172,13 @@ kill_process(){
 	sslocal=`ps | grep -w ss-local | grep -v "grep" | grep -w "23456" | awk '{print $1}'`
 	if [ -n "$sslocal" ];then 
 		echo_date 关闭ss-local进程:23456端口...
-		kill $sslocal  >/dev/null 2>&1
+		kill $sslocal >/dev/null 2>&1
 	fi
 
 	ssrlocal=`ps | grep -w rss-local | grep -v "grep" | grep -w "23456" | awk '{print $1}'`
 	if [ -n "$ssrlocal" ];then 
 		echo_date 关闭ssr-local进程:23456端口...
-		kill $ssrlocal  >/dev/null 2>&1
+		kill $ssrlocal >/dev/null 2>&1
 	fi
 	sstunnel=`pidof ss-tunnel`
 	if [ -n "$sstunnel" ];then 
@@ -472,7 +478,7 @@ start_dns(){
 	# Start cdns
 	if [ "$ss_foreign_dns" == "1" ];then
 		echo_date 开启cdns，用于dns解析...
-		cdns -c /koolshare/ss/rules/cdns.json > /dev/null 2>&1 &
+		cdns -c /koolshare/ss/rules/cdns.json >/dev/null 2>&1 &
 	fi
 
 	# Start chinadns2
@@ -499,7 +505,7 @@ start_dns(){
 
 		if [ -n "$ss_basic_server_ip" ];then
 			# 用chnroute去判断SS服务器在国内还是在国外
-			ipset test chnroute $ss_basic_server_ip > /dev/null 2>&1
+			ipset test chnroute $ss_basic_server_ip >/dev/null 2>&1
 			if [ "$?" != "0" ];then
 				# ss服务器是国外IP
 				ss_real_server_ip="$ss_basic_server_ip"
@@ -519,7 +525,7 @@ start_dns(){
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
 		start_sslocal
 		echo_date 开启dns2socks，用于dns解析...
-		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
 	fi
 	
 	# Start ss-tunnel
@@ -539,7 +545,7 @@ start_dns(){
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
 		fi
 	fi
 	
@@ -547,9 +553,9 @@ start_dns(){
 	if [ "$ss_foreign_dns" == "5" ];then
 		start_sslocal
 		echo_date 开启dns2socks，用于chinadns1上游...
-		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 > /dev/null 2>&1 &
+		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
 		echo_date 开启chinadns1，用于dns解析...
-		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
+		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
 	fi
 
 	#start https_dns_proxy
@@ -557,7 +563,7 @@ start_dns(){
 		echo_date 开启https_dns_proxy，用于dns解析...
 		if [ -n "$ss_basic_server_ip" ];then
 			# 用chnroute去判断SS服务器在国内还是在国外
-			ipset test chnroute $ss_basic_server_ip > /dev/null 2>&1
+			ipset test chnroute $ss_basic_server_ip >/dev/null 2>&1
 			if [ "$?" != "0" ];then
 				# ss服务器是国外IP
 				ss_real_server_ip="$ss_basic_server_ip"
@@ -581,7 +587,7 @@ start_dns(){
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
 		fi
 	fi
 
@@ -594,7 +600,7 @@ start_dns(){
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
 		fi
 	fi
 	
@@ -619,7 +625,7 @@ create_dnsmasq_conf(){
 		else
 			if [ -n "$IFIP_DNS1" ];then
 				# 用chnroute去判断运营商DNS是否为局域网(国外)ip地址，有些二级路由的是局域网ip地址，会被ChinaDNS 判断为国外dns服务器，这个时候用114取代之
-				ipset test chnroute $IFIP_DNS1 > /dev/null 2>&1
+				ipset test chnroute $IFIP_DNS1 >/dev/null 2>&1
 				if [ "$?" != "0" ];then
 					# 运营商DNS：ISP_DNS1是局域网(国外)ip
 					CDN="114.114.114.114"
@@ -1046,18 +1052,33 @@ start_ss_redir(){
 				# tcp udp go ss
 				echo_date $BIN的 tcp 走$BIN.
 				echo_date $BIN的 udp 走$BIN.
-				$BIN -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				fire_redir "$BIN -c $CONFIG_FILE $ARG_OBFS -u"
 			fi
 		else
 			# tcp only go ss
 			echo_date $BIN的 tcp 走$BIN.
 			echo_date $BIN的 udp 未开启.
-			$BIN -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1		
+			fire_redir "$BIN -c $CONFIG_FILE $ARG_OBFS"
 		fi
 	fi
 	echo_date $BIN 启动完毕！.
 	
 	start_speeder
+}
+
+fire_redir(){
+	[ "$ss_basic_type" == "0" ] && [ "$ss_basic_mcore" == "1" ] && local ARG="--reuse-port" || local ARG=""
+	if [ "$ss_basic_mcore" == "1" ];then
+		echo_date $BIN开启$THREAD线程支持.
+		local i=1
+		while [ $i -le $THREAD ]
+		do
+			cmd $1 $ARG -f /var/run/ss_$i.pid
+			let i++
+		done
+	else
+		cmd $1 -f /var/run/ss.pid
+	fi
 }
 
 start_koolgame(){
@@ -1538,13 +1559,13 @@ flush_nat(){
 	done
 	#iptables -t nat -D PREROUTING -p tcp -j SHADOWSOCKS >/dev/null 2>&1
 	
-	iptables -t nat -F SHADOWSOCKS > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS > /dev/null 2>&1
-	iptables -t nat -F SHADOWSOCKS_EXT > /dev/null 2>&1
-	iptables -t nat -F SHADOWSOCKS_GFW > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GFW > /dev/null 2>&1
-	iptables -t nat -F SHADOWSOCKS_CHN > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_CHN > /dev/null 2>&1
-	iptables -t nat -F SHADOWSOCKS_GAM > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GAM > /dev/null 2>&1
-	iptables -t nat -F SHADOWSOCKS_GLO > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GLO > /dev/null 2>&1
-	iptables -t nat -F SHADOWSOCKS_HOM > /dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_HOM > /dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_EXT >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_GFW >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GFW >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_CHN >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_CHN >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_GAM >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GAM >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_GLO >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GLO >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_HOM >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_HOM >/dev/null 2>&1
 
 	mangle_indexs=`iptables -nvL PREROUTING -t mangle |sed 1,2d | sed -n '/SHADOWSOCKS/='|sort -r`
 	for mangle_index in $mangle_indexs
@@ -1554,10 +1575,10 @@ flush_nat(){
 	#iptables -t mangle -D PREROUTING -p udp -j SHADOWSOCKS >/dev/null 2>&1
 	
 	iptables -t mangle -F SHADOWSOCKS >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS >/dev/null 2>&1
-	iptables -t mangle -F SHADOWSOCKS_GAM > /dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GAM > /dev/null 2>&1
+	iptables -t mangle -F SHADOWSOCKS_GAM >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GAM >/dev/null 2>&1
 	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 >/dev/null 2>&1
-	iptables -t nat -F OUTPUT > /dev/null 2>&1
-	iptables -t nat -X SHADOWSOCKS_EXT > /dev/null 2>&1
+	iptables -t nat -F OUTPUT >/dev/null 2>&1
+	iptables -t nat -X SHADOWSOCKS_EXT >/dev/null 2>&1
 	#iptables -t nat -D PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	[ -n "$chromecast_nu" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1

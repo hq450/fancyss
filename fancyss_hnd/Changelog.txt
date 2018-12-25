@@ -1,5 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
+1.5.1
+   - update	ss/ssr现在支持调用多核心，在【附加功能】-【ss/ssr多核心支持】处启用；
+   - fix	现在负载均衡节点如果是域名且解析失败，不会添加到负载均衡列表，以免haproxy无法运行；
+   - fix	修复插件页面显示裂图的问题；
+   - update	更新v2ray到v4.9.0；
+   - update	同步最新规则；
+
 1.5.0
    - 说明	1.4.9的中ssrr-libev和haproxy的二进制更新给忘了，故此版本中补上。
    - fix	更新ssrr-libev二进制，修复ssrr-libev的速度降低问题，详情:https://github.com/hq450/fancyss/issues/238；
