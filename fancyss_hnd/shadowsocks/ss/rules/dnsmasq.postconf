@@ -74,6 +74,7 @@ perpare(){
 	[ -n "`cat /etc/dnsmasq.conf|grep no-resolv`" ] && sed -i '/no-resolv/d' /etc/dnsmasq.conf
 	[ -n "`cat /etc/dnsmasq.conf|grep servers-file`" ] && sed -i '/servers-file/d' /etc/dnsmasq.conf
 	[ -n "`cat /etc/dnsmasq.conf|grep resolv-file`" ] && sed -i '/resolv-file/d' /etc/dnsmasq.conf
+	[ -n "`cat /etc/dnsmasq.conf|grep script-arp`" ] && sed -i '/script-arp/d' /etc/dnsmasq.conf
 }
 
 use_chn_plan(){
