@@ -1581,7 +1581,12 @@ flush_nat(){
 	iptables -t nat -X SHADOWSOCKS_EXT >/dev/null 2>&1
 	#iptables -t nat -D PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
-	[ -n "$chromecast_nu" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1
+	if [ -n "$chromecast_nu" ];then
+		echo "$chromecast_nu" |sed 'x;1!H;$!d;x'| while read -r line;
+		do
+			iptables -t nat -D PREROUTING ${line} >/dev/null 2>&1
+		done
+	fi
 	iptables -t mangle -D QOSO0 -m mark --mark "$ip_prefix_hex" -j RETURN >/dev/null 2>&1
 	# flush ipset
 	ipset -F chnroute >/dev/null 2>&1 && ipset -X chnroute >/dev/null 2>&1
@@ -1863,6 +1868,10 @@ chromecast(){
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	if [ "$ss_basic_dns_hijack" == "1" ];then
 		if [ -z "$chromecast_nu" ]; then
+			IFIP=`echo $ss_basic_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+			if [ -n "$IFIP" ];then
+				iptables -t nat -A PREROUTING -p udp -s $ss_basic_server_ip --dport 53 -j ACCEPT
+			fi
 			iptables -t nat -A PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
 			echo_date 开启DNS劫持功能功能，防止DNS污染...
 		else
