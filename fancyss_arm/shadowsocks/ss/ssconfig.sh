@@ -1591,11 +1591,11 @@ flush_nat(){
 	iptables -t nat -F OUTPUT > /dev/null 2>&1
 	iptables -t nat -X SHADOWSOCKS_EXT > /dev/null 2>&1
 	#iptables -t nat -D PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
-	chromecast_nu=`iptables-save -t nat|grep 'dport 53'|grep 'PREROUTING'`
+	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	if [ -n "$chromecast_nu" ];then
-		echo "$chromecast_nu" | while read -r line;
+		echo "$chromecast_nu" |sed 'x;1!H;$!d;x'| while read -r line;
 		do
-			iptables -t nat -D ${line:3} >/dev/null 2>&1
+			iptables -t nat -D PREROUTING ${line} >/dev/null 2>&1
 		done
 	fi
 	iptables -t mangle -D QOSO0 -m mark --mark "$ip_prefix_hex" -j RETURN >/dev/null 2>&1
