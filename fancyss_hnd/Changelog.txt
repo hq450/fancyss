@@ -1,5 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
+1.5.4
+   - fix	修复dnsmasq-fastlookup在RT-AC86U 384.8梅林改版固件中无法工作的问题；
+   - fix	修复回国模式自定义国外直连DNS无效的问题。
+   - fix	修复当【节点域名解析DNS服务器】自定义服务器加上端口号后导致v2ray无法工作等问题；
+   - update	优化了当ss/ssr/koolgame/v2ray服务器，或者负载均衡服务器使用域名时的解析功能；
+   - change	现在【插件触发重启设定】去掉了重启dnsmasq选项，因为重启dnsmasq基本无用。
+
 1.5.3
    - fix	修复dnsmasq-fastlookup在RT-AC86U_384_45419官改固件中无法工作的问题。
 
