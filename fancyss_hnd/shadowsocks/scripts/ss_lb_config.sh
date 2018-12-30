@@ -1,7 +1,8 @@
 #!/bin/sh
-# 导入skipd数据
+
+# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+
 eval `dbus export ss`
-# 引用环境变量等
 source /koolshare/scripts/base.sh
 username=`nvram get http_username`
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
@@ -10,31 +11,95 @@ ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|s
 IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 
-get_server_resolver(){
-	if [ "$ss_basic_server_resolver" == "1" ];then
+__valid_ip(){
+	# 验证是否为ipv4或者ipv6地址，是则正确返回，不是返回空值
+	local format_4=`echo "$1"|grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
+	local format_6=`echo "$1"|grep -Eo '^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*'`
+	if [ -n "$format_4" ] && [ -z "$format_6" ];then
+		echo "$format_4"
+		return 0
+	elif [ -z "$format_4" ] && [ -n "$format_6" ];then
+		echo "$format_6"
+		return 0
+	else
+		echo ""
+		return 1
+	fi
+}
+
+__get_server_resolver(){
+	local value_1="$ss_basic_server_resolver"
+	local value_2="$ss_basic_server_resolver_user"
+	local res
+	if [ "$value_1" == "1" ];then
 		if [ -n "$IFIP_DNS1" ];then
-			RESOLVER="$ISP_DNS1"
+			res="$ISP_DNS1"
 		else
-			RESOLVER="114.114.114.114"
+			res="114.114.114.114"
 		fi
 	fi
-	[ "$ss_basic_server_resolver" == "2" ] && RESOLVER="223.5.5.5"
-	[ "$ss_basic_server_resolver" == "3" ] && RESOLVER="223.6.6.6"
-	[ "$ss_basic_server_resolver" == "4" ] && RESOLVER="114.114.114.114"
-	[ "$ss_basic_server_resolver" == "5" ] && RESOLVER="114.114.115.115"
-	[ "$ss_basic_server_resolver" == "6" ] && RESOLVER="1.2.4.8"
-	[ "$ss_basic_server_resolver" == "7" ] && RESOLVER="210.2.4.8"
-	[ "$ss_basic_server_resolver" == "8" ] && RESOLVER="117.50.11.11"
-	[ "$ss_basic_server_resolver" == "9" ] && RESOLVER="117.50.22.22"
-	[ "$ss_basic_server_resolver" == "10" ] && RESOLVER="180.76.76.76"
-	[ "$ss_basic_server_resolver" == "11" ] && RESOLVER="119.29.29.29"
-	[ "$ss_basic_server_resolver" == "12" ] && {
-		[ -n "$ss_basic_server_resolver_user" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
-	}
-	echo $RESOLVER
+	[ "$value_1" == "2" ] && res="223.5.5.5"
+	[ "$value_1" == "3" ] && res="223.6.6.6"
+	[ "$value_1" == "4" ] && res="114.114.114.114"
+	[ "$value_1" == "5" ] && res="114.114.115.115"
+	[ "$value_1" == "6" ] && res="1.2.4.8"
+	[ "$value_1" == "7" ] && res="210.2.4.8"
+	[ "$value_1" == "8" ] && res="117.50.11.11"
+	[ "$value_1" == "9" ] && res="117.50.22.22"
+	[ "$value_1" == "10" ] && res="180.76.76.76"
+	[ "$value_1" == "11" ] && res="119.29.29.29"
+	if [ "$value_1" == "12" ];then
+		if [ -n "$value_2" ];then
+			res=$(__valid_ip "$value_2")
+			[ -z "$res" ] && res="114.114.114.114"
+		else
+			res="114.114.114.114"
+		fi
+	fi
+	echo $res
+}
+
+__get_server_resolver_port(){
+	local port
+	if [ "$ss_basic_server_resolver" == "12" ];then
+		if [ -n "$ss_basic_server_resolver_user" ];then
+			port=`echo "$ss_basic_server_resolver_user"|awk -F"#|:" '{print $2}'`
+			[ -z "$port" ] && port="53"
+		else
+			port="53"
+		fi
+	else
+		port="53"
+	fi
+	echo $port
+}
+
+__resolve_ip(){
+	local domain1=`echo "$1"|grep -E "^https://|^http://|/"`
+	local domain2=`echo "$1"|grep -E "\."`
+	if [ -n "$domain1" ] || [ -z "$domain2" ];then
+		# not ip, not domain
+		echo ""
+		return 2
+	else
+		# domain format
+		SERVER_IP=`nslookup "$1" $(__get_server_resolver):$(__get_server_resolver_port) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}' 2>/dev/null`
+		SERVER_IP=$(__valid_ip $SERVER_IP)
+		if [ -n "$SERVER_IP" ];then
+			# success resolved
+			echo "$SERVER_IP"
+			return 0
+		else
+			# resolve failed
+			echo ""
+			return 1
+		fi
+	fi
 }
 
 write_haproxy_cfg(){
+	local tmp server_ip
+	rm -rf /jffs/configs/dnsmasq.d/ss_server.conf
 	echo_date 生成haproxy配置文件到/koolshare/configs目录.
 	cat > /koolshare/configs/haproxy.cfg <<-EOF
 		global
@@ -81,8 +146,13 @@ write_haproxy_cfg(){
 		    mode tcp
 		    balance roundrobin
 	EOF
-if [ "$ss_lb_heartbeat" == "1" ];then
-	echo_date 启用故障转移心跳...
+	
+	if [ "$ss_lb_heartbeat" == "1" ];then
+		echo_date "启用故障转移心跳..."
+	else
+		echo_date "不启用故障转移心跳..."
+	fi
+
 	lb_node=`dbus list ssconf_basic_use_lb_|sed 's/ssconf_basic_use_lb_//g' |cut -d "=" -f 1 | sort -n | sed '/^$/d'`
 	for node in $lb_node
 	do
@@ -97,40 +167,58 @@ if [ "$ss_lb_heartbeat" == "1" ];then
 				port=`dbus get ssconf_basic_port_$node`
 				name=`dbus get ssconf_basic_server_$node`:$port
 				server=`dbus get ssconf_basic_server_$node`
-				IFIP=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-				if [ -z "$IFIP" ];then
-					echo_date "检测到【"$nick_name"】节点域名格式，将尝试进行解析..."
-					echo_date "使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)"
-					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v : | awk 'NR==1{print}' | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:" 2>/dev/null`
-					if [ -n "$server" ];then
-						echo_date "【"$nick_name"】节点ip地址解析成功：$server"
-					else
-						echo_date "【警告】：【"$nick_name"】节点ip解析失败，将不会添加到负载均衡列表！"
-						continue
-					fi
-				else
+				tmp=$(__valid_ip "$server")
+				if [ $? == 0 ];then
 					echo_date "检测到【"$nick_name"】节点已经是IP格式，跳过解析... "
+				else
+					echo_date "使用nslookup方式解析负载均衡服务器【$nick_name】的ip地址，解析DNS：$(__get_server_resolver):$(__get_server_resolver_port)"
+					server_ip=$(__resolve_ip "$server")
+					case $? in
+					0)
+						# server is domain format and success resolved.
+						echo_date "【$nick_name】节点【$server】的ip地址解析成功：$server_ip"
+						echo "server=/$server/$(__get_server_resolver)#$(__get_server_resolver_port)" >> /jffs/configs/dnsmasq.d/ss_server.conf
+						;;
+					1)
+						# server is domain format and failed to resolve.
+						echo_date "【警告】：【$nick_name】节点【$server】的ip解析失败，将不会添加到负载均衡列表！"
+						echo "server=/$server/$(__get_server_resolver)#$(__get_server_resolver_port)" >> /jffs/configs/dnsmasq.d/ss_server.conf
+						continue
+						;;
+					2)
+						# server is not ip either domain!
+						echo_date "错误！！检测【$nick_name】节点【$server】既不是ip地址，也不是域名格式！"
+						echo_date "此节点将不会添加到负载均衡列表！"
+						continue
+						;;
+					esac
 				fi
 			fi
 			weight=`dbus get ssconf_basic_weight_$node`
-			up=`dbus get ss_lb_up`
-			down=`dbus get ss_lb_down`
-			interval=`dbus get ss_lb_interval`
 			mode=`dbus get ssconf_basic_lbmode_$node`
+			if [ "$ss_lb_heartbeat" == "1" ];then
+				up=`dbus get ss_lb_up`
+				down=`dbus get ss_lb_down`
+				interval=`dbus get ss_lb_interval`
+				sp_args="rise $up fall $down check inter $interval"
+			else
+				sp_args=""
+			fi
+			
 			if [ "$mode" == "3" ];then
-				echo_date 载入【"$nick_name"】作为备用节点...
+				echo_date 载入【$nick_name】【$server】作为备用节点...
 				cat >> /koolshare/configs/haproxy.cfg <<-EOF
-				    server $name $server:$port weight $weight rise $up fall $down check inter $interval resolvers mydns backup
+				    server $name $server_ip:$port weight $weight $sp_args resolvers mydns backup
 				EOF
 			elif [ "$mode" == "2" ];then
-				echo_date 载入【"$nick_name"】作为主用节点...
+				echo_date 载入【$nick_name】【$server】作为主用节点...
 				cat >> /koolshare/configs/haproxy.cfg <<-EOF
-				    server $name $server:$port weight $weight rise $up fall $down check inter $interval resolvers mydns
+				    server $name $server_ip:$port weight $weight $sp_args resolvers mydns
 				EOF
 			else
-				echo_date 载入【"$nick_name"】作为负载均衡节点...
+				echo_date 载入【$nick_name】【$server】作为负载均衡节点...
 				cat >> /koolshare/configs/haproxy.cfg <<-EOF
-				    server $name $server:$port weight $weight rise $up fall $down check inter $interval resolvers mydns
+				    server $name $server_ip:$port weight $weight $sp_args resolvers mydns
 				EOF
 			fi
 		else
@@ -138,67 +226,10 @@ if [ "$ss_lb_heartbeat" == "1" ];then
 			dbus remove ssconf_basic_use_lb_$node
 		fi
 	done
-
-else
-	echo_date 不启用故障转移心跳...
-	lb_node=`dbus list ssconf_basic_use_lb_|sed 's/ssconf_basic_use_lb_//g' |cut -d "=" -f 1 | sort -n | sed '/^$/d'`
-	for node in $lb_node
-	do
-		nick_name=`dbus get ssconf_basic_name_$node`
-		if [ ! -z "$nick_name" ];then
-			kcp=`dbus get ssconf_basic_use_kcp_$node`
-			if [ "$kcp" == 1 ];then
-				port="1091"
-				name=`dbus get ssconf_basic_server_$node`:kcp
-				server="127.0.0.1"
-			else
-				port=`dbus get ssconf_basic_port_$node`
-				name=`dbus get ssconf_basic_server_$node`:$port
-				server=`dbus get ssconf_basic_server_$node`
-				IFIP=`echo $server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-				if [ -z "$IFIP" ];then
-					echo_date "检测到【"$nick_name"】节点域名格式，将尝试进行解析..."
-					echo_date "使用nslookup方式解析SS服务器的ip地址，解析DNS：$(get_server_resolver)"
-					server=`nslookup "$server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v : | awk 'NR==1{print}' | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:" 2>/dev/null`
-					if [ -n "$server" ];then
-						echo_date "【"$nick_name"】节点ip地址解析成功：$server"
-					else
-						echo_date "【警告】：【"$nick_name"】节点ip解析失败，将不会添加到负载均衡列表！"
-						continue
-					fi
-				else
-					echo_date "检测到【"$nick_name"】节点已经是IP格式，跳过解析... "
-				fi
-			fi
-			port=`dbus get ssconf_basic_port_$node`
-			weight=`dbus get ssconf_basic_weight_$node`
-			mode=`dbus get ssconf_basic_lbmode_$node`
-			if [ "$mode" == "3" ];then
-				echo_date 载入节点："$nick_name"，作为备用节点...
-				cat >> /koolshare/configs/haproxy.cfg <<-EOF
-				    server $name $server:$port weight $weight resolvers mydns backup
-				EOF
-			elif [ "$mode" == "2" ];then
-				echo_date 载入节点："$nick_name"，作为主节点...
-				cat >> /koolshare/configs/haproxy.cfg <<-EOF
-				    server $name $server:$port weight $weight resolvers mydns
-				EOF
-			else
-				echo_date 载入节点："$nick_name"，作为负载均衡节点...
-				cat >> /koolshare/configs/haproxy.cfg <<-EOF
-				    server $name $server:$port weight $weight resolvers mydns
-				EOF
-			fi
-		else
-			#检测到这个节点是空的，可能是某一次的残留，用这个方式处理一下
-			dbus remove ssconf_basic_use_lb_$node
-		fi
-	done
-fi
 }
 
 start_haproxy(){
-	pid=`pidof haproxy`
+	local pid=`pidof haproxy`
 	if [ -z "$pid" ];then
 		echo_date ┏启动haproxy主进程...
 		echo_date ┣如果此处等待过久，可能服务器域名解析失败造成的！可以刷新页面后关闭一次SS!

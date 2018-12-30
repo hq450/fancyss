@@ -1,4 +1,7 @@
 #!/bin/sh
+
+# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+
 source /koolshare/scripts/base.sh
 eval `dbus export ss_basic`
 

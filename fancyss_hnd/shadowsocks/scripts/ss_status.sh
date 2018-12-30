@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
 eval `dbus export ss_`

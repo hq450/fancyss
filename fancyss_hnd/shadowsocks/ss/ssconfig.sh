@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # shadowsocks script for HND router with kernel 4.1.27 merlin firmware
-# by sadog (sadoneli@gmail.com) from koolshare.cn
 
 eval `dbus export ss`
 source /koolshare/scripts/base.sh
@@ -53,8 +52,18 @@ cmd() {
 	"$@"
 }
 
+set_lock(){
+	exec 1000>"$LOCK_FILE"
+	flock -x 1000
+}
+
+unset_lock(){
+	flock -u 1000
+	rm -rf "$LOCK_FILE"
+}
+
 get_lan_cidr(){
-	netmask=`nvram get lan_netmask`
+	local netmask=`nvram get lan_netmask`
 	local x=${netmask##*255.}
 	set -- 0^^^128^192^224^240^248^252^254^ $(( (${#netmask} - ${#x})*2 )) ${x%%.*}
 	x=${1%%$3*}
@@ -64,7 +73,7 @@ get_lan_cidr(){
 }
 
 get_wan0_cidr(){
-	netmask=`nvram get wan0_netmask`
+	local netmask=`nvram get wan0_netmask`
 	local x=${netmask##*255.}
 	set -- 0^^^128^192^224^240^248^252^254^ $(( (${#netmask} - ${#x})*2 )) ${x%%.*}
 	x=${1%%$3*}
@@ -77,60 +86,141 @@ get_wan0_cidr(){
 	fi
 }
 
-get_server_resolver(){
-	if [ "$ss_basic_server_resolver" == "1" ];then
-		if [ -n "$IFIP_DNS1" ];then
-			RESOLVER="$ISP_DNS1"
-		else
-			RESOLVER="114.114.114.114"
-		fi
-	fi
-	[ "$ss_basic_server_resolver" == "2" ] && RESOLVER="223.5.5.5"
-	[ "$ss_basic_server_resolver" == "3" ] && RESOLVER="223.6.6.6"
-	[ "$ss_basic_server_resolver" == "4" ] && RESOLVER="114.114.114.114"
-	[ "$ss_basic_server_resolver" == "5" ] && RESOLVER="114.114.115.115"
-	[ "$ss_basic_server_resolver" == "6" ] && RESOLVER="1.2.4.8"
-	[ "$ss_basic_server_resolver" == "7" ] && RESOLVER="210.2.4.8"
-	[ "$ss_basic_server_resolver" == "8" ] && RESOLVER="117.50.11.11"
-	[ "$ss_basic_server_resolver" == "9" ] && RESOLVER="117.50.22.22"
-	[ "$ss_basic_server_resolver" == "10" ] && RESOLVER="180.76.76.76"
-	[ "$ss_basic_server_resolver" == "11" ] && RESOLVER="119.29.29.29"
-	[ "$ss_basic_server_resolver" == "12" ] && {
-		[ -n "$ss_basic_server_resolver_user" ] && RESOLVER="$ss_basic_server_resolver_user" || RESOLVER="114.114.114.114"
-	}
-	echo $RESOLVER
-}
-
-set_lock(){
-	exec 1000>"$LOCK_FILE"
-	flock -x 1000
-}
-
-unset_lock(){
-	flock -u 1000
-	rm -rf "$LOCK_FILE"
-}
-
 close_in_five(){
 	echo_date "插件将在5秒后自动关闭！！"
-	sleep 1
-	echo_date 5
-	sleep 1
-	echo_date 4
-	sleep 1
-	echo_date 3
-	sleep 1
-	echo_date 2
-	sleep 1
-	echo_date 1
-	sleep 1
-	echo_date 0
+	local i=5
+	while [ $i -ge 0 ]
+	do
+		sleep 1
+		echo_date $i
+		let i--
+	done
 	dbus set ss_basic_enable="0"
 	disable_ss >/dev/null
 	echo_date "插件已关闭！！"
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	unset_lock
 	exit
+}
+
+__get_type_full_name() {
+	case "$1" in
+		0)
+			echo "shadowsocks-libev"
+		;;
+		1)
+			echo "shadowsocksR-libev"
+		;;
+		2)
+			echo "koolgame"
+		;;
+		3)
+			echo "v2ray"
+		;;
+	esac
+}
+
+__get_type_abbr_name() {
+	case "$ss_basic_type" in
+		0)
+			echo "ss"
+		;;
+		1)
+			echo "ssr"
+		;;
+		2)
+			echo "koolgame"
+		;;
+		3)
+			echo "v2ray"
+		;;
+	esac
+}
+
+__valid_ip(){
+	# 验证是否为ipv4或者ipv6地址，是则正确返回，不是返回空值
+	local format_4=`echo "$1"|grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
+	local format_6=`echo "$1"|grep -Eo '^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*'`
+	if [ -n "$format_4" ] && [ -z "$format_6" ];then
+		echo "$format_4"
+		return 0
+	elif [ -z "$format_4" ] && [ -n "$format_6" ];then
+		echo "$format_6"
+		return 0
+	else
+		echo ""
+		return 1
+	fi
+}
+
+__get_server_resolver(){
+	local value_1="$ss_basic_server_resolver"
+	local value_2="$ss_basic_server_resolver_user"
+	local res
+	if [ "$value_1" == "1" ];then
+		if [ -n "$IFIP_DNS1" ];then
+			res="$ISP_DNS1"
+		else
+			res="114.114.114.114"
+		fi
+	fi
+	[ "$value_1" == "2" ] && res="223.5.5.5"
+	[ "$value_1" == "3" ] && res="223.6.6.6"
+	[ "$value_1" == "4" ] && res="114.114.114.114"
+	[ "$value_1" == "5" ] && res="114.114.115.115"
+	[ "$value_1" == "6" ] && res="1.2.4.8"
+	[ "$value_1" == "7" ] && res="210.2.4.8"
+	[ "$value_1" == "8" ] && res="117.50.11.11"
+	[ "$value_1" == "9" ] && res="117.50.22.22"
+	[ "$value_1" == "10" ] && res="180.76.76.76"
+	[ "$value_1" == "11" ] && res="119.29.29.29"
+	if [ "$value_1" == "12" ];then
+		if [ -n "$value_2" ];then
+			res=$(__valid_ip "$value_2")
+			[ -z "$res" ] && res="114.114.114.114"
+		else
+			res="114.114.114.114"
+		fi
+	fi
+	echo $res
+}
+
+__get_server_resolver_port(){
+	local port
+	if [ "$ss_basic_server_resolver" == "12" ];then
+		if [ -n "$ss_basic_server_resolver_user" ];then
+			port=`echo "$ss_basic_server_resolver_user"|awk -F"#|:" '{print $2}'`
+			[ -z "$port" ] && port="53"
+		else
+			port="53"
+		fi
+	else
+		port="53"
+	fi
+	echo $port
+}
+
+__resolve_ip(){
+	local domain1=`echo "$1"|grep -E "^https://|^http://|/"`
+	local domain2=`echo "$1"|grep -E "\."`
+	if [ -n "$domain1" ] || [ -z "$domain2" ];then
+		# not ip, not domain
+		echo ""
+		return 2
+	else
+		# domain format
+		SERVER_IP=`nslookup "$1" $(__get_server_resolver):$(__get_server_resolver_port) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}' 2>/dev/null`
+		SERVER_IP=$(__valid_ip $SERVER_IP)
+		if [ -n "$SERVER_IP" ];then
+			# success resolved
+			echo "$SERVER_IP"
+			return 0
+		else
+			# resolve failed
+			echo ""
+			return 1
+		fi
+	fi
 }
 
 # ================================= ss stop ===============================
@@ -163,7 +253,6 @@ kill_process(){
 		echo_date 关闭ss-redir进程...
 		killall ss-redir >/dev/null 2>&1
 	fi
-
 	rssredir=`pidof rss-redir`
 	if [ -n "$rssredir" ];then 
 		echo_date 关闭ssr-redir进程...
@@ -174,7 +263,6 @@ kill_process(){
 		echo_date 关闭ss-local进程:23456端口...
 		kill $sslocal >/dev/null 2>&1
 	fi
-
 	ssrlocal=`ps | grep -w rss-local | grep -v "grep" | grep -w "23456" | awk '{print $1}'`
 	if [ -n "$ssrlocal" ];then 
 		echo_date 关闭ssr-local进程:23456端口...
@@ -263,15 +351,15 @@ ss_pre_start(){
 	if [ "$lb_enable" == "1" ];then
 		echo_date ---------------------- 【科学上网】 启动前触发脚本 ----------------------
 		if [ `dbus get ss_basic_server | grep -o "127.0.0.1"` ] && [ `dbus get ss_basic_port` == `dbus get ss_lb_port` ];then
-			echo_date ss启动前触发:触发启动负载均衡功能！
+			echo_date 插件启动前触发:触发启动负载均衡功能！
 			#start haproxy
 			sh /koolshare/scripts/ss_lb_config.sh
 		else
-			echo_date ss启动前触发:未选择负载均衡节点，不触发负载均衡启动！
+			echo_date 插件启动前触发:未选择负载均衡节点，不触发负载均衡启动！
 		fi
 	else
 		if [ `dbus get ss_basic_server | grep -o "127.0.0.1"` ] && [ `dbus get ss_basic_port` == `dbus get ss_lb_port` ];then
-			echo_date ss启动前触发【警告】：你选择了负载均衡节点，但是负载均衡开关未启用！！
+			echo_date 插件启动前触发【警告】：你选择了负载均衡节点，但是负载均衡开关未启用！！
 		#else
 			#echo_date ss启动前触发：你选择了普通节点，不触发负载均衡启动！
 		fi
@@ -280,44 +368,50 @@ ss_pre_start(){
 # ================================= ss start ==============================
 
 resolv_server_ip(){
+	local tmp server_ip
 	if [ "$ss_basic_type" == "3" ] && [ "$ss_basic_v2ray_use_json" == "1" ];then
-		#echo_date "你使用的v2ray json配置，请自行将v2ray服务器ip地址添加到IP/CIDR白名单！"
+		#v2ray json配置在后面单独处理
 		return 1
 	else
-		IFIP=`echo $ss_basic_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-		if [ -z "$IFIP" ];then
-			# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
-			echo "server=/$ss_basic_server/$(get_server_resolver)#53" > /jffs/configs/dnsmasq.d/ss_server.conf
-			echo_date 尝试解析SS服务器的ip地址，DNS：$(get_server_resolver)
-			server_ip=`nslookup "$ss_basic_server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
-			if [ "$?" == "0" ];then
-				server_ip=`echo $server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-			else
-				echo_date SS服务器域名解析失败！
-				echo_date 尝试用resolveip方式解析，DNS：系统
-				server_ip=`resolveip -4 -t 2 $ss_basic_server|awk 'NR==1{print}'`
-				if [ "$?" == "0" ];then
-			    	server_ip=`echo $server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-				fi
-			fi
-
-			if [ -n "$server_ip" ];then
-				echo_date SS服务器的ip地址解析成功：$server_ip
-				# 解析并记录一次ip，方便插件触发重启设定工作
+		# 判断服务器域名格式
+		tmp=$(__valid_ip "$ss_basic_server")
+		if [ $? == 0 ];then
+			# server is ip address format, not need to resolve.
+			echo_date "检测到你的$(__get_type_abbr_name)服务器已经是IP格式：$ss_basic_server,跳过解析... "
+			ss_basic_server_ip="$ss_basic_server"
+			dbus set ss_basic_server_ip=$ss_basic_server
+		else
+			echo_date "检测到你的$(__get_type_abbr_name)服务器：【$ss_basic_server】不是ip格式！"
+			echo_date "尝试解析$(__get_type_abbr_name)服务器的ip地址，使用DNS：$(__get_server_resolver):$(__get_server_resolver_port)"
+			echo_date "如果此处等待时间较久，建议在【节点域名解析DNS服务器】处更换DNS服务器..."
+			server_ip=$(__resolve_ip "$ss_basic_server")
+			case $? in
+			0)
+				echo_date "$(__get_type_abbr_name)服务器【$ss_basic_server】的ip地址解析成功：$server_ip"
+				echo "server=/$ss_basic_server/$(__get_server_resolver)#$(__get_server_resolver_port)" > /jffs/configs/dnsmasq.d/ss_server.conf
+				# server is domain format and success resolved.
+				# 记录解析结果到/tmp/ss_host.conf，方便插件触发重启设定工作
 				echo "address=/$ss_basic_server/$server_ip" > /tmp/ss_host.conf
 				# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
 				#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
 				ss_basic_server="$server_ip"
 				ss_basic_server_ip="$server_ip"
 				dbus set ss_basic_server_ip="$server_ip"
-			else
+				;;
+			1)
+				# server is domain format and failed to resolve.
+				echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，将由ss-redir自己解析... "
+				echo "server=/$ss_basic_server/$(__get_server_resolver)#$(__get_server_resolver_port)" > /jffs/configs/dnsmasq.d/ss_server.conf
+				unset ss_basic_server_ip
 				dbus remvoe ss_basic_server_ip
-				echo_date SS服务器的ip地址解析失败，将由ss-redir自己解析.
-			fi
-		else
-			ss_basic_server_ip="$ss_basic_server"
-			dbus set ss_basic_server_ip=$ss_basic_server
-			echo_date 检测到你的SS服务器已经是IP格式：$ss_basic_server,跳过解析... 
+				;;
+			2)
+				# server is not ip either domain!
+				echo_date "错误！！检测到你设置的服务器域名既不是ip地址，也不是域名格式！"
+				echo_date "请更正你的错误然后重试！！"
+				close_in_five
+				;;
+			esac
 		fi
 	fi
 }
@@ -400,23 +494,6 @@ creat_ss_json(){
 			mv /koolshare/ss/ss_tmp.json /koolshare/ss/ss.json
 		fi
 	fi
-}
-
-get_type_name() {
-	case "$1" in
-		0)
-			echo "shadowsocks-libev"
-		;;
-		1)
-			echo "shadowsocksR-libev"
-		;;
-		2)
-			echo "koolgame"
-		;;
-		3)
-			echo "v2ray"
-		;;
-	esac
 }
 
 get_dns_name() {
@@ -541,7 +618,7 @@ start_dns(){
 				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			fi
 		elif [ "$ss_basic_type" == "3" ];then
-			echo_date V2Ray下不支持ss-tunnel，改用dns2socks！
+			echo_date V2ray下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
@@ -583,7 +660,7 @@ start_dns(){
 		if [ "$ss_basic_type" == "3" ];then
 			return 0
 		else
-			echo_date $(get_type_name $ss_basic_type)下不支持v2ray dns，改用dns2socks！
+			echo_date $(__get_type_full_name $ss_basic_type)下不支持v2ray dns，改用dns2socks！
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
@@ -1145,6 +1222,7 @@ get_path(){
 }
 
 creat_v2ray_json(){
+	local tmp v2ray_server_ip
 	rm -rf "$V2RAY_CONFIG_FILE_TMP"
 	rm -rf "$V2RAY_CONFIG_FILE"
 	if [ "$ss_basic_v2ray_use_json" == "0" ];then
@@ -1396,41 +1474,42 @@ creat_v2ray_json(){
 		esac
 
 		if [ -n "$v2ray_server" -a "$v2ray_server" != "null" ];then
-			IFIP_VS=`echo $v2ray_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-			if [ -n "$IFIP_VS" ];then
-				ss_basic_server_ip="$v2ray_server"
+			# 服务器地址强制由用户选择的DNS解析，以免插件还未开始工作而导致解析失败
+			echo "server=/$v2ray_server/$(__get_server_resolver)#$(__get_server_resolver_port)" > /jffs/configs/dnsmasq.d/ss_server.conf
+			# 判断服务器域名格式
+			tmp=$(__valid_ip "$v2ray_server")
+			if [ $? == 0 ];then
 				echo_date "检测到你的json配置的v2ray服务器是：$v2ray_server"
+				ss_basic_server_ip="$v2ray_server"
 			else
-				echo_date "检测到你的json配置的v2ray服务器：$v2ray_server不是ip格式！"
-				echo_date "为了确保v2ray的正常工作，建议配置ip格式的v2ray服务器地址！"
-				echo_date "尝试解析v2ray服务器的ip地址，DNS：$(get_server_resolver)"
-				# 服务器地址强制由114解析，以免插件还未开始工作而导致解析失败
-				echo "server=/$v2ray_server/$(get_server_resolver)#53" > /jffs/configs/dnsmasq.d/ss_server.conf
-				v2ray_server_ip=`nslookup "$v2ray_server" $(get_server_resolver) | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
-				if [ "$?" == "0" ];then
-					v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-				else
-					echo_date v2ray服务器域名解析失败！
-					echo_date 尝试用resolveip方式解析，DNS：系统
-					v2ray_server_ip=`resolveip -4 -t 2 $ss_basic_server|awk 'NR==1{print}'`
-					if [ "$?" == "0" ];then
-						v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
-					fi
-				fi
-
-				if [ -n "$v2ray_server_ip" ];then
+				echo_date "检测到你的json配置的v2ray服务器：【$v2ray_server】不是ip格式！"
+				echo_date "尝试解析v2ray服务器的ip地址，使用DNS：$(__get_server_resolver):$(__get_server_resolver_port)"
+				echo_date "如果此处等待时间较久，建议在【节点域名解析DNS服务器】处更换DNS服务器..."
+				v2ray_server_ip=$(__resolve_ip "$v2ray_server")
+				case $? in
+				0)
+					# server is domain format and success resolved.
 					echo_date "v2ray服务器的ip地址解析成功：$v2ray_server_ip"
 					# 解析并记录一次ip，方便插件触发重启设定工作
 					echo "address=/$v2ray_server/$v2ray_server_ip" > /tmp/ss_host.conf
 					# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
 					#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
 					ss_basic_server_ip="$v2ray_server_ip"
-				else
+					;;
+				1)
+					# server is domain format and failed to resolve.
+					unset ss_basic_server_ip
 					echo_date "v2ray服务器的ip地址解析失败!插件将继续运行，域名解析将由v2ray自己进行！"
 					echo_date "请自行将v2ray服务器的ip地址填入IP/CIDR白名单中!"
 					echo_date "为了确保v2ray的正常工作，建议配置ip格式的v2ray服务器地址！"
-					#close_in_five
-				fi
+					;;
+				2)
+					# server is not ip either domain!
+					echo_date "错误！！检测到json配置内的v2ray服务器既不是ip地址，也不是域名格式！"
+					echo_date "请更正你的错误然后重试！！"
+					close_in_five
+					;;
+				esac
 			fi
 		else
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -1474,7 +1553,7 @@ start_v2ray(){
 	cd /koolshare/bin
 	#export GOGC=30
 	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
-	
+	local V2PID
 	local i=10
 	until [ -n "$V2PID" ]
 	do
@@ -1484,7 +1563,7 @@ start_v2ray(){
 			echo_date "v2ray进程启动失败！"
 			close_in_five
 		fi
-		sleep 1
+		usleep 500000
 	done
 	echo_date v2ray启动成功，pid：$V2PID
 }
@@ -1906,8 +1985,7 @@ set_ulimit(){
 
 remove_ss_reboot_job(){
 	if [ -n "`cru l|grep ss_reboot`" ]; then
-		echo_date 删除插件自动重启定时任务...
-		#cru d ss_reboot >/dev/null 2>&1
+		echo_date "【科学上网】：删除插件自动重启定时任务..."
 		sed -i '/ss_reboot/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 }
@@ -1915,52 +1993,52 @@ remove_ss_reboot_job(){
 set_ss_reboot_job(){
 	if [[ "${ss_reboot_check}" == "0" ]]; then
 		remove_ss_reboot_job
-	elif [[	"${ss_reboot_check}" ==	"1"	]];	then
-		echo_date 设置每天${ss_basic_time_hour}时${ss_basic_time_min}分重启插件...
-		cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour}"	* *	* /koolshare/ss/ssconfig.sh	restart"
-	elif [[	"${ss_reboot_check}" ==	"2"	]];	then
-		echo_date 设置每周${ss_basic_week}的${ss_basic_time_hour}时${ss_basic_time_min}分重启插件...
-		cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour}"	* *	"${ss_basic_week}" /koolshare/ss/ssconfig.sh restart"
-	elif [[	"${ss_reboot_check}" ==	"3"	]];	then
-		echo_date 设置每月${ss_basic_day}日${ss_basic_time_hour}时${ss_basic_time_min}分重启插件...
-		cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour} ${ss_basic_day}"	* *	/koolshare/ss/ssconfig.sh restart"
-	elif [[	"${ss_reboot_check}" ==	"4"	]];	then
+	elif [[ "${ss_reboot_check}" == "1" ]]; then
+		echo_date "【科学上网】：设置每天${ss_basic_time_hour}时${ss_basic_time_min}分重启插件..."
+		cru a ss_reboot ${ss_basic_time_min} ${ss_basic_time_hour}" * * * /bin/sh /koolshare/ss/ssconfig.sh restart"
+	elif [[ "${ss_reboot_check}" == "2" ]]; then
+		echo_date "【科学上网】：设置每周${ss_basic_week}的${ss_basic_time_hour}时${ss_basic_time_min}分重启插件..."
+		cru a ss_reboot ${ss_basic_time_min} ${ss_basic_time_hour}" * * "${ss_basic_week}" /bin/sh /koolshare/ss/ssconfig.sh restart"
+	elif [[ "${ss_reboot_check}" == "3" ]]; then
+		echo_date "【科学上网】：设置每月${ss_basic_day}日${ss_basic_time_hour}时${ss_basic_time_min}分重启插件..."
+		cru a ss_reboot ${ss_basic_time_min} ${ss_basic_time_hour} ${ss_basic_day}" * * /bin/sh /koolshare/ss/ssconfig.sh restart"
+	elif [[ "${ss_reboot_check}" == "4" ]]; then
 		if [[ "${ss_basic_inter_pre}" == "1" ]]; then
-			echo_date 设置每隔${ss_basic_inter_min}分钟重启插件...
-			cru	a ss_reboot	"*/"${ss_basic_inter_min}" * * * * /koolshare/ss/ssconfig.sh restart"
-		elif [[	"${ss_basic_inter_pre}"	== "2" ]]; then
-			echo_date 设置每隔${ss_basic_inter_hour}小时重启插件...
-			cru	a ss_reboot	"0 */"${ss_basic_inter_hour}" *	* *	/koolshare/ss/ssconfig.sh restart"
-		elif [[	"${ss_basic_inter_pre}"	== "3" ]]; then
-			echo_date 设置每隔${ss_basic_inter_day}天${ss_basic_inter_hour}小时${ss_basic_time_min}分钟重启插件...
-			cru	a ss_reboot	${ss_basic_time_min} ${ss_basic_time_hour}"	*/"${ss_basic_inter_day} " * * /koolshare/ss/ssconfig.sh restart"
+			echo_date "【科学上网】：设置每隔${ss_basic_inter_min}分钟重启插件..."
+			cru a ss_reboot "*/"${ss_basic_inter_min}" * * * * /bin/sh /koolshare/ss/ssconfig.sh restart"
+		elif [[ "${ss_basic_inter_pre}" == "2" ]]; then
+			echo_date "【科学上网】：设置每隔${ss_basic_inter_hour}小时重启插件..."
+			cru a ss_reboot "0 */"${ss_basic_inter_hour}" * * * /bin/sh /koolshare/ss/ssconfig.sh restart"
+		elif [[ "${ss_basic_inter_pre}" == "3" ]]; then
+			echo_date "【科学上网】：设置每隔${ss_basic_inter_day}天${ss_basic_inter_hour}小时${ss_basic_time_min}分钟重启插件..."
+			cru a ss_reboot ${ss_basic_time_min} ${ss_basic_time_hour}" */"${ss_basic_inter_day} " * * /bin/sh /koolshare/ss/ssconfig.sh restart"
 		fi
-	elif [[	"${ss_reboot_check}" ==	"5"	]];	then
-		check_custom_time=`dbus	get	ss_basic_custom	| base64_decode`
-		echo_date 设置每天${check_custom_time}时的${ss_basic_time_min}分重启插件...
-		cru	a ss_reboot	${ss_basic_time_min} ${check_custom_time}" * * * /koolshare/ss/ssconfig.sh restart"
-	else
-		remove_ss_reboot_job
+	elif [[ "${ss_reboot_check}" == "5" ]]; then
+		check_custom_time=`dbus get ss_basic_custom | base64_decode`
+		echo_date "【科学上网】：设置每天${check_custom_time}时的${ss_basic_time_min}分重启插件..."
+		cru a ss_reboot ${ss_basic_time_min} ${check_custom_time}" * * * /bin/sh /koolshare/ss/ssconfig.sh restart"
 	fi
 }
 
 remove_ss_trigger_job(){
 	if [ -n "`cru l|grep ss_tri_check`" ]; then
-		echo_date 删除插件触发重启定时任务...
-		#cru d ss_tri_check >/dev/null 2>&1
+		echo_date "删除插件触发重启定时任务..."
 		sed -i '/ss_tri_check/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
+	else
+		echo_date "插件触发重启定时任务已经删除..."
 	fi
 }
 
 set_ss_trigger_job(){
-	if [ "$ss_basic_tri_reboot_time" == "0" ] || [ -z "$ss_basic_tri_reboot_time" ];then
+	if [ "$ss_basic_tri_reboot_time" == "0" ];then
 		remove_ss_trigger_job
 	else
 		if [ "$ss_basic_tri_reboot_policy" == "1" ];then
-			echo_date 设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启科学上网插件...
+			echo_date "设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启科学上网插件..."
 		else
-			echo_date 设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启dnsmasq...
+			echo_date "设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启dnsmasq..."
 		fi
+		echo_date "科学上网插件触发重启功能的日志将显示再系统日志内。"
 		cru d ss_tri_check  >/dev/null 2>&1
 		cru a ss_tri_check "*/$ss_basic_tri_reboot_time * * * * /koolshare/scripts/ss_reboot_job.sh check_ip"
 	fi
@@ -1988,6 +2066,7 @@ load_nat(){
 
 ss_post_start(){
 	# 在SS插件启动成功后触发脚本
+	local i
 	mkdir -p /koolshare/ss/postscripts && cd /koolshare/ss/postscripts
 	for i in $(find ./ -name 'P*' | sort) ;
 	do
@@ -2002,6 +2081,7 @@ ss_post_start(){
 
 ss_pre_stop(){
 	# 在SS插件关闭前触发脚本
+	local i
 	mkdir -p /koolshare/ss/postscripts && cd /koolshare/ss/postscripts
 	for i in $(find ./ -name 'P*' | sort -r) ;
 	do
@@ -2061,7 +2141,6 @@ detect(){
 mount_dnsmasq(){
 	killall dnsmasq >/dev/null 2>&1
 	mount --bind /koolshare/bin/dnsmasq /usr/sbin/dnsmasq
-	#service restart_dnsmasq >/dev/null 2>&
 }
 
 umount_dnsmasq(){
@@ -2071,7 +2150,7 @@ umount_dnsmasq(){
 
 
 mount_dnsmasq_now(){
-	MOUNTED=`mount|grep -o dnsmasq`
+	local MOUNTED=`mount|grep -o dnsmasq`
 	case $ss_basic_dnsmasq_fastlookup in
 	0)
 		if [ -n "$MOUNTED" ];then
@@ -2106,7 +2185,7 @@ mount_dnsmasq_now(){
 }
 
 umount_dnsmasq_now(){
-	MOUNTED=`mount|grep -o dnsmasq`
+	local MOUNTED=`mount|grep -o dnsmasq`
 	case $ss_basic_dnsmasq_fastlookup in
 	0|1|2)
 		if [ -n "$MOUNTED" ];then
@@ -2126,6 +2205,7 @@ umount_dnsmasq_now(){
 }
 
 disable_ss(){
+	ss_pre_stop
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	echo_date ------------------------- 关闭【科学上网】 -----------------------------
@@ -2147,11 +2227,11 @@ disable_ss(){
 apply_ss(){
 	# router is on boot
 	WAN_ACTION=`ps|grep /jffs/scripts/wan-start|grep -v grep`
+	ss_pre_stop
 	# now stop first
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	echo_date ------------------------- 启动【科学上网】 -----------------------------
-	ss_pre_stop
 	nvram set ss_mode=0
 	dbus set dns2socks=0
 	nvram commit
@@ -2169,6 +2249,7 @@ apply_ss(){
 	# start
 	#echo_date ------------------------- 启动 【科学上网】 ----------------------------
 	detect
+	set_ulimit
 	resolv_server_ip
 	ss_arg
 	load_module
@@ -2191,6 +2272,7 @@ apply_ss(){
 	write_cron_job
 	set_ss_reboot_job
 	set_ss_trigger_job
+	write_numbers
 	# post-start
 	ss_post_start
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
@@ -2234,37 +2316,29 @@ start)
 	set_lock
 	if [ "$ss_basic_enable" == "1" ];then
 		logger "[软件中心]: 启动科学上网插件！"
-		set_ulimit >> "$LOG_FILE"
 		apply_ss >> "$LOG_FILE"
-		write_numbers >> "$LOG_FILE"
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
 	fi
-	#get_status >> /tmp/ss_start.txt
 	unset_lock
 	;;
 stop)
 	set_lock
-	ss_pre_stop
 	disable_ss
 	echo_date
 	echo_date 你已经成功关闭shadowsocks服务~
 	echo_date See you again!
 	echo_date
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
-	#get_status >> /tmp/ss_start.txt
 	unset_lock
 	;;
 restart)
 	set_lock
-	set_ulimit
 	apply_ss
-	write_numbers
 	echo_date
 	echo_date "Across the Great Wall we can reach every corner in the world!"
 	echo_date
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
-	#get_status >> /tmp/ss_start.txt
 	unset_lock
 	;;
 flush_nat)
@@ -2274,12 +2348,7 @@ flush_nat)
 	;;
 start_nat)
 	set_lock
-	if [ "$ss_basic_enable" == "1" ];then
-		set_ulimit
-		apply_ss
-		write_numbers
-	fi
-	#get_status >> /tmp/ss_start.txt
+	[ "$ss_basic_enable" == "1" ] && apply_ss
 	unset_lock
 	;;
 esac

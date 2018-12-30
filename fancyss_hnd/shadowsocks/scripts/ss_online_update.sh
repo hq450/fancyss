@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # shadowsocks script for HND router with kernel 4.1.27 merlin firmware
-# by sadog (sadoneli@gmail.com) from koolshare.cn
 
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh

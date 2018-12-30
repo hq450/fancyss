@@ -1,4 +1,7 @@
 #!/bin/sh
+
+# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'

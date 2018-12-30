@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # shadowsocks script for HND router with kernel 4.1.27 merlin firmware
-# by sadog (sadoneli@gmail.com) from koolshare.cn
 
 # 此脚本是一个示例，实际写法按照自己的方法来做
 # 更改此脚本的名字，保证此脚本的名字格式是： P+数字+名字.sh

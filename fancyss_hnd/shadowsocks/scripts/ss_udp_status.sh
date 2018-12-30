@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+
 eval `dbus export ss`
 source /koolshare/scripts/base.sh
 game_on=`dbus list ss_acl_mode|cut -d "=" -f 2 | grep 3`
