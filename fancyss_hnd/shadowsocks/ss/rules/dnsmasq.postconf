@@ -19,40 +19,40 @@ IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 perpare(){
 	if [ "$ss_dns_china" == "1" ];then
 		if [ "$ss_basic_mode" == "6" ];then
-			# Ê¹ÓÃ»Ø¹úÄ£Ê½µÄÊ±ºò£¬ISP dnsÊÇ¹úÍâµÄ£¬ËùÒÔÕâÀïÖ±½ÓÓÃ114È¡´ú
+			# ä½¿ç”¨å›å›½æ¨¡å¼çš„æ—¶å€™ï¼ŒISP dnsæ˜¯å›½å¤–çš„ï¼Œæ‰€ä»¥è¿™é‡Œç›´æ¥ç”¨114å–ä»£
 			CDN1="114.114.114.114"
 		else
 			if [ -n "$IFIP_DNS1" ];then
-				# ÔËÓªÉÌDNS1:ISP_DNS1ÊÇip¸ñÊ½
+				# è¿è¥å•†DNS1:ISP_DNS1æ˜¯ipæ ¼å¼
 				FO=`awk -F'[./]' -v ip=$IFIP_DNS1 ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt`
 				if [ -n "$FO" ];then
-					# ÔËÓªÉÌDNS1:ISP_DNS1ÊÇ¹úÄÚIP
+					# è¿è¥å•†DNS1:ISP_DNS1æ˜¯å›½å†…IP
 					CDN1="$IFIP_DNS1"
 				else
-					# ÔËÓªÉÌDNS1:ISP_DNS1ÊÇ¹úÍâIP»òÕß¾ÖÓòÍøIP
+					# è¿è¥å•†DNS1:ISP_DNS1æ˜¯å›½å¤–IPæˆ–è€…å±€åŸŸç½‘IP
 					CDN1="114.114.114.114"
 				fi
 			else
-				# ÔËÓªÉÌDNS1:ISP_DNS1²»ÊÇip¸ñÊ½
+				# è¿è¥å•†DNS1:ISP_DNS1ä¸æ˜¯ipæ ¼å¼
 				CDN1="114.114.114.114"
 			fi
 		fi
 		if [ "$ss_basic_mode" == "6" ];then
-			# Ê¹ÓÃ»Ø¹úÄ£Ê½µÄÊ±ºò£¬ISP dnsÊÇ¹úÍâµÄ£¬ËùÒÔÕâÀïÖ±½ÓÓÃ114È¡´ú
+			# ä½¿ç”¨å›å›½æ¨¡å¼çš„æ—¶å€™ï¼ŒISP dnsæ˜¯å›½å¤–çš„ï¼Œæ‰€ä»¥è¿™é‡Œç›´æ¥ç”¨114å–ä»£
 			CDN2="114.114.115.115"
 		else
 			if [ -n "$IFIP_DNS2" ];then
-				# ÔËÓªÉÌDNS1:ISP_DNS1ÊÇip¸ñÊ½
+				# è¿è¥å•†DNS1:ISP_DNS1æ˜¯ipæ ¼å¼
 				FO=`awk -F'[./]' -v ip=$IFIP_DNS2 ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt`
 				if [ -n "$FO" ];then
-					# ÔËÓªÉÌDNS1:ISP_DNS1ÊÇ¹úÄÚIP
+					# è¿è¥å•†DNS1:ISP_DNS1æ˜¯å›½å†…IP
 					CDN2="$IFIP_DNS2"
 				else
-					# ÔËÓªÉÌDNS1:ISP_DNS1ÊÇ¹úÍâIP»òÕß¾ÖÓòÍøIP
+					# è¿è¥å•†DNS1:ISP_DNS1æ˜¯å›½å¤–IPæˆ–è€…å±€åŸŸç½‘IP
 					CDN2="114.114.115.115"
 				fi
 			else
-				# ÔËÓªÉÌDNS1:ISP_DNS1²»ÊÇip¸ñÊ½
+				# è¿è¥å•†DNS1:ISP_DNS1ä¸æ˜¯ipæ ¼å¼
 				CDN2="114.114.115.115"
 			fi
 		fi
@@ -82,25 +82,25 @@ perpare(){
 }
 
 use_chn_plan(){
-	# DNS·½°¸£¬¹úÄÚÓÅÏÈ£¬Òò´ËdnsmasqµÄserverÄ¬ÈÏÎª¹úÄÚµØÖ·£¬¹úÍâ½âÎöÓÉgfwlist.confÌá¹©£¬Â·ÓÉµÄ¿ªÏú±È½ÏĞ¡£¬¹úÄÚcdnºÜºÃ£¬µ«ÊÇ¹úÍâcdn½ÏÈõ
+	# DNSæ–¹æ¡ˆï¼Œå›½å†…ä¼˜å…ˆï¼Œå› æ­¤dnsmasqçš„serveré»˜è®¤ä¸ºå›½å†…åœ°å€ï¼Œå›½å¤–è§£æç”±gfwlist.confæä¾›ï¼Œè·¯ç”±çš„å¼€é”€æ¯”è¾ƒå°ï¼Œå›½å†…cdnå¾ˆå¥½ï¼Œä½†æ˜¯å›½å¤–cdnè¾ƒå¼±
 	pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
 	if [ "$ss_dns_china" == "1" ];then
-		# Ñ¡ÔñÔËÓªÉÌDNSÊ±ºò£¬Èç¹ûÓĞÁ½¸öDNS£¬Ôò¶¼Ê¹ÓÃ
+		# é€‰æ‹©è¿è¥å•†DNSæ—¶å€™ï¼Œå¦‚æœæœ‰ä¸¤ä¸ªDNSï¼Œåˆ™éƒ½ä½¿ç”¨
 		pc_insert "no-poll" "server=$CDN2#53" "/etc/dnsmasq.conf"
 		pc_insert "no-poll" "server=$CDN1#53" "/etc/dnsmasq.conf"
 		pc_insert "no-poll" "all-servers" "/etc/dnsmasq.conf"
 	else
-		# Ñ¡ÔñÆäËü¹úÄÚDNSÊ±ºò
+		# é€‰æ‹©å…¶å®ƒå›½å†…DNSæ—¶å€™
 		pc_insert "no-poll" "server=$CDN#53" "/etc/dnsmasq.conf"
 	fi
 	pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
 }
 
 use_for_plan(){
-	# DNS·½°¸£¬¹úÍâÓÅÏÈ£¬Òò´ËdnsmasqµÄserverÄ¬ÈÏÎª¹úÍâµØÖ·£¬¹úÄÚµÄ½âÎöÓÉcdn.txtÌá¹©£¬Â·ÓÉµÄ¿ªÏú±È½Ï´ó£¬¹úÄÚcdn½ÏºÃ£¬µ«ÊÇ¹úÍâcdnºÜºÃ
+	# DNSæ–¹æ¡ˆï¼Œå›½å¤–ä¼˜å…ˆï¼Œå› æ­¤dnsmasqçš„serveré»˜è®¤ä¸ºå›½å¤–åœ°å€ï¼Œå›½å†…çš„è§£æç”±cdn.txtæä¾›ï¼Œè·¯ç”±çš„å¼€é”€æ¯”è¾ƒå¤§ï¼Œå›½å†…cdnè¾ƒå¥½ï¼Œä½†æ˜¯å›½å¤–cdnå¾ˆå¥½
 	if [ "$ss_basic_mode" == "6" ];then
 		if [ -n "`echo $ss_direct_user|grep :`" ];then
-			echo_date ¹úÍâÖ±Á¬dnsÉè¶¨¸ñÊ½´íÎó£¬½«×Ô¶¯¸üÕıÎª8.8.8.8#53.
+			echo_date å›½å¤–ç›´è¿dnsè®¾å®šæ ¼å¼é”™è¯¯ï¼Œå°†è‡ªåŠ¨æ›´æ­£ä¸º8.8.8.8#53.
 			ss_direct_user="8.8.8.8#53"
 			dbus set ss_direct_user="8.8.8.8#53"
 		fi
@@ -117,12 +117,12 @@ use_for_plan(){
 }
 
 if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" ] || [ "$ss_basic_mode" == "6" ];then
-	# gfwlistÄ£Ê½µÄÊ±ºò£¬ÇÒ·ÃÎÊ¿ØÖÆÖ÷»úÖĞ²»´æÔÚ ´óÂ½°×Ãûµ¥Ä£Ê½ ÓÎÏ·Ä£Ê½ È«¾ÖÄ£Ê½£¬ÔòÊ¹ÓÃ¹úÄÚÓÅÏÈÄ£Ê½
-	# »Ø¹úÄ£Ê½ÏÂ×Ô¶¯ÅĞ¶ÏÊ¹ÓÃ¹úÄÚÓÅÏÈ
+	# gfwlistæ¨¡å¼çš„æ—¶å€™ï¼Œä¸”è®¿é—®æ§åˆ¶ä¸»æœºä¸­ä¸å­˜åœ¨ å¤§é™†ç™½åå•æ¨¡å¼ æ¸¸æˆæ¨¡å¼ å…¨å±€æ¨¡å¼ï¼Œåˆ™ä½¿ç”¨å›½å†…ä¼˜å…ˆæ¨¡å¼
+	# å›å›½æ¨¡å¼ä¸‹è‡ªåŠ¨åˆ¤æ–­ä½¿ç”¨å›½å†…ä¼˜å…ˆ
 	perpare
 	use_chn_plan
 else
-	# ÆäËüÇé¿ö£¬¾ùÊ¹ÓÃ¹úÍâÓÅÏÈÄ£Ê½
+	# å…¶å®ƒæƒ…å†µï¼Œå‡ä½¿ç”¨å›½å¤–ä¼˜å…ˆæ¨¡å¼
 	perpare
 	use_for_plan
 fi
