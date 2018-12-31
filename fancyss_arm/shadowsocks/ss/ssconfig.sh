@@ -2077,7 +2077,7 @@ mount_dnsmasq_now(){
 		fi
 		;;
 	2)
-		if [ -L "/jffs/configs/cdn.conf" ];then
+		if [ -L "/jffs/configs/dnsmasq.d/cdn.conf" ];then
 			if [ -z "$MOUNTED" ];then
 				echo_date "【dnsmasq替换】：检测到cdn.conf，用dnsmasq-fastlookup替换原版dnsmasq！"
 				mount_dnsmasq
