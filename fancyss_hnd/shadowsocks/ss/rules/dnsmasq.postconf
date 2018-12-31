@@ -79,8 +79,6 @@ perpare(){
 	[ -n "`cat /etc/dnsmasq.conf|grep dhcp-name-match`" ] && sed -i '/dhcp-name-match/d' /etc/dnsmasq.conf
 }
 	
-}
-
 use_chn_plan(){
 	# DNS方案，国内优先，因此dnsmasq的server默认为国内地址，国外解析由gfwlist.conf提供，路由的开销比较小，国内cdn很好，但是国外cdn较弱
 	pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
