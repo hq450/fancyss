@@ -1,5 +1,10 @@
 fancyss_hnd Changelog
 ===========================================
+1.5.6
+   - fix	修复在用到cdn.conf的时候，dnsmasq-fastlookup不会替换的问题；
+   - fix	修复当负载均衡节点服务器是ip格式的时候，生成了错误的配置文件的问题；
+   - fix	修复一个web的bug。
+
 1.5.4 - 1.5.5
    - fix	修复dnsmasq-fastlookup在RT-AC86U 384.8梅林改版固件中无法工作的问题；
    - fix	修复回国模式自定义国外直连DNS无效的问题。
