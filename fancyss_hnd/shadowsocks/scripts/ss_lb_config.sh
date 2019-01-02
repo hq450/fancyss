@@ -170,6 +170,7 @@ write_haproxy_cfg(){
 				tmp=$(__valid_ip "$server")
 				if [ $? == 0 ];then
 					echo_date "检测到【"$nick_name"】节点已经是IP格式，跳过解析... "
+					server_ip=$server
 				else
 					echo_date "使用nslookup方式解析负载均衡服务器【$nick_name】的ip地址，解析DNS：$(__get_server_resolver):$(__get_server_resolver_port)"
 					server_ip=$(__resolve_ip "$server")
