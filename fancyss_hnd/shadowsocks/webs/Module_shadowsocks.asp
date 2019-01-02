@@ -255,7 +255,7 @@ function save() {
 			dbus[params_base64_a[i]] = Base64.encode(E(params_base64_a[i]).value);
 		} else {
 			//乱码了或者格式不对！
-			console.log("格式不正确")
+			//console.log("格式不正确")
 			dbus[params_base64_a[i]] = "";
 		}
 	}
@@ -425,8 +425,7 @@ function save() {
 		}
 	}
 
-	console.log("post_dbus", post_dbus);
-	
+	//console.log("post_dbus", post_dbus);
 	push_data("ss_config.sh", "start",  post_dbus);
 }
 
@@ -879,7 +878,7 @@ function getAllConfigs() {
 		var params = ["password", "mode", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "group", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + field;
-			if (typeof db_ss["ssconf_basic_mode_" + field] == "undefined") {
+			if (typeof db_ss[ofield] == "undefined") {
 				obj[params[i]] = '';
 			}else{
 				obj[params[i]] = db_ss[ofield];
@@ -1239,8 +1238,8 @@ function add_ss_node_conf(flag) { //点击添加按钮动作
 		if($("#ss_node_table_v2ray_json").val()){
 			if(E('ss_node_table_v2ray_json').value.indexOf("vmess://") != -1){
 				var vmess_node = JSON.parse(Base64.decode(E('ss_node_table_v2ray_json').value.split("//")[1]));
-				console.log("use v2ray vmess://")
-				console.log(vmess_node)
+				//console.log("use v2ray vmess://")
+				//console.log(vmess_node)
 				ns[p + "_server_" + node_global_max] = vmess_node.add;
 				ns[p + "_port_" + node_global_max] = vmess_node.port;
 				ns[p + "_v2ray_uuid_" + node_global_max] = vmess_node.id;
@@ -1662,8 +1661,8 @@ function edit_ss_node_conf(flag) { //编辑节点功能，数据重写
 		if($("#ss_node_table_v2ray_json").val()){
 			if(E('ss_node_table_v2ray_json').value.indexOf("vmess://") != -1){
 				var vmess_node = JSON.parse(Base64.decode(E('ss_node_table_v2ray_json').value.split("//")[1]));
-				console.log("use v2ray vmess://");
-				console.log(vmess_node);
+				//console.log("use v2ray vmess://");
+				//console.log(vmess_node);
 				ns["ssconf_basic_server_" + myid] = vmess_node.add;
 				ns["ssconf_basic_port_" + myid] = vmess_node.port;
 				ns["ssconf_basic_v2ray_uuid_" + myid] = vmess_node.id;
@@ -1687,7 +1686,7 @@ function edit_ss_node_conf(flag) { //编辑节点功能，数据重写
 				ns["ssconf_basic_v2ray_use_json_" + myid] = 0;
 				ns["ssconf_basic_v2ray_json_" + myid] = "";
 			}else{
-				console.log("use v2ray json");
+				//console.log("use v2ray json");
 				ns["ssconf_basic_v2ray_json_" + myid] = Base64.encode(pack_js(E('ss_node_table_v2ray_json').value));
 			}
 		}
