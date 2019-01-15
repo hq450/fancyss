@@ -152,7 +152,7 @@ decode_url_link(){
 }
 
 add_ssr_servers(){
-	usleep 250000
+	usleep 100000
 	ssrindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
 	dbus set ssconf_basic_name_$ssrindex=$remarks
 	[ -z "$1" ] && dbus set ssconf_basic_group_$ssrindex=$group
@@ -185,14 +185,14 @@ add_ss_servers(){
 get_remote_config(){
 	decode_link="$1"
 	action="$2"
-	server=$(echo "$decode_link" |awk -F':' '{print $1}')
-	server_port=$(echo "$decode_link" |awk -F':' '{print $2}')
-	protocol=$(echo "$decode_link" |awk -F':' '{print $3}')
+	server=$(echo "$decode_link"|awk -F':' '{print $1}'|sed 's/\s//g')
+	server_port=$(echo "$decode_link"|awk -F':' '{print $2}')
+	protocol=$(echo "$decode_link"|awk -F':' '{print $3}')
 	encrypt_method=$(echo "$decode_link" |awk -F':' '{print $4}')
-	obfs=$(echo "$decode_link" |awk -F':' '{print $5}'|sed 's/_compatible//g')
+	obfs=$(echo "$decode_link"|awk -F':' '{print $5}'|sed 's/_compatible//g')
 	
 	password=$(decode_url_link $(echo "$decode_link" |awk -F':' '{print $6}'|awk -F'/' '{print $1}'))
-	password=`echo $password|base64_encode`
+	password=`echo $password|base64_encode|sed 's/\s//g'`
 	
 	obfsparam_temp=$(echo "$decode_link" |awk -F':' '{print $6}'|grep -Eo "obfsparam.+"|sed 's/obfsparam=//g'|awk -F'&' '{print $1}')
 	[ -n "$obfsparam_temp" ] && obfsparam=$(decode_url_link $obfsparam_temp) || obfsparam=''
@@ -235,7 +235,11 @@ get_remote_config(){
 	#echo obfsparam: $obfsparam
 	#echo ------
 	echo "$group" >> /tmp/all_group_info.txt
-	[ -n "$group" ] && return 0 || return 1
+	if [ -n "$group" ] && [ -n "$server" ] && [ -n "$server_port" ] && [ -n "$password" ] && [ -n "$protocol" ] && [ -n "$obfs" ] && [ -n "$encrypt_method" ];then
+		return 0
+	else
+		return 1
+	fi
 }
 
 update_config(){
@@ -248,8 +252,21 @@ update_config(){
 		[ "$ssr_subscribe_obfspara" == "2" ] && dbus set ssconf_basic_rss_obfs_param_$ssrindex="$ssr_subscribe_obfspara_val"
 		let addnum+=1
 	else
-		# 如果在本地的订阅节点中没找到该节点，检测下配置是否更改，如果更改，则更新配置
-		index=$(cat /tmp/all_localservers| grep $group_base64 | grep $server_base64 |awk '{print $3}'|head -n1)
+		# 如果在本地的订阅节点中找到该节点，检测下配置是否更改，如果更改，则更新配置
+		index_line=$(cat /tmp/all_localservers| grep $group_base64 | grep $server_base64 |awk '{print $3}'|wc -l)
+		if [ "$index_line" == "1" ];then
+			local index=$(cat /tmp/all_localservers| grep $group_base64 | grep $server_base64 |awk '{print $3}'|sed -n "$index_line p")
+		else
+			# 如果有些机场有域名重复的节点，如一些用于流量提示和过期日期提醒的假节点，把同名节点序号写进文件后依次去取节点号
+			local tmp_file=$(echo $server_base64|sed 's/\=//g')
+			if [ ! -f /tmp/multi_${tmp_file}.txt ] || [ $(cat /tmp/multi_${tmp_file}.txt |wc -l) == 0 ];then
+				# 节点的base64值，去掉"="后，作为文件名写入/tmp，后面遇到该节点（server值相同的节点）就能从里面取值啦
+				cat /tmp/all_localservers| grep $group_base64 | grep $server_base64 |awk '{print $3}' > /tmp/multi_${tmp_file}.txt
+			fi
+			local index=$(cat /tmp/multi_${tmp_file}.txt|sed -n '1 p')
+			sed -i '1d' /tmp/multi_${tmp_file}.txt
+		fi
+		
 		local_remarks=$(dbus get ssconf_basic_name_$index)
 		local_server_port=$(dbus get ssconf_basic_port_$index)
 		local_protocol=$(dbus get ssconf_basic_rss_protocol_$index)
@@ -265,7 +282,7 @@ update_config(){
 		[ "$ssr_subscribe_obfspara" == "1" ] && dbus set ssconf_basic_rss_obfs_param_$index="$obfsparam"
 		[ "$ssr_subscribe_obfspara" == "2" ] && dbus set ssconf_basic_rss_obfs_param_$index="$ssr_subscribe_obfspara_val"
 		dbus set ssconf_basic_mode_$index="$ssr_subscribe_mode"
-		[ "$local_remarks" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks
+		[ "$local_remarks" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks && let i+=1
 		[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index=$server_port && let i+=1
 		[ "$local_protocol" != "$protocol" ] && dbus set ssconf_basic_rss_protocol_$index=$protocol && let i+=1
 		[ "$local_protocol_param"x != "$protoparam"x ] && dbus set ssconf_basic_rss_protocol_param_$index=$protoparam && let i+=1
@@ -351,7 +368,7 @@ get_v2ray_remote_config(){
 }
 
 add_v2ray_servers(){
-	usleep 250000
+	usleep 100000
 	v2rayindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
 	[ -z "$1" ] && dbus set ssconf_basic_group_$v2rayindex=$v2ray_group
 	dbus set ssconf_basic_type_$v2rayindex=3
@@ -539,7 +556,7 @@ remove_node_gap(){
 				[ -n "$(dbus get ssconf_basic_v2ray_mux_concurrency_$nu)" ] && dbus set ssconf_basic_v2ray_mux_concurrency_"$y"="$(dbus get ssconf_basic_v2ray_mux_concurrency_$nu)" && dbus remove ssconf_basic_v2ray_mux_concurrency_$nu
 				[ -n "$(dbus get ssconf_basic_v2ray_json_$nu)" ] && dbus set ssconf_basic_v2ray_json_"$y"="$(dbus get ssconf_basic_v2ray_json_$nu)" && dbus remove ssconf_basic_v2ray_json_$nu
 				[ -n "$(dbus get ssconf_basic_type_$nu)" ] && dbus set ssconf_basic_type_"$y"="$(dbus get ssconf_basic_type_$nu)" && dbus remove ssconf_basic_type_$nu
-				usleep 250000
+				usleep 100000
 				# change node nu
 				if [ "$nu" == "$ssconf_basic_node" ];then
 					dbus set ssconf_basic_node="$y"
@@ -643,6 +660,8 @@ get_oneline_rule_now(){
 	fi
 
 	if [ "$?" == "0" ];then
+		#删除上一个订阅的group信息
+		rm -rf /tmp/sub_group_info.txt
 		echo_date 下载订阅成功...
 		echo_date 开始解析节点信息...
 		decode_url_link `cat /tmp/ssr_subscribe_file.txt` > /tmp/ssr_subscribe_file_temp1.txt
@@ -666,9 +685,15 @@ get_oneline_rule_now(){
 			do
 				decode_link=$(decode_url_link $link)
 				get_remote_config $decode_link 1
-				[ "$?" == "0" ] && update_config || echo_date "检测到一个错误节点，已经跳过！"
+				if [ "$?" == "0" ];then
+					update_config
+					echo $group >> /tmp/sub_group_info.txt
+				else
+					echo_date "检测到一个错误节点，已经跳过！"
+				fi
 			done
 			# 储存对应订阅链接的group信息
+			group=`cat /tmp/sub_group_info.txt|sort -u|sed 's/$/ + /g'|sed ':a;N;$!ba;s#\n##g'|sed 's/\s+\s$//g'`
 			if [ -n "$group" ];then
 				dbus set ss_online_group_$z=$group
 				echo $group >> /tmp/group_info.txt
@@ -752,8 +777,9 @@ start_update(){
 	rm -rf /tmp/all_onlineservers >/dev/null 2>&1
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
-	usleep 250000
-	echo_date 收集本地节点名到文件
+	rm -rf /tmp/multi_*.txt >/dev/null 2>&1
+	usleep 100000
+	echo_date "收集本地节点名到文件"
 	LOCAL_NODES=`dbus list ssconf_basic_|grep _group_|cut -d "_" -f 4|cut -d "=" -f 1|sort -n`
 	if [ -n "$LOCAL_NODES" ];then
 		for LOCAL_NODE in $LOCAL_NODES
@@ -878,7 +904,7 @@ start_update(){
 					need_adjust=1
 				fi
 			done
-			usleep 250000
+			usleep 100000
 			# 再次排序
 			if [ "$need_adjust" == "1" ];then
 				echo_date 因为进行了删除订阅节点操作，需要对节点顺序进行检查！
@@ -903,7 +929,7 @@ start_update(){
 			kill $sslocal  >/dev/null 2>&1
 		fi
 	fi
-	usleep 250000
+	usleep 100000
 	echo_date "一点点清理工作..."
 	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
@@ -911,6 +937,7 @@ start_update(){
 	rm -rf /tmp/all_onlineservers >/dev/null 2>&1
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
+	rm -rf /tmp/sub_group_info.txt >/dev/null 2>&1
 	echo_date "==================================================================="
 	echo_date "所有订阅任务完成，请等待6秒，或者手动关闭本窗口！"
 	echo_date "==================================================================="
@@ -927,7 +954,7 @@ get_ss_config(){
 
 add() {
 	echo_date "==================================================================="
-	usleep 250000
+	usleep 100000
 	echo_date 通过SS/SSR/v2ray链接添加节点...
 	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
