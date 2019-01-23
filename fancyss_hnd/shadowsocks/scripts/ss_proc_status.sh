@@ -69,16 +69,6 @@ echo_version(){
 			ss_basic_v2ray_version="null"
 		fi
 	fi
-
-	if [ -z "$ss_basic_v2ray_date" ];then
-		ss_basic_v2ray_date_tmp=`/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f5`
-		if [ -n "$ss_basic_v2ray_date_tmp" ];then
-			ss_basic_v2ray_date="$ss_basic_v2ray_date_tmp"
-			dbus set ss_basic_v2ray_date="$ss_basic_v2ray_date_tmp"
-		else
-			ss_basic_v2ray_date="null"
-		fi
-	fi
 	echo ① 程序版本（插件版本：$SOFVERSION）：
 	echo -----------------------------------------------------------
 	echo "程序			版本		备注"
@@ -95,7 +85,7 @@ echo_version(){
 	echo "chinadns2		2.0.0 		2017年12月09日编译"
 	echo "https_dns_proxy		bea6840		2018年04月15日编译"
 	echo "client_linux_arm7	20180810	kcptun"
-	echo "v2ray			$ss_basic_v2ray_version		$ss_basic_v2ray_date"
+	echo "v2ray			$ss_basic_v2ray_version"
 	echo -----------------------------------------------------------
 }
 

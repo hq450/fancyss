@@ -8,45 +8,44 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 eval `dbus export ss`
 LOCK_FILE=/tmp/online_update.lock
 CONFIG_FILE=/koolshare/ss/ss.json
+BACKUP_FILE_TMP=/tmp/ss_conf_tmp.sh
+BACKUP_FILE=/tmp/ss_conf.sh
+
 DEL_SUBSCRIBE=0
 SOCKS_FLAG=0
 
-# ==============================
-# ssconf_basic_ping_
-# ssconf_basic_webtest_
-# ssconf_basic_node_
-# ssconf_basic_koolgame_udp_
-# ssconf_basic_method_
-# ssconf_basic_mode_
-# ssconf_basic_name_
-# ssconf_basic_password_
-# ssconf_basic_port_
-# ssconf_basic_rss_obfs_
-# ssconf_basic_rss_obfs_param_
-# ssconf_basic_rss_protocol_
-# ssconf_basic_rss_protocol_param_
-# ssconf_basic_server_
-# ssconf_basic_ss_obfs_
-# ssconf_basic_ss_obfs_host_
-# ssconf_basic_use_kcp_
-# ssconf_basic_use_lb_
-# ssconf_basic_lbmode_
-# ssconf_basic_weight_
-# ssconf_basic_v2ray_use_json_
-# ssconf_basic_v2ray_uuid_
-# ssconf_basic_v2ray_alterid_
-# ssconf_basic_v2ray_security_
-# ssconf_basic_v2ray_network_
-# ssconf_basic_v2ray_headtype_tcp_
-# ssconf_basic_v2ray_headtype_kcp_
-# ssconf_basic_v2ray_network_path_
-# ssconf_basic_v2ray_network_host_
-# ssconf_basic_v2ray_network_security_
-# ssconf_basic_v2ray_mux_enable_
-# ssconf_basic_v2ray_mux_concurrency_
-# ssconf_basic_v2ray_json_
-# ssconf_basic_type_
-# ==============================
+PREFIX="ssconf_basic_name_
+		ssconf_basic_server_
+		ssconf_basic_mode_
+		ssconf_basic_method_
+		ssconf_basic_password_
+		ssconf_basic_port_
+		ssconf_basic_ss_obfs_
+		ssconf_basic_ss_obfs_host_
+		ssconf_basic_rss_obfs_
+		ssconf_basic_rss_obfs_param_
+		ssconf_basic_rss_protocol_
+		ssconf_basic_rss_protocol_param_
+		ssconf_basic_koolgame_udp_
+		ssconf_basic_use_kcp_
+		ssconf_basic_use_lb_
+		ssconf_basic_lbmode_
+		ssconf_basic_weight_
+		ssconf_basic_group_
+		ssconf_basic_v2ray_use_json_
+		ssconf_basic_v2ray_uuid_
+		ssconf_basic_v2ray_alterid_
+		ssconf_basic_v2ray_security_
+		ssconf_basic_v2ray_network_
+		ssconf_basic_v2ray_headtype_tcp_
+		ssconf_basic_v2ray_headtype_kcp_
+		ssconf_basic_v2ray_network_path_
+		ssconf_basic_v2ray_network_host_
+		ssconf_basic_v2ray_network_security_
+		ssconf_basic_v2ray_mux_enable_
+		ssconf_basic_v2ray_mux_concurrency_
+		ssconf_basic_v2ray_json_
+		ssconf_basic_type_"
 
 set_lock(){
 	exec 233>"$LOCK_FILE"
@@ -69,74 +68,38 @@ prepare(){
 		echo_date "节点顺序正确，无需调整!"
 		return 0
 	fi 
+	# -----------------
 	# 1 提取干净的节点配置，并重新排序
 	echo_date 备份shadowsocks节点信息...
 	echo_date 如果节点数量过多，此处可能需要等待较长时间，请耐心等待...
-	rm -rf /tmp/ss_conf.sh
-	touch /tmp/ss_conf.sh
-	chmod +x /tmp/ss_conf.sh
-	echo "#!/bin/sh" >> /tmp/ss_conf.sh
-	valid_nus=`dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -n`
-	q=1
-	for nu in $valid_nus
+	rm -rf $BACKUP_FILE_TMP
+	rm -rf $BACKUP_FILE
+	local i=1
+	export -p | grep ssconf_basic_name_ | awk -F"=" '{print $1}' | awk -F"_" '{print $NF}' | sort -n | while read nu
 	do
-		[ -n "$(dbus get ssconf_basic_koolgame_udp_$nu)" ] && echo dbus set ssconf_basic_koolgame_udp_$q=$(dbus get ssconf_basic_koolgame_udp_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_method_$nu)" ] && echo dbus set ssconf_basic_method_$q=$(dbus get ssconf_basic_method_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_mode_$nu)" ] && echo dbus set ssconf_basic_mode_$q=$(dbus get ssconf_basic_mode_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_name_$nu)" ] && echo dbus set ssconf_basic_name_$q=$(dbus get ssconf_basic_name_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_password_$nu)" ] && echo dbus set ssconf_basic_password_$q=$(dbus get ssconf_basic_password_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_port_$nu)" ] && echo dbus set ssconf_basic_port_$q=$(dbus get ssconf_basic_port_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_rss_obfs_$nu)" ] && echo dbus set ssconf_basic_rss_obfs_$q=$(dbus get ssconf_basic_rss_obfs_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_rss_obfs_param_$nu)" ] && echo dbus set ssconf_basic_rss_obfs_param_$q=$(dbus get ssconf_basic_rss_obfs_param_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_rss_protocol_$nu)" ] && echo dbus set ssconf_basic_rss_protocol_$q=$(dbus get ssconf_basic_rss_protocol_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_rss_protocol_param_$nu)" ] && echo dbus set ssconf_basic_rss_protocol_param_$q=$(dbus get ssconf_basic_rss_protocol_param_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_server_$nu)" ] && echo dbus set ssconf_basic_server_$q=$(dbus get ssconf_basic_server_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_ss_obfs_$nu)" ] && echo dbus set ssconf_basic_ss_obfs_$q=$(dbus get ssconf_basic_ss_obfs_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_ss_obfs_host_$nu)" ] && echo dbus set ssconf_basic_ss_obfs_host_$q=$(dbus get ssconf_basic_ss_obfs_host_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_use_kcp_$nu)" ] && echo dbus set ssconf_basic_use_kcp_$q=$(dbus get ssconf_basic_use_kcp_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_use_lb_$nu)" ] && echo dbus set ssconf_basic_use_lb_$q=$(dbus get ssconf_basic_use_lb_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_lbmode_$nu)" ] && echo dbus set ssconf_basic_lbmode_$q=$(dbus get ssconf_basic_lbmode_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_weight_$nu)" ] && echo dbus set ssconf_basic_weight_$q=$(dbus get ssconf_basic_weight_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_group_$nu)" ] && echo dbus set ssconf_basic_group_$q=$(dbus get ssconf_basic_group_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_use_json_$nu)" ] && echo dbus set ssconf_basic_v2ray_use_json_$q=$(dbus get ssconf_basic_v2ray_use_json_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_uuid_$nu)" ] && echo dbus set ssconf_basic_v2ray_uuid_$q=$(dbus get ssconf_basic_v2ray_uuid_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_alterid_$nu)" ] && echo dbus set ssconf_basic_v2ray_alterid_$q=$(dbus get ssconf_basic_v2ray_alterid_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_security_$nu)" ] && echo dbus set ssconf_basic_v2ray_security_$q=$(dbus get ssconf_basic_v2ray_security_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_network_$nu)" ] && echo dbus set ssconf_basic_v2ray_network_$q=$(dbus get ssconf_basic_v2ray_network_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_headtype_tcp_$nu)" ] && echo dbus set ssconf_basic_v2ray_headtype_tcp_$q=$(dbus get ssconf_basic_v2ray_headtype_tcp_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_headtype_kcp_$nu)" ] && echo dbus set ssconf_basic_v2ray_headtype_kcp_$q=$(dbus get ssconf_basic_v2ray_headtype_kcp_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_network_path_$nu)" ] && echo dbus set ssconf_basic_v2ray_network_path_$q=$(dbus get ssconf_basic_v2ray_network_path_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_network_host_$nu)" ] && echo dbus set ssconf_basic_v2ray_network_host_$q=$(dbus get ssconf_basic_v2ray_network_host_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_network_security_$nu)" ] && echo dbus set ssconf_basic_v2ray_network_security_$q=$(dbus get ssconf_basic_v2ray_network_security_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_mux_enable_$nu)" ] && echo dbus set ssconf_basic_v2ray_mux_enable_$q=$(dbus get ssconf_basic_v2ray_mux_enable_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_mux_concurrency_$nu)" ] && echo dbus set ssconf_basic_v2ray_mux_concurrency_$q=$(dbus get ssconf_basic_v2ray_mux_concurrency_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_v2ray_json_$nu)" ] && echo dbus set ssconf_basic_v2ray_json_$q=$(dbus get ssconf_basic_v2ray_json_$nu) >> /tmp/ss_conf.sh
-		[ -n "$(dbus get ssconf_basic_type_$nu)" ] && echo dbus set ssconf_basic_type_$q=$(dbus get ssconf_basic_type_$nu) >> /tmp/ss_conf.sh
-		
-		echo "#------------------------" >> /tmp/ss_conf.sh
+		local items=$PREFIX
+		for item in $items
+		do
+		{
+			local tmp=$(eval echo \$$item$nu)
+			echo "export $item$i=\"$tmp\"" >> $BACKUP_FILE_TMP
+		} &
+		done
 		if [ "$nu" == "$ssconf_basic_node" ];then
-			echo dbus set ssconf_basic_node=$q >> /tmp/ss_conf.sh
+			echo "export ssconf_basic_node=\"$i\"" >> $BACKUP_FILE_TMP
 		fi
-		let q+=1
+		let i+=1
 	done
-	#echo $q
+	cat $BACKUP_FILE_TMP|awk -F"=" '{print $0"|"$1}' | awk -F"_" '{print $NF"|"$0}' | sort -t "|" -nk1,1 | awk -F"|" '{print $2}' | sed '1 i\#------------------------' | sed '1 isource /koolshare/scripts/base.sh' | sed '1 i#!/bin/sh' | sed '/ssconf_basic_weight_/a\#------------------------' > $BACKUP_FILE
+	echo "dbus save ssconf" >> $BACKUP_FILE
+	chmod +x $BACKUP_FILE
+	cp $BACKUP_FILE /koolshare/configs/ss_conf.sh
+	echo_date 备份完毕...
 	# -----------------
-	# 2 清除已有的ss节点配置
-	echo_date 一些必要的检查工作...
-	confs=`dbus list ssconf_basic_ | cut -d "=" -f 1`
-	for conf in $confs
-	do
-		#echo_date 移除$conf
-		dbus remove $conf
-	done
-	# -----------------
-	# 3 应用之前提取的干净的ss配置
+	# 2 应用之前提取的干净的ss配置
 	echo_date 检查完毕！节点信息备份在/koolshare/configs/ss_conf.sh
-	cat /tmp/ss_conf.sh | sed 's/=/=\"/' | sed 's/$/\"/g' > /koolshare/configs/ss_conf.sh
 	sh /koolshare/configs/ss_conf.sh
-	# ==============================
 }
-
 
 decode_url_link(){
 	local link=$1
@@ -938,6 +901,7 @@ start_update(){
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/sub_group_info.txt >/dev/null 2>&1
+	rm -rf /tmp/multi_*.txt >/dev/null 2>&1
 	echo_date "==================================================================="
 	echo_date "所有订阅任务完成，请等待6秒，或者手动关闭本窗口！"
 	echo_date "==================================================================="
@@ -1114,5 +1078,8 @@ case $2 in
 	add >> /tmp/upload/ss_log.txt
 	echo XU6J03M6 >> /tmp/upload/ss_log.txt
 	unset_lock
+	;;
+5)
+	prepare
 	;;
 esac

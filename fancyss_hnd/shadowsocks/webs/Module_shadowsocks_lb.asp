@@ -410,8 +410,8 @@ function refresh_table() {
 		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
-			$("#lb_node_table").find("tr:gt(0)").remove();
-			$('#lb_node_table tr:last').after(refresh_html());
+			$("#lb_node_table_2").remove();
+			$('#lb_node_table').after(refresh_html());
 		}
 	});
 }
@@ -419,29 +419,31 @@ function refresh_table() {
 function refresh_html() {
 	confs = getAllConfigs();
 	var html = '';
+	html = html + '<table id="lb_node_table_2" style="margin:-1px 0px 0px 0px;" width="750px" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="list_table">';
 	for (var field in confs) {
 		var c = confs[field];
 		if (c["use_lb"] == 1) {
-			html = html + '<tr>';
-			html = html + '<td id="ss_node_name_' + c["node"] + '" style="width:85px;">' + c["name"] + '</td>';
-			html = html + '<td id="ss_node_server_' + c["node"] + '" style="width:85px;">' + c["server"] + '</td>';
-			html = html + '<td id="ss_node_port_' + c["node"] + '" style="width:37px;">' + c["port"] + '</td>';
-			html = html + '<td id="ss_node_password_' + c["node"] + '" style="width:75px;">' + Base64.decode(c["password"]) + '</td>';
-			html = html + '<td id="ss_node_method_' + c["node"] + '" style="width:75px;">' + c["method"] + '</td>';
+			html = html + '<tr height="40px">';
+			html = html + '<td width="20%" id="ss_node_name_' + c["node"] + '">' + c["name"] + '</td>';
+			html = html + '<td width="15%" id="ss_node_server_' + c["node"] + '">' + c["server"] + '</td>';
+			html = html + '<td width="15%" id="ss_node_port_' + c["node"] + '">' + c["port"] + '</td>';
+			html = html + '<td width="11%" id="ss_node_password_' + c["node"] + '">' + Base64.decode(c["password"]) + '</td>';
+			html = html + '<td width="15%" id="ss_node_method_' + c["node"] + '">' + c["method"] + '</td>';
 			if (c["lbmode"] == 3) {
-				html = html + '<td id="ss_node_mode_' + c["node"] + '" style="width:75px;">备用节点</td>';
+				html = html + '<td width="8%" id="ss_node_mode_' + c["node"] + '">备用节点</td>';
 			} else if (c["lbmode"] == 2) {
-				html = html + '<td id="ss_node_mode_' + c["node"] + '" style="width:75px;">主用节点</td>';
+				html = html + '<td width="8%" id="ss_node_mode_' + c["node"] + '">主用节点</td>';
 			} else if (c["lbmode"] == 1) {
-				html = html + '<td id="ss_node_mode_' + c["node"] + '" style="width:75px;">负载均衡</td>';
+				html = html + '<td width="11%" id="ss_node_mode_' + c["node"] + '">负载均衡</td>';
 			}
-			html = html + '<td id="ss_node_weight_' + c["node"] + '" style="width:75px;">' + c["weight"] + '</td>';
-			html = html + '<td style="width:33px;">'
-			html = html + '<input style="margin-top: 4px;margin-left:-3px;" id="td_node_' + c["node"] + '" class="remove_btn" type="button" onclick="delTr(this);" value="">'
+			html = html + '<td width="5%" id="ss_node_weight_' + c["node"] + '">' + c["weight"] + '</td>';
+			html = html + '<td width="8%" style="width:33px;">'
+			html = html + '<input style="margin:-2px 0px -4px -2px;" id="td_node_' + c["node"] + '" class="remove_btn" type="button" onclick="delTr(this);" value="">'
 			html = html + '</td>';
 			html = html + '</tr>';
 		}
 	}
+	html = html + '</table>';
 	return html;
 }
 
@@ -477,7 +479,7 @@ function count_down_close() {
 <body onload="init();">
 	<div id="TopBanner"></div>
 	<div id="Loading" class="popup_bg"></div>
-	<div id="LoadingBar" class="popup_bar_bg">
+	<div id="LoadingBar" class="popup_bar_bg_ks">
 	<table cellpadding="5" cellspacing="0" id="loadingBarBlock" class="loadingBarBlock"  align="center">
 		<tr>
 			<td height="100">
@@ -554,7 +556,7 @@ function count_down_close() {
                                                 <td colspan="3"></td>
                                             </tr>
                                         </table>
-										<div style="margin:-25px 0px 0px 0px;">
+										<div id="lb_setting" style="margin:-25px 0px 0px 0px;">
 											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="routing_table">
 												<thead>
 												<tr>
@@ -649,17 +651,17 @@ function count_down_close() {
 												</tr>
                                     		</table>
 										</div>
-										<div style="margin:20px 0px 0px 0px;">
-											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="lb_node_table">
-												<tr>
-													<th style="width:70px;">服务器别名</th>
-													<th style="width:90px;">服务器</th>
-													<th style="width:90px;">服务器端口</th>
-													<th style="width:90px;">密码</th>
-													<th style="width:90px;">加密方式</th>
-													<th style="width:35px;">属性</th>
-													<th style="width:35px;">权重</th>
-													<th style="width:35px;">删除</th>
+										<div id="lb_list" style="margin:20px 0px 0px 0px;">
+											<table id="lb_node_table" style="margin:-1px 0px 0px 0px;" width="750px" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable_table">
+												<tr height="40px">
+													<th width="20%">服务器别名</th>
+													<th width="15%">服务器</th>
+													<th width="15%">服务器端口</th>
+													<th width="11%">密码</th>
+													<th width="15%">加密方式</th>
+													<th width="11%">属性</th>
+													<th width="5%">权重</th>
+													<th width="8%">删除</th>
 												</tr>
 											</table>
 										</div>

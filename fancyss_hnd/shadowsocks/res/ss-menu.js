@@ -1,8 +1,238 @@
 function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
-var retArea = E('log_content1');
-var autoTextarea = function(elem, extra, maxHeight) {
+var elem = {
+	parentElem: function(e, tagName) {
+		e = E(e);
+		tagName = tagName.toUpperCase();
+		while (e.parentNode) {
+			e = e.parentNode;
+			if (e.tagName == tagName) return e;
+		}
+		return null;
+	},
+	display: function() {
+		var enable = arguments[arguments.length - 1];
+		for (var i = 0; i < arguments.length - 1; ++i) {
+			E(arguments[i]).style.display = enable ? '' : 'none';
+		}
+	},
+}
+
+function get_config(name, def) {
+	return ((typeof(nvram) != 'undefined') && (typeof(nvram[name]) != 'undefined')) ? nvram[name] : def;
+}
+
+(function($) {
+	$.fn.forms = function(data, settings) {
+		$(this).append(createFormFields(data, settings));
+	}
+})(jQuery);
+
+function escapeHTML(s) {
+	function esc(c) {
+		return '&#' + c.charCodeAt(0) + ';';
+	}
+	return s.replace(/[&"'<>\r\n]/g, esc);
+}
+
+function UT(v) {
+	return (typeof(v) == 'undefined') ? '' : '' + v;
+}
+
+function createFormFields(data, settings) {
+	var id, id1, common, output, form = '', multiornot;
+	var s = $.extend({
+		'align': 'left',
+		'grid': ['col-sm-3', 'col-sm-9']
+
+	}, settings);
+	$.each(data, function(key, v) {
+		if (!v) {
+			form += '<br />';
+			return;
+		}
+		if (v.ignore) return;
+		if (v.th) {
+			form += '<tr' + ((v.class) ? ' class="' + v.class + '"' : '') + '><th colspan="2">' + v.title + '</th></tr>';
+			return;
+		}
+		if (v.thead) {
+			form += '<thead><tr><td colspan="2">' + v.title + '</td></tr></thead>';
+			return;
+		}
+		if (v.td) {
+			form += v.td;
+			return;
+		}
+		form += '<tr' + ((v.rid) ? ' id="' + v.rid + '"' : '') + ((v.class) ? ' class="' + v.class + '"' : '') + ((v.hidden) ? ' style="display: none;"' : '') + '>';
+		if (v.help) {
+			v.title += '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.help + ')"><font color="#ffcc00"><u>[说明]</u></font></a>';
+		}
+		if (v.text) {
+			if (v.title)
+				form += '<label class="' + s.grid[0] + ' ' + ((s.align == 'center') ? 'control-label' : 'control-left-label') + '">' + v.title + '</label><div class="' + s.grid[1] + ' text-block">' + v.text + '</div></fieldset>';
+			else
+				form += '<label class="' + s.grid[0] + ' ' + ((s.align == 'center') ? 'control-label' : 'control-left-label') + '">' + v.text + '</label></fieldset>';
+			return;
+		}
+		if (v.multi) multiornot = v.multi;
+		else multiornot = [v];
+		output = '';
+		$.each(multiornot, function(key, f) {
+			id = (f.id ? f.id : '');
+			common = ' id="' + id + '"';
+			if (f.func == 'v') common += ' onchange="verifyFields(this, 1);"';
+			else if (f.func == 'u') common += ' onchange="update_visibility();"';
+			else if (f.func) common += ' ' + f.func
+
+			if (f.attrib) common += ' ' + f.attrib;
+			if (f.ph) common += ' placeholder="' + f.ph + '"';
+			if (f.disabled) common += ' disabled="disabled"'
+			if (f.prefix) output += f.prefix;
+			switch (f.type) {
+				case 'checkbox':
+					output += '<input type="checkbox"' + (f.value ? ' checked' : '') + common + '>' + (f.suffix ? f.suffix : '');
+					break;
+				case 'radio':
+					output += '<div class="radio c-radio"><label><input class="custom" type="radio"' + (f.value ? ' checked' : '') + common + '>\
+					<span></span> ' + (f.suffix ? f.suffix : '') + '</label></div>';
+					break;
+				case 'password':
+					common += ' class="input_ss_table" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
+					if (f.style) common += ' style="' + f.style + '"';
+					if (f.peekaboo) common += ' readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute(' + '\'readonly\'' + ');"';
+					output += '<input type="' + f.type + '"' + ' value="' + escapeHTML(UT(f.value)) + '"' + (f.maxlen ? (' maxlength="' + f.maxlen + '" ') : '') + common + '>';
+					break;
+				case 'text':
+					if (f.css) common += ' class="input_ss_table ' + f.css + '"';
+					else common += ' class="input_ss_table" spellcheck="false"';
+					if (f.style) common += ' style="' + f.style + '"';
+					if (f.title) common += ' title="' + f.title + '"';
+					output += '<input type="' + f.type + '"' + ' value="' + escapeHTML(UT(f.value)) + '"' + (f.maxlen ? (' maxlength="' + f.maxlen + '" ') : '') + common + '>';
+					break;
+				case 'select':
+					if (f.css) common += ' class="input_option ' + f.css + '"';
+					else common += ' class="input_option"';
+					if (f.style) common += ' style="' + f.style + ';margin:0px 0px 0px 2px;"';
+					else common += ' style="width:164px;margin:0px 0px 0px 2px;"';
+					output += '<select' + common + '>';
+					for (optsCount = 0; optsCount < f.options.length; ++optsCount) {
+						a = f.options[optsCount];
+						if (!Array.isArray(a)) {
+							output += '<option value="' + a + '"' + ((a == f.value) ? ' selected' : '') + '>' + a + '</option>';
+						} else {
+							if (a.length == 1) a.push(a[0]);
+							output += '<option value="' + a[0] + '"' + ((a[0] == f.value) ? ' selected' : '') + '>' + a[1] + '</option>';
+						}
+					}
+					output += '</select>';
+					break;
+				case 'textarea':
+					common += ' autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
+					if (f.style) common += ' style="' + f.style + ';margin:0px 0px 0px 2px;"';
+					else common += ' style="margin:0px 0px 0px 2px;"';
+					if (f.rows) common += ' rows="' + f.rows + '"';
+					output += '<textarea ' + common + (f.wrap ? (' wrap=' + f.wrap) : '') + '>' + escapeHTML(UT(f.value)) + '</textarea>';
+					break;
+				default:
+					if (f.custom) output += f.custom;
+					break;
+			}
+			if (f.suffix && (f.type != 'checkbox' && f.type != 'radio')) output += f.suffix;
+		});
+		if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.hint + ')">' + v.title + '</a></th><td>' + output;
+		else form += '<th>' + v.title + '</th><td>' + output;
+		form += '</td></tr>';
+	});
+	return form;
+}
+function pop_111() {
+	require(['/res/layer/layer.js'], function(layer) {
+		layer.open({
+			type: 2,
+			shade: .7,
+			scrollbar: 0,
+			title: '国内外分流信息:http://ip.koolcenter.com/all',
+			area: ['850px', '350px'],
+			fixed: false,
+			maxmin: true,
+			shadeClose: 1,
+			id: 'LAY_layuipro',
+			btnAlign: 'c',
+			content: ['http://ip.koolcenter.com/all', 'no'],
+		});
+	});
+}
+function pop_help() {
+	require(['/res/layer/layer.js'], function(layer) {
+		layer.open({
+			type: 1,
+			title: false,
+			closeBtn: false,
+			area: '600px;',
+			shade: 0.8,
+			shadeClose: 1,
+			scrollbar: false,
+			id: 'LAY_layuipro',
+			btn: ['关闭窗口'],
+			btnAlign: 'c',
+			moveType: 1,
+			content: '<div style="padding: 50px; line-height: 22px; background-color: #393D49; color: #fff; font-weight: 300;">\
+				<b><% nvram_get("productid"); %> - 科学上网插件 - ' + db_ss["ss_basic_version_local"] + '</b><br><br>\
+				本插件是支持<a target="_blank" href="https://github.com/shadowsocks/shadowsocks-libev" ><u>SS</u></a>、<a target="_blank" href="https://github.com/shadowsocksrr/shadowsocksr-libev"><u>SSR</u></a>、<a target="_blank" href="http://firmware.koolshare.cn/binary/koolgame"><u>KoolGame</u></a>、<a target="_blank" href="https://github.com/v2ray/v2ray-core"><u>V2Ray</u></a>四种客户端的科学上网、游戏加速工具。<br>\
+				本插件仅支持Asuswrt/Merlin hnd platform 4.1.27内核的固件，请不要用于其它固件安装。<br>\
+				使用本插件有任何问题，可以前往<a style="color:#e7bd16" target="_blank" href="https://github.com/hq450/fancyss/issues"><u>github的issue页面</u></a>反馈~<br><br>\
+				● SS/SSR一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/onekeyshell/kcptun_for_ss_ssr/tree/master"><u>一键安装KCPTUN for SS/SSR on Linux</u></a><br>\
+				● koolgame一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/clangcn/game-server"><u>一键安装koolgame服务器端脚本，完美支持nat2</u></a><br>\
+				● V2Ray一键脚本：<a style="color:#e7bd16" target="_blank" href="https://233blog.com/post/17/"><u>V2Ray 搭建和优化详细图文教程</u></a><br>\
+				● 插件交流：<a style="color:#e7bd16" target="_blank" href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw"><u>加入telegram群组</u></a><br><br>\
+				我们的征途是星辰大海 ^_^</div>'
+		});
+	});
+}
+
+function pop_node_add() {
+	require(['/res/layer/layer.js'], function(layer) {
+		layer.open({
+			type: 0,
+			shade: 0.8,
+			title: '警告',
+			time: 0,
+			maxmin: true,
+			content: '你尚未添加任何节点信息！<br /> 点击下面按钮添加节点信息！',
+			btn: ['手动添加', '订阅节点', '恢复配置'],
+			btn1: function() {
+				$("#add_ss_node").trigger("click");
+				layer.closeAll();
+			},
+			btn2: function() {
+				$("#show_btn6").trigger("click");
+			},
+			btn3: function() {
+				$("#show_btn8").trigger("click");
+			},
+		});
+		poped = 1;
+	});
+}
+function compare(val1,val2){
+	return val1-val2;
+}
+function compfilter(a, b){
+	var c = {};
+	for (var key in b) {
+		if(a[key] && b[key] && a[key] == b[key]){
+			continue;
+		}else if(a[key] == undefined && (b[key] == "")){
+			continue;
+		}else{
+			c[key] = b[key];
+		}
+	}
+	return c;
+}
+function autoTextarea(elem, extra, maxHeight) {
 	extra = extra || 0;
 	var isFirefox = !!document.getBoxObjectFor || 'mozInnerScreenX' in window,
 		isOpera = !!window.opera && !!window.opera.toString().indexOf('Opera'),
@@ -53,8 +283,8 @@ var autoTextarea = function(elem, extra, maxHeight) {
 			};
 			style.height = height + extra + 'px';
 			scrollTop += parseInt(style.height) - elem.currHeight;
-			document.body.scrollTop = scrollTop;
-			document.documentElement.scrollTop = scrollTop;
+			//document.body.scrollTop = scrollTop;
+			//document.documentElement.scrollTop = scrollTop;
 			elem.currHeight = parseInt(style.height);
 		};
 	};
@@ -62,159 +292,77 @@ var autoTextarea = function(elem, extra, maxHeight) {
 	addEvent('input', change);
 	addEvent('focus', change);
 	change();
-};
-
-function browser_compatibility1(){
-	//fw versiom
-	var _fw = "<% nvram_get("extendno"); %>";
-	fw_version=parseFloat(_fw.split("X")[1]);
-	// chrome
-	var isChrome = navigator.userAgent.search("Chrome") > -1;
-	if(isChrome){
-		var major = navigator.userAgent.match("Chrome\/([0-9]*)\.");    //check for major version
-		var isChrome56 = (parseInt(major[1], 10) >= 56);
-	} else {
-		var isChrome56 = false;
-	}
-	if((isChrome56) && document.getElementById("FormTitle") && fw_version < 7.5){
-		document.getElementById("FormTitle").className = "FormTitle_chrome56";
-	}else if((isChrome56) && document.getElementById("FormTitle") && fw_version >= 7.5){
-		document.getElementById("FormTitle").className = "FormTitle";
-	}
-	//firefox
-	var isFirefox = navigator.userAgent.search("Firefox") > -1;
-	if((isFirefox) && document.getElementById("FormTitle") && fw_version < 7.5){
-		document.getElementById("FormTitle").className = "FormTitle_firefox";
-		if(current_url.indexOf("Main_Ss") == 0){
-			document.getElementById("FormTitle").style.marginTop = "-100px"
-		}
-
-	}else if((isFirefox) && document.getElementById("FormTitle") && fw_version >= 7.5){
-		document.getElementById("FormTitle").className = "FormTitle_firefox";
-		if(current_url.indexOf("Main_Ss") == 0){
-			document.getElementById("FormTitle").style.marginTop = "0px"	
-			E("FormTitle").style.height = "975px";
-		}
-	}
 }
-
+function getNowFormatDate(s) {
+	var date = new Date();
+	var seperator1 = "-";
+	var seperator2 = ":";
+	var month = date.getMonth() + 1;
+	var strDate = date.getDate();
+	if (month >= 1 && month <= 9) {
+		month = "0" + month;
+	}
+	if (strDate >= 0 && strDate <= 9) {
+		strDate = "0" + strDate;
+	}
+	var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate + " " + date.getHours() + seperator2 + date.getMinutes() + seperator2 + date.getSeconds() + seperator1 + date.getMilliseconds();
+	console.log(s, currentdate);
+}
 function menu_hook() {
-	browser_compatibility1();
 	tabtitle[tabtitle.length - 1] = new Array("", "科学上网设置", "负载均衡设置", "Socks5设置", "__INHERIT__");
 	tablink[tablink.length - 1] = new Array("", "Module_shadowsocks.asp", "Module_shadowsocks_lb.asp", "Module_shadowsocks_local.asp", "NULL");
 }
-
-function done_validating(action) {
-	return true;
-}
-
-var Base64;
-if (typeof btoa == "Function") {
-	Base64 = {
-		encode: function(e) {
-			return btoa(e);
-		},
-		decode: function(e) {
-			return atob(e);
+function versionCompare(v1, v2, options) {
+	var lexicographical = options && options.lexicographical,
+		zeroExtend = options && options.zeroExtend,
+		v1parts = v1.split('.'),
+		v2parts = v2.split('.');
+	function isValidPart(x) {
+		return (lexicographical ? /^\d+[A-Za-z]*$/ : /^\d+$/).test(x);
+	}
+	if (!v1parts.every(isValidPart) || !v2parts.every(isValidPart)) {
+		return NaN;
+	}
+	if (zeroExtend) {
+		while (v1parts.length < v2parts.length) v1parts.push("0");
+		while (v2parts.length < v1parts.length) v2parts.push("0");
+	}
+	if (!lexicographical) {
+		v1parts = v1parts.map(Number);
+		v2parts = v2parts.map(Number);
+	}
+	for (var i = 0; i < v1parts.length; ++i) {
+		if (v2parts.length == i) {
+			return true;
 		}
-	};
-} else {
-	Base64 = {
-		_keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-		encode: function(e) {
-			var t = "";
-			var n, r, i, s, o, u, a;
-			var f = 0;
-			e = Base64._utf8_encode(e);
-			while (f < e.length) {
-				n = e.charCodeAt(f++);
-				r = e.charCodeAt(f++);
-				i = e.charCodeAt(f++);
-				s = n >> 2;
-				o = (n & 3) << 4 | r >> 4;
-				u = (r & 15) << 2 | i >> 6;
-				a = i & 63;
-				if (isNaN(r)) {
-					u = a = 64
-				} else if (isNaN(i)) {
-					a = 64
-				}
-				t = t + this._keyStr.charAt(s) + this._keyStr.charAt(o) + this._keyStr.charAt(u) + this._keyStr.charAt(a)
+		if (v1parts[i] == v2parts[i]) {
+			continue;
+		} else if (v1parts[i] > v2parts[i]) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	if (v1parts.length != v2parts.length) {
+		return false;
+	}
+	return false;
+}
+function isJSON(str) {
+	if (typeof str == 'string' && str) {
+		try {
+			var obj = JSON.parse(str);
+			if (typeof obj == 'object' && obj) {
+				return true;
+			} else {
+				return false;
 			}
-			return t
-		},
-		decode: function(e) {
-			var t = "";
-			var n, r, i;
-			var s, o, u, a;
-			var f = 0;
-			e = e.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-			while (f < e.length) {
-				s = this._keyStr.indexOf(e.charAt(f++));
-				o = this._keyStr.indexOf(e.charAt(f++));
-				u = this._keyStr.indexOf(e.charAt(f++));
-				a = this._keyStr.indexOf(e.charAt(f++));
-				n = s << 2 | o >> 4;
-				r = (o & 15) << 4 | u >> 2;
-				i = (u & 3) << 6 | a;
-				t = t + String.fromCharCode(n);
-				if (u != 64) {
-					t = t + String.fromCharCode(r)
-				}
-				if (a != 64) {
-					t = t + String.fromCharCode(i)
-				}
-			}
-			t = Base64._utf8_decode(t);
-			return t
-		},
-		_utf8_encode: function(e) {
-			e = e.replace(/\r\n/g, "\n");
-			var t = "";
-			for (var n = 0; n < e.length; n++) {
-				var r = e.charCodeAt(n);
-				if (r < 128) {
-					t += String.fromCharCode(r)
-				} else if (r > 127 && r < 2048) {
-					t += String.fromCharCode(r >> 6 | 192);
-					t += String.fromCharCode(r & 63 | 128)
-				} else {
-					t += String.fromCharCode(r >> 12 | 224);
-					t += String.fromCharCode(r >> 6 & 63 | 128);
-					t += String.fromCharCode(r & 63 | 128)
-				}
-			}
-			return t
-		},
-		_utf8_decode: function(e) {
-			var t = "";
-			var n = 0;
-			var r = c1 = c2 = 0;
-			while (n < e.length) {
-				r = e.charCodeAt(n);
-				if (r < 128) {
-					t += String.fromCharCode(r);
-					n++
-				} else if (r > 191 && r < 224) {
-					c2 = e.charCodeAt(n + 1);
-					t += String.fromCharCode((r & 31) << 6 | c2 & 63);
-					n += 2
-				} else {
-					c2 = e.charCodeAt(n + 1);
-					c3 = e.charCodeAt(n + 2);
-					t += String.fromCharCode((r & 15) << 12 | (c2 & 63) << 6 | c3 & 63);
-					n += 3
-				}
-			}
-			return t
+		} catch (e) {
+			console.log('error：' + str + '!!!' + e);
+			return false;
 		}
 	}
 }
-
-String.prototype.replaceAll = function(s1, s2) {　　
-	return this.replace(new RegExp(s1, "gm"), s2);
-}
-
 function showSSLoadingBar(seconds) {
 	if (window.scrollTo)
 		window.scrollTo(0, 0);
@@ -324,16 +472,17 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 17) {
 		document.getElementById("loading_block3").innerHTML = "设置插件触发重启定时任务 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，应用中 ...</font></li>");
+	} else if (action == 18) {
+		document.getElementById("loading_block3").innerHTML = "设置节点ping ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，应用中 ...</font></li>");
 	}
 }
-
 function hideSSLoadingBar() {
 	x = -1;
 	E("LoadingBar").style.visibility = "hidden";
 	checkss = 0;
 	refreshpage();
 }
-
 function openssHint(itemNum) {
 	statusmenu = "";
 	width = "350px";
@@ -405,28 +554,12 @@ function openssHint(itemNum) {
 		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~</br>"
 		_caption = "模式说明";
 		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
-	} else if (itemNum == 2) {
-		statusmenu = "此处填入你的ss/ssr/koolgame服务器的地址。</br>建议优先填入<font color='#F46'>IP地址</font>。填入域名，特别是一些服务商给的复杂域名，有时遇到无法解析会导致国外无法连接!";
-		_caption = "服务器";
-	} else if (itemNum == 3) {
-		statusmenu = "此处填入你的ss/ssr/koolgame服务器的端口";
-		_caption = "服务器端口";
-	} else if (itemNum == 4) {
-		statusmenu = "此处填入你的ss/ssr/koolgame服务器的密码。</br><font color='#F46'>注意：</font>使用带有特殊字符的密码，可能会导致链接不上服务器。";
-		_caption = "服务器密码";
 	} else if (itemNum == 5) {
 		statusmenu = "此处填入你的ss/ssr/koolgame服务器的加密方式。</br><font color='#F46'>建议</font>如果是自己搭建服务器，建议使用对路由器负担比较小的加密方式，例如chacha20,chacha20-ietf等。";
 		_caption = "服务器加密方式";
 	} else if (itemNum == 6) {
 		statusmenu = "此处选择你希望UDP的通道。</br>很多游戏都走udp的初衷就是加速udp连接。</br>如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
 		_caption = "游戏模式V2 UDP通道";
-	} else if (itemNum == 8) {
-		statusmenu = "更多信息，请参考<a href='https://github.com/koolshare/shadowsocks-rss/blob/master/ssr.md' target='_blank'><u><font color='#00F'>ShadowsocksR 协议插件文档</font></u></a>"
-		_caption = "协议插件（protocol）";
-	} else if (itemNum == 9) {
-		statusmenu = "更多信息，请参考<a href='https://github.com/koolshare/shadowsocks-rss/blob/master/ssr.md' target='_blank'><u><font color='#00F'>ShadowsocksR 协议插件文档</font></u></a>"
-		_caption = "混淆插件 (obfs)";
-
 	} else if (itemNum == 11) {
 		statusmenu = "如果不知道如何填写，请一定留空，不然可能带来副作用！"
 		statusmenu += "</br></br>请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
@@ -436,10 +569,10 @@ function openssHint(itemNum) {
 		width = "500px";
 		statusmenu = "此处显示你的SS插件当前的版本号，当前版本：<% dbus_get_def("ss_basic_version_local", "未知"); %>,如果需要回滚SS版本，请参考以下操作步骤：";
 		statusmenu += "</br></br><font color='#CC0066'>1&nbsp;&nbsp;</font>进入<a href='Tools_Shell.asp' target='_blank'><u><font color='#00F'>webshell</font></u></a>或者其他telnet,ssh等能输入命令的工具";
-		statusmenu += "</br><font color='#CC0066'>2&nbsp;&nbsp;</font>请依次输入以下命令，等待上一条命令执行完后再运行下一条(这里以回滚1.5.0为例)：";
+		statusmenu += "</br><font color='#CC0066'>2&nbsp;&nbsp;</font>请依次输入以下命令，等待上一条命令执行完后再运行下一条(这里以回滚1.5.7为例)：";
 		statusmenu += "</br></br>&nbsp;&nbsp;&nbsp;&nbsp;cd /tmp";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss_history_package/master/fancyss_hnd/shadowsocks_1.5.0.tar.gz";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;mv shadowsocks_1.5.0.tar.gz shadowsocks.tar.gz";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss_history_package/master/fancyss_hnd/shadowsocks_1.5.7.tar.gz";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;mv shadowsocks_1.5.7.tar.gz shadowsocks.tar.gz";
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;tar -zxvf /tmp/shadowsocks.tar.gz";
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;chmod +x /tmp/shadowsocks/install.sh";
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;sh /tmp/shadowsocks/install.sh";
@@ -481,10 +614,6 @@ function openssHint(itemNum) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;导出功能可以将ss所有的设置全部导出，包括节点信息，dns设定，黑白名单设定等；"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;恢复配置功能可以使用之前导出的文件，也可以使用标准的json格式节点文件。"
 		_caption = "导出恢复";
-	} else if (itemNum == 25) {
-		statusmenu = "<font color='#CC0066'>1&nbsp;&nbsp;在gfwlist模式下：</font>";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此处定义的国内DNS仅在dns2socks和ss-tunnel下有效，chinadns1和chinadns2因为自带了国内外cdn，所以不需要。"
-		_caption = "国内DNS";
 	} else if (itemNum == 26) {
 		width = "750px";
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;国外DNS为大家提供了丰富的选择，其目的有二，一是为了保证大家有能用的国外DNS服务；二是在有能用的基础上，能够选择多种DNS解析方案，达到最佳的解析效果；所以如果你切换某个DNS程序，导致国外连接Problem detected! 那么更换能用的就好，不用纠结某个解析方案不能用。"
@@ -877,10 +1006,11 @@ function showDropdownClientList(_callBackFun, _callBackFunParam, _interfaceMode,
 			removeElement(document.getElementById("" + _containerID + "_clientlist_online"));
 		}
 	}
-	if (document.getElementById(_containerID).childNodes.length == "0")
+	if (document.getElementById(_containerID).childNodes.length == "0"){
 		document.getElementById(_pullArrowID).style.display = "none";
-	else
+	} else {
 		document.getElementById(_pullArrowID).style.display = "";
+	}
 }
 
 //=====================================

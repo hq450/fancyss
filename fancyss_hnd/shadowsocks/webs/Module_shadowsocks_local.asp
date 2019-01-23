@@ -148,7 +148,7 @@ function update_visibility(){
 <body onload="init();">
 	<div id="TopBanner"></div>
 	<div id="Loading" class="popup_bg"></div>
-	<div id="LoadingBar" class="popup_bar_bg">
+	<div id="LoadingBar" class="popup_bar_bg_ks">
 	<table cellpadding="5" cellspacing="0" id="loadingBarBlock" class="loadingBarBlock"  align="center">
 		<tr>
 			<td height="100">
@@ -197,7 +197,7 @@ function update_visibility(){
 										<div class="SimpleNote">
 											<li><i>说明：</i>此页面允许配置第二个shadosocks账号，功能仅限于在路由器上打开一个连接到shadowsocks服务器的socks5端口。如果你使用chrome浏览器，你可以使用SwitchyOmega插件去连接这个socks5代理。</li>
 										</div>
-										<div style="margin:5px 0px 0px 0px">
+										<div id="local_table" style="margin:5px 0px 0px 0px;">
 											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<thead>
 													<tr>

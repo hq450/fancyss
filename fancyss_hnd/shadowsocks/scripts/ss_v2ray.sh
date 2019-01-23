@@ -16,11 +16,11 @@ get_latest_version(){
 	if [ "$?" == "0" ];then
 		if [ -z "`cat /tmp/v2ray_latest_info.txt`" ];then
 			echo_date "获取V2Ray最新版本信息失败！使用备用服务器检测！"
-			get_latest_version_backup
+			failed_warning_v2ray
 		fi
 		if [ -n "`cat /tmp/v2ray_latest_info.txt|grep "404"`" ];then
 			echo_date "获取V2Ray最新版本信息失败！使用备用服务器检测！"
-			get_latest_version_backup
+			failed_warning_v2ray
 		fi
 		V2VERSION=`cat /tmp/v2ray_latest_info.txt | sed 's/v//g'` || 0
 		echo_date "检测到V2Ray最新版本：v$V2VERSION"
@@ -44,62 +44,16 @@ get_latest_version(){
 		fi
 	else
 		echo_date "获取V2Ray最新版本信息失败！使用备用服务器检测！"
-		get_latest_version_backup
+		failed_warning_v2ray
 	fi
 }
 
-get_latest_version_backup(){
-	echo_date "目前还没有任何备用服务器！"
+failed_warning_v2ray(){
 	echo_date "获取V2Ray最新版本信息失败！请检查到你的网络！"
 	echo_date "==================================================================="
 	echo XU6J03M6
 	exit 1
 }
-
-# get_latest_version_backup(){
-# 	rm -rf /tmp/v2ray_latest_info.txt
-# 	echo_date "检测V2Ray最新版本..."
-# 	curl --connect-timeout 8 -s $url_back/latest.txt > /tmp/v2ray_latest_info.txt
-# 	if [ "$?" == "0" ];then
-# 		if [ -z "`cat /tmp/v2ray_latest_info.txt`" ];then
-# 			echo_date "获取V2Ray最新版本信息失败！退出！"
-# 			echo_date "==================================================================="
-# 			echo XU6J03M6
-# 			exit 1
-# 		fi
-# 		if [ -n "`cat /tmp/v2ray_latest_info.txt|grep "404"`" ];then
-# 			echo_date "获取V2Ray最新版本信息失败！退出！"
-# 			echo_date "==================================================================="
-# 			echo XU6J03M6
-# 			exit 1
-# 		fi
-# 		V2VERSION=`cat /tmp/v2ray_latest_info.txt | sed 's/v//g'`
-# 		echo_date "检测到V2Ray最新版本：v$V2VERSION"
-# 		if [ ! -f "/koolshare/bin/v2ray" -o ! -f "/koolshare/bin/v2ctl" ];then
-# 			echo_date "v2ray安装文件丢失！重新下载！"
-# 			CUR_VER="0"
-# 		else
-# 			CUR_VER=`v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g'` || 0
-# 			echo_date "当前已安装V2Ray版本：v$CUR_VER"
-# 		fi
-# 		COMP=`versioncmp $V2VERSION $CUR_VER`
-# 		if [ "$COMP" == "1" ];then
-# 			[ "$CUR_VER" != "0" ] && echo_date "V2Ray已安装版本号低于最新版本，开始更新程序..."
-# 			update_now_backup v$V2VERSION
-# 		else
-# 			V2RAY_LOCAL_VER=`/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2`
-# 			V2RAY_LOCAL_DATE=`/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f5`
-# 			[ -n "$V2RAY_LOCAL_VER" ] && dbus set ss_basic_v2ray_version="$V2RAY_LOCAL_VER"
-# 			[ -n "$V2RAY_LOCAL_DATE" ] && dbus set ss_basic_v2ray_date="$V2RAY_LOCAL_DATE"
-# 			echo_date "V2Ray已安装版本已经是最新，退出更新程序!"
-# 		fi
-# 	else
-# 		echo_date "获取V2Ray最新版本信息失败！请检查到你的网络！"
-# 		echo_date "==================================================================="
-# 		echo XU6J03M6
-# 		exit 1
-# 	fi
-# }
 
 update_now(){
 	rm -rf /tmp/v2ray
@@ -140,60 +94,12 @@ update_now(){
 		check_md5sum
 	else
 		echo_date "使用备用服务器下载..."
-		update_now_backup $1
+		echo_date "下载失败，请检查你的网络！"
+		echo_date "==================================================================="
+		echo XU6J03M6
+		exit 1
 	fi
 }
-
-update_now_backup(){
-	echo_date "下载失败，请检查你的网络！"
-	echo_date "==================================================================="
-	echo XU6J03M6
-	exit 1
-}
-
-# update_now_backup(){
-# 	rm -rf /tmp/v2ray
-# 	mkdir -p /tmp/v2ray && cd /tmp/v2ray
-# 
-# 	echo_date "开始下载校验文件：md5sum.txt"
-# 	wget --no-check-certificate --timeout=20 -qO - $url_back/$1/md5sum.txt > /tmp/v2ray/md5sum.txt
-# 	if [ "$?" != "0" ];then
-# 		echo_date "md5sum.txt下载失败！"
-# 		md5sum_ok=0
-# 	else
-# 		md5sum_ok=1
-# 		echo_date "md5sum.txt下载成功..."
-# 	fi
-# 	
-# 	echo_date "开始下载v2ray程序"
-# 	wget --no-check-certificate --timeout=20 --tries=1 $url_back/$1/v2ray
-# 	if [ "$?" != "0" ];then
-# 		echo_date "v2ray下载失败！"
-# 		v2ray_ok=0
-# 	else
-# 		v2ray_ok=1
-# 		echo_date "v2ray程序下载成功..."
-# 	fi
-# 
-# 	echo_date "开始下载v2ctl程序"
-# 	wget --no-check-certificate --timeout=20 --tries=1 $url_back/$1/v2ctl
-# 	if [ "$?" != "0" ];then
-# 		echo_date "v2ctl下载失败！"
-# 		v2ctl_ok=0
-# 	else
-# 		v2ctl_ok=1
-# 		echo_date "v2ctl程序下载成功..."
-# 	fi
-# 
-# 	if [ "$md5sum_ok=1" ] && [ "$v2ray_ok=1" ] && [ "$v2ctl_ok=1" ];then
-# 		check_md5sum
-# 	else
-# 		echo_date "下载失败，请检查你的网络！"
-# 		echo_date "==================================================================="
-# 		echo XU6J03M6
-# 		exit 1
-# 	fi
-# }
 
 check_md5sum(){
 	cd /tmp/v2ray

@@ -41,8 +41,6 @@ backup_tar(){
 	cp /koolshare/bin/pdu $TARGET_FOLDER/bin/
 	cp /koolshare/bin/dns2socks $TARGET_FOLDER/bin/
 	cp /koolshare/bin/cdns $TARGET_FOLDER/bin/
-	#cp /koolshare/bin/dnscrypt-proxy $TARGET_FOLDER/bin/
-	#cp /koolshare/bin/Pcap_DNSProxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns1 $TARGET_FOLDER/bin/
 	cp /koolshare/bin/resolveip $TARGET_FOLDER/bin/
@@ -57,12 +55,13 @@ backup_tar(){
 	cp /koolshare/bin/haveged $TARGET_FOLDER/bin/
 	cp /koolshare/bin/dnsmasq $TARGET_FOLDER/bin/
 	cp /koolshare/webs/Module_shadowsocks*.asp $TARGET_FOLDER/webs/
+	cp /koolshare/res/accountadd.png $TARGET_FOLDER/res/
+	cp /koolshare/res/accountdelete.png $TARGET_FOLDER/res/
+	cp /koolshare/res/accountedit.png $TARGET_FOLDER/res/
 	cp /koolshare/res/icon-shadowsocks.png $TARGET_FOLDER/res/
 	cp /koolshare/res/ss-menu.js $TARGET_FOLDER/res/
-	cp /koolshare/res/all.png $TARGET_FOLDER/res/
-	cp /koolshare/res/gfw.png $TARGET_FOLDER/res/
-	cp /koolshare/res/chn.png $TARGET_FOLDER/res/
-	cp /koolshare/res/game.png $TARGET_FOLDER/res/
+	cp /koolshare/res/tablednd.js $TARGET_FOLDER/res/
+	cp /koolshare/res/qrcode.js $TARGET_FOLDER/res/
 	cp /koolshare/res/shadowsocks.css $TARGET_FOLDER/res/
 	cp -r /koolshare/ss $TARGET_FOLDER/
 	rm -rf $TARGET_FOLDER/ss/*.json
@@ -235,6 +234,18 @@ restore_now(){
 	echo_date 完成！
 }
 
+reomve_ping(){
+	# flush previous ping value in the table
+	pings=`dbus list ssconf_basic_ping | sort -n -t "_" -k 4|cut -d "=" -f 1`
+	if [ -n "$pings" ];then
+		for ping in $pings
+		do
+			echo "remove $ping"
+			dbus remove "$ping"
+		done
+	fi
+}
+
 case $2 in
 1)
 	echo " " > /tmp/upload/ss_log.txt
@@ -261,5 +272,8 @@ case $2 in
 	remove_silent >> /tmp/upload/ss_log.txt
 	restore_now >> /tmp/upload/ss_log.txt
 	echo XU6J03M6 >> /tmp/upload/ss_log.txt
+	;;
+5)
+	reomve_ping
 	;;
 esac
