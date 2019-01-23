@@ -20,6 +20,7 @@ fancyss_hnd Changelog
    - update	【二进制】更新https_dns_proxy二进制到最新；
    - update	【二进制】更新内置v2ray到v4.13.0；
    - update	【规则】更新内置规则到最新；
+   - update	分流检测地址更改为：http://ip.koolcenter.com/all
    
 1.5.7
    - fix	【订阅功能】修复有些机场节点有多个group信息时，只能订阅最后一组的问题；
