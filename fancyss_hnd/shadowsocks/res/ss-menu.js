@@ -92,6 +92,8 @@ function createFormFields(data, settings) {
 			if (f.prefix) output += f.prefix;
 			switch (f.type) {
 				case 'checkbox':
+					if (f.css) common += ' class="' + f.css + '"';
+					if (f.style) common += ' style="' + f.style + '"';
 					output += '<input type="checkbox"' + (f.value ? ' checked' : '') + common + '>' + (f.suffix ? f.suffix : '');
 					break;
 				case 'radio':
@@ -475,6 +477,9 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 18) {
 		document.getElementById("loading_block3").innerHTML = "设置节点ping ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，应用中 ...</font></li>");
+	} else if (action == 19) {
+		document.getElementById("loading_block3").innerHTML = "设置故障转移 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，应用中 ...</font></li>");
 	}
 }
 function hideSSLoadingBar() {
@@ -754,9 +759,6 @@ function openssHint(itemNum) {
 		statusmenu += "</br></br>需要注意的是，这里要填写的一定是网站的一级域名，比如google.com才是正确的，www.baidu.com，http://www.baidu.com/这些格式都是错误的！"
 		statusmenu += "</br></br>需要清空电脑DNS缓存，才能立即看到效果。"
 		_caption = "IP/CIDR黑名单";
-	} else if (itemNum == 42) {
-		statusmenu = "此处定义ss状态检测更新时间间隔，默认5秒。"
-		_caption = "状态更新间隔";
 	} else if (itemNum == 44) {
 		statusmenu = "shadowsocks规则更新包括了gfwlist模式中用到的<a href='https://github.com/hq450/fancyss/blob/master/rules/gfwlist.conf' target='_blank'><font color='#00F'><u>gfwlist</u></font></a>，在大陆白名单模式和游戏模式中用到的<a href='https://github.com/hq450/fancyss/blob/master/rules/chnroute.txt' target='_blank'><u><font color='#00F'>chnroute</font></u></a>和<a href='https://github.com/hq450/fancyss/blob/master/rules/cdn.txt' target='_blank'><u><font color='#00F'>国内cdn名单</font></u></a>"
 		statusmenu += "</br>建议更新时间在凌晨闲时进行，以避免更新时重启ss服务器造成网络访问问题。"

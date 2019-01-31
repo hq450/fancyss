@@ -88,6 +88,9 @@ prepare(){
 		if [ "$nu" == "$ssconf_basic_node" ];then
 			echo "export ssconf_basic_node=\"$i\"" >> $BACKUP_FILE_TMP
 		fi
+		if [ -n "$ss_failover_s4_3" && "$nu" == "$ss_failover_s4_3" ];then
+			echo "export ss_failover_s4_3=\"$i\"" >> $BACKUP_FILE_TMP
+		fi
 		let i+=1
 	done
 	cat $BACKUP_FILE_TMP|awk -F"=" '{print $0"|"$1}' | awk -F"_" '{print $NF"|"$0}' | sort -t "|" -nk1,1 | awk -F"|" '{print $2}' | sed '1 i\#------------------------' | sed '1 isource /koolshare/scripts/base.sh' | sed '1 i#!/bin/sh' | sed '/ssconf_basic_weight_/a\#------------------------' > $BACKUP_FILE
@@ -523,6 +526,10 @@ remove_node_gap(){
 				# change node nu
 				if [ "$nu" == "$ssconf_basic_node" ];then
 					dbus set ssconf_basic_node="$y"
+				fi
+				# change node nu
+				if [ -n "$ss_failover_s4_3" && "$nu" == "$ss_failover_s4_3" ];then
+					dbus set ss_failover_s4_3="$y"
 				fi
 			fi
 			let y+=1

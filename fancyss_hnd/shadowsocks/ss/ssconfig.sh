@@ -1704,7 +1704,7 @@ flush_nat(){
 	ip_rule_exist=`ip rule show | grep "lookup 310" | grep -c 310`
 	if [ -n "ip_rule_exist" ];then
 		#echo_date 清除重复的ip rule规则.
-		until [ "$ip_rule_exist" = 0 ]
+		until [ "$ip_rule_exist" == "0" ]
 		do 
 			IP_ARG=`ip rule show | grep "lookup 310"|head -n 1|cut -d " " -f3,4,5,6`
 			ip rule del $IP_ARG
@@ -2236,16 +2236,51 @@ umount_dnsmasq_now(){
 	esac
 }
 
+httping_check(){
+	[ "$ss_basic_check" != "1" ] && return
+	echo "--------------------------------------------------------------------------------------"
+	echo "检查国内可用性..."
+	httping www.baidu.com -s -Z -r --ts -c 10 -i 0.5 -t 5  | tee /tmp/upload/china.txt
+	if [ "$?" != "0" ];then
+		ehco 当前节点无法访问国内网络！
+		#dbus set ssconf_basic_node=$
+	fi
+	echo "--------------------------------------------------------------------------------------"
+	echo "检查国外可用性..."
+	#httping www.google.com.tw -s -Z --proxy 127.0.0.1:23456 -5 -r --ts -c 5
+	httping www.google.com.tw -s -Z -5 -r --ts -c 10 -i 0.5 -t 2
+	if [ "$?" != "0" ];then
+		echo "当前节点无法访问国外网络！"
+		echo "自动切换到下一个节点..."
+		ssconf_basic_node=$(($ssconf_basic_node+1))
+		dbus set ssconf_basic_node=$ssconf_basic_node
+		apply_ss
+		return 1
+		#start-stop-daemon -S -q -x /koolshare/ss/ssconfig.sh 2>&1
+	fi
+	echo "--------------------------------------------------------------------------------------"
+}
+
+stop_status(){
+	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
+	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
+	killall curl >/dev/null 2>&1
+}
+
+check_status(){
+	echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssf_status.txt
+	echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssc_status.txt
+	start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+}
+
 disable_ss(){
 	get_config
 	ss_pre_stop
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	echo_date ------------------------- 关闭【科学上网】 -----------------------------
-	nvram set ss_mode=0
-	dbus set dns2socks=0
 	dbus remove ss_basic_server_ip
-	nvram commit
+	stop_status
 	kill_process
 	remove_ss_trigger_job
 	remove_ss_reboot_job
@@ -2266,9 +2301,7 @@ apply_ss(){
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	echo_date ------------------------- 启动【科学上网】 -----------------------------
-	nvram set ss_mode=0
-	dbus set dns2socks=0
-	nvram commit
+	stop_status
 	kill_process
 	remove_ss_trigger_job
 	remove_ss_reboot_job
@@ -2309,6 +2342,9 @@ apply_ss(){
 	write_numbers
 	# post-start
 	ss_post_start
+	#httping_check
+	#[ "$?" == "1" ] && return 1
+	check_status
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
 }
 

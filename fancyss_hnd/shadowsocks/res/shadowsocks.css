@@ -63,7 +63,10 @@
 input[type=button]:focus {
 	outline: none;
 }
-#log_content3, #loading_block2, #log_content1 {line-height:1.5}
+input[type=checkbox]{
+	vertical-align:middle;
+}
+#log_content3, #loading_block2 {line-height:1.5}
 .SimpleNote { padding:5px 10px;}
 .contentM_qis {
 	position: absolute;
@@ -185,14 +188,14 @@ input[type=button]:focus {
 	/*--------non rog--------*/
 	background-color: #2F3A3E;
 }
-.show-btn0, .show-btn1, .show-btn2, .show-btn3, .show-btn4, .show-btn5, .show-btn6, .show-btn7, .show-btn8, .show-btn9 {
+.show-btn0, .show-btn1, .show-btn2, .show-btn3, .show-btn4, .show-btn5, .show-btn6, .show-btn7, .show-btn8, .show-btn9, .show-btn10, .sub-node1, .sub-node2 {
 	font-size:10pt;
 	color: #fff;
 	padding: 10px 3.75px;
 	border-radius: 5px 5px 0px 0px;
 	width:8.42%;
 	/*--------rog--------*/
-	/*border: 1px solid #680516;*/
+	/*border: 1px solid #91071f;*/
 	/*background: none;*/
 	/*--------non rog--------*/
 	border-left: 1px solid #67767d;
@@ -201,10 +204,10 @@ input[type=button]:focus {
 	border-bottom: none;
 	background: #67767d;
 }
-.show-btn0:hover, .show-btn1:hover, .show-btn2:hover, .show-btn3:hover, .show-btn4:hover, .show-btn5:hover, .show-btn6:hover, .show-btn7:hover, .show-btn8:hover, .show-btn9:hover, .active {
+.show-btn0:hover, .show-btn1:hover, .show-btn2:hover, .show-btn3:hover, .show-btn4:hover, .show-btn5:hover, .show-btn6:hover, .show-btn7:hover, .show-btn8:hover, .show-btn9:hover, .show-btn10:hover, .sub-node1:hover, .sub-node2:hover, .active {
 	/*--------rog--------*/
-	/*border: 1px solid #680516;*/
-	/*background: linear-gradient(to bottom, #680516  0%, #680516 100%);*/
+	/*border: 1px solid #91071f;*/
+	/*background: #91071f;*/
 	/*--------non rog--------*/
 	border: 1px solid #2f3a3e;
 	background: #2f3a3e;
@@ -227,8 +230,8 @@ input[type=button]:focus {
 }
 .sub-btn1:hover, .sub-btn2:hover, .sub-btn3:hover, .active2 {
 	/*--------rog--------*/
-	/*border: 1px solid #680516;*/
-	/*background: linear-gradient(to bottom, #680516  0%, #680516 100%);*/
+	/*border: 1px solid #91071f;*/
+	/*background: #91071f;*/
 	/*--------non rog--------*/
 	border: 1px solid #2f3a3e;
 	background: #2f3a3e;
@@ -252,7 +255,7 @@ input[type=button]:focus {
 	/*--------non rog--------*/
 	border-bottom:none;
 }
-#log_content1{
+#log_content1, #log_content_f, #log_content_c{
 	width:97%;
 	padding-left:4px;
 	padding-right:37px;
@@ -362,7 +365,7 @@ input[type=button]:focus {
 	/*--------non rog--------*/
 	background: linear-gradient(to bottom, #003333  0%, #000000 100%);
 }
-.ss_btn:hover {
+.ss_btn:hover, .active3 {
 	border: 1px solid #222;
 	font-size:10pt;
 	color: #fff;
@@ -375,8 +378,9 @@ input[type=button]:focus {
 	background: linear-gradient(to bottom, #27c9c9  0%, #279fd9 100%);
 }
 /*--------non rog--------*/
-#log_content{
+#log_content, #log_content_fov{
 	outline: 1px solid #222;
+	width:748px;
 }
 #ss_basic_lst_am{
 	text-align-last: center;

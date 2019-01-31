@@ -45,7 +45,7 @@ var isMenuopen = 0;
 var _responseLen;
 var noChange = 0;
 var noChange2 = 0;
-var checkss = 0;
+var noChange_status = 0;
 var poped = 0;
 var x = 5;
 var ping_result = "";
@@ -58,6 +58,8 @@ var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
 var option_v2enc = [["none", "不加密"], ["auto", "自动"], ["aes-128-cfb", "aes-128-cfb"], ["aes-128-gcm", "aes-128-gcm"], ["chacha20-poly1305", "chacha20-poly1305"]];
 var option_headtcp = [["none", "不伪装"], ["http", "伪装http"]];
 var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"], ["utp", "伪装BT下载(uTP)"], ["wechat-video", "伪装微信视频通话"]];
+var logf = 0;
+var logc = 0;
 
 function init() {
 	show_menu(menu_hook);
@@ -143,9 +145,13 @@ function refresh_options() {
 	var option = $("#ssconf_basic_node");
 	var option1 = $("#ss_basic_ping_node");
 	var option2 = $("#ss_basic_udp_node");
+	var option3 = $("#ss_failover_s4_3");
+	
 	option.find('option').remove().end();
 	option1.find('option').remove().end();
 	option2.find('option').remove().end();
+	option3.find('option').remove().end();
+	
 	option1.append('<option value="off">关闭ping功能</option>');
 	option1.append('<option value="0" selected>全部节点</option>');
 	for (var field in confs) {
@@ -157,6 +163,12 @@ function refresh_options() {
 			option2.append('<option value="' + field + '">' + c["name"] + '</option>');
 		}
 	}
+
+	for (var field in confs) {
+		var c = confs[field];
+		option3.append('<option value="' + field + '">' + c["name"] + '</option>');
+	}
+
 	for (var field in confs) {
 		var c = confs[field];
 		if (c.rss_protocol) {
@@ -195,16 +207,16 @@ function refresh_options() {
 	option.val(db_ss["ssconf_basic_node"]||"1");
 	option1.val(db_ss["ss_basic_ping_node"]||"0");
 	option2.val(db_ss["ss_basic_udp_node"]||"1");
+	option3.val((db_ss["ss_failover_s4_3"])||"1");
 }
 function save() {
-	checkss = 10001;
 	var node_sel = E("ssconf_basic_node").value;
 	dbus["ssconf_basic_node"] = node_sel;
 	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 	//key define
-	var params_input = ["ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_base64_links", "ss_basic_refreshrate", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_dnsmasq_fastlookup", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
-	var params_check = ["ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_basic_mcore"];
+	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_base64_links", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_dnsmasq_fastlookup", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
+	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_basic_mcore"];
 	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
 	var params_base64_b = ["ss_basic_custom"];
 	//---------------------------------------------------------------
@@ -231,7 +243,6 @@ function save() {
 		var tr = E("ACL_table").getElementsByTagName("tr");
 		for (var i = 1; i < tr.length - 1; i++) {
 			var rowid = tr[i].getAttribute("id").split("_")[2];
-			console.log(rowid)
 			if (E("ss_acl_name_" + i)){
 				dbus["ss_acl_name_" + rowid] = E("ss_acl_name_" + rowid).value;
 				dbus["ss_acl_mode_" + rowid] = E("ss_acl_mode_" + rowid).value;
@@ -527,7 +538,16 @@ function verifyFields(r) {
 	for ( var i = 1; i < items.length; ++i ) $("." + items[i]).hide();
 	if (Ti != "0") $(".re" + Ti).show();
 	if (Ti == "4") $(".re4_" + In).show();
-
+	// failover
+	if(E("ss_failover_enable").checked){
+		$("#failover_settings").show();
+	}else{
+		$("#failover_settings").hide();
+	}
+	showhide("ss_failover_text_1",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2" && E("ss_failover_s4_2").value == "2");
+	showhide("ss_failover_s4_2",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2");
+	showhide("ss_failover_s4_3",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2" && E("ss_failover_s4_2").value == "1");
+	// push on click
 	var trid = $(r).attr("id")
 	if ( trid == "ss_basic_qrcode" || trid == "ss_basic_dragable" || trid == "ss_basic_tablet" ) {
 		var dbus_post = {};
@@ -913,7 +933,7 @@ function remove_conf_table(o) {
 	}
 	//filer values
 	var post_data = compfilter(db_ss, dbus_tmp);
-	console.log("post_data:", post_data);
+	//console.log("post_data:", post_data);
 	//post_data
 	var id_1 = parseInt(Math.random() * 100000000);
 	var postData = {"id": id_1, "method": "dummy_script.sh", "params":[], "fields": post_data };
@@ -1268,7 +1288,7 @@ function refresh_html() {
 	
 	// define col width in different situation
 	if(node_nu && E("ss_basic_ping_node") != "off" && E("ss_basic_ping_node") != ""){
-		var width = ["", "5%", "31%", "31%", "8%", "12%", "8%", "5%", ];
+		var width = ["", "5%", "30%", "30%", "8%", "12%", "10%", "5%", ];
 	}else{
 		var width = ["", "6%", "32%", "32%", "10%", "10%", "10%" ];
 	}
@@ -1450,6 +1470,10 @@ function save_new_order(){
 		// 如果移动的节点是正在使用的，需要更改到新的位置
 		if(db_ss["ssconf_basic_node"] == rowid){
 			dbus_tmp["ssconf_basic_node"] = String(i+1);
+		}
+		// 如果移动的节点是备用节点的，需要更改到新的位置
+		if(db_ss["ss_failover_s4_3"] && db_ss["ss_failover_s4_3"] == rowid){
+			dbus_tmp["ss_failover_s4_3"] = String(i+1);
 		}
 		// 生成新的所有节点的信息
 		for (var j = 0; j < temp.length; j++) {
@@ -1945,38 +1969,31 @@ function version_show() {
 	});
 }
 function get_ss_status_data() {
-	if (checkss > 10000) {
+	if (db_ss['ss_basic_enable'] != "1") {
+		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 		return false;
 	}
-	refreshRate = $("#ss_basic_refreshrate").val();
-	if (refreshRate != 0) {
-		if (db_ss['ss_basic_enable'] == "1") {
-		var id = parseInt(Math.random() * 100000000);
-			var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
-			$.ajax({
-				type: "POST",
-				url: "/_api/",
-				async: true,
-				data: JSON.stringify(postData),
-				success: function(response) {
-					var arr = response.result.split("@@");
-					if (arr[0] == "" || arr[1] == "") {
-						E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-						E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-					} else {
-						E("ss_state2").innerHTML = arr[0];
-						E("ss_state3").innerHTML = arr[1];
-					}
+	$.ajax({
+		type: "GET",
+		url: "/_result/9527",
+		dataType: "json",
+		async: false,
+		success: function(response) {
+			//console.log(response);
+			if(response != -1 && response.result.indexOf("@@") != -1){
+				var arr = response.result.split("@@");
+				if (arr[0] == "" || arr[1] == "") {
+					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+				} else {
+					E("ss_state2").innerHTML = arr[0];
+					E("ss_state3").innerHTML = arr[1];
 				}
-			});
-		} else {
-			E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-			E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+			}
 		}
-	}
-	if (refreshRate > 0 && checkss <= 10000) {
-		setTimeout("get_ss_status_data();", refreshRate * 1000);
-	}
+	});
+	setTimeout("get_ss_status_data();", 1500);
 }
 function get_udp_status(){
 	var id = parseInt(Math.random() * 100000000);
@@ -1992,7 +2009,7 @@ function get_udp_status(){
 			setTimeout("get_udp_status();", 10000);
 		},
 		error: function(){
-			setTimeout("get_udp_status();", 5000);
+			setTimeout("get_udp_status();", 2000);
 		}
 	});
 }
@@ -2000,6 +2017,15 @@ function update_ss() {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "7";
 	push_data("ss_update.sh", "update",  dbus_post);
+}
+
+function tabSelect(w) {
+	for (var i = 0; i <= 10; i++) {
+		$('.show-btn' + i).removeClass('active');
+		$('#tablet_' + i).hide();
+	}
+	$('.show-btn' + w).addClass('active');
+	$('#tablet_' + w).show();
 }
 
 function toggle_func() {
@@ -2016,14 +2042,6 @@ function toggle_func() {
 			E("reset_select").style.display = db_ss["ss_basic_enable"] == "1" ? "":"none";
 		}
 	});
-	var tabSelect = function(w) {
-		for (var i = 0; i <= 9; i++) {
-			$('.show-btn' + i).removeClass('active');
-			$('#tablet_' + i).hide();
-		}
-		$('.show-btn' + w).addClass('active');
-		$('#tablet_' + w).show();
-	}
 	$(".show-btn0").click(
 		function() {
 			tabSelect(0);
@@ -2040,56 +2058,68 @@ function toggle_func() {
 	$(".show-btn2").click(
 		function() {
 			tabSelect(2);
-			$('#apply_button').show();
-			update_visibility();
-			autoTextarea(E("ss_dnsmasq"), 0, 500);
+			$("#look_logf").addClass("active3");
+			$("#look_logc").removeClass("active3");
+			$('#log_content_f').show();
+			$('#log_content_c').hide();
+			$("#stauts_bar_text").html("👇 国外状态 - www.google.com.tw 👇")
+			$('#apply_button').hide();
+			verifyFields();
+			if(logf == 0) get_status_log(1);
 		});
 	$(".show-btn3").click(
 		function() {
 			tabSelect(3);
+			$('#apply_button').show();
+			update_visibility();
+			autoTextarea(E("ss_dnsmasq"), 0, 500);
+		});
+	$(".show-btn4").click(
+		function() {
+			tabSelect(4);
 			$('#apply_button').show();
 			autoTextarea(E("ss_wan_white_ip"), 0, 400);
 			autoTextarea(E("ss_wan_white_domain"), 0, 400);
 			autoTextarea(E("ss_wan_black_ip"), 0, 400);
 			autoTextarea(E("ss_wan_black_domain"), 0, 400);
 		});
-	$(".show-btn4").click(
+	$(".show-btn5").click(
 		function() {
-			tabSelect(4);
+			tabSelect(5);
 			$('#apply_button').show();
 			verifyFields();
 			autoTextarea(E("ss_basic_kcp_parameter"), 0, 100);
 		});
-	$(".show-btn5").click(
+	$(".show-btn6").click(
 		function() {
-			tabSelect(5);
+			tabSelect(6);
 			$('#apply_button').show();
 			update_visibility();
 			verifyFields();
 			get_udp_status();
 		});
-	$(".show-btn6").click(
-		function() {
-			tabSelect(6);
-			$('#apply_button').hide();
-			update_visibility();
-		});
 	$(".show-btn7").click(
 		function() {
 			tabSelect(7);
-			$('#apply_button').show();
-			refresh_acl_table();
-			//update_visibility();
+			$('#apply_button').hide();
+			update_visibility();
 		});
 	$(".show-btn8").click(
 		function() {
 			tabSelect(8);
 			$('#apply_button').show();
-			update_visibility();
+			refresh_acl_table();
+			//update_visibility();
 		});
 	$(".show-btn9").click(
 		function() {
 			tabSelect(9);
+			$('#apply_button').show();
+			update_visibility();
+		});
+	$(".show-btn10").click(
+		function() {
+			tabSelect(10);
 			$('#apply_button').hide();
 			get_log();
 		});
@@ -2120,6 +2150,66 @@ function toggle_func() {
 		$(".show-btn" + default_tab).trigger("click");
 	}
 }
+function lookup_status_log(s) {
+	if(s == 1){
+		$('#log_content_f').show();
+		$('#log_content_c').hide();
+		$("#look_logf").addClass("active3");
+		$("#look_logc").removeClass("active3");
+		$("#stauts_bar_text").html("👇 国外状态 - www.google.com.tw 👇")
+		if(logf == 0) get_status_log(1);
+	}else{
+		$('#log_content_f').hide();
+		$('#log_content_c').show();
+		$("#look_logf").removeClass("active3");
+		$("#look_logc").addClass("active3");
+		$("#stauts_bar_text").html("👇 国内状态 - www.baidu.com 👇")
+		if(logc == 0) get_status_log(2);
+	}
+}
+function get_status_log(s) {
+	if(s == 1){
+		logf = 1;
+		var file = '/_temp/ssf_status.txt';
+		var retArea = E("log_content_f");
+	}else{
+		logc = 1;
+		var file = '/_temp/ssc_status.txt';
+		var retArea = E("log_content_c");
+	}
+	$.ajax({
+		url: file,
+		type: 'GET',
+		dataType: 'html',
+		async: true,
+		cache:false,
+		success: function(response) {
+			if(E("tablet_2").style.display == "none"){
+				logf = 0;
+				logc = 0;
+				return false;
+			}
+			if (_responseLen == response.length) {
+				noChange_status++;
+			} else {
+				noChange_status = 0;
+			}
+			if (noChange_status > 10) {
+				return false;
+			} else {
+				setTimeout('get_status_log("' + s + '");', 1500);
+			}
+			retArea.value = response;
+			if(E("ss_failover_c4").checked == false){
+				retArea.scrollTop = retArea.scrollHeight;
+			}
+			_responseLen = response.length;
+		},
+		error: function(xhr) {
+			retArea.value = "获取日志失败！";
+		}
+	});
+}
 function get_log() {
 	$.ajax({
 		url: '/_temp/ss_log.txt',
@@ -2145,13 +2235,15 @@ function get_log() {
 				noChange = 0;
 			}
 			if (noChange > 5) {
-				//retArea.value = "当前日志文件为空";
 				return false;
 			} else {
-				setTimeout("get_log();", 100);
+				setTimeout("get_log();", 300);
 			}
 			retArea.value = response;
 			_responseLen = response.length;
+			if(E("tablet_9").style.display == "none"){
+				return false;
+			}
 		},
 		error: function(xhr) {
 			E("log_content1").value = "获取日志失败！";
@@ -2305,7 +2397,20 @@ function refresh_acl_table(q) {
 			db_ss = data.result[0];
 			refresh_acl_html();
 			//write defaut rule mode when switching ss mode
-			$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+			if (typeof db_ss["ss_acl_default_mode"] != "undefined") {
+				if (E("ss_basic_mode").value == 1 && db_ss["ss_acl_default_mode"] == 1 || db_ss["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				}
+				if (E("ss_basic_mode").value == 2 && db_ss["ss_acl_default_mode"] == 2 || db_ss["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				}
+				if (E("ss_basic_mode").value == 3 && db_ss["ss_acl_default_mode"] == 3 || db_ss["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				}
+				if (E("ss_basic_mode").value == 5 && db_ss["ss_acl_default_mode"] == 5 || db_ss["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				}
+			}
 			//write default rule port
 			if (typeof db_ss["ss_acl_default_port"] != "undefined") {
 				$('#ss_acl_default_port').val(db_ss["ss_acl_default_port"]);
@@ -2467,8 +2572,7 @@ function refresh_acl_html() {
 		code += '<td width="23%">其它主机</td>';
 	}
 	code += '<td width="23%">默认规则</td>';
-	//ssmode = E("ss_basic_mode").value;
-	ssmode = db_ss["ss_basic_mode"];
+	ssmode = E("ss_basic_mode").value;
 	if (n == 0) {
 		if (ssmode == 0) {
 			code += '<td width="23%">SS关闭</td>';
@@ -2645,6 +2749,19 @@ function set_cron(action) {
 	}
 	push_data("ss_reboot_job.sh", action, dbus_post);
 }
+function save_failover() {
+	var dbus_post = {};
+		db_ss["ss_basic_action"] = "19";
+	var fov_inp = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5"];
+	var fov_chk = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3"];
+	for (var i = 0; i < fov_inp.length; i++) {
+		dbus_post[fov_inp[i]] = E(fov_inp[i]).value;
+	}
+	for (var i = 0; i < fov_chk.length; i++) {
+		dbus_post[fov_chk[i]] = E(fov_chk[i]).checked ? '1' : '0';
+	}
+	push_data("ss_status_reset.sh", "", dbus_post);
+}
 </script>
 </head>
 <body onload="init();">
@@ -2776,14 +2893,15 @@ function set_cron(action) {
 													<td cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#222">
 														<input id="show_btn0" class="show-btn0" style="cursor:pointer" type="button" value="帐号设置" />
 														<input id="show_btn1" class="show-btn1" style="cursor:pointer" type="button" value="节点管理" />
-														<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="DNS设定" />
-														<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="黑白名单" />
-														<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="KCP加速" />
-														<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="UDP加速"/>
-														<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="更新管理" />
-														<input id="show_btn7" class="show-btn7" style="cursor:pointer" type="button" value="访问控制" />
-														<input id="show_btn8" class="show-btn8" style="cursor:pointer" type="button" value="附加功能" />
-														<input id="show_btn9" class="show-btn9" style="cursor:pointer" type="button" value="查看日志" />
+														<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="故障转移" />
+														<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="DNS设定" />
+														<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="黑白名单" />
+														<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="KCP加速" />
+														<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="UDP加速"/>
+														<input id="show_btn7" class="show-btn7" style="cursor:pointer" type="button" value="更新管理" />
+														<input id="show_btn8" class="show-btn8" style="cursor:pointer" type="button" value="访问控制" />
+														<input id="show_btn9" class="show-btn9" style="cursor:pointer" type="button" value="附加功能" />
+														<input id="show_btn10" class="show-btn10" style="cursor:pointer" type="button" value="查看日志" />
 													</td>
 												</tr>
 											</table>
@@ -2885,9 +3003,79 @@ function set_cron(action) {
 											</table>
 										</div>
 										<div id="tablet_1" style="display: none;">
-										<div id="ss_list_table"></div>
+											<div id="ss_list_table"></div>
 										</div>
 										<div id="tablet_2" style="display: none;">
+											<table id="table_failover" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
+												<script type="text/javascript">
+													var fa1 = ["2", "3", "4", "5"];
+													var fa2_1 = ["10", "15", "20"];
+													var fa2_2 = ["2", "3", "4", "5", "6", "7", "8"];
+													var fa3_1 = ["10", "15", "20"];
+													var fa3_2 = ["100", "150", "200", "250", "300", "350", "400", "450", "500", "1000"];
+													var fa4_1 = [["0", "关闭插件"], ["1", "重启插件"], ["2", "切换到"]];
+													var fa4_2 = [["1", "备用节点"], ["2", "下个节点"]];
+													$('#table_failover').forms([
+														{ title: '故障转移开关', id:'ss_failover_enable',type:'checkbox', func:'v', value:false},
+														{ title: '故障转移设置', rid:'failover_settings', multi: [
+															{ suffix:'<div style="margin-top: 5px;">' },
+															{ id:'ss_failover_c1', type:'checkbox', value:false },
+															{ suffix:'<lable>👉&nbsp;国外连续发生&nbsp;</lable>' },
+															{ id:'ss_failover_s1', type:'select', style:'width:auto', options:fa1, value:'3'},
+															{ suffix:'<lable>&nbsp;次故障；<br /></lable>' },
+															{ suffix:'</div>' },
+															//line3
+															{ suffix:'<div style="margin-top: 5px;">' },
+															{ id:'ss_failover_c2', type:'checkbox', value:false },
+															{ suffix:'<lable>👉&nbsp;最近&nbsp;</lable>' },
+															{ id:'ss_failover_s2_1', type:'select', style:'width:auto', options:fa2_1, value:'15'},
+															{ suffix:'<lable>&nbsp;次国外状态检测中，故障次数超过&nbsp;</lable>' },
+															{ id:'ss_failover_s2_2', type:'select', style:'width:auto', options:fa2_2, value:'4'},
+															{ suffix:'<lable>&nbsp;次；<br /></lable>' },
+															{ suffix:'</div>' },
+															//line4
+															{ suffix:'<div style="margin-top: 5px;">' },
+															{ id:'ss_failover_c3', type:'checkbox', value:false },
+															{ suffix:'<lable>👉&nbsp;最近&nbsp;</lable>' },
+															{ id:'ss_failover_s3_1', type:'select', style:'width:auto', options:fa3_1, value:'20'},
+															{ suffix:'<lable>&nbsp;次国外状态检测中，平均延迟超过&nbsp;</lable>' },
+															{ id:'ss_failover_s3_2', type:'select', style:'width:auto', options:fa3_2, value:'500'},
+															{ suffix:'<lable>ms<br /></lable>' },
+															{ suffix:'</div>' },
+															//line5
+															{ suffix:'<div style="margin-top: 5px;">' },
+															{ suffix:'<lable>&nbsp;以上有一个条件满足，则&nbsp;</lable>' },
+															{ id:'ss_failover_s4_1', type:'select', style:'width:auto', func:'v', options:fa4_1, value:'2'},
+															{ id:'ss_failover_s4_2', type:'select', style:'width:auto', func:'v', options:fa4_2, value:'2'},
+															{ id:'ss_failover_s4_3', type:'select', style:'width:170px', func:'v', options:[]},
+															{ suffix:'<lable id="ss_failover_text_1">&nbsp;，即在节点列表内顺序循环。&nbsp;</lable>' },
+															{ suffix:'</div>' },
+														]},
+														{ title: '查看历史状态', multi: [
+															{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
+															{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
+															{ suffix:'<lable>&nbsp;&nbsp;&nbsp;&nbsp;最多保留&nbsp;</lable>' },
+															{ id:'ss_failover_s5', type:'select', style:'width:auto',options:["1000", "2000", "3000", "4000"], value:'2000'},
+															{ suffix:'<lable>&nbsp;行日志&nbsp;</lable>' },
+														]},
+														{ td: '<tr><td id="stauts_bar_text" class="smth" style="font-weight: bold;text-align:center" colspan="2"></td></tr>'},
+													]);
+												</script>
+											</table>
+											<div id="log_content_fov" style="margin-top:-1px;overflow:hidden;">
+												<textarea rows="30" wrap="on" readonly="readonly" id="log_content_f" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												<textarea rows="30" wrap="on" readonly="readonly" id="log_content_c" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+
+											<div align="center" style="margin-top: 10px;">
+												<input class="button_gen" type="button" onclick="save()" value="保存&amp;应用">
+												<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
+												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
+												<lable>&nbsp;暂停日志刷新</lable>
+											</div>
+											
+										</div>
+										<div id="tablet_3" style="display: none;">
 											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
 													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【112.124.47.27】"], ["9", "oneDNS2【114.215.126.16】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["12", "自定义DNS"]]
@@ -2925,7 +3113,7 @@ function set_cron(action) {
 												</script>
 											</table>
 										</div>
-										<div id="tablet_3" style="display: none;">
+										<div id="tablet_4" style="display: none;">
 											<table id="table_wblist" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
 													var ph1 = "# 填入不需要走代理的外网ip地址，一行一个，格式（IP/CIDR）如下&#10;2.2.2.2&#10;3.3.3.3&#10;4.4.4.4/24";
@@ -2941,7 +3129,7 @@ function set_cron(action) {
 												</script>
 											</table>
 										</div>
-										<div id="tablet_4" style="display: none;">
+										<div id="tablet_5" style="display: none;">
 											<table id="table_kcp" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
 													var option_kcpm = [ "manual", "normal", "fast", "fast2", "fast3" ];
@@ -2977,7 +3165,7 @@ function set_cron(action) {
 												</script>
 											</table>
 										</div>
-										<div id="tablet_5" style="display: none;">
+										<div id="tablet_6" style="display: none;">
 											<table id="table_udp_main" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
 													$('#table_udp_main').forms([
@@ -3109,7 +3297,7 @@ function set_cron(action) {
 												</script>
 											</table>
 										</div>
-										<div id="tablet_6" style="display: none;">
+										<div id="tablet_7" style="display: none;">
 											<table id="table_rules" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
 												<script type="text/javascript">
 													var option_ruleu = [];
@@ -3198,7 +3386,7 @@ function set_cron(action) {
 												</script>
 											</table>
 										</div>
-										<div id="tablet_7" style="display: none;">
+										<div id="tablet_8" style="display: none;">
 											<div id="ss_acl_table"></div>
 											<div id="ACL_note" style="margin:10px 0 0 5px">
 												<div><i>1&nbsp;&nbsp;默认状态下，所有局域网的主机都会走当前节点的模式（主模式），相当于即不启用局域网访问控制。</i></div>
@@ -3208,11 +3396,10 @@ function set_cron(action) {
 												<div><i>5&nbsp;&nbsp;如果需要自定义端口范围，适用英文逗号和冒号，参考格式：80,443,5566:6677,7777:8888</i></div>
 											</div>
 										</div>
-										<div id="tablet_8" style="display: none;">
+										<div id="tablet_9" style="display: none;">
 											<table id="table_addons" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
 												<script type="text/javascript">
 													var title1 = "填写说明：&#13;此处填写1-23之间任意小时&#13;小时间用逗号间隔，如：&#13;当天的8点、10点、15点则填入：8,10,15"
-													var option_refr = [["0", "不更新"], ["5", "5s"], ["10", "10s"], ["15", "15s"], ["30", "30s"], ["60", "60s"]];
 													var option_rebc = [["0", "关闭"], ["1", "每天"], ["2", "每周"], ["3", "每月"], ["4", "每隔"], ["5", "自定义"]];
 													var option_rebw = [["1", "一"], ["2", "二"], ["3", "三"], ["4", "四"], ["5", "五"], ["6", "六"], ["7", "日"]];
 													var option_rebd = [];
@@ -3249,8 +3436,6 @@ function set_cron(action) {
 													var pingm = [["1", "ping(1次/节点)"], ["2", "ping(5次/节点)"], ["3", "ping(10次/节点)"], ["4", "ping(20次/节点)"]];
 													var option_dnsfast = [["0", "【0】不替换"], ["1", "【1】插件开启后替换，插件关闭后恢复原版dnsmasq"], ["2", "【2】在用到cdn.conf时替换，插件关闭后恢复原版dnsmasq"], ["3", "【3】插件开启后替换，插件关闭后保持替换，不恢复原版dnsmasq"]]
 													$('#table_addons').forms([
-														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">状态检测</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;状态更新间隔', id:'ss_basic_refreshrate', type:'select', hint:'42', style:'width:auto', options:option_refr, value:'5'},
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;导出SS配置', hint:'24', multi: [
 															{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_SS_node(1);" value="导出配置">'},
@@ -3303,7 +3488,7 @@ function set_cron(action) {
 												</script> 
 											</table>
 										</div>
-										<div id="tablet_9" style="display: none;">
+										<div id="tablet_10" style="display: none;">
 												<div id="log_content" style="margin-top:-1px;overflow:hidden;">
 													<textarea cols="63" rows="36" wrap="on" readonly="readonly" id="log_content1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 												</div>

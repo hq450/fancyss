@@ -80,6 +80,7 @@ rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/bin/https_dns_proxy
+rm -rf /koolshare/bin/httping
 rm -rf /koolshare/bin/dnsmassq
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
