@@ -64,7 +64,7 @@ do_backup(){
 	echo backup VERSION $backup_version
 	cp ${MODULE}.tar.gz $HISTORY_DIR/${MODULE}_$backup_version.tar.gz
 	sed -i "/$backup_version/d" "$HISTORY_DIR"/version
-	echo $backup_tar_md5 ${MODULE}_$backup_version.tar.gz >> "$HISTORY_DIR"/version
+	echo $backup_tar_md5 ${MODULE}_$backup_version.tar.gz >> "$HISTORY_DIR"/md5sum.txt
 }
 
 
