@@ -497,29 +497,30 @@ function openssHint(itemNum) {
 		_caption = "服务器说明";
 	}
 	if (itemNum == 0) {
-		width = "750px";
+		width = "850px";
 		bgcolor = "#CC0066",
-			statusmenu = "<li>通过对路由器内ss访问(<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>https://www.google.com.tw/</font></u></a>)状态的检测，返回状态信息。状态检测默认每10秒进行一次，可以通过附加设置中的选项，更改检测时间间隔，每次检测都会请求<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>https://www.google.com.tw/</font></u></a>，该请求不会进行下载，仅仅请求HTTP头部，请求成功后，会返回working信息，请求失败，会返回Problem detected!</li>"
-		statusmenu += "</br><li>状态检测只在SS主界面打开时进行，网页关闭后，后台是不会进行检测的，每次进入页面，或者切换模式，重新提交等操作，状态检测会在此后5秒后进行，在这之前，状态会显示为watting... 如果显示Waiting for first refresh...则表示正在等待首次状态检测的结果。</li>"
-		statusmenu += "</br><li>状态检测反应的是路由器本身访问https://www.google.com.tw/的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用SS代理中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
-		statusmenu += "</br><b><font color='#CC0066'>1：双working，不能访问被墙网站：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.1：DNS缓存：</font>可能你在未开启ss的时候访问过被墙域名，DNS缓存受到了污染，只需要简单的刷新下缓存，window电脑通过在CMD中运行命令：<font color='#669900'>ipconfig /flushdns</font>刷新电脑DNS缓存，手机端可以通过尝试开启飞行模式后关闭飞行模式刷新DNS缓存。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.2：自定义DNS：</font>很多用户喜欢自己在电脑上定义DNS来使用，这样访问google等被墙网站，解析出来的域名基本都是污染的，因此建议将DNS解析改为自动获取。如果你的路由器很多人使用，你不能阻止别人自定义DNS，那么建议开启chromecast功能，路由器会将所有自定义的DNS劫持到自己的DNS服务器上，避免DNS污染。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.3：host：</font>电脑端以前设置过host翻墙，host翻墙失效快，DNS解析将通过host完成，不过路由器，如果host失效，使用chnroute翻墙的模式将无法使用；即使未失效，在gfwlist模式下，域名解析通过电脑host完成，而无法进入ipset，同样使得翻墙无法使用，因此强烈建议清除相关host！"
-		statusmenu += "</br><b><font color='#CC0066'>2：国内working，国外Problem detected!：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.1：检查你的SS账号：</font>在电脑端用SS客户端检查是否正常；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.2：是否使用了域名：</font>一些SS服务商提供的域名，特别是较为复杂的域名，可能有解析不了的问题，可尝试更换为IP地址；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.3：是否使用了含有特殊字符的密码：</font>极少数情况下，电脑端账号使用正常，路由端却Problem detected!是因为使用了包含特殊字符的密码；"
+			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
+		statusmenu += "</br><li>国内、国外状态检测的历史记录会显示在【故障转移】内的日志窗口，该日志记录会实时更新，且最新的一条记录即为插件顶部的【插件运行状态】；</li>"
+		statusmenu += "</br><li>状态检测反应的是路由器本身访问www.google.com.tw的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用科学上网中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
+		statusmenu += "</br><b><font color='#CC0066'>1：双√，不能访问被墙网站：</font></b>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.1：电脑DNS缓存：</font>可能你在未开启ss的时候访问过被墙域名，DNS缓存受到了污染，只需要简单的刷新下缓存，window电脑通过在CMD中运行命令：<font color='#669900'>ipconfig /flushdns</font>刷新电脑DNS缓存，手机端可以通过尝试开启飞行模式后关闭飞行模式刷新DNS缓存。"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.2：电脑自定义DNS：</font>很多用户喜欢自己在电脑上定义DNS来使用，这样访问google等被墙网站，解析出来的域名基本都是污染的，因此建议将DNS解析改为自动获取。如果你的路由器很多人使用，你不能阻止别人自定义DNS，那么建议开启chromecast功能，路由器会将所有自定义的DNS劫持到自己的DNS服务器上，避免DNS污染。"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.3：电脑host：</font>电脑端以前设置过host翻墙，host翻墙失效快，DNS解析将通过host完成，不过路由器，如果host失效，使用chnroute翻墙的模式将无法使用；即使未失效，在gfwlist模式下，域名解析通过电脑host完成，而无法进入ipset，同样使得翻墙无法使用，因此强烈建议清除相关host！"
+		statusmenu += "</br><b><font color='#CC0066'>2：国内√，国外<font color='#FF0000'>X</font>：</font></b>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.1：检查你的科学上网账号：</font>在电脑端用相应客户端检查是否正常；"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.2：是否使用了域名：</font>一些机场提供的域名，特别是较为复杂的域名，可能有解析不了的问题，可尝试更换为IP地址，或者更换节点解析DNS；"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.3：是否使用了含有特殊字符的密码：</font>极少数情况下，电脑端账号使用正常，路由端却<font color='#FF0000'>X</font>是因为使用了包含特殊字符的密码；"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.4：尝试更换国外dns：</font>此部分详细解析，请看DNS部分帮助文档；"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.5：更换shadowsocks主程序：</font>meirlin ss一直使用最新的shadowsocks-libev和shadowsocksR-libev代码编译主程序，如果某次更新后出现这种情况，在检查了以上均无问题后，可能出现的问题就是路由器内的ss主程序和服务器端的不匹配，此时你可以通过下载历史安装包，将旧的主程序替换掉新的，主程序位于路由器下的/koolshare/bin目录，shadowsocks-libev：ss-redir,ss-local,ss-tunnel；shadowsocksR-libev：rss-redir,rss-local,rss-tunnel；"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.6：更新服务器端：</font>如果你不希望更换路由器端主程序，可以更新最新服务器端来尝试解决问题，另外建议使用原版SS的朋友,在服务器端部署和路由器端相同版本的shadowsocks-libev；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.7：ntp时间问题：</font>如果你使用SSR，一些混淆协议是需要验证ss服务器和路由器的时间的，如果时间相差太多，那么就会出现Problem detected! 。"
-		statusmenu += "</br><b><font color='#CC0066'>3：双Problem detected!：</font></b>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.7：ntp时间问题：</font>如果你使用SSR，一些混淆协议是需要验证ss服务器和路由器的时间的，如果时间相差太多，那么就会出现<font color='#FF0000'>X</font> 。"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.8：是否在插件内定义了错误格式的黑白名单</font>：如果定义的格式错误，会造成路由器dnsmasq无法启动，从而无法正常解析域名。"
+		statusmenu += "</br><b><font color='#CC0066'>3：双<font color='#FF0000'>X</font>：</font></b>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.1：更换国内DNS：</font>在电脑端用SS客户端检查是否正常；"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.2：逐项检查第2点中每个项目。</font>"
-		statusmenu += "</br><b><font color='#CC0066'>4：国内Problem detected!，国外working：</font></b>"
+		statusmenu += "</br><b><font color='#CC0066'>4：国内<font color='#FF0000'>X</font>，国外√：</font></b>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>4.1：尝试更换国内DNS。</font>"
-		statusmenu += "</br><b><font color='#CC0066'>5：国外间歇性Problem detected!：</font></b>"
+		statusmenu += "</br><b><font color='#CC0066'>5：国外间歇性<font color='#FF0000'>X</font>：</font></b>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.1：检查你的SS服务器ping和丢包：</font>一些线路可能在高峰期或者线路调整期，导致丢包过多，获取状态失败；"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.2：升级新版本后出现这种情况：</font>merlin ss插件从2015年6月，其核心部分就基本无改动，升级新版本出现这种情况，最大可能的原因，新版本升级了最新的ss或者ssr的主程序，解决方法可以通过回滚路由器内程序，也可以升级你的服务器端到最新，如果你是自己搭建的用户,建议最新原版shadowsocks-libev程序。"
 		statusmenu += "</br><b><font color='#CC0066'>6：你遇到了非常少见的情况：</font></b>来这里反馈吧：<a href='https://telegram.me/joinchat/DCq55kC7pgWKX9J4cJ4dJw' target='_blank'><u><font color='#00F'>telegram</font></u></a>。"
@@ -621,7 +622,7 @@ function openssHint(itemNum) {
 		_caption = "导出恢复";
 	} else if (itemNum == 26) {
 		width = "750px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;国外DNS为大家提供了丰富的选择，其目的有二，一是为了保证大家有能用的国外DNS服务；二是在有能用的基础上，能够选择多种DNS解析方案，达到最佳的解析效果；所以如果你切换某个DNS程序，导致国外连接Problem detected! 那么更换能用的就好，不用纠结某个解析方案不能用。"
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;国外DNS为大家提供了丰富的选择，其目的有二，一是为了保证大家有能用的国外DNS服务；二是在有能用的基础上，能够选择多种DNS解析方案，达到最佳的解析效果；所以如果你切换某个DNS程序，导致国外连接<font color='#FF0000'>X</font> 那么更换能用的就好，不用纠结某个解析方案不能用。"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;</br></br>各DNS方案做简单介绍："
 		//dns2socks
 		statusmenu += "</br><font color='#CC0066'><b>1:dns2socks：</b></font>"

@@ -1,10 +1,9 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-export KSROOT=/koolshare
-source $KSROOT/scripts/base.sh
-eval `dbus export ss`
+source /koolshare/scripts/base.sh
+eval $(dbus export ss_basic_)
 mkdir -p /tmp/upload
 echo "" > /tmp/upload/ss_log.txt
 http_response "$1"
@@ -71,47 +70,6 @@ update_ss2(){
 	echo XU6J03M6
 	exit
 }
-
-# update_ss2(){
-# 	echo_date 开启SS检查更新：使用备用服务器
-# 	echo_date 检测备用服务器在线版本号...
-# 	ss_basic_version_web2=`curl --connect-timeout 5 -s "$backup_url"/version | sed -n 1p`
-# 	if [ -n "$ss_basic_version_web2" ];then
-# 	echo_date 检测到备用服务器在线版本号：$ss_basic_version_web1
-# 		dbus set ss_basic_version_web=$ss_basic_version_web2
-# 		if [ "$ss_basic_version_local" != "$ss_basic_version_web2" ];then
-# 		echo_date 备用服务器在线版本号："$ss_basic_version_web1" 和本地版本号："$ss_basic_version_local" 不同！
-# 			cd /tmp
-# 			md5_web2=`curl -s "$backup_url"/version | sed -n 2p`
-# 			echo_date 开启下载进程，从备用服务器上下载更新包...
-# 			wget "$backup_url"/shadowsocks.tar.gz
-# 			md5sum_gz=`md5sum /tmp/shadowsocks.tar.gz | sed 's/ /\n/g'| sed -n 1p`
-# 			if [ "$md5sum_gz" != "$md5_web2" ]; then
-# 				echo_date 更新包md5校验不一致！估计是下载的时候除了什么状况，请等待一会儿再试...
-# 				rm -rf /tmp/shadowsocks* >/dev/null 2>&1
-# 				sleep 1
-# 				echo_date 然而只有这一台备用更更新服务器，请尝试离线手动安装...
-# 				sleep 1
-# 				exit
-# 			else
-# 				echo_date 更新包md5校验一致！ 开始安装！...
-# 				install_ss
-# 			fi
-# 		else
-# 			echo_date 备用服务器在线版本号："$ss_basic_version_web1" 和本地版本号："$ss_basic_version_local" 相同！
-# 			sleep 1
-# 			echo_date 那还更新个毛啊，关闭更新进程!
-# 			sleep 1
-# 			exit
-# 		fi
-# 	else
-# 		echo_date 没有检测到备用服务器在线版本号,访问备用服务器可能有问题！
-# 		sleep 1
-# 		echo_date 然而只有这一台备用更更新服务器，请尝试离线手动安装...
-# 		sleep 1
-# 		exit
-# 	fi
-# }
 
 case $2 in
 update)

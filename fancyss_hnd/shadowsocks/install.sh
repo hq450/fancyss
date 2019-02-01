@@ -1,8 +1,12 @@
 #! /bin/sh
 
-eval `dbus export ss`
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+
+source /koolshare/scripts/base.sh
+eval $(dbus export ss)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 mkdir -p /koolshare/ss
+mkdir -p /tmp/upload
 
 # 判断路由架构和平台
 case $(uname -m) in
@@ -148,10 +152,8 @@ echo_date 创建一些二进制文件的软链接！
 echo_date 设置一些默认值
 [ -z "$ss_dns_china" ] && dbus set ss_dns_china=11
 [ -z "$ss_dns_foreign" ] && dbus set ss_dns_foreign=1
-[ -z "$ss_acl_default_mode" ] && [ -n "$ss_basic_mode" ] && dbus set ss_acl_default_mode="$ss_basic_mode"
-[ -z "$ss_acl_default_mode" ] && [ -z "$ss_basic_mode" ] && dbus set ss_acl_default_mode=1
+[ -z "$ss_acl_default_mode" ] && dbus set ss_acl_default_mode=1
 [ -z "$ss_acl_default_port" ] && dbus set ss_acl_default_port=all
-[ "$ss_basic_v2ray_network" == "ws_hd" ] && dbus set ss_basic_v2ray_network="ws"
 
 # 离线安装时设置软件中心内储存的版本号和连接
 CUR_VERSION=`cat /koolshare/ss/version`

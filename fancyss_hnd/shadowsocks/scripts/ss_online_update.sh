@@ -1,11 +1,8 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-export KSROOT=/koolshare
-source $KSROOT/scripts/base.sh
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
-eval `dbus export ss`
+source /koolshare/scripts/ss_base.sh
 LOCK_FILE=/tmp/online_update.lock
 CONFIG_FILE=/koolshare/ss/ss.json
 BACKUP_FILE_TMP=/tmp/ss_conf_tmp.sh
@@ -90,6 +87,9 @@ prepare(){
 		fi
 		if [ -n "$ss_failover_s4_3" && "$nu" == "$ss_failover_s4_3" ];then
 			echo "export ss_failover_s4_3=\"$i\"" >> $BACKUP_FILE_TMP
+		fi
+		if [ -n "$ss_basic_udp_node" && "$nu" == "$ss_basic_udp_node" ];then
+			echo "export ss_basic_udp_node=\"$i\"" >> $BACKUP_FILE_TMP
 		fi
 		let i+=1
 	done
@@ -527,9 +527,11 @@ remove_node_gap(){
 				if [ "$nu" == "$ssconf_basic_node" ];then
 					dbus set ssconf_basic_node="$y"
 				fi
-				# change node nu
 				if [ -n "$ss_failover_s4_3" && "$nu" == "$ss_failover_s4_3" ];then
 					dbus set ss_failover_s4_3="$y"
+				fi
+				if [ -n "$ss_basic_udp_node" && "$nu" == "$ss_basic_udp_node" ];then
+					dbus set ss_basic_udp_node="$y"
 				fi
 			fi
 			let y+=1

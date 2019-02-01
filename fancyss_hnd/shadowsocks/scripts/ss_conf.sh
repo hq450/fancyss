@@ -1,9 +1,8 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-export KSROOT=/koolshare
-source $KSROOT/scripts/base.sh
+source /koolshare/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 
 backup_conf(){
@@ -11,7 +10,7 @@ backup_conf(){
 	rm -rf /koolshare/webs/files
 	mkdir -p /tmp/files
 	ln -sf ln -sf /tmp/files /koolshare/webs/files
-	dbus list ss | grep -v "enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > $KSROOT/webs/files/ssconf_backup.sh
+	dbus list ss | grep -v "enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
 }
 
 backup_tar(){

@@ -1,16 +1,10 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-source /koolshare/bin/helper.sh
+source /koolshare/scripts/ss_base.sh
 CONFIG=$1
 
-ss_basic_mode=`dbus get ss_basic_mode`
-ss_dns_china=`dbus get ss_dns_china`
-ss_dns_china_user=`dbus get ss_dns_china_user`
-ss_direct_user=`dbus get ss_direct_user`
-chn_on=`dbus list ss_acl_mode_|cut -d "=" -f 2 | grep -E "2|3|4"`
-all_on=`dbus list ss_acl_mode_|cut -d "=" -f 2 | grep -E "5"`
 ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
 ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
 IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`

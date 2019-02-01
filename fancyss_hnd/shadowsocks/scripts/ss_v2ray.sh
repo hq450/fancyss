@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-eval `dbus export ss`
 source /koolshare/scripts/base.sh
+eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/master/v2ray_binary"

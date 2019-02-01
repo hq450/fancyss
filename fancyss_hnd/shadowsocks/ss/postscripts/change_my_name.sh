@@ -1,34 +1,31 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
 # 此脚本是一个示例，实际写法按照自己的方法来做
 # 更改此脚本的名字，保证此脚本的名字格式是： P+数字+名字.sh
-# 例如在/koolshare/ss/postscripts下放入两个脚本:P01V2ray.sh, P99Brook.sh
-# SS插件运行后货自动按照数字从小到大顺序运行 P01V2ray.sh start, P99Brook.sh start
-# SS插件关闭前会自动按照数字从大到小顺序运行 P99Brook.sh stop, P01V2ray.sh stop
+# 例如在/koolshare/ss/postscripts下放入两个脚本:P01V2xxx.sh, P99Brook.sh
+# SS插件运行后货自动按照数字从小到大顺序运行 P01xxx.sh start, P99Brook.sh start
+# SS插件关闭前会自动按照数字从大到小顺序运行 P99Brook.sh stop, P01xxx.sh stop
 #------------------------------------------
-source /koolshare/scripts/base.sh
-# 读取SS配置
-eval `dbus export ss`
-# 保持打印日志时间格式和ss插件一致
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+# 读取所有SS配置，1.6.0版本及其以后插件，请用此方法获取配置，以前的方法可能导致配置获取不全
+source /koolshare/scripts/ss_base.sh
 #------------------------------------------
-start_v2ray(){
-	echo_date ："启动v2ray"
+start_xxx(){
+	echo_date ："启动xxx"
 	# do something here
 }
 
-stop_v2ray(){
-	echo_date ："停止v2ray"
+stop_xxx(){
+	echo_date ："停止xxx"
 	# do something here
 }
 #------------------------------------------
 case $1 in
 start)
-	start_v2ray
+	start_xxx
 	;;
 stop)
-	stop_v2ray
+	stop_xxx
 	;;
 esac

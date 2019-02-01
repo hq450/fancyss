@@ -344,10 +344,8 @@ function save() {
 		}
 	}
 	// show different title when subscribe
-	var sel_node_info = $('.activate_icon').attr("id");
-	if(sel_node_info && E("ss_basic_enable").checked){
-		var sel_node = sel_node_info.split("_")[3];
-		var sel_mode = db_ss["ssconf_basic_mode_" + sel_node];
+	if(E("ss_basic_enable").checked){
+		var sel_mode = E("ss_basic_mode").value;
 		if (sel_mode == "1") {
 			db_ss["ss_basic_action"] = "1";
 		} else if (sel_mode == "2") {
@@ -1284,7 +1282,7 @@ function refresh_html() {
 	if (node_nu > nodeL){
 		$("#ss_basic_row").append('<option value="all">全部显示</option>');
 	}
-	E("ss_basic_row").value = db_ss["ss_basic_row"]||"10";
+	E("ss_basic_row").value = db_ss["ss_basic_row"]||nodeL;
 	
 	// define col width in different situation
 	if(node_nu && E("ss_basic_ping_node") != "off" && E("ss_basic_ping_node") != ""){

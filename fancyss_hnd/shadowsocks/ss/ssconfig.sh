@@ -1,14 +1,11 @@
 #!/bin/sh
 
-# shadowsocks script for HND router with kernel 4.1.27 merlin firmware
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-eval `dbus export ss`
-source /koolshare/scripts/base.sh
-source helper.sh
+source /koolshare/scripts/ss_base.sh
 #-----------------------------------------------
 # Variable definitions
 THREAD=$(grep -c '^processor' /proc/cpuinfo)
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 dbus set ss_basic_version_local=`cat /koolshare/ss/version`
 LOG_FILE=/tmp/upload/ss_log.txt
 CONFIG_FILE=/koolshare/ss/ss.json
@@ -25,47 +22,6 @@ ip_prefix_hex=`nvram get lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {print
 ARG_OBFS=""
 
 #-----------------------------------------------
-get_config(){
-	local cur_node=$ssconf_basic_node
-	local base_1 base_2 config key_1 key_2 tmp
-	base_1="type mode server port method password ss_obfs ss_obfs_host koolgame_udp rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_network_path v2ray_network_host v2ray_network_security v2ray_mux_concurrency v2ray_json"
-	base_2="enable use_kcp v2ray_use_json v2ray_mux_enable"
-	for config in $base_1 $base_2
-	do
-		key_1=ssconf_basic_${config}_${cur_node}
-		key_2=ss_basic_${config}
-		#echo key_1: $key_1
-		#echo key_2: $key_2
-		tmp="export $key_2=\$$key_1"
-		#echo_date $tmp
-		eval $tmp
-		unset key_1 key_2
-	done
-
-	gfw_on=`dbus list ss_acl_mode_|cut -d "=" -f 2 | grep -E "1"`
-	chn_on=`dbus list ss_acl_mode_|cut -d "=" -f 2 | grep -E "2|3|4"`
-	all_on=`dbus list ss_acl_mode_|cut -d "=" -f 2 | grep -E "5"`
-	game_on=`dbus list ss_acl_mode|cut -d "=" -f 2 | grep 3`
-	[ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && mangle=1
-	ss_basic_password=`echo $ss_basic_password|base64_decode`
-	ss_basic_server_orig=$ss_basic_server
-	# 兼容1.2.0及其以下
-	[ -z "$ss_basic_type" ] && {
-		if [ -n "$ss_basic_rss_protocol" ];then
-			ss_basic_type="1"
-		else
-			if [ -n "$ss_basic_koolgame_udp" ];then
-				ss_basic_type="2"
-			else
-				if [ -n "$ss_basic_v2ray_use_json" ];then
-					ss_basic_type="3"
-				else
-					ss_basic_type="0"
-				fi
-			fi
-		fi
-	}
-}
 
 cmd() {
 	echo_date "$*" 2>&1
