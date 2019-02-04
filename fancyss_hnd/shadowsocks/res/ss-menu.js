@@ -193,7 +193,6 @@ function pop_help() {
 		});
 	});
 }
-
 function pop_node_add() {
 	require(['/res/layer/layer.js'], function(layer) {
 		layer.open({
@@ -209,10 +208,10 @@ function pop_node_add() {
 				layer.closeAll();
 			},
 			btn2: function() {
-				$("#show_btn6").trigger("click");
+				$("#show_btn7").trigger("click");
 			},
 			btn3: function() {
-				$("#show_btn8").trigger("click");
+				$("#show_btn9").trigger("click");
 			},
 		});
 		poped = 1;

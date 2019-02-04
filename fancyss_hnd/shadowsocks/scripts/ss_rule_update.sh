@@ -4,6 +4,7 @@
 
 source /koolshare/scripts/base.sh
 eval $(dbus export ss_basic_)
+alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 
 start_update(){
 	url_main="https://raw.githubusercontent.com/hq450/fancyss/master/rules"
