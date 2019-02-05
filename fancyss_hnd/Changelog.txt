@@ -3,6 +3,8 @@ fancyss_hnd Changelog
 1.6.2 (尚未推送)
    - update	更新shadowsocks-libev到最新3.2.3，simple-obfs更新到0.0.5最新 （2019年02月05日 编译）；
    - update	【二进制】更新https_dns_proxy二进制到最新,commit:758f913；
+   - update	【二进制】更新https_dns_proxy二进制到最新,commit:758f913；
+   - update	【二进制】更新内置v2ray到v4.14.0；
    - fix	修复当更新v2ray二进制文件的期间，故障转移可能切换节点的问题；
 
 1.6.1
