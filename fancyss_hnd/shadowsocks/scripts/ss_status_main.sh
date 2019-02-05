@@ -139,8 +139,8 @@ main(){
 		# exit loop when fancyss not enabled
 		[ "`dbus get ss_basic_enable`" != "1" ] && exit
 		
-		if [ "`ps|grep ssconfig.sh|grep -v grep`" ];then
-			# wait until ssconfig.sh finished running
+		if [ "`ps|grep ssconfig.sh|grep -v grep`" ] || [ "`ps|grep ss_v2ray.sh|grep -v grep`" ];then
+			# wait until ssconfig.sh or ss_v2ray.sh finished running
 			continue
 		else
 			# call ss_status.sh to get status
