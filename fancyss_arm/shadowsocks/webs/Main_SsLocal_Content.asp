@@ -26,7 +26,7 @@
 var x = 5;
 var noChange = 0;
 var _responseLen;
-var params = ["ss_local_server", "ss_local_port", "ss_local_password", "ss_local_method", "ss_local_timeout", "ss_local_proxyport", "ss_local_v2ray_plugin", "ss_local_acl"];
+var params = ["ss_local_server", "ss_local_port", "ss_local_password", "ss_local_method", "ss_local_timeout", "ss_local_proxyport", "ss_local_v2ray_plugin", "ss_local_v2ray_plugin_opts", "ss_local_acl"];
 	
 function init() {
 	show_menu(menu_hook);
