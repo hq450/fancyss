@@ -22,7 +22,7 @@ cp /koolshare/scripts/ss_* $TARGET_FOLDER/scripts/
 cp /koolshare/bin/ss-local $TARGET_FOLDER/bin/
 cp /koolshare/bin/ss-redir $TARGET_FOLDER/bin/
 cp /koolshare/bin/ss-tunnel $TARGET_FOLDER/bin/
-cp /koolshare/bin/obfs-local $TARGET_FOLDER/bin/
+cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
 cp /koolshare/bin/rss-local $TARGET_FOLDER/bin/
 cp /koolshare/bin/rss-redir $TARGET_FOLDER/bin/
 cp /koolshare/bin/koolgame $TARGET_FOLDER/bin/
