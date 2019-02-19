@@ -2,11 +2,11 @@ fancyss_arm Changelog
 ===========================================
 4.1.9
    - update 更新v2ray-plugin至v1.1.0；
-   - update	同步最新规则；
 
 4.1.8
    - add 新增v2ray-plugin支持；
    - update 更新shadowsocks-libev到最新3.2.3 （2019年2月17日 编译）；
+   - update	同步最新规则；
    - remove 移除simple-obfs支持；
 
 4.1.7
