@@ -95,10 +95,11 @@ function get_dbus_data() {
 			console.log(productid);
 			setTimeout("get_ss_status_data()", 500);
 		},
-		error:function(){
-			console.log("error!");
+		error: function(XmlHttpRequest, textStatus, errorThrown){
+			console.log(XmlHttpRequest.responseText);
 			alert("skipd数据读取错误，请格式化jffs分区后重新尝试！");
 		}
+		,timeout: 0
 	});
 }
 function conf2obj(obj, action) {

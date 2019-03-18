@@ -1,10 +1,14 @@
 fancyss_hnd Changelog
 ===========================================
-1.6.2 (尚未推送)
+1.6.2
    - update	更新shadowsocks-libev到最新3.2.3，simple-obfs更新到0.0.5最新 （2019年02月05日 编译）；
    - update	【二进制】更新https_dns_proxy二进制到最新,commit:758f913；
-   - update	【二进制】更新内置v2ray到v4.14.0；
+   - update	【二进制】更新内置v2ray到v4.18.0；
+   - update	【规则】更新内置规则到最新；
+   - fix	修复了v2ray配置使用完整json文件可能出现的检测不到ip甚至写入配置文件异常的问题，thanks to gzzx1209cn；
+   - fix	修复了存在的单词拼写错误，thanks to gzzx1209cn；；
    - fix	修复当更新v2ray二进制文件的期间，故障转移可能切换节点的问题；
+   - fix	修复了国外状态日志显示节点名称可能错误的问题；
 
 1.6.1
    - fix：	修复更新规则不输出日志的问题；
