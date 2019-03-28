@@ -10,6 +10,7 @@ Fancyss is a project providing tools to across the GFW on asuswrt/merlin based r
 **fancyss_hnd**离线安装包仅适用于asus/merlin koolshare hnd/axhnd平台机型改版固件（armV8架构，linux内核版本：4.1.27/4.1.51，bcm490X系列cpu）
 
 **fancyss_hnd**支持机型/固件：
+ * [RT-AX88U merlin改版固件](http://koolshare.cn/thread-158199-1-1.html)
  * [RT-AC86U merlin改版固件](http://koolshare.cn/thread-127878-1-1.html)
  * [RT-AC86U 官改固件](http://koolshare.cn/thread-139965-1-1.html)
  * [GT-AC5300 官改固件](http://koolshare.cn/thread-130902-1-1.html)
