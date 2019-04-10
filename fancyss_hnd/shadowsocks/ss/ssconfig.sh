@@ -2230,7 +2230,6 @@ check_status(){
 }
 
 disable_ss(){
-	get_config
 	ss_pre_stop
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
@@ -2251,7 +2250,6 @@ disable_ss(){
 apply_ss(){
 	# router is on boot
 	WAN_ACTION=`ps|grep /jffs/scripts/wan-start|grep -v grep`
-	get_config
 	ss_pre_stop
 	# now stop first
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
