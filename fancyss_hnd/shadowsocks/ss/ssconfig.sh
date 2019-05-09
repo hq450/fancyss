@@ -150,6 +150,9 @@ __get_server_resolver(){
 	[ "$value_1" == "9" ] && res="117.50.22.22"
 	[ "$value_1" == "10" ] && res="180.76.76.76"
 	[ "$value_1" == "11" ] && res="119.29.29.29"
+	[ "$value_1" == "13" ] && res="8.8.8.8"
+	[ "$value_1" == "14" ] && res="8.8.4.4"
+	[ "$value_1" == "15" ] && res="9.9.9.9"
 	if [ "$value_1" == "12" ];then
 		if [ -n "$value_2" ];then
 			res=$(__valid_ip "$value_2")
