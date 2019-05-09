@@ -1,16 +1,17 @@
 ﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns:v>
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta HTTP-EQUIV="Pragma" CONTENT="no-cache"/>
-<meta HTTP-EQUIV="Expires" CONTENT="-1"/>
-<link rel="shortcut icon" href="images/favicon.png"/>
-<link rel="icon" href="images/favicon.png"/>
+<meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<meta HTTP-EQUIV="Expires" CONTENT="-1">
+<link rel="shortcut icon" href="images/favicon.png">
+<link rel="icon" href="images/favicon.png">
 <title>【科学上网】</title>
-<link rel="stylesheet" type="text/css" href="index_style.css"/>
-<link rel="stylesheet" type="text/css" href="form_style.css"/>
-<link rel="stylesheet" type="text/css" href="usp_style.css"/>
+<link rel="stylesheet" type="text/css" href="index_style.css">
+<link rel="stylesheet" type="text/css" href="form_style.css">
+<link rel="stylesheet" type="text/css" href="usp_style.css">
 <link rel="stylesheet" type="text/css" href="css/element.css">
 <link rel="stylesheet" type="text/css" href="/device-map/device-map.css">
 <link rel="stylesheet" type="text/css" href="/js/table/table.css">
@@ -18,12 +19,12 @@
 <link rel="stylesheet" type="text/css" href="/res/softcenter.css">
 <link rel="stylesheet" type="text/css" href="/res/shadowsocks.css">
 <script type="text/javascript" src="/state.js"></script>
-<script type="text/javascript" src="/js/table/table.js"></script>
-<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
-<script type="text/javascript" src="/general.js"></script>
-<script type="text/javascript" src="/client_function.js"></script>
 <script type="text/javascript" src="/help.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
+<script type="text/javascript" src="/general.js"></script>
+<script type="text/javascript" language="JavaScript" src="/js/table/table.js"></script>
+<script type="text/javascript" language="JavaScript" src="/client_function.js"></script>
 <script type="text/javascript" src="/res/ss-menu.js"></script>
 <script type="text/javascript" src="/res/softcenter.js"></script>
 <script type="text/javascript" src="/res/tablednd.js"></script>
@@ -83,6 +84,7 @@ function get_dbus_data() {
 		url: "/_api/ss",
 		dataType: "json",
 		cache:false,
+		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
 			conf2obj(db_ss);
@@ -1217,23 +1219,12 @@ function generate_node_info() {
 	}
 	//console.log("所有节点信息：", confs);
 }
-function refresh_dbss() {
-	$.ajax({
-		type: "GET",
-		url: "/_api/ss",
-		dataType: "json",
-		async: false,
-		success: function(data) {
-			db_ss = data.result[0];
-			generate_node_info();
-		}
-	});
-}
 function refresh_table() {
 	$.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
+		cache:false,
 		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
@@ -2389,38 +2380,38 @@ function delTr(o) {
 function refresh_acl_table(q) {
 	$.ajax({
 		type: "GET",
-		url: "/_api/ss",
+		url: "/_api/ss_acl",
 		dataType: "json",
 		async: false,
 		success: function(data) {
-			db_ss = data.result[0];
+			db_acl = data.result[0];
 			refresh_acl_html();
 			//write defaut rule mode when switching ss mode
-			if (typeof db_ss["ss_acl_default_mode"] != "undefined") {
-				if (E("ss_basic_mode").value == 1 && db_ss["ss_acl_default_mode"] == 1 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+			if (typeof db_acl["ss_acl_default_mode"] != "undefined") {
+				if (E("ss_basic_mode").value == 1 && db_acl["ss_acl_default_mode"] == 1 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 2 && db_ss["ss_acl_default_mode"] == 2 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				if (E("ss_basic_mode").value == 2 && db_acl["ss_acl_default_mode"] == 2 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 3 && db_ss["ss_acl_default_mode"] == 3 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				if (E("ss_basic_mode").value == 3 && db_acl["ss_acl_default_mode"] == 3 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 5 && db_ss["ss_acl_default_mode"] == 5 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				if (E("ss_basic_mode").value == 5 && db_acl["ss_acl_default_mode"] == 5 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
 			}
 			//write default rule port
-			if (typeof db_ss["ss_acl_default_port"] != "undefined") {
-				$('#ss_acl_default_port').val(db_ss["ss_acl_default_port"]);
+			if (typeof db_acl["ss_acl_default_port"] != "undefined") {
+				$('#ss_acl_default_port').val(db_acl["ss_acl_default_port"]);
 			} else {
 				$('#ss_acl_default_port').val("all");
 			}
 			//write dynamic table value
 			for (var i = 1; i < acl_node_max + 1; i++) {
-				$('#ss_acl_mode_' + i).val(db_ss["ss_acl_mode_" + i]);
-				$('#ss_acl_port_' + i).val(db_ss["ss_acl_port_" + i]);
-				$('#ss_acl_name_' + i).val(db_ss["ss_acl_name_" + i]);
+				$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
+				$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
+				$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
 			}
 			//set default rule port to all when game mode enabled
 			set_default_port();
