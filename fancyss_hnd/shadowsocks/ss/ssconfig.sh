@@ -2261,6 +2261,7 @@ apply_ss(){
 	remove_ss_reboot_job
 	restore_conf
 	# restart dnsmasq when ss server is not ip or on router boot
+	umount_dnsmasq_now
 	restart_dnsmasq
 	flush_nat
 	kill_cron_job
