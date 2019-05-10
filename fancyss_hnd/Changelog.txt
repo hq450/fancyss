@@ -1,7 +1,13 @@
 fancyss_hnd Changelog
 ===========================================
+1.6.4
+   - update	对web性能的一些优化；
+   - update 节点域名解析DNS服务器预置3个国外DNS；
+   - fix	修复脚本里的一些小错误；
+   - fix	修复重启插件过程中dnsmasq可能启动失败的问题。
+
 1.6.3
-   - update 更新shadowsocks-libev到最新3.2.5（2019年04月10日 编译）；
+   - update	更新shadowsocks-libev到最新3.2.5（2019年04月10日 编译）；
    - fix	修复订阅计划任务不定时运行的问题。
    - fix	修复故障转移功能，切换到下个节点功能有时不能切换的bug。
    - update	【规则】更新内置规则到最新；
