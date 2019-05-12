@@ -6,6 +6,8 @@ source /koolshare/scripts/base.sh
 
 LOGFILE_F=/tmp/upload/ssf_status.txt
 LOGFILE_C=/tmp/upload/ssc_status.txt
+LOGTIME1=$(TZ=UTC-8 date -R "+%m-%d %H:%M:%S")
+CURRENT=$(dbus get ssconf_basic_node)
 COUNT=1
 rm -rf /tmp/upload/test.txt
 
@@ -149,8 +151,11 @@ main(){
 			continue
 		else
 			# kill the last status script if exist
-			kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 			killall curl >/dev/null 2>&1
+			if [ -n "$(pidof ss_status.sh)" ];then
+				kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
+				echo $LOGTIME1 script run time out "[`dbus get ssconf_basic_name_$CURRENT`]" >> $LOGFILE_F
+			fi
 			
 			# call ss_status.sh to get status
 			start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status.sh
