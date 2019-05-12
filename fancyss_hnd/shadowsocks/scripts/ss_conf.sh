@@ -9,7 +9,7 @@ backup_conf(){
 	rm -rf /tmp/files
 	rm -rf /koolshare/webs/files
 	mkdir -p /tmp/files
-	ln -sf ln -sf /tmp/files /koolshare/webs/files
+	ln -sf /tmp/files /koolshare/webs/files
 	dbus list ss | grep -v "enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
 }
 
@@ -17,7 +17,7 @@ backup_tar(){
 	rm -rf /tmp/files
 	rm -rf /koolshare/webs/files
 	mkdir -p /tmp/files
-	ln -sf ln -sf /tmp/files /koolshare/webs/files
+	ln -sf /tmp/files /koolshare/webs/files
 	echo_date "开始打包..."
 	cd /tmp
 	mkdir shadowsocks
@@ -246,6 +246,30 @@ reomve_ping(){
 	fi
 }
 
+download_ssf(){
+	rm -rf /tmp/files
+	rm -rf /koolshare/webs/files
+	mkdir -p /tmp/files
+	ln -sf /tmp/files /koolshare/webs/files
+	if [ -f "/tmp/upload/ssf_status.txt" ];then
+		cp -rf /tmp/upload/ssf_status.txt /tmp/files/ssf_status.txt
+	else
+		echo "日志为空" > /tmp/files/ssf_status.txt
+	fi
+}
+
+download_ssc(){
+	rm -rf /tmp/files
+	rm -rf /koolshare/webs/files
+	mkdir -p /tmp/files
+	ln -sf /tmp/files /koolshare/webs/files
+	if [ -f "/tmp/upload/ssc_status.txt" ];then
+		cp -rf /tmp/upload/ssc_status.txt /tmp/files/ssc_status.txt
+	else
+		echo "日志为空" > /tmp/files/ssc_status.txt
+	fi
+}
+
 case $2 in
 1)
 	echo " " > /tmp/upload/ss_log.txt
@@ -275,5 +299,15 @@ case $2 in
 	;;
 5)
 	reomve_ping
+	;;
+6)
+	echo " " > /tmp/upload/ss_log.txt
+	download_ssf
+	http_response "$1"
+	;;
+7)
+	echo " " > /tmp/upload/ss_log.txt
+	download_ssc
+	http_response "$1"
 	;;
 esac

@@ -28,7 +28,6 @@
 <script type="text/javascript" src="/res/ss-menu.js"></script>
 <script type="text/javascript" src="/res/softcenter.js"></script>
 <script type="text/javascript" src="/res/tablednd.js"></script>
-<script type="text/javascript" src="/res/qrcode.js"></script>
 <script>
 var db_ss = {};
 var dbus = {};
@@ -51,6 +50,8 @@ var poped = 0;
 var x = 5;
 var ping_result = "";
 var save_flag = "";
+var STATUS_FLAG;
+var refreshRate;
 var ph_v2ray = "# 此处填入v2ray json，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的outbound配置正确！！！&#10;# ------------------------------------&#10;# 同样支持vmess://链接填入，格式如下：&#10;vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIjIzMyIsDQogICJhZGQiOiAiMjMzLjIzMy4yMzMuMjMzIiwNCiAgInBvcnQiOiAiMjMzIiwNCiAgImlkIjogImFlY2EzYzViLTc0NzktNDFjMy1hMWUzLTAyMjkzYzg2Y2EzOCIsDQogICJhaWQiOiAiMjMzIiwNCiAgIm5ldCI6ICJ3cyIsDQogICJ0eXBlIjogIm5vbmUiLA0KICAiaG9zdCI6ICJ3d3cuMjMzLmNvbSIsDQogICJwYXRoIjogIi8yMzMiLA0KICAidGxzIjogInRscyINCn0="
 var option_modes = [["1", "gfwlist模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"]];
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305" ];
@@ -59,8 +60,6 @@ var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
 var option_v2enc = [["none", "不加密"], ["auto", "自动"], ["aes-128-cfb", "aes-128-cfb"], ["aes-128-gcm", "aes-128-gcm"], ["chacha20-poly1305", "chacha20-poly1305"]];
 var option_headtcp = [["none", "不伪装"], ["http", "伪装http"]];
 var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"], ["utp", "伪装BT下载(uTP)"], ["wechat-video", "伪装微信视频通话"]];
-var logf = 0;
-var logc = 0;
 
 function init() {
 	show_menu(menu_hook);
@@ -94,8 +93,12 @@ function get_dbus_data() {
 			toggle_func();
 			ss_node_sel();
 			version_show();
-			console.log(productid);
-			setTimeout("get_ss_status_data()", 500);
+			if(db_ss["ss_failover_enable"] == "1"){
+				get_ss_status_back();
+			}else{
+				get_ss_status_front();
+			}
+			//console.log(productid);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			console.log(XmlHttpRequest.responseText);
@@ -541,9 +544,13 @@ function verifyFields(r) {
 	if (Ti == "4") $(".re4_" + In).show();
 	// failover
 	if(E("ss_failover_enable").checked){
-		$("#failover_settings").show();
+		$("#failover_settings_1").show();
+		$("#failover_settings_2").show();
+		$("#failover_settings_3").show();
 	}else{
-		$("#failover_settings").hide();
+		$("#failover_settings_1").hide();
+		$("#failover_settings_2").hide();
+		$("#failover_settings_3").hide();
 	}
 	showhide("ss_failover_text_1",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2" && E("ss_failover_s4_2").value == "2");
 	showhide("ss_failover_s4_2",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2");
@@ -1671,16 +1678,17 @@ function showQRcode(data) {
 	}else if(data == 2){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">错误！！节点类型位置！！<br />请检查你的节点！</span>')
 	}else{
-		var qrcode = new QRCode(E("qrcode"), {
-			text: data,
-			width: 256,
-			height: 256,
-			colorDark : "#000000",
-			colorLight : "#ffffff",
-			correctLevel : QRCode.CorrectLevel.H
+		require(['/res/qrcode.js'], function() {
+			var qrcode = new QRCode(E("qrcode"), {
+				text: data,
+				width: 256,
+				height: 256,
+				colorDark : "#000000",
+				colorLight : "#ffffff",
+				correctLevel : QRCode.CorrectLevel.H
+			});
 		});
 	}
-
 	$("#qrcode_show").fadeIn(200);
 }
 function cleanCode(){
@@ -1876,6 +1884,20 @@ function download_SS_node(arg) {
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+				}else if(arg == 6){
+					var b = document.createElement('A')
+					b.href = "_root/files/ssf_status.txt"
+					b.download = 'ssf_status.txt'
+					document.body.appendChild(b);
+					b.click();
+					document.body.removeChild(b);
+				}else if(arg == 7){
+					var b = document.createElement('A')
+					b.href = "_root/files/ssc_status.txt"
+					b.download = 'ssc_status.txt'
+					document.body.appendChild(b);
+					b.click();
+					document.body.removeChild(b);
 				}
 			}
 		}
@@ -1958,51 +1980,6 @@ function version_show() {
 		}
 	});
 }
-function get_ss_status_data() {
-	if (db_ss['ss_basic_enable'] != "1") {
-		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
-		return false;
-	}
-	$.ajax({
-		type: "GET",
-		url: "/_result/9527",
-		dataType: "json",
-		async: false,
-		success: function(response) {
-			//console.log(response);
-			if(response != -1 && response.result.indexOf("@@") != -1){
-				var arr = response.result.split("@@");
-				if (arr[0] == "" || arr[1] == "") {
-					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-				} else {
-					E("ss_state2").innerHTML = arr[0];
-					E("ss_state3").innerHTML = arr[1];
-				}
-			}
-		}
-	});
-	setTimeout("get_ss_status_data();", 1500);
-}
-function get_udp_status(){
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_udp_status.sh", "params":[], "fields": ""};
-	$.ajax({
-		type: "POST",
-		cache:false,
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		success: function(response){
-			E("udp_status").innerHTML = response.result;
-			setTimeout("get_udp_status();", 10000);
-		},
-		error: function(){
-			setTimeout("get_udp_status();", 2000);
-		}
-	});
-}
 function update_ss() {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "7";
@@ -2048,14 +2025,8 @@ function toggle_func() {
 	$(".show-btn2").click(
 		function() {
 			tabSelect(2);
-			$("#look_logf").addClass("active3");
-			$("#look_logc").removeClass("active3");
-			$('#log_content_f').show();
-			$('#log_content_c').hide();
-			$("#stauts_bar_text").html("👇 国外状态 - www.google.com.tw 👇")
 			$('#apply_button').hide();
 			verifyFields();
-			if(logf == 0) get_status_log(1);
 		});
 	$(".show-btn3").click(
 		function() {
@@ -2140,30 +2111,107 @@ function toggle_func() {
 		$(".show-btn" + default_tab).trigger("click");
 	}
 }
+function get_ss_status_front() {
+	if (db_ss['ss_basic_enable'] != "1") {
+		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		return false;
+	}
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
+	$.ajax({
+		type: "POST",
+		url: "/_api/",
+		async: true,
+		data: JSON.stringify(postData),
+		success: function(response) {
+			var arr = response.result.split("@@");
+			if (arr[0] == "" || arr[1] == "") {
+				E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+				E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+			} else {
+				E("ss_state2").innerHTML = arr[0];
+				E("ss_state3").innerHTML = arr[1];
+			}
+		}
+	});
+	refreshRate = Math.floor(Math.random() * 4000) + 4000;
+	setTimeout("get_ss_status_front();", refreshRate);
+}
+function get_ss_status_back() {
+	if (db_ss['ss_basic_enable'] != "1") {
+		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		return false;
+	}
+	$.ajax({
+		url: '/_temp/ss_status.txt',
+		type: 'GET',
+		dataType: 'html',
+		async: true,
+		cache:false,
+		success: function(response) {
+			if(response.indexOf("@@") != -1){
+				var arr = response.split("@@");
+				if (arr[0] == "" || arr[1] == "") {
+					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+				} else {
+					E("ss_state2").innerHTML = arr[0];
+					E("ss_state3").innerHTML = arr[1];
+				}
+			}
+		},
+		error: function(xhr) {
+			E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+			E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		}
+	});
+	setTimeout("get_ss_status_back();", 3000);
+}
+function get_udp_status(){
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_udp_status.sh", "params":[], "fields": ""};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response){
+			E("udp_status").innerHTML = response.result;
+			setTimeout("get_udp_status();", 10000);
+		},
+		error: function(){
+			setTimeout("get_udp_status();", 2000);
+		}
+	});
+}
+function close_ssf_status() {
+	$("#ssf_status_div").fadeOut(200);
+	STATUS_FLAG = 0;
+}
+function close_ssc_status() {
+	$("#ssc_status_div").fadeOut(200);
+	STATUS_FLAG = 0;
+}
 function lookup_status_log(s) {
+	STATUS_FLAG = 1;
 	if(s == 1){
-		$('#log_content_f').show();
-		$('#log_content_c').hide();
-		$("#look_logf").addClass("active3");
-		$("#look_logc").removeClass("active3");
-		$("#stauts_bar_text").html("👇 国外状态 - www.google.com.tw 👇")
-		if(logf == 0) get_status_log(1);
+		$("#ssf_status_div").fadeIn(500);
+		get_status_log(1);
 	}else{
-		$('#log_content_f').hide();
-		$('#log_content_c').show();
-		$("#look_logf").removeClass("active3");
-		$("#look_logc").addClass("active3");
-		$("#stauts_bar_text").html("👇 国内状态 - www.baidu.com 👇")
-		if(logc == 0) get_status_log(2);
+		$("#ssc_status_div").fadeIn(500);
+		get_status_log(2);
 	}
 }
 function get_status_log(s) {
+	if(STATUS_FLAG == 0) return;
+	
 	if(s == 1){
-		logf = 1;
 		var file = '/_temp/ssf_status.txt';
 		var retArea = E("log_content_f");
 	}else{
-		logc = 1;
 		var file = '/_temp/ssc_status.txt';
 		var retArea = E("log_content_c");
 	}
@@ -2175,8 +2223,6 @@ function get_status_log(s) {
 		cache:false,
 		success: function(response) {
 			if(E("tablet_2").style.display == "none"){
-				logf = 0;
-				logc = 0;
 				return false;
 			}
 			if (_responseLen == response.length) {
@@ -2190,13 +2236,13 @@ function get_status_log(s) {
 				setTimeout('get_status_log("' + s + '");', 1500);
 			}
 			retArea.value = response;
-			if(E("ss_failover_c4").checked == false){
+			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
 				retArea.scrollTop = retArea.scrollHeight;
 			}
 			_responseLen = response.length;
 		},
 		error: function(xhr) {
-			retArea.value = "获取日志失败！";
+			retArea.value = "暂无任何日志，获取日志失败！";
 		}
 	});
 }
@@ -2796,15 +2842,42 @@ function save_failover() {
 										</div>
 										<div style="margin:10px 0 10px 5px;" class="splitLine"></div>
 										<div class="SimpleNote" id="head_illustrate">本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>、<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2Ray</u></em></a>四种客户端的科学上网、游戏加速工具。</div>
-										<!-- this is the popup area for status -->
+										<!-- this is the popup area for process status -->
 										<div id="detail_status"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;">
 											<div class="user_title">【科学上网】状态检测</div>
 											<div style="margin-left:15px"><i>&nbsp;&nbsp;目前本功能支持ss相关进程状态和iptables表状态检测。</i></div>
-											<div id="user_tr" style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
+											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
 												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
 											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
 												<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">
+											</div>
+										</div>
+										<!-- this is the popup area for foreign status -->
+										<div id="ssf_status_div"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
+											<div class="user_title">国外历史状态 - www.google.com.tw</div>
+											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
+											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
+												<textarea cols="63" rows="36" wrap="off" id="log_content_f" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+												<input class="button_gen" type="button" onclick="download_SS_node(6);" value="下载日志">
+												<input class="button_gen" type="button" onclick="close_ssf_status();" value="返回主界面">
+												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
+												<lable>&nbsp;暂停日志刷新</lable>
+											</div>
+										</div>
+										<!-- this is the popup area for china status -->
+										<div id="ssc_status_div"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
+											<div class="user_title">国内历史状态 - www.baidu.com</div>
+											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
+											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
+												<textarea cols="63" rows="36" wrap="off" id="log_content_c" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+												<input class="button_gen" type="button" onclick="download_SS_node(7);" value="下载日志">
+												<input class="button_gen" type="button" onclick="close_ssc_status();" value="返回主界面">
+												<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
 											</div>
 										</div>
 										<!-- this is the popup area for QRcode -->
@@ -3007,7 +3080,7 @@ function save_failover() {
 													var fa4_2 = [["1", "备用节点"], ["2", "下个节点"]];
 													$('#table_failover').forms([
 														{ title: '故障转移开关', id:'ss_failover_enable',type:'checkbox', func:'v', value:false},
-														{ title: '故障转移设置', rid:'failover_settings', multi: [
+														{ title: '故障转移设置', rid:'failover_settings_1', multi: [
 															{ suffix:'<div style="margin-top: 5px;">' },
 															{ id:'ss_failover_c1', type:'checkbox', value:false },
 															{ suffix:'<lable>👉&nbsp;国外连续发生&nbsp;</lable>' },
@@ -3041,27 +3114,21 @@ function save_failover() {
 															{ suffix:'<lable id="ss_failover_text_1">&nbsp;，即在节点列表内顺序循环。&nbsp;</lable>' },
 															{ suffix:'</div>' },
 														]},
-														{ title: '查看历史状态', multi: [
-															{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
-															{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
-															{ suffix:'<lable>&nbsp;&nbsp;&nbsp;&nbsp;最多保留&nbsp;</lable>' },
+														{ title: '历史记录保存数量', rid:'failover_settings_2', multi: [
+															{ suffix:'<lable>最多保留&nbsp;</lable>' },
 															{ id:'ss_failover_s5', type:'select', style:'width:auto',options:["1000", "2000", "3000", "4000"], value:'2000'},
 															{ suffix:'<lable>&nbsp;行日志&nbsp;</lable>' },
 														]},
-														{ td: '<tr><td id="stauts_bar_text" class="smth" style="font-weight: bold;text-align:center" colspan="2"></td></tr>'},
+														{ title: '查看历史状态', rid:'failover_settings_3', multi: [
+															{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
+															{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
+														]},
 													]);
 												</script>
 											</table>
-											<div id="log_content_fov" style="margin-top:-1px;overflow:hidden;">
-												<textarea rows="30" wrap="on" readonly="readonly" id="log_content_f" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-												<textarea rows="30" wrap="on" readonly="readonly" id="log_content_c" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-											</div>
-
 											<div align="center" style="margin-top: 10px;">
 												<input class="button_gen" type="button" onclick="save()" value="保存&amp;应用">
 												<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
-												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
-												<lable>&nbsp;暂停日志刷新</lable>
 											</div>
 											
 										</div>

@@ -14,12 +14,15 @@ stop_status(){
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 	killall curl >/dev/null 2>&1
+	rm -rf /tmp/upload/ss_status.txt
 }
 
 check_status(){
-	echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_F
-	echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_C
-	start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	if [ "$ss_failover_enable" == "1" ];then
+		echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_F
+		echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_C
+		start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	fi
 }
 
 

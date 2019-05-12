@@ -2224,12 +2224,15 @@ stop_status(){
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 	killall curl >/dev/null 2>&1
+	rm -rf /tmp/upload/ss_status.txt
 }
 
 check_status(){
-	echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssf_status.txt
-	echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssc_status.txt
-	start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	if [ "$ss_failover_enable" == "1" ];then
+		echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssf_status.txt
+		echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssc_status.txt
+		start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	fi
 }
 
 disable_ss(){
