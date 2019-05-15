@@ -2339,7 +2339,7 @@ function reload_Soft_Center() {
 function getACLConfigs() {
 	var dict = {};
 	acl_node_max = 0;
-	for (var field in db_ss) {
+	for (var field in db_acl) {
 		names = field.split("_");
 		dict[names[names.length - 1]] = 'ok';
 	}
@@ -2348,18 +2348,18 @@ function getACLConfigs() {
 	var params = ["ip", "port", "mode"];
 	for (var field in dict) {
 		var obj = {};
-		if (typeof db_ss[p + "_name_" + field] == "undefined") {
-			obj["name"] = db_ss[p + "_ip_" + field];
+		if (typeof db_acl[p + "_name_" + field] == "undefined") {
+			obj["name"] = db_acl[p + "_ip_" + field];
 		} else {
-			obj["name"] = db_ss[p + "_name_" + field];
+			obj["name"] = db_acl[p + "_name_" + field];
 		}
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + field;
-			if (typeof db_ss[ofield] == "undefined") {
+			if (typeof db_acl[ofield] == "undefined") {
 				obj = null;
 				break;
 			}
-			obj[params[i]] = db_ss[ofield];
+			obj[params[i]] = db_acl[ofield];
 		}
 		if (obj != null) {
 			var node_a = parseInt(field);
