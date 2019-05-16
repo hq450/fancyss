@@ -1,8 +1,10 @@
 # fancyss - 科学上网
 
-Fancyss is a project providing tools to across the GFW on asuswrt/merlin based router. 
+@(科学上网)[fancyss, fancyss_arm, fancyss_hnd, fancyss_mipsel, fancyss_x64]
 
-此项目提供用于asuswrt/merlin改版固件路由器科学上网。
+Fancyss is a project providing tools to across the GFW on asuswrt/merlin/openwrt based router with software center. 
+
+此项目提供用于asuswrt/merlin/openwrt为基础的，带软件中心固件路由器的科学上网。
 
 ## 机型/固件支持
 
@@ -58,3 +60,11 @@ Fancyss is a project providing tools to across the GFW on asuswrt/merlin based r
 #### 相关链接：
 * mipsel机型的科学上网离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel)
 * mipsel机型的固件下载地址：[http://koolshare.cn/forum-96-1.html](http://koolshare.cn/forum-96-1.html)
+
+----
+
+### [fancyss_X64](https://github.com/hq450/fancyss/tree/master/fancyss_X64)
+适用于koolshare OpenWRT/LEDE X64 带酷软的固件，由于该固件酷软下架了koolss插件，本项目将其收入。
+
+#### 相关链接：
+* koolshare OpenWRT/LEDE X64机型的科学上网离线包：[https://github.com/hq450/fancyss_history_package/tree/master/X64](https://github.com/hq450/fancyss_history_package/tree/master/X64)
