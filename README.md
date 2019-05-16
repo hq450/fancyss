@@ -1,7 +1,5 @@
 # fancyss - 科学上网
 
-@(科学上网)[fancyss, fancyss_arm, fancyss_hnd, fancyss_mipsel, fancyss_x64]
-
 Fancyss is a project providing tools to across the GFW on asuswrt/merlin/openwrt based router with software center. 
 
 此项目提供用于asuswrt/merlin/openwrt为基础的，带软件中心固件路由器的科学上网。
