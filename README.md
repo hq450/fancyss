@@ -18,6 +18,7 @@ Fancyss is a project providing tools to across the GFW on asuswrt/merlin/openwrt
 
 #### 注意： 
 * 其它arm架构或mipsel架构的merlin固件不能使用fancyss_hnd！
+* 强烈建议在最新版本的固件和最新版本软件中心上使用fancyss_hnd！
 * GT-AC5300/RT-AC86U官该固件使用的是ROG皮肤，插件安装会自动识别机型并安装对应皮肤版本。
 
 #### 相关链接：
