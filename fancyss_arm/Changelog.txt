@@ -6,7 +6,7 @@ fancyss_arm Changelog
    - add	现在状态检测不仅会显示√、×，还会显示请求检测网站header的延迟，注意此延迟不是ping！
    - remove	移除【附加功能】中【状态更新间隔】设定功能，现在检测间隔在4000ms - 8000ms内随机取值，以避免可能的特征；
    - update	更新内置v2ray到v4.18.0；
-   - update 同步最新规则；
+   - update	同步最新规则；
 
 4.1.7
    - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
