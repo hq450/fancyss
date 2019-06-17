@@ -6,5 +6,5 @@
 "name":"shadowsocks",
 "tar_url": "https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_arm/shadowsocks.tar.gz", 
 "title":"科学上网",
-"version":"4.1.8"
+"version":"4.1.7"
 }
