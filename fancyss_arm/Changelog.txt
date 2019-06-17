@@ -1,5 +1,13 @@
 fancyss_arm Changelog
 ===========================================
+4.1.8
+   - add	添加httping，并用httping检测国内外状态，原wget检测状态方式弃用，注意现在状态检测仍然是按需检测，即：
+    		只有在进入插件页面才会进行检测，退出页面后不会进行检测；
+   - add	现在状态检测不仅会显示√、×，还会显示请求检测网站header的延迟，注意此延迟不是ping！
+   - remove	移除【附加功能】中【状态更新间隔】设定功能，现在检测间隔在4000ms - 8000ms内随机取值，以避免可能的特征；
+   - update	更新内置v2ray到v4.18.0；
+   - update 同步最新规则；
+
 4.1.7
    - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
    - update	更新shadowsocksrr-libev到最新，支持auth_akarin_rand和auth_akarin_spec_a协议 （2018年11月25日 编译）；
