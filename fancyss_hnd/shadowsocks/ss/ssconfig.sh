@@ -150,6 +150,9 @@ __get_server_resolver(){
 	[ "$value_1" == "9" ] && res="117.50.22.22"
 	[ "$value_1" == "10" ] && res="180.76.76.76"
 	[ "$value_1" == "11" ] && res="119.29.29.29"
+	[ "$value_1" == "13" ] && res="8.8.8.8"
+	[ "$value_1" == "14" ] && res="8.8.4.4"
+	[ "$value_1" == "15" ] && res="9.9.9.9"
 	if [ "$value_1" == "12" ];then
 		if [ -n "$value_2" ];then
 			res=$(__valid_ip "$value_2")
@@ -1567,10 +1570,10 @@ write_cron_job(){
 	sed -i '/ssnodeupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	if [ "$ss_basic_node_update" = "1" ];then
 		if [ "$ss_basic_node_update_day" = "7" ];then
-			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * * /koolshare/scripts/ss_online_update.sh 3"
+			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * * /koolshare/scripts/ss_online_update.sh fancyss 3"
 			echo_date "设置订阅服务器自动更新订阅服务器在每天 $ss_basic_node_update_hr 点。"
 		else
-			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * $ss_basic_node_update_day /koolshare/scripts/ss_online_update.sh 3"
+			cru a ssnodeupdate "0 $ss_basic_node_update_hr * * $ss_basic_node_update_day /koolshare/scripts/ss_online_update.sh fancyss 3"
 			echo_date "设置订阅服务器自动更新订阅服务器在星期 $ss_basic_node_update_day 的 $ss_basic_node_update_hr 点。"
 		fi
 	fi
@@ -2221,16 +2224,18 @@ stop_status(){
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 	killall curl >/dev/null 2>&1
+	rm -rf /tmp/upload/ss_status.txt
 }
 
 check_status(){
-	echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssf_status.txt
-	echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssc_status.txt
-	start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	if [ "$ss_failover_enable" == "1" ];then
+		echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssf_status.txt
+		echo "=========================================== start/restart ==========================================" >> /tmp/upload/ssc_status.txt
+		start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	fi
 }
 
 disable_ss(){
-	get_config
 	ss_pre_stop
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
@@ -2251,7 +2256,6 @@ disable_ss(){
 apply_ss(){
 	# router is on boot
 	WAN_ACTION=`ps|grep /jffs/scripts/wan-start|grep -v grep`
-	get_config
 	ss_pre_stop
 	# now stop first
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
@@ -2263,6 +2267,7 @@ apply_ss(){
 	remove_ss_reboot_job
 	restore_conf
 	# restart dnsmasq when ss server is not ip or on router boot
+	umount_dnsmasq_now
 	restart_dnsmasq
 	flush_nat
 	kill_cron_job

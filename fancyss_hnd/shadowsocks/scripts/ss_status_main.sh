@@ -6,6 +6,8 @@ source /koolshare/scripts/base.sh
 
 LOGFILE_F=/tmp/upload/ssf_status.txt
 LOGFILE_C=/tmp/upload/ssc_status.txt
+LOGTIME1=$(TZ=UTC-8 date -R "+%m-%d %H:%M:%S")
+CURRENT=$(dbus get ssconf_basic_node)
 COUNT=1
 rm -rf /tmp/upload/test.txt
 
@@ -23,27 +25,32 @@ clean_c_log() {
 	unset logdata
 }
 
+LOGM() {
+	echo $1
+	logger $1
+}
+
 failover_action(){
 	FLAG=$1
 	PING=$2
 	if [ "$ss_failover_s4_1" == "0" ];then
-		[ "$FLAG" == "1" ] && echo "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，关闭插件！"
-		[ "$FLAG" == "2" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，关闭插件！"
-		[ "$FLAG" == "3" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，关闭插件！"
+		[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，关闭插件！"
+		[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，关闭插件！"
+		[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，关闭插件！"
 		dbus set ss_basic_enable="0"
 		# 关闭
 		start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
 	elif [ "$ss_failover_s4_1" == "1" ];then
-		[ "$FLAG" == "1" ] && echo "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，重启插件！"
-		[ "$FLAG" == "2" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，重启插件！"
-		[ "$FLAG" == "3" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，重启插件！"
+		[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，重启插件！"
+		[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，重启插件！"
+		[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，重启插件！"
 		# 重启
 		start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 	elif [ "$ss_failover_s4_1" == "2" ];then
 		if [ "$ss_failover_s4_2" == "1" ];then
-			[ "$FLAG" == "1" ] && echo "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
-			[ "$FLAG" == "2" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
-			[ "$FLAG" == "3" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
+			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
+			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
+			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
 			# 切换
 			dbus set ssconf_basic_node=$ss_failover_s4_3
 			# 降级
@@ -51,13 +58,13 @@ failover_action(){
 			# 重启
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 		elif [ "$ss_failover_s4_2" == "2" ];then
-			[ "$FLAG" == "1" ] && echo "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			[ "$FLAG" == "2" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			[ "$FLAG" == "3" ] && echo "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			NEXT_NODE=$(($ss_failover_s4_3 + 1))
+			NEXT_NODE=$(($ssconf_basic_node + 1))
 			MAXT_NODE=$(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)
+			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
+			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
+			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
 			if [ "$MAXT_NODE" == "1" ];then
-				echo "$LOGTIME1 fancyss：检测到你只有一个节点！无法切换到下一个节点！只好关闭插件了！"
+				LOGM "$LOGTIME1 fancyss：检测到你只有一个节点！无法切换到下一个节点！只好关闭插件了！"
 				dbus set ss_basic_enable="0"
 				start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
 			fi
@@ -117,8 +124,8 @@ heath_check(){
 	LOGTIME1=$(TZ=UTC-8 date -R "+%m-%d %H:%M:%S")
 	
 	[ "$ss_failover_enable" != "1" ] && return
-	[ "$COUNT" -eq "3" ] && echo "$LOGTIME1 fancyss：跳过刚提交后的3个状态，从此处开始的状态用于故障检测"
 	[ "$COUNT" -le "3" ] && return
+	[ "$COUNT" -eq "4" ] && echo "$LOGTIME1 fancyss：跳过刚提交后的3个状态，从此处开始的状态用于故障检测"
 
 	[ "$ss_failover_c1" == "1" ] && failover_check_1
 	[ "$ss_failover_c2" == "1" ] && failover_check_2
@@ -143,9 +150,15 @@ main(){
 			# wait until ssconfig.sh or ss_v2ray.sh finished running
 			continue
 		else
+			# kill the last status script if exist
+			killall curl >/dev/null 2>&1
+			if [ -n "$(pidof ss_status.sh)" ];then
+				kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
+				echo $LOGTIME1 script run time out "[`dbus get ssconf_basic_name_$CURRENT`]" >> $LOGFILE_F
+			fi
+			
 			# call ss_status.sh to get status
-			local ret=`curl -s -m 4 -X POST -d '{"id":9527,"method":"ss_status.sh","params":[],"fields":""}' http://127.0.0.1/_api/`
-			echo $ret
+			start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status.sh
 		fi
 
 		# do health check after result obtain
@@ -155,7 +168,7 @@ main(){
 		let COUNT++
 		
 		# random sleep 4s - 7s
-		local INTER=$(shuf -i 4000-7000 -n 1)
+		local INTER=$(shuf -i 4000-8000 -n 1)
 		INTER=$(($INTER * 1000))
 		usleep $INTER
 	done

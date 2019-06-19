@@ -126,8 +126,9 @@ cp -rf /tmp/shadowsocks/uninstall.sh /koolshare/scripts/uninstall_shadowsocks.sh
 echo_date 复制相关的网页文件！
 cp -rf /tmp/shadowsocks/webs/* /koolshare/webs/
 cp -rf /tmp/shadowsocks/res/* /koolshare/res/
-if [ "`nvram get model`" == "GT-AC5300" ] || [ -n "`nvram get extendno | grep koolshare`" -a "`nvram get productid`" == "RT-AC86U" ];then
-	[ -d "/tmp/shadowsocks/GT-AC5300/res/" ] && cp -rf /tmp/shadowsocks/GT-AC5300/res/* /koolshare/res/
+
+if [ "`nvram get model`" == "GT-AC5300" ] || [ "`nvram get model`" == "GT-AX11000" ] || [ -n "`nvram get extendno | grep koolshare`" -a "`nvram get productid`" == "RT-AC86U" ];then
+	[ -d "/tmp/shadowsocks/rog/res/" ] && cp -rf /tmp/shadowsocks/rog/res/* /koolshare/res/
 fi
 
 echo_date 为新安装文件赋予执行权限...
@@ -164,7 +165,7 @@ dbus set softcenter_module_shadowsocks_title="科学上网"
 dbus set softcenter_module_shadowsocks_description="科学上网"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v4.14.0"
+dbus set ss_basic_v2ray_version="v4.18.0"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
