@@ -1,10 +1,10 @@
 {
-"build_date":"2019-06-19_16:11:27",
+"build_date":"2019-06-20_15:25:20",
 "description":"科学上网",
 "home_url":"Main_Ss_Content.asp",
-"md5":"38d3af81fd574ef17931fa16566e22fa",
+"md5":"8a7c0b68f54c35427a071c537de7ec3a",
 "name":"shadowsocks",
 "tar_url": "https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_arm/shadowsocks.tar.gz", 
 "title":"科学上网",
-"version":"4.1.10"
+"version":"4.2.0"
 }
