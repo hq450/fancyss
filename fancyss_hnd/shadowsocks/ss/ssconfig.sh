@@ -1964,10 +1964,17 @@ chromecast(){
 # -----------------------------------nat part end--------------------------------------------------------
 
 restart_dnsmasq(){
+	# use use local dns as system resolver
+	local DLC=`nvram get dns_local_cache`
+	if [ "$DLC" == "0" ];then
+		nvram set dns_local_cache=1
+		nvram commit
+	fi
 	# Restart dnsmasq
 	echo_date 重启dnsmasq服务...
 	service restart_dnsmasq >/dev/null 2>&1
 }
+
 
 load_module(){
 	xt=`lsmod | grep xt_set`

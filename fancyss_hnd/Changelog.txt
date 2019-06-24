@@ -1,5 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
+1.6.8
+   - update	因为梅林固件在384.12版本中，将路由本身的域名解析由本地DNS解析（127.0.0.1）改为使用运营商地址DNS解析：
+    		（https://github.com/RMerl/asuswrt-merlin.ng/commit/de8806990462b8c3dbd4182b4991e31cd082f7fe，
+    		https://github.com/RMerl/asuswrt-merlin.ng/blob/613a8080c4671d044bde0d809507c8b625ad3525/Changelog-NG.txt#L37-L44）
+    		这会导致路由器本身无法解析国外受到污染的域名而使得路由本身翻墙失效，为保证插件和384.12及其以后固件的兼容性，fancyss将强制路由本身的域名解析由本地DNS解析（127.0.0.1）。
+    		即在http://router.asus.com/Tools_OtherSettings.asp —→ Wan: Use local caching DNS server as system resolver (default: No)选项中，fancyss插件将会强制将此处设定为"是"。
+
 1.6.7
    - fix	修复在使用部分机场节点时，重启路由或者路由断电开机后，无法访问谷歌等外网的问题；
    - update	【规则】更新内置规则到最新。
