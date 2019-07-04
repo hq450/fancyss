@@ -24,5 +24,5 @@ fancyss_arm384 Changelog
     		但是由于fancyss_arm384 所支持的梅林固件linux内核版本2.6.36太老旧，因此不支持fancyss_hnd有的一些特性，
     		目前已知的fancyss_arm384比fancyss_hnd会少[ss/ssr 开启多核心支持]和[tcp fast open]功能。
 
-			fancyss_arm384的一些特性的相关功能多数时候可以参考fancyss_hnd的更新日志：
-			https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt
+    		fancyss_arm384的一些特性的相关功能多数时候可以参考fancyss_hnd的更新日志：
+    		https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt
