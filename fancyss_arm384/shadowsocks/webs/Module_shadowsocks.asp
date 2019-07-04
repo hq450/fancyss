@@ -1770,27 +1770,25 @@ function ping_test() {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			console.log(response);
 			write_ping(response);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			//console.log(XmlHttpRequest.responseText);
 			$(".ping").html("失败!");
 		},
-		timeout: 0
+		timeout: 60000
 	});
 }
 function write_ping(r){
 	if(E("ss_basic_ping_node") == "off"){
 		return false;
 	}
-	console.log(r)
 	if ((String(r.result)).length <= 2){
 		if(db_ss["ss_basic_ping_node"] == "0"){
-			$(".ping").html("超时！1");
+			$(".ping").html("超时！");
 		}else{
 			$(".ping").html("");
-			$("#ss_node_ping_" + db_ss["ss_basic_ping_node"]).html("超时！2");
+			$("#ss_node_ping_" + db_ss["ss_basic_ping_node"]).html("超时！");
 		}
 	}else{
 		ping_result = r;
@@ -2124,6 +2122,7 @@ function get_ss_status_front() {
 	$.ajax({
 		type: "POST",
 		url: "/_api/",
+		async: true,
 		data: JSON.stringify(postData),
 		success: function(response) {
 			var arr = response.result.split("@@");
