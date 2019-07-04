@@ -6,8 +6,8 @@ fancyss_arm384 Changelog
     		注意：建议使用此版本科学上网插件（fancyss_arm384）的朋友仔细阅读以下内容：
     		
     		fancyss_arm384	仅能在koolshare 梅林 arm 384平台，且linux内核为2.6.36.4的armv7架构的机器上使用，
-    		fancyss_arm		仅能在koolshare 梅林 arm 380平台，且linux内核为2.6.36.4的armv7架构的机器上使用，
-    		fancyss_hnd		仅能在koolshare 梅林/官改 hnd/axhnd 384平台，且linux内核为4.1.27/4.1.51的armv8架构机器上使用，
+    		fancyss_arm	仅能在koolshare 梅林 arm 380平台，且linux内核为2.6.36.4的armv7架构的机器上使用，
+    		fancyss_hnd	仅能在koolshare 梅林/官改 hnd/axhnd 384平台，且linux内核为4.1.27/4.1.51的armv8架构机器上使用，
     		
     		fancyss_arm384可以用在比如RT-AC88U_384.12_0，RT-AC5300_384.12_0的koolshare梅林384固件。
     		安装本插件请使用软件中心自带的离线安装功能，插件安装成功后回在软件中心显示名为【科学上网】的图标。
