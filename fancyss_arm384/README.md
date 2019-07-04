@@ -1,4 +1,4 @@
-# [fancyss_arm384](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
+# [fancyss_arm384](https://github.com/hq450/fancyss/tree/master/fancyss_arm384)
 
 > **fancyss_arm384**离线安装包仅能在koolshare 梅林 arm 384平台，且linux内核为2.6.36.4的armv7架构的机器上使用！
 
