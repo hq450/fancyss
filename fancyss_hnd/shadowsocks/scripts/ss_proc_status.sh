@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
 
 source /koolshare/scripts/ss_base.sh
 
@@ -81,7 +81,7 @@ echo_version(){
 	echo "chinadns1		1.3.2 		2017年12月09日编译"
 	echo "chinadns2		2.0.0 		2017年12月09日编译"
 	echo "https_dns_proxy		758f913		2019年02月05日编译"
-	echo "client_linux_arm7	20180810	kcptun"
+	echo "client_linux_arm5	20180810	kcptun"
 	echo "v2ray			$ss_basic_v2ray_version"
 	echo -----------------------------------------------------------
 }

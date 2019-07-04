@@ -52,9 +52,9 @@
 }
 .myDragClass{
 	/*--------rog--------*/
-	background-color:#91071f;
+	/*background-color:#91071f;*/
 	/*--------non rog--------*/
-	/*background-color:#396995;*/
+	background-color:#396995;
 	box-shadow: 3px 3px 10px #000;
 }
 .showDragHandle{
@@ -137,9 +137,9 @@ input[type=checkbox]{
 }
 #ss_node_list_table tr:hover {
 	/*--------rog--------*/
-	background-color:#91071f;
+	/*background-color:#91071f;*/
 	/*--------non rog--------*/
-	/*background-color:#396995;*/
+	background-color:#396995;
 }
 .list_table td {
 	border-left: none;
@@ -173,20 +173,20 @@ input[type=checkbox]{
 	height:25px;
 	border-collapse: collapse;
 	/*--------rog--------*/
-	border: none;
-	background: #91071f;
+	/*border: none;*/
+	/*background: #91071f;*/
 	/*--------non rog--------*/
-	/*border: 0px solid transparent;*/
-	/*background:#2F3A3E;*/
+	border: 0px solid transparent;
+	background:#2F3A3E;
 }
 .shadow1, .shadow2{
 	height: 25px;
 	display: none;
 	border-radius: 3px;
 	/*--------rog--------*/
-	background-color: #91071f;
+	/*background-color: #91071f;*/
 	/*--------non rog--------*/
-	/*background-color: #2F3A3E;*/
+	background-color: #2F3A3E;
 }
 .show-btn0, .show-btn1, .show-btn2, .show-btn3, .show-btn4, .show-btn5, .show-btn6, .show-btn7, .show-btn8, .show-btn9, .show-btn10, .sub-node1, .sub-node2 {
 	font-size:10pt;
@@ -195,22 +195,22 @@ input[type=checkbox]{
 	border-radius: 5px 5px 0px 0px;
 	width:8.42%;
 	/*--------rog--------*/
-	border: 1px solid #91071f;
-	background: none;
+	/*border: 1px solid #91071f;*/
+	/*background: none;*/
 	/*--------non rog--------*/
-	/*border-left: 1px solid #67767d;*/
-	/*border-top: 1px solid #67767d;*/
-	/*border-right: 1px solid #67767d;*/
-	/*border-bottom: none;*/
-	/*background: #67767d;*/
+	border-left: 1px solid #67767d;
+	border-top: 1px solid #67767d;
+	border-right: 1px solid #67767d;
+	border-bottom: none;
+	background: #67767d;
 }
 .show-btn0:hover, .show-btn1:hover, .show-btn2:hover, .show-btn3:hover, .show-btn4:hover, .show-btn5:hover, .show-btn6:hover, .show-btn7:hover, .show-btn8:hover, .show-btn9:hover, .show-btn10:hover, .sub-node1:hover, .sub-node2:hover, .active {
 	/*--------rog--------*/
-	border: 1px solid #91071f;
-	background: #91071f;
+	/*border: 1px solid #91071f;*/
+	/*background: #91071f;*/
 	/*--------non rog--------*/
-	/*border: 1px solid #2f3a3e;*/
-	/*background: #2f3a3e;*/
+	border: 1px solid #2f3a3e;
+	background: #2f3a3e;
 }
 .sub-btn1, .sub-btn2, .sub-btn3 {
 	font-size:10pt;
@@ -219,41 +219,41 @@ input[type=checkbox]{
 	border-radius: 5px 5px 0px 0px;
 	width:16%;
 	/*--------rog--------*/
-	border: 1px solid #680516;
-	background: none;
+	/*border: 1px solid #680516;*/
+	/*background: none;*/
 	/*--------non rog--------*/
-	/*border-left: 1px solid #67767d;*/
-	/*border-top: 1px solid #67767d;*/
-	/*border-right: 1px solid #67767d;*/
-	/*border-bottom: none;*/
-	/*background: #67767d;*/
+	border-left: 1px solid #67767d;
+	border-top: 1px solid #67767d;
+	border-right: 1px solid #67767d;
+	border-bottom: none;
+	background: #67767d;
 }
 .sub-btn1:hover, .sub-btn2:hover, .sub-btn3:hover, .active2 {
 	/*--------rog--------*/
-	border: 1px solid #91071f;
-	background: #91071f;
+	/*border: 1px solid #91071f;*/
+	/*background: #91071f;*/
 	/*--------non rog--------*/
-	/*border: 1px solid #2f3a3e;*/
-	/*background: #2f3a3e;*/
+	border: 1px solid #2f3a3e;
+	background: #2f3a3e;
 }
 .smth{
 	/*--------rog--------*/
- 	background: #91071f;
+ 	/*background: #91071f;*/
 	/*--------non rog--------*/
-	/*background: #2F3A3E !important;*/
+	background: #2F3A3E !important;
 }
 #tablet_0, #tablet_2, #tablet_3, #tablet_4, #tablet_5, #tablet_6, #tablet_7, #tablet_8, #tablet_9, #lb_setting, #local_table {
 	margin:-1px 0px 0px 0px;
 	/*--------rog--------*/
-	border:1px solid #91071f;
+	/*border:1px solid #91071f;*/
 	/*--------non rog--------*/
-	/*border:none;*/
+	border:none;
 }
 #sub_tablets{
 	/*--------rog--------*/
-	border-bottom:1px solid #91071f;
+	/*border-bottom:1px solid #91071f;*/
 	/*--------non rog--------*/
-	/*border-bottom:none;*/
+	border-bottom:none;
 }
 #log_content1, #log_content_f, #log_content_c{
 	width:97%;
@@ -267,9 +267,9 @@ input[type=checkbox]{
 	overflow-x:hidden;
 	border:0px solid #222;
 	/*--------rog--------*/
-	background:transparent;
+	/*background:transparent;*/
 	/*--------non rog--------*/
-	/*background:#475A5F;*/
+	background:#475A5F;
 }
 #ss_basic_v2ray_json, #ss_dnsmasq, #ss_wan_white_ip, #ss_wan_white_domain, #ss_wan_black_ip, #ss_wan_black_domain, #ss_online_links, #ss_base64_links, #ss_node_table_v2ray_json, #ss_basic_kcp_parameter{
 	width:99%;
@@ -278,11 +278,11 @@ input[type=checkbox]{
 	color:#FFFFFF;
 	line-height:1.2;
 	/*--------rog--------*/
-	border:1px solid #91071f;
-	background:transparent;
+	/*border:1px solid #91071f;*/
+	/*background:transparent;*/
 	/*--------non rog--------*/
-	/*border:1px solid #888;*/
-	/*background:#475A5F;*/
+	border:1px solid #888;
+	background:#475A5F;
 }
 .input_ss_table{
 	margin-left:2px;
@@ -297,11 +297,11 @@ input[type=checkbox]{
 	color:#FFFFFF;
 	vertical-align:middle;
 	/*--------rog--------*/
-	background-color: #3e030d;
-	border:1px solid #91071f;
+	/*background-color: #3e030d;
+	border:1px solid #91071f;*/
 	/*--------non rog--------*/
-	/*border:1px solid gray;*/
-	/*background-color: #576d73;*/
+	border:1px solid gray;
+	background-color: #576d73;
 }
 .input_option{
 	vertical-align:middle;
@@ -326,12 +326,12 @@ input[type=checkbox]{
 }
 .input_option_2:hover, .input_option_2:focus{
 	/*--------rog--------*/
-	border:1px solid #91071f;
-	background-color: #3e030d;
+	/*border:1px solid #91071f;*/
+	/*background-color: #3e030d;*/
 	/*--------non rog--------*/
-	/*outline: none;*/
-	/*border: 1px solid grey;*/
-	/*background-color:#576D73;*/
+	outline: none;
+	border: 1px solid grey;
+	background-color:#576D73;
 }
 .sel_option{
 	height:25px;
@@ -346,12 +346,12 @@ input[type=checkbox]{
 }
 .sel_option:hover, .sel_option:focus{
 	/*--------rog--------*/
-	border:1px solid #91071f;
-	background-color: #3e030d;
+	/*border:1px solid #91071f;*/
+	/*background-color: #3e030d;*/
 	/*--------non rog--------*/
-	/*outline: none;*/
-	/*border: 1px solid grey;*/
-	/*background-color:#576D73;*/
+	outline: none;
+	border: 1px solid grey;
+	background-color:#576D73;
 }
 .ss_btn {
 	border: 1px solid #222;
@@ -361,9 +361,9 @@ input[type=checkbox]{
 	border-radius: 5px 5px 5px 5px;
 	width:14%;
 	/*--------rog--------*/
-	background: linear-gradient(to bottom, #91071f  0%, #700618 100%);
+	/*background: linear-gradient(to bottom, #91071f  0%, #700618 100%);*/
 	/*--------non rog--------*/
-	/*background: linear-gradient(to bottom, #003333  0%, #000000 100%);*/
+	background: linear-gradient(to bottom, #003333  0%, #000000 100%);
 }
 .ss_btn:hover, .active3 {
 	border: 1px solid #222;
@@ -373,9 +373,9 @@ input[type=checkbox]{
 	border-radius: 5px 5px 5px 5px;
 	width:14%;
 	/*--------rog--------*/
-	background: linear-gradient(to bottom, #cf0a2c  0%, #91071f 100%);
+	/*background: linear-gradient(to bottom, #cf0a2c  0%, #91071f 100%);*/
 	/*--------non rog--------*/
-	/*background: linear-gradient(to bottom, #27c9c9  0%, #279fd9 100%);*/
+	background: linear-gradient(to bottom, #27c9c9  0%, #279fd9 100%);
 }
 /*--------non rog--------*/
 #log_content, #log_content_fov{
