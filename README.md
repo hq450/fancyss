@@ -1,8 +1,8 @@
 # fancyss - 科学上网
 
-Fancyss is a project providing tools to across the GFW on asuswrt/merlin/openwrt based router with software center. 
+> Fancyss is a project providing tools to across the GFW on asuswrt/merlin/openwrt based router with software center. 
 
-此项目提供用于asuswrt/merlin/openwrt为基础的，带软件中心固件路由器的科学上网。
+> 此项目提供用于asuswrt/merlin/openwrt为基础的，带软件中心固件路由器的科学上网。
 
 ## 机型/固件支持
 
