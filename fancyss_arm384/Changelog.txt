@@ -2,6 +2,7 @@ fancyss_arm384 Changelog
 ===========================================
 1.0.1
    - fix	修复https_dns_proxy, haproxy二进制错误的问题。
+    		fancyss_arm 384 1.0.1版本对应fancyss_hnd 1.6.8。
 
 1.0.0
    - add	Fancyss添加对koolshare armv7架构梅林384改版固件的支持，取名为fancyss_arm384，以作区分。
