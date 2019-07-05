@@ -1,5 +1,7 @@
 #! /bin/sh
 
+# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
+
 sh /koolshare/ss/ssconfig.sh stop
 sh /koolshare/scripts/ss_conf.sh koolshare 3
 sleep 1

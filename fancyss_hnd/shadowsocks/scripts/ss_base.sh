@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
+# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
 # 此脚本用以获取fancyss插件的所有数据 + 节点数据
 # 同时可以存放一些公用的函数
