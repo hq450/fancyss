@@ -155,14 +155,14 @@ function pop_111() {
 			type: 2,
 			shade: .7,
 			scrollbar: 0,
-			title: '国内外分流信息:http://ip.koolcenter.com/all',
+			title: '国内外分流信息:https://ip.koolcenter.com/all',
 			area: ['850px', '350px'],
 			fixed: false,
 			maxmin: true,
 			shadeClose: 1,
 			id: 'LAY_layuipro',
 			btnAlign: 'c',
-			content: ['http://ip.koolcenter.com/all', 'no'],
+			content: ['https://ip.koolcenter.com/all', 'no'],
 		});
 	});
 }
