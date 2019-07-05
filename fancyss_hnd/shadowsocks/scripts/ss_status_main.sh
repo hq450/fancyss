@@ -140,9 +140,11 @@ main(){
 		[ -z "$LOG_MAX" ] && LOG_MAX=2000
 		
 		# clean clog incase of log grow too big
-		clean_f_log
-		clean_c_log
-	
+		if [ -f "/tmp/upload/ssf_status.txt" ];then
+			clean_f_log
+			clean_c_log
+		fi
+		
 		# exit loop when fancyss not enabled
 		[ "`dbus get ss_basic_enable`" != "1" ] && exit
 		
@@ -157,8 +159,9 @@ main(){
 				echo $LOGTIME1 script run time out "[`dbus get ssconf_basic_name_$CURRENT`]" >> $LOGFILE_F
 			fi
 			
-			# call ss_status.sh to get status
-			start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status.sh
+			# call ss_status.sh to get status, start-stop-daemon consume more cpu, use sh instead.
+			# start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status.sh
+			sh /koolshare/scripts/ss_status.sh
 		fi
 
 		# do health check after result obtain
