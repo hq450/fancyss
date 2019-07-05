@@ -1,5 +1,10 @@
 fancyss_arm384 Changelog
 ===========================================
+1.0.2
+   - fix	修复在开启故障转移功能后，CPU使用率可能偏高的问题；
+   - fix	修复节点ping有时候无法获取数据显示超时的问题；
+   - fix	修复外网https访问路由器时，分流检测无法显示结果的问题；
+
 1.0.1
    - fix	修复https_dns_proxy, haproxy二进制错误的问题。
     		fancyss_arm 384 1.0.1版本对应fancyss_hnd 1.6.8。
