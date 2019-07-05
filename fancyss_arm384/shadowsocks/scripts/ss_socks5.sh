@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
 
 source /koolshare/scripts/base.sh
 eval $(dbus export ss_)

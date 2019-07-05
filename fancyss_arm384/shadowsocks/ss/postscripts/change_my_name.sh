@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
 
 # 此脚本是一个示例，实际写法按照自己的方法来做
 # 更改此脚本的名字，保证此脚本的名字格式是： P+数字+名字.sh
