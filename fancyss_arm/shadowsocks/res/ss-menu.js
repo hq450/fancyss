@@ -524,7 +524,7 @@ function openssHint(itemNum) {
 		statusmenu = "</br><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vmess作为传出协议，不支持sock，shadowsocks；提交后会根据你的配置自动生成v2ray的json配置。"
 		statusmenu += "</br></br><font color='#CC0066'><b>1:勾选（自定义json）：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传出协议，插件会取你的json的outbound部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传入传出协议，支持链式代理与反向代理，支持自定义路由与负载均衡。插件仅检查你的json的inbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
 		_caption = "使用json配置";
 	} else if (itemNum == 28) {
 		width = "750px";

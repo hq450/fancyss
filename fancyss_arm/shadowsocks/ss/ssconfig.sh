@@ -1346,8 +1346,20 @@ create_v2ray_json(){
 		echo_date 使用自定义的v2ray json配置文件...
 		echo "$ss_basic_v2ray_json" | base64_decode > "$V2RAY_CONFIG_FILE_TMP"
 
-		OUTBOUND=`cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds`
-		#JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.log)'`
+		#检查自定义json配置的inbounds是否占用了3333或23456端口
+		for port in $(cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound?.port, .inboundDetour[]?.port, .inbounds[]?.port')
+		do
+			if [ "$port" == "3333" ];then
+				echo_date "【警告】检测到你的json配置的inbounds占用了【3333】端口！"
+				echo_date "3333端口为本插件dokodemo-door入站协议的默认端口，请勿占用！"
+			elif [ "$port" == "23456" ];then
+				echo_date "【警告】检测到你的json配置的inbounds占用了【23456】端口！"
+				echo_date "23456端口为本插件socks入站协议的默认端口，请勿占用！"
+			fi
+		done
+
+		#OUTBOUND=`cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds`
+		JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.inbounds) | del (.log)'`
 		#INBOUND_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
 		#INBOUND_DETOUR_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
 		
@@ -1382,9 +1394,13 @@ create_v2ray_json(){
 						]
 						}"
 		#local TEMPLATE=`cat /koolshare/ss/rules/v2ray_template.json`
+		
+		#提取模板与自定义json中的所有入站配置
+		INBOUNDS=`echo $TEMPLATE | cat - "$V2RAY_CONFIG_FILE_TMP" | jq '[.inbound?, .inboundDetour[]?, .inbounds[]?] | del(.[] | nulls)' | jq -s add`
+
 		echo_date 解析V2Ray配置文件...
-		echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbounds: $args}' > "$V2RAY_CONFIG_FILE"
-		#echo $TEMPLATE | jq --argjson args "$JSON_INFO" '. + $args' > "$V2RAY_CONFIG_FILE"
+		#echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbounds: $args}' > "$V2RAY_CONFIG_FILE"
+		echo $JSON_INFO | jq --argjson args "$INBOUNDS" --argjson logs "`echo $TEMPLATE | jq .log`" '{log: $logs} + {inbounds: $args} + .' > "$V2RAY_CONFIG_FILE"
 		
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
 		#close_in_five

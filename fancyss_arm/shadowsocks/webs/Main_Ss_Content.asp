@@ -3401,7 +3401,9 @@ function set_cron(action) {
 																<th width="35%">v2ray json</th>
 																<td>
 																	<textarea placeholder="# 此处填入v2ray json，内容可以是标准的也可以是压缩的
-																	# 请保证你json内的outbound配置正确！！！
+																	# 请保证你json内的outbounds配置正确！！！
+																	# 如有自定义inbounds，请勿占用3333和23456端口！！！
+																	# 如有自定义routing且使用到了geoip/geosite，请自行下载对应的dat文件！
 																	# ------------------------------------
 																	# 同样支持vmess://链接填入，格式如下：
 																	vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIjIzMyIsDQogICJhZGQiOiAiMjMzLjIzMy4yMzMuMjMzIiwNCiAgInBvcnQiOiAiMjMzIiwNCiAgImlkIjogImFlY2EzYzViLTc0NzktNDFjMy1hMWUzLTAyMjkzYzg2Y2EzOCIsDQogICJhaWQiOiAiMjMzIiwNCiAgIm5ldCI6ICJ3cyIsDQogICJ0eXBlIjogIm5vbmUiLA0KICAiaG9zdCI6ICJ3d3cuMjMzLmNvbSIsDQogICJwYXRoIjogIi8yMzMiLA0KICAidGxzIjogInRscyINCn0=" rows="32" style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;" id="ss_node_table_v2ray_json" name="ss_node_table_v2ray_json" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" title=""></textarea>
@@ -3691,7 +3693,9 @@ function set_cron(action) {
 													<th width="35%">v2ray json</th>
 													<td>
 														<textarea  placeholder="# 此处填入v2ray json，内容可以是标准的也可以是压缩的
-																	# 请保证你json内的outbound配置正确！！！
+																	# 请保证你json内的outbounds配置正确！！！
+																	# 如有自定义inbounds，请勿占用3333和23456端口！！！
+																	# 如有自定义routing且使用到了geoip/geosite，请自行下载对应的dat文件！
 																	# ------------------------------------
 																	# 同样支持vmess://链接填入，格式如下：
 																	vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIjIzMyIsDQogICJhZGQiOiAiMjMzLjIzMy4yMzMuMjMzIiwNCiAgInBvcnQiOiAiMjMzIiwNCiAgImlkIjogImFlY2EzYzViLTc0NzktNDFjMy1hMWUzLTAyMjkzYzg2Y2EzOCIsDQogICJhaWQiOiAiMjMzIiwNCiAgIm5ldCI6ICJ3cyIsDQogICJ0eXBlIjogIm5vbmUiLA0KICAiaG9zdCI6ICJ3d3cuMjMzLmNvbSIsDQogICJwYXRoIjogIi8yMzMiLA0KICAidGxzIjogInRscyINCn0=" rows="40" style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;" id="ss_basic_v2ray_json" name="ss_basic_v2ray_json" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" title=""></textarea>
