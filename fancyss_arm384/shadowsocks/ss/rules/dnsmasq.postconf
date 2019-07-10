@@ -1,0 +1,120 @@
+#!/bin/sh
+
+# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
+
+source /koolshare/scripts/ss_base.sh
+CONFIG=$1
+
+ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
+ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
+IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+
+perpare(){
+	if [ "$ss_dns_china" == "1" ];then
+		if [ "$ss_basic_mode" == "6" ];then
+			# 使用回国模式的时候，ISP dns是国外的，所以这里直接用114取代
+			CDN1="114.114.114.114"
+		else
+			if [ -n "$IFIP_DNS1" ];then
+				# 运营商DNS1:ISP_DNS1是ip格式
+				FO=`awk -F'[./]' -v ip=$IFIP_DNS1 ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt`
+				if [ -n "$FO" ];then
+					# 运营商DNS1:ISP_DNS1是国内IP
+					CDN1="$IFIP_DNS1"
+				else
+					# 运营商DNS1:ISP_DNS1是国外IP或者局域网IP
+					CDN1="114.114.114.114"
+				fi
+			else
+				# 运营商DNS1:ISP_DNS1不是ip格式
+				CDN1="114.114.114.114"
+			fi
+		fi
+		if [ "$ss_basic_mode" == "6" ];then
+			# 使用回国模式的时候，ISP dns是国外的，所以这里直接用114取代
+			CDN2="114.114.115.115"
+		else
+			if [ -n "$IFIP_DNS2" ];then
+				# 运营商DNS1:ISP_DNS1是ip格式
+				FO=`awk -F'[./]' -v ip=$IFIP_DNS2 ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt`
+				if [ -n "$FO" ];then
+					# 运营商DNS1:ISP_DNS1是国内IP
+					CDN2="$IFIP_DNS2"
+				else
+					# 运营商DNS1:ISP_DNS1是国外IP或者局域网IP
+					CDN2="114.114.115.115"
+				fi
+			else
+				# 运营商DNS1:ISP_DNS1不是ip格式
+				CDN2="114.114.115.115"
+			fi
+		fi
+	fi
+	[ "$ss_dns_china" == "2" ] && CDN="223.5.5.5"
+	[ "$ss_dns_china" == "3" ] && CDN="223.6.6.6"
+	[ "$ss_dns_china" == "4" ] && CDN="114.114.114.114"
+	[ "$ss_dns_china" == "5" ] && CDN="114.114.115.115"
+	[ "$ss_dns_china" == "6" ] && CDN="1.2.4.8"
+	[ "$ss_dns_china" == "7" ] && CDN="210.2.4.8"
+	[ "$ss_dns_china" == "8" ] && CDN="112.124.47.27"
+	[ "$ss_dns_china" == "9" ] && CDN="114.215.126.16"
+	[ "$ss_dns_china" == "10" ] && CDN="180.76.76.76"
+	[ "$ss_dns_china" == "11" ] && CDN="119.29.29.29"
+	[ "$ss_dns_china" == "12" ] && {
+		[ -n "$ss_dns_china_user" ] && CDN="$ss_dns_china_user" || CDN="114.114.114.114"
+	}
+	[ -n "`cat /etc/dnsmasq.conf|grep no-resolv`" ] && sed -i '/no-resolv/d' /etc/dnsmasq.conf
+	[ -n "`cat /etc/dnsmasq.conf|grep servers-file`" ] && sed -i '/servers-file/d' /etc/dnsmasq.conf
+	[ -n "`cat /etc/dnsmasq.conf|grep resolv-file`" ] && sed -i '/resolv-file/d' /etc/dnsmasq.conf
+	# compatible with official mod dnsmasq-fastlookup
+	[ -n "`cat /etc/dnsmasq.conf|grep script-arp`" ] && sed -i '/script-arp/d' /etc/dnsmasq.conf
+	# compatible with merlin dnsmasq-fastlookup
+	[ -n "`cat /etc/dnsmasq.conf|grep dhcp-name-match`" ] && sed -i '/dhcp-name-match/d' /etc/dnsmasq.conf
+}
+	
+use_chn_plan(){
+	# DNS方案，国内优先，因此dnsmasq的server默认为国内地址，国外解析由gfwlist.conf提供，路由的开销比较小，国内cdn很好，但是国外cdn较弱
+	pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
+	if [ "$ss_dns_china" == "1" ];then
+		# 选择运营商DNS时候，如果有两个DNS，则都使用
+		pc_insert "no-poll" "server=$CDN2#53" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "server=$CDN1#53" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "all-servers" "/etc/dnsmasq.conf"
+	else
+		# 选择其它国内DNS时候
+		pc_insert "no-poll" "server=$CDN#53" "/etc/dnsmasq.conf"
+	fi
+	pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
+}
+
+use_for_plan(){
+	# DNS方案，国外优先，因此dnsmasq的server默认为国外地址，国内的解析由cdn.txt提供，路由的开销比较大，国内cdn较好，但是国外cdn很好
+	if [ "$ss_basic_mode" == "6" ];then
+		if [ -n "`echo $ss_direct_user|grep :`" ];then
+			echo_date 国外直连dns设定格式错误，将自动更正为8.8.8.8#53.
+			ss_direct_user="8.8.8.8#53"
+			dbus set ss_direct_user="8.8.8.8#53"
+		fi
+		[ -z "$ss_direct_user" ] && ss_direct_user="8.8.8.8#53"
+
+		pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
+		pc_insert "no-poll" "server=$ss_direct_user" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
+	else
+		pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
+		pc_insert "no-poll" "server=127.0.0.1#7913" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
+	fi
+}
+
+if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" ] || [ "$ss_basic_mode" == "6" ];then
+	# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
+	# 回国模式下自动判断使用国内优先
+	perpare
+	use_chn_plan
+else
+	# 其它情况，均使用国外优先模式
+	perpare
+	use_for_plan
+fi

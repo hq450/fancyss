@@ -19,6 +19,8 @@ IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 lan_ipaddr=$(nvram get lan_ipaddr)
 ip_prefix_hex=`nvram get lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("00/0xffffff00\n")}'`
+WAN_ACTION=`ps|grep /jffs/scripts/wan-start|grep -v grep`
+NAT_ACTION=`ps|grep /jffs/scripts/nat-start|grep -v grep`
 ARG_OBFS=""
 
 #-----------------------------------------------
@@ -418,8 +420,17 @@ ss_arg(){
 }
 # create shadowsocks config file...
 creat_ss_json(){
+	if [ -n "$WAN_ACTION" ];then
+		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	elif [ -n "$NAT_ACTION" ];then
+		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	else
+		echo_date "创建$(__get_type_abbr_name)配置文件到$CONFIG_FILE"
+	fi
+	
 	if [ "$ss_basic_type" == "0" ];then
-		echo_date 创建SS配置文件到$CONFIG_FILE
 		cat > $CONFIG_FILE <<-EOF
 			{
 			    "server":"$ss_basic_server",
@@ -432,7 +443,6 @@ creat_ss_json(){
 			}
 		EOF
 	elif [ "$ss_basic_type" == "1" ];then
-		echo_date 创建SSR配置文件到$CONFIG_FILE
 		cat > $CONFIG_FILE <<-EOF
 			{
 			    "server":"$ss_basic_server",
@@ -449,7 +459,6 @@ creat_ss_json(){
 			}
 		EOF
 	elif [ "$ss_basic_type" == "2" ];then
-		echo_date 创建koolgame配置文件到$CONFIG_FILE
 		cat > $CONFIG_FILE <<-EOF
 			{
 			    "server":"$ss_basic_server",
@@ -1217,6 +1226,16 @@ get_path(){
 }
 
 creat_v2ray_json(){
+	if [ -n "$WAN_ACTION" ];then
+		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	elif [ -n "$NAT_ACTION" ];then
+		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	else
+		echo_date "创建$(__get_type_abbr_name)配置文件到$V2RAY_CONFIG_FILE"
+	fi
+	
 	local tmp v2ray_server_ip
 	rm -rf "$V2RAY_CONFIG_FILE_TMP"
 	rm -rf "$V2RAY_CONFIG_FILE"
@@ -1945,10 +1964,17 @@ chromecast(){
 # -----------------------------------nat part end--------------------------------------------------------
 
 restart_dnsmasq(){
+	# use use local dns as system resolver
+	local DLC=`nvram get dns_local_cache`
+	if [ "$DLC" == "0" ];then
+		nvram set dns_local_cache=1
+		nvram commit
+	fi
 	# Restart dnsmasq
 	echo_date 重启dnsmasq服务...
 	service restart_dnsmasq >/dev/null 2>&1
 }
+
 
 load_module(){
 	xt=`lsmod | grep xt_set`
@@ -2254,8 +2280,6 @@ disable_ss(){
 }
 
 apply_ss(){
-	# router is on boot
-	WAN_ACTION=`ps|grep /jffs/scripts/wan-start|grep -v grep`
 	ss_pre_stop
 	# now stop first
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
@@ -2284,8 +2308,8 @@ apply_ss(){
 	creat_ipset
 	create_dnsmasq_conf
 	# do not re generate json on router start, use old one
-	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ] && creat_ss_json
-	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "3" ] && creat_v2ray_json
+	[ "$ss_basic_type" != "3" ] && creat_ss_json
+	[ "$ss_basic_type" = "3" ] && creat_v2ray_json
 	[ "$ss_basic_type" == "0" ] || [ "$ss_basic_type" == "1" ] && start_ss_redir
 	[ "$ss_basic_type" == "2" ] && start_koolgame
 	[ "$ss_basic_type" == "3" ] && start_v2ray
@@ -2348,6 +2372,7 @@ start)
 	if [ "$ss_basic_enable" == "1" ];then
 		logger "[软件中心]: 启动科学上网插件！"
 		apply_ss >> "$LOG_FILE"
+		#get_status >> /tmp/upload/test.txt
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
 	fi
@@ -2380,6 +2405,7 @@ flush_nat)
 start_nat)
 	set_lock
 	[ "$ss_basic_enable" == "1" ] && apply_ss
+	#get_status >> /tmp/upload/test.txt
 	unset_lock
 	;;
 esac
