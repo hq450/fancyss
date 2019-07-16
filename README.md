@@ -77,7 +77,7 @@
 
 **fancyss_arm384**支持机型（需刷koolshare梅林**384**改版固件，版本：384_1x_x，如384_12_0）：
 
-* 华硕系列：`RT-AC88U` `RT-AC3100` `RT-AC3200` `RT-AC5300`
+* 华硕系列：`RT-AC68U` `RT-AC66U-B1` `RT-AC1900P` `RT-AC87U` `RT-AC88U` `RT-AC3100` `RT-AC3200` `RT-AC5300`
 
 #### 注意：
 
@@ -89,11 +89,12 @@
 
 * arm384机型的科学上网离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384)
 * arm384机型的科学上网更新日志：https://github.com/hq450/fancyss/blob/master/fancyss_arm384/Changelog.txt
-* arm384机型的固件下载地址：[暂无](http://koolshare.cn/forum-96-1.html)
+* arm384机型的固件下载地址：[https://koolshare.cn/thread-164857-1-1.html](https://koolshare.cn/thread-164857-1-1.html)
 
 ----
 
 ### [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
+
 > **fancyss_arm**离线安装包仅能在koolshare 梅林 arm 380平台，且linux内核为2.6.36.4的armv7架构的机器上使用！
 
 **fancyss_arm**支持机型（需刷koolshare梅林**380**改版固件，最新版本：X7.9.1）：
@@ -119,6 +120,7 @@
 ----
 
 ### [fancyss_mipsel](https://github.com/hq450/fancyss/tree/master/fancyss_mipsel)
+
 > 适用于merlin koolshare mipsel架构机型的改版固件，由于mipsel架构老旧且性能较低，此架构机型的科学上网插件已经不再维护，最后的版本是3.0.4，此处作为仓库搬迁后的备份留存。
 
 **fancyss_mipsel**支持机型（需刷梅林koolshare改版固件）：
