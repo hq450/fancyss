@@ -21,8 +21,8 @@ upgrade_ss_conf(){
 	do
 		if [ "`dbus get ssconf_basic_use_rss_$node`" == "1" ];then
 			#ssr
-			dbus remove ssconf_basic_ss_obfs_$node
-			dbus remove ssconf_basic_ss_obfs_host_$node
+			dbus remove ssconf_basic_ss_v2ray_plugin_$node
+			dbus remove ssconf_basic_ss_v2ray_plugin_opts_$node
 			dbus remove ssconf_basic_koolgame_udp_$node
 		else
 			if [ -n "`dbus get ssconf_basic_koolgame_udp_$node`" ];then
@@ -31,8 +31,8 @@ upgrade_ss_conf(){
 				dbus remove ssconf_basic_rss_protocol_param_$node
 				dbus remove ssconf_basic_rss_obfs_$node
 				dbus remove ssconf_basic_rss_obfs_param_$node
-				dbus remove ssconf_basic_ss_obfs_$node
-				dbus remove ssconf_basic_ss_obfs_host_$node
+				dbus remove ssconf_basic_ss_v2ray_plugin_$node
+				dbus remove ssconf_basic_ss_v2ray_plugin_opts_$node
 			else
 				#ss
 				dbus remove ssconf_basic_rss_protocol_$node
@@ -40,7 +40,7 @@ upgrade_ss_conf(){
 				dbus remove ssconf_basic_rss_obfs_$node
 				dbus remove ssconf_basic_rss_obfs_param_$node
 				dbus remove ssconf_basic_koolgame_udp_$node
-				[ -z "`dbus get ssconf_basic_ss_obfs_$node`" ] && dbus set ssconf_basic_ss_obfs_$node="0"
+				[ -z "`dbus get ssconf_basic_ss_v2ray_plugin_$node`" ] && dbus set ssconf_basic_ss_v2ray_plugin_$node="0"
 			fi
 		fi
 		dbus remove ssconf_basic_use_rss_$node
@@ -52,8 +52,8 @@ upgrade_ss_conf(){
 	dbus remove ss_basic_mode
 	dbus remove ss_basic_port
 	dbus remove ss_basic_method
-	dbus remove ss_basic_ss_obfs
-	dbus remove ss_basic_ss_obfs_host
+	dbus remove ss_basic_ss_v2ray_plugin
+	dbus remove ss_basic_ss_v2ray_plugin_opts
 	dbus remove ss_basic_rss_protocol
 	dbus remove ss_basic_rss_protocol_param
 	dbus remove ss_basic_rss_obfs
@@ -66,8 +66,8 @@ upgrade_ss_conf(){
 	[ -n "`dbus get ssconf_basic_mode_$node`" ] && dbus set ss_basic_mode=`dbus get ssconf_basic_mode_$node`
 	[ -n "`dbus get ssconf_basic_port_$node`" ] && dbus set ss_basic_port=`dbus get ssconf_basic_port_$node`
 	[ -n "`dbus get ssconf_basic_method_$node`" ] && dbus set ss_basic_method=`dbus get ssconf_basic_method_$node`
-	[ -n "`dbus get ssconf_basic_ss_obfs_$node`" ] && dbus set ss_basic_ss_obfs=`dbus get ssconf_basic_ss_obfs_$node`
-	[ -n "`dbus get ssconf_basic_ss_obfs_host_$node`" ] && dbus set ss_basic_ss_obfs_host=`dbus get ssconf_basic_ss_obfs_host_$node`
+	[ -n "`dbus get ssconf_basic_ss_v2ray_plugin_$node`" ] && dbus set ss_basic_ss_v2ray_plugin=`dbus get ssconf_basic_ss_v2ray_plugin_$node`
+	[ -n "`dbus get ssconf_basic_ss_v2ray_plugin_opts_$node`" ] && dbus set ss_basic_ss_v2ray_plugin_opts=`dbus get ssconf_basic_ss_v2ray_plugin_opts_$node`
 	[ -n "`dbus get ssconf_basic_rss_protocol_$node`" ] && dbus set ss_basic_rss_protocol=`dbus get ssconf_basic_rss_protocol_$node`
 	[ -n "`dbus get ssconf_basic_rss_protocol_param_$node`" ] && dbus set ss_basic_rss_protocol_param=`dbus get ssconf_basic_rss_protocol_param_$node`
 	[ -n "`dbus get ssconf_basic_rss_obfs_$node`" ] && dbus set ss_basic_rss_obfs=`dbus get ssconf_basic_rss_obfs_$node`

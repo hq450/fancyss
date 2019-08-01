@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=Edge">
@@ -26,7 +26,7 @@
 var x = 5;
 var noChange = 0;
 var _responseLen;
-var params = ["ss_local_server", "ss_local_port", "ss_local_password", "ss_local_method", "ss_local_timeout", "ss_local_proxyport", "ss_local_obfs", "ss_local_acl"];
+var params = ["ss_local_server", "ss_local_port", "ss_local_password", "ss_local_method", "ss_local_timeout", "ss_local_proxyport", "ss_local_v2ray_plugin", "ss_local_v2ray_plugin_opts", "ss_local_acl"];
 	
 function init() {
 	show_menu(menu_hook);
@@ -74,7 +74,7 @@ function conf2obj(){
 }
 
 function update_visibility() {
-	showhide("ss_obfs_host", (E("ss_local_obfs").value !== "0"));
+	showhide("ss_v2ray_plugin_opts", (E("ss_local_v2ray_plugin").value !== "0"));
 }
 
 function get_realtime_log() {
@@ -260,20 +260,19 @@ function count_down_close() {
 													<input type="text" class="input_ss_table" id="ss_local_proxyport" name="ss_local_proxyport" maxlength="100" value="1082">												
 												</td>
 											</tr>
-											<tr id="ss_obfs">
-												<th width="35%">混淆 (obfs)</th>
+											<tr id="ss_v2ray_plugin">
+												<th width="35%">v2ray-plugin</th>
 												<td>
-													<select id="ss_local_obfs" name="ss_local_obfs" style="width:164px;margin:0px 0px 0px 2px;" class="input_option"  onchange="update_visibility();" >
+													<select id="ss_local_v2ray_plugin" name="ss_local_v2ray_plugin" style="width:164px;margin:0px 0px 0px 2px;" class="input_option"  onchange="update_visibility();" >
 														<option class="content_input_fd" value="0">关闭</option>
-														<option class="content_input_fd" value="tls">tls</option>
-														<option class="content_input_fd" value="http">http</option>
+														<option class="content_input_fd" value="1">启用</option>
 													</select>
 												</td>
 											</tr>
-											<tr id="ss_obfs_host">
-												<th width="35%">混淆主机名 (obfs_host)</th>
+											<tr id="ss_v2ray_plugin_opts">
+												<th width="35%">v2ray-plugin参数</th>
 												<td>
-													<input type="text" name="ss_local_obfs_host" id="ss_local_obfs_host" placeholder="bing.com"  class="input_ss_table" maxlength="100" value=""></input>
+													<input type="text" name="ss_local_v2ray_plugin_opts" id="ss_local_v2ray_plugin_opts" placeholder="tls;host=cloudfront.com"  class="input_ss_table" maxlength="100" value=""></input>
 												</td>
 											</tr>
 											<tr id="acl_support">
