@@ -33,8 +33,13 @@ fi
 echo =================
 # ======================================
 # get chnroute for shadowsocks chn and game mode
-wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest > apnic.txt
-cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > chnroute1.txt
+
+# Deprecated in 2019-8-1
+# wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest > apnic.txt
+# cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > chnroute1.txt
+
+# use ipip_country_cn ip database sync by https://github.com/firehol/blocklist-ipsets from ipip.net（source: https://cdn.ipip.net/17mon/country.zip）.
+curl https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset | sed '/^#/d' > chnroute1.txt
 
 md5sum3=$(md5sum chnroute1.txt | sed 's/ /\n/g'| sed -n 1p)
 md5sum4=$(md5sum ../chnroute.txt | sed 's/ /\n/g'| sed -n 1p)
@@ -43,7 +48,9 @@ echo =================
 if [ "$md5sum3"x = "$md5sum4"x ];then
 	echo chnroute same md5!
 else
-	echo update chnroute!
+	IPLINE=`cat chnroute1.txt | wc -l`
+	IPCOUN=`awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' chnroute1.txt`
+	echo update chnroute, $IPLINE subnets, $IPCOUN unique IPs !
 	cp -f chnroute1.txt ../chnroute.txt
 	sed -i "2c `date +%Y-%m-%d` # $md5sum3 chnroute" ../version1
 fi
@@ -69,6 +76,9 @@ else
 fi
 echo =================
 # ======================================
+# use apnic data
+wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest > apnic.txt
+cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > chnroute1.txt
 
 echo -e "[Local Routing]\n## China mainland routing blocks\n## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest" > Routing.txt
 echo -n "## Last update: " >> Routing.txt
