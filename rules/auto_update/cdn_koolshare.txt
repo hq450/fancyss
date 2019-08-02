@@ -1,4 +1,6 @@
 koolshare.cn
+koolshare.io
 koolddns.com
+koolproxy.com
 ddnsto.com
 ngrok.wang
