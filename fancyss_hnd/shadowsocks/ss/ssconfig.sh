@@ -1992,6 +1992,7 @@ write_numbers(){
 	nvram set update_cdn="$(cat /koolshare/ss/rules/version | sed -n 4p | sed 's/#/\n/g'| sed -n 1p)"
 	nvram set ipset_numbers=$(cat /koolshare/ss/rules/gfwlist.conf | grep -c ipset)
 	nvram set chnroute_numbers=$(cat /koolshare/ss/rules/chnroute.txt | grep -c .)
+	nvram set chnroute_ips=$(awk -F "/" '{sum += 2^(32-$2)};END {print sum}' /koolshare/ss/rules/chnroute.txt)
 	nvram set cdn_numbers=$(cat /koolshare/ss/rules/cdn.txt | grep -c .)
 }
 

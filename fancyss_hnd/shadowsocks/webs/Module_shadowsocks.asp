@@ -3365,19 +3365,35 @@ function save_failover() {
 														_tmp[1] = _i + ":00时";
 														option_ruleu.push(_tmp);
 													}
+													function addCommas(nStr) {
+														nStr += '';
+														var x = nStr.split('.');
+														var x1 = x[0];
+														var x2 = x.length > 1 ? '.' + x[1] : '';
+														var rgx = /(\d+)(\d{3})/;
+														while (rgx.test(x1)) {
+														    x1 = x1.replace(rgx, '$1' + ',' + '$2');
+														}
+														return x1 + x2;
+													}
+													//var ipsn='<% nvram_get("chnroute_ips"); %>'
+													var gfwl = addCommas('<% nvram_get("ipset_numbers"); %>');
+													var chnl = addCommas('<% nvram_get("chnroute_numbers"); %>');
+													var chnn = addCommas('<% nvram_get("chnroute_ips"); %>');
+													var cdnn = addCommas('<% nvram_get("cdn_numbers"); %>');
 													$('#table_rules').forms([
 														{ title: 'gfwlist域名数量', multi: [
-															{ suffix: '<% nvram_get("ipset_numbers"); %>&nbsp;条，最后更新版本：' },
+															{ suffix: '<em>'+ gfwl +'</em>&nbsp;条，版本：' },
 															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/master/rules/gfwlist.conf" target="_blank">' },
 															{ suffix: '<i><% nvram_get("update_ipset"); %></i></a>' },
 														]},
 														{ title: '大陆白名单IP段数量', multi: [
-															{ suffix: '<% nvram_get("chnroute_numbers"); %>&nbsp;行，最后更新版本：' },
+															{ suffix: '<em>'+ chnl +'</em>&nbsp;行，包含 <em>' + chnn + '</em>&nbsp;个ip地址，版本：' },
 															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/master/rules/chnroute.txt" target="_blank">' },
 															{ suffix: '<i><% nvram_get("update_chnroute"); %></i></a>' },
 														]},
 														{ title: '国内域名数量（cdn名单）', multi: [
-															{ suffix: '<% nvram_get("cdn_numbers"); %>&nbsp;条，最后更新版本：' },
+															{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
 															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/master/rules/cdn.txt" target="_blank">' },
 															{ suffix: '<i><% nvram_get("update_cdn"); %></i></a>' },
 														]},
