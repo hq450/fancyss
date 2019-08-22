@@ -1,5 +1,11 @@
 fancyss_hnd Changelog
 ===========================================
+1.7.1
+   - fix	修复【节点域名解析DNS服务器】无法选择IBM DNS的问题；
+   - update	更新内置v2ray二进制到v4.20.0；
+   - update	更新内置规则到最新，chnroute.txt更换为ipip.net源；
+   - update	大陆白名单IP段数量增加ip数量显示。
+
 1.7.0
    - fix	修复因css丢失导致官改固件的科学上网插件rog皮肤显示不正常的问题。
 
