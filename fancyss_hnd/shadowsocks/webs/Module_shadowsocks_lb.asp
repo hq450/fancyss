@@ -307,6 +307,8 @@ function add_new_lb_node() {
 	dbus["ssconf_basic_method_" + cur_lb_node] = db_ss['ssconf_basic_method_' + min_lb_node];
 	dbus["ssconf_basic_ss_obfs" + cur_lb_node] = db_ss['ss_basic_ss_obfs' + min_lb_node];
 	dbus["ssconf_basic_ss_obfs_host" + cur_lb_node] = db_ss['ss_basic_ss_obfs_host' + min_lb_node];
+	dbus["ssconf_basic_ss_v2ray" + cur_lb_node] = db_ss['ssconf_basic_ss_v2ray' + min_lb_node];
+	dbus["ssconf_basic_ss_v2ray_opts" + cur_lb_node] = db_ss['ssconf_basic_ss_v2ray_opts' + min_lb_node];
 	dbus["ssconf_basic_rss_protocol_" + cur_lb_node] = db_ss['ssconf_basic_rss_protocol_' + min_lb_node];
 	dbus["ssconf_basic_rss_protocol_param_" + cur_lb_node] = db_ss['ssconf_basic_rss_protocol_param_' + min_lb_node];
 	dbus["ssconf_basic_rss_obfs_" + cur_lb_node] = db_ss['ssconf_basic_rss_obfs_' + min_lb_node];

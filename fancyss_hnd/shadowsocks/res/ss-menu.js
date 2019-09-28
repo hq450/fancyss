@@ -565,6 +565,13 @@ function openssHint(itemNum) {
 	} else if (itemNum == 6) {
 		statusmenu = "此处选择你希望UDP的通道。</br>很多游戏都走udp的初衷就是加速udp连接。</br>如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
 		_caption = "游戏模式V2 UDP通道";
+	} else if (itemNum == 7) {
+		statusmenu = "请注意：本设置<b>不是v2ray使用shadowsocks协议！</b>";
+		statusmenu += "而是基于v2ray的<a href='https://www.v2ray.com/chapter_02/05_transport.html' target='_blank'><u><font color='#00F'>传输配置</font></u></a>作为SS的混淆方式。";
+		statusmenu += "</br>因为v2ray-plugin与simple-obfs同为Shadowsocks <a href='https://github.com/shadowsocks/shadowsocks-org/wiki/Plugin' target='_blank'><font color='#00F'><u>SIP003插件</u></font></a>的实现，";
+		statusmenu += "所以打开v2ray-plugin会<b>忽略原混淆(obfs)</b>的设置。";
+		statusmenu += "</br>关于这个插件的信息以及参数(opts)，请查看仓库：<a href='https://github.com/shadowsocks/v2ray-plugin' target='_blank'><u><font color='#00F'>v2ray-plugin</font></u></a>";
+		_caption = "v2ray-plugin设置";
 	} else if (itemNum == 11) {
 		statusmenu = "如果不知道如何填写，请一定留空，不然可能带来副作用！"
 		statusmenu += "</br></br>请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
