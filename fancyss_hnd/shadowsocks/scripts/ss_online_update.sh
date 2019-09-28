@@ -551,7 +551,7 @@ open_socks_23456(){
 		elif  [ "$ss_basic_type" == "0" ];then
 			SOCKS_FLAG=2
 			echo_date 开启ss-local，提供socks5代理端口：23456
-			if [ "$ss_basic_ss_obfs" == "0" ];then
+			if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ];then
 				ss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 			else
 				ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1

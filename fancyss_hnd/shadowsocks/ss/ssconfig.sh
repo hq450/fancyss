@@ -398,23 +398,25 @@ resolv_server_ip() {
 }
 
 ss_arg() {
-	# simple obfs
-	if [ -n "$ss_basic_ss_obfs_host" ]; then
-		if [ "$ss_basic_ss_obfs" == "http" ]; then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http;obfs-host=$ss_basic_ss_obfs_host"
-		elif [ "$ss_basic_ss_obfs" == "tls" ]; then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=$ss_basic_ss_obfs_host"
-		else
-			ARG_OBFS=""
+	# v2ray-plugin or simple obfs
+	if [ "$ss_basic_ss_v2ray" == "1" ]; then
+		ARG_OBFS="--plugin v2ray-plugin --plugin-opts $ss_basic_ss_v2ray_opts"
+		echo_date "检测到开启了v2ray-plugin，将忽略obfs设置。"
+	elif [ "$ss_basic_ss_obfs" == "http" ]; then
+		echo_date "检测到开启了obfs。"
+		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
+		if [ -n "$ss_basic_ss_obfs_host" ]; then
+			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
+		fi
+	elif [ "$ss_basic_ss_obfs" == "tls" ]; then
+		echo_date "检测到开启了obfs。"
+		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
+		if [ -n "$ss_basic_ss_obfs_host" ]; then
+			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
 		fi
 	else
-		if [ "$ss_basic_ss_obfs" == "http" ]; then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
-		elif [ "$ss_basic_ss_obfs" == "tls" ]; then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
-		else
-			ARG_OBFS=""
-		fi
+		echo_date "没有开启任何ss插件设置。"
+		ARG_OBFS=""
 	fi
 }
 # create shadowsocks config file...
@@ -523,7 +525,7 @@ start_sslocal() {
 		rss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	elif [ "$ss_basic_type" == "0" ]; then
 		echo_date 开启ss-local，提供socks5代理端口：23456
-		if [ "$ss_basic_ss_obfs" == "0" ]; then
+		if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
 			ss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 		else
 			ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
@@ -600,7 +602,7 @@ start_dns() {
 			rss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 		elif [ "$ss_basic_type" == "0" ]; then
 			echo_date 开启ss-tunnel，用于dns解析...
-			if [ "$ss_basic_ss_obfs" == "0" ]; then
+			if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
 				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			else
 				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
@@ -1025,7 +1027,7 @@ start_ss_redir() {
 		# ss-libev需要大于160的熵才能正常工作
 		start_haveged
 		echo_date 开启ss-redir进程，用于透明代理.
-		if [ "$ss_basic_ss_obfs" == "0" ]; then
+		if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
 			BIN=ss-redir
 			ARG_OBFS=""
 		else

@@ -40,6 +40,7 @@ rm -rf /koolshare/bin/speederv2
 rm -rf /koolshare/bin/udp2raw
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
+rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/httping
 rm -rf /koolshare/bin/haveged
