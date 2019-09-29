@@ -971,6 +971,7 @@ function remove_conf_table(o) {
 			$('#ss_node_list_table tr:nth-child(' + id + ')').remove();
 			refresh_dbss();
 			reorder_trs();
+			refresh_options();
 		}
 	});
 }

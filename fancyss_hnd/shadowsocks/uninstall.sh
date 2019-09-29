@@ -64,3 +64,4 @@ dbus remove softcenter_module_shadowsocks_version
 dbus remove ss_basic_enable
 dbus remove ss_basic_version_local
 dbus remove ss_basic_version_web
+dbus remove ss_basic_v2ray_version
