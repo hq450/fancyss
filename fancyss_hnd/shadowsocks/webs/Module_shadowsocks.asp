@@ -1514,6 +1514,7 @@ function save_new_order(){
 		success: function(response) {
 			refresh_dbss();
 			reorder_trs();
+			refresh_options();
 			getNowFormatDate();
 		}
 	});
