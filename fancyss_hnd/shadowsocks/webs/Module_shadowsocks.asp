@@ -132,7 +132,7 @@ function conf2obj(obj, action) {
 function ssconf_node2obj(node_sel) {
 	var p = "ssconf_basic";
 	var obj = {};
-	var params2 = ["password", "v2ray_json", "server", "mode", "port", "password", "method", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_mux_enable", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_use_json"];
+	var params2 = ["password", "v2ray_json", "server", "mode", "port", "password", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_mux_enable", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_use_json"];
 
 	for (var i = 0; i < params2.length; i++) {
 		obj["ss_basic_" + params2[i]] = db_ss[p + "_" + params2[i] + "_" + node_sel] || "";
@@ -301,7 +301,7 @@ function save() {
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
-	var params = ["server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
+	var params = ["server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
 	for (var i = 0; i < params.length; i++) {
 		dbus["ssconf_basic_" + params[i] + "_" + node_sel] = E("ss_basic_" + params[i]).value;
 	}
@@ -313,7 +313,7 @@ function save() {
 	dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 	// adjust some value when switch node between ss ssr v2ray koolgame
 	if (typeof(db_ss["ssconf_basic_rss_protocol_" + node_sel]) != "undefined"){
-		var remove_ssr = [ "ss_obfs", "ss_obfs_host", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
+		var remove_ssr = [ "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 		dbus["ss_basic_type"] = "1"
 		dbus["ssconf_basic_type_" + node_sel] = "1"
 		for (var i = 0; i < remove_ssr.length; i++) {
@@ -322,7 +322,7 @@ function save() {
 		}
 	} else {
 		if (typeof(db_ss["ssconf_basic_koolgame_udp_" + node_sel]) != "undefined"){
-			var remove_gamev2 = [ "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
+			var remove_gamev2 = [ "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 			dbus["ss_basic_type"] = "2"
 			dbus["ssconf_basic_type_" + node_sel] = "2"
 			for (var i = 0; i < remove_gamev2.length; i++) {
@@ -331,7 +331,7 @@ function save() {
 			}
 		} else {
 			if (typeof(db_ss["ssconf_basic_v2ray_use_json_" + node_sel]) != "undefined"){
-				var remove_v2ray = [ "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
+				var remove_v2ray = [ "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 				dbus["ss_basic_type"] = "3"
 				dbus["ssconf_basic_type_" + node_sel] = "3"
 				for (var i = 0; i < remove_v2ray.length; i++) {
@@ -422,6 +422,8 @@ function verifyFields(r) {
 	//ss-libev
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
+	elem.display(elem.parentElem('ss_basic_ss_v2ray', 'tr'), ss_on);
+	elem.display(elem.parentElem('ss_basic_ss_v2ray_opts', 'tr'), (ss_on && E("ss_basic_ss_v2ray").value != "0"));
 	//ssr-libev
 	elem.display(elem.parentElem('ss_basic_rss_protocol_param', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_protocol', 'tr'), ssr_on);
@@ -460,6 +462,8 @@ function verifyFields(r) {
 	if (save_flag == "shadowsocks") {
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
+		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));
+		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));
 	}
 	if (save_flag == "v2ray") {
 		if(E("ss_node_table_v2ray_use_json").checked){
@@ -611,6 +615,8 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_mode").value = "1";
 	E("ss_node_table_ss_obfs").value = "0"
 	E("ss_node_table_ss_obfs_host").value = "";
+	E("ss_node_table_ss_v2ray").value = "0"
+	E("ss_node_table_ss_v2ray_opts").value = "";
 	E("ss_node_table_rss_protocol").value = "origin";
 	E("ss_node_table_rss_protocol_param").value = "";
 	E("ss_node_table_rss_obfs").value = "plain";
@@ -666,6 +672,8 @@ function tabclickhandler(_type) {
 		E('v2ray_json_tr').style.display = "none";
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
+		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));
+		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));
 	} else if (_type == 1) {
 		save_flag = "shadowsocksR";
 		E('ssrTitle').className = "vpnClientTitle_td_click";
@@ -677,6 +685,8 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
 		E('ssr_protocol_tr').style.display = "";
 		E('ssr_protocol_param_tr').style.display = "";
 		E('ssr_obfs_tr').style.display = "";
@@ -705,6 +715,8 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
@@ -731,6 +743,8 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "none";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
@@ -795,7 +809,7 @@ function add_ss_node_conf(flag) {
 	var ns = {};
 	var p = "ssconf_basic";
 	node_max += 1;
-	var params1 = ["mode", "name", "server", "port", "method", "ss_obfs", "ss_obfs_host"];
+	var params1 = ["mode", "name", "server", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts"];
 	var params2 = ["mode", "name", "server", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 	var params3 = ["mode", "name", "server", "port", "method", "koolgame_udp"];
 	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"]; //for v2ray
@@ -894,6 +908,8 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_mode").value = "1";
 				E("ss_node_table_ss_obfs").value = "0"
 				E("ss_node_table_ss_obfs_host").value = "";
+				E("ss_node_table_ss_v2ray").value = "0"
+				E("ss_node_table_ss_v2ray_opts").value = "";
 				E("ss_node_table_rss_protocol").value = "origin";
 				E("ss_node_table_rss_protocol_param").value = "";
 				E("ss_node_table_rss_obfs").value = "plain";
@@ -920,7 +936,7 @@ function remove_conf_table(o) {
 
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -955,6 +971,7 @@ function remove_conf_table(o) {
 			$('#ss_node_list_table tr:nth-child(' + id + ')').remove();
 			refresh_dbss();
 			reorder_trs();
+			refresh_options();
 		}
 	});
 }
@@ -970,7 +987,7 @@ function edit_conf_table(o) {
 	var c = confs[id];
 	var params1_base64 = ["password"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -1040,7 +1057,7 @@ function edit_conf_table(o) {
 function edit_ss_node_conf(flag) {
 	var ns = {};
 	var p = "ssconf_basic";
-	var params1 = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host"];
+	var params1 = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts"];
 	var params2 = ["name", "server", "mode", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 	var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"]
 	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"]; //for v2ray
@@ -1122,6 +1139,8 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_mode").value = "1";
 			E("ss_node_table_ss_obfs").value = "0"
 			E("ss_node_table_ss_obfs_host").value = "";
+			E("ss_node_table_ss_v2ray").value = "0"
+			E("ss_node_table_ss_v2ray_opts").value = "";
 			E("ss_node_table_rss_protocol").value = "origin";
 			E("ss_node_table_rss_protocol_param").value = "";
 			E("ss_node_table_rss_obfs").value = "plain";
@@ -1180,7 +1199,7 @@ function generate_node_info() {
 			}
 		}
 		//这些值统一处理
-		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json"];
+		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + idx;
 			if (typeof db_ss[ofield] == "undefined") {
@@ -1452,7 +1471,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -1495,6 +1514,7 @@ function save_new_order(){
 		success: function(response) {
 			refresh_dbss();
 			reorder_trs();
+			refresh_options();
 			getNowFormatDate();
 		}
 	});
@@ -1617,7 +1637,9 @@ function makeQRcode(node){
 	id = ids[ids.length - 1];
 	var c = confs[id];
 	if(c["type"] == "0"){
-		if(c["ss_obfs"]){
+		if(c["ss_v2ray"] === "1"){
+			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=" + encodeURIComponent("v2ray-plugin;" +c["ss_v2ray_opts"]) + "#" + c["name"];
+		}else if(c["ss_obfs"] === "1"){
 			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=obfs-local%3Bobfs%3D" + c["ss_obfs"] + "%3Bobfs-host%3D" + c["ss_obfs_host"] + "#" + c["name"];
 		}else{
 			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"]) + "@" + c["server"] + ":" + c["port"] + "#" + c["name"]);
@@ -2999,6 +3021,8 @@ function save_failover() {
 																	{ title: 'UDP通道', rid:'gameV2_udp_tr', id:'ss_node_table_koolgame_udp', type:'select', options:[["0", "udp in udp"], ["1", "udp in tcp"]], style:'width:350px', value: "0"},
 																	{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:350px', value: "0"},
 																	{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:338px', ph:'bing.com'},
+																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:350px', value: "0"},
+																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:338px', ph:'tls;host=example.com;path=/'},
 																	{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:350px', value: "0"},
 																	{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:338px', ph:'id:password'},
 																	{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:350px', value: "0"},
@@ -3044,6 +3068,8 @@ function save_failover() {
 														{ title: 'UDP通道', id:'ss_basic_koolgame_udp', type:'select', func:'v', hint:'6', options:[["0", "udp in udp"], ["1", "udp in tcp"]], value: "0"},
 														{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
 														{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', type:'text', maxlen:'100', ph:'bing.com'},
+														{ title: 'v2ray-plugin', id:'ss_basic_ss_v2ray', type:'select', hint: '7', func:'v', options:[["0", "关闭"], ["1", "打开"]], value: "0"},
+														{ title: 'v2ray-plugin参数', id:'ss_basic_ss_v2ray_opts', type:'text', maxlen:'300', ph:'tls;host=yourhost.com;path=/;'},
 														{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', type:'select', func:'v', options:option_protocals},
 														{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
 														{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},

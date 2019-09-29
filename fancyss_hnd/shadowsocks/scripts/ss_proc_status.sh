@@ -73,6 +73,7 @@ echo_version(){
 	echo "ss-tunnel		3.2.5		2019年04月10日编译"
 	echo "ss-local		3.2.5		2019年04月10日编译"
 	echo "obfs-local		0.0.5		2018年11月25日编译"
+	echo "v2ray-plugin		1.1.0		2019年2月19日编译"
 	echo "ssrr-redir		3.5.3 		2018年12月06日编译"
 	echo "ssrr-local		3.5.3 		2018年12月06日编译"
 	echo "haproxy			1.8.14 		2018年12月06日编译"
