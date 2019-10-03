@@ -80,15 +80,15 @@ echo =================
 wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest >apnic.txt
 cat apnic.txt | awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' >chnroute1.txt
 
-echo "[Local Routing]\n## China mainland routing blocks\n## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest" >Routing.txt
+echo -e "[Local Routing]\n## China mainland routing blocks\n## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest" >Routing.txt
 echo -n "## Last update: " >>Routing.txt
 echo $CurrentDate >>Routing.txt
-echo "\n" >>Routing.txt
+echo -e "\n" >>Routing.txt
 
 # IPv4
 echo "## IPv4" >>Routing.txt
 cat apnic.txt | grep ipv4 | grep CN | awk -F\| '{printf("%s/%d\n", $4, 32-log($5)/log(2))}' >>Routing.txt
-echo "\n" >>Routing.txt
+echo -e "\n" >>Routing.txt
 
 # IPv6
 echo "## IPv6" >>Routing.txt
@@ -117,7 +117,7 @@ echo '[Local Hosts]' >>WhiteList.txt
 echo '## China mainland domains' >>WhiteList.txt
 echo '## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt' >>WhiteList.txt
 echo '## Report an issue: https://github.com/xinhugo/Free-List/issues' >>WhiteList.txt
-echo "## Last update: $CurrentDate\n" >>WhiteList.txt
+echo -e "## Last update: $CurrentDate\n" >>WhiteList.txt
 cat WhiteList_tmp.txt >>WhiteList.txt
 
 [ ! -f "../WhiteList.txt" ] && mv WhiteList_tmp.txt >>WhiteList.txt
@@ -135,10 +135,10 @@ fi
 echo =================
 
 # ======================================
-echo "[Local Hosts]\n## China mainland domains\n## Source: https://github.com/felixonmars/dnsmasq-china-list" >WhiteList_new.txt
+echo -e "[Local Hosts]\n## China mainland domains\n## Source: https://github.com/felixonmars/dnsmasq-china-list" >WhiteList_new.txt
 echo -n "## Last update: " >>WhiteList_new.txt
 echo $CurrentDate >>WhiteList_new.txt
-echo "\n" >>WhiteList_new.txt
+echo -e "\n" >>WhiteList_new.txt
 sed -e "s|114.114.114.114$||" -e "s|^s|S|" accelerated-domains.china.conf >>WhiteList_new.txt
 
 # Download domain data of Google in Mainland China part.
