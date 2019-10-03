@@ -1,8 +1,8 @@
--e [Local Routing]
+[Local Routing]
 ## China mainland routing blocks
 ## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest
 ## Last update: 2019-10-03
--e 
+
 
 ## IPv4
 1.0.1.0/24

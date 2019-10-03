@@ -80,10 +80,10 @@ echo =================
 wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest >apnic.txt
 cat apnic.txt | awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' >chnroute1.txt
 
-echo -e "[Local Routing]\n## China mainland routing blocks\n## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest" >Routing.txt
+echo "[Local Routing]\n## China mainland routing blocks\n## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest" >Routing.txt
 echo -n "## Last update: " >>Routing.txt
 echo $CurrentDate >>Routing.txt
-echo -e "\n" >>Routing.txt
+echo "\n" >>Routing.txt
 
 # IPv4
 echo "## IPv4" >>Routing.txt
