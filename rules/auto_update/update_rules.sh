@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 CurrentDate=$(date +%Y-%m-%d)
 # ======================================
 # get gfwlist for shadowsocks ipset mode
