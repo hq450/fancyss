@@ -73,7 +73,7 @@ echo_version() {
 	echo "ss-tunnel		3.2.5		2019年04月10日编译"
 	echo "ss-local		3.2.5		2019年04月10日编译"
 	echo "obfs-local		0.0.5		2018年11月25日编译"
-	echo "v2ray-plugin		1.1.0		2019年2月19日编译"
+	echo "v2ray-plugin		1.2.0		2019年10月7日编译"
 	echo "ssrr-redir		3.5.3 		2018年12月06日编译"
 	echo "ssrr-local		3.5.3 		2018年12月06日编译"
 	echo "haproxy			1.8.14 		2018年12月06日编译"
@@ -91,6 +91,7 @@ check_status() {
 	#echo
 	SS_REDIR=$(pidof ss-redir)
 	SS_TUNNEL=$(pidof ss-tunnel)
+	SS_V2RAY=$(pidof v2ray-plugin)
 	SS_LOCAL=$(ps | grep ss-local | grep 23456 | awk '{print $1}')
 	SSR_REDIR=$(pidof rss-redir)
 	SSR_LOCAL=$(ps | grep rss-local | grep 23456 | awk '{print $1}')
@@ -114,6 +115,9 @@ check_status() {
 		echo -----------------------------------------------------------
 		echo "程序		状态	PID"
 		[ -n "$SS_REDIR" ] && echo "ss-redir	工作中	pid：$SS_REDIR" || echo "ss-redir	未运行"
+		if [ -n "$SS_V2RAY" ]; then
+			echo "v2ray-plugin	工作中	pid：$SS_V2RAY"
+		fi
 	elif [ "$ss_basic_type" == "1" ]; then
 		echo_version
 		echo
