@@ -1,7 +1,7 @@
 fancyss_hnd Changelog
 ===========================================
 1.7.3
-   - update 更新v2ray-plugin二进制到1.2.0
+   - update	更新v2ray-plugin二进制到1.2.0
 1.7.2
    - add	新增Shadowsocks的v2ray-plugin支持
    - fix	修复了节点列表拖拽排序后，因为没有刷新节点选择导致的保存时覆盖了错误位置的节点配置
