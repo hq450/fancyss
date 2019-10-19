@@ -1342,7 +1342,7 @@ creat_v2ray_json() {
 		if [ "$ss_foreign_dns" == "7" ]; then
 			echo_date 配置v2ray dns，用于dns解析...
 			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inbound": {
+				"inbounds": [{
 				"protocol": "dokodemo-door",
 				"port": 7913,
 				"settings": {
@@ -1352,11 +1352,11 @@ creat_v2ray_json() {
 					"timeout": 0,
 					"followRedirect": false
 					}
-				},
+				}],
 			EOF
 		else
 			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inbound": {
+				"inbounds": [{
 					"port": 23456,
 					"listen": "0.0.0.0",
 					"protocol": "socks",
@@ -1368,11 +1368,7 @@ creat_v2ray_json() {
 					},
 					"streamSettings": null
 				},
-			EOF
-		fi
-		cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
-			"inboundDetour": [
-				{
+                {
 					"listen": "0.0.0.0",
 					"port": 3333,
 					"protocol": "dokodemo-door",
@@ -1380,9 +1376,11 @@ creat_v2ray_json() {
 						"network": "tcp,udp",
 						"followRedirect": true
 					}
-				}
-			],
-			"outbound": {
+				}],
+			EOF
+		fi
+		cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+			"outbounds": [{
 				"tag": "agentout",
 				"protocol": "vmess",
 				"settings": {
@@ -1414,7 +1412,7 @@ creat_v2ray_json() {
 					"enabled": $(get_function_switch $ss_basic_v2ray_mux_enable),
 					"concurrency": $ss_basic_v2ray_mux_concurrency
 				}
-			}
+			}]
 				}
 		EOF
 		echo_date 解析V2Ray配置文件...
@@ -1424,56 +1422,53 @@ creat_v2ray_json() {
 		echo_date 使用自定义的v2ray json配置文件...
 		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_FILE_TMP"
 
-		OUTBOUND=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
+		OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds)
 		#JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.log)'`
 		#INBOUND_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
 		#INBOUND_DETOUR_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
 
-		local TEMPLATE="{
-						\"log\": {
-							\"access\": \"/dev/null\",
-							\"error\": \"/tmp/v2ray_log.log\",
-							\"loglevel\": \"error\"
-						},
-						\"inbound\": {
-							\"port\": 23456,
-							\"listen\": \"0.0.0.0\",
-							\"protocol\": \"socks\",
-							\"settings\": {
-								\"auth\": \"noauth\",
-								\"udp\": true,
-								\"ip\": \"127.0.0.1\",
-								\"clients\": null
-							},
-							\"streamSettings\": null
-						},
-						\"inboundDetour\": [
-							{
-								\"listen\": \"0.0.0.0\",
-								\"port\": 3333,
-								\"protocol\": \"dokodemo-door\",
-								\"settings\": {
-									\"network\": \"tcp,udp\",
-									\"followRedirect\": true
-								}
-							}
-						]
-						}"
+		local TEMPLATE='{
+    "log":{
+        "access": "/dev/null",
+        "error": "/tmp/v2ray_error.log",
+        "loglevel": "error"
+    },
+    "inbounds":[{
+      "port": 23456,
+      "listen": "0.0.0.0",
+      "protocol":"socks",
+      "settings":{
+        "auth":"noauth",
+        "udp":true,
+        "ip": "127.0.0.1"
+      },
+      "tag":"in-0"
+    },
+    {
+      "listen": "0.0.0.0",
+      "port": 3333,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "tcp,udp",
+        "followRedirect": true
+      }
+    }]
+}'
 		echo_date 解析V2Ray配置文件...
-		echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbound: $args}' >"$V2RAY_CONFIG_FILE"
+		echo $TEMPLATE | jq --argjson args "$OUTBOUNDS" '. + {outbounds: $args}' > "$V2RAY_CONFIG_FILE"
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
 
 		# 检测用户json的服务器ip地址
-		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.protocol)
+		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
 		vmess)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.vnext[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		shadowsocks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			v2ray_server=""
@@ -1545,6 +1540,8 @@ creat_v2ray_json() {
 	echo_date 测试V2Ray配置文件.....
 	cd /koolshare/bin
 	result=$(v2ray -test -config="$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
+    echo_data $result
+    
 	if [ -n "$result" ]; then
 		echo_date $result
 		echo_date V2Ray配置文件通过测试!!!
@@ -1559,7 +1556,7 @@ creat_v2ray_json() {
 start_v2ray() {
 	cd /koolshare/bin
 	#export GOGC=30
-	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
+	v2ray -config /koolshare/ss/v2ray.json >/dev/null 2>&1 &
 	local V2PID
 	local i=10
 	until [ -n "$V2PID" ]; do

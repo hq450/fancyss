@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <html xmlns:v>
 <head>
@@ -287,6 +287,7 @@ function save() {
 				if(E('ss_basic_v2ray_json').value.indexOf("outbound") != -1){
 					dbus["ssconf_basic_v2ray_json_" + node_sel] = Base64.encode(pack_js(E('ss_basic_v2ray_json').value));
 					var param_v2 = ["server", "port", "v2ray_uuid", "v2ray_security", "v2ray_alterid", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_host", "v2ray_network_path", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency"];
+					 /* TODO: 填入正确信息，兼容ping测速功能 */
 					for (var i = 0; i < param_v2.length; i++) {
 						dbus["ssconf_basic_" + param_v2[i] + "_" + node_sel] = "";
 					}
@@ -1221,8 +1222,8 @@ function generate_node_info() {
 			//对v2ray json节点的处理
 			var json = JSON.parse(Base64.decode(db_ss[p + "_v2ray_json_" + idx]));
 			var server_addr;
-			server_addr = json["outbound"];
-			server_addr = (server_addr != undefined) ? server_addr : ""
+			server_addr = json["outbounds"];
+			server_addr = (server_addr != undefined && server_addr.length > 0) ? server_addr[0] : ""
 			server_addr = (!!server_addr) ? server_addr.settings : ""
 			server_addr = (!!server_addr) ? server_addr.vnext["0"] : ""
 			server_addr = (!!server_addr) ? server_addr.address : ""
