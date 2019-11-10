@@ -2,6 +2,7 @@ fancyss_hnd Changelog
 ===========================================
 1.7.4
    - update 更新ss-local/redir/tunnel二进制到3.3.3
+   - update 更新v2ray二进制到4.21.3
 1.7.3
    - update	更新v2ray-plugin二进制到1.2.0
 1.7.2
