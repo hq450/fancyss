@@ -69,6 +69,6 @@ do_backup(){
 
 
 cp_rules
-sync_v2ray_binary
+# sync_v2ray_binary 暂时不使用同步v2ray二进制
 do_build
 do_backup
