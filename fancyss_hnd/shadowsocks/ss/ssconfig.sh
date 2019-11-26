@@ -22,6 +22,7 @@ ip_prefix_hex=$(nvram get lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {prin
 WAN_ACTION=$(ps | grep /jffs/scripts/wan-start | grep -v grep)
 NAT_ACTION=$(ps | grep /jffs/scripts/nat-start | grep -v grep)
 ARG_OBFS=""
+OUTBOUNDS="[]"
 
 #-----------------------------------------------
 
@@ -1331,91 +1332,108 @@ creat_v2ray_json() {
 				}"
 			;;
 		esac
+		# log area
 		cat >"$V2RAY_CONFIG_FILE_TMP" <<-EOF
 			{
-				"log": {
-					"access": "/dev/null",
-					"error": "/tmp/v2ray_log.log",
-					"loglevel": "error"
-				},
+			"log": {
+				"access": "/dev/null",
+				"error": "/tmp/v2ray_log.log",
+				"loglevel": "error"
+			},
 		EOF
+		# inbounds area (7913 for dns resolve)
 		if [ "$ss_foreign_dns" == "7" ]; then
 			echo_date 配置v2ray dns，用于dns解析...
 			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inbound": {
-				"protocol": "dokodemo-door",
-				"port": 7913,
-				"settings": {
-					"address": "8.8.8.8",
-					"port": 53,
-					"network": "udp",
-					"timeout": 0,
-					"followRedirect": false
+				"inbounds": [
+					{
+					"protocol": "dokodemo-door",
+					"port": 7913,
+					"settings": {
+						"address": "8.8.8.8",
+						"port": 53,
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
+					},
+					{
+						"listen": "0.0.0.0",
+						"port": 3333,
+						"protocol": "dokodemo-door",
+						"settings": {
+							"network": "tcp,udp",
+							"followRedirect": true
+						}
 					}
-				},
+				],
 			EOF
 		else
+			# inbounds area (23456 for socks5)
 			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inbound": {
-					"port": 23456,
-					"listen": "0.0.0.0",
-					"protocol": "socks",
-					"settings": {
-						"auth": "noauth",
-						"udp": true,
-						"ip": "127.0.0.1",
-						"clients": null
+				"inbounds": [
+					{
+						"port": 23456,
+						"listen": "0.0.0.0",
+						"protocol": "socks",
+						"settings": {
+							"auth": "noauth",
+							"udp": true,
+							"ip": "127.0.0.1",
+							"clients": null
+						},
+						"streamSettings": null
 					},
-					"streamSettings": null
-				},
+					{
+						"listen": "0.0.0.0",
+						"port": 3333,
+						"protocol": "dokodemo-door",
+						"settings": {
+							"network": "tcp,udp",
+							"followRedirect": true
+						}
+					}
+				],
 			EOF
 		fi
+		# outbounds area
 		cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
-			"inboundDetour": [
+			"outbounds": [
 				{
-					"listen": "0.0.0.0",
-					"port": 3333,
-					"protocol": "dokodemo-door",
+					"tag": "agentout",
+					"protocol": "vmess",
 					"settings": {
-						"network": "tcp,udp",
-						"followRedirect": true
+						"vnext": [
+							{
+								"address": "$ss_basic_server_orig",
+								"port": $ss_basic_port,
+								"users": [
+									{
+										"id": "$ss_basic_v2ray_uuid",
+										"alterId": $ss_basic_v2ray_alterid,
+										"security": "$ss_basic_v2ray_security"
+									}
+								]
+							}
+						],
+						"servers": null
+					},
+					"streamSettings": {
+						"network": "$ss_basic_v2ray_network",
+						"security": "$ss_basic_v2ray_network_security",
+						"tlsSettings": $tls,
+						"tcpSettings": $tcp,
+						"kcpSettings": $kcp,
+						"wsSettings": $ws,
+						"httpSettings": $h2
+					},
+					"mux": {
+						"enabled": $(get_function_switch $ss_basic_v2ray_mux_enable),
+						"concurrency": $ss_basic_v2ray_mux_concurrency
 					}
 				}
-			],
-			"outbound": {
-				"tag": "agentout",
-				"protocol": "vmess",
-				"settings": {
-					"vnext": [
-						{
-							"address": "$ss_basic_server_orig",
-							"port": $ss_basic_port,
-							"users": [
-								{
-									"id": "$ss_basic_v2ray_uuid",
-									"alterId": $ss_basic_v2ray_alterid,
-									"security": "$ss_basic_v2ray_security"
-								}
-							]
-						}
-					],
-					"servers": null
-				},
-				"streamSettings": {
-					"network": "$ss_basic_v2ray_network",
-					"security": "$ss_basic_v2ray_network_security",
-					"tlsSettings": $tls,
-					"tcpSettings": $tcp,
-					"kcpSettings": $kcp,
-					"wsSettings": $ws,
-					"httpSettings": $h2
-				},
-				"mux": {
-					"enabled": $(get_function_switch $ss_basic_v2ray_mux_enable),
-					"concurrency": $ss_basic_v2ray_mux_concurrency
-				}
+			]
 			}
-				}
 		EOF
 		echo_date 解析V2Ray配置文件...
 		cat "$V2RAY_CONFIG_FILE_TMP" | jq --tab . >"$V2RAY_CONFIG_FILE"
@@ -1423,57 +1441,96 @@ creat_v2ray_json() {
 	elif [ "$ss_basic_v2ray_use_json" == "1" ]; then
 		echo_date 使用自定义的v2ray json配置文件...
 		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_FILE_TMP"
+		local OB=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
+		local OBS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds)
 
-		OUTBOUND=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
-		#JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.log)'`
-		#INBOUND_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
-		#INBOUND_DETOUR_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
-
-		local TEMPLATE="{
-						\"log\": {
-							\"access\": \"/dev/null\",
-							\"error\": \"/tmp/v2ray_log.log\",
-							\"loglevel\": \"error\"
-						},
-						\"inbound\": {
-							\"port\": 23456,
-							\"listen\": \"0.0.0.0\",
-							\"protocol\": \"socks\",
-							\"settings\": {
-								\"auth\": \"noauth\",
-								\"udp\": true,
-								\"ip\": \"127.0.0.1\",
-								\"clients\": null
-							},
-							\"streamSettings\": null
-						},
-						\"inboundDetour\": [
-							{
-								\"listen\": \"0.0.0.0\",
-								\"port\": 3333,
-								\"protocol\": \"dokodemo-door\",
-								\"settings\": {
-									\"network\": \"tcp,udp\",
-									\"followRedirect\": true
-								}
-							}
-						]
-						}"
+		# 兼容旧格式：outbound
+		if [ "$OB" != "null" ]; then
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
+		fi
+		
+		# 新格式：outbound[]
+		if [ "$OBS" != "null" ]; then
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds[])
+		fi
+		
+		if [ "$ss_foreign_dns" == "7" ]; then
+			local TEMPLATE="{
+								\"log\": {
+									\"access\": \"/dev/null\",
+									\"error\": \"/tmp/v2ray_log.log\",
+									\"loglevel\": \"error\"
+								},
+								\"inbounds\": [
+									{
+										\"protocol\": \"dokodemo-door\", 
+										\"port\": 7913,
+										\"settings\": {
+											\"address\": \"8.8.8.8\",
+											\"port\": 53,
+											\"network\": \"udp\",
+											\"timeout\": 0,
+											\"followRedirect\": false
+										}
+									},
+									{
+										\"listen\": \"0.0.0.0\",
+										\"port\": 3333,
+										\"protocol\": \"dokodemo-door\",
+										\"settings\": {
+											\"network\": \"tcp,udp\",
+											\"followRedirect\": true
+										}
+									}
+								]
+							}"
+		else
+			local TEMPLATE="{
+								\"log\": {
+									\"access\": \"/dev/null\",
+									\"error\": \"/tmp/v2ray_log.log\",
+									\"loglevel\": \"error\"
+								},
+								\"inbounds\": [
+									{
+										\"port\": 23456,
+										\"listen\": \"0.0.0.0\",
+										\"protocol\": \"socks\",
+										\"settings\": {
+											\"auth\": \"noauth\",
+											\"udp\": true,
+											\"ip\": \"127.0.0.1\",
+											\"clients\": null
+										},
+										\"streamSettings\": null
+									},
+									{
+										\"listen\": \"0.0.0.0\",
+										\"port\": 3333,
+										\"protocol\": \"dokodemo-door\",
+										\"settings\": {
+											\"network\": \"tcp,udp\",
+											\"followRedirect\": true
+										}
+									}
+								]
+							}"
+		fi
 		echo_date 解析V2Ray配置文件...
-		echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbound: $args}' >"$V2RAY_CONFIG_FILE"
+		echo $TEMPLATE | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
 
 		# 检测用户json的服务器ip地址
-		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.protocol)
+		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
 		vmess)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.vnext[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		shadowsocks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			v2ray_server=""
@@ -1524,22 +1581,6 @@ creat_v2ray_json() {
 			echo_date "+   请自行将v2ray服务器的ip地址填入【IP/CIDR】黑名单中，以确保正常使用   +"
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		fi
-
-		if [ "$ss_foreign_dns" == "7" ]; then
-			echo_date 配置v2ray dns，用于dns解析...
-			local V2DNS="{
-							\"protocol\": \"dokodemo-door\", 
-							\"port\": 7913,
-							\"settings\": {
-								\"address\": \"8.8.8.8\",
-								\"port\": 53,
-								\"network\": \"udp\",
-								\"timeout\": 0,
-								\"followRedirect\": false
-							}
-						}"
-			cat /koolshare/ss/v2ray.json | jq --argjson args "$V2DNS" '. + {inbound: $args}' >/tmp/v2ray_dns.json && mv /tmp/v2ray_dns.json /koolshare/ss/v2ray.json
-		fi
 	fi
 
 	echo_date 测试V2Ray配置文件.....
@@ -1550,8 +1591,8 @@ creat_v2ray_json() {
 		echo_date V2Ray配置文件通过测试!!!
 	else
 		echo_date V2Ray配置文件没有通过测试，请检查设置!!!
-		#rm -rf "$V2RAY_CONFIG_FILE_TMP"
-		#rm -rf "$V2RAY_CONFIG_FILE"
+		rm -rf "$V2RAY_CONFIG_FILE_TMP"
+		rm -rf "$V2RAY_CONFIG_FILE"
 		close_in_five
 	fi
 }
@@ -1569,7 +1610,7 @@ start_v2ray() {
 			echo_date "v2ray进程启动失败！"
 			close_in_five
 		fi
-		usleep 500000
+		usleep 250000
 	done
 	echo_date v2ray启动成功，pid：$V2PID
 }
