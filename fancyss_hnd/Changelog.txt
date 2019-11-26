@@ -1,17 +1,25 @@
 fancyss_hnd Changelog
 ===========================================
+1.7.7 （尚未推送）
+   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式
+
 1.7.6
    - update	压缩v2ray二进制
+
 1.7.5
    - update	更新v2ray二进制到4.21.3
+
 1.7.4
    - update	更新ss-local/redir/tunnel二进制到3.3.3
+
 1.7.3
    - update	更新v2ray-plugin二进制到1.2.0
+
 1.7.2
    - add	新增Shadowsocks的v2ray-plugin支持
    - fix	修复了节点列表拖拽排序后，因为没有刷新节点选择导致的保存时覆盖了错误位置的节点配置
    - fix	修复了从节点列表删除节点后帐号设置的节点选择选项没有更新的问题
+
 1.7.1
    - fix	修复【节点域名解析DNS服务器】无法选择IBM DNS的问题；
    - update	更新内置v2ray二进制到v4.20.0；
