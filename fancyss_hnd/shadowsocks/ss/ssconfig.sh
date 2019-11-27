@@ -781,10 +781,12 @@ create_dnsmasq_conf() {
 		done
 	fi
 
-	# 非回国模式下，apple 和 microsoft需要中国cdn
+	# 非回国模式下，apple 和 microsoft需要中国cdn；
+	# 另外：dns.msftncsi.com是asuswrt/merlin固件里，用以判断网络是否畅通的地址，固件后台会通过解析dns.msftncsi.com （nvram get dns_probe_content），并检查其解析结果是否和`nvram get dns_probe_content`匹配
+	# 此地址在非回国模式下用国内DNS解析，以免SS/SSR/V2RAY线路挂掉，导致一些走远端解析的情况下，无法获取到dns.msftncsi.com的解析结果，从而使得【网络地图】中网络显示断开。
 	if [ "$ss_basic_mode" != "6" ]; then
-		echo "#for special site" >>/tmp/wblist.conf
-		for wan_white_domain2 in "apple.com" "microsoft.com"; do
+		echo "#for special site (Mandatory China DNS)" >>/tmp/wblist.conf
+		for wan_white_domain2 in "apple.com" "microsoft.com" "dns.msftncsi.com"; do
 			echo "$wan_white_domain2" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >>/tmp/wblist.conf
 			echo "$wan_white_domain2" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >>/tmp/wblist.conf
 		done
