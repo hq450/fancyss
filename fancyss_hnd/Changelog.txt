@@ -1,7 +1,9 @@
 fancyss_hnd Changelog
 ===========================================
-1.7.7 （尚未推送）
-   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式
+1.7.7
+   - fix	修复某些情况下，因SS/SSR/V2RAY线路挂掉导致【网络地图】中显示网络断开的问题；
+   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式；
+   - update	更新安装包内置规则到最新。
 
 1.7.6
    - update	压缩v2ray二进制
