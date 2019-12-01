@@ -1,7 +1,7 @@
 fancyss_hnd Changelog
 ===========================================
 1.7.8
-   - update 更换ss-*二进制使用shadowsocks-libev_3.3.3-1_arm_cortex-a5.ipk
+   - update	更换ss-*二进制使用shadowsocks-libev_3.3.3-1_arm_cortex-a5.ipk
 
 1.7.7
    - fix	修复某些情况下，因SS/SSR/V2RAY线路挂掉导致【网络地图】中显示网络断开的问题；
