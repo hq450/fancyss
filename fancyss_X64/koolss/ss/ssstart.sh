@@ -16,8 +16,8 @@ game_on=`dbus list ss_acl_mode|cut -d "=" -f 2 | grep 3`
 lan_ipaddr=`uci get network.lan.ipaddr`
 lan_ipaddr_prefix=`uci get network.lan.ipaddr`
 LOCK_FILE=/var/lock/koolss.lock
-ISP_DNS1=`cat /tmp/resolv.conf.auto|cut -d " " -f 2|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p`
-ISP_DNS2=`cat /tmp/resolv.conf.auto|cut -d " " -f 2|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 3p`
+ISP_DNS1=`cat /tmp/resolv.conf.auto|cut -d " " -f 2|grep -v 0.0.0.0|grep -v 127.0.0.1|grep ^[1-9]|sed -n 1p`
+ISP_DNS2=`cat /tmp/resolv.conf.auto|cut -d " " -f 2|grep -v 0.0.0.0|grep -v 127.0.0.1|grep ^[1-9]|sed -n 2p`
 IFIP=`echo $ss_basic_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 ARG_OBFS=""
 # triggher shell
@@ -860,7 +860,7 @@ create_dnsmasq_conf(){
 		echo "#for white_domain" >> //tmp/wblist.conf
 		for wan_white_domain in $wanwhitedomain
 		do 
-			echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" >> /tmp/wblist.conf
+			echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
 			echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/wblist.conf
 		done
 	fi
