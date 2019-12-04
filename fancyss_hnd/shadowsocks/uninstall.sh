@@ -34,6 +34,7 @@ rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/client_linux_arm*
 rm -rf /koolshare/bin/chinadns
 rm -rf /koolshare/bin/chinadns1
+rm -rf /koolshare/bin/smartdns
 rm -rf /koolshare/bin/resolveip
 rm -rf /koolshare/bin/speederv1
 rm -rf /koolshare/bin/speederv2

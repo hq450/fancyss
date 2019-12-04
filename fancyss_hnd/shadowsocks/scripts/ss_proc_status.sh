@@ -51,6 +51,9 @@ get_dns_name() {
 	8)
 		echo "koolgame内置"
 		;;
+	9)
+		echo "SmartDNS"
+		;;
 	esac
 }
 
@@ -82,6 +85,7 @@ echo_version() {
 	echo "chinadns1		1.3.2 		2017年12月09日编译"
 	echo "chinadns2		2.0.0 		2017年12月09日编译"
 	echo "https_dns_proxy		758f913		2019年02月05日编译"
+	echo "SmartDNS		1.2019.11.02-1102"
 	echo "client_linux_arm5	20180810	kcptun"
 	echo "v2ray			$ss_basic_v2ray_version"
 	echo -----------------------------------------------------------
@@ -106,6 +110,7 @@ check_status() {
 	V2RAY=$(pidof v2ray)
 	HDP=$(pidof https_dns_proxy)
 	DMQ=$(pidof dnsmasq)
+	SMD=$(pidof smartdns)
 	game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep 3)
 
 	if [ "$ss_basic_type" == "0" ]; then
@@ -178,6 +183,8 @@ check_status() {
 			[ -n "$CHINADNS1" ] && echo "chinadns1	工作中	pid：$CHINADNS1" || echo "chinadns1	未运行"
 		elif [ "$ss_foreign_dns" == "6" ]; then
 			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
+		elif [ "$ss_foreign_dns" == "9" ]; then
+			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
 		fi
 	fi
 	[ -n "$DMQ" ] && echo "dnsmasq		工作中	pid：$DMQ" || echo "dnsmasq	未运行"

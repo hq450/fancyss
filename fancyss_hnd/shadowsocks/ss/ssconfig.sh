@@ -12,7 +12,8 @@ CONFIG_FILE=/koolshare/ss/ss.json
 V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 LOCK_FILE=/var/lock/koolss.lock
-DNS_PORT=7913
+DNSF_PORT=7913
+DNSC_PORT=53
 ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p)
 ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p)
 IFIP_DNS1=$(echo $ISP_DNS1 | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
@@ -219,6 +220,7 @@ restore_conf() {
 	rm -rf /tmp/custom.conf
 	rm -rf /tmp/wblist.conf
 	rm -rf /tmp/ss_host.conf
+	rm -rf /tmp/smartdns.conf
 }
 
 kill_process() {
@@ -279,6 +281,11 @@ kill_process() {
 		echo_date 关闭dns2socks进程...
 		killall dns2socks >/dev/null 2>&1
 	fi
+	smartdns_process=$(pidof smartdns)
+	if [ -n "$smartdns_process" ]; then
+		echo_date 关闭smartdns进程...
+		killall smartdns >/dev/null 2>&1
+	fi
 	koolgame_process=$(pidof koolgame)
 	if [ -n "$koolgame_process" ]; then
 		echo_date 关闭koolgame进程...
@@ -325,7 +332,6 @@ kill_process() {
 		killall haveged >/dev/null 2>&1
 	fi
 	echo 1 >/proc/sys/net/ipv4/tcp_fastopen
-
 }
 
 # ================================= ss prestart ===========================
@@ -399,6 +405,8 @@ resolv_server_ip() {
 }
 
 ss_arg() {
+	[ "$ss_basic_type" != "0" ] && return
+	
 	# v2ray-plugin or simple obfs
 	if [ "$ss_basic_ss_v2ray" == "1" ]; then
 		ARG_OBFS="--plugin v2ray-plugin --plugin-opts $ss_basic_ss_v2ray_opts"
@@ -467,7 +475,7 @@ creat_ss_json() {
 			    "server_port":$ss_basic_port,
 			    "local_port":3333,
 			    "sock5_port":23456,
-			    "dns2ss":7913,
+			    "dns2ss":$DNSF_PORT,
 			    "adblock_addr":"",
 			    "dns_server":"$ss_dns2ss_user",
 			    "password":"$ss_basic_password",
@@ -517,6 +525,9 @@ get_dns_name() {
 	8)
 		echo "koolgame内置"
 		;;
+	9)
+		echo "SmartDNS"
+		;;
 	esac
 }
 
@@ -535,23 +546,33 @@ start_sslocal() {
 }
 
 start_dns() {
+	# 判断使用何种DNS优先方案
+	if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" ] || [ "$ss_basic_mode" == "6" ];then
+		# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
+		# 回国模式下自动判断使用国内优先
+		local DNS_PLAN=1
+	else
+		# 其它情况，均使用国外优先模式
+		local DNS_PLAN=2
+	fi
+	
+	# 回国模式下强制改国外DNS为直连方式
 	if [ "$ss_basic_mode" == "6" -a "$ss_foreign_dns" != "8" ]; then
 		ss_foreign_dns="8"
 		dbus set ss_foreign_dns="8"
 	fi
 
-	# Start ss-local
-	# [ "$ss_basic_type" != "3" ] && start_sslocal
-
 	# Start cdns
 	if [ "$ss_foreign_dns" == "1" ]; then
-		echo_date 开启cdns，用于dns解析...
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启cdns，用于【国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启cdns，用于【国外所有网站】的DNS解析..."
 		cdns -c /koolshare/ss/rules/cdns.json >/dev/null 2>&1 &
 	fi
 
 	# Start chinadns2
 	if [ "$ss_foreign_dns" == "2" ]; then
-		echo_date 开启chinadns2，用于dns解析...
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns2，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启chinadns2，用于【国内cdn网站 + 国外所有网站】的DNS解析..."
 		clinet_ip="114.114.114.114"
 		public_ip=$(nvram get wan0_realip_ip)
 		if [ -z "$public_ip" ]; then
@@ -585,50 +606,67 @@ start_dns() {
 			# ss服务器可能是域名且没有正确解析
 			ss_real_server_ip="8.8.8.8"
 		fi
-		chinadns -p $DNS_PORT -s $ss_chinadns_user -e $clinet_ip,$ss_real_server_ip -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
+		chinadns -p $DNSF_PORT -s $ss_chinadns_user -e $clinet_ip,$ss_real_server_ip -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
 	fi
 
 	# Start DNS2SOCKS (default)
 	if [ "$ss_foreign_dns" == "3" ] || [ -z "$ss_foreign_dns" ]; then
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
 		start_sslocal
-		echo_date 开启dns2socks，用于dns解析...
-		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
+		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
 	fi
 
 	# Start ss-tunnel
 	if [ "$ss_foreign_dns" == "4" ]; then
 		if [ "$ss_basic_type" == "1" ]; then
-			echo_date 开启ssr-tunnel，用于dns解析...
-			rss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启ssr-tunnel，用于【国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启ssr-tunnel，用于【国外所有网站】的DNS解析..."
+			rss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 		elif [ "$ss_basic_type" == "0" ]; then
-			echo_date 开启ss-tunnel，用于dns解析...
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启ss-tunnel，用于【国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启ss-tunnel，用于【国外所有网站】的DNS解析..."
 			if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
-				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			else
-				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			fi
 		elif [ "$ss_basic_type" == "3" ]; then
 			echo_date V2ray下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
 			start_sslocal
-			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
 		fi
 	fi
 
 	#start chinadns1
 	if [ "$ss_foreign_dns" == "5" ]; then
-		start_sslocal
-		echo_date 开启dns2socks，用于chinadns1上游...
-		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
-		echo_date 开启chinadns1，用于dns解析...
-		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
+		# 当国内SmartDNS和国外chiandns1冲突
+		if [ "$ss_dns_china" == "13" -a "$ss_foreign_dns" == "5" ]; then
+			echo_date "！！中国DNS选择SmartDNS和外国DNS选择chiandns1冲突，将外国DNS默认改为dns2socks！！"
+			ss_foreign_dns="3"
+			dbus set ss_foreign_dns="3"
+			start_sslocal
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
+		else
+			start_sslocal
+			echo_date 开启dns2socks，用于chinadns1上游...
+			dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns1，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启chinadns1，用于【国内cdn网站 + 国外所有网站】的DNS解析..."
+			chinadns1 -p $DNSF_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
+		fi
 	fi
 
 	#start https_dns_proxy
 	if [ "$ss_foreign_dns" == "6" ]; then
-		echo_date 开启https_dns_proxy，用于dns解析...
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启https_dns_proxy，用于【国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启https_dns_proxy，用于【国外所有网站】的DNS解析..."
 		if [ -n "$ss_basic_server_ip" ]; then
 			# 用chnroute去判断SS服务器在国内还是在国外
 			ipset test chnroute $ss_basic_server_ip >/dev/null 2>&1
@@ -643,10 +681,10 @@ start_dns() {
 			# ss服务器可能是域名且没有正确解析
 			ss_real_server_ip="8.8.8.8"
 		fi
-		https_dns_proxy -u nobody -p 7913 -b 8.8.8.8,1.1.1.1,8.8.4.4,1.0.0.1,145.100.185.15,145.100.185.16,185.49.141.37 -e $ss_real_server_ip/16 -r "https://cloudflare-dns.com/dns-query?ct=application/dns-json&" -d
+		https_dns_proxy -u nobody -p $DNSF_PORT -b 8.8.8.8,1.1.1.1,8.8.4.4,1.0.0.1,145.100.185.15,145.100.185.16,185.49.141.37 -e $ss_real_server_ip/16 -r "https://cloudflare-dns.com/dns-query?ct=application/dns-json&" -d
 	fi
 
-	# start v2ray DNS_PORT
+	# start v2ray DNSF_PORT
 	if [ "$ss_foreign_dns" == "7" ]; then
 		if [ "$ss_basic_type" == "3" ]; then
 			return 0
@@ -654,24 +692,50 @@ start_dns() {
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持v2ray dns，改用dns2socks！
 			dbus set ss_foreign_dns=3
 			start_sslocal
-			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
 		fi
+	fi
+
+	# 开启SmartDNS
+	if [ "$ss_dns_china" == "13" ] && [ "$ss_foreign_dns" == "9" ]; then
+		# 国内国外都启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式也不需要使用cdn.conf）
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外所有网站】的DNS解析..."
+		sed '/^#/d /^$/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#[ -n "$IFIP_DNS1" ] && sed -i "$a server $IFIP_DNS1 -group china" /tmp/smartdns.conf
+		#[ -n "$IFIP_DNS2" ] && sed -i "$a server $IFIP_DNS2 -group china" /tmp/smartdns.conf
+		smartdns -c /tmp/smartdns.conf -p /var/run/smartdns.pid >/dev/null 2>&1 &
+	elif [ "$ss_dns_china" == "13" ] && [ "$ss_foreign_dns" != "9" ]; then
+		# 国内启用SmartDNS，国外不启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则是根据国外DNS的选择而决定是否使用cdn.conf）
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内cdn网站】的DNS解析..."
+		sed '/^#/d /^$/d /foreign/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#[ -n "$IFIP_DNS1" ] && sed -i "$a server $IFIP_DNS1 -group china" /tmp/smartdns.conf
+		#[ -n "$IFIP_DNS2" ] && sed -i "$a server $IFIP_DNS2 -group china" /tmp/smartdns.conf
+		smartdns -c /tmp/smartdns.conf -p /var/run/smartdns.pid >/dev/null 2>&1 &
+	elif [ "$ss_dns_china" != "13" ] && [ "$ss_foreign_dns" == "9" ]; then
+		# 国内不启用SmartDNS，国外启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则需要使用cdn.conf）
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国外所有网站】的DNS解析..."
+		sed '/^#/d /^$/d /china/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		smartdns -c /tmp/smartdns.conf -p /var/run/smartdns.pid >/dev/null 2>&1 &
 	fi
 
 	# direct
 	if [ "$ss_foreign_dns" == "8" ]; then
 		if [ "$ss_basic_mode" == "6" ]; then
-			echo_date 回国模式，国外dns采用直连方案。
+			echo_date 回国模式，国外DNS采用直连方案。
 		else
-			echo_date 非回国模式，国外dns不能使用，自动切换到dns2socks方案。
+			echo_date 非回国模式，国外DNS直连解析不能使用，自动切换到dns2socks方案。
 			dbus set ss_foreign_dns=3
 			start_sslocal
-			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT >/dev/null 2>&1 &
+			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
+			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
 		fi
 	fi
-
 }
 #--------------------------------------------------------------------------------------
 
@@ -720,6 +784,10 @@ create_dnsmasq_conf() {
 	[ "$ss_dns_china" == "12" ] && {
 		[ -n "$ss_dns_china_user" ] && CDN="$ss_dns_china_user" || CDN="114.114.114.114"
 	}
+	if [ "$ss_dns_china" == "13" ];then
+		CDN="127.0.0.1"
+		DNSC_PORT=5335
+	fi
 
 	# delete pre settings
 	rm -rf /tmp/sscdn.conf
@@ -731,6 +799,7 @@ create_dnsmasq_conf() {
 	rm -rf /jffs/configs/dnsmasq.d/cdn.conf
 	rm -rf /jffs/configs/dnsmasq.d/gfwlist.conf
 	rm -rf /jffs/scripts/dnsmasq.postconf
+	rm -rf /tmp/smartdns.conf
 
 	# custom dnsmasq settings by user
 	if [ -n "$ss_dnsmasq" ]; then
@@ -741,21 +810,21 @@ create_dnsmasq_conf() {
 	# these sites need to go ss inside router
 	if [ "$ss_basic_mode" != "6" ]; then
 		echo "#for router itself" >>/tmp/wblist.conf
-		echo "server=/.google.com.tw/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.google.com.tw/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.google.com.tw/router" >>/tmp/wblist.conf
-		echo "server=/dns.google.com/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/dns.google.com/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/dns.google.com/router" >>/tmp/wblist.conf
-		echo "server=/.github.com/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.github.com/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.github.com/router" >>/tmp/wblist.conf
-		echo "server=/.github.io/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.github.io/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.github.io/router" >>/tmp/wblist.conf
-		echo "server=/.raw.githubusercontent.com/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.raw.githubusercontent.com/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.raw.githubusercontent.com/router" >>/tmp/wblist.conf
-		echo "server=/.adblockplus.org/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.adblockplus.org/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.adblockplus.org/router" >>/tmp/wblist.conf
-		echo "server=/.entware.net/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.entware.net/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.entware.net/router" >>/tmp/wblist.conf
-		echo "server=/.apnic.net/127.0.0.1#7913" >>/tmp/wblist.conf
+		echo "server=/.apnic.net/127.0.0.1#$DNSF_PORT" >>/tmp/wblist.conf
 		echo "ipset=/.apnic.net/router" >>/tmp/wblist.conf
 	fi
 
@@ -769,7 +838,7 @@ create_dnsmasq_conf() {
 			if [ "$?" == "0" ]; then
 				# 回国模式下，用外国DNS，否则用中国DNS。
 				if [ "$ss_basic_mode" != "6" ]; then
-					echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >>/tmp/wblist.conf
+					echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#$DNSC_PORT/g" >>/tmp/wblist.conf
 					echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >>/tmp/wblist.conf
 				else
 					echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$ss_direct_user/g" >>/tmp/wblist.conf
@@ -787,7 +856,7 @@ create_dnsmasq_conf() {
 	if [ "$ss_basic_mode" != "6" ]; then
 		echo "#for special site (Mandatory China DNS)" >>/tmp/wblist.conf
 		for wan_white_domain2 in "apple.com" "microsoft.com" "dns.msftncsi.com"; do
-			echo "$wan_white_domain2" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >>/tmp/wblist.conf
+			echo "$wan_white_domain2" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#$DNSC_PORT/g" >>/tmp/wblist.conf
 			echo "$wan_white_domain2" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >>/tmp/wblist.conf
 		done
 	fi
@@ -801,10 +870,10 @@ create_dnsmasq_conf() {
 			detect_domain "$wan_black_domain"
 			if [ "$?" == "0" ]; then
 				if [ "$ss_basic_mode" != "6" ]; then
-					echo "$wan_black_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" >>/tmp/wblist.conf
+					echo "$wan_black_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#$DNSF_PORT/g" >>/tmp/wblist.conf
 					echo "$wan_black_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/black_list/g" >>/tmp/wblist.conf
 				else
-					echo "$wan_black_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >>/tmp/wblist.conf
+					echo "$wan_black_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#$DNSC_PORT/g" >>/tmp/wblist.conf
 					echo "$wan_black_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/black_list/g" >>/tmp/wblist.conf
 				fi
 			else
@@ -839,6 +908,7 @@ create_dnsmasq_conf() {
 	# 2 用户自己选择，一刀切的方案很多情况下都会走到国外优先上去，这对路由器的负担是很大的，而多数人的上网需求国内优先就足够了，一些人需要国外访问快（代理够快的情况下），可以自行选择国外优先（todo）
 	# 3 所以最终保留自动方案，增加国内优先和国外优先的选择方案（todo）
 
+	# 此处决定何时使用cdn.txt
 	if [ "$ss_basic_mode" == "6" ]; then
 		# 回国模式中，因为国外DNS无论如何都不会污染的，所以采取的策略是直连就行，默认国内优先即可
 		echo_date 自动判断在回国模式中使用国内优先模式，不加载cdn.conf
@@ -848,18 +918,19 @@ create_dnsmasq_conf() {
 			# 回国模式下自动判断使用国内优先
 			echo_date 自动判断使用国内优先模式，不加载cdn.conf
 		else
-			# 其它情况，均使用国外优先模式
-			if [ "$ss_foreign_dns" != "2" ] && [ "$ss_foreign_dns" != "5" ]; then
+			# 其它情况，均使用国外优先模式，以下区分是否加载cdn.conf
+			# if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" ] || [ "$ss_foreign_dns" == "9" -a "$ss_dns_china" == "13" ]; then
+			if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" -a "$ss_dns_china" != "13" ]; then
 				# 因为chinadns1 chinadns2自带国内cdn，所以也不需要cdn.conf
+				echo_date 自动判断dns解析使用国外优先模式...
+				echo_date 国外解析方案【$(get_dns_name $ss_foreign_dns)】自带国内cdn，无需加载cdn.conf，路由器开销小...
+			else
 				echo_date 自动判断dns解析使用国外优先模式...
 				echo_date 国外解析方案【$(get_dns_name $ss_foreign_dns)】，需要加载cdn.conf提供国内cdn...
 				echo_date 建议将系统dnsmasq替换为dnsmasq-fastlookup，以减轻路由cpu消耗...
 				echo_date 生成cdn加速列表到/tmp/sscdn.conf，加速用的dns：$CDN
 				echo "#for china site CDN acclerate" >>/tmp/sscdn.conf
-				cat /koolshare/ss/rules/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/sscdn.conf
-			else
-				echo_date 自动判断dns解析使用国外优先模式...
-				echo_date 你选择解析方案【$(get_dns_name $ss_foreign_dns)】自带国内cdn，无需加载cdn.conf，路由器开销小...
+				cat /koolshare/ss/rules/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN#$DNSC_PORT/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/sscdn.conf
 			fi
 		fi
 	fi
@@ -879,6 +950,7 @@ create_dnsmasq_conf() {
 		ln -sf /tmp/sscdn.conf /jffs/configs/dnsmasq.d/cdn.conf
 	fi
 
+	# 此处决定何时使用gfwlist.txt
 	if [ "$ss_basic_mode" == "1" ]; then
 		echo_date 创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
 		ln -sf /koolshare/ss/rules/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
@@ -896,7 +968,7 @@ create_dnsmasq_conf() {
 		fi
 		echo_date 创建回国模式专用gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
 		[ -z "$ss_direct_user" ] && ss_direct_user="8.8.8.8#53"
-		cat /koolshare/ss/rules/gfwlist.conf | sed "s/127.0.0.1#7913/$ss_direct_user/g" >/tmp/gfwlist.conf
+		cat /koolshare/ss/rules/gfwlist.conf | sed "s/127.0.0.1#$DNSF_PORT/$ss_direct_user/g" >/tmp/gfwlist.conf
 		ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 	fi
 
@@ -1350,7 +1422,7 @@ creat_v2ray_json() {
 				"inbounds": [
 					{
 					"protocol": "dokodemo-door",
-					"port": 7913,
+					"port": $DNSF_PORT,
 					"settings": {
 						"address": "8.8.8.8",
 						"port": 53,
@@ -1466,7 +1538,7 @@ creat_v2ray_json() {
 								\"inbounds\": [
 									{
 										\"protocol\": \"dokodemo-door\", 
-										\"port\": 7913,
+										\"port\": $DNSF_PORT,
 										\"settings\": {
 											\"address\": \"8.8.8.8\",
 											\"port\": 53,
@@ -1600,6 +1672,13 @@ creat_v2ray_json() {
 }
 
 start_v2ray() {
+	# tfo start
+	if [ "$ss_basic_tfo" == "1" ]; then
+		echo_date 开启tcp fast open支持.
+		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	fi
+
+	# v2ray start
 	cd /koolshare/bin
 	#export GOGC=30
 	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
