@@ -60,6 +60,7 @@ var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
 var option_v2enc = [["none", "不加密"], ["auto", "自动"], ["aes-128-cfb", "aes-128-cfb"], ["aes-128-gcm", "aes-128-gcm"], ["chacha20-poly1305", "chacha20-poly1305"]];
 var option_headtcp = [["none", "不伪装"], ["http", "伪装http"]];
 var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"], ["utp", "伪装BT下载(uTP)"], ["wechat-video", "伪装微信视频通话"]];
+var heart_count = 1;
 
 function init() {
 	show_menu(menu_hook);
@@ -84,26 +85,34 @@ function get_heart_beat() {
 		dataType: "json",
 		async: false,
 		success: function(data) {
-			heart_beat = data.result[0]["ss_heart_beat"]
+			heart_beat = data.result[0]["ss_heart_beat"];
 			if(heart_beat == "1"){
-				var dbus_post = {};
-				dbus_post["ss_heart_beat"] = "0";
-				push_data("dummy_script.sh", "", dbus_post, "2");
-				require(['/res/layer/layer.js'], function(layer) {
-					layer.confirm('<li>科学上网插件页面需要刷新！</li><br /><li>由于故障转移功能已经在后台切换了节点，为了保证页面显示正确配置！需要刷新此页面！</li><br /><li>确定现在刷新吗？</li>', {
-						time: 3e4,
-						shade: 0.8
-					}, function(index) {
-						layer.close(index);
-						refreshpage();
-					}, function(index) {
-						layer.close(index);
-						return false;
+				if (heart_count == "1"){
+					var dbus_post = {};
+					dbus_post["ss_heart_beat"] = "0";
+					push_data("dummy_script.sh", "", dbus_post, "2");
+					return true;
+				}else{
+					var dbus_post = {};
+					dbus_post["ss_heart_beat"] = "0";
+					push_data("dummy_script.sh", "", dbus_post, "2");
+					require(['/res/layer/layer.js'], function(layer) {
+						layer.confirm('<li>科学上网插件页面需要刷新！</li><br /><li>由于故障转移功能已经在后台切换了节点，为了保证页面显示正确配置！需要刷新此页面！</li><br /><li>确定现在刷新吗？</li>', {
+							time: 3e4,
+							shade: 0.8
+						}, function(index) {
+							layer.close(index);
+							refreshpage();
+						}, function(index) {
+							layer.close(index);
+							return false;
+						});
 					});
-				});
+				}
 			}
 		}
 	});
+	heart_count++
 	setTimeout("get_heart_beat();", 10000);
 }
 function get_dbus_data() {
