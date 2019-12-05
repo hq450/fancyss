@@ -704,23 +704,19 @@ start_dns() {
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外所有网站】的DNS解析..."
 		sed '/^#/d /^$/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
-		#[ -n "$IFIP_DNS1" ] && sed -i "$a server $IFIP_DNS1 -group china" /tmp/smartdns.conf
-		#[ -n "$IFIP_DNS2" ] && sed -i "$a server $IFIP_DNS2 -group china" /tmp/smartdns.conf
-		smartdns -c /tmp/smartdns.conf -p /var/run/smartdns.pid >/dev/null 2>&1 &
+		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
 	elif [ "$ss_dns_china" == "13" ] && [ "$ss_foreign_dns" != "9" ]; then
 		# 国内启用SmartDNS，国外不启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则是根据国外DNS的选择而决定是否使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内cdn网站】的DNS解析..."
 		sed '/^#/d /^$/d /foreign/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
-		#[ -n "$IFIP_DNS1" ] && sed -i "$a server $IFIP_DNS1 -group china" /tmp/smartdns.conf
-		#[ -n "$IFIP_DNS2" ] && sed -i "$a server $IFIP_DNS2 -group china" /tmp/smartdns.conf
-		smartdns -c /tmp/smartdns.conf -p /var/run/smartdns.pid >/dev/null 2>&1 &
+		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
 	elif [ "$ss_dns_china" != "13" ] && [ "$ss_foreign_dns" == "9" ]; then
 		# 国内不启用SmartDNS，国外启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则需要使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国外所有网站】的DNS解析..."
 		sed '/^#/d /^$/d /china/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
-		smartdns -c /tmp/smartdns.conf -p /var/run/smartdns.pid >/dev/null 2>&1 &
+		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
 	fi
 
 	# direct
@@ -976,11 +972,6 @@ create_dnsmasq_conf() {
 	[ ! -L "/jffs/scripts/dnsmasq.postconf" ] && ln -sf /koolshare/ss/rules/dnsmasq.postconf /jffs/scripts/dnsmasq.postconf
 }
 
-start_haveged() {
-	echo_date "启动haveged，为系统提供更多的可用熵！"
-	haveged -w 1024 >/dev/null 2>&1
-}
-
 auto_start() {
 	[ ! -L "/koolshare/init.d/S99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/S99shadowsocks.sh
 	[ ! -L "/koolshare/init.d/N99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/N99shadowsocks.sh
@@ -1100,7 +1091,6 @@ start_ss_redir() {
 		ARG_OBFS=""
 	elif [ "$ss_basic_type" == "0" ]; then
 		# ss-libev需要大于160的熵才能正常工作
-		start_haveged
 		echo_date 开启ss-redir进程，用于透明代理.
 		if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
 			BIN=ss-redir
@@ -2105,9 +2095,15 @@ write_numbers() {
 	nvram set cdn_numbers=$(cat /koolshare/ss/rules/cdn.txt | grep -c .)
 }
 
-set_ulimit() {
+set_sys() {
+	# set_ulimit
 	ulimit -n 16384
 	echo 1 >/proc/sys/vm/overcommit_memory
+
+	# more entropy
+	# use command `cat /proc/sys/kernel/random/entropy_avail` to check current entropy
+	echo_date "启动haveged，为系统提供更多的可用熵！"
+	haveged -w 1024 >/dev/null 2>&1	
 }
 
 remove_ss_reboot_job() {
@@ -2356,6 +2352,7 @@ stop_status() {
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 	killall curl >/dev/null 2>&1
+	killall httping >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
 }
 
@@ -2407,7 +2404,7 @@ apply_ss() {
 	# start
 	#echo_date ------------------------- 启动 【科学上网】 ----------------------------
 	detect
-	set_ulimit
+	set_sys
 	resolv_server_ip
 	ss_arg
 	load_module
