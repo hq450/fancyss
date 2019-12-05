@@ -5,6 +5,7 @@ fancyss_hnd Changelog
    - update	重写了外国DNS的说明文档（在【外国DNS】字样上点击鼠标可见）；
    - update	现在v2ray模式下也能使用tcp fast open了；
    - update	更新了故障检测功能，现在开启插件后能更快的进行故障检测；
+   - add	现在如果故障转移功能在后台切换了节点，且前端页面是打开的，那么前台会收到通知；
    - add	现在状态检测可以自己定义检测时间间隔；
    - fix	修复了打包插件无法打包v2ray-plugin的问题；
    
