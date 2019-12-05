@@ -1,6 +1,7 @@
 fancyss_hnd Changelog
 ===========================================
-1.7.9
+1.7.9 （smartdns分支）
+   - 说明：	目前处于测试期，请下载后离线安装：https://raw.githubusercontent.com/hq450/fancyss/smartdns/fancyss_hnd/shadowsocks.tar.gz
    - add	添加SmartDNS支持；
    - update	重写了外国DNS的说明文档（在【外国DNS】字样上点击鼠标可见）；
    - update	现在v2ray模式下也能使用tcp fast open了；
