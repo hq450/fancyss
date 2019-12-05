@@ -9,7 +9,6 @@ fancyss_hnd Changelog
    - add	现在如果故障转移功能在后台切换了节点，且前端页面是打开的，那么前台会收到通知；
    - add	现在状态检测可以自己定义检测时间间隔；
    - fix	修复了打包插件无法打包v2ray-plugin的问题；
-   
 
 1.7.8
    - update	更换ss-*二进制使用shadowsocks-libev_3.3.3-1_arm_cortex-a5.ipk
