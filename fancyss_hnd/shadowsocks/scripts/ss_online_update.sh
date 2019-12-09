@@ -8,8 +8,8 @@ CONFIG_FILE=/koolshare/ss/ss.json
 BACKUP_FILE_TMP=/tmp/ss_conf_tmp.sh
 BACKUP_FILE=/tmp/ss_conf.sh
 
-KEY_WORDS_1=`echo $ss_basic_exclude|sed 's/,$//g'|sed 's/,/|/g'`
-KEY_WORDS_2=`echo $ss_basic_include|sed 's/,$//g'|sed 's/,/|/g'`
+KEY_WORDS_1=`echo $ss_basic_exclude|sed 's/,$//g'|sed 's/,/|/g'|sed 's/^$//g'`
+KEY_WORDS_2=`echo $ss_basic_include|sed 's/,$//g'|sed 's/,/|/g'|sed 's/^$//g'`
 DEL_SUBSCRIBE=0
 SOCKS_FLAG=0
 
@@ -413,23 +413,63 @@ get_ssr_node_info(){
 }
 
 update_ssr_nodes(){
+	local UPDATE_FLAG
+	local DELETE_FLAG
 	# 用关键词匹配不需要添加的节点
 	[ -n "$KEY_WORDS_1" ] && local KEY_MATCH_1=`echo $remarks $server | grep -Eo "$KEY_WORDS_1"`
 	# 用关键词匹配需要添加的节点
 	[ -n "$KEY_WORDS_2" ] && local KEY_MATCH_2=`echo $remarks $server | grep -Eo "$KEY_WORDS_2"`
 
-	if [ -n "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
-		echo_date SSR节点：不添加【$remarks】节点，因为匹配了[排除+包括]关键词
-		let exclude+=1 
-		local UPDATE_FLAG=2
-	elif [ -n "$KEY_MATCH_1" -a -n "$KEY_MATCH_2" ]; then
-		echo_date SSR节点：不添加【$remarks】节点，因为匹配了[排除]关键词
-		let exclude+=1 
-		local UPDATE_FLAG=2
-	elif  [ -z "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
-		echo_date SSR节点：不添加【$remarks】节点，因为不匹配[包括]关键词
-		let exclude+=1 
-		local UPDATE_FLAG=2
+	if [ -n "$KEY_WORDS_1" -a -z "$KEY_WORDS_2" ]; then
+		if [ -n "$KEY_MATCH_1" ]; then
+			echo_date SSR节点：不添加【$remarks】节点，因为匹配了[排除]关键词
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		else
+			if [ -n "$group" ] && [ -n "$server" ] && [ -n "$server_port" ] && [ -n "$password" ] && [ -n "$protocol" ] && [ -n "$obfs" ] && [ -n "$encrypt_method" ]; then
+				local UPDATE_FLAG=0
+			else
+				local UPDATE_FLAG=1
+				echo_date "检测到一个错误节点，跳过！"
+				return 1
+			fi
+		fi
+	elif [ -z "$KEY_WORDS_1" -a -n "$KEY_WORDS_2" ]; then
+		if [ -z "$KEY_MATCH_2" ];then
+			echo_date SSR节点：不添加【$remarks】节点，因为不匹配[包括]关键词
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		else
+			if [ -n "$group" ] && [ -n "$server" ] && [ -n "$server_port" ] && [ -n "$password" ] && [ -n "$protocol" ] && [ -n "$obfs" ] && [ -n "$encrypt_method" ]; then
+				local UPDATE_FLAG=0
+			else
+				local UPDATE_FLAG=1
+				echo_date "检测到一个错误节点，跳过！"
+				return 1
+			fi
+		fi
+	elif [ -n "$KEY_WORDS_1" -a -n "$KEY_WORDS_2" ]; then
+		if [ -n "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
+			echo_date SSR节点：不添加【$remarks】节点，因为匹配了[排除+包括]关键词
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		elif [ -n "$KEY_MATCH_1" -a -n "$KEY_MATCH_2" ]; then
+			echo_date SSR节点：不添加【$remarks】节点，因为匹配了[排除]关键词
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		elif  [ -z "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
+			echo_date SSR节点：不添加【$remarks】节点，因为不匹配[包括]关键词
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		else
+			if [ -n "$group" ] && [ -n "$server" ] && [ -n "$server_port" ] && [ -n "$password" ] && [ -n "$protocol" ] && [ -n "$obfs" ] && [ -n "$encrypt_method" ]; then
+				local UPDATE_FLAG=0
+			else
+				local UPDATE_FLAG=1
+				echo_date "检测到一个错误节点，跳过！"
+				return 1
+			fi
+		fi
 	else
 		if [ -n "$group" ] && [ -n "$server" ] && [ -n "$server_port" ] && [ -n "$password" ] && [ -n "$protocol" ] && [ -n "$obfs" ] && [ -n "$encrypt_method" ]; then
 			local UPDATE_FLAG=0
@@ -439,7 +479,7 @@ update_ssr_nodes(){
 			return 1
 		fi
 	fi
-	
+
 	isadded_server=$(cat /tmp/all_localservers | grep $group_base64 | awk '{print $1}' | grep -c $server_base64|head -n1)
 	if [ "$isadded_server" == "0" ]; then
 		#在本地节点里没有找到对应节点，且没有被关键词排除，该节点需要被添加
@@ -475,14 +515,39 @@ update_ssr_nodes(){
 		# 删除未匹配到[包括关键词]的本地节点
 		[ -n "$KEY_WORDS_2" -a -n "$KEY_LOCAL_NAME" -a -n "$KEY_LOCAL_SERVER" ] && local KEY_MATCH_4=`echo $KEY_LOCAL_NAME $KEY_LOCAL_SERVER | grep -Eo "$KEY_WORDS_2"`
 
-		if [ -n "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
-			echo_date SSR节点：移除本地【$remarks】节点，因为匹配了[排除+包括]关键词
-			remove_sub_node_silent $index
-		elif [ -n "$KEY_MATCH_1" -a -n "$KEY_MATCH_2" ]; then
-			echo_date SSR节点：移除本地【$remarks】节点，因为匹配了[排除]关键词
-			remove_sub_node_silent $index
-		elif  [ -z "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
-			echo_date SSR节点：移除本地【$remarks】节点，因为不匹配[包括]关键词
+
+		if [ -n "$KEY_WORDS_1" -a -z "$KEY_WORDS_2" ]; then
+			if [ -n "$KEY_MATCH_3" ]; then
+				echo_date SSR节点：移除本地【$remarks】节点，因为匹配了[排除]关键词
+				local DELETE_FLAG=1
+			else
+				local DELETE_FLAG=0
+			fi
+		elif [ -z "$KEY_WORDS_1" -a -n "$KEY_WORDS_2" ]; then
+			if [ -z "$KEY_MATCH_4" ];then
+				echo_date SSR节点：移除本地【$remarks】节点，因为不匹配[包括]关键词
+				local DELETE_FLAG=1
+			else
+				local DELETE_FLAG=0
+			fi
+		elif [ -n "$KEY_WORDS_1" -a -n "$KEY_WORDS_2" ]; then
+			if [ -n "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
+				echo_date SSR节点：移除本地【$remarks】节点，因为匹配了[排除+包括]关键词
+				local DELETE_FLAG=1
+			elif [ -n "$KEY_MATCH_1" -a -n "$KEY_MATCH_2" ]; then
+				echo_date SSR节点：移除本地【$remarks】节点，因为匹配了[排除]关键词
+				local DELETE_FLAG=1
+			elif  [ -z "$KEY_MATCH_1" -a -z "$KEY_MATCH_2" ]; then
+				echo_date SSR节点：移除本地【$remarks】节点，因为不匹配[包括]关键词
+				local DELETE_FLAG=1
+			else
+				local DELETE_FLAG=0
+			fi
+		else
+			local DELETE_FLAG=0
+		fi
+
+		if [ "$DELETE_FLAG" == "1" ]; then
 			remove_sub_node_silent $index
 		else
 			# 在本地的订阅节点中找到该节点，检测下配置是否更改，如果更改，则更新配置
@@ -684,7 +749,7 @@ get_oneline_rule_now(){
 			echo_date 订阅链接可能有跳转，尝试更换wget进行下载...
 			rm /tmp/ssr_subscribe_file.txt
 			if [ "`echo $ssr_subscribe_link|grep ^https`" ];then
-				wget --no-check-certificate -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
+				wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
 			else
 				wget -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
 			fi
@@ -704,7 +769,7 @@ get_oneline_rule_now(){
 		echo_date 使用curl下载订阅失败，尝试更换wget进行下载...
 		rm /tmp/ssr_subscribe_file.txt
 		if [ "`echo $ssr_subscribe_link|grep ^https`" ];then
-			wget --no-check-certificate -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
+			wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
 		else
 			wget -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
 		fi
@@ -770,8 +835,6 @@ get_oneline_rule_now(){
 			fi
 			# 去除订阅服务器上已经删除的节点
 			del_none_exist
-			# 节点重新排序
-			remove_node_gap
 			USER_ADD=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
 			ONLINE_GET=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
 			echo_date "本次更新订阅来源【$group】，共有节点$NODE_NU个，其中："
@@ -815,7 +878,7 @@ get_oneline_rule_now(){
 			# 去除订阅服务器上已经删除的节点
 			del_none_exist
 			# 节点重新排序
-			remove_node_gap
+			# remove_node_gap
 			USER_ADD=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
 			#TOTAL_V2=$(dbus list ssconf_basic_|grep _uuid_|wc -l) || 0
 			#TOTAL_GET_SSR=$(dbus list ssconf_basic_|grep _rss_protocol_|wc -l) || 0
@@ -942,16 +1005,18 @@ start_online_update(){
 					need_adjust=1
 				fi
 			done
-			usleep 100000
-			# 再次排序
-			if [ "$need_adjust" == "1" ];then
-				echo_date 因为进行了删除订阅节点操作，需要对节点顺序进行检查！
-				remove_node_gap
-			fi
+			# usleep 100000
+			# # 再次排序
+			# if [ "$need_adjust" == "1" ];then
+			# 	echo_date 因为进行了删除订阅节点操作，需要对节点顺序进行检查！
+			# 	remove_node_gap
+			# fi
 		fi
 	else
 		echo_date "由于订阅过程有失败，本次不检测需要删除的订阅，以免误伤；下次成功订阅后再进行检测。"
 	fi
+	# 节点重新排序
+	remove_node_gap
 	# 结束
 	echo_date "-------------------------------------------------------------------"
 	if [ "$SOCKS_FLAG" == "1" ];then
