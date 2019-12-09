@@ -9,7 +9,7 @@ fancyss_hnd Changelog
     		详细说明鼠标点击对应功能名称可见。
    - update	增加订阅成功率：现在使用curl下载订阅失败后，会自动使用wget重新尝试一次；
    - update	现在v2ray模式下也能使用tcp fast open了；
-   - update 现在haveged随插件常驻启动，而不是之前在ss-libev启动时才启动；
+   - update	现在haveged随插件常驻启动，而不是之前在ss-libev启动时才启动；
    - update	更新了故障检测功能，现在开启插件后能更快的进行故障检测；
    - add	现在如果故障转移功能在后台切换了节点，且前端页面是打开的，那么前台会收到通知；
    - add	现在状态检测可以自己选择检测时间间隔，默认4s - 7s；
