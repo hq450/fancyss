@@ -2204,7 +2204,7 @@ function get_ss_status_front() {
 	});
 	//refreshRate = Math.floor(Math.random() * 4000) + 4000;
 	//1: 2-3s, 2:4-7s, 3:8-15s, 4:16-31s, 5:32-63s
-	var time_plus = Math.pow("2", String(db_ss['ss_basic_interval'])) * 1000;
+	var time_plus = Math.pow("2", String(db_ss['ss_basic_interval']||"2")) * 1000;
 	var time_base = time_plus - 1000;
 	refreshRate = Math.floor(Math.random() * time_base) + time_plus ;
 	setTimeout("get_ss_status_front();", refreshRate);
