@@ -498,7 +498,7 @@ function openssHint(itemNum) {
 	if (itemNum == 0) {
 		width = "850px";
 		bgcolor = "#CC0066",
-			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
+			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后默认在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
 		statusmenu += "</br><li>国内、国外状态检测的历史记录会显示在【故障转移】内的日志窗口，该日志记录会实时更新，且最新的一条记录即为插件顶部的【插件运行状态】；</li>"
 		statusmenu += "</br><li>状态检测反应的是路由器本身访问www.google.com.tw的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用科学上网中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
 		statusmenu += "</br><b><font color='#CC0066'>1：双√，不能访问被墙网站：</font></b>"
@@ -892,6 +892,12 @@ function openssHint(itemNum) {
 	} else if (itemNum == 109) {
 		statusmenu = "插件触发重启设定说明：<br />&nbsp;&nbsp;&nbsp;&nbsp;当你的ss/ssr/koolgame/v2ray服务器，或者负载均衡服务器节点使用域名的时候，可以在此处设定定时解析域名时间，当检测到相应的解析地址发生改变的时候，定时任务会自动重启插件，以应用新的ip地址。<br />&nbsp;&nbsp;&nbsp;&nbsp;服务器有多个解析地址的建议不要使用！！v2ray开了cdn的也建议不要使用！！因为这可能会导致每次检测到的ip都不一样而让插件在后台频繁重启！"
 		_caption = "说明：";
+	} else if (itemNum == 110) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点不会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>测试,过期,剩余,曼谷,M247,D01,硅谷</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
+		_caption = "[排除]关键词：";
+	} else if (itemNum == 111) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
+		_caption = "[包括]关键词：";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

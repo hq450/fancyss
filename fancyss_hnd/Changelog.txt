@@ -1,15 +1,20 @@
 fancyss_hnd Changelog
 ===========================================
 1.7.9 （smartdns分支）
-   - 说明：	目前处于测试期，请下载后离线安装：https://raw.githubusercontent.com/hq450/fancyss/smartdns/fancyss_hnd/shadowsocks.tar.gz
    - add	添加SmartDNS支持；
    - update	重写了外国DNS的说明文档（在【外国DNS】字样上点击鼠标可见）；
+   - add	现在ssr订阅功能支持订阅部分节点，请前往【更新管理】中的[排除]关键词和[包括]关键词设置；
+    		[排除]关键词：含关键词的节点不会添加，多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷,东京,V3
+    		[包括]关键词：含关键词的节点才会添加，多个关键词用英文逗号分隔，如：香港,新加坡
    - update	现在v2ray模式下也能使用tcp fast open了；
    - update 现在haveged随插件常驻启动，而不是之前在ss-libev启动时才启动；
    - update	更新了故障检测功能，现在开启插件后能更快的进行故障检测；
    - add	现在如果故障转移功能在后台切换了节点，且前端页面是打开的，那么前台会收到通知；
-   - add	现在状态检测可以自己定义检测时间间隔；
+   - add	现在状态检测可以自己选择检测时间间隔，默认4s - 7s；
    - fix	修复了打包插件无法打包v2ray-plugin的问题；
+   - fix	修复导出插件配置恢复后，故障转移等一些功能的配置无法恢复的问题；
+   - fix	修复配置了v2ray-plugin的ss节点，因节点排序而丢失部分节点配置的问题；
+   
 
 1.7.8
    - update	更换ss-*二进制使用shadowsocks-libev_3.3.3-1_arm_cortex-a5.ipk

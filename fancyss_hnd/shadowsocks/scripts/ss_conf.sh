@@ -10,7 +10,7 @@ backup_conf(){
 	rm -rf /koolshare/webs/files
 	mkdir -p /tmp/files
 	ln -sf /tmp/files /koolshare/webs/files
-	dbus list ss | grep -v "enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
+	dbus list ss | grep -v "ss_basic_enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
 }
 
 backup_tar(){
