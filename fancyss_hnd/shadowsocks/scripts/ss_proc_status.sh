@@ -187,6 +187,9 @@ check_status() {
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
 		fi
 	fi
+	[ "$ss_dnschina" == "13" ] && {
+		[ "$ss_foreign_dns" != "9" ] && [ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
+	}
 	[ -n "$DMQ" ] && echo "dnsmasq		工作中	pid：$DMQ" || echo "dnsmasq	未运行"
 
 	echo -----------------------------------------------------------
