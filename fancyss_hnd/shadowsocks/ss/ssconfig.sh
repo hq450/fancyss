@@ -2216,9 +2216,7 @@ ss_pre_stop() {
 
 detect() {
 	MODEL=$(nvram get model)
-	# 检测jffs2脚本是否开启，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf）
-	#if [ "$MODEL" != "GT-AC5300" ];then
-	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，官改固件不需要开启
+	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf），官改固件不需要开启
 	if [ -z "$(nvram get extendno | grep koolshare)" ]; then
 		if [ "$(nvram get jffs2_scripts)" != "1" ]; then
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -2232,7 +2230,7 @@ detect() {
 
 	#检测v2ray模式下是否启用虚拟内存
 	if [ "$ss_basic_type" == "3" -a -z "$WAN_ACTION" ]; then
-		if [ "$MODEL" != "GT-AC5300" ] && [ "$MODEL" != "RT-AX88U" ]; then
+		if [ "$MODEL" == "RT-AC86U" ]; then
 			SWAPSTATUS=$(free | grep Swap | awk '{print $2}')
 			if [ "$SWAPSTATUS" != "0" ]; then
 				echo_date "你选择了v2ray节点，当前系统已经启用虚拟内存！！符合启动条件！"
