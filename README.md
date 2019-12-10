@@ -16,9 +16,8 @@
 |     平台      |                          hnd/axhnd                           |                             arm                              |                             arm                              |                            mipsel                            |                             x64                              |
 |   linux内核   |                        4.1.27/4.1.51                         |                           2.6.36.4                           |                           2.6.36.4                           |                             2.6                              |                             很新                             |
 |      CPU      |                         bcm490x系列                          |                          bcm4708/9                           |                          bcm4708/9                           |                           bcm4706                            |                          x64架构CPU                          |
-|   代表机型    |                             见下                             |                             见下                             |                             见下                             |                             见下                             |                             见下                             |
-|   维护状态    |                            维护中                            |                            维护中                            |                            维护中                            |                         **停止维护**                         |                         **备份留存**                         |
-|   最新版本    |                          **1.7.8**                           |                          **1.0.3**                           |                          **4.2.0**                           |                          **3.14？**                          |                          **2.2.2**                           |
+|   维护状态    |                            维护中                            |                            维护中                            |                        **停止维护**                          |                         **停止维护**                         |                         **备份留存**                         |
+|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.2.0**                           |                          **3.0.4？**                         |                          **2.2.2**                           |
 |   插件名称    |                           科学上网                           |                           科学上网                           |                           科学上网                           |                           科学上网                           |                            koolss                            |
 |   节点管理    |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
 |    ss支持     |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
@@ -94,7 +93,19 @@
 
 ----
 
-### [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
+### [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)（停止维护）
+
+> **fancyss_arm 停止维护通知：**
+>
+> 2019年12月10日 
+>
+> -- by hq450
+>
+> 因为fancyss_arm支持的固件较旧（最高380 X7.9.1），软件中心API较旧（1.0代），并且维护者持有的armv7机型（RT-AC5300）的固件已经升级到koolshare 384版本，加上代码差异时间问题，很难继续维持下去。所以arm380平台上的科学上网插件停止维护，最终版本将停留在4.2.0。
+>
+> 如果你持有华硕armv7机型（`RT-AC68U` `RT-AC66U-B1` `RT-AC1900P` `RT-AC87U` `RT-AC88U` `RT-AC3100` `RT-AC3200` `RT-AC5300`），那么你可以将你的固件更新至koolshare 384版本（[固件下载地址](https://koolshare.cn/thread-164857-1-1.html)）后使用fancyss_arm384，目前fancyss_arm384处于维护状态，且功能上更加新。
+>
+> 如果你持有的是网件、linksys等armv7机型，那么非常遗憾，因为你的机器固件最高只能支持到koolshare arm380 X7.9.1，所以你只能使用已经停止维护的fancyss_arm，最终版本为4.2.0，不过你仍然可以获得v2ray二进制和规则的更新。如果你在其他地方看见有人发布高于此版本的离线包，请谨慎使用，因为这很可能不是本项目发布的。
 
 > **fancyss_arm**离线安装包仅能在koolshare 梅林 arm 380平台，且linux内核为2.6.36.4的armv7架构的机器上使用！
 
@@ -120,7 +131,7 @@
 
 ----
 
-### [fancyss_mipsel](https://github.com/hq450/fancyss/tree/master/fancyss_mipsel)
+### [fancyss_mipsel](https://github.com/hq450/fancyss/tree/master/fancyss_mipsel) （停止维护）
 
 > 适用于merlin koolshare mipsel架构机型的改版固件，由于mipsel架构老旧且性能较低，此架构机型的科学上网插件已经不再维护，最后的版本是3.0.4，此处作为仓库搬迁后的备份留存。
 
@@ -135,7 +146,8 @@
 
 ----
 
-### [fancyss_X64](https://github.com/hq450/fancyss/tree/master/fancyss_X64)
+### [fancyss_X64](https://github.com/hq450/fancyss/tree/master/fancyss_X64) （备份留存）
+
 > 适用于koolshare OpenWRT/LEDE X64 带酷软的固件，由于该固件酷软下架了koolss插件，本项目将其收入。
 
 #### 相关链接：

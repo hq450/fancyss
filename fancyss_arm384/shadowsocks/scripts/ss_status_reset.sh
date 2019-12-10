@@ -14,6 +14,7 @@ stop_status(){
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 	killall curl >/dev/null 2>&1
+	killall httping >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
 }
 

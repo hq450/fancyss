@@ -72,6 +72,7 @@ rm -rf /koolshare/bin/speederv2
 rm -rf /koolshare/bin/udp2raw
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
+rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/bin/https_dns_proxy
@@ -137,6 +138,7 @@ echo_date 设置一些默认值
 [ -z "$ss_dns_foreign" ] && dbus set ss_dns_foreign=1
 [ -z "$ss_acl_default_mode" ] && dbus set ss_acl_default_mode=1
 [ -z "$ss_acl_default_port" ] && dbus set ss_acl_default_port=all
+[ -z "$ss_basic_interval" ] && dbus set ss_basic_interval=2
 
 # 离线安装时设置软件中心内储存的版本号和连接
 CUR_VERSION=`cat /koolshare/ss/version`
@@ -147,7 +149,7 @@ dbus set softcenter_module_shadowsocks_title="科学上网"
 dbus set softcenter_module_shadowsocks_description="科学上网 for merlin armv7l 384"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v4.20.0"
+dbus set ss_basic_v2ray_version="v4.21.3"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
