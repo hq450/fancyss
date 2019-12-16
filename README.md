@@ -37,6 +37,7 @@
 |  固件下载-3   | [GT-AC5300 官改固件](http://koolshare.cn/thread-130902-1-1.html) |                                                              | [linksys EA系列](https://koolshare.cn/thread-139325-1-1.html) |                                                              |                                                              |
 |  固件下载-4   | [RT-AX88U 梅林改版](http://koolshare.cn/thread-158199-1-1.html) |                                                              |     [华为](https://koolshare.cn/thread-139322-1-1.html)      |                                                              |                                                              |
 |  固件下载-5   | [GT-AX11000 官改固件](http://koolshare.cn/thread-159465-1-1.html) |                                                              |                                                              |                                                              |                                                              |
+|  固件下载-6   | [RAX80 梅林改版](http://koolshare.cn/thread-xxxxxx-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |   更新日志    | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm384/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm/Changelog.txt) |                             null                             | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_X64/Changelog.txt) |
 |  离线包下载   | [fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd) | [fancyss_arm384](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384) | [fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm) | [fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel) | [fancyss_x64](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_X64) |
 
@@ -50,11 +51,12 @@
 
 **fancyss_hnd**支持机型/固件：
 
- * [RT-AC86U merlin改版固件](http://koolshare.cn/thread-127878-1-1.html)
- * [RT-AC86U 官改固件](http://koolshare.cn/thread-139965-1-1.html)
- * [GT-AC5300 官改固件](http://koolshare.cn/thread-130902-1-1.html)
- * [RT-AX88U merlin改版固件](http://koolshare.cn/thread-158199-1-1.html)
- * [GT-AX11000 官改固件](http://koolshare.cn/thread-159465-1-1.html)
+ * [ASUS RT-AC86U merlin改版固件](http://koolshare.cn/thread-127878-1-1.html)
+ * [ASUS RT-AC86U 官改固件](http://koolshare.cn/thread-139965-1-1.html)
+ * [ASUS GT-AC5300 官改固件](http://koolshare.cn/thread-130902-1-1.html)
+ * [ASUS RT-AX88U merlin改版固件](http://koolshare.cn/thread-158199-1-1.html)
+ * [ASUS GT-AX11000 官改固件](http://koolshare.cn/thread-159465-1-1.html)
+ * NetGear RAX80 梅林改版固件
 
 #### 注意：
 
