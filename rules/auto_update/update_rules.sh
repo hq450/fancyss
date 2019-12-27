@@ -59,8 +59,10 @@ echo =================
 # get cdn list for shadowsocks chn and game mode
 
 wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf
+wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf
+wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf
 
-cat accelerated-domains.china.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" >cdn_download.txt
+cat accelerated-domains.china.conf apple.china.conf google.china.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" >cdn_download.txt
 cat cdn_koolshare.txt cdn_download.txt | sort -u >cdn1.txt
 
 md5sum5=$(md5sum cdn1.txt | sed 's/ /\n/g' | sed -n 1p)
@@ -142,11 +144,11 @@ echo -e "\n" >>WhiteList_new.txt
 sed -e "s|114.114.114.114$||" -e "s|^s|S|" accelerated-domains.china.conf >>WhiteList_new.txt
 
 # Download domain data of Google in Mainland China part.
-curl -O https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf
+#curl -O https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf
 sed -e "s|114.114.114.114$||" -e "s|^s|S|" google.china.conf >>WhiteList_new.txt
 
 # Download domain data of Apple in Mainland China part.
-curl -O https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf
+#curl -O https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf
 sed -e "s|114.114.114.114$||" -e "s|^s|S|" apple.china.conf >>WhiteList_new.txt
 
 # ok
