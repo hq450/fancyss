@@ -167,8 +167,35 @@ fi
 echo =================
 
 # ======================================
+# get cdn list for shadowsocks chn and game mode
+cat apple.china.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sort -u > apple_download.txt
+cat google.china.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sort -u > google_download.txt
+
+md5sum13=$(md5sum apple_download.txt | sed 's/ /\n/g' | sed -n 1p)
+md5sum14=$(md5sum ../apple_china.txt | sed 's/ /\n/g' | sed -n 1p)
+
+md5sum15=$(md5sum google_download.txt | sed 's/ /\n/g' | sed -n 1p)
+md5sum16=$(md5sum ../google_china.txt | sed 's/ /\n/g' | sed -n 1p)
+
+echo =================
+if [ "$md5sum13"x = "$md5sum14"x ]; then
+	echo apple china list same md5!
+else
+	echo update apple china list!
+	cp -f apple_download.txt ../apple_china.txt
+	sed -i "8c $(date +%Y-%m-%d) # $md5sum13 apple_china" ../version1
+fi
+if [ "$md5sum15"x = "$md5sum16"x ]; then
+	echo google china list same md5!
+else
+	echo update goole china list!
+	cp -f google_download.txt ../google_china.txt
+	sed -i "9c $(date +%Y-%m-%d) # $md5sum15 google_china" ../version1
+fi
+echo =================
+# ======================================
 rm google.china.conf
 rm apple.china.conf
 rm gfwlist1.conf gfwlist_download.conf gfwlist_download_tmp.conf chnroute1.txt
-rm cdn1.txt accelerated-domains.china.conf cdn_download.txt
+rm cdn1.txt accelerated-domains.china.conf cdn_download.txt apple_download.txt google_download.txt
 rm WhiteList.txt WhiteList_tmp.txt apnic.txt WhiteList_new.txt Routing.txt
