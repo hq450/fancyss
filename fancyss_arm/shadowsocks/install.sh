@@ -235,8 +235,8 @@ dbus set softcenter_module_shadowsocks_description="科学上网 for merlin armv
 dbus set softcenter_module_shadowsocks_home_url="Main_Ss_Content.asp"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v4.6.4"
-dbus set ss_basic_v2ray_date="20181124"
+dbus set ss_basic_v2ray_version="v4.22.0"
+dbus set ss_basic_v2ray_date="20191231"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
