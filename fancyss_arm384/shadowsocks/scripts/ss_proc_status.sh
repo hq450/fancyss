@@ -87,8 +87,8 @@ echo_version() {
 	echo "https_dns_proxy		758f913		2019年02月05日编译"
 	echo "SmartDNS		1.2019.11.02-1102"
 	echo "httping			2.6		2020年01月06日编译"
-	echo "client_linux_arm5	20180810	kcptun"
-	echo "v2ray			$ss_basic_v2ray_version"
+	echo "client_linux_arm5	20200103	kcptun"
+	echo "v2ray			$ss_basic_v2ray_version	2020年01月05日编译"
 	echo -----------------------------------------------------------
 }
 
