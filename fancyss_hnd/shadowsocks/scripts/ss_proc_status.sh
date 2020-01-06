@@ -72,20 +72,21 @@ echo_version() {
 	echo ① 程序版本（插件版本：$SOFVERSION）：
 	echo -----------------------------------------------------------
 	echo "程序			版本		备注"
-	echo "ss-redir		3.3.3		2019年11月3日编译"
-	echo "ss-tunnel		3.3.3		2019年11月3日编译"
-	echo "ss-local		3.3.3		2019年11月3日编译"
+	echo "ss-redir		3.3.3		2019年11月03日编译"
+	echo "ss-tunnel		3.3.3		2019年11月03日编译"
+	echo "ss-local		3.3.3		2019年11月03日编译"
 	echo "obfs-local		0.0.5		2018年11月25日编译"
-	echo "v2ray-plugin		1.2.0		2019年10月7日编译"
-	echo "ssrr-redir		3.5.3 		2018年12月06日编译"
-	echo "ssrr-local		3.5.3 		2018年12月06日编译"
-	echo "haproxy			1.8.14 		2018年12月06日编译"
-	echo "dns2socks		V2.0 		2017年12月05日编译"
-	echo "cdns			1.0 		2017年12月09日编译"
-	echo "chinadns1		1.3.2 		2017年12月09日编译"
-	echo "chinadns2		2.0.0 		2017年12月09日编译"
+	echo "v2ray-plugin		1.2.0		2019年10月07日编译"
+	echo "ssrr-redir		3.5.3		2018年12月06日编译"
+	echo "ssrr-local		3.5.3		2018年12月06日编译"
+	echo "haproxy			2.1.2		2020年01月06日编译"
+	echo "dns2socks		V2.0		2017年12月05日编译"
+	echo "cdns			1.0		2017年12月09日编译"
+	echo "chinadns1		1.3.2		2017年12月09日编译"
+	echo "chinadns2		2.0.0		2017年12月09日编译"
 	echo "https_dns_proxy		758f913		2019年02月05日编译"
-	echo "SmartDNS		1.2019.11.02-1102"
+	echo "SmartDNS		198d18f1	2020年01月05日编译"
+	echo "httping			2.6		2020年01月06日编译"
 	echo "client_linux_arm5	20180810	kcptun"
 	echo "v2ray			$ss_basic_v2ray_version"
 	echo -----------------------------------------------------------
@@ -187,8 +188,10 @@ check_status() {
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
 		fi
 	fi
-	[ "$ss_dnschina" == "13" ] && {
-		[ "$ss_foreign_dns" != "9" ] && [ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
+	[ "$ss_dns_china" == "13" ] &&{
+		if [ "$ss_foreign_dns" != "9" ]; then 
+			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
+		fi
 	}
 	[ -n "$DMQ" ] && echo "dnsmasq		工作中	pid：$DMQ" || echo "dnsmasq	未运行"
 
