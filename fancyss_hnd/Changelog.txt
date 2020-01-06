@@ -4,6 +4,7 @@ fancyss_hnd Changelog
    - update	更新httping，支持ssl；
    - update	更新smartdns二进制到最新(commit:198d18f)；
    - update	更新haproxy二进制到2.1.2；
+   - update	更新kcptun二进制到20200103；
 
 1.8.1
    - fix	修复因未定义[包括]关键词，导致所有订阅节点被删除的问题！
