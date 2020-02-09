@@ -19,21 +19,11 @@ kill_socks5(){
 # Start ss-local
 start_socks5(){
 	echo_date 开启ss-local...
-	if [ "$ss_local_obfs_host" != "" ];then
-		if [ "$ss_local_obfs" == "http" ];then
-			ARG_OBFS="obfs=http;obfs-host=$ss_local_obfs_host"
-		elif [ "$ss_local_obfs" == "tls" ];then
-			ARG_OBFS="obfs=tls;obfs-host=$ss_local_obfs_host"
+	if [ "$ss_local_v2ray_plugin_opts" != "" ];then
+		if [ "$ss_local_v2ray_plugin" == "1" ];then
+			ARG_V2RAY_PLUGIN="--plugin v2ray-plugin --plugin-opts $ss_local_v2ray_plugin_opts"
 		else
-			ARG_OBFS=""
-		fi
-	else
-		if [ "$ss_local_obfs" == "http" ];then
-			ARG_OBFS="obfs=http"
-		elif [ "$ss_local_obfs" == "tls" ];then
-			ARG_OBFS="obfs=tls"
-		else
-			ARG_OBFS=""
+			ARG_V2RAY_PLUGIN=""
 		fi
 	fi
 	
@@ -45,10 +35,10 @@ start_socks5(){
 		ARG_ACL="--acl /koolshare/ss/rules/chn.acl"
 	fi
 
-	if [ "$ss_local_obfs" == "0" ];then
+	if [ "$ss_local_v2ray_plugin" == "0" ];then
 		ss-local -b 0.0.0.0 -s "$ss_local_server" -p "$ss_local_port" -l "$ss_local_proxyport" -k "$ss_local_password" -m "$ss_local_method" -u $ARG_ACL -f /var/run/ss_local.pid
 	else
-		ss-local -b 0.0.0.0 -s "$ss_local_server" -p "$ss_local_port" -l "$ss_local_proxyport" -k "$ss_local_password" -m "$ss_local_method" -u $ARG_ACL --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/ss_local.pid
+		ss-local -b 0.0.0.0 -s "$ss_local_server" -p "$ss_local_port" -l "$ss_local_proxyport" -k "$ss_local_password" -m "$ss_local_method" -u $ARG_ACL "$ARG_V2RAY_PLUGIN" -f /var/run/ss_local.pid
 	fi
 	echo_date 完成...
 }

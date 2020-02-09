@@ -1,16 +1,17 @@
 ﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns:v>
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta HTTP-EQUIV="Pragma" CONTENT="no-cache"/>
-<meta HTTP-EQUIV="Expires" CONTENT="-1"/>
-<link rel="shortcut icon" href="images/favicon.png"/>
-<link rel="icon" href="images/favicon.png"/>
+<meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<meta HTTP-EQUIV="Expires" CONTENT="-1">
+<link rel="shortcut icon" href="images/favicon.png">
+<link rel="icon" href="images/favicon.png">
 <title>【科学上网】</title>
-<link rel="stylesheet" type="text/css" href="index_style.css"/>
-<link rel="stylesheet" type="text/css" href="form_style.css"/>
-<link rel="stylesheet" type="text/css" href="usp_style.css"/>
+<link rel="stylesheet" type="text/css" href="index_style.css">
+<link rel="stylesheet" type="text/css" href="form_style.css">
+<link rel="stylesheet" type="text/css" href="usp_style.css">
 <link rel="stylesheet" type="text/css" href="css/element.css">
 <link rel="stylesheet" type="text/css" href="/device-map/device-map.css">
 <link rel="stylesheet" type="text/css" href="/js/table/table.css">
@@ -18,16 +19,15 @@
 <link rel="stylesheet" type="text/css" href="/res/softcenter.css">
 <link rel="stylesheet" type="text/css" href="/res/shadowsocks.css">
 <script type="text/javascript" src="/state.js"></script>
-<script type="text/javascript" src="/js/table/table.js"></script>
-<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
-<script type="text/javascript" src="/general.js"></script>
-<script type="text/javascript" src="/client_function.js"></script>
 <script type="text/javascript" src="/help.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
+<script type="text/javascript" src="/general.js"></script>
+<script type="text/javascript" language="JavaScript" src="/js/table/table.js"></script>
+<script type="text/javascript" language="JavaScript" src="/client_function.js"></script>
 <script type="text/javascript" src="/res/ss-menu.js"></script>
 <script type="text/javascript" src="/res/softcenter.js"></script>
 <script type="text/javascript" src="/res/tablednd.js"></script>
-<script type="text/javascript" src="/res/qrcode.js"></script>
 <script>
 var db_ss = {};
 var dbus = {};
@@ -50,6 +50,8 @@ var poped = 0;
 var x = 5;
 var ping_result = "";
 var save_flag = "";
+var STATUS_FLAG;
+var refreshRate;
 var ph_v2ray = "# 此处填入v2ray json，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的outbound配置正确！！！&#10;# ------------------------------------&#10;# 同样支持vmess://链接填入，格式如下：&#10;vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIjIzMyIsDQogICJhZGQiOiAiMjMzLjIzMy4yMzMuMjMzIiwNCiAgInBvcnQiOiAiMjMzIiwNCiAgImlkIjogImFlY2EzYzViLTc0NzktNDFjMy1hMWUzLTAyMjkzYzg2Y2EzOCIsDQogICJhaWQiOiAiMjMzIiwNCiAgIm5ldCI6ICJ3cyIsDQogICJ0eXBlIjogIm5vbmUiLA0KICAiaG9zdCI6ICJ3d3cuMjMzLmNvbSIsDQogICJwYXRoIjogIi8yMzMiLA0KICAidGxzIjogInRscyINCn0="
 var option_modes = [["1", "gfwlist模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"]];
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305" ];
@@ -58,8 +60,9 @@ var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
 var option_v2enc = [["none", "不加密"], ["auto", "自动"], ["aes-128-cfb", "aes-128-cfb"], ["aes-128-gcm", "aes-128-gcm"], ["chacha20-poly1305", "chacha20-poly1305"]];
 var option_headtcp = [["none", "不伪装"], ["http", "伪装http"]];
 var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"], ["utp", "伪装BT下载(uTP)"], ["wechat-video", "伪装微信视频通话"]];
-var logf = 0;
-var logc = 0;
+var heart_count = 1;
+const pattern=/[`~!@#$^&*()=|{}':;'\\\[\]\.<>\/?~！@#￥……&*（）——|{}%【】'；：""'。，、？\s]/g;
+
 
 function init() {
 	show_menu(menu_hook);
@@ -77,12 +80,50 @@ function refresh_dbss() {
 		}
 	});
 }
+function get_heart_beat() {
+	$.ajax({
+		type: "GET",
+		url: "/_api/ss_heart_beat",
+		dataType: "json",
+		async: false,
+		success: function(data) {
+			heart_beat = data.result[0]["ss_heart_beat"];
+			if(heart_beat == "1"){
+				if (heart_count == "1"){
+					var dbus_post = {};
+					dbus_post["ss_heart_beat"] = "0";
+					push_data("dummy_script.sh", "", dbus_post, "2");
+					return true;
+				}else{
+					var dbus_post = {};
+					dbus_post["ss_heart_beat"] = "0";
+					push_data("dummy_script.sh", "", dbus_post, "2");
+					require(['/res/layer/layer.js'], function(layer) {
+						layer.confirm('<li>科学上网插件页面需要刷新！</li><br /><li>由于故障转移功能已经在后台切换了节点，为了保证页面显示正确配置！需要刷新此页面！</li><br /><li>确定现在刷新吗？</li>', {
+							time: 3e4,
+							shade: 0.8
+						}, function(index) {
+							layer.close(index);
+							refreshpage();
+						}, function(index) {
+							layer.close(index);
+							return false;
+						});
+					});
+				}
+			}
+		}
+	});
+	heart_count++
+	setTimeout("get_heart_beat();", 10000);
+}
 function get_dbus_data() {
 	$.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
 		cache:false,
+		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
 			conf2obj(db_ss);
@@ -92,13 +133,19 @@ function get_dbus_data() {
 			toggle_func();
 			ss_node_sel();
 			version_show();
-			console.log(productid);
-			setTimeout("get_ss_status_data()", 500);
+			if(db_ss["ss_failover_enable"] == "1"){
+				get_ss_status_back();
+			}else{
+				get_ss_status_front();
+			}
+			get_heart_beat();
+			//console.log(productid);
 		},
-		error:function(){
-			console.log("error!");
+		error: function(XmlHttpRequest, textStatus, errorThrown){
+			console.log(XmlHttpRequest.responseText);
 			alert("skipd数据读取错误，请格式化jffs分区后重新尝试！");
 		}
+		,timeout: 0
 	});
 }
 function conf2obj(obj, action) {
@@ -126,7 +173,7 @@ function conf2obj(obj, action) {
 function ssconf_node2obj(node_sel) {
 	var p = "ssconf_basic";
 	var obj = {};
-	var params2 = ["password", "v2ray_json", "server", "mode", "port", "password", "method", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_mux_enable", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_use_json"];
+	var params2 = ["password", "v2ray_json", "server", "mode", "port", "password", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_mux_enable", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_use_json"];
 
 	for (var i = 0; i < params2.length; i++) {
 		obj["ss_basic_" + params2[i]] = db_ss[p + "_" + params2[i] + "_" + node_sel] || "";
@@ -215,7 +262,7 @@ function save() {
 	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 	//key define
-	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_base64_links", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_dnsmasq_fastlookup", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
+	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_base64_links", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_dnsmasq_fastlookup", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
 	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_basic_mcore"];
 	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
 	var params_base64_b = ["ss_basic_custom"];
@@ -226,6 +273,8 @@ function save() {
 			dbus[params_input[i]] = E(params_input[i]).value;
 		}
 	}
+	dbus["ss_basic_exclude"] = E("ss_basic_exclude").value.replace(pattern,"") || "";
+	dbus["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 	// collect data from checkbox
 	for (var i = 0; i < params_check.length; i++) {
 		dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
@@ -295,7 +344,7 @@ function save() {
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
-	var params = ["server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
+	var params = ["server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
 	for (var i = 0; i < params.length; i++) {
 		dbus["ssconf_basic_" + params[i] + "_" + node_sel] = E("ss_basic_" + params[i]).value;
 	}
@@ -307,7 +356,7 @@ function save() {
 	dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 	// adjust some value when switch node between ss ssr v2ray koolgame
 	if (typeof(db_ss["ssconf_basic_rss_protocol_" + node_sel]) != "undefined"){
-		var remove_ssr = [ "ss_obfs", "ss_obfs_host", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
+		var remove_ssr = [ "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 		dbus["ss_basic_type"] = "1"
 		dbus["ssconf_basic_type_" + node_sel] = "1"
 		for (var i = 0; i < remove_ssr.length; i++) {
@@ -316,7 +365,7 @@ function save() {
 		}
 	} else {
 		if (typeof(db_ss["ssconf_basic_koolgame_udp_" + node_sel]) != "undefined"){
-			var remove_gamev2 = [ "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
+			var remove_gamev2 = [ "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 			dbus["ss_basic_type"] = "2"
 			dbus["ssconf_basic_type_" + node_sel] = "2"
 			for (var i = 0; i < remove_gamev2.length; i++) {
@@ -325,7 +374,7 @@ function save() {
 			}
 		} else {
 			if (typeof(db_ss["ssconf_basic_v2ray_use_json_" + node_sel]) != "undefined"){
-				var remove_v2ray = [ "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
+				var remove_v2ray = [ "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 				dbus["ss_basic_type"] = "3"
 				dbus["ssconf_basic_type_" + node_sel] = "3"
 				for (var i = 0; i < remove_v2ray.length; i++) {
@@ -379,6 +428,9 @@ function push_data(script, arg, obj, flag){
 			if(response.result == id){
 				if(flag && flag == "1"){
 					refreshpage();
+				}else if(flag && flag == "2"){
+					//continue;
+					//do nothing
 				}else{
 					get_realtime_log();
 				}
@@ -416,6 +468,8 @@ function verifyFields(r) {
 	//ss-libev
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
+	elem.display(elem.parentElem('ss_basic_ss_v2ray', 'tr'), ss_on);
+	elem.display(elem.parentElem('ss_basic_ss_v2ray_opts', 'tr'), (ss_on && E("ss_basic_ss_v2ray").value != "0"));
 	//ssr-libev
 	elem.display(elem.parentElem('ss_basic_rss_protocol_param', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_protocol', 'tr'), ssr_on);
@@ -454,6 +508,8 @@ function verifyFields(r) {
 	if (save_flag == "shadowsocks") {
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
+		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));
+		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));
 	}
 	if (save_flag == "v2ray") {
 		if(E("ss_node_table_v2ray_use_json").checked){
@@ -538,9 +594,13 @@ function verifyFields(r) {
 	if (Ti == "4") $(".re4_" + In).show();
 	// failover
 	if(E("ss_failover_enable").checked){
-		$("#failover_settings").show();
+		$("#failover_settings_1").show();
+		$("#failover_settings_2").show();
+		$("#failover_settings_3").show();
 	}else{
-		$("#failover_settings").hide();
+		$("#failover_settings_1").hide();
+		$("#failover_settings_2").hide();
+		$("#failover_settings_3").hide();
 	}
 	showhide("ss_failover_text_1",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2" && E("ss_failover_s4_2").value == "2");
 	showhide("ss_failover_s4_2",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2");
@@ -551,8 +611,7 @@ function verifyFields(r) {
 		var dbus_post = {};
 		dbus_post[trid] = E(trid).checked ? '1' : '0';
 		push_data("dummy_script.sh", "", dbus_post, "1");
-	}
-	
+	}	
 	refresh_acl_table();
 }
 function update_visibility() {
@@ -601,6 +660,8 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_mode").value = "1";
 	E("ss_node_table_ss_obfs").value = "0"
 	E("ss_node_table_ss_obfs_host").value = "";
+	E("ss_node_table_ss_v2ray").value = "0"
+	E("ss_node_table_ss_v2ray_opts").value = "";
 	E("ss_node_table_rss_protocol").value = "origin";
 	E("ss_node_table_rss_protocol_param").value = "";
 	E("ss_node_table_rss_obfs").value = "plain";
@@ -656,6 +717,8 @@ function tabclickhandler(_type) {
 		E('v2ray_json_tr').style.display = "none";
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
+		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));
+		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));
 	} else if (_type == 1) {
 		save_flag = "shadowsocksR";
 		E('ssrTitle').className = "vpnClientTitle_td_click";
@@ -667,6 +730,8 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
 		E('ssr_protocol_tr').style.display = "";
 		E('ssr_protocol_param_tr').style.display = "";
 		E('ssr_obfs_tr').style.display = "";
@@ -695,6 +760,8 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
@@ -721,6 +788,8 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "none";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
@@ -785,7 +854,7 @@ function add_ss_node_conf(flag) {
 	var ns = {};
 	var p = "ssconf_basic";
 	node_max += 1;
-	var params1 = ["mode", "name", "server", "port", "method", "ss_obfs", "ss_obfs_host"];
+	var params1 = ["mode", "name", "server", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts"];
 	var params2 = ["mode", "name", "server", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 	var params3 = ["mode", "name", "server", "port", "method", "koolgame_udp"];
 	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"]; //for v2ray
@@ -884,6 +953,8 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_mode").value = "1";
 				E("ss_node_table_ss_obfs").value = "0"
 				E("ss_node_table_ss_obfs_host").value = "";
+				E("ss_node_table_ss_v2ray").value = "0"
+				E("ss_node_table_ss_v2ray_opts").value = "";
 				E("ss_node_table_rss_protocol").value = "origin";
 				E("ss_node_table_rss_protocol_param").value = "";
 				E("ss_node_table_rss_obfs").value = "plain";
@@ -910,7 +981,7 @@ function remove_conf_table(o) {
 
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -945,6 +1016,7 @@ function remove_conf_table(o) {
 			$('#ss_node_list_table tr:nth-child(' + id + ')').remove();
 			refresh_dbss();
 			reorder_trs();
+			refresh_options();
 		}
 	});
 }
@@ -960,7 +1032,7 @@ function edit_conf_table(o) {
 	var c = confs[id];
 	var params1_base64 = ["password"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -1030,7 +1102,7 @@ function edit_conf_table(o) {
 function edit_ss_node_conf(flag) {
 	var ns = {};
 	var p = "ssconf_basic";
-	var params1 = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host"];
+	var params1 = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts"];
 	var params2 = ["name", "server", "mode", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 	var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"]
 	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"]; //for v2ray
@@ -1112,6 +1184,8 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_mode").value = "1";
 			E("ss_node_table_ss_obfs").value = "0"
 			E("ss_node_table_ss_obfs_host").value = "";
+			E("ss_node_table_ss_v2ray").value = "0"
+			E("ss_node_table_ss_v2ray_opts").value = "";
 			E("ss_node_table_rss_protocol").value = "origin";
 			E("ss_node_table_rss_protocol_param").value = "";
 			E("ss_node_table_rss_obfs").value = "plain";
@@ -1170,7 +1244,7 @@ function generate_node_info() {
 			}
 		}
 		//这些值统一处理
-		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json"];
+		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + idx;
 			if (typeof db_ss[ofield] == "undefined") {
@@ -1216,23 +1290,12 @@ function generate_node_info() {
 	}
 	//console.log("所有节点信息：", confs);
 }
-function refresh_dbss() {
-	$.ajax({
-		type: "GET",
-		url: "/_api/ss",
-		dataType: "json",
-		async: false,
-		success: function(data) {
-			db_ss = data.result[0];
-			generate_node_info();
-		}
-	});
-}
 function refresh_table() {
 	$.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
+		cache:false,
 		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
@@ -1453,7 +1516,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "type"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -1496,6 +1559,7 @@ function save_new_order(){
 		success: function(response) {
 			refresh_dbss();
 			reorder_trs();
+			refresh_options();
 			getNowFormatDate();
 		}
 	});
@@ -1618,7 +1682,9 @@ function makeQRcode(node){
 	id = ids[ids.length - 1];
 	var c = confs[id];
 	if(c["type"] == "0"){
-		if(c["ss_obfs"]){
+		if(c["ss_v2ray"] === "1"){
+			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=" + encodeURIComponent("v2ray-plugin;" +c["ss_v2ray_opts"]) + "#" + c["name"];
+		}else if(c["ss_obfs"] === "1"){
 			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=obfs-local%3Bobfs%3D" + c["ss_obfs"] + "%3Bobfs-host%3D" + c["ss_obfs_host"] + "#" + c["name"];
 		}else{
 			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"]) + "@" + c["server"] + ":" + c["port"] + "#" + c["name"]);
@@ -1679,16 +1745,17 @@ function showQRcode(data) {
 	}else if(data == 2){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">错误！！节点类型位置！！<br />请检查你的节点！</span>')
 	}else{
-		var qrcode = new QRCode(E("qrcode"), {
-			text: data,
-			width: 256,
-			height: 256,
-			colorDark : "#000000",
-			colorLight : "#ffffff",
-			correctLevel : QRCode.CorrectLevel.H
+		require(['/res/qrcode.js'], function() {
+			var qrcode = new QRCode(E("qrcode"), {
+				text: data,
+				width: 256,
+				height: 256,
+				colorDark : "#000000",
+				colorLight : "#ffffff",
+				correctLevel : QRCode.CorrectLevel.H
+			});
 		});
 	}
-
 	$("#qrcode_show").fadeIn(200);
 }
 function cleanCode(){
@@ -1884,6 +1951,20 @@ function download_SS_node(arg) {
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+				}else if(arg == 6){
+					var b = document.createElement('A')
+					b.href = "_root/files/ssf_status.txt"
+					b.download = 'ssf_status.txt'
+					document.body.appendChild(b);
+					b.click();
+					document.body.removeChild(b);
+				}else if(arg == 7){
+					var b = document.createElement('A')
+					b.href = "_root/files/ssc_status.txt"
+					b.download = 'ssc_status.txt'
+					document.body.appendChild(b);
+					b.click();
+					document.body.removeChild(b);
 				}
 			}
 		}
@@ -1966,51 +2047,6 @@ function version_show() {
 		}
 	});
 }
-function get_ss_status_data() {
-	if (db_ss['ss_basic_enable'] != "1") {
-		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
-		return false;
-	}
-	$.ajax({
-		type: "GET",
-		url: "/_result/9527",
-		dataType: "json",
-		async: false,
-		success: function(response) {
-			//console.log(response);
-			if(response != -1 && response.result.indexOf("@@") != -1){
-				var arr = response.result.split("@@");
-				if (arr[0] == "" || arr[1] == "") {
-					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-				} else {
-					E("ss_state2").innerHTML = arr[0];
-					E("ss_state3").innerHTML = arr[1];
-				}
-			}
-		}
-	});
-	setTimeout("get_ss_status_data();", 1500);
-}
-function get_udp_status(){
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_udp_status.sh", "params":[], "fields": ""};
-	$.ajax({
-		type: "POST",
-		cache:false,
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		success: function(response){
-			E("udp_status").innerHTML = response.result;
-			setTimeout("get_udp_status();", 10000);
-		},
-		error: function(){
-			setTimeout("get_udp_status();", 2000);
-		}
-	});
-}
 function update_ss() {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "7";
@@ -2056,14 +2092,8 @@ function toggle_func() {
 	$(".show-btn2").click(
 		function() {
 			tabSelect(2);
-			$("#look_logf").addClass("active3");
-			$("#look_logc").removeClass("active3");
-			$('#log_content_f').show();
-			$('#log_content_c').hide();
-			$("#stauts_bar_text").html("👇 国外状态 - www.google.com.tw 👇")
 			$('#apply_button').hide();
 			verifyFields();
-			if(logf == 0) get_status_log(1);
 		});
 	$(".show-btn3").click(
 		function() {
@@ -2148,30 +2178,111 @@ function toggle_func() {
 		$(".show-btn" + default_tab).trigger("click");
 	}
 }
+function get_ss_status_front() {
+	if (db_ss['ss_basic_enable'] != "1") {
+		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		return false;
+	}
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
+	$.ajax({
+		type: "POST",
+		url: "/_api/",
+		async: true,
+		data: JSON.stringify(postData),
+		success: function(response) {
+			var arr = response.result.split("@@");
+			if (arr[0] == "" || arr[1] == "") {
+				E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+				E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+			} else {
+				E("ss_state2").innerHTML = arr[0];
+				E("ss_state3").innerHTML = arr[1];
+			}
+		}
+	});
+	//refreshRate = Math.floor(Math.random() * 4000) + 4000;
+	//1: 2-3s, 2:4-7s, 3:8-15s, 4:16-31s, 5:32-63s
+	var time_plus = Math.pow("2", String(db_ss['ss_basic_interval']||"2")) * 1000;
+	var time_base = time_plus - 1000;
+	refreshRate = Math.floor(Math.random() * time_base) + time_plus ;
+	setTimeout("get_ss_status_front();", refreshRate);
+}
+function get_ss_status_back() {
+	if (db_ss['ss_basic_enable'] != "1") {
+		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		return false;
+	}
+	$.ajax({
+		url: '/_temp/ss_status.txt',
+		type: 'GET',
+		dataType: 'html',
+		async: true,
+		cache:false,
+		success: function(response) {
+			if(response.indexOf("@@") != -1){
+				var arr = response.split("@@");
+				if (arr[0] == "" || arr[1] == "") {
+					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+				} else {
+					E("ss_state2").innerHTML = arr[0];
+					E("ss_state3").innerHTML = arr[1];
+				}
+			}
+		},
+		error: function(xhr) {
+			E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
+			E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		}
+	});
+	setTimeout("get_ss_status_back();", 3000);
+}
+function get_udp_status(){
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_udp_status.sh", "params":[], "fields": ""};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response){
+			E("udp_status").innerHTML = response.result;
+			setTimeout("get_udp_status();", 10000);
+		},
+		error: function(){
+			setTimeout("get_udp_status();", 2000);
+		}
+	});
+}
+function close_ssf_status() {
+	$("#ssf_status_div").fadeOut(200);
+	STATUS_FLAG = 0;
+}
+function close_ssc_status() {
+	$("#ssc_status_div").fadeOut(200);
+	STATUS_FLAG = 0;
+}
 function lookup_status_log(s) {
+	STATUS_FLAG = 1;
 	if(s == 1){
-		$('#log_content_f').show();
-		$('#log_content_c').hide();
-		$("#look_logf").addClass("active3");
-		$("#look_logc").removeClass("active3");
-		$("#stauts_bar_text").html("👇 国外状态 - www.google.com.tw 👇")
-		if(logf == 0) get_status_log(1);
+		$("#ssf_status_div").fadeIn(500);
+		get_status_log(1);
 	}else{
-		$('#log_content_f').hide();
-		$('#log_content_c').show();
-		$("#look_logf").removeClass("active3");
-		$("#look_logc").addClass("active3");
-		$("#stauts_bar_text").html("👇 国内状态 - www.baidu.com 👇")
-		if(logc == 0) get_status_log(2);
+		$("#ssc_status_div").fadeIn(500);
+		get_status_log(2);
 	}
 }
 function get_status_log(s) {
+	if(STATUS_FLAG == 0) return;
+	
 	if(s == 1){
-		logf = 1;
 		var file = '/_temp/ssf_status.txt';
 		var retArea = E("log_content_f");
 	}else{
-		logc = 1;
 		var file = '/_temp/ssc_status.txt';
 		var retArea = E("log_content_c");
 	}
@@ -2183,8 +2294,6 @@ function get_status_log(s) {
 		cache:false,
 		success: function(response) {
 			if(E("tablet_2").style.display == "none"){
-				logf = 0;
-				logc = 0;
 				return false;
 			}
 			if (_responseLen == response.length) {
@@ -2198,13 +2307,13 @@ function get_status_log(s) {
 				setTimeout('get_status_log("' + s + '");', 1500);
 			}
 			retArea.value = response;
-			if(E("ss_failover_c4").checked == false){
+			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
 				retArea.scrollTop = retArea.scrollHeight;
 			}
 			_responseLen = response.length;
 		},
 		error: function(xhr) {
-			retArea.value = "获取日志失败！";
+			retArea.value = "暂无任何日志，获取日志失败！";
 		}
 	});
 }
@@ -2301,7 +2410,7 @@ function reload_Soft_Center() {
 function getACLConfigs() {
 	var dict = {};
 	acl_node_max = 0;
-	for (var field in db_ss) {
+	for (var field in db_acl) {
 		names = field.split("_");
 		dict[names[names.length - 1]] = 'ok';
 	}
@@ -2310,18 +2419,18 @@ function getACLConfigs() {
 	var params = ["ip", "port", "mode"];
 	for (var field in dict) {
 		var obj = {};
-		if (typeof db_ss[p + "_name_" + field] == "undefined") {
-			obj["name"] = db_ss[p + "_ip_" + field];
+		if (typeof db_acl[p + "_name_" + field] == "undefined") {
+			obj["name"] = db_acl[p + "_ip_" + field];
 		} else {
-			obj["name"] = db_ss[p + "_name_" + field];
+			obj["name"] = db_acl[p + "_name_" + field];
 		}
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + field;
-			if (typeof db_ss[ofield] == "undefined") {
+			if (typeof db_acl[ofield] == "undefined") {
 				obj = null;
 				break;
 			}
-			obj[params[i]] = db_ss[ofield];
+			obj[params[i]] = db_acl[ofield];
 		}
 		if (obj != null) {
 			var node_a = parseInt(field);
@@ -2388,38 +2497,38 @@ function delTr(o) {
 function refresh_acl_table(q) {
 	$.ajax({
 		type: "GET",
-		url: "/_api/ss",
+		url: "/_api/ss_acl",
 		dataType: "json",
 		async: false,
 		success: function(data) {
-			db_ss = data.result[0];
+			db_acl = data.result[0];
 			refresh_acl_html();
 			//write defaut rule mode when switching ss mode
-			if (typeof db_ss["ss_acl_default_mode"] != "undefined") {
-				if (E("ss_basic_mode").value == 1 && db_ss["ss_acl_default_mode"] == 1 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+			if (typeof db_acl["ss_acl_default_mode"] != "undefined") {
+				if (E("ss_basic_mode").value == 1 && db_acl["ss_acl_default_mode"] == 1 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 2 && db_ss["ss_acl_default_mode"] == 2 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				if (E("ss_basic_mode").value == 2 && db_acl["ss_acl_default_mode"] == 2 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 3 && db_ss["ss_acl_default_mode"] == 3 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				if (E("ss_basic_mode").value == 3 && db_acl["ss_acl_default_mode"] == 3 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 5 && db_ss["ss_acl_default_mode"] == 5 || db_ss["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_ss["ss_acl_default_mode"]);
+				if (E("ss_basic_mode").value == 5 && db_acl["ss_acl_default_mode"] == 5 || db_acl["ss_acl_default_mode"] == 0) {
+					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
 			}
 			//write default rule port
-			if (typeof db_ss["ss_acl_default_port"] != "undefined") {
-				$('#ss_acl_default_port').val(db_ss["ss_acl_default_port"]);
+			if (typeof db_acl["ss_acl_default_port"] != "undefined") {
+				$('#ss_acl_default_port').val(db_acl["ss_acl_default_port"]);
 			} else {
 				$('#ss_acl_default_port').val("all");
 			}
 			//write dynamic table value
 			for (var i = 1; i < acl_node_max + 1; i++) {
-				$('#ss_acl_mode_' + i).val(db_ss["ss_acl_mode_" + i]);
-				$('#ss_acl_port_' + i).val(db_ss["ss_acl_port_" + i]);
-				$('#ss_acl_name_' + i).val(db_ss["ss_acl_name_" + i]);
+				$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
+				$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
+				$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
 			}
 			//set default rule port to all when game mode enabled
 			set_default_port();
@@ -2700,6 +2809,8 @@ function save_online_nodes(action) {
 	dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
 	dbus_post["ss_basic_node_update_day"] = E("ss_basic_node_update_day").value;
 	dbus_post["ss_basic_node_update_hr"] = E("ss_basic_node_update_hr").value;
+	dbus_post["ss_basic_exclude"] = E("ss_basic_exclude").value.replace(pattern,"") || "";
+	dbus_post["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 	dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
 	dbus_post["ss_base64_links"] = E("ss_base64_links").value;
 	push_data("ss_online_update.sh", action,  dbus_post);
@@ -2750,7 +2861,7 @@ function set_cron(action) {
 function save_failover() {
 	var dbus_post = {};
 		db_ss["ss_basic_action"] = "19";
-	var fov_inp = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5"];
+	var fov_inp = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval"];
 	var fov_chk = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3"];
 	for (var i = 0; i < fov_inp.length; i++) {
 		dbus_post[fov_inp[i]] = E(fov_inp[i]).value;
@@ -2804,15 +2915,42 @@ function save_failover() {
 										</div>
 										<div style="margin:10px 0 10px 5px;" class="splitLine"></div>
 										<div class="SimpleNote" id="head_illustrate">本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>、<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2Ray</u></em></a>四种客户端的科学上网、游戏加速工具。</div>
-										<!-- this is the popup area for status -->
+										<!-- this is the popup area for process status -->
 										<div id="detail_status"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;">
 											<div class="user_title">【科学上网】状态检测</div>
 											<div style="margin-left:15px"><i>&nbsp;&nbsp;目前本功能支持ss相关进程状态和iptables表状态检测。</i></div>
-											<div id="user_tr" style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
+											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
 												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
 											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
 												<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">
+											</div>
+										</div>
+										<!-- this is the popup area for foreign status -->
+										<div id="ssf_status_div"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
+											<div class="user_title">国外历史状态 - www.google.com.tw</div>
+											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
+											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
+												<textarea cols="63" rows="36" wrap="off" id="log_content_f" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+												<input class="button_gen" type="button" onclick="download_SS_node(6);" value="下载日志">
+												<input class="button_gen" type="button" onclick="close_ssf_status();" value="返回主界面">
+												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
+												<lable>&nbsp;暂停日志刷新</lable>
+											</div>
+										</div>
+										<!-- this is the popup area for china status -->
+										<div id="ssc_status_div"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
+											<div class="user_title">国内历史状态 - www.baidu.com</div>
+											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
+											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
+												<textarea cols="63" rows="36" wrap="off" id="log_content_c" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+												<input class="button_gen" type="button" onclick="download_SS_node(7);" value="下载日志">
+												<input class="button_gen" type="button" onclick="close_ssc_status();" value="返回主界面">
+												<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
 											</div>
 										</div>
 										<!-- this is the popup area for QRcode -->
@@ -2934,6 +3072,8 @@ function save_failover() {
 																	{ title: 'UDP通道', rid:'gameV2_udp_tr', id:'ss_node_table_koolgame_udp', type:'select', options:[["0", "udp in udp"], ["1", "udp in tcp"]], style:'width:350px', value: "0"},
 																	{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:350px', value: "0"},
 																	{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:338px', ph:'bing.com'},
+																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:350px', value: "0"},
+																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:338px', ph:'tls;host=example.com;path=/'},
 																	{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:350px', value: "0"},
 																	{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:338px', ph:'id:password'},
 																	{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:350px', value: "0"},
@@ -2979,6 +3119,8 @@ function save_failover() {
 														{ title: 'UDP通道', id:'ss_basic_koolgame_udp', type:'select', func:'v', hint:'6', options:[["0", "udp in udp"], ["1", "udp in tcp"]], value: "0"},
 														{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
 														{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', type:'text', maxlen:'100', ph:'bing.com'},
+														{ title: 'v2ray-plugin', id:'ss_basic_ss_v2ray', type:'select', hint: '7', func:'v', options:[["0", "关闭"], ["1", "打开"]], value: "0"},
+														{ title: 'v2ray-plugin参数', id:'ss_basic_ss_v2ray_opts', type:'text', maxlen:'300', ph:'tls;host=yourhost.com;path=/;'},
 														{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', type:'select', func:'v', options:option_protocals},
 														{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
 														{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},
@@ -3013,9 +3155,10 @@ function save_failover() {
 													var fa3_2 = ["100", "150", "200", "250", "300", "350", "400", "450", "500", "1000"];
 													var fa4_1 = [["0", "关闭插件"], ["1", "重启插件"], ["2", "切换到"]];
 													var fa4_2 = [["1", "备用节点"], ["2", "下个节点"]];
+													var fa5 = [["1", "2s - 3s"], ["2", "4s - 7s"], ["3", "8s - 15s"], ["4", "16s - 31s"], ["5", "32s - 63s"]];
 													$('#table_failover').forms([
 														{ title: '故障转移开关', id:'ss_failover_enable',type:'checkbox', func:'v', value:false},
-														{ title: '故障转移设置', rid:'failover_settings', multi: [
+														{ title: '故障转移设置', rid:'failover_settings_1', multi: [
 															{ suffix:'<div style="margin-top: 5px;">' },
 															{ id:'ss_failover_c1', type:'checkbox', value:false },
 															{ suffix:'<lable>👉&nbsp;国外连续发生&nbsp;</lable>' },
@@ -3049,36 +3192,34 @@ function save_failover() {
 															{ suffix:'<lable id="ss_failover_text_1">&nbsp;，即在节点列表内顺序循环。&nbsp;</lable>' },
 															{ suffix:'</div>' },
 														]},
-														{ title: '查看历史状态', multi: [
-															{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
-															{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
-															{ suffix:'<lable>&nbsp;&nbsp;&nbsp;&nbsp;最多保留&nbsp;</lable>' },
+														{ title: '状态检测时间间隔', rid:'interval_settings', multi: [
+															{ id:'ss_basic_interval', type:'select', style:'width:auto',options:fa5, value:'2'},
+															{ suffix:'<small>&nbsp;默认：4 - 7s</small>' },
+														]},
+														{ title: '历史记录保存数量', rid:'failover_settings_2', multi: [
+															{ suffix:'<lable>最多保留&nbsp;</lable>' },
 															{ id:'ss_failover_s5', type:'select', style:'width:auto',options:["1000", "2000", "3000", "4000"], value:'2000'},
 															{ suffix:'<lable>&nbsp;行日志&nbsp;</lable>' },
 														]},
-														{ td: '<tr><td id="stauts_bar_text" class="smth" style="font-weight: bold;text-align:center" colspan="2"></td></tr>'},
+														{ title: '查看历史状态', rid:'failover_settings_3', multi: [
+															{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
+															{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
+														]},
 													]);
 												</script>
 											</table>
-											<div id="log_content_fov" style="margin-top:-1px;overflow:hidden;">
-												<textarea rows="30" wrap="on" readonly="readonly" id="log_content_f" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-												<textarea rows="30" wrap="on" readonly="readonly" id="log_content_c" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-											</div>
-
 											<div align="center" style="margin-top: 10px;">
 												<input class="button_gen" type="button" onclick="save()" value="保存&amp;应用">
 												<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
-												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
-												<lable>&nbsp;暂停日志刷新</lable>
 											</div>
 											
 										</div>
 										<div id="tablet_3" style="display: none;">
 											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
-													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【112.124.47.27】"], ["9", "oneDNS2【114.215.126.16】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["12", "自定义DNS"]]
-													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["6", "https_dns_proxy"], ["7", "v2ray_dns"], ["8", "直连"]];
-													var option_dnsr = option_dnsc;
+													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "SmartDNS"], ["12", "自定义DNS"]];
+													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["6", "https_dns_proxy"], ["7", "v2ray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
+													var option_dnsr = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "google DNS1【8.8.8.8】"], ["14", "google DNS2【8.8.4.4】"], ["15", "IBM DNS【9.9.9.9】"], ["12", "自定义DNS"]];
 													var ph1 = "需端口号如：8.8.8.8:53"
 													var ph2 = "需端口号如：8.8.8.8#53"
 													var ph3 = "# 填入自定义的dnsmasq设置，一行一个&#10;# 例如hosts设置：&#10;address=/weibo.com/2.2.2.2&#10;# 防DNS劫持设置：&#10;bogus-nxdomain=220.250.64.18"
@@ -3103,7 +3244,7 @@ function save_failover() {
 														]},														
 														{ title: 'DNS劫持（原chromecast功能）', id:'ss_basic_dns_hijack', type:'checkbox', func:'v', hint:'106', value:true},
 														{ title: '节点域名解析DNS服务器', hint:'107', multi: [
-															{ id: 'ss_basic_server_resolver', type:'select', func:'u', options:option_dnsr, style:'width:auto;', value:'11'},
+															{ id: 'ss_basic_server_resolver', type:'select', func:'u', options:option_dnsr, style:'width:auto;', value:'13'},
 															{ id: 'ss_basic_server_resolver_user', type: 'text'},
 														]},	
 														{ title: '自定义dnsmasq', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
@@ -3306,19 +3447,35 @@ function save_failover() {
 														_tmp[1] = _i + ":00时";
 														option_ruleu.push(_tmp);
 													}
+													function addCommas(nStr) {
+														nStr += '';
+														var x = nStr.split('.');
+														var x1 = x[0];
+														var x2 = x.length > 1 ? '.' + x[1] : '';
+														var rgx = /(\d+)(\d{3})/;
+														while (rgx.test(x1)) {
+														    x1 = x1.replace(rgx, '$1' + ',' + '$2');
+														}
+														return x1 + x2;
+													}
+													//var ipsn='<% nvram_get("chnroute_ips"); %>'
+													var gfwl = addCommas('<% nvram_get("ipset_numbers"); %>');
+													var chnl = addCommas('<% nvram_get("chnroute_numbers"); %>');
+													var chnn = addCommas('<% nvram_get("chnroute_ips"); %>');
+													var cdnn = addCommas('<% nvram_get("cdn_numbers"); %>');
 													$('#table_rules').forms([
 														{ title: 'gfwlist域名数量', multi: [
-															{ suffix: '<% nvram_get("ipset_numbers"); %>&nbsp;条，最后更新版本：' },
+															{ suffix: '<em>'+ gfwl +'</em>&nbsp;条，版本：' },
 															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/master/rules/gfwlist.conf" target="_blank">' },
 															{ suffix: '<i><% nvram_get("update_ipset"); %></i></a>' },
 														]},
 														{ title: '大陆白名单IP段数量', multi: [
-															{ suffix: '<% nvram_get("chnroute_numbers"); %>&nbsp;行，最后更新版本：' },
+															{ suffix: '<em>'+ chnl +'</em>&nbsp;行，包含 <em>' + chnn + '</em>&nbsp;个ip地址，版本：' },
 															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/master/rules/chnroute.txt" target="_blank">' },
 															{ suffix: '<i><% nvram_get("update_chnroute"); %></i></a>' },
 														]},
 														{ title: '国内域名数量（cdn名单）', multi: [
-															{ suffix: '<% nvram_get("cdn_numbers"); %>&nbsp;条，最后更新版本：' },
+															{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
 															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/master/rules/cdn.txt" target="_blank">' },
 															{ suffix: '<i><% nvram_get("update_cdn"); %></i></a>' },
 														]},
@@ -3348,6 +3505,8 @@ function save_failover() {
 														option_nodeh.push(_tmp);
 													}
 													var ph1 = "填入需要订阅的地址，多个地址分行填写";
+													var ph2 = "多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷";
+													var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
 													$('#table_subscribe').forms([
 														{ title: 'SSR/v2ray订阅设置', thead:'1'},
 														{ title: '订阅地址管理（支持SSR/v2ray）', id:'ss_online_links', type:'textarea', rows:'8', ph:ph1},
@@ -3362,6 +3521,8 @@ function save_failover() {
 															{ id:'ss_basic_node_update_day', type:'select', style:'width:auto', options:option_noded, value:'6'},
 															{ id:'ss_basic_node_update_hr', type:'select', style:'width:auto', options:option_nodeh, value:'3'},
 														]},
+														{ title: '[排除]关键词（含关键词的节点不会添加）', rid:'ss_basic_exclude_tr', id:'ss_basic_exclude', type:'text', hint:'110', maxlen:'300', style:'width:95%', ph:ph2},
+														{ title: '[包括]关键词（含关键词的节点才会添加）', rid:'ss_basic_include_tr', id:'ss_basic_include', type:'text', hint:'111', maxlen:'300', style:'width:95%', ph:ph3},
 														{ title: '删除节点', multi: [
 															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(0)">删除全部节点</a>'},
 															{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(1)">删除全部订阅节点</a>'},
@@ -3479,7 +3640,7 @@ function save_failover() {
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;设置节点列表为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr 开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev 开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev / v2ray 开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev 开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;替换为dnsmasq-fastlookup', id:'ss_basic_dnsmasq_fastlookup', help:'105', type:'select', style:'width:auto', options:option_dnsfast},
 													]);

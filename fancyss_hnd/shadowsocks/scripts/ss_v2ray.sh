@@ -70,8 +70,8 @@ update_now(){
 	fi
 	
 	echo_date "开始下载v2ray程序"
-	wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ray_armv7
-	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/$1/v2ray_armv7
+	wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ray
+	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/$1/v2ray
 	if [ "$?" != "0" ];then
 		echo_date "v2ray下载失败！"
 		v2ray_ok=0
@@ -104,8 +104,8 @@ update_now(){
 check_md5sum(){
 	cd /tmp/v2ray
 	echo_date "校验下载的文件!"
-	V2RAY_LOCAL_MD5=`md5sum v2ray_armv7|awk '{print $1}'`
-	V2RAY_ONLINE_MD5=`cat md5sum.txt|grep -w v2ray_armv7|awk '{print $1}'`
+	V2RAY_LOCAL_MD5=`md5sum v2ray|awk '{print $1}'`
+	V2RAY_ONLINE_MD5=`cat md5sum.txt|grep -w v2ray|awk '{print $1}'`
 	V2CTL_LOCAL_MD5=`md5sum v2ctl|awk '{print $1}'`
 	V2CTL_ONLINE_MD5=`cat md5sum.txt|grep v2ctl|awk '{print $1}'`
 	if [ "$V2RAY_LOCAL_MD5"x = "$V2RAY_ONLINE_MD5"x ] && [ "$V2CTL_LOCAL_MD5"x = "$V2CTL_ONLINE_MD5"x ];then
@@ -134,7 +134,7 @@ install_binary(){
 
 move_binary(){
 	echo_date "开始替换v2ray二进制文件... "
-	mv /tmp/v2ray/v2ray_armv7 /koolshare/bin/v2ray
+	mv /tmp/v2ray/v2ray /koolshare/bin/v2ray
 	mv /tmp/v2ray/v2ctl /koolshare/bin/
 	chmod +x /koolshare/bin/v2*
 	V2RAY_LOCAL_VER=`/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2`

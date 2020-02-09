@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
@@ -171,7 +171,7 @@ function getAllConfigs() {
 			obj["method"] = db_ss[p + "_method_" + field];
 		}
 
-		var params = ["password", "mode", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "group", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable"];
+		var params = ["password", "mode", "ss_v2ray_plugin", "ss_v2ray_plugin_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "group", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + field;
 			if (typeof db_ss["ssconf_basic_mode_" + field] == "undefined") {
@@ -235,8 +235,8 @@ function add_new_lb_node() {
 	dbus["ssconf_basic_port_" + cur_lb_node] = E("ss_lb_port").value;
 	dbus["ssconf_basic_password_" + cur_lb_node] = db_ss['ssconf_basic_password_' + min_lb_node];
 	dbus["ssconf_basic_method_" + cur_lb_node] = db_ss['ssconf_basic_method_' + min_lb_node];
-	dbus["ssconf_basic_ss_obfs" + cur_lb_node] = db_ss['ss_basic_ss_obfs' + min_lb_node];
-	dbus["ssconf_basic_ss_obfs_host" + cur_lb_node] = db_ss['ss_basic_ss_obfs_host' + min_lb_node];
+	dbus["ssconf_basic_ss_v2ray_plugin" + cur_lb_node] = db_ss['ss_basic_ss_v2ray_plugin' + min_lb_node];
+	dbus["ssconf_basic_ss_v2ray_plugin_opts" + cur_lb_node] = db_ss['ss_basic_ss_v2ray_plugin_opts' + min_lb_node];
 	dbus["ssconf_basic_rss_protocol_" + cur_lb_node] = db_ss['ssconf_basic_rss_protocol_' + min_lb_node];
 	dbus["ssconf_basic_rss_protocol_param_" + cur_lb_node] = db_ss['ssconf_basic_rss_protocol_param_' + min_lb_node];
 	dbus["ssconf_basic_rss_obfs_" + cur_lb_node] = db_ss['ssconf_basic_rss_obfs_' + min_lb_node];
@@ -261,8 +261,8 @@ function del_lb_node(o) {
 	dbus["ssconf_basic_port_" + cur_lb_node] = "";
 	dbus["ssconf_basic_password_" + cur_lb_node] = "";
 	dbus["ssconf_basic_method_" + cur_lb_node] = "";
-	dbus["ssconf_basic_ss_obfs" + cur_lb_node] = "";
-	dbus["ssconf_basic_ss_obfs_host" + cur_lb_node] = "";
+	dbus["ssconf_basic_ss_v2ray_plugin" + cur_lb_node] = "";
+	dbus["ssconf_basic_ss_v2ray_plugin_opts" + cur_lb_node] = "";
 	dbus["ssconf_basic_rss_protocol_" + cur_lb_node] = "";
 	dbus["ssconf_basic_rss_protocol_param_" + cur_lb_node] = "";
 	dbus["ssconf_basic_rss_obfs_" + cur_lb_node] = "";

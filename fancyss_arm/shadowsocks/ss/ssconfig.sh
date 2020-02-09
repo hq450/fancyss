@@ -14,7 +14,7 @@ CONFIG_FILE=/koolshare/ss/ss.json
 V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 LOCK_FILE=/var/lock/koolss.lock
-DNS_PORT=7913
+DNSF_PORT=7913
 ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
 ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
 IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
@@ -28,7 +28,7 @@ ip_prefix_hex=`nvram get lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {print
 game_on=`dbus list ss_acl_mode|cut -d "=" -f 2 | grep 3`
 [ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && mangle=1
 ss_basic_password=`echo $ss_basic_password|base64_decode`
-ARG_OBFS=""
+ARG_V2RAY_PLUGIN=""
 
 # 兼容3.8.9及其以下
 [ -z "$ss_basic_type" ] && {
@@ -317,27 +317,17 @@ resolv_server_ip(){
 }
 
 ss_arg(){
-	# simple obfs
-	if [ -n "$ss_basic_ss_obfs_host" ];then
-		if [ "$ss_basic_ss_obfs" == "http" ];then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http;obfs-host=$ss_basic_ss_obfs_host"
-		elif [ "$ss_basic_ss_obfs" == "tls" ];then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=$ss_basic_ss_obfs_host"
+	# v2ray-plugin
+	if [ -n "$ss_basic_ss_v2ray_plugin_opts" ];then
+		if [ "$ss_basic_ss_v2ray_plugin" == "1" ];then
+			ARG_V2RAY_PLUGIN="--plugin v2ray-plugin --plugin-opts $ss_basic_ss_v2ray_plugin_opts"
 		else
-			ARG_OBFS=""
-		fi
-	else
-		if [ "$ss_basic_ss_obfs" == "http" ];then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
-		elif [ "$ss_basic_ss_obfs" == "tls" ];then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
-		else
-			ARG_OBFS=""
+			ARG_V2RAY_PLUGIN=""
 		fi
 	fi
 }
 # create shadowsocks config file...
-creat_ss_json(){
+create_ss_json(){
 	if [ "$ss_basic_type" == "0" ];then
 		echo_date 创建SS配置文件到$CONFIG_FILE
 		cat > $CONFIG_FILE <<-EOF
@@ -452,10 +442,10 @@ start_sslocal(){
 		rss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	elif  [ "$ss_basic_type" == "0" ];then
 		echo_date 开启ss-local，提供socks5代理端口：23456
-		if [ "$ss_basic_ss_obfs" == "0" ];then
+		if [ "$ss_basic_ss_v2ray_plugin" == "0" ];then
 			ss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 		else
-			ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+			ss-local -l 23456 -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 		fi
 	fi
 }
@@ -511,7 +501,7 @@ start_dns(){
 			# ss服务器可能是域名且没有正确解析
 			ss_real_server_ip="8.8.8.8"
 		fi
-		chinadns -p $DNS_PORT -s $ss_chinadns_user -e $clinet_ip,$ss_real_server_ip -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
+		chinadns -p $DNSF_PORT -s $ss_chinadns_user -e $clinet_ip,$ss_real_server_ip -c /koolshare/ss/rules/chnroute.txt >/dev/null 2>&1 &
 	fi
 	
 	# Start DNS2SOCKS (default)
@@ -519,27 +509,27 @@ start_dns(){
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
 		start_sslocal
 		echo_date 开启dns2socks，用于dns解析...
-		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT > /dev/null 2>&1 &
 	fi
 	
 	# Start ss-tunnel
 	if [ "$ss_foreign_dns" == "4" ];then
 		if [ "$ss_basic_type" == "1" ];then
 			echo_date 开启ssr-tunnel，用于dns解析...
-			rss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			rss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 		elif [ "$ss_basic_type" == "0" ];then
 			echo_date 开启ss-tunnel，用于dns解析...
-			if [ "$ss_basic_ss_obfs" == "0" ];then
-				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			if [ "$ss_basic_ss_v2ray_plugin" == "0" ];then
+				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			else
-				ss-tunnel -c $CONFIG_FILE -l $DNS_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_V2RAY_PLUGIN -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			fi
 		elif [ "$ss_basic_type" == "3" ];then
 			echo_date V2Ray下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT > /dev/null 2>&1 &
 		fi
 	fi
 	
@@ -549,7 +539,7 @@ start_dns(){
 		echo_date 开启dns2socks，用于chinadns1上游...
 		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 > /dev/null 2>&1 &
 		echo_date 开启chinadns1，用于dns解析...
-		chinadns1 -p $DNS_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
+		chinadns1 -p $DNSF_PORT -s $CDN,127.0.0.1:1055 -d -c /koolshare/ss/rules/chnroute.txt > /dev/null 2>&1 &
 	fi
 
 	#start https_dns_proxy
@@ -572,7 +562,7 @@ start_dns(){
 		https_dns_proxy -u nobody -p 7913 -b 8.8.8.8,1.1.1.1,8.8.4.4,1.0.0.1,145.100.185.15,145.100.185.16,185.49.141.37 -e $ss_real_server_ip/16 -r "https://cloudflare-dns.com/dns-query?ct=application/dns-json&" -d
 	fi
 	
-	# start v2ray DNS_PORT
+	# start v2ray DNSF_PORT
 	if [ "$ss_foreign_dns" == "7" ];then
 		if [ "$ss_basic_type" == "3" ];then
 			return 0
@@ -581,7 +571,7 @@ start_dns(){
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT > /dev/null 2>&1 &
 		fi
 	fi
 
@@ -594,7 +584,7 @@ start_dns(){
 			dbus set ss_foreign_dns=3
 			start_sslocal
 			echo_date 开启dns2socks，用于dns解析...
-			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNS_PORT > /dev/null 2>&1 &
+			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT > /dev/null 2>&1 &
 		fi
 	fi
 	
@@ -984,14 +974,14 @@ start_ss_redir(){
 	if [ "$ss_basic_type" == "1" ];then
 		echo_date 开启ssr-redir进程，用于透明代理.
 		BIN=rss-redir
-		ARG_OBFS=""
+		ARG_V2RAY_PLUGIN=""
 	elif  [ "$ss_basic_type" == "0" ];then
 		# ss-libev需要大于160的熵才能正常工作
 		start_haveged
 		echo_date 开启ss-redir进程，用于透明代理.
-		if [ "$ss_basic_ss_obfs" == "0" ];then
+		if [ "$ss_basic_ss_v2ray_plugin" == "0" ];then
 			BIN=ss-redir
-			ARG_OBFS=""
+			ARG_V2RAY_PLUGIN=""
 		else
 			BIN=ss-redir
 		fi
@@ -1029,13 +1019,13 @@ start_ss_redir(){
 				else
 					echo_date $BIN的 tcp 走kcptun.
 				fi
-				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				# udp go udpspeeder
 				[ "$ss_basic_udp2raw_boost_enable" == "1" ]  && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
 				[ "$ss_basic_udp2raw_boost_enable" == "1" ]  && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
 				[ "$ss_basic_udp2raw_boost_enable" != "1" ]  && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
 				[ "$ss_basic_udp2raw_boost_enable" != "1" ]  && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
-				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			else
 				# tcp go kcp
 				if [ "$SPEED_KCP" == "1" ];then
@@ -1045,10 +1035,10 @@ start_ss_redir(){
 				else
 					echo_date $BIN的 tcp 走kcptun.
 				fi
-				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				# udp go ss
 				echo_date $BIN的 udp 走$BIN.
-				$BIN -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			fi
 		else
 			# tcp only go kcp
@@ -1060,31 +1050,31 @@ start_ss_redir(){
 				echo_date $BIN的 tcp 走kcptun.
 			fi
 			echo_date $BIN的 udp 未开启.
-			$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+			$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -f /var/run/shadowsocks.pid >/dev/null 2>&1
 		fi
 	else
 		if [ "$mangle" == "1" ];then
 			if [ "$SPEED_UDP" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ];then
 				# tcp go ss
 				echo_date $BIN的 tcp 走$BIN.
-				$BIN -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				# udp go udpspeeder
 				[ "$ss_basic_udp2raw_boost_enable" == "1" ]  && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
 				[ "$ss_basic_udp2raw_boost_enable" == "1" ]  && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
 				[ "$ss_basic_udp2raw_boost_enable" != "1" ]  && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
 				[ "$ss_basic_udp2raw_boost_enable" != "1" ]  && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
-				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			else
 				# tcp udp go ss
 				echo_date $BIN的 tcp 走$BIN.
 				echo_date $BIN的 udp 走$BIN.
-				$BIN -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				$BIN -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -u -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			fi
 		else
 			# tcp only go ss
 			echo_date $BIN的 tcp 走$BIN.
 			echo_date $BIN的 udp 未开启.
-			$BIN -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1		
+			$BIN -c $CONFIG_FILE $ARG_V2RAY_PLUGIN -f /var/run/shadowsocks.pid >/dev/null 2>&1		
 		fi
 	fi
 	echo_date $BIN 启动完毕！.
@@ -1155,10 +1145,10 @@ get_path(){
 	fi
 }
 
-creat_v2ray_json(){
+create_v2ray_json(){
 	rm -rf "$V2RAY_CONFIG_FILE_TMP"
 	rm -rf "$V2RAY_CONFIG_FILE"
-	if [ "$ss_basic_v2ray_use_json" == "0" ];then
+	if [ "$ss_basic_v2ray_use_json" == "0" ]; then
 		echo_date 生成V2Ray配置文件...
 		local kcp="null"
 		local tcp="null"
@@ -1170,27 +1160,27 @@ creat_v2ray_json(){
 		[ -z "$ss_basic_v2ray_mux_concurrency" ] && local ss_basic_v2ray_mux_concurrency=8
 		[ "$ss_basic_v2ray_network_security" == "none" ] && local ss_basic_v2ray_network_security=""
 		#if [ "$ss_basic_v2ray_network" == "ws" -o "$ss_basic_v2ray_network" == "h2" ];then
-			case "$ss_basic_v2ray_network_security" in
-				tls)
-					local tls="{
+		case "$ss_basic_v2ray_network_security" in
+		tls)
+			local tls="{
 					\"allowInsecure\": true,
 					\"serverName\": null
 					}"
-				;;
-				*)
-					local tls="null"
-				;;
-			esac
+			;;
+		*)
+			local tls="null"
+			;;
+		esac
 		#fi
 		# incase multi-domain input
-		if [ "`echo $ss_basic_v2ray_network_host | grep ","`" ];then
-			ss_basic_v2ray_network_host=`echo $ss_basic_v2ray_network_host | sed 's/,/", "/g'`
+		if [ "$(echo $ss_basic_v2ray_network_host | grep ",")" ]; then
+			ss_basic_v2ray_network_host=$(echo $ss_basic_v2ray_network_host | sed 's/,/", "/g')
 		fi
-		
+
 		case "$ss_basic_v2ray_network" in
-			tcp)
-				if [ "$ss_basic_v2ray_headtype_tcp" == "http" ];then
-					local tcp="{
+		tcp)
+			if [ "$ss_basic_v2ray_headtype_tcp" == "http" ]; then
+				local tcp="{
 					\"connectionReuse\": true,
 					\"header\": {
 					\"type\": \"http\",
@@ -1219,12 +1209,12 @@ creat_v2ray_json(){
 					}
 					}
 					}"
-				else
-					local tcp="null"
-				fi        
+			else
+				local tcp="null"
+			fi
 			;;
-			kcp)
-				local kcp="{
+		kcp)
+			local kcp="{
 				\"mtu\": 1350,
 				\"tti\": 50,
 				\"uplinkCapacity\": 12,
@@ -1239,61 +1229,45 @@ creat_v2ray_json(){
 				}
 				}"
 			;;
-			ws)
-				local ws="{
+		ws)
+			local ws="{
 				\"connectionReuse\": true,
 				\"path\": $(get_path $ss_basic_v2ray_network_path),
 				\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
 				}"
 			;;
-			h2)
-				local h2="{
-        		\"path\": $(get_path $ss_basic_v2ray_network_path),
-        		\"host\": $(get_h2_host $ss_basic_v2ray_network_host)
-      			}"
+		h2)
+			local h2="{
+				\"path\": $(get_path $ss_basic_v2ray_network_path),
+				\"host\": $(get_h2_host $ss_basic_v2ray_network_host)
+				}"
 			;;
 		esac
-		cat > "$V2RAY_CONFIG_FILE_TMP" <<-EOF
+		# log area
+		cat >"$V2RAY_CONFIG_FILE_TMP" <<-EOF
 			{
-				"log": {
-					"access": "/dev/null",
-					"error": "/tmp/v2ray_log.log",
-					"loglevel": "error"
-				},
+			"log": {
+				"access": "/dev/null",
+				"error": "/tmp/v2ray_log.log",
+				"loglevel": "error"
+			},
 		EOF
-		if [ "$ss_foreign_dns" == "7" ];then
+		# inbounds area (7913 for dns resolve)
+		if [ "$ss_foreign_dns" == "7" ]; then
 			echo_date 配置v2ray dns，用于dns解析...
-			cat >> "$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inbound": {
-				"protocol": "dokodemo-door",
-				"port": 7913,
-				"settings": {
-					"address": "8.8.8.8",
-					"port": 53,
-					"network": "udp",
-					"timeout": 0,
-					"followRedirect": false
-					}
-				},
-			EOF
-		else
-			cat >> "$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inbound": {
-					"port": 23456,
-					"listen": "0.0.0.0",
-					"protocol": "socks",
+			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+				"inbounds": [
+					{
+					"protocol": "dokodemo-door",
+					"port": $DNSF_PORT,
 					"settings": {
-						"auth": "noauth",
-						"udp": true,
-						"ip": "127.0.0.1",
-						"clients": null
+						"address": "8.8.8.8",
+						"port": 53,
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
 					},
-					"streamSettings": null
-				},
-			EOF
-		fi
-		cat >> "$V2RAY_CONFIG_FILE_TMP" <<-EOF
-				"inboundDetour": [
 					{
 						"listen": "0.0.0.0",
 						"port": 3333,
@@ -1304,13 +1278,45 @@ creat_v2ray_json(){
 						}
 					}
 				],
-				"outbound": {
+			EOF
+		else
+			# inbounds area (23456 for socks5)
+			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+				"inbounds": [
+					{
+						"port": 23456,
+						"listen": "0.0.0.0",
+						"protocol": "socks",
+						"settings": {
+							"auth": "noauth",
+							"udp": true,
+							"ip": "127.0.0.1",
+							"clients": null
+						},
+						"streamSettings": null
+					},
+					{
+						"listen": "0.0.0.0",
+						"port": 3333,
+						"protocol": "dokodemo-door",
+						"settings": {
+							"network": "tcp,udp",
+							"followRedirect": true
+						}
+					}
+				],
+			EOF
+		fi
+		# outbounds area
+		cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+			"outbounds": [
+				{
 					"tag": "agentout",
 					"protocol": "vmess",
 					"settings": {
 						"vnext": [
 							{
-								"address": "`dbus get ss_basic_server`",
+								"address": "$(dbus get ss_basic_server)",
 								"port": $ss_basic_port,
 								"users": [
 									{
@@ -1337,69 +1343,105 @@ creat_v2ray_json(){
 						"concurrency": $ss_basic_v2ray_mux_concurrency
 					}
 				}
+			]
 			}
 		EOF
 		echo_date 解析V2Ray配置文件...
-		cat "$V2RAY_CONFIG_FILE_TMP" | jq --tab . > "$V2RAY_CONFIG_FILE"
+		cat "$V2RAY_CONFIG_FILE_TMP" | jq --tab . >"$V2RAY_CONFIG_FILE"
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
-	elif [ "$ss_basic_v2ray_use_json" == "1" ];then
+	elif [ "$ss_basic_v2ray_use_json" == "1" ]; then
 		echo_date 使用自定义的v2ray json配置文件...
-		echo "$ss_basic_v2ray_json" | base64_decode > "$V2RAY_CONFIG_FILE_TMP"
+		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_FILE_TMP"
+		local OB=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
+		local OBS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds)
 
-		OUTBOUND=`cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound`
-		#JSON_INFO=`cat "$V2RAY_CONFIG_FILE_TMP" | jq 'del (.inbound) | del (.inboundDetour) | del (.log)'`
-		#INBOUND_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
-		#INBOUND_DETOUR_TAG=`cat "$V2RAY_CONFIG_FILE_TMP" | jq '.inbound.tag'||""
+		# 兼容旧格式：outbound
+		if [ "$OB" != "null" ]; then
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
+		fi
 		
-		local TEMPLATE="{
-						\"log\": {
-							\"access\": \"/dev/null\",
-							\"error\": \"/tmp/v2ray_log.log\",
-							\"loglevel\": \"error\"
-						},
-						\"inbound\": {
-							\"port\": 23456,
-							\"listen\": \"0.0.0.0\",
-							\"protocol\": \"socks\",
-							\"settings\": {
-								\"auth\": \"noauth\",
-								\"udp\": true,
-								\"ip\": \"127.0.0.1\",
-								\"clients\": null
-							},
-							\"streamSettings\": null
-						},
-						\"inboundDetour\": [
-							{
-								\"listen\": \"0.0.0.0\",
-								\"port\": 3333,
-								\"protocol\": \"dokodemo-door\",
-								\"settings\": {
-									\"network\": \"tcp,udp\",
-									\"followRedirect\": true
-								}
-							}
-						]
-						}"
-		#local TEMPLATE=`cat /koolshare/ss/rules/v2ray_template.json`
+		# 新格式：outbound[]
+		if [ "$OBS" != "null" ]; then
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds[])
+		fi
+		
+		if [ "$ss_foreign_dns" == "7" ]; then
+			local TEMPLATE="{
+								\"log\": {
+									\"access\": \"/dev/null\",
+									\"error\": \"/tmp/v2ray_log.log\",
+									\"loglevel\": \"error\"
+								},
+								\"inbounds\": [
+									{
+										\"protocol\": \"dokodemo-door\", 
+										\"port\": $DNSF_PORT,
+										\"settings\": {
+											\"address\": \"8.8.8.8\",
+											\"port\": 53,
+											\"network\": \"udp\",
+											\"timeout\": 0,
+											\"followRedirect\": false
+										}
+									},
+									{
+										\"listen\": \"0.0.0.0\",
+										\"port\": 3333,
+										\"protocol\": \"dokodemo-door\",
+										\"settings\": {
+											\"network\": \"tcp,udp\",
+											\"followRedirect\": true
+										}
+									}
+								]
+							}"
+		else
+			local TEMPLATE="{
+								\"log\": {
+									\"access\": \"/dev/null\",
+									\"error\": \"/tmp/v2ray_log.log\",
+									\"loglevel\": \"error\"
+								},
+								\"inbounds\": [
+									{
+										\"port\": 23456,
+										\"listen\": \"0.0.0.0\",
+										\"protocol\": \"socks\",
+										\"settings\": {
+											\"auth\": \"noauth\",
+											\"udp\": true,
+											\"ip\": \"127.0.0.1\",
+											\"clients\": null
+										},
+										\"streamSettings\": null
+									},
+									{
+										\"listen\": \"0.0.0.0\",
+										\"port\": 3333,
+										\"protocol\": \"dokodemo-door\",
+										\"settings\": {
+											\"network\": \"tcp,udp\",
+											\"followRedirect\": true
+										}
+									}
+								]
+							}"
+		fi
 		echo_date 解析V2Ray配置文件...
-		echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbound: $args}' > "$V2RAY_CONFIG_FILE"
-		#echo $TEMPLATE | jq --argjson args "$JSON_INFO" '. + $args' > "$V2RAY_CONFIG_FILE"
-		
+		echo $TEMPLATE | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date V2Ray配置文件写入成功到"$V2RAY_CONFIG_FILE"
-		#close_in_five
-		
+
 		# 检测用户json的服务器ip地址
-		v2ray_protocal=`cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.protocol`
+		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
 		vmess)
-			v2ray_server=`cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.vnext[0].address`
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks)
-			v2ray_server=`cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.servers[0].address`
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		shadowsocks)
-			v2ray_server=`cat "$V2RAY_CONFIG_FILE" | jq -r .outbound.settings.servers[0].address`
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			v2ray_server=""
@@ -1449,49 +1491,33 @@ creat_v2ray_json(){
 			echo_date "+   请自行将v2ray服务器的ip地址填入【IP/CIDR】黑名单中，以确保正常使用   +"
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		fi
-
-		if [ "$ss_foreign_dns" == "7" ];then
-			echo_date 配置v2ray dns，用于dns解析...
-			local V2DNS="{
-							\"protocol\": \"dokodemo-door\", 
-							\"port\": 7913,
-							\"settings\": {
-								\"address\": \"8.8.8.8\",
-								\"port\": 53,
-								\"network\": \"udp\",
-								\"timeout\": 0,
-								\"followRedirect\": false
-							}
-						}"
-			cat /koolshare/ss/v2ray.json | jq --argjson args "$V2DNS" '. + {inbound: $args}' > /tmp/v2ray_dns.json && mv /tmp/v2ray_dns.json /koolshare/ss/v2ray.json
-		fi
 	fi
 
 	echo_date 测试V2Ray配置文件.....
 	cd /koolshare/bin
 	result=$(v2ray -test -config="$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
-	if [ -n "$result" ];then
+	if [ -n "$result" ]; then
 		echo_date $result
 		echo_date V2Ray配置文件通过测试!!!
 	else
+		echo_date V2Ray配置文件没有通过测试，请检查设置!!!
 		rm -rf "$V2RAY_CONFIG_FILE_TMP"
 		rm -rf "$V2RAY_CONFIG_FILE"
-		echo_date V2Ray配置文件没有通过测试，请检查设置!!!
 		close_in_five
 	fi
 }
 
-start_v2ray(){
+start_v2ray() {
+	# v2ray start
 	cd /koolshare/bin
 	#export GOGC=30
-	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
-	
+	v2ray -config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
+	local V2PID
 	local i=10
-	until [ -n "$V2PID" ]
-	do
-		i=$(($i-1))
-		V2PID=`pidof v2ray`
-		if [ "$i" -lt 1 ];then
+	until [ -n "$V2PID" ]; do
+		i=$(($i - 1))
+		V2PID=$(pidof v2ray)
+		if [ "$i" -lt 1 ]; then
 			echo_date "v2ray进程启动失败！"
 			close_in_five
 		fi
@@ -1616,8 +1642,8 @@ flush_nat(){
 	ip route del local 0.0.0.0/0 dev lo table 310 >/dev/null 2>&1
 }
 
-# creat ipset rules
-creat_ipset(){
+# create ipset rules
+create_ipset(){
 	echo_date 创建ipset名单
 	ipset -! create white_list nethash && ipset flush white_list
 	ipset -! create black_list nethash && ipset flush black_list
@@ -1991,7 +2017,7 @@ load_nat(){
 		nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers|grep -v PREROUTING|grep -v destination)
 	done
 	echo_date "加载nat规则!"
-	#creat_ipset
+	#create_ipset
 	add_white_black_ip
 	apply_nat_rules
 	chromecast
@@ -2161,11 +2187,11 @@ apply_ss(){
 	resolv_server_ip
 	ss_arg
 	load_module
-	creat_ipset
+	create_ipset
 	create_dnsmasq_conf
 	# do not re generate json on router start, use old one
-	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ] && creat_ss_json
-	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "3" ] && creat_v2ray_json
+	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ] && create_ss_json
+	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "3" ] && create_v2ray_json
 	[ "$ss_basic_type" == "0" ] || [ "$ss_basic_type" == "1" ] && start_ss_redir
 	[ "$ss_basic_type" == "2" ] && start_koolgame
 	[ "$ss_basic_type" == "3" ] && start_v2ray

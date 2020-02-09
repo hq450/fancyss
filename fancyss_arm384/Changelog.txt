@@ -1,0 +1,68 @@
+fancyss_arm384 Changelog
+===========================================
+1.0.4
+   - info	同步fancyss_hnd 1.7.2 - 1.8.1之间的更新：https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt，具体如下：
+   - add	添加SmartDNS支持；
+   - add	新增Shadowsocks的v2ray-plugin支持；
+   - add	现在ssr订阅功能支持订阅部分节点，请前往【更新管理】中的[排除]关键词和[包括]关键词设置；
+    		[排除]关键词：含关键词的节点不会添加，多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷,东京,V3
+    		[包括]关键词：含关键词的节点才会添加，多个关键词用英文逗号分隔，如：香港,新加坡
+    		详细说明鼠标点击对应功能名称可见。
+   - update	重写了外国DNS的说明文档（在【外国DNS】字样上点击鼠标可见）；
+   - update	增加订阅成功率：现在使用curl下载订阅失败后，会自动使用wget重新尝试一次；
+   - update	现在haveged随插件常驻启动，而不是之前在ss-libev启动时才启动；
+   - update	更新了故障检测功能，现在开启插件后能更快的进行故障检测；
+   - update	现在如果故障转移功能在后台切换了节点，且前端页面是打开的，那么前台会收到通知；
+   - update	现在状态检测可以自己选择检测时间间隔，默认4s - 7s；
+   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式；
+   - update	更新v2ray二进制到4.21.3；
+   - update	更新安装包内置规则到最新；
+   - fix	修复了打包插件无法打包v2ray-plugin的问题；
+   - fix	修复导出插件配置恢复后，故障转移等一些功能的配置无法恢复的问题；
+   - fix	修复配置了v2ray-plugin的ss节点，因节点排序而丢失部分节点配置的问题；
+   - fix	修复了节点列表拖拽排序后，因为没有刷新节点选择导致的保存时覆盖了错误位置的节点配置；
+   - fix	修复了从节点列表删除节点后帐号设置的节点选择选项没有更新的问题；
+   - fix	修复某些情况下，因SS/SSR/V2RAY线路挂掉导致【网络地图】中显示网络断开的问题。
+   
+1.0.3
+   - fix	修复游戏模式加载内核模块不完整导致插件无法启用的问题；
+   - fix	修复【节点域名解析DNS服务器】无法选择IBM DNS的问题；
+   - update	更新内置v2ray二进制到v4.20.0；
+   - update	更新内置规则到最新，chnroute.txt更换为ipip.net源；
+   - update	大陆白名单IP段数量增加ip数量显示。
+
+1.0.2
+   - fix	修复在开启故障转移功能后，CPU使用率可能偏高的问题；
+   - fix	修复节点ping有时候无法获取数据显示超时的问题；
+   - fix	修复外网https访问路由器时，分流检测无法显示结果的问题；
+
+1.0.1
+   - fix	修复https_dns_proxy, haproxy二进制错误的问题。
+    		fancyss_arm 384 1.0.1版本对应fancyss_hnd 1.6.8。
+
+1.0.0
+   - add	Fancyss添加对koolshare armv7架构梅林384改版固件的支持，取名为fancyss_arm384，以作区分。
+   
+    		注意：建议使用此版本科学上网插件（fancyss_arm384）的朋友仔细阅读以下内容：
+    		
+    		fancyss_arm384	仅能在koolshare 梅林 arm 384平台，且linux内核为2.6.36.4的armv7架构的机器上使用，
+    		fancyss_arm	仅能在koolshare 梅林 arm 380平台，且linux内核为2.6.36.4的armv7架构的机器上使用，
+    		fancyss_hnd	仅能在koolshare 梅林/官改 hnd/axhnd 384平台，且linux内核为4.1.27/4.1.51的armv8架构机器上使用，
+    		
+    		fancyss_arm384可以用在比如RT-AC88U_384.12_0，RT-AC5300_384.12_0的koolshare梅林384固件。
+    		安装本插件请使用软件中心自带的离线安装功能，插件安装成功后回在软件中心显示名为【科学上网】的图标。
+    		
+    		在web方面：此版本科学上网插件在web上使用的是是软件中心1.5代的api(与fancyss_hnd软件中心api一致)，
+    		在程序方面：此版本科学上网集成的相关程序仍然是armv7架构程序(与fancyss_arm 所用的二进制程序文件一致)。
+    		相当于fancyss_arm 和 fancyss_hnd的合体，但是不兼容其中任何一个（因为web api或者二进制架构不同的原因）
+    		不过因为部分二进制文件是全静态编译的，所以部分二进制文件在两个不同的平台是可以通用的，
+    		所以fancyss_arm384会用到一些fancyss_hnd的二进制文件，如ss-redir，rss-redir等，
+    		也有很多不通用的，比如dnsmasq-fastlookup，v2ray，httping，dns2socks等程序。
+
+    		fancyss_arm384在功能上几乎复刻了fancyss_hnd，所以fancyss_hnd本来已有的功能，在fancyss_arm384几乎都会有，
+    		fancyss_arm384/fancyss_hnd相比fancyss_arm，有更精简的代码、更好节点管理功能、新增的故障转移等等功能,
+    		但是由于fancyss_arm384 所支持的梅林固件linux内核版本2.6.36太老旧，因此不支持fancyss_hnd有的一些特性，
+    		目前已知的fancyss_arm384比fancyss_hnd会少[ss/ssr 开启多核心支持]和[tcp fast open]功能。
+
+    		fancyss_arm384的一些特性的相关功能多数时候可以参考fancyss_hnd的更新日志：
+    		https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt

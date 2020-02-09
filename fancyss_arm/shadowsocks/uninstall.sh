@@ -26,6 +26,7 @@ rm -rf /koolshare/bin/rss-redir
 rm -rf /koolshare/bin/rss-tunnel
 rm -rf /koolshare/bin/rss-local
 rm -rf /koolshare/bin/obfs-local
+rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/koolgame
 rm -rf /koolshare/bin/pdu
 rm -rf /koolshare/bin/haproxy
