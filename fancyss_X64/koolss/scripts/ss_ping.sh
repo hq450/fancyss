@@ -8,10 +8,11 @@ ss_basic_ping_method=`dbus get ss_basic_ping_method`
 ss_mwan_ping_dst=`dbus get ss_mwan_ping_dst`
 [ -z "$ss_basic_ping_method" ] && ss_basic_ping_method="1"
 
-IFS_LINE=`/usr/sbin/ip route show|grep 'default'|grep -v 'lo'|awk -F " " '{print $5}'| wc -l`
+IFS_LINE=`ip route show|grep 'default'|grep -v 'lo'|awk -F " " '{print $5}'| wc -l`
 if [ "$IFS_LINE" -gt "1" ] && [ -n "$ss_mwan_ping_dst" ];then
 	if [ "$ss_mwan_ping_dst" != "0" ];then
-		ARG="-I $ss_mwan_ping_dst"
+		l3_name=`ubus call network.interface dump|jq .interface["$ss_mwan_ping_dst"].l3_device|sed 's/"//g'`
+		ARG="-I $l3_name"
 	else
 		ARG=""
 	fi
