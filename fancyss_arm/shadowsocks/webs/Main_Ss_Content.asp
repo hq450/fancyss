@@ -401,7 +401,7 @@ function save() {
 					dbus["ss_basic_" + remove_v2ray[i]] = "";
 					dbus["ssconf_basic_" + remove_v2ray[i] + "_" + node_sel] = "";
 				}
-			}else{
+			}else if(typeof(db_ss["ssconf_basic_ss_v2ray_plugin" + node_sel])  != "undefined") {
 				var remove_ss = [ "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 				//console.log("use ss");
 				dbus["ss_basic_type"] = "0"
@@ -410,6 +410,15 @@ function save() {
 					dbus["ss_basic_" + remove_ss[i]] = "";
 					dbus["ssconf_basic_" + remove_ss[i] + "_" + node_sel] = "";
 				}
+			} else {
+			    var remove_trojan = [ "method", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
+                //console.log("use trojan");
+                dbus["ss_basic_type"] = "4"
+                dbus["ssconf_basic_type_" + node_sel] = "4"
+                for (var i = 0; i < remove_trojan.length; i++) {
+                    dbus["ss_basic_" + remove_trojan[i]] = "";
+                    dbus["ssconf_basic_" + remove_trojan[i] + "_" + node_sel] = "";
+                }
 			}
 		}
 	}

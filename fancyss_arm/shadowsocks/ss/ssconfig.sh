@@ -13,6 +13,8 @@ LOG_FILE=/tmp/syslog.log
 CONFIG_FILE=/koolshare/ss/ss.json
 V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
+TROJAN_CONFIG_FILE="/koolshare/ss/trojan.json"
+TROJAN_V2RAY_CONFIG_FILE="/koolshare/ss/trojan-v2ray.json"
 LOCK_FILE=/var/lock/koolss.lock
 DNSF_PORT=7913
 ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
@@ -1526,6 +1528,67 @@ start_v2ray() {
 	echo_date v2ray启动成功，pid：$V2PID
 }
 
+# create trojan config file...
+create_trojan_json(){
+	echo_date 创建 Trojan 配置文件到 $TROJAN_CONFIG_FILE
+	cat > $TROJAN_CONFIG_FILE <<-EOF
+		{
+      "run_type": "client",
+      "local_addr": "0.0.0.0",
+      "local_port": 23456,
+      "remote_addr": "$ss_basic_server",
+      "remote_port": $ss_basic_port,
+      "password": [
+          "$ss_basic_password"
+      ],
+      "log_level": 2,
+      "ssl": {
+          "verify": false,
+          "verify_hostname": false,
+          "cert": "",
+          "cipher": "",
+          "cipher_tls13": "TLS_CHACHA20_POLY1305_SHA256",
+          "sni": "",
+          "alpn": [
+              "h2"
+          ],
+          "reuse_session": true,
+          "session_ticket": false,
+          "curves": ""
+      },
+      "tcp": {
+          "no_delay": true,
+          "keep_alive": true,
+          "reuse_port": false,
+          "fast_open": false,
+          "fast_open_qlen": 20
+      }
+    }
+	EOF
+
+	echo_date 创建 Trojan-V2Ray 配置文件到 $TROJAN_V2RAY_CONFIG_FILE
+
+}
+
+start_trojan() {
+	# trojan start
+	cd /koolshare/bin
+	trojan --config=$TROJAN_CONFIG_FILE >/dev/null 2>&1 &
+	local TROJAN_PID
+	local i=10
+	until [ -n "$TROJAN_PID" ]; do
+		i=$(($i - 1))
+		TROJAN_PID=$(pidof trojan)
+		if [ "$i" -lt 1 ]; then
+			echo_date "trojan 进程启动失败！"
+			close_in_five
+		fi
+		sleep 1
+	done
+	echo_date "trojan 启动成功，pid：$TROJAN_PID"
+}
+
+
 write_cron_job(){
 	sed -i '/ssupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	if [ "1" == "$ss_basic_rule_update" ]; then
@@ -2190,11 +2253,13 @@ apply_ss(){
 	create_ipset
 	create_dnsmasq_conf
 	# do not re generate json on router start, use old one
-	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ] && create_ss_json
+	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" != "3" ]  && [ "$ss_basic_type" != "4" ] && create_ss_json
 	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "3" ] && create_v2ray_json
+	[ -z "$WAN_ACTION" ] && [ "$ss_basic_type" = "4" ] && create_trojan_json
 	[ "$ss_basic_type" == "0" ] || [ "$ss_basic_type" == "1" ] && start_ss_redir
 	[ "$ss_basic_type" == "2" ] && start_koolgame
 	[ "$ss_basic_type" == "3" ] && start_v2ray
+	[ "$ss_basic_type" == "4" ] && start_trojan
 	[ "$ss_basic_type" != "2" ] && start_kcp
 	[ "$ss_basic_type" != "2" ] && start_dns
 	#===load nat start===
