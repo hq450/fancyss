@@ -313,7 +313,7 @@ ss_arg(){
 		elif [ "$ss_basic_ss_obfs" == "obfs-tls" ];then
 			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=$ss_basic_ss_obfs_host"
 		elif [ "$ss_basic_ss_obfs" == "v2ray-http" ];then
-			ARG_OBFS="--plugin v2ray-plugin"
+			ARG_OBFS="--plugin v2ray-plugin --plugin-opts host=$ss_basic_ss_obfs_host"
 		elif [ "$ss_basic_ss_obfs" == "v2ray-tls" ];then
 			ARG_OBFS="--plugin v2ray-plugin --plugin-opts tls;host=$ss_basic_ss_obfs_host"
 		elif [ "$ss_basic_ss_obfs" == "v2ray-quic" ];then
