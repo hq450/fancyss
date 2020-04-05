@@ -24,7 +24,7 @@ fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 
 |   linux内核   |                        4.1.27/4.1.51                         |                           2.6.36.4                           |                           2.6.36.4                           |                             2.6                              |                             很新                             |
 |      CPU      |                         bcm490x系列                          |                          bcm4708/9                           |                          bcm4708/9                           |                           bcm4706                            |                          x64架构CPU                          |
 |   维护状态    |                            维护中                            |                            维护中                            |                         **停止维护**                         |                         **停止维护**                         |                         **备份留存**                         |
-|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.2.2**                           |                         **3.0.4？**                          |                          **2.2.2**                           |
+|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.3.0**                           |                         **3.0.4？**                          |                          **2.2.2**                           |
 |   插件名称    |                           科学上网                           |                           科学上网                           |                           科学上网                           |                           科学上网                           |                            koolss                            |
 |   节点管理    |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
 |    ss支持     |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
@@ -45,8 +45,8 @@ fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 
 |  固件下载-4   | [RT-AX88U 梅林改版](http://koolshare.cn/thread-158199-1-1.html) |                                                              |     [华为](https://koolshare.cn/thread-139322-1-1.html)      |                                                              |                                                              |
 |  固件下载-5   | [GT-AX11000 官改固件](http://koolshare.cn/thread-159465-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |  固件下载-6   | [RAX80 梅林改版](https://koolshare.cn/thread-177255-1-1.html) |                                                              |                                                              |                                                              |                                                              |
-|   更新日志    | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm384/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm/Changelog.txt) |                             null                             | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_X64/Changelog.txt) |
-|  离线包下载   | [fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd) | [fancyss_arm384](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384) | [fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm) | [fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel) | [fancyss_x64](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_X64) |
+|   更新日志    | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm384/Changelog.txt) | [Changelog.txt](/fancyss_arm/Changelog.txt) |                             null                             | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_X64/Changelog.txt) |
+|  离线包下载   | [fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd) | [fancyss_arm384](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384) | [fancyss_armv v4.3.0⬆️](/fancyss_arm/history_package) [fancyss_arm v4.2.2⬇️](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm) | [fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel) | [fancyss_x64](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_X64) |
 
 
 
@@ -102,7 +102,9 @@ fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 
 
 ----
 
-### [fancyss_arm](https://github.com/hq450/fancyss/tree/master/fancyss_arm)（停止维护）
+### [fancyss_arm](fancyss_arm)（停止维护）
+
+v4.3.0 开始支持使用 trojan
 
 > **fancyss_arm 停止维护通知：**
 >

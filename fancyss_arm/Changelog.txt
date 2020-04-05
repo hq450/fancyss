@@ -1,5 +1,8 @@
 fancyss_arm Changelog
 ===========================================
+4.3.0
+   - feat	支持 trojan ，可以单个添加/编辑 trojan 节点。
+
 4.2.2
    - fix	修复v2ray_dns无法使用的问题。
 
