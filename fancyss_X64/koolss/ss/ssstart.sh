@@ -193,6 +193,11 @@ kill_process(){
 		echo_date 关闭cdns进程...
 		killall cdns
 	fi
+	# kill v2ray-plugin
+	if [ -n "`pidof v2ray-plugin`" ];then
+		echo_date 关闭v2ray-plugin进程...
+		killall v2ray-plugin
+	fi
 }
 
 kill_cron_job(){
@@ -316,6 +321,8 @@ ss_arg(){
 			ARG_OBFS="--plugin v2ray-plugin --plugin-opts host=$ss_basic_ss_obfs_host"
 		elif [ "$ss_basic_ss_obfs" == "v2ray-tls" ];then
 			ARG_OBFS="--plugin v2ray-plugin --plugin-opts tls;host=$ss_basic_ss_obfs_host"
+		elif [ "$ss_basic_ss_obfs" == "v2ray-tls-path" ];then
+			ARG_OBFS="--plugin v2ray-plugin --plugin-opts tls;$ss_basic_ss_obfs_host"
 		elif [ "$ss_basic_ss_obfs" == "v2ray-quic" ];then
 			ARG_OBFS="--plugin v2ray-plugin --plugin-opts mode=quic;host=$ss_basic_ss_obfs_host"
 		else
