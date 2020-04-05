@@ -2072,6 +2072,12 @@ restart_dnsmasq() {
 		nvram set dns_local_cache=1
 		nvram commit
 	fi
+	# 这是个官改固件
+	if [ -z "$DLC" ]; then
+		cat >/etc/resolv.conf <<-EOF
+			nameserver 127.0.0.1
+		EOF
+	fi
 	# Restart dnsmasq
 	echo_date 重启dnsmasq服务...
 	service restart_dnsmasq >/dev/null 2>&1
