@@ -182,7 +182,7 @@ function pop_node_add() {
 					shade: 0.2,
 					time: 20000, //20s后自动关闭
 					area: ['450px'],
-					btn: ['添加ss节点', '添加ssr节点', '添加koolgame节点', '添加V2Ray节点'],
+					btn: ['添加ss节点', '添加ssr节点', '添加koolgame节点', '添加V2Ray节点', '添加 Trojan 节点'],
 					btnAlign: 'c',
 					btn1: function(index, layero) {
 						setTimeout("Add_profile();", 300);
@@ -200,7 +200,11 @@ function pop_node_add() {
 					btn4: function(index, layero) {
 						setTimeout("Add_profile();", 300);
 						setTimeout("tabclickhandler(3);", 320);
-					}
+					},
+                    btn5: function(index, layero) {
+                        setTimeout("Add_profile();", 300);
+                        setTimeout("tabclickhandler(4);", 320);
+                    }
 				});
 			},
 			btn2: function() {
@@ -504,36 +508,33 @@ function verifyFields(r) {
 	// somae variable
 	var node_sel = E("ssconf_basic_node").value;
 	var ssmode = E("ss_basic_mode").value;
+    var ss_on = false;
+    var ssr_on = false;
+    var koolgame_on = false;
+    var v2ray_on = false;
+    var trojan_on = false;
 	if (typeof(db_ss["ssconf_basic_rss_protocol_" + node_sel]) != "undefined"){
-		var ss_on = false;
-		var ssr_on = true;
-		var koolgame_on = false;
-		var v2ray_on = false;
+        ssr_on = true;
 		$("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(2)">服务器</a>');
 		$("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(3)">服务器端口</a>');
 	}else{
 		if (typeof(db_ss["ssconf_basic_koolgame_udp_" + node_sel]) != "undefined"){
-			var ss_on = false;
-			var ssr_on = false;
-			var koolgame_on = true;
-			var v2ray_on = false;
+			koolgame_on = true;
 			$("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(2)">服务器</a>');
 			$("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(3)">服务器端口</a>');
 		}else{
 			if (typeof(db_ss["ssconf_basic_v2ray_use_json_" + node_sel]) != "undefined"){
-				var ss_on = false;
-				var ssr_on = false;
-				var koolgame_on = false;
-				var v2ray_on = true;
+				v2ray_on = true;
 				$("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(51)"><font color="#ffcc00">地址（address）</font></a>');
 				$("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(50)"><font color="#ffcc00">端口（port）</font></a>');
-			}else{
-				var ss_on = true;
-				var ssr_on = false;
-				var koolgame_on = false;
-				var v2ray_on = false;
+			}else if(typeof(db_ss["ssconf_basic_ss_v2ray_plugin" + node_sel])  != "undefined") {
+				ss_on = true;
 				$("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(2)">服务器</a>');
 				$("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(3)">服务器端口</a>');
+			} else {
+			    trojan_on = true;
+			    $("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(2)">服务器</a>');
+                $("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(3)">服务器端口</a>');
 			}
 		}
 	}
@@ -575,7 +576,7 @@ function verifyFields(r) {
 	var host_on = E("ss_basic_v2ray_network").value == "ws" || E("ss_basic_v2ray_network").value == "h2" || http_on;
 	var path_on = E("ss_basic_v2ray_network").value == "ws" || E("ss_basic_v2ray_network").value == "h2";
 	showhide("pass_tr", (!v2ray_on));
-	showhide("method_tr", (!v2ray_on));
+	showhide("method_tr", (!v2ray_on && !trojan_on));
 	showhide("server_tr", (json_off));
 	showhide("port_tr", (json_off));
 	showhide("v2ray_use_json_basic_tr", v2ray_on);
@@ -592,6 +593,8 @@ function verifyFields(r) {
 	showhide("v2ray_mux_concurrency_basic_tr", (v2ray_on && json_off && E("ss_basic_v2ray_mux_enable").checked));
 	showhide("v2ray_json_basic_tr", (v2ray_on && json_on));
 	showhide("v2ray_binary_update_tr", v2ray_on);
+	// trojan
+	// 暂无
 
 	// dns pannel
 	showhide("dns_plan_foreign", !koolgame_on);
@@ -864,7 +867,7 @@ function getAllConfigs() {
 		} else {
 			obj["use_lb"] = db_ss[p + "_use_lb_" + field];
 		}
-		
+
 		if (typeof db_ss[p + "_server_" + field] == "undefined") {
 			if(db_ss[p + "_v2ray_use_json_" + field] ==  "1"){
 				obj["server"] = "v2ray json";
@@ -924,12 +927,12 @@ function loadBasicOptions(confs) {
 	var option1 = $("#ssconf_basic_ping_node");
 	var option2 = $("#ssconf_basic_test_node");
 	var option3 = $("#ss_basic_udp_node");
-	
+
 	option.find('option').remove().end();
 	option1.find('option').remove().end();
 	option2.find('option').remove().end();
 	option3.find('option').remove().end();
-	
+
 	option1.append($("<option>", {
 		value: 0,
 		text: "全部节点"
@@ -964,11 +967,16 @@ function loadBasicOptions(confs) {
 						value: field,
 						text: c.use_kcp == "1" ? "【V2Ray+KCP】" + c.name : "【V2Ray】" + c.name
 					}));
-				}else{  //判断节点为ss
+				} else if(c["ss_v2ray_plugin"]) {  //判断节点为SS （有 v2ray 插件的为 SS）
 					option.append($("<option>", {
 						value: field,
 						text: c.use_kcp == "1" ? "【SS+KCP】" + c.name : "【SS】" + c.name
 					}));
+				} else { // 其余为 Trojan 节点
+                    option.append($("<option>", {
+                        value: field,
+                        text: c.use_kcp == "1" ? "【Trojan+KCP】" + c.name : "【Trojan】" + c.name
+                    }));
 				}
 			}
 		}
@@ -1040,6 +1048,7 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ssrTitle").style.display = "";
 	E("gamev2Title").style.display = "";
 	E("v2rayTitle").style.display = "";
+	E("trojanTitle").style.display = "";
 	E("add_node").style.display = "";
 	E("edit_node").style.display = "none";
 	E("continue_add").style.display = "";
@@ -1056,6 +1065,7 @@ function tabclickhandler(_type) {
 	E('ssrTitle').className = "vpnClientTitle_td_unclick";
 	E('gamev2Title').className = "vpnClientTitle_td_unclick";
 	E('v2rayTitle').className = "vpnClientTitle_td_unclick";
+	E('trojanTitle').className = "vpnClientTitle_td_unclick";
 	if (_type == 0) {
 		save_flag = "shadowsocks";
 		E("vpnc_type").value = "shadowsocks";
@@ -1210,7 +1220,40 @@ function tabclickhandler(_type) {
 			showhide("v2ray_mux_concurrency_tr", (E("ss_node_table_v2ray_mux_enable").checked));
 			showhide("v2ray_json_tr", (E("ss_node_table_v2ray_use_json").checked));
 		}
-	} 
+	} else if (_type == 4) {
+	    // 添加 Trojan 节点的界面
+	    save_flag = "trojan";
+        E("vpnc_type").value = "trojan";
+        E('trojanTitle').className = "vpnClientTitle_td_click";
+        // 显示别名、地址、端口和密码（公用 ss 的）
+        E('ss_name_support_tr').style.display = "";
+		E('ss_server_support_tr').style.display = "";
+		E('ss_port_support_tr').style.display = "";
+		E('ss_passwd_support_tr').style.display = "";
+        // 不显示 ss 相关条目
+        E('v2ray_use_json_tr').style.display = "none";
+		E('ss_method_support_tr').style.display = "none";
+		E('ss_v2ray_plugin_support').style.display = "none";
+		E('ss_v2ray_plugin_opts_support').style.display = "none";
+		E('ssr_protocol_tr').style.display = "none";
+		E('ssr_protocol_param_tr').style.display = "none";
+		E('ssr_obfs_tr').style.display = "none";
+		E('ssr_obfs_param_tr').style.display = "none";
+		E('gameV2_udp_tr').style.display = "none";
+		// 不显示 v2ray 相关条目
+        E('v2ray_uuid_tr').style.display = "none";
+        E('v2ray_alterid_tr').style.display = "none";
+        E('v2ray_security_tr').style.display = "none";
+        E('v2ray_network_tr').style.display = "none";
+        E('v2ray_headtype_tcp_tr').style.display = "none";
+        E('v2ray_headtype_kcp_tr').style.display = "none";
+        E('v2ray_network_path_tr').style.display = "none";
+        E('v2ray_network_host_tr').style.display = "none";
+        E('v2ray_network_security_tr').style.display = "none";
+        E('v2ray_mux_enable_tr').style.display = "none";
+        E('v2ray_mux_concurrency_tr').style.display = "none";
+        E('v2ray_json_tr').style.display = "none";
+	}
 	return save_flag;
 }
 
@@ -1223,6 +1266,7 @@ function add_ss_node_conf(flag) { //点击添加按钮动作
 	var params3 = ["mode", "name", "server", "port", "method", "koolgame_udp"]; //for ssr
 	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"]; //for v2ray
 	var params4_2 = ["v2ray_use_json", "v2ray_mux_enable"]; //for v2ray
+	var paramsTrojan = ["name", "server", "mode", "port"]; //for trojan
 	if(!$.trim($('#ss_node_table_name').val())){
 		alert("节点名不能为空！！");
 		return false;
@@ -1277,7 +1321,7 @@ function add_ss_node_conf(flag) { //点击添加按钮动作
 					ns[p + "_v2ray_network_security_" + node_global_max] = "tls";
 				}else{
 					ns[p + "_v2ray_network_security_" + node_global_max] = "none";
-				}	
+				}
 				ns[p + "_v2ray_mux_enable_" + node_global_max] = 1;
 				ns[p + "_v2ray_mux_concurrency_" + node_global_max] = 8;
 				ns[p + "_v2ray_use_json_" + node_global_max] = 0;
@@ -1299,7 +1343,13 @@ function add_ss_node_conf(flag) { //点击添加按钮动作
 			}
 		}
 		ns[p + "_type_" + node_global_max] = "3";
-	}
+	} else if(flag == 'trojan') {
+        for (var i = 0; i < paramsTrojan.length; i++) {
+            ns[p + "_" + paramsTrojan[i] + "_" + node_global_max] = $('#ss_node_table' + "_" + paramsTrojan[i]).val();
+        }
+        ns[p + "_password_" + node_global_max] = Base64.encode($("#ss_node_table_password").val());
+        ns[p + "_type_" + node_global_max] = "4";
+    }
 	$.ajax({
 		url: '/applydb.cgi?p=ssconf_basic',
 		contentType: "application/x-www-form-urlencoded",
@@ -1444,8 +1494,10 @@ function refresh_html() {
 				} else {
 					if(c["v2ray_use_json"] == "0" || c["v2ray_use_json"] == "1") { //判断节点为v2ray
 						html = html + '<input id="apply_ss_node_' + c["node"] + '" type="button" class="ss_btn" style="color: #9900CC;width:66px;cursor:pointer;" onclick="apply_Running_node(this);" value="运行中">'
-					}else{
+					}else if(c["ss_v2ray_plugin"]) { //判断节点为SS （有 v2ray 插件的为 SS）
 						html = html + '<input id="apply_ss_node_' + c["node"] + '" type="button" class="ss_btn" style="color: #00CCFF;width:66px;cursor:pointer;" onclick="apply_Running_node(this);" value="运行中">'
+					} else {  // 其余为 Trojan 节点
+					    html = html + '<input id="apply_ss_node_' + c["node"] + '" type="button" class="ss_btn" style="color: #91EAE4;width:66px;cursor:pointer;" onclick="apply_Running_node(this);" value="运行中">'
 					}
 				}
 			}
@@ -1458,8 +1510,10 @@ function refresh_html() {
 				} else {
 					if(c["v2ray_use_json"] == "0" || c["v2ray_use_json"] == "1") { //判断节点为v2ray
 						html = html + '<input id="apply_ss_node_' + c["node"] + '" type="button" class="ss_btn" style="color: #9900CC;width:66px;cursor:pointer;" onclick="apply_this_ss_node(this);" value="应用">'
-					}else{
+					} else if(c["ss_v2ray_plugin"]) { //判断节点为SS （有 v2ray 插件的为 SS）
 						html = html + '<input id="apply_ss_node_' + c["node"] + '" type="button" class="ss_btn" style="color: #00CCFF;width:66px;cursor:pointer;" onclick="apply_this_ss_node(this);" value="应用">'
+					} else {  // 其余为 Trojan 节点
+					    html = html + '<input id="apply_ss_node_' + c["node"] + '" type="button" class="ss_btn" style="color: #91EAE4;width:66px;cursor:pointer;" onclick="apply_this_ss_node(this);" value="应用">'
 					}
 				}
 			}
@@ -1513,11 +1567,16 @@ function apply_this_ss_node(s) { //应用此节点
 						value: field,
 						text: "【V2Ray】" + c.name
 					}));
-				}else{
+				} else if(c["ss_v2ray_plugin"]) { //判断节点为SS （有 v2ray 插件的为 SS）
 					option.append($("<option>", {
 						value: field,
 						text: "【SS】" + c.name
 					}));
+				} else {  // 其余的为 Trojan 节点
+                    option.append($("<option>", {
+                        value: field,
+                        text: "【Trojan】" + c.name
+                    }));
 				}
 			}
 		}
@@ -1600,41 +1659,39 @@ function edit_conf_table(o) { //编辑节点功能，显示编辑面板
 	E("add_node").style.display = "none";
 	E("edit_node").style.display = "";
 	E("continue_add").style.display = "none";
-	
+
+    E("ssTitle").style.display = "none";
+    E("ssrTitle").style.display = "none";
+    E("gamev2Title").style.display = "none";
+    E("v2rayTitle").style.display = "none";
+    E("trojanTitle").style.display = "none";
 	if (c["rss_protocol"]) { //判断节点为SSR
 		$("#vpnc_settings").fadeIn(200);
-		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "";
-		E("gamev2Title").style.display = "none";
-		E("v2rayTitle").style.display = "none";
 		$("#ssrTitle").html("编辑SSR账号");
 		tabclickhandler(1);
 	} else {
 		if (c["koolgame_udp"] == "0" || c["koolgame_udp"] == "1") { //判断节点为koolgame
 			$("#vpnc_settings").fadeIn(200);
-			E("ssTitle").style.display = "none";
-			E("ssrTitle").style.display = "none";
 			E("gamev2Title").style.display = "";
-			E("v2rayTitle").style.display = "none";
 			$("#gamev2Title").html("编辑koolgame账号");
 			tabclickhandler(2);
-		}else { 
+		}else {
 			if(c["v2ray_use_json"] == "0" || c["v2ray_use_json"] == "1") { //判断节点为v2ray
 				$("#vpnc_settings").fadeIn(200);
-				E("ssTitle").style.display = "none";
-				E("ssrTitle").style.display = "none";
-				E("gamev2Title").style.display = "none";
 				E("v2rayTitle").style.display = "";
 				$("#v2rayTitle").html("编辑V2Ray账号");
 				tabclickhandler(3);
-			}else{ //判断节点为SS
+			} else if(c["ss_v2ray_plugin"]) { //判断节点为SS （有 v2ray 插件的为 SS）
 				$("#vpnc_settings").fadeIn(200);
-				E("ssTitle").style.display = "";
-				E("ssrTitle").style.display = "none";
-				E("gamev2Title").style.display = "none";
-				E("v2rayTitle").style.display = "none";
+                E("ssTitle").style.display = "";
 				$("#ssTitle").html("编辑ss账号");
 				tabclickhandler(0);
+			} else { // 其余的为 Trojan 节点
+                $("#vpnc_settings").fadeIn(200);
+                E("trojanTitle").style.display = "";
+                $("#trojanTitle").html("编辑 Trojan 配置");
+                tabclickhandler(4);
 			}
 		}
 	}
@@ -1649,6 +1706,7 @@ function edit_ss_node_conf(flag) { //编辑节点功能，数据重写
 	var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"]; //for ssr
 	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency"]; //for v2ray
 	var params4_2 = ["v2ray_use_json", "v2ray_mux_enable"]; //for v2ray
+	var paramsTrojan = ["name", "server", "mode", "port"]; //for trojan
 	if (flag == 'shadowsocks') {
 		for (var i = 0; i < params1.length; i++) {
 			ns[p + "_" + params1[i] + "_" + myid] = $('#ss_node_table' + "_" + params1[i]).val();
@@ -1713,7 +1771,13 @@ function edit_ss_node_conf(flag) { //编辑节点功能，数据重写
 			}
 		}
 		ns[p + "_type_" + myid] = "3";
-	} 
+	} else if(flag == 'trojan') {
+		for (var i = 0; i < paramsTrojan.length; i++) {
+			ns[p + "_" + paramsTrojan[i] + "_" + myid] = $('#ss_node_table' + "_" + paramsTrojan[i]).val();
+		}
+		ns[p + "_password_" + myid] = Base64.encode($("#ss_node_table_password").val());
+	    ns[p + "_type_" + myid] = "4";
+	}
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
 	$.ajax({
@@ -2972,7 +3036,7 @@ function set_cron(action) {
 		for (var i = 0; i < cron_params1.length; i++) {
 			dbus[cron_params1[i]] = E(cron_params1[i]).value;
 		}
-		
+
 		if (!E("ss_basic_custom").value) {
 			dbus["ss_basic_custom"] = "";
 		} else {
@@ -3059,8 +3123,8 @@ function set_cron(action) {
 												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
 											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">	
-											</div>	
+												<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">
+											</div>
 										</div>
 										<!-- end of the popouparea -->
 										<div id="ss_switch_show">
@@ -3145,13 +3209,14 @@ function set_cron(action) {
 										<div id="vpnc_settings"  class="contentM_qis" style="box-shadow: 3px 3px 10px #000;margin-top: 50px;">
 											<table class="QISform_wireless" border=0 align="center" cellpadding="5" cellspacing="0">
 												<tr style="height:32px;">
-													<td>		
+													<td>
 														<table width="100%" border="0" align="left" cellpadding="0" cellspacing="0" class="vpnClientTitle">
 															<tr>
-													  		<td width="25%" align="center" id="ssTitle" onclick="tabclickhandler(0);">添加SS账号</td>
-													  		<td width="25%" align="center" id="ssrTitle" onclick="tabclickhandler(1);">添加SSR账号</td>
-													  		<td width="25%" align="center" id="gamev2Title" onclick="tabclickhandler(2);">添加koolgame账号</td>
-													  		<td width="25%" align="center" id="v2rayTitle" onclick="tabclickhandler(3);">添加V2Ray配置</td>
+													  		<td width="20%" align="center" id="ssTitle" onclick="tabclickhandler(0);">添加SS账号</td>
+													  		<td width="20%" align="center" id="ssrTitle" onclick="tabclickhandler(1);">添加SSR账号</td>
+													  		<td width="20%" align="center" id="gamev2Title" onclick="tabclickhandler(2);">添加koolgame账号</td>
+													  		<td width="20%" align="center" id="v2rayTitle" onclick="tabclickhandler(3);">添加V2Ray配置</td>
+													  		<td width="20%" align="center" id="trojanTitle" onclick="tabclickhandler(4);">添加 Trojan 配置</td>
 															</tr>
 														</table>
 													</td>
