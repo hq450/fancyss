@@ -8,8 +8,9 @@ fancyss_hnd Changelog
    - update	优化了订阅脚本；
    - add	添加chinadns-ng，此解析方式下不需要cnd.conf参与，详情：https://github.com/zfl9/chinadns-ng；
     		PS:由于现在DNS方案错综复杂，下个版本应该会较大改动下这块。
-   - add	添加TUF-AX3000支持，虽然TUF-AX3000使用的CPU：BCM6750是armv7l 32位cpu，但是其固件基本是和RT-AC86U一样的工具链编译的
-    		所以将TUF-AX3000纳入支持，不过目前1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
+   - add	添加TUF-AX3000 koolshare官改固件支持，虽然TUF-AX3000使用的CPU：BCM6750是armv7l 32位cpu，
+    		但是其固件基本是和RT-AC86U一样的工具链编译的，所以将TUF-AX3000纳入支持，
+		不过对于目前fancyss_hnd 1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
     		因为这些功能使用的二进制是64位的，BCM6750作为32位cpu是不能运行的，后期版本将逐渐添加支持。		
    
 1.8.1
