@@ -54,6 +54,9 @@ get_dns_name() {
 	9)
 		echo "SmartDNS"
 		;;
+	10)
+		echo "chinadns-ng"
+		;;
 	esac
 }
 
@@ -107,6 +110,7 @@ check_status() {
 	CDNS=$(pidof cdns)
 	CHINADNS1=$(pidof chinadns1)
 	CHINADNS=$(pidof chinadns)
+	CHINADNS_NG=$(pidof chinadns-ng)
 	KCPTUN=$(pidof client_linux_arm7)
 	HAPROXY=$(pidof haproxy)
 	V2RAY=$(pidof v2ray)
@@ -187,6 +191,8 @@ check_status() {
 			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
 		elif [ "$ss_foreign_dns" == "9" ]; then
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
+		elif [ "$ss_foreign_dns" == "10" ]; then
+			[ -n "${CHINADNS_NG}" ] && echo "chinadns-ng	工作中	pid：${CHINADNS_NG}" || echo "chinadns-ng	未运行"
 		fi
 	fi
 	[ "$ss_dns_china" == "13" ] &&{
