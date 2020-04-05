@@ -1,6 +1,6 @@
 fancyss_hnd Changelog
 ===========================================
-1.8.2
+1.8.2 - 1.8.3
    - update	更新httping，支持ssl；
    - update	更新smartdns二进制到(commit:198d18f)；
    - update	更新haproxy二进制到2.1.2；
