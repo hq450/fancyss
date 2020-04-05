@@ -1,5 +1,8 @@
 fancyss_arm Changelog
 ===========================================
+4.3.1
+   - feat	支持订阅 trojan 链接。
+
 4.3.0
    - feat	支持 trojan ，可以单个添加/编辑 trojan 节点。
 

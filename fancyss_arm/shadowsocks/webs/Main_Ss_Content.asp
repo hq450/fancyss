@@ -151,7 +151,7 @@ function pop_help() {
 			moveType: 1,
 			content: '<div style="padding: 50px; line-height: 22px; background-color: #393D49; color: #fff; font-weight: 300;">\
 				<b>梅林固件 - 科学上网插件 - ' + db_ss["ss_basic_version_local"] + '</b><br><br>\
-				本插件是支持<a target="_blank" href="https://github.com/shadowsocks/shadowsocks-libev" ><u>SS</u></a>、<a target="_blank" href="https://github.com/shadowsocksrr/shadowsocksr-libev"><u>SSR</u></a>、<a target="_blank" href="http://firmware.koolshare.cn/binary/koolgame"><u>KoolGame</u></a>、<a target="_blank" href="https://github.com/v2ray/v2ray-core"><u>V2Ray</u></a>四种客户端的科学上网、游戏加速工具。<br>\
+				本插件是支持<a target="_blank" href="https://github.com/shadowsocks/shadowsocks-libev" ><u>SS</u></a>、<a target="_blank" href="https://github.com/shadowsocksrr/shadowsocksr-libev"><u>SSR</u></a>、<a target="_blank" href="http://firmware.koolshare.cn/binary/koolgame"><u>KoolGame</u></a>、<a target="_blank" href="https://github.com/v2ray/v2ray-core"><u>V2Ray</u></a>、<a target="_blank" href="https://github.com/trojan-gfw/trojan"><u>Trojan</u></a>五种客户端的科学上网、游戏加速工具。<br>\
 				本插件仅支持Merlin AM380 2.6.36.4内核的固件，请不要用于其它固件安装。<br>\
 				使用本插件有任何问题，可以前往<a style="color:#e7bd16" target="_blank" href="https://github.com/hq450/fancyss/issues"><u>github的issue页面</u></a>反馈~<br><br>\
 				● SS/SSR一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/onekeyshell/kcptun_for_ss_ssr/tree/master"><u>一键安装KCPTUN for SS/SSR on Linux</u></a><br>\
@@ -3122,7 +3122,7 @@ function set_cron(action) {
 											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
 										</div>
 										<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
-										<div class="SimpleNote" id="head_illustrate">本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>、<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2Ray</u></em></a>四种客户端的科学上网、游戏加速工具。</div>
+										<div class="SimpleNote" id="head_illustrate">本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>、<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2Ray</u></em></a>、<a target="_blank" href="https://github.com/trojan-gfw/trojan"><em><u>Trojan</u></em></a>五种客户端的科学上网、游戏加速工具。</div>
 										<div style="margin-top: 0px;text-align: center;font-size: 18px;margin-bottom: 0px;" class="formfontdesc" id="cmdDesc"></div>
 										<!-- this is the popup area for status -->
 										<div id="detail_status"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: 0px;display: none;">
@@ -4587,17 +4587,17 @@ taobao.com
 											<table id="conf_table1" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<thead>
 												<tr>
-													<td colspan="3">SSR/v2ray订阅设置</td>
+													<td colspan="3">SSR/v2ray/Trojan订阅设置</td>
 												</tr>
 												</thead>
 												<tr>
-													<th width="35%">订阅地址管理（支持SSR/v2ray）</th>
+													<th width="35%">订阅地址管理（支持SSR/v2ray/Trojan）</th>
 													<td>
 														<textarea placeholder="填入需要订阅的地址，多个地址分行填写" rows=8 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_online_links" name="ss_online_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 													</td>
 												</tr>
 												<tr>
-													<th width="35%">订阅节点模式设定（SSR/v2ray）</th>
+													<th width="35%">订阅节点模式设定（SSR/v2ray/Trojan）</th>
 													<td>
 														<select id="ssr_subscribe_mode" name="ssr_subscribe_mode" class="input_option" onchange="update_visibility();" >
 															<option value="1">【1】 gfwlist模式</option>
@@ -4620,7 +4620,7 @@ taobao.com
 													</td>
 												</tr>
 												<tr>
-													<th width="35%">下载订阅时走SS/SSR/v2ray代理网络</th>
+													<th width="35%">下载订阅时走SS/SSR/v2ray/Trojan代理网络</th>
 													<td>
 														<select id="ss_basic_online_links_goss" name="ss_basic_online_links_goss" class="input_option" onchange="update_visibility();" >
 															<option value="0" selected="">不走代理</option>
@@ -4668,13 +4668,13 @@ taobao.com
 											<table style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<thead>
 												<tr>
-													<td colspan="3">通过SS/SSR/vmess链接添加服务器</td>
+													<td colspan="3">通过SS/SSR/vmess/trojan链接添加服务器</td>
 												</tr>
 												</thead>
 												<tr>
-													<th width="35%">SS/SSR/vmess链接</th>
+													<th width="35%">SS/SSR/vmess/trojan链接</th>
 													<td>
-														<textarea placeholder="填入以ss://或者ssr://或者vmess://开头的链接，多个链接请分行填写" rows=9 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_base64_links" name="ss_base64_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+														<textarea placeholder="填入以ss://或者ssr://或者vmess://或者trojan://开头的链接，多个链接请分行填写" rows=9 style="width:99%; font-family:'Lucida Console'; font-size:12px;background:#475A5F;color:#FFFFFF;border:1px solid gray;" id="ss_base64_links" name="ss_base64_links" title="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 													</td>
 												</tr>
 												<tr>

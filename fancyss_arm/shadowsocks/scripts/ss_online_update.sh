@@ -620,7 +620,7 @@ get_oneline_rule_now(){
 	
 	if [ "$ss_basic_online_links_goss" == "1" ];then
 		open_socks_23456
-		socksopen_b=`netstat -nlp|grep -w 23456|grep -E "local|v2ray"`
+		socksopen_b=`netstat -nlp|grep -w 23456|grep -E "local|v2ray|trojan"`
 		if [ -n "$socksopen_b" ];then
 			echo_date "使用$(get_type_name $ss_basic_type)提供的socks代理网络下载..."
 			curl --connect-timeout 8 -s -L --socks5-hostname 127.0.0.1:23456 $ssr_subscribe_link > /tmp/ssr_subscribe_file.txt
@@ -669,6 +669,7 @@ get_oneline_rule_now(){
 		NODE_FORMAT1=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^ss://"`
 		NODE_FORMAT2=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^ssr://"`
 		NODE_FORMAT3=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^vmess://"`
+		NODE_FORMAT_TROJAN=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^trojan://"`
 		if [ -n "$NODE_FORMAT2" ];then
 			# SSR 订阅
 			NODE_NU=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "ssr://"`
@@ -750,11 +751,48 @@ get_oneline_rule_now(){
 			ONLINE_GET=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
 			echo_date "本次更新订阅来源 【$v2ray_group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
 			echo_date "现共有自添加节点：$USER_ADD 个。"
-			echo_date "现共有订阅SSR/v2ray节点：$ONLINE_GET 个。"
+			echo_date "现共有订阅 SSR/v2ray/Trojan 节点：$ONLINE_GET 个。"
 			echo_date "在线订阅列表更新完成!"			
 		elif [ -n "$NODE_FORMAT1" ];then
 			echo_date 暂时不支持ss节点订阅...
 			echo_date 退出订阅程序...
+    elif [ -n "$NODE_FORMAT_TROJAN" ];then
+			# Trojan 订阅
+			# use domain as group
+			group=`echo $ssr_subscribe_link|awk -F'[/:]' '{print $4}'`
+			# 储存对应订阅链接的group信息
+			dbus set ss_online_group_$z=$group
+			echo $group >> /tmp/group_info.txt
+
+			NODE_NU=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "trojan://"`
+			echo_date "检测到 Trojan 节点格式，共计 $NODE_NU 个节点..."
+      urllinks=$(decode_url_link `cat /tmp/ssr_subscribe_file.txt` | sed 's/trojan:\/\///g')
+
+			[ -z "$urllinks" ] && continue
+			for link in $urllinks
+			do
+        if [ -n "`echo -n "$link" | grep "#"`" ];then
+					new_sslink=`echo -n "$link" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g'`
+					# 因为订阅的 trojan 里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装
+					remarks=`echo -n "$link" | awk -F'#' '{print $2}' | tr '\r\n' ' '`
+				else
+					new_sslink=`echo -n "$link" | sed 's/trojan:\/\///g'`
+					remarks='AddByLink'
+				fi
+				get_trojan_config $new_sslink
+				[ "$?" == "0" ] && update_trojan_config || echo_date "检测到一个错误节点，已经跳过！"
+			done
+
+			# 去除订阅服务器上已经删除的节点
+			del_none_exist
+			# 节点重新排序
+			remove_node_gap
+			USER_ADD=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
+			ONLINE_GET=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
+			echo_date "本次更新订阅来源 【$group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
+			echo_date "现共有自添加 SSR/v2ray/Trojan 节点：$USER_ADD 个。"
+			echo_date "现共有订阅 SSR/v2ray/Trojan 节点：$ONLINE_GET 个。"
+			echo_date "在线订阅列表更新完成!"
 		else
 			return 3
 		fi
@@ -944,10 +982,74 @@ get_ss_config(){
 	password=`echo $password|base64_encode`
 }
 
+get_trojan_config(){
+	link=$1
+	server=$(echo "$link" |awk -F':' '{print $1}'|awk -F'@' '{print $2}')
+	server_port=$(echo "$link" |awk -F':' '{print $2}')
+	password=$(echo "$link" |awk -F':' '{print $1}'|awk -F'@' '{print $1}')
+	password=`echo $password|base64_encode`
+
+  [ -n "$group" ] && group_base64=`echo $group | base64_encode | sed 's/ -//g'`
+	[ -n "$server" ] && server_base64=`echo $server | base64_encode | sed 's/ -//g'`
+	#把全部服务器节点写入文件 /usr/share/shadowsocks/serverconfig/all_onlineservers
+	[ -n "$group" ] && [ -n "$server" ] && echo $server_base64 $group_base64 >> /tmp/all_onlineservers
+	#echo ------
+	#echo group: $group
+	#echo remarks: $remarks
+	#echo server: $server
+	#echo server_port: $server_port
+	#echo password: $password
+	#echo ------
+	echo "$group" >> /tmp/all_group_info.txt
+	[ -n "$group" ] && return 0 || return 1
+}
+
+add_trojan_servers(){
+	trojanindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
+	echo_date "添加 Trojan 节点：$remarks"
+	dbus set ssconf_basic_name_$trojanindex=$remarks
+	dbus set ssconf_basic_mode_$trojanindex=$ssr_subscribe_mode
+	dbus set ssconf_basic_server_$trojanindex=$server
+	dbus set ssconf_basic_port_$trojanindex=$server_port
+	dbus set ssconf_basic_password_$trojanindex=$password
+	dbus set ssconf_basic_type_$trojanindex="3"
+	echo_date "Trojan 节点：新增加 【$remarks】 到节点列表第 $trojanindex 位。"
+}
+
+update_trojan_config(){
+	isadded_server=$(cat /tmp/all_localservers | grep -w $group_base64 | awk '{print $1}' | grep -c $server_base64|head -n1)
+	if [ "$isadded_server" == "0" ]; then
+		add_trojan_servers
+		let addnum+=1
+	else
+		# 如果在本地的订阅节点中已经有该节点（用group和server去判断），检测下配置是否更改，如果更改，则更新配置
+		index=$(cat /tmp/all_localservers| grep $group_base64 | grep $server_base64 |awk '{print $3}'|head -n1)
+
+		local i=0
+		dbus set ssconf_basic_mode_$index="$ssr_subscribe_mode"
+		local_remarks=$(dbus get ssconf_basic_name_$index)
+		[ "$local_remarks" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks && let i+=1
+		local_mode=$(dbus get ssconf_basic_name_$index)
+		[ "$local_mode" != "$ssr_subscribe_mode" ] && dbus set ssconf_basic_name_$index=$ssr_subscribe_mode && let i+=1
+		local_server=$(dbus get ssconf_basic_server_$index)
+		[ "$local_server" != "$server" ] && dbus set ssconf_basic_server_$index=$server && let i+=1
+		local_server_port=$(dbus get ssconf_basic_port_$index)
+		[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index=$server_port && let i+=1
+		local_password=$(dbus get ssconf_basic_password_$index)
+		[ "$local_password" != "$password" ] && dbus set ssconf_basic_port_$index=$password && let i+=1
+
+		if [ "$i" -gt "0" ];then
+			echo_date "修改 Trojan 节点：【$remarks】" && let updatenum+=1
+		else
+			echo_date "Trojan 节点：【$remarks】 参数未发生变化，跳过！"
+		fi
+	fi
+}
+
 add() {
 	echo_date "==================================================================="
 	usleep 250000
-	echo_date 通过SS/SSR/v2ray链接添加节点...
+	echo_date 通过 SS/SSR/v2ray/Trojan 链接添加节点...
 	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
 	rm -rf /tmp/all_localservers >/dev/null 2>&1
@@ -984,7 +1086,19 @@ add() {
 				decode_sslink=$(decode_url_link $new_sslink)
 				get_ss_config $decode_sslink
 				add_ss_servers
-			fi
+			elif [ -n "`echo -n "$ssrlink" | grep "trojan://"`" ]; then
+        echo_date 检测到 Trojan 链接...开始尝试解析...
+        if [ -n "`echo -n "$ssrlink" | grep "#"`" ];then
+					new_sslink=`echo -n "$ssrlink" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g'`
+					remarks=`echo -n "$ssrlink" | awk -F'#' '{print $2}'`
+          echo "【$remarks】"
+				else
+					new_sslink=`echo -n "$ssrlink" | sed 's/trojan:\/\///g'`
+					remarks='AddByLink'
+				fi
+				get_trojan_config $new_sslink
+				add_trojan_servers
+      fi
 		fi
 		dbus remove ss_base64_links
 	done

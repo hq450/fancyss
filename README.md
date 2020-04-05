@@ -3,7 +3,7 @@ fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 
 
 仅修改 [fancyss_arm](fancyss_arm) 以下的相关特性。
 
-目前 fancyss_arm 支持启动 trojan ，单个添加/编辑 trojan 节点。
+目前 fancyss_arm 支持启动 trojan ，单个添加/编辑 trojan 节点，订阅 trojan 链接。
 
 # [fancyss - 科学上网](https://hq450.github.io/fancyss/)
 
@@ -24,7 +24,7 @@ fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 
 |   linux内核   |                        4.1.27/4.1.51                         |                           2.6.36.4                           |                           2.6.36.4                           |                             2.6                              |                             很新                             |
 |      CPU      |                         bcm490x系列                          |                          bcm4708/9                           |                          bcm4708/9                           |                           bcm4706                            |                          x64架构CPU                          |
 |   维护状态    |                            维护中                            |                            维护中                            |                         **停止维护**                         |                         **停止维护**                         |                         **备份留存**                         |
-|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.3.0**                           |                         **3.0.4？**                          |                          **2.2.2**                           |
+|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.3.1**                           |                         **3.0.4？**                          |                          **2.2.2**                           |
 |   插件名称    |                           科学上网                           |                           科学上网                           |                           科学上网                           |                           科学上网                           |                            koolss                            |
 |   节点管理    |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
 |    ss支持     |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
