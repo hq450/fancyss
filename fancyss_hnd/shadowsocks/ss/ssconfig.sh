@@ -1027,6 +1027,7 @@ start_speeder() {
 		if [ "$ss_basic_udp_boost_enable" == "1" ]; then
 			if [ "$ss_basic_udp_software" == "1" ]; then
 				echo_date 开启UDPspeederV1进程.
+				[ -z "$ss_basic_udpv1_rserver" ] && ss_basic_udpv1_rserver="$ss_basic_server"
 				[ -n "$ss_basic_udpv1_duplicate_time" ] && duplicate_time="-t $ss_basic_udpv1_duplicate_time" || duplicate_time=""
 				[ -n "$ss_basic_udpv1_jitter" ] && jitter="-j $ss_basic_udpv1_jitter" || jitter=""
 				[ -n "$ss_basic_udpv1_report" ] && report="--report $ss_basic_udpv1_report" || report=""
@@ -1046,6 +1047,7 @@ start_speeder() {
 				fi
 			elif [ "$ss_basic_udp_software" == "2" ]; then
 				echo_date 开启UDPspeederV2进程.
+				[ -z "$ss_basic_udpv2_rserver" ] && ss_basic_udpv2_rserver="$ss_basic_server"
 				[ "$ss_basic_udpv2_disableobscure" == "1" ] && disable_obscure="--disable-obscure" || disable_obscure=""
 				[ "$ss_basic_udpv2_disablechecksum" == "1" ] && disable_checksum="--disable-checksum" || disable_checksum=""
 				[ -n "$ss_basic_udpv2_timeout" ] && timeout="--timeout $ss_basic_udpv2_timeout" || timeout=""
