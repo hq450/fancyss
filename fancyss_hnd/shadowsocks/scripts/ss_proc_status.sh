@@ -84,11 +84,12 @@ echo_version() {
 	echo "cdns			1.0		2017年12月09日编译"
 	echo "chinadns1		1.3.2		2017年12月09日编译"
 	echo "chinadns2		2.0.0		2017年12月09日编译"
+	echo "chinadns-ng		v1.0-beta.15	2020年01月02日编译"
 	echo "https_dns_proxy		758f913		2019年02月05日编译"
 	echo "SmartDNS		198d18f1	2020年01月05日编译"
 	echo "httping			2.6		2020年01月06日编译"
-	echo "client_linux_arm5	20180810	kcptun"
-	echo "v2ray			$ss_basic_v2ray_version"
+	echo "client_linux_arm5	20200103	kcptun"
+	echo "v2ray			$ss_basic_v2ray_version		2020年01月05日编译"
 	echo -----------------------------------------------------------
 }
 

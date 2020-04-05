@@ -1,11 +1,17 @@
 fancyss_hnd Changelog
 ===========================================
-1.8.2 (尚未推送)
+1.8.2
    - update	更新httping，支持ssl；
-   - update	更新smartdns二进制到最新(commit:198d18f)；
+   - update	更新smartdns二进制到(commit:198d18f)；
    - update	更新haproxy二进制到2.1.2；
    - update	更新kcptun二进制到20200103；
-
+   - update	优化了订阅脚本；
+   - add	添加chinadns-ng，此解析方式下不需要cnd.conf参与，详情：https://github.com/zfl9/chinadns-ng；
+    		PS:由于现在DNS方案错综复杂，下个版本应该会较大改动下这块。
+   - add	添加TUF-AX3000支持，虽然TUF-AX3000使用的CPU：BCM6750是armv7l 32位cpu，但是其固件基本是和RT-AC86U一样的工具链编译的
+    		所以将TUF-AX3000纳入支持，不过目前1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
+    		因为这些功能使用的二进制是64位的，BCM6750作为32位cpu是不能运行的，后期版本将逐渐添加支持。		
+   
 1.8.1
    - fix	修复因未定义[包括]关键词，导致所有订阅节点被删除的问题！
 

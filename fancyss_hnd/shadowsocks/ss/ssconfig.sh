@@ -271,6 +271,11 @@ kill_process() {
 		echo_date 关闭chinadns1进程...
 		killall chinadns1 >/dev/null 2>&1
 	fi
+	chinadnsNG_process=$(pidof chinadns-ng)
+	if [ -n "$chinadnsNG_process" ]; then
+		echo_date 关闭chinadns-ng进程...
+		killall chinadns-ng >/dev/null 2>&1
+	fi
 	cdns_process=$(pidof cdns)
 	if [ -n "$cdns_process" ]; then
 		echo_date 关闭cdns进程...
@@ -528,6 +533,9 @@ get_dns_name() {
 	9)
 		echo "SmartDNS"
 		;;
+	10)
+		echo "chinadns-ng"
+		;;
 	esac
 }
 
@@ -663,6 +671,16 @@ start_dns() {
 		fi
 	fi
 
+	#start chinadns_ng
+	if [ "$ss_foreign_dns" == "10" ]; then
+		start_sslocal
+		echo_date 开启dns2socks，用于chinadns-ng的国外上游...
+		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
+		[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
+		[ "$DNS_PLAN" == "2" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外所有网站】的DNS解析..."
+		chinadns-ng -l ${DNSF_PORT} -c ${CDN}#${DNSC_PORT} -t 127.0.0.1#1055 -g /koolshare/ss/rules/gfwlist.txt -m /koolshare/ss/rules/cdn.txt -M >/dev/null 2>&1 &
+	fi
+
 	#start https_dns_proxy
 	if [ "$ss_foreign_dns" == "6" ]; then
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启https_dns_proxy，用于【国外gfwlist站点】的DNS解析..."
@@ -703,19 +721,34 @@ start_dns() {
 		# 国内国外都启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式也不需要使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外所有网站】的DNS解析..."
-		sed '/^#/d /^$/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#if [ "$(nvram get ipv6_service)" == "disabled" ]; then
+		#	sed 's/# force-AAAA-SOA yes/force-AAAA-SOA yes/g' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#	sed -i '/^#/d /^$/d' /tmp/smartdns.conf
+		#else
+			sed '/^#/d /^$/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#fi
 		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
 	elif [ "$ss_dns_china" == "13" ] && [ "$ss_foreign_dns" != "9" ]; then
 		# 国内启用SmartDNS，国外不启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则是根据国外DNS的选择而决定是否使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内cdn网站】的DNS解析..."
-		sed '/^#/d /^$/d /foreign/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#if [ "$(nvram get ipv6_service)" == "disabled" ]; then
+		#	sed 's/# force-AAAA-SOA yes/force-AAAA-SOA yes/g' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#	sed -i '/^#/d /^$/d /foreign/d' /tmp/smartdns.conf
+		#else
+			sed '/^#/d /^$/d /foreign/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#fi
 		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
 	elif [ "$ss_dns_china" != "13" ] && [ "$ss_foreign_dns" == "9" ]; then
 		# 国内不启用SmartDNS，国外启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则需要使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国外所有网站】的DNS解析..."
-		sed '/^#/d /^$/d /china/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#if [ "$(nvram get ipv6_service)" == "disabled" ]; then
+		#	sed 's/# force-AAAA-SOA yes/force-AAAA-SOA yes/g' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#	sed -i '/^#/d /^$/d /china/d' /tmp/smartdns.conf
+		#else
+			sed '/^#/d /^$/d /china/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
+		#fi
 		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
 	fi
 
@@ -916,7 +949,7 @@ create_dnsmasq_conf() {
 		else
 			# 其它情况，均使用国外优先模式，以下区分是否加载cdn.conf
 			# if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" ] || [ "$ss_foreign_dns" == "9" -a "$ss_dns_china" == "13" ]; then
-			if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" -a "$ss_dns_china" != "13" ]; then
+			if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" -a "$ss_dns_china" != "13" ] || [ "$ss_foreign_dns" == "10" ]; then
 				# 因为chinadns1 chinadns2自带国内cdn，所以也不需要cdn.conf
 				echo_date 自动判断dns解析使用国外优先模式...
 				echo_date 国外解析方案【$(get_dns_name $ss_foreign_dns)】自带国内cdn，无需加载cdn.conf，路由器开销小...
@@ -1199,12 +1232,11 @@ start_ss_redir() {
 
 fire_redir() {
 	[ "$ss_basic_type" == "0" ] && [ "$ss_basic_mcore" == "1" ] && local ARG_1="--reuse-port" || local ARG_1=""
+	local ARG_2=""
 	if [ "$ss_basic_type" == "0" ] && [ "$ss_basic_tfo" == "1" ]; then
 		local ARG_2="--fast-open"
 		echo_date $BIN开启tcp fast open支持.
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	else
-		local ARG_2=""
 	fi
 
 	if [ "$ss_basic_type" == "0" ] && [ "$ss_basic_tnd" == "1" ]; then
@@ -2223,8 +2255,10 @@ ss_pre_stop() {
 }
 
 detect() {
-	MODEL=$(nvram get model)
-	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf），官改固件不需要开启
+	local MODEL=$(nvram get productid)
+	# 检测jffs2脚本是否开启，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf）
+	#if [ "$MODEL" != "GT-AC5300" ];then
+	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，官改固件不需要开启
 	if [ -z "$(nvram get extendno | grep koolshare)" ]; then
 		if [ "$(nvram get jffs2_scripts)" != "1" ]; then
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -2238,7 +2272,7 @@ detect() {
 
 	#检测v2ray模式下是否启用虚拟内存
 	if [ "$ss_basic_type" == "3" -a -z "$WAN_ACTION" ]; then
-		if [ "$MODEL" == "RT-AC86U" ]; then
+		if [ "$MODEL" == "RT-AC86U" -o "$MODEL" == "TUF-AX3000" ]; then
 			SWAPSTATUS=$(free | grep Swap | awk '{print $2}')
 			if [ "$SWAPSTATUS" != "0" ]; then
 				echo_date "你选择了v2ray节点，当前系统已经启用虚拟内存！！符合启动条件！"

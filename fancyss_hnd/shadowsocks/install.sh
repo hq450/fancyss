@@ -5,25 +5,48 @@
 source /koolshare/scripts/base.sh
 eval $(dbus export ss)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+MODEL=$(nvram get productid)
 mkdir -p /koolshare/ss
 mkdir -p /tmp/upload
 
 # 判断路由架构和平台
 case $(uname -m) in
 	aarch64)
-		if [ "`uname -o|grep Merlin`" ] && [ -d "/koolshare" ];then
+		if [ "$(uname -o|grep Merlin)" ] && [ -d "/koolshare" ];then
 			echo_date 固件平台【koolshare merlin aarch64 / merlin_hnd】符合安装要求，开始安装插件！
 		else
 			echo_date 本插件适用于【koolshare merlin aarch64 / merlin_hnd】固件平台，你的平台不能安装！！！
+			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
+			exit 1
+		fi
+		;;
+	armv7l)
+		if [ "$MODEL" == "TUF-AX3000" -a -d "/koolshare" ];then
+			echo_date 固件TUF-AX3000 koolshare官改固件符合安装要求，开始安装插件！
+		else
+			echo_date 本插件适用于【koolshare merlin hnd/axhnd aarch64】固件平台，你的固件平台不能安装！！！
+			echo_date 退出安装！
+			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
 			exit 1
 		fi
 		;;
 	*)
 		echo_date 本插件适用于koolshare merlin aarch64固件平台，你的平台：$(uname -m)不能安装！！！
 		echo_date 退出安装！
+		rm -rf /tmp/shadowsocks* >/dev/null 2>&1
 		exit 1
 	;;
 esac
+
+if [ "$MODEL" == "GT-AC5300" ] || [ "$MODEL" == "GT-AX11000" ] || [ -n "$(nvram get extendno | grep koolshare)" -a "$MODEL" == "RT-AC86U" ];then
+	# 官改固件，骚红皮肤
+	ROG=1
+fi
+
+if [ "$MODEL" == "TUF-AX3000" ];then
+	# 官改固件，橙色皮肤
+	TUF=1
+fi
 
 # 先关闭ss
 if [ "$ss_basic_enable" == "1" ];then
@@ -31,13 +54,13 @@ if [ "$ss_basic_enable" == "1" ];then
 	[ -f "/koolshare/ss/stop.sh" ] && sh /koolshare/ss/stop.sh stop_all || sh /koolshare/ss/ssconfig.sh stop
 fi
 
-if [ -n "`ls /koolshare/ss/postscripts/P*.sh 2>/dev/null`" ];then
+if [ -n "$(ls /koolshare/ss/postscripts/P*.sh 2>/dev/null)" ];then
 	echo_date 备份触发脚本!
 	find /koolshare/ss/postscripts -name "P*.sh" | xargs -i mv {} -f /tmp/ss_backup
 fi
 
 # 如果dnsmasq是mounted状态，先恢复
-MOUNTED=`mount|grep -o dnsmasq`
+MOUNTED=$(mount|grep -o dnsmasq)
 if [ -n "$MOUNTED" ];then
 	echo_date 恢复dnsmasq-fastlookup为原版dnsmasq
 	killall dnsmasq >/dev/null 2>&1
@@ -65,6 +88,7 @@ rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/client_linux_arm*
 rm -rf /koolshare/bin/chinadns
 rm -rf /koolshare/bin/chinadns1
+rm -rf /koolshare/bin/chinadns-ng
 rm -rf /koolshare/bin/resolveip
 rm -rf /koolshare/bin/speederv1
 rm -rf /koolshare/bin/speederv2
@@ -112,18 +136,20 @@ cp -rf /tmp/shadowsocks/uninstall.sh /koolshare/scripts/uninstall_shadowsocks.sh
 echo_date 复制相关的网页文件！
 cp -rf /tmp/shadowsocks/webs/* /koolshare/webs/
 cp -rf /tmp/shadowsocks/res/* /koolshare/res/
-
-if [ "`nvram get model`" == "GT-AC5300" ] || [ "`nvram get model`" == "GT-AX11000" ] || [ -n "`nvram get extendno | grep koolshare`" -a "`nvram get productid`" == "RT-AC86U" ];then
-	[ -d "/tmp/shadowsocks/rog/res/" ] && cp -rf /tmp/shadowsocks/rog/res/* /koolshare/res/
+if [ "$ROG" == "1" ];then
+	cp -rf /tmp/shadowsocks/rog/res/shadowsocks.css /koolshare/res/
 fi
-
+if [ "$TUF" == "1" ];then
+	sed -i 's/3e030d/3e2902/g;s/91071f/92650F/g;s/680516/D0982C/g;s/cf0a2c/c58813/g;s/700618/74500b/g;s/530412/92650F/g' /tmp/shadowsocks/rog/res/shadowsocks.css >/dev/null 2>&1
+	cp -rf /tmp/shadowsocks/rog/res/shadowsocks.css /koolshare/res/
+fi
 echo_date 为新安装文件赋予执行权限...
 chmod 755 /koolshare/ss/rules/*
 chmod 755 /koolshare/ss/*
 chmod 755 /koolshare/scripts/ss*
 chmod 755 /koolshare/bin/*
 
-if [ -n "`ls /tmp/ss_backup/P*.sh 2>/dev/null`" ];then
+if [ -n "$(ls /tmp/ss_backup/P*.sh 2>/dev/null)" ];then
 	echo_date 恢复触发脚本!
 	mkdir -p /koolshare/ss/postscripts
 	find /tmp/ss_backup -name "P*.sh" | xargs -i mv {} -f /koolshare/ss/postscripts
@@ -144,7 +170,7 @@ echo_date 设置一些默认值
 [ -z "$ss_basic_interval" ] && dbus set ss_basic_interval=2
 
 # 离线安装时设置软件中心内储存的版本号和连接
-CUR_VERSION=`cat /koolshare/ss/version`
+CUR_VERSION=$(cat /koolshare/ss/version)
 dbus set ss_basic_version_local="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_install="4"
 dbus set softcenter_module_shadowsocks_version="$CUR_VERSION"
@@ -165,4 +191,3 @@ if [ "$ss_basic_enable" == "1" ];then
 fi
 
 echo_date 更新完毕，请等待网页自动刷新！
-
