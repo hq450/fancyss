@@ -1,3 +1,10 @@
+# 注
+fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 trojan 。
+
+仅修改 [fancyss_arm](fancyss_arm) 以下的相关特性。
+
+目前 fancyss_arm 支持启动 trojan ，单个添加/编辑 trojan 节点。
+
 # [fancyss - 科学上网](https://hq450.github.io/fancyss/)
 
 > Fancyss is a project providing tools to across the GFW on asuswrt/merlin/openwrt based router with software center. 

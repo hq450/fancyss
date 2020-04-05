@@ -34,3 +34,5 @@
 有其他版本需求的可使用上述相关参数自行编译。
 
 【注】没有使用压缩包中的证书，默认关闭证书。
+
+由于 Trojan 只提供 socks 的代理，所以需要需要将 socks 转成 http ，但貌似常用的工具 privoxy 不支持当前固件，只好另辟蹊径，发现有大佬提供[一种方法](https://www.johnrosen1.com/ubuntu-router/)，支持通过 v2ray 将 socks 转成 http 。

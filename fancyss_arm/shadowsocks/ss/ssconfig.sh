@@ -2,6 +2,7 @@
 
 # shadowsocks script for AM380 merlin firmware
 # by sadog (sadoneli@gmail.com) from koolshare.cn
+# suport trojan by idealism-xxm (https://github.com/idealism-xxm)
 
 eval `dbus export ss`
 source /koolshare/scripts/base.sh
@@ -14,6 +15,7 @@ CONFIG_FILE=/koolshare/ss/ss.json
 V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 TROJAN_CONFIG_FILE="/koolshare/ss/trojan.json"
+TROJAN_V2RAY_CONFIG_FILE_TMP="/tmp/trojan-v2ray-tmp.json"
 TROJAN_V2RAY_CONFIG_FILE="/koolshare/ss/trojan-v2ray.json"
 LOCK_FILE=/var/lock/koolss.lock
 DNSF_PORT=7913
@@ -42,8 +44,10 @@ ARG_V2RAY_PLUGIN=""
 		else
 			if [ -n "$ss_basic_v2ray_use_json" ];then
 				ss_basic_type="3"
-			else
+			elif [ -n "$ss_basic_ss_v2ray_plugin" ]; then
 				ss_basic_type="0"
+      else
+        ss_basic_type="4"
 			fi
 		fi
 	fi
@@ -147,6 +151,11 @@ restore_conf(){
 }
 
 kill_process(){
+  trojan_process=`pidof trojan`
+	if [ -n "$trojan_process" ];then
+		echo_date 关闭 Trojan 进程...
+		killall trojan >/dev/null 2>&1
+	fi
 	v2ray_process=`pidof v2ray`
 	if [ -n "$v2ray_process" ];then 
 		echo_date 关闭V2Ray进程...
@@ -1566,8 +1575,50 @@ create_trojan_json(){
     }
 	EOF
 
+
+  # v2ray 程序读取 json 配置文件必须要 tab 缩进，所以要转换一下
 	echo_date 创建 Trojan-V2Ray 配置文件到 $TROJAN_V2RAY_CONFIG_FILE
 
+
+	cat > $TROJAN_V2RAY_CONFIG_FILE_TMP <<-EOF
+    {
+      "log": {
+        "access": "/dev/null",
+        "error": "/tmp/trojan_v2ray_log.log",
+        "loglevel": "error"
+      },
+      "inbounds": [
+        {
+          "listen": "0.0.0.0",
+          "port": 3333,
+          "protocol": "dokodemo-door",
+          "settings": {
+            "network": "tcp,udp",
+            "followRedirect": true
+          }
+        }
+        ],
+        "outbounds": [
+          {
+            "tag": "proxy",
+            "protocol": "socks",
+            "settings": {
+              "servers": [{
+                "address": "127.0.0.1",
+                "port": 23456
+              }]
+            },
+            "streamSettings": {
+              "sockopt": {
+                "mark": 255
+              }
+            }
+          }
+      ]
+    }
+	EOF
+
+	cat "$TROJAN_V2RAY_CONFIG_FILE_TMP" | jq --tab . >"$TROJAN_V2RAY_CONFIG_FILE"
 }
 
 start_trojan() {
@@ -1586,6 +1637,22 @@ start_trojan() {
 		sleep 1
 	done
 	echo_date "trojan 启动成功，pid：$TROJAN_PID"
+
+	# v2ray start
+	v2ray -config=$TROJAN_V2RAY_CONFIG_FILE >/dev/null 2>&1 &
+	local V2RAY_PID
+	local i=10
+	until [ -n "$V2RAY_PID" ]; do
+		i=$(($i - 1))
+		V2RAY_PID=$(pidof v2ray)
+		if [ "$i" -lt 1 ]; then
+			echo_date "v2ray 进程启动失败！"
+			close_in_five
+		fi
+		sleep 1
+	done
+	echo_date "v2ray 启动成功，pid：$V2RAY_PID"
+	echo_date "Trojan 和 V2Ray 启动成功， socks 走 trojan ，http 走 v2ray"
 }
 
 
