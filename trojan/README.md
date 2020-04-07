@@ -29,24 +29,15 @@
    cd /koolshare/ss
    wget https://raw.githubusercontent.com/trojan-gfw/trojan/master/examples/nat.json-example trojan.json
    mv nat.json-example trojan_nat.json
-   
-   # 修改模板中以下配置为第1步中的值
-   local_port 修改为 3333,
-   "remote_addr": "fancyss.example.com",
-   "remote_port": 443,
-   "cert": "/koolshare/ss/rules/cert.crt",
    ```
    
 5. 修改/koolshare/ss/trojan_nat.json
 
-   1. local_port 修改为 3333
-   
-   2. remote_addr改为你的域名，比如：fancyss.example.com
-   3. remote_port改为你的端口，比如：443
-   
-   4. password同理
-   
-   5. ssl下cert配置改成：`"cert": "/koolshare/ss/rules/cert.crt"`
+   - local_port 修改为 3333
+   - remote_addr改为你的域名，比如：fancyss.example.com
+   - remote_port改为你的端口，比如：443
+   - password同理
+   - ssl下cert配置改成：`"cert": "/koolshare/ss/rules/cert.crt"`
    
 6. 启用fancyss_hnd插件ssr模式，国外DNS使用不经过服务转发的方式，比如使用cdns、chinadns2、https_dns_proxy、SmartDNS。然后进入SSH，将监听在3333端口的rss-redir进程杀掉。v2ray模式下杀v2ray进程，ss模式下杀ss-redir进程
 
