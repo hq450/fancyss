@@ -61,7 +61,7 @@
    # 启动trojan前台运行
    /koolshare/bin/trojan -c /koolshare/ss/trojan_nat.json
    
-# 若需后台运行，使用下面命令
+   # 若需后台运行，使用下面命令
    /koolshare/bin/trojan -c /koolshare/ss/trojan_nat.json >/dev/null 2>&1 &
    ```
    
