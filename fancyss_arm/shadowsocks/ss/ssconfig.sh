@@ -1597,23 +1597,23 @@ create_trojan_json(){
             "followRedirect": true
           }
         }
-        ],
-        "outbounds": [
-          {
-            "tag": "proxy",
-            "protocol": "socks",
-            "settings": {
-              "servers": [{
-                "address": "127.0.0.1",
-                "port": 23456
-              }]
-            },
-            "streamSettings": {
-              "sockopt": {
-                "mark": 255
-              }
+      ],
+      "outbounds": [
+        {
+          "tag": "proxy",
+          "protocol": "socks",
+          "settings": {
+            "servers": [{
+              "address": "127.0.0.1",
+              "port": 23456
+            }]
+          },
+          "streamSettings": {
+            "sockopt": {
+              "mark": 255
             }
           }
+        }
       ]
     }
 	EOF

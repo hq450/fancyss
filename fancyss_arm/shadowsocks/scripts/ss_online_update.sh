@@ -774,7 +774,7 @@ get_oneline_rule_now(){
         if [ -n "`echo -n "$link" | grep "#"`" ];then
 					new_sslink=`echo -n "$link" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g'`
 					# 因为订阅的 trojan 里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装
-					remarks=`echo -n "$link" | awk -F'#' '{print $2}' | tr '\r\n' ' '`
+					remarks=`echo -n "$link" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g'`
 				else
 					new_sslink=`echo -n "$link" | sed 's/trojan:\/\///g'`
 					remarks='AddByLink'
@@ -1007,6 +1007,7 @@ get_trojan_config(){
 add_trojan_servers(){
 	trojanindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
 	echo_date "添加 Trojan 节点：$remarks"
+	[ -z "$1" ] && dbus set ssconf_basic_group_$trojanindex=$group
 	dbus set ssconf_basic_name_$trojanindex=$remarks
 	dbus set ssconf_basic_mode_$trojanindex=$ssr_subscribe_mode
 	dbus set ssconf_basic_server_$trojanindex=$server
@@ -1029,14 +1030,12 @@ update_trojan_config(){
 		dbus set ssconf_basic_mode_$index="$ssr_subscribe_mode"
 		local_remarks=$(dbus get ssconf_basic_name_$index)
 		[ "$local_remarks" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks && let i+=1
-		local_mode=$(dbus get ssconf_basic_name_$index)
-		[ "$local_mode" != "$ssr_subscribe_mode" ] && dbus set ssconf_basic_name_$index=$ssr_subscribe_mode && let i+=1
 		local_server=$(dbus get ssconf_basic_server_$index)
 		[ "$local_server" != "$server" ] && dbus set ssconf_basic_server_$index=$server && let i+=1
 		local_server_port=$(dbus get ssconf_basic_port_$index)
 		[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index=$server_port && let i+=1
 		local_password=$(dbus get ssconf_basic_password_$index)
-		[ "$local_password" != "$password" ] && dbus set ssconf_basic_port_$index=$password && let i+=1
+		[ "$local_password" != "$password" ] && dbus set ssconf_basic_password_$index=$password && let i+=1
 
 		if [ "$i" -gt "0" ];then
 			echo_date "修改 Trojan 节点：【$remarks】" && let updatenum+=1
@@ -1097,7 +1096,7 @@ add() {
 					remarks='AddByLink'
 				fi
 				get_trojan_config $new_sslink
-				add_trojan_servers
+				add_trojan_servers 1
       fi
 		fi
 		dbus remove ss_base64_links
@@ -1205,7 +1204,7 @@ case $ss_online_action in
 	unset_lock
 	;;
 4)
-	# 通过链接添加ss:// ssr:// vmess://
+	# 通过链接添加ss:// ssr:// vmess:// trojan://
 	set_lock
 	detect
 	add

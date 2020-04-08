@@ -23,8 +23,8 @@ fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 
 |     平台      |                          hnd/axhnd                           |                             arm                              |                             arm                              |                            mipsel                            |                             x64                              |
 |   linux内核   |                        4.1.27/4.1.51                         |                           2.6.36.4                           |                           2.6.36.4                           |                             2.6                              |                             很新                             |
 |      CPU      |                         bcm490x系列                          |                          bcm4708/9                           |                          bcm4708/9                           |                           bcm4706                            |                          x64架构CPU                          |
-|   维护状态    |                            维护中                            |                            维护中                            |                         **停止维护**                         |                         **停止维护**                         |                         **备份留存**                         |
-|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.3.1**                           |                         **3.0.4？**                          |                          **2.2.2**                           |
+|   维护状态    |                            维护中                            |                            维护中                            |                         **停止维护（原版止于 4.2.2）**                         |                         **停止维护**                         |                         **备份留存**                         |
+|   最新版本    |                          **1.8.1**                           |                          **1.0.4**                           |                          **4.3.2**                           |                         **3.0.4？**                          |                          **2.2.2**                           |
 |   插件名称    |                           科学上网                           |                           科学上网                           |                           科学上网                           |                           科学上网                           |                            koolss                            |
 |   节点管理    |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
 |    ss支持     |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |                      :heavy_check_mark:                      |
@@ -137,7 +137,7 @@ v4.3.0 开始支持使用 trojan
 #### 相关链接：
 
 * arm机型的科学上网离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm)
-* arm机型的科学上网更新日志：https://github.com/hq450/fancyss/blob/master/fancyss_arm/Changelog.txt
+* arm机型的科学上网更新日志：[Changelog](fancyss_arm/Changelog.txt)
 * arm机型的固件下载地址：[http://koolshare.cn/forum-96-1.html](http://koolshare.cn/forum-96-1.html)
 
 ----
