@@ -24,6 +24,16 @@ sync_v2ray_binary(){
 	fi
 }
 
+sync_trojan_binary(){
+	trojan_version=`cat ../trojan_binary/latest.txt`
+	md5_latest=`md5sum ../trojan_binary/$trojan_version/trojan | sed 's/ /\n/g'| sed -n 1p`
+	md5_old=`md5sum shadowsocks/bin/trojan | sed 's/ /\n/g'| sed -n 1p`
+	if [ "$md5_latest"x != "$md5_old"x ]; then
+		echo update trojan binary！
+		cp -rf ../trojan_binary/$trojan_version/trojan shadowsocks/bin/
+	fi
+}
+
 do_build() {
 	if [ "$VERSION" = "" ]; then
 		echo "version not found"
@@ -57,18 +67,21 @@ do_build() {
 }
 
 do_backup(){
-	HISTORY_DIR="../../fancyss_history_package/fancyss_arm"
+  # 只保存 fork 以后的 package ，直接在本目录下
+	HISTORY_DIR="history_package"
 	# backup latested package after pack
 	backup_version=`cat version | sed -n 1p`
 	backup_tar_md5=`cat version | sed -n 2p`
 	echo backup VERSION $backup_version
 	cp ${MODULE}.tar.gz $HISTORY_DIR/${MODULE}_$backup_version.tar.gz
-	sed -i "/$backup_version/d" "$HISTORY_DIR"/md5sum.txt
+	# 多添加一个 "" 是为了在 MacOS 下运行
+	sed -i "" "/$backup_version/d" "$HISTORY_DIR"/md5sum.txt
 	echo $backup_tar_md5 ${MODULE}_$backup_version.tar.gz >> "$HISTORY_DIR"/md5sum.txt
 }
 
 
 cp_rules
 sync_v2ray_binary
+sync_trojan_binary
 do_build
 do_backup

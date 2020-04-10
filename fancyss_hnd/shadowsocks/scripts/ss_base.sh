@@ -14,7 +14,7 @@ eval `dbus export ss`
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 
 cur_node=$ssconf_basic_node
-base_1="type mode server port method password ss_obfs ss_obfs_host koolgame_udp rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_network_path v2ray_network_host v2ray_network_security v2ray_mux_concurrency v2ray_json"
+base_1="type mode server port method password ss_obfs ss_obfs_host ss_v2ray ss_v2ray_opts koolgame_udp rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_network_path v2ray_network_host v2ray_network_security v2ray_mux_concurrency v2ray_json"
 base_2="use_kcp v2ray_use_json v2ray_mux_enable"
 for config in $base_1 $base_2
 do

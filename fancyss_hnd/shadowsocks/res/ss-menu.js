@@ -155,14 +155,14 @@ function pop_111() {
 			type: 2,
 			shade: .7,
 			scrollbar: 0,
-			title: '国内外分流信息:http://ip.koolcenter.com/all',
+			title: '国内外分流信息:https://ip.koolcenter.com/all',
 			area: ['850px', '350px'],
 			fixed: false,
 			maxmin: true,
 			shadeClose: 1,
 			id: 'LAY_layuipro',
 			btnAlign: 'c',
-			content: ['http://ip.koolcenter.com/all', 'no'],
+			content: ['https://ip.koolcenter.com/all', 'no'],
 		});
 	});
 }
@@ -498,7 +498,7 @@ function openssHint(itemNum) {
 	if (itemNum == 0) {
 		width = "850px";
 		bgcolor = "#CC0066",
-			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
+			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后默认在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
 		statusmenu += "</br><li>国内、国外状态检测的历史记录会显示在【故障转移】内的日志窗口，该日志记录会实时更新，且最新的一条记录即为插件顶部的【插件运行状态】；</li>"
 		statusmenu += "</br><li>状态检测反应的是路由器本身访问www.google.com.tw的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用科学上网中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
 		statusmenu += "</br><b><font color='#CC0066'>1：双√，不能访问被墙网站：</font></b>"
@@ -565,6 +565,13 @@ function openssHint(itemNum) {
 	} else if (itemNum == 6) {
 		statusmenu = "此处选择你希望UDP的通道。</br>很多游戏都走udp的初衷就是加速udp连接。</br>如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
 		_caption = "游戏模式V2 UDP通道";
+	} else if (itemNum == 7) {
+		statusmenu = "请注意：本设置<b>不是v2ray使用shadowsocks协议！</b>";
+		statusmenu += "而是基于v2ray的<a href='https://www.v2ray.com/chapter_02/05_transport.html' target='_blank'><u><font color='#00F'>传输配置</font></u></a>作为SS的混淆方式。";
+		statusmenu += "</br>因为v2ray-plugin与simple-obfs同为Shadowsocks <a href='https://github.com/shadowsocks/shadowsocks-org/wiki/Plugin' target='_blank'><font color='#00F'><u>SIP003插件</u></font></a>的实现，";
+		statusmenu += "所以打开v2ray-plugin会<b>忽略原混淆(obfs)</b>的设置。";
+		statusmenu += "</br>关于这个插件的信息以及参数(opts)，请查看仓库：<a href='https://github.com/shadowsocks/v2ray-plugin' target='_blank'><u><font color='#00F'>v2ray-plugin</font></u></a>";
+		_caption = "v2ray-plugin设置";
 	} else if (itemNum == 11) {
 		statusmenu = "如果不知道如何填写，请一定留空，不然可能带来副作用！"
 		statusmenu += "</br></br>请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
@@ -620,39 +627,72 @@ function openssHint(itemNum) {
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;恢复配置功能可以使用之前导出的文件，也可以使用标准的json格式节点文件。"
 		_caption = "导出恢复";
 	} else if (itemNum == 26) {
-		width = "750px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;国外DNS为大家提供了丰富的选择，其目的有二，一是为了保证大家有能用的国外DNS服务；二是在有能用的基础上，能够选择多种DNS解析方案，达到最佳的解析效果；所以如果你切换某个DNS程序，导致国外连接<font color='#FF0000'>X</font> 那么更换能用的就好，不用纠结某个解析方案不能用。"
+		width = "1000px";
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;国外DNS为大家提供了丰富的选择，其目的有二，一是为了保证大家有能用的国外DNS服务；二是在有能用的基础上，能够选择多种DNS解析方案，达到最佳的解析效果；所以如果你切换到某个DNS程序，导致国外连接<font color='#FF0000'>X</font>， 那么更换能用的就好，不用纠结某个解析方案不能用。"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;</br></br>名词约定："
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>此模式以gfwlist为分流方式，如gfwlist模式";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>此模式以chnroute为分流方式，如大陆白名单模式、游戏模式";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>vps：</b>SS/SSR/V2ray服务器端";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;</br></br>各DNS方案做简单介绍："
 		//dns2socks
 		statusmenu += "</br><font color='#CC0066'><b>1:dns2socks：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;万金油方案，DNS请求通过一个socks5隧道转发到DNS服务器，然后由代理服务器向你定义的DNS发起tcp dns请求，和下文中ss-tunnel类似，不过dns2socks是利用了SOCK5隧道代理，ss-tunnel是利用了加密UDP；该DNS方案不受到ss服务是否支持udp限制，只要能建立socoks5链接，就能使用；";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析通过SS服务器转发，国内cdn由cdn.txt提供，对cpu负担稍大，国外cdn很好。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;万金油方案，DNS请求通过socks5隧道（由本地ss-local/ssr-local/v2ray提供）转发到vps，然后由vps向你定义的DNS服务器发起tcp dns解析请求，和下文中ss-tunnel类似，不过dns2socks是利用了socks5隧道代理，ss-tunnel是利用了加密UDP；该DNS方案不受到ss服务是否支持udp限制，只要能建立socoks5链接，就能使用。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用dns2socks，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用dns2socks。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//ss-tunnel
 		statusmenu += "</br><font color='#CC0066'><b>2:ss-tunnel：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;原理是将DNS请求，通过ss-tunnel利用UDP发送到ss服务器上，然后由代理服务器向你定义的DNS发起udp dns请求，解析出到正确的IP地址，的解析效果和dns2socks应该是一样的。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析通过SS服务器转发，国内cdn由cdn.txt提供，对cpu负担稍大，国外cdn很好。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;原理是将DNS请求通过ss-tunnel/ssr-tunnel利用udp协议发送到vps，然后由vps向你定义的DNS发起udp dns解析请求，解析到正确的IP地址，其解析效果和dns2socks应该是一样的。"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用ss-tunnel，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用ss-tunnel。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		_caption = "国外DNS";
 		//cdns
 		statusmenu += "</br><font color='#CC0066'><b>3:cdns：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;和chinadns2一样，支持ECS（EDNS Client Subnet），DNS请求时携带一个EDNS标签，解析成功后返回带该标签的解析结果，gfw投毒的解析结果则不会带该标签，以达到防dns污染的目的！";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直链国外DNS服务器，国内cdn由cdn.txt提供，对cpu负担稍大，国外cdn较弱。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用cdns，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用cdns";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//chinadns1
 		statusmenu += "</br><font color='#CC0066'><b>4:chinadns1：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;使用dns2socks作为chinadns上游dns解析工具获取无污染dns，通过chinadns的国内dns请求国内dns获取国内解析结果";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析通过SS服务器转发，具有很好的国内cdn，和很好的国外cdn，不需要cdn.txt作为国内加速，对cpu负担小。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;使用dns2socks作为chinadns1上游DNS解析工具获取无污染的解析结果，通过chinadns1中设定的中国DNS进行请求获取国内解析结果";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用chinadns1，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用chinadns1，DNS解析国内外分流在chinadns1内部实现";		
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下不需要cdn.txt作为国内加速，对cpu负担稍小。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>注意1：</b>当国内DNS设定为SmartDNS的时候，国外DNS无法设定为chinadns1！";
 		//chinadns2
 		statusmenu += "</br><font color='#CC0066'><b>5:chinadns2：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;支持ECS，并且chinadns2根据本地公网ip和ss服务器ip，发送两个带EDNS标签的请求，dns服务器会根据此信息选择离你最近的解析结果返回给你，因此具有非常好的cdn效果！需要上游DNS服务器支持ECS，所以此处固定为直连谷歌DNS，如果你的网络到谷歌DNS丢包严重、不通或你的上级路由开了国外代理，请不要使用此方案";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直链谷歌DNS服务器，国外cdn很好；不需要cdn.txt作为国内加速，对cpu负担小，国内cdn较好，但是有时候国内网站会解析到香港网站。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;支持ECS，并且chinadns2根据本地公网ip和vps的ip，发送两个带EDNS标签的请求，DNS服务器会根据此信息选择离你最近的解析结果返回给你，因此具有非常好的cdn效果！例如对于国内解析淘宝www.taobao.com，谷歌DNS服务器8.8.8.8:53收到了你的国内解析请求，并且知道你的路由器公网地址是123.123.123.123（北京联通），谷歌DNS服务器将会根据你的IP地址，返回较快的123.123.124.124（北京联通），而不是211.142.151.123（河南移动）。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用chinadns2，其余全部使用你选择的中国DNS解析";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用chinadns2，DNS解析国内外分流在chinadns2内部依靠ECS实现";	
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下不需要cdn.txt作为国内加速，对cpu负担稍小。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>注意：</b>chinadns2需要上游DNS服务器支持ECS，所以此处默认设定为直连谷歌DNS（8.8.8.8:53），如果你的网络到谷歌DNS丢包严重、不通或你的上级路由开了国外代理，请不要使用此方案！";
 		//https_dns_proxy
 		statusmenu += "</br><font color='#CC0066'><b>6:https_dns_proxy：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！此处默认使用了cloudflare的服务（1.1.1.1和1.0.0.1）";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析本地直连cloudflare服务器，所以到cloudflare服务器的网络连接至关重要；国内cdn由cdn.txt提供，对cpu负担稍大。</b>";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用https_dns_proxy，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用https_dns_proxy，DNS解析国内外分流在chinadns2内部依靠ECS实现";	
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//v2ray dns
-		statusmenu += "</br><font color='#CC0066'><b>7:v2ray dns：</b></font>"
+		statusmenu += "</br><font color='#CC0066'><b>7:v2ray_dns：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;v2ray自带的dns，通过在v2ray的json配置文件中添加一个新的传入连接来转发dns请求，使用效果应该和ss/ssr下使用ss-tunnel一样";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>国外解析通过v2ray服务器转发，国外cdn很好；国内cdn由cdn.txt提供，对cpu负担稍大。。</b>";
-
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用v2ray_dns，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用v2ray_dns。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
+		//SmartDNS
+		statusmenu += "</br><font color='#CC0066'><b>8:SmartDNS：</b></font>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;SmartDNS是一个运行在本地的DNS服务器，SmartDNS接受本地客户端的DNS查询请求，从多个上游DNS服务器获取DNS查询结果，并将访问速度最快的结果返回给客户端，提高网络访问速度。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;在本插件中，SmartDNS根据运行方式的不同，会生成不同的配置文件，简单的来说：SmartDNS的7913端口负责国外解析，SmartDNS的5335端口负责国内解析，具体如下。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅中国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用你选择的外国DNS方案，其余全部使用SmartDNS的5335端口解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅外国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（中国DNS和外国DNS均设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用SmartDNS的5335端口解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅中国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用使用你选择外国DNS方案解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅外国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用你选择的中国DNS解析，其余全部使用SmartDNS的7913端口解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（中国DNS和外国DNS均设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用SmartDNS的7913端口解析。";
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。另外因为SmartDNS只会给出一个\"最优的\"解析结果，而可能对一些靠多个cdn解析同时连接下载加速的应用造成速度损失。";
+		//直连
+		statusmenu += "</br><font color='#CC0066'><b>9:直连：</b></font>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;本地直接向DNS服务器请求获取国外网站的解析地址，目前此选项仅限于回国模式使用，因为在国外网络下查询国外DNS服务器不会有DNS污染。";
 		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 27) {
 		statusmenu = "</br><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
@@ -852,6 +892,12 @@ function openssHint(itemNum) {
 	} else if (itemNum == 109) {
 		statusmenu = "插件触发重启设定说明：<br />&nbsp;&nbsp;&nbsp;&nbsp;当你的ss/ssr/koolgame/v2ray服务器，或者负载均衡服务器节点使用域名的时候，可以在此处设定定时解析域名时间，当检测到相应的解析地址发生改变的时候，定时任务会自动重启插件，以应用新的ip地址。<br />&nbsp;&nbsp;&nbsp;&nbsp;服务器有多个解析地址的建议不要使用！！v2ray开了cdn的也建议不要使用！！因为这可能会导致每次检测到的ip都不一样而让插件在后台频繁重启！"
 		_caption = "说明：";
+	} else if (itemNum == 110) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点不会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>测试,过期,剩余,曼谷,M247,D01,硅谷</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
+		_caption = "[排除]关键词：";
+	} else if (itemNum == 111) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
+		_caption = "[包括]关键词：";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

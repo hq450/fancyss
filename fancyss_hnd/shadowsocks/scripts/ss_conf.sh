@@ -10,7 +10,7 @@ backup_conf(){
 	rm -rf /koolshare/webs/files
 	mkdir -p /tmp/files
 	ln -sf /tmp/files /koolshare/webs/files
-	dbus list ss | grep -v "enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
+	dbus list ss | grep -v "ss_basic_enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
 }
 
 backup_tar(){
@@ -42,6 +42,7 @@ backup_tar(){
 	cp /koolshare/bin/cdns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns1 $TARGET_FOLDER/bin/
+	cp /koolshare/bin/smartdns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/resolveip $TARGET_FOLDER/bin/
 	cp /koolshare/bin/haproxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/client_linux_arm7 $TARGET_FOLDER/bin/
@@ -50,6 +51,7 @@ backup_tar(){
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
+	cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/httping $TARGET_FOLDER/bin/
 	cp /koolshare/bin/haveged $TARGET_FOLDER/bin/

@@ -35,8 +35,8 @@ upgrade_ss_conf(){
 	do
 		if [ "`dbus get ssconf_basic_use_rss_$node`" == "1" ];then
 			#ssr
-			dbus remove ssconf_basic_ss_obfs_$node
-			dbus remove ssconf_basic_ss_obfs_host_$node
+			dbus remove ssconf_basic_ss_v2ray_plugin_$node
+			dbus remove ssconf_basic_ss_v2ray_plugin_opts_$node
 			dbus remove ssconf_basic_koolgame_udp_$node
 		else
 			if [ -n "`dbus get ssconf_basic_koolgame_udp_$node`" ];then
@@ -45,8 +45,8 @@ upgrade_ss_conf(){
 				dbus remove ssconf_basic_rss_protocol_param_$node
 				dbus remove ssconf_basic_rss_obfs_$node
 				dbus remove ssconf_basic_rss_obfs_param_$node
-				dbus remove ssconf_basic_ss_obfs_$node
-				dbus remove ssconf_basic_ss_obfs_host_$node
+				dbus remove ssconf_basic_ss_v2ray_plugin_$node
+				dbus remove ssconf_basic_ss_v2ray_plugin_opts_$node
 			else
 				#ss
 				dbus remove ssconf_basic_rss_protocol_$node
@@ -54,7 +54,7 @@ upgrade_ss_conf(){
 				dbus remove ssconf_basic_rss_obfs_$node
 				dbus remove ssconf_basic_rss_obfs_param_$node
 				dbus remove ssconf_basic_koolgame_udp_$node
-				[ -z "`dbus get ssconf_basic_ss_obfs_$node`" ] && dbus set ssconf_basic_ss_obfs_$node="0"
+				[ -z "`dbus get ssconf_basic_ss_v2ray_plugin_$node`" ] && dbus set ssconf_basic_ss_v2ray_plugin_$node="0"
 			fi
 		fi
 		dbus remove ssconf_basic_use_rss_$node
@@ -66,8 +66,8 @@ upgrade_ss_conf(){
 	dbus remove ss_basic_mode
 	dbus remove ss_basic_port
 	dbus remove ss_basic_method
-	dbus remove ss_basic_ss_obfs
-	dbus remove ss_basic_ss_obfs_host
+	dbus remove ss_basic_ss_v2ray_plugin
+	dbus remove ss_basic_ss_v2ray_plugin_opts
 	dbus remove ss_basic_rss_protocol
 	dbus remove ss_basic_rss_protocol_param
 	dbus remove ss_basic_rss_obfs
@@ -80,8 +80,8 @@ upgrade_ss_conf(){
 	[ -n "`dbus get ssconf_basic_mode_$node`" ] && dbus set ss_basic_mode=`dbus get ssconf_basic_mode_$node`
 	[ -n "`dbus get ssconf_basic_port_$node`" ] && dbus set ss_basic_port=`dbus get ssconf_basic_port_$node`
 	[ -n "`dbus get ssconf_basic_method_$node`" ] && dbus set ss_basic_method=`dbus get ssconf_basic_method_$node`
-	[ -n "`dbus get ssconf_basic_ss_obfs_$node`" ] && dbus set ss_basic_ss_obfs=`dbus get ssconf_basic_ss_obfs_$node`
-	[ -n "`dbus get ssconf_basic_ss_obfs_host_$node`" ] && dbus set ss_basic_ss_obfs_host=`dbus get ssconf_basic_ss_obfs_host_$node`
+	[ -n "`dbus get ssconf_basic_ss_v2ray_plugin_$node`" ] && dbus set ss_basic_ss_v2ray_plugin=`dbus get ssconf_basic_ss_v2ray_plugin_$node`
+	[ -n "`dbus get ssconf_basic_ss_v2ray_plugin_opts_$node`" ] && dbus set ss_basic_ss_v2ray_plugin_opts=`dbus get ssconf_basic_ss_v2ray_plugin_opts_$node`
 	[ -n "`dbus get ssconf_basic_rss_protocol_$node`" ] && dbus set ss_basic_rss_protocol=`dbus get ssconf_basic_rss_protocol_$node`
 	[ -n "`dbus get ssconf_basic_rss_protocol_param_$node`" ] && dbus set ss_basic_rss_protocol_param=`dbus get ssconf_basic_rss_protocol_param_$node`
 	[ -n "`dbus get ssconf_basic_rss_obfs_$node`" ] && dbus set ss_basic_rss_obfs=`dbus get ssconf_basic_rss_obfs_$node`
@@ -136,6 +136,7 @@ rm -rf /koolshare/bin/rss-redir
 rm -rf /koolshare/bin/rss-tunnel
 rm -rf /koolshare/bin/rss-local
 rm -rf /koolshare/bin/obfs-local
+rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/koolgame
 rm -rf /koolshare/bin/pdu
 rm -rf /koolshare/bin/haproxy
@@ -215,7 +216,7 @@ echo_date 创建一些二进制文件的软链接！
 echo_date 设置一些默认值
 [ -z "$ss_dns_china" ] && dbus set ss_dns_china=11
 [ -z "$ss_dns_foreign" ] && dbus set ss_dns_foreign=1
-[ -z "$ss_basic_ss_obfs" ] && dbus set ss_basic_ss_obfs=0
+[ -z "$ss_basic_ss_v2ray_plugin" ] && dbus set ss_basic_ss_v2ray_plugin=0
 [ -z "$ss_acl_default_mode" ] && [ -n "$ss_basic_mode" ] && dbus set ss_acl_default_mode="$ss_basic_mode"
 [ -z "$ss_acl_default_mode" ] && [ -z "$ss_basic_mode" ] && dbus set ss_acl_default_mode=1
 [ -z "$ss_acl_default_port" ] && dbus set ss_acl_default_port=all
@@ -230,12 +231,12 @@ dbus set ss_basic_version_local="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_install="4"
 dbus set softcenter_module_shadowsocks_version="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_title="科学上网"
-dbus set softcenter_module_shadowsocks_description="科学上网"
+dbus set softcenter_module_shadowsocks_description="科学上网 for merlin armv7l 380"
 dbus set softcenter_module_shadowsocks_home_url="Main_Ss_Content.asp"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v4.6.4"
-dbus set ss_basic_v2ray_date="20181124"
+dbus set ss_basic_v2ray_version="v4.22.0"
+dbus set ss_basic_v2ray_date="20191231"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
@@ -243,7 +244,7 @@ dbus set ss_basic_install_status="0"
 echo_date 科学上网插件安装成功！
 
 if [ "$ss_basic_enable" == "1" ];then
-	echo_date 重启ss！
+	echo_date 重启科学上网插件！
 	dbus set ss_basic_action=1
 	sh /koolshare/ss/ssconfig.sh restart
 fi

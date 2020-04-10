@@ -1,0 +1,27 @@
+{
+    "global": {
+    "daemon": true,
+    "log": "syslog:daemon",
+    "pidfile": "/var/run/cdns.pid",
+    "log_debug": false
+    },
+    "cdns": {
+        "listen_ip": "127.0.0.1",
+        "listen_port": 7913,
+        "timeout": 2,
+        "servers": [
+        {
+            "ip_port": "203.80.96.10"
+        },
+        {
+            "ip_port": "208.67.222.222"
+        },
+        {
+	        "ip_port": "8.8.8.8"
+        },
+        {
+	        "ip_port": "9.9.9.9"
+        }
+        ]
+    }
+}

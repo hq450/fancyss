@@ -1,5 +1,83 @@
 fancyss_hnd Changelog
 ===========================================
+1.8.2 (尚未推送)
+   - update	更新httping，支持ssl；
+   - update	更新smartdns二进制到最新(commit:198d18f)；
+   - update	更新haproxy二进制到2.1.2；
+   - update	更新kcptun二进制到20200103；
+
+1.8.1
+   - fix	修复因未定义[包括]关键词，导致所有订阅节点被删除的问题！
+
+1.7.9 - 1.8.0
+   - add	添加SmartDNS支持；
+   - update	重写了外国DNS的说明文档（在【外国DNS】字样上点击鼠标可见）；
+   - add	现在ssr订阅功能支持订阅部分节点，请前往【更新管理】中的[排除]关键词和[包括]关键词设置；
+    		[排除]关键词：含关键词的节点不会添加，多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷,东京,V3
+    		[包括]关键词：含关键词的节点才会添加，多个关键词用英文逗号分隔，如：香港,新加坡
+    		详细说明鼠标点击对应功能名称可见。
+   - update	增加订阅成功率：现在使用curl下载订阅失败后，会自动使用wget重新尝试一次；
+   - update	现在v2ray模式下也能使用tcp fast open了；
+   - update	现在haveged随插件常驻启动，而不是之前在ss-libev启动时才启动；
+   - update	更新了故障检测功能，现在开启插件后能更快的进行故障检测；
+   - add	现在如果故障转移功能在后台切换了节点，且前端页面是打开的，那么前台会收到通知；
+   - add	现在状态检测可以自己选择检测时间间隔，默认4s - 7s；
+   - fix	修复了打包插件无法打包v2ray-plugin的问题；
+   - fix	修复导出插件配置恢复后，故障转移等一些功能的配置无法恢复的问题；
+   - fix	修复配置了v2ray-plugin的ss节点，因节点排序而丢失部分节点配置的问题；
+   
+
+1.7.8
+   - update	更换ss-*二进制使用shadowsocks-libev_3.3.3-1_arm_cortex-a5.ipk
+
+1.7.7
+   - fix	修复某些情况下，因SS/SSR/V2RAY线路挂掉导致【网络地图】中显示网络断开的问题；
+   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式；
+   - update	更新安装包内置规则到最新。
+
+1.7.6
+   - update	压缩v2ray二进制
+
+1.7.5
+   - update	更新v2ray二进制到4.21.3
+
+1.7.4
+   - update	更新ss-local/redir/tunnel二进制到3.3.3
+
+1.7.3
+   - update	更新v2ray-plugin二进制到1.2.0
+
+1.7.2
+   - add	新增Shadowsocks的v2ray-plugin支持
+   - fix	修复了节点列表拖拽排序后，因为没有刷新节点选择导致的保存时覆盖了错误位置的节点配置
+   - fix	修复了从节点列表删除节点后帐号设置的节点选择选项没有更新的问题
+
+1.7.1
+   - fix	修复【节点域名解析DNS服务器】无法选择IBM DNS的问题；
+   - update	更新内置v2ray二进制到v4.20.0；
+   - update	更新内置规则到最新，chnroute.txt更换为ipip.net源；
+   - update	大陆白名单IP段数量增加ip数量显示。
+
+1.7.0
+   - fix	修复因css丢失导致官改固件的科学上网插件rog皮肤显示不正常的问题。
+
+1.6.9
+   - fix	修复在开启故障转移功能后，CPU使用率可能偏高的问题；
+   - fix	修复节点ping有时候无法获取数据显示超时的问题；
+   - fix	修复外网https访问路由器时，分流检测无法显示结果的问题；
+   - fix	修复v2ray二进制版本号显示错误的问题。
+
+1.6.8
+   - update	因为梅林固件在384.12版本中，将路由本身的域名解析由本地DNS解析（127.0.0.1）改为使用运营商地址DNS解析：
+    		commit：https://github.com/RMerl/asuswrt-merlin.ng/commit/de8806990462b8c3dbd4182b4991e31cd082f7fe，
+    		Changelog：https://github.com/RMerl/asuswrt-merlin.ng/blob/613a8080c4671d044bde0d809507c8b625ad3525/Changelog-NG.txt#L37-L44；
+    		这会导致路由器本身无法解析国外受到污染的域名而使得路由本身翻墙失效，为保证插件和384.12及其以后固件的兼容性，fancyss将强制路由本身的域名解析由本地DNS解析（127.0.0.1）。
+    		即在http://router.asus.com/Tools_OtherSettings.asp —→ Wan: Use local caching DNS server as system resolver (default: No)选项中，fancyss插件将会强制将此处设定为"是"。
+
+1.6.7
+   - fix	修复在使用部分机场节点时，重启路由或者路由断电开机后，无法访问谷歌等外网的问题；
+   - update	【规则】更新内置规则到最新。
+
 1.6.6
    - fix	修复fancyss_hnd访问控制添加/删除主机后不刷新列表的问题；
 

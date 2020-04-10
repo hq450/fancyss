@@ -45,15 +45,6 @@ if [ -n "$MOUNTED" ];then
 	service restart_dnsmasq >/dev/null 2>&1
 fi
 
-# flush previous ping value
-pings=`dbus list ssconf_basic_ping | sort -n -t "_" -k 4|cut -d "=" -f 1`
-if [ -n "$pings" ];then
-	for ping in $pings
-	do
-		dbus remove "$ping"
-	done
-fi
-
 #升级前先删除无关文件
 echo_date 清理旧文件
 rm -rf /koolshare/ss/*
@@ -70,7 +61,6 @@ rm -rf /koolshare/bin/koolgame
 rm -rf /koolshare/bin/pdu
 rm -rf /koolshare/bin/haproxy
 rm -rf /koolshare/bin/dnscrypt-proxy
-rm -rf /koolshare/bin/Pcap_DNSProxy
 rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/client_linux_arm*
 rm -rf /koolshare/bin/chinadns
@@ -81,6 +71,7 @@ rm -rf /koolshare/bin/speederv2
 rm -rf /koolshare/bin/udp2raw
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
+rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/bin/https_dns_proxy
@@ -90,10 +81,6 @@ rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/qrcode.js
 rm -rf /koolshare/res/tablednd.js
-rm -rf /koolshare/res/all.png
-rm -rf /koolshare/res/gfw.png
-rm -rf /koolshare/res/chn.png
-rm -rf /koolshare/res/game.png
 rm -rf /koolshare/res/shadowsocks.css
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
@@ -115,7 +102,6 @@ cd /tmp
 
 echo_date 复制相关二进制文件！此步时间可能较长！
 cp -rf /tmp/shadowsocks/bin/* /koolshare/bin/
-
 
 echo_date 复制相关的脚本文件！
 cp -rf /tmp/shadowsocks/ss/* /koolshare/ss/
@@ -155,6 +141,7 @@ echo_date 设置一些默认值
 [ -z "$ss_dns_foreign" ] && dbus set ss_dns_foreign=1
 [ -z "$ss_acl_default_mode" ] && dbus set ss_acl_default_mode=1
 [ -z "$ss_acl_default_port" ] && dbus set ss_acl_default_port=all
+[ -z "$ss_basic_interval" ] && dbus set ss_basic_interval=2
 
 # 离线安装时设置软件中心内储存的版本号和连接
 CUR_VERSION=`cat /koolshare/ss/version`
@@ -162,10 +149,10 @@ dbus set ss_basic_version_local="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_install="4"
 dbus set softcenter_module_shadowsocks_version="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_title="科学上网"
-dbus set softcenter_module_shadowsocks_description="科学上网"
+dbus set softcenter_module_shadowsocks_description="科学上网 for merlin hnd"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v4.18.0"
+dbus set ss_basic_v2ray_version="v4.21.3"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1
@@ -173,7 +160,7 @@ rm -rf /tmp/shadowsocks* >/dev/null 2>&1
 echo_date 科学上网插件安装成功！
 
 if [ "$ss_basic_enable" == "1" ];then
-	echo_date 重启ss！
+	echo_date 重启科学上网插件！
 	sh /koolshare/ss/ssconfig.sh restart
 fi
 
