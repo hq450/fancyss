@@ -8,7 +8,6 @@
    # 域名：fancyss.example.com
    # 端口：443
    # 密码：fancyss
-   # 证书：cert.crt
    ```
 
 2. 下载本目录下的trojan二进制文件，放进`/koolshare/bin`，此二进制文件适用于hnd机型。
@@ -20,9 +19,7 @@
    chmod +x /koolshare/bin/trojan
    ```
 
-3. 用winscp登录路由器，将证书文件，如：`cert.crt`放进`/koolshare/ss/rules`目录
-
-4. 创建trojan.json配置文件到`/koolshare/ss/trojan.json`，使用trojan官方的配置文件：**[nat.json-example](https://github.com/trojan-gfw/trojan/blob/master/examples/nat.json-example)**来进行修改。
+3. 创建trojan.json配置文件到`/koolshare/ss/trojan.json`，使用trojan官方的配置文件：**[nat.json-example](https://github.com/trojan-gfw/trojan/blob/master/examples/nat.json-example)**来进行修改。
 
    ```bash
    # 下载配置文件模板
@@ -31,22 +28,22 @@
    mv nat.json-example trojan_nat.json
    ```
    
-5. 修改`/koolshare/ss/trojan_nat.json`
+4. 修改`/koolshare/ss/trojan_nat.json`
 
-   - local_port 修改为 `3333`
+   - local_port 固定为 `3333`
    - remote_addr改为你的域名，比如：`fancyss.example.com`
    - remote_port改为你的端口，比如：`443`
-   - password同理
-   - ssl下cert配置改成：`"cert": "/koolshare/ss/rules/cert.crt"`
+   - password修改为你的密码，比如：`fancyss`
+   - ssl下cert配置改成：`"cert": "/rom/etc/ssl/certs/certificates.crt"`
    
-6. 启用fancyss_hnd插件ssr模式，国外DNS使用不经过服务转发的方式，比如使用`cdns`、`chinadns2`、`https_dns_proxy`、`SmartDNS`。然后进入SSH，将监听在3333端口的rss-redir进程杀掉。(v2ray模式下杀v2ray进程，ss模式下杀ss-redir进程)
+5. 启用fancyss_hnd插件ssr模式，国外DNS使用不经过服务转发的方式，比如使用`cdns`、`chinadns2`、`https_dns_proxy`、`SmartDNS`。然后进入SSH，将监听在3333端口的rss-redir进程杀掉。(v2ray模式下杀v2ray进程，ss模式下杀ss-redir进程)
 
    ```bash
    # 杀掉占用3333端口的进程
    killall rss-redir
    ```
    
-7. 启用trojan
+6. 启用trojan
    
    ```bash
    # 启动trojan前台运行
