@@ -1,9 +1,13 @@
 # 注
-fork 后的修改仅为自己路由器（R7000 - 380.70_0-X7.9.1）方便使用 trojan 。
-K3 TB 梅林380版本测试通过。
+fork 后的修改仅为自己路由器方便使用 trojan 。
+
+测试通过版本：
+- R7000 - 380.70_0-X7.9.1
+- K3 TB 梅林380版本
+
 仅修改 [fancyss_arm](fancyss_arm) 以下的相关特性。
 
-目前 fancyss_arm 支持启动 trojan ，单个添加/编辑 trojan 节点，订阅 trojan 链接。
+- 支持启动 trojan ，单个添加/编辑 trojan 节点，订阅 trojan 链接
 
 # [fancyss - 科学上网](https://hq450.github.io/fancyss/)
 
