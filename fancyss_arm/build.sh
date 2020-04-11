@@ -59,7 +59,7 @@ do_build() {
 	"home_url":"$HOME_URL",
 	"md5":"$md5value",
 	"name":"$MODULE",
-	"tar_url": "https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_arm/shadowsocks.tar.gz", 
+	"tar_url": "https://raw.githubusercontent.com/idealism-xxm/fancyss/master/fancyss_arm/shadowsocks.tar.gz",
 	"title":"$TITLE",
 	"version":"$VERSION"
 	}
@@ -67,7 +67,7 @@ do_build() {
 }
 
 do_backup(){
-  # 只保存 fork 以后的 package ，直接在本目录下
+  # 只保存 fork 以后 (v4.3.0 ↑) 的 package ，直接在本目录下
 	HISTORY_DIR="history_package"
 	# backup latested package after pack
 	backup_version=`cat version | sed -n 1p`
