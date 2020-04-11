@@ -53,5 +53,33 @@
    /koolshare/bin/trojan -c /koolshare/ss/trojan_nat.json >/dev/null 2>&1 &
    ```
 
-
 **总结**：以上操作其实就是利用了插件现成的DNS方案，iptables配置等，用trojan来提供透明代理，而不是ss/ssr/v2ray。选用直连的国外DNS方案是因为这里直接用了trojan的nat运行方式，不同于client方式，提供的是socks5端口。如果需要使用经由服务器转发的DNS方式，那么需要杀掉ss-local，rss-local进程，然后再开一个client模式的trojan，监听在23456端口即可。
+
+
+
+更新记录：
+
+1. 2020年4月11日 ，trojan二进制更新为全静态编译(使用axhnd工具链)，现在RT-AC86U和TUF-AX3000机型也能正常运行
+
+   ```bash
+   # TUF-AX3000运行信息 （正常）
+   admin@TUF-AX3000-5580:/jffs/.koolshare/bin# trojan -v
+   Welcome to trojan 1.15.1
+   Boost 1_72, OpenSSL 1.1.1f  31 Mar 2020
+   [Disabled] MySQL Support
+    [Enabled] TCP_FASTOPEN Support
+    [Enabled] TCP_FASTOPEN_CONNECT Support
+    [Enabled] SSL KeyLog Support
+    [Enabled] NAT Support
+    [Enabled] TLS1.3 Ciphersuites Support
+    [Enabled] TCP Port Reuse Support
+   OpenSSL Information
+   	Build Flags: compiler: /opt/toolchains/crosstools-arm-gcc-5.5-linux-4.1-glibc-2.26-binutils-2.28.1/usr/bin/arm-buildroot-linux-gnueabi-gcc -fPIC -pthread -Wa,--noexecstack -Wall -O3 -Os -DOPENSSL_USE_NODELETE -DOPENSSL_PIC -DOPENSSL_CPUID_OBJ -DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_GF2m -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DKECCAK1600_ASM -DAES_ASM -DBSAES_ASM -DGHASH_ASM -DECP_NISTZ256_ASM -DPOLY1305_ASM -DZLIB -DNDEBUG -DOPENSSL_PREFER_CHACHA_OVER_GCM
+   
+   # RT-AC5300运行信息 （此二进制不支持armv7l）
+   admin@RT-AC5300-8E70:/jffs/.koolshare/bin# trojan 
+   FATAL: kernel too old
+   Aborted
+   ```
+
+   
