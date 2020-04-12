@@ -2,7 +2,9 @@
 
 ***
 
-##### 此处使用的二进制文件来源于[trojan 官方项目](https://github.com/trojan-gfw/trojan) 的一个 issue: [[BUG] 32位 ARM merlin 系统上运行不了](https://github.com/trojan-gfw/trojan/issues/189#issuecomment-600031473)
+##### 此处使用的二进制文件 (v1.14.1) 来源于[trojan 官方项目](https://github.com/trojan-gfw/trojan) 的一个 issue: [[BUG] 32位 ARM merlin 系统上运行不了](https://github.com/trojan-gfw/trojan/issues/189#issuecomment-600031473)
+
+##### trojan 二进制文件均来源于 [arm-static-bins](https://github.com/rampageX/arm-static-bins/tree/master/trojan)
 
 > trojan.v1.14.1.arm7l.static.rar，用 tomatoware 静态编译，适用于 Asus RT-AC68U，Netgear R7000 等基于博通 arm 方案的路由器，在 Asus 原版固件，Asus merlin 以及 Tomato，DD-WRT 下测试通过。
 > 
