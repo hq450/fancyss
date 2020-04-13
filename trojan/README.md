@@ -34,7 +34,7 @@
    - remote_addr改为你的域名，比如：`fancyss.example.com`
    - remote_port改为你的端口，比如：`443`
    - password修改为你的密码，比如：`fancyss`
-   - ssl下cert配置改成：`"cert": "/rom/etc/ssl/certs/certificates.crt"`
+   - ssl下cert配置改成：`"cert": "/rom/etc/ssl/certs/ca-certificates.crt"`
    
 5. 启用fancyss_hnd插件ssr模式，国外DNS使用不经过服务转发的方式，比如使用`cdns`、`chinadns2`、`https_dns_proxy`、`SmartDNS`。然后进入SSH，将监听在3333端口的rss-redir进程杀掉。(v2ray模式下杀v2ray进程，ss模式下杀ss-redir进程)
 
