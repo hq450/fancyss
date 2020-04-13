@@ -25,10 +25,9 @@
    # 下载配置文件模板
    cd /koolshare/ss
    wget https://raw.githubusercontent.com/trojan-gfw/trojan/master/examples/nat.json-example trojan.json
-   mv nat.json-example trojan_nat.json
    ```
    
-4. 修改`/koolshare/ss/trojan_nat.json`
+4. 修改`/koolshare/ss/trojan.json`
 
    - local_port 固定为 `3333`
    - remote_addr改为你的域名，比如：`fancyss.example.com`
@@ -47,10 +46,10 @@
    
    ```bash
    # 启动trojan前台运行
-   /koolshare/bin/trojan -c /koolshare/ss/trojan_nat.json
+   trojan
    
    # 若需后台运行，使用下面命令
-   /koolshare/bin/trojan -c /koolshare/ss/trojan_nat.json >/dev/null 2>&1 &
+   trojan >/dev/null 2>&1 &
    ```
 
 **总结**：以上操作其实就是利用了插件现成的DNS方案，iptables配置等，用trojan来提供透明代理，而不是ss/ssr/v2ray。选用直连的国外DNS方案是因为这里直接用了trojan的nat运行方式，不同于client方式，提供的是socks5端口。如果需要使用经由服务器转发的DNS方式，那么需要杀掉ss-local，rss-local进程，然后再开一个client模式的trojan，监听在23456端口即可。
