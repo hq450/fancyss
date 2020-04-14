@@ -1469,8 +1469,8 @@ function refresh_html() {
 		} else {
 			html = html + '<td style="width:40px"></td>';
 		}
-		html = html + '<td style="width:90px;" id="ss_node_name_' + c["node"] + '">' + c["name"] + '</td>';
-		html = html + '<td style="width:90px;" id="ss_node_server_' + c["node"] + '"> ' + c["server"] + '</td>';
+		html = html + '<td style="width:90px;" id="ss_node_name_' + c["node"] + '" title="' + c["name"] + '">' + c["name"] + '</td>';
+		html = html + '<td style="width:90px;" id="ss_node_server_' + c["node"] + '" title="' + c["server"] + '"> ' + c["server"] + '</td>';
 		html = html + '<td id="ss_node_port_' + c["node"] + '" style="width:37px;">' + c["port"] + '</td>';
 		html = html + '<td id="ss_node_method_' + c["node"] + '" style="width:90px;"> ' + c["method"] + '</td>';
 		if(!c["ping"]){

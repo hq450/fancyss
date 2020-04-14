@@ -367,8 +367,8 @@ function refresh_html() {
 		var c = confs[field];
 		if (c["use_lb"] == 1) {
 			html = html + '<tr>';
-			html = html + '<td id="ss_node_name_' + c["node"] + '" style="width:85px;">' + c["name"] + '</td>';
-			html = html + '<td id="ss_node_server_' + c["node"] + '" style="width:85px;">' + c["server"] + '</td>';
+			html = html + '<td id="ss_node_name_' + c["node"] + '" style="width:85px;" title="' + c["name"] + '">' + c["name"] + '</td>';
+			html = html + '<td id="ss_node_server_' + c["node"] + '" style="width:85px;" title="' + c["server"] + '">' + c["server"] + '</td>';
 			html = html + '<td id="ss_node_port_' + c["node"] + '" style="width:37px;">' + c["port"] + '</td>';
 			html = html + '<td id="ss_node_password_' + c["node"] + '" style="width:75px;">' + Base64.decode(c["password"]) + '</td>';
 			html = html + '<td id="ss_node_method_' + c["node"] + '" style="width:75px;">' + c["method"] + '</td>';
