@@ -9,6 +9,8 @@ ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|s
 ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
 IFIP_DNS1=`echo $ISP_DNS1|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 IFIP_DNS2=`echo $ISP_DNS2|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
+DNSC_PORT=53
+DNSF_PORT=7913
 
 perpare(){
 	if [ "$ss_dns_china" == "1" ];then
@@ -64,6 +66,11 @@ perpare(){
 	[ "$ss_dns_china" == "12" ] && {
 		[ -n "$ss_dns_china_user" ] && CDN="$ss_dns_china_user" || CDN="114.114.114.114"
 	}
+	if [ "$ss_dns_china" == "13" ];then
+		CDN="127.0.0.1"
+		DNSC_PORT=5335
+	fi
+	
 	[ -n "`cat /etc/dnsmasq.conf|grep no-resolv`" ] && sed -i '/no-resolv/d' /etc/dnsmasq.conf
 	[ -n "`cat /etc/dnsmasq.conf|grep servers-file`" ] && sed -i '/servers-file/d' /etc/dnsmasq.conf
 	[ -n "`cat /etc/dnsmasq.conf|grep resolv-file`" ] && sed -i '/resolv-file/d' /etc/dnsmasq.conf
@@ -78,12 +85,12 @@ use_chn_plan(){
 	pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
 	if [ "$ss_dns_china" == "1" ];then
 		# 选择运营商DNS时候，如果有两个DNS，则都使用
-		pc_insert "no-poll" "server=$CDN2#53" "/etc/dnsmasq.conf"
-		pc_insert "no-poll" "server=$CDN1#53" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "server=$CDN2#$DNSC_PORT" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "server=$CDN1#$DNSC_PORT" "/etc/dnsmasq.conf"
 		pc_insert "no-poll" "all-servers" "/etc/dnsmasq.conf"
 	else
 		# 选择其它国内DNS时候
-		pc_insert "no-poll" "server=$CDN#53" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "server=$CDN#$DNSC_PORT" "/etc/dnsmasq.conf"
 	fi
 	pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
 }
@@ -103,7 +110,7 @@ use_for_plan(){
 		pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
 	else
 		pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
-		pc_insert "no-poll" "server=127.0.0.1#7913" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "server=127.0.0.1#$DNSF_PORT" "/etc/dnsmasq.conf"
 		pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"
 	fi
 }

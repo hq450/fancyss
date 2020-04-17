@@ -24,14 +24,14 @@ update_ss(){
 	echo_date 更新过程中请不要刷新本页面或者关闭路由等，不然可能导致问题！
 	echo_date 开启SS检查更新：使用主服务器：github
 	echo_date 检测主服务器在线版本号...
-	ss_basic_version_web1=`curl --connect-timeout 5 -s "$main_url"/version | sed -n 1p`
+	ss_basic_version_web1=`curl -4sk --connect-timeout 5 $main_url/version | sed -n 1p`
 	if [ -n "$ss_basic_version_web1" ];then
 		echo_date 检测到主服务器在线版本号：$ss_basic_version_web1
 		dbus set ss_basic_version_web=$ss_basic_version_web1
 		if [ "$ss_basic_version_local" != "$ss_basic_version_web1" ];then
 		echo_date 主服务器在线版本号："$ss_basic_version_web1" 和本地版本号："$ss_basic_version_local" 不同！
 			cd /tmp
-			md5_web1=`curl -s "$main_url"/version | sed -n 2p`
+			md5_web1=`curl -4sk --connect-timeout 5 $main_url/version | sed -n 2p`
 			echo_date 开启下载进程，从主服务器上下载更新包...
 			wget --no-check-certificate --timeout=5 "$main_url"/shadowsocks.tar.gz
 			md5sum_gz=`md5sum /tmp/shadowsocks.tar.gz | sed 's/ /\n/g'| sed -n 1p`

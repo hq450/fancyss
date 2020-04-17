@@ -1,7 +1,22 @@
 fancyss_arm Changelog
 ===========================================
+4.2.2
+   - fix	修复v2ray_dns无法使用的问题。
+
+4.2.1
+   - 说明：	因v2ray v4.22.0不再兼容旧的v2ray json配置格式（如：inbound{},outbound{}格式），
+    		而4.2.0及其之前版本的插件只能生成旧的v2ray配置格式，
+    		导致4.2.0及其以下版本版本插件更新了v2ray v4.22.0后工作不正常，
+    		因此更新插件4.2.1，以保证和未来v2ray的兼容性。
+    		1. 如果你需要插件版本停留在4.2.0，那么请不要更新你的v2ray二进制到v4.22.0及以上；
+    		2. 如果你需要保持v2ray二进制为最新（v4.22.0及以上），你只能使用插件版本4.2.1及以上。
+    		此次更新日志如下：
+   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式；
+   - update	更新内置v2ray二进制版本到v4.22.0；
+   - update	同步最新规则；
+
 4.2.0
-   - update 更新shadowsocks-libev到最新3.3.0 （2019年6月20日 编译）；
+   - update	更新shadowsocks-libev到最新3.3.0 （2019年6月20日 编译）；
 
 4.1.9
    - add	添加httping，并用httping检测国内外状态，原wget检测状态方式弃用，注意现在状态检测仍然是按需检测，即：
@@ -12,10 +27,10 @@ fancyss_arm Changelog
    - update	同步最新规则；
 
 4.1.8
-   - add    新增v2ray-plugin支持（v2ray-plugin v1.1.0）；
-   - update 更新shadowsocks-libev到最新3.2.4 （2019年2月26日 编译）；
+   - add	新增v2ray-plugin支持（v2ray-plugin v1.1.0）；
+   - update	更新shadowsocks-libev到最新3.2.4 （2019年2月26日 编译）；
    - update	同步最新规则；
-   - remove 移除simple-obfs支持；
+   - remove	移除simple-obfs支持；
 
 4.1.7
    - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
