@@ -38,6 +38,7 @@
 |  固件下载-4   | [RT-AX88U 梅林改版](http://koolshare.cn/thread-158199-1-1.html) |                                                              |     [华为](https://koolshare.cn/thread-139322-1-1.html)      |                                                              |                                                              |
 |  固件下载-5   | [GT-AX11000 官改固件](http://koolshare.cn/thread-159465-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |  固件下载-6   | [RAX80 梅林改版](https://koolshare.cn/thread-177255-1-1.html) |                                                              |                                                              |                                                              |                                                              |
+|  固件下载-7   | [TUF-AX3000 官改固件](https://koolshare.cn/thread-179968-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |   更新日志    | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm384/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm/Changelog.txt) |                             null                             | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_X64/Changelog.txt) |
 |  离线包下载   | [fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd) | [fancyss_arm384](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384) | [fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm) | [fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel) | [fancyss_x64](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_X64) |
 
@@ -57,6 +58,7 @@
  * [ASUS RT-AX88U merlin改版固件](http://koolshare.cn/thread-158199-1-1.html)
  * [ASUS GT-AX11000 官改固件](http://koolshare.cn/thread-159465-1-1.html)
  * [NETGEAR RAX80 梅林改版固件](https://koolshare.cn/thread-177255-1-1.html)
+ * [TUF-AX3000 官改固件](https://koolshare.cn/thread-179968-1-1.html)
 
 #### 注意：
 
@@ -64,6 +66,8 @@
 * 使用本插件建议使用chrome或者chrome内核的浏览器！
 * 强烈建议在最新版本的固件和最新版本软件中心上使用fancyss_hnd！
 * RT-AC86U/GT-AC5300/GT-AX11000官改固件使用的是ROG皮肤，插件安装会自动识别机型并安装对应皮肤版本。
+* TUF-AX3000官改固件使用的是TUF橙色皮肤，插件安装会自动识别机型并安装对应皮肤版本。
+* TUF-AX3000官改固件请安装fancyss_hnd，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，因为这些功能使用的二进制是64位的，BCM6750作为32位cpu是不能运行的，后期版本将逐渐添加支持。	
 
 #### 相关链接：
 
