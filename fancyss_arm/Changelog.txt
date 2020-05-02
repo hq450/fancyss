@@ -1,5 +1,11 @@
 fancyss_arm Changelog
 ===========================================
+4.3.5
+   - feat	支持 trojan 节点进行 web test
+
+4.3.4
+   - feat	使用 trojan 时，支持显示 trojan 和 v2ray 的 pid
+
 4.3.3
    - feat	更新内置 trojan 二进制版本到 v1.15.1
 
