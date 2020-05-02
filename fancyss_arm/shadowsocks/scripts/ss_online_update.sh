@@ -1089,7 +1089,8 @@ add() {
         echo_date 检测到 Trojan 链接...开始尝试解析...
         if [ -n "`echo -n "$ssrlink" | grep "#"`" ];then
 					new_sslink=`echo -n "$ssrlink" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g'`
-					remarks=`echo -n "$ssrlink" | awk -F'#' '{print $2}'`
+					# 因为订阅的 trojan 里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装
+					remarks=`echo -n "$ssrlink" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g'`
           echo "【$remarks】"
 				else
 					new_sslink=`echo -n "$ssrlink" | sed 's/trojan:\/\///g'`
