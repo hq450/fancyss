@@ -15,7 +15,7 @@ if [ ! -z "$webtest" ];then
 	done
 fi
 
-start_webtest(){
+start_ss_webtest(){
 	array1=`dbus get ssconf_basic_server_$nu`
 	array2=`dbus get ssconf_basic_port_$nu`
 	array3=`dbus get ssconf_basic_password_$nu|base64_decode`
@@ -71,6 +71,72 @@ start_webtest(){
 	else
 		dbus set ssconf_basic_webtest_$nu="failed"
 	fi
+}
+
+start_trojan_webtest(){
+	trojan_test_server=`dbus get ssconf_basic_server_$nu`
+	trojan_test_port=`dbus get ssconf_basic_port_$nu`
+	trojan_test_password=`dbus get ssconf_basic_password_$nu|base64_decode`
+
+  trojan_test_config_file=/tmp/tmp_trojan.json
+  trojan_test_local_port=23458
+
+  cat > $trojan_test_config_file <<-EOF
+		{
+      "run_type": "client",
+      "local_addr": "0.0.0.0",
+      "local_port": $trojan_test_local_port,
+      "remote_addr": "$trojan_test_server",
+      "remote_port": $trojan_test_port,
+      "password": [
+          "$trojan_test_password"
+      ],
+      "log_level": 2,
+      "ssl": {
+          "verify": false,
+          "verify_hostname": false,
+          "cert": "",
+          "cipher": "",
+          "cipher_tls13": "TLS_CHACHA20_POLY1305_SHA256",
+          "sni": "",
+          "alpn": [
+              "h2"
+          ],
+          "reuse_session": true,
+          "session_ticket": false,
+          "curves": ""
+      },
+      "tcp": {
+          "no_delay": true,
+          "keep_alive": true,
+          "reuse_port": false,
+          "fast_open": false,
+          "fast_open_qlen": 20
+      }
+    }
+	EOF
+
+  trojan --config=$trojan_test_config_file >/dev/null 2>&1 &
+  sleep 2
+  result=`curl -o /dev/null -s -w %{time_total}:%{speed_download} --connect-timeout 15 --socks5-hostname 127.0.0.1:$trojan_test_local_port $ssconf_basic_test_domain`
+  sleep 1
+  dbus set ssconf_basic_webtest_$nu=$result
+  kill -9 `ps | grep trojan | grep $trojan_test_config_file | grep -v grep | awk '{print $1}'` >/dev/null 2>&1
+  rm -rf $trojan_test_config_file
+}
+
+start_webtest() {
+  case `dbus get ssconf_basic_type_$nu` in
+		0|1|2)
+			start_ss_webtest
+			;;
+		3)
+		  start_trojan_webtest
+		  ;;
+		*)
+      dbus set ssconf_basic_webtest_$nu="error"
+      ;;
+  esac
 }
 
 # start testing
