@@ -536,7 +536,7 @@ function verifyFields(r) {
 				v2ray_on = true;
 				$("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(51)"><font color="#ffcc00">地址（address）</font></a>');
 				$("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(50)"><font color="#ffcc00">端口（port）</font></a>');
-			}else if(typeof(db_ss["ssconf_basic_ss_v2ray_plugin" + node_sel])  != "undefined") {
+			}else if(typeof(db_ss["ssconf_basic_ss_v2ray_plugin_" + node_sel])  != "undefined") {
 				ss_on = true;
 				$("#server_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(2)">服务器</a>');
 				$("#port_th").html('<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(3)">服务器端口</a>');
