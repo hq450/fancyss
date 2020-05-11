@@ -699,7 +699,7 @@ get_oneline_rule_now(){
 					remarks='AddByLink'
 				fi
 				# 链接中有 ? 开始的参数，去掉这些参数
-				new_trojan_link=`echo -n "$link" | awk -F'?' '{print $1}'`
+				new_trojan_link=`echo -n "$new_sslink" | awk -F'?' '{print $1}'`
 				get_trojan_config $new_trojan_link
 				[ "$?" == "0" ] && update_trojan_config || echo_date "检测到一个错误节点，已经跳过！"
 			done
