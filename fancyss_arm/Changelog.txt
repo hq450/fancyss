@@ -1,5 +1,13 @@
 fancyss_arm Changelog
 ===========================================
+4.3.7
+   - fix	修复 4.3.6 新引入的问题，会导致端口识别错误
+
+4.3.6
+   - fix	更新 haproxy 版本（https://github.com/rampageX/arm-static-bins/blob/master/haproxy/1.8.25/lite/haproxy）
+   - fix    ss 节点信息展示错误
+   - fix    修复 trojan 和其他类型的混合订阅链接解析错误的问题
+
 4.3.5
    - feat	支持 trojan 节点进行 web test
 
