@@ -46,7 +46,6 @@ recaptcha.net
 redirector.gvt1.com
 safebrowsing-cache.google.com
 safebrowsing.googleapis.com
-settings.crashlytics.com
 ssl-google-analytics.l.google.com
 ssl.gstatic.com
 toolbarqueries.google.com
