@@ -90,7 +90,7 @@ echo_version(){
 	echo "ssrr-redir		3.5.3 		2018年11月25日编译"
 	echo "ssrr-tunnel		3.5.3 		2018年11月25日编译"
 	echo "ssrr-local		3.5.3 		2018年11月25日编译"
-	echo "haproxy			1.8.8 		2018年05月03日编译"
+	echo "haproxy			1.8.25 		2020年05月09日编译 HA-Proxy version 1.8.25 版本发布日期2020/04/02"
 	echo "dns2socks		V2.0 	"
 	echo "cdns			1.0 		2017年12月09日编译"
 	echo "chinadns1		1.3.2 		2017年12月09日编译"

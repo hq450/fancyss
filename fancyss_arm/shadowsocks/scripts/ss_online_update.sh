@@ -670,7 +670,51 @@ get_oneline_rule_now(){
 		NODE_FORMAT2=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^ssr://"`
 		NODE_FORMAT3=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^vmess://"`
 		NODE_FORMAT_TROJAN=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^trojan://"`
-		if [ -n "$NODE_FORMAT2" ];then
+		if [ -n "$NODE_FORMAT_TROJAN" ];then
+			# Trojan 订阅
+			# use domain as group
+			group=`echo $ssr_subscribe_link|awk -F'[/:]' '{print $4}'`
+			# 储存对应订阅链接的group信息
+			dbus set ss_online_group_$z=$group
+			echo $group >> /tmp/group_info.txt
+
+			NODE_NU=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "trojan://"`
+			echo_date "检测到 Trojan 节点格式，共计 $NODE_NU 个节点..."
+      urllinks=$(decode_url_link `cat /tmp/ssr_subscribe_file.txt` | sed 's/trojan:\/\///g')
+
+			[ -z "$urllinks" ] && continue
+			for link in $urllinks
+			do
+			  # 如果不是 trojan 节点，则直接处理下一个
+			  [ -n "`echo -n "$link" | grep -E "^(ss|ssr|vmess)://"`" ] && continue
+
+        if [ -n "`echo -n "$link" | grep "#"`" ];then
+					new_sslink=`echo -n "$link" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g'`
+					# 有些链接被 url 编码过，所以要先 url 解码
+					link=$(printf $(echo -n $link | sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g'))
+					# 因为订阅的 trojan 里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装
+					remarks=`echo -n "$link" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g'`
+				else
+					new_sslink=`echo -n "$link" | sed 's/trojan:\/\///g'`
+					remarks='AddByLink'
+				fi
+				# 链接中有 ? 开始的参数，去掉这些参数
+				new_trojan_link=`echo -n "$new_sslink" | awk -F'?' '{print $1}'`
+				get_trojan_config $new_trojan_link
+				[ "$?" == "0" ] && update_trojan_config || echo_date "检测到一个错误节点，已经跳过！"
+			done
+
+			# 去除订阅服务器上已经删除的节点
+			del_none_exist
+			# 节点重新排序
+			remove_node_gap
+			USER_ADD=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
+			ONLINE_GET=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
+			echo_date "本次更新订阅来源 【$group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
+			echo_date "现共有自添加 SSR/v2ray/Trojan 节点：$USER_ADD 个。"
+			echo_date "现共有订阅 SSR/v2ray/Trojan 节点：$ONLINE_GET 个。"
+			echo_date "在线订阅列表更新完成!"
+		elif [ -n "$NODE_FORMAT2" ];then
 			# SSR 订阅
 			NODE_NU=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "ssr://"`
 			echo_date 检测到ssr节点格式，共计$NODE_NU个节点...
@@ -756,43 +800,6 @@ get_oneline_rule_now(){
 		elif [ -n "$NODE_FORMAT1" ];then
 			echo_date 暂时不支持ss节点订阅...
 			echo_date 退出订阅程序...
-    elif [ -n "$NODE_FORMAT_TROJAN" ];then
-			# Trojan 订阅
-			# use domain as group
-			group=`echo $ssr_subscribe_link|awk -F'[/:]' '{print $4}'`
-			# 储存对应订阅链接的group信息
-			dbus set ss_online_group_$z=$group
-			echo $group >> /tmp/group_info.txt
-
-			NODE_NU=`cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "trojan://"`
-			echo_date "检测到 Trojan 节点格式，共计 $NODE_NU 个节点..."
-      urllinks=$(decode_url_link `cat /tmp/ssr_subscribe_file.txt` | sed 's/trojan:\/\///g')
-
-			[ -z "$urllinks" ] && continue
-			for link in $urllinks
-			do
-        if [ -n "`echo -n "$link" | grep "#"`" ];then
-					new_sslink=`echo -n "$link" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g'`
-					# 因为订阅的 trojan 里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装
-					remarks=`echo -n "$link" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g'`
-				else
-					new_sslink=`echo -n "$link" | sed 's/trojan:\/\///g'`
-					remarks='AddByLink'
-				fi
-				get_trojan_config $new_sslink
-				[ "$?" == "0" ] && update_trojan_config || echo_date "检测到一个错误节点，已经跳过！"
-			done
-
-			# 去除订阅服务器上已经删除的节点
-			del_none_exist
-			# 节点重新排序
-			remove_node_gap
-			USER_ADD=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
-			ONLINE_GET=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
-			echo_date "本次更新订阅来源 【$group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
-			echo_date "现共有自添加 SSR/v2ray/Trojan 节点：$USER_ADD 个。"
-			echo_date "现共有订阅 SSR/v2ray/Trojan 节点：$ONLINE_GET 个。"
-			echo_date "在线订阅列表更新完成!"
 		else
 			return 3
 		fi
