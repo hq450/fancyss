@@ -1,5 +1,11 @@
 fancyss_hnd Changelog
 ===========================================
+1.8.4 （尚未推送）
+   - update	chinadns-ng、v2ray-plugin、smartdns更换为32位程序，以兼容BCM6750机型（TUF-AX3000、RT-AX82U等）
+   - update	更新chinadns-ng v1.0-beta.22 <https://github.com/zfl9/chinadns-ng>
+   - update	更新v2ray-plugin v1.3.1
+   - update smartdns todo
+
 1.8.2 - 1.8.3
     		-----------------------------------
     		太久没推送，漏掉一些改动，所以推了1.8.3，结果还漏掉一些，就短时间内重推了1.8.3    		
