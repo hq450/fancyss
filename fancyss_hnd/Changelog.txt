@@ -1,7 +1,7 @@
 fancyss_hnd Changelog
 ===========================================
 1.8.5
-   - revert	暂时回滚v2ray 到 v4.22.0，待近日v2ray-core的几个漏洞得到较好修复后再同步。
+   - revert	暂时回滚v2ray 到 v4.22.1，待近日v2ray-core的几个漏洞得到较好修复后再同步。
 
 1.8.4
    - add	添加armv7机型：RT-AX82U官改固件支持。
