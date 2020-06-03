@@ -40,7 +40,6 @@ case $(uname -m) in
 		# cpu架构为armv8，koolshare 官改/梅林改固件可以安装
 		if [ "$(uname -o|grep Merlin)" ] && [ -d "/koolshare" ];then
 			echo_date 机型：$MODEL $(_get_type) 符合安装要求，开始安装插件！
-			echo_date 固件平台【koolshare merlin aarch64 / merlin_hnd】符合安装要求，开始安装插件！
 		else
 			exit_install
 		fi
