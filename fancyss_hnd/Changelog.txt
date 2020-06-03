@@ -4,10 +4,10 @@ fancyss_hnd Changelog
    - add	添加armv7机型：RT-AX82U官改固件支持。
    - update	chinadns-ng、v2ray-plugin、smartdns更换为32位程序，以兼容BCM6750机型（TUF-AX3000、RT-AX82U等）
    - update	更新chinadns-ng v1.0-beta.22 <https://github.com/zfl9/chinadns-ng>
-   - update 更新smartdns 1.2020.05.04-0005
+   - update	更新smartdns 1.2020.05.04-0005
    - update	更新v2ray-plugin v1.3.1
-   - update 更新v2ray v4.23.3
-   - update 更新kcptun 20200409
+   - update	更新v2ray v4.23.3
+   - update	更新kcptun 20200409
 
 1.8.2 - 1.8.3
     		-----------------------------------
