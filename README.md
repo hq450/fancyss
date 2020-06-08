@@ -8,7 +8,7 @@
 
 **提示：** 如果离线安装提示检测到离线安装包名有非法关键词，开启路由器的SSH功能，登录并输入以下命令后，再进行离线安装。
 ```bash
-sed -i 's/\tdetect_package//g' /koolshare/scripts/ks_tar_install.sh
+sed -i 's/\tdetect_package/\t# detect_package/g' /koolshare/scripts/ks_tar_install.sh
 ```
 
 ---
