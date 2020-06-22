@@ -6,10 +6,18 @@
 
 ---
 
-**提示：** 如果提示检测到离线安装包名有非法关键词，开启路由器的SSH功能，登录并输入以下命令后，再进行离线安装。(arm380/X7.x版本固件需要请将软件中心更新到1.4.8及以上)
+**提示1：** 如果提示检测到离线安装包名有非法关键词，开启路由器的SSH功能，登录并输入以下命令后，再进行离线安装。(arm380/X7.x版本固件需要请将软件中心更新到1.4.8及以上)
 ```bash
 sed -i 's/\tdetect_package/\t# detect_package/g' /koolshare/scripts/ks_tar_install.sh
 ```
+
+**提示2：** 如果更新了RT-AC86U 384_81918_koolshare 官改固件后，科学上网插件皮肤和固件主题不匹配的情况，请使用以下命令修复。下个版本1.8.6将会针对此固件UI做出兼容匹配。
+```bash
+cd /koolshare/res
+rm shadowsocks.css
+wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_hnd/shadowsocks/rog/res/shadowsocks.css
+```
+运行完毕后进入科学上网插件，使用ctrl + F5强制刷新浏览器缓存。
 
 ---
 
