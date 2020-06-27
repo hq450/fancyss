@@ -9,32 +9,51 @@ MODEL=$(nvram get productid)
 mkdir -p /koolshare/ss
 mkdir -p /tmp/upload
 
+_get_type() {
+	local FWTYPE=$(nvram get extendno|grep koolshare)
+	if [ -d "/koolshare" ];then
+		if [ -n $FWTYPE ];then
+			echo "koolshare官改固件"
+		else
+			echo "koolshare梅林改版固件"
+		fi
+	else
+		if [ "$(uname -o|grep Merlin)" ];then
+			echo "梅林原版固件"
+		else
+			echo "华硕官方固件"
+		fi
+	fi
+}
+
+exit_install(){
+	echo_date fancyss_hnd适用于【koolshare 梅林改/官改 hnd/axhnd/axhnd.675x】固件平台，你的固件平台不能安装！！！
+	echo_date fancyss_hnd支持机型/平台：https://github.com/hq450/fancyss#fancyss_hnd
+	echo_date 退出安装！
+	rm -rf /tmp/shadowsocks* >/dev/null 2>&1
+	exit 1
+}
+
 # 判断路由架构和平台
 case $(uname -m) in
 	aarch64)
+		# cpu架构为armv8，koolshare 官改/梅林改固件可以安装
 		if [ "$(uname -o|grep Merlin)" ] && [ -d "/koolshare" ];then
-			echo_date 固件平台【koolshare merlin aarch64 / merlin_hnd】符合安装要求，开始安装插件！
+			echo_date 机型：$MODEL $(_get_type) 符合安装要求，开始安装插件！
 		else
-			echo_date 本插件适用于【koolshare merlin aarch64 / merlin_hnd】固件平台，你的平台不能安装！！！
-			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
-			exit 1
+			exit_install
 		fi
 		;;
 	armv7l)
-		if [ "$MODEL" == "TUF-AX3000" -a -d "/koolshare" ];then
-			echo_date 固件TUF-AX3000 koolshare官改固件符合安装要求，开始安装插件！
+		# cpu架构为armv7，TUF-AX3000，RT-AX82U官改固件可以安装
+		if [ "$MODEL" == "TUF-AX3000" -o "$MODEL" == "RT-AX82U" ] && [ -d "/koolshare" ];then
+			echo_date 机型：$MODEL $(_get_type) 符合安装要求，开始安装插件！
 		else
-			echo_date 本插件适用于【koolshare merlin hnd/axhnd aarch64】固件平台，你的固件平台不能安装！！！
-			echo_date 退出安装！
-			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
-			exit 1
+			exit_install
 		fi
 		;;
 	*)
-		echo_date 本插件适用于koolshare merlin aarch64固件平台，你的平台：$(uname -m)不能安装！！！
-		echo_date 退出安装！
-		rm -rf /tmp/shadowsocks* >/dev/null 2>&1
-		exit 1
+		exit_install
 	;;
 esac
 
@@ -178,7 +197,7 @@ dbus set softcenter_module_shadowsocks_title="科学上网"
 dbus set softcenter_module_shadowsocks_description="科学上网 for merlin hnd"
 
 # 设置v2ray 版本号
-dbus set ss_basic_v2ray_version="v4.21.3"
+dbus set ss_basic_v2ray_version="v4.22.0"
 
 echo_date 一点点清理工作...
 rm -rf /tmp/shadowsocks* >/dev/null 2>&1

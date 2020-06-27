@@ -86,6 +86,8 @@ mesu.apple.com
 mesu-cdn.apple.com.akadns.net
 mesu-china.apple.com.akadns.net
 music.apple.com
+ocsp.apple.com
+ocsp-lb.apple.com.akadns.net
 oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
 pancake.apple.com
