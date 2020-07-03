@@ -11,6 +11,8 @@ LOG_FILE=/tmp/upload/ss_log.txt
 CONFIG_FILE=/koolshare/ss/ss.json
 V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
+TROJAN_CONFIG_FILE="/koolshare/ss/trojan.json"
+TROJAN2_CONFIG_FILE="/koolshare/ss/trojan2.json"
 LOCK_FILE=/var/lock/koolss.lock
 DNSF_PORT=7913
 DNSC_PORT=53
@@ -96,6 +98,9 @@ __get_type_full_name() {
 	3)
 		echo "v2ray"
 		;;
+	4)
+		echo "trojan"
+		;;
 	esac
 }
 
@@ -112,6 +117,9 @@ __get_type_abbr_name() {
 		;;
 	3)
 		echo "v2ray"
+		;;
+	4)
+		echo "trojan"
 		;;
 	esac
 }
@@ -337,6 +345,11 @@ kill_process() {
 		echo_date 关闭haveged进程...
 		killall haveged >/dev/null 2>&1
 	fi
+	trojan_process=$(pidof trojan)
+	if [ -n "$trojan_process" ];then 
+		echo_date 关闭trojan进程... >> $LOG_FILE
+		killall trojan >/dev/null 2>&1
+	fi
 	echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 }
 
@@ -363,8 +376,8 @@ ss_pre_start() {
 
 resolv_server_ip() {
 	local tmp server_ip
-	if [ "$ss_basic_type" == "3" ] && [ "$ss_basic_v2ray_use_json" == "1" ]; then
-		#v2ray json配置在后面单独处理
+	if [ "$ss_basic_type" == "3" ] && [ "$ss_basic_v2ray_use_json" == "1" ] || [ "$ss_basic_type" == "4" ]; then
+		#v2ray/trojan json配置在后面单独处理
 		return 1
 	else
 		# 判断服务器域名格式
@@ -621,7 +634,11 @@ start_dns() {
 	# Start DNS2SOCKS (default)
 	if [ "$ss_foreign_dns" == "3" ] || [ -z "$ss_foreign_dns" ]; then
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
+		if [ "$ss_basic_type" == "4" ]; then
+			/koolshare/bin/trojan -c /koolshare/ss/trojan2.json >/dev/null 2>&1 &
+		fi
 		start_sslocal
+		
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
@@ -769,7 +786,217 @@ start_dns() {
 	fi
 }
 #--------------------------------------------------------------------------------------
+creat_trojan_json(){
+	if [ -n "$WAN_ACTION" ]; then
+		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！" >> $LOG_FILE		
+		return 0
+	elif [ -n "$NAT_ACTION" ]; then
+		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！" >> $LOG_FILE
+		return 0
+	else
+		echo_date "创建$(__get_type_abbr_name)配置文件到$TROJAN_CONFIG_FILE" >> $LOG_FILE
+	fi
+		rm -rf "$TROJAN_CONFIG_FILE"
+		rm -rf "$TROJAN2_CONFIG_FILE"
+		
+		if [ "$ss_basic_type" == "4" ]; then
+			if [ "$ss_basic_ss_kcp_support" == "1" ]; then
+				cat > "$TROJAN_CONFIG_FILE" <<-EOF
+				{
+					"run_type": "nat",
+					"local_addr": "0.0.0.0",
+					"local_port": 3333,
+					"remote_addr": "127.0.0.1",
+					"remote_port": 1091,
+					"password": [
+					"$ss_basic_password"
+					],
+					"log_level": 1,
+					"ssl": {
+					"verify": $(get_function_switch $ss_basic_ssl_verify_enable),
+					"verify_hostname": true,
+					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+					"sni": "$ss_basic_server",
+					"alpn": [
+						"h2",
+						"http/1.1"
+					],
+					"reuse_session": true,
+					"session_ticket": false,
+					"curves": ""
+					},
+					"tcp": {
+					"no_delay": true,
+					"keep_alive": true,
+					"reuse_port": $(get_function_switch $ss_basic_trojan_mp_enable),
+					"fast_open": false,
+					"fast_open_qlen": 20
+					}
+				}
+					EOF
+				cat > "$TROJAN2_CONFIG_FILE" <<-EOF
+				{
+					"run_type": "client",
+					"local_addr": "127.0.0.1",
+					"local_port": 23456,
+					"remote_addr": "$ss_basic_server",
+					"remote_port": $ss_basic_port,
+					"password": [
+					"$ss_basic_password"
+					],
+					"log_level": 1,
+					"ssl": {
+					"verify": $(get_function_switch $ss_basic_ssl_verify_enable),
+					"verify_hostname": true,
+					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+					"sni": "$ss_basic_server",
+					"alpn": [
+						"h2",
+						"http/1.1"
+					],
+					"reuse_session": true,
+					"session_ticket": false,
+					"curves": ""
+					},
+					"tcp": {
+					"no_delay": true,
+					"keep_alive": true,
+					"reuse_port": $(get_function_switch $ss_basic_trojan_mp_enable),
+					"fast_open": false,
+					"fast_open_qlen": 20
+					}
+				}
+					EOF
+					echo_date trojan配置文件生成成功. >> $LOG_FILE				
+			else
+				cat > "$TROJAN_CONFIG_FILE" <<-EOF
+				{
+					"run_type": "nat",
+					"local_addr": "0.0.0.0",
+					"local_port": 3333,
+					"remote_addr": "$ss_basic_server",
+					"remote_port": $ss_basic_port,
+					"password": [
+					"$ss_basic_password"
+					],
+					"log_level": 1,
+					"ssl": {
+					"verify": $(get_function_switch $ss_basic_ssl_verify_enable),
+					"verify_hostname": true,
+					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+					"sni": "",
+					"alpn": [
+						"h2",
+						"http/1.1"
+					],
+					"reuse_session": true,
+					"session_ticket": false,
+					"curves": ""
+					},
+					"tcp": {
+					"no_delay": true,
+					"keep_alive": true,
+					"reuse_port": $(get_function_switch $ss_basic_trojan_mp_enable),
+					"fast_open": false,
+					"fast_open_qlen": 20
+					}
+				}
+					EOF
+				cat > "$TROJAN2_CONFIG_FILE" <<-EOF
+				{
+					"run_type": "client",
+					"local_addr": "127.0.0.1",
+					"local_port": 23456,
+					"remote_addr": "$ss_basic_server",
+					"remote_port": $ss_basic_port,
+					"password": [
+					"$ss_basic_password"
+					],
+					"log_level": 1,
+					"ssl": {
+					"verify": $(get_function_switch $ss_basic_ssl_verify_enable),
+					"verify_hostname": true,
+					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+					"sni": "",
+					"alpn": [
+						"h2",
+						"http/1.1"
+					],
+					"reuse_session": true,
+					"session_ticket": false,
+					"curves": ""
+					},
+					"tcp": {
+					"no_delay": true,
+					"keep_alive": true,
+					"reuse_port": $(get_function_switch $ss_basic_trojan_mp_enable),
+					"fast_open": false,
+					"fast_open_qlen": 20
+					}
+				}
+					EOF
+					echo_date trojan配置文件生成成功. >> $LOG_FILE				
+			fi
+		else
+			echo_date trojan配置文件生成失败，请检查设置!!! >> $LOG_FILE
+		fi
 
+}
+
+start_trojan(){
+	echo_date 开启trojan主进程...
+	#rm -rf /tmp/upload/ss_trojan.log
+	
+	if [ "$ss_basic_tfo" == "1" ]; then
+		echo_date 开启tcp fast open支持.
+		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+		echo_date "开启TROJAN前，开启tcp fast open支持，需服务端开启支持" >> $LOG_FILE
+
+	fi
+
+	if [ "$ss_basic_trojan_mp_enable" -gt 0 ];then
+		if [ "$ss_basic_trojan_mulprocess" -lt 10 ];then
+			echo_date "多进程启动"
+			local count=1
+			while [ $count -le $ss_basic_trojan_mulprocess ]; do
+				echo_date "进程$count启动"
+				sleep 1s
+				/koolshare/bin/trojan -c /koolshare/ss/trojan.json >/dev/null 2>&1 &
+				let count++
+			done
+		else
+			echo_date "进程不建议超过10个，退出，请修改再运行"
+			close_in_five
+		fi
+	else
+		echo_date "使用单进程"
+		sleep 1s
+		/koolshare/bin/trojan -c /koolshare/ss/trojan.json >/dev/null 2>&1 &
+		
+	fi
+	
+	echo_date "trojan启用进程!!!"  >> $LOG_FILE
+	local trojanpid
+	local i=10
+	until [ -n "$trojanpid" ]; do
+		i=$(($i - 1))
+		trojanpid=$(pidof trojan)
+		if [ "$i" -lt 1 ];then
+			echo_date "trojan进程启动失败！"
+			close_in_five
+		fi
+		sleep 1
+	done
+	echo_date trojan启动成功，pid：$trojanpid >> $LOG_FILE
+}
 detect_domain() {
 	domain1=$(echo $1 | grep -E "^https://|^http://|www|/")
 	domain2=$(echo $1 | grep -E "\.")
@@ -2457,11 +2684,14 @@ apply_ss() {
 	# do not re generate json on router start, use old one
 	[ "$ss_basic_type" != "3" ] && creat_ss_json
 	[ "$ss_basic_type" = "3" ] && creat_v2ray_json
+	[ "$ss_basic_type" = "4" ] && creat_trojan_json
 	[ "$ss_basic_type" == "0" ] || [ "$ss_basic_type" == "1" ] && start_ss_redir
 	[ "$ss_basic_type" == "2" ] && start_koolgame
 	[ "$ss_basic_type" == "3" ] && start_v2ray
+	[ "$ss_basic_type" == "4" ] && start_trojan
 	[ "$ss_basic_type" != "2" ] && start_kcp
 	[ "$ss_basic_type" != "2" ] && start_dns
+	
 	#===load nat start===
 	load_nat
 	#===load nat end===
