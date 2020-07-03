@@ -50,7 +50,9 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_v2ray_json_
 				ssconf_basic_ss_v2ray_
 				ssconf_basic_ss_v2ray_opts_
-				ssconf_basic_type_"
+				ssconf_basic_type_
+				ssconf_basic_trojan_mp_enable_
+				ssconf_basic_trojan_mulprocess_"
 
 set_lock(){
 	exec 233>"$LOCK_FILE"
@@ -84,6 +86,9 @@ get_type_name() {
 		;;
 		3)
 			echo "v2ray"
+		;;
+		4)
+			echo "trojan"
 		;;
 	esac
 }
@@ -253,7 +258,69 @@ decode_url_link(){
 		echo -n "$link" | sed 's/-/+/g; s/_/\//g' | base64 -d 2>/dev/null
 	fi
 }
+get_trojan_config(){
+	decode_link=$1
+	server=$(echo "$decode_link" |awk -F':' '{print $1}'|awk -F'@' '{print $2}')
+	server_port=$(echo "$decode_link" |awk -F':' '{print $2}')
+	password=$(echo "$decode_link" |awk -F':' '{print $1}'|awk -F'@' '{print $1}')
+	password=`echo $password|base64_encode`
 
+	[ -n "$group" ] && group_base64=`echo $group | base64_encode | sed 's/ -//g'`
+	[ -n "$server" ] && server_base64=`echo $server | base64_encode | sed 's/ -//g'`
+	#把全部服务器节点写入文件 /usr/share/shadowsocks/serverconfig/all_onlineservers
+	[ -n "$group" ] && [ -n "$server" ] && echo $server_base64 $group_base64 >> /tmp/all_subscservers.txt
+	#echo ------
+	#echo group: $group
+	#echo remarks: $remarks
+	#echo server: $server
+	#echo server_port: $server_port
+	#echo password: $password
+	#echo ------
+	echo "$group" >> /tmp/all_group_info.txt
+	[ -n "$group" ] && return 0 || return 1
+}
+
+add_trojan_servers(){
+	trojanindex=$(($(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)+1))
+	echo_date "添加 Trojan 节点：$remarks" >> $LOG_FILE
+	[ -z "$1" ] && dbus set ssconf_basic_group_$trojanindex=$group
+	dbus set ssconf_basic_name_$trojanindex=$remarks
+	dbus set ssconf_basic_mode_$trojanindex=$ssr_subscribe_mode
+	dbus set ssconf_basic_server_$trojanindex=$server
+	dbus set ssconf_basic_port_$trojanindex=$server_port
+	dbus set ssconf_basic_password_$trojanindex=$password
+	dbus set ssconf_basic_type_$trojanindex="4"
+	echo_date "Trojan 节点：新增加 【$remarks】 到节点列表第 $trojanindex 位。" >> $LOG_FILE
+}
+
+update_trojan_config(){
+	isadded_server=$(cat /tmp/all_localservers.txt | grep -w $group_base64 | awk '{print $1}' | grep -c $server_base64|head -n1)
+	if [ "$isadded_server" == "0" ]; then
+		add_trojan_servers
+		let addnum+=1
+	else
+		# 如果在本地的订阅节点中已经有该节点（用group和server去判断），检测下配置是否更改，如果更改，则更新配置
+		local index=$(cat /tmp/all_localservers.txt| grep $group_base64 | grep $server_base64 |awk '{print $4}'|head -n1)
+
+		local i=0
+		dbus set ssconf_basic_mode_$index="$ssr_subscribe_mode"
+		local_remarks=$(dbus get ssconf_basic_name_$index)
+		[ "$local_remarks" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks && let i+=1
+		local_server=$(dbus get ssconf_basic_server_$index)
+		[ "$local_server" != "$server" ] && dbus set ssconf_basic_server_$index=$server && let i+=1
+		local_server_port=$(dbus get ssconf_basic_port_$index)
+		[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index=$server_port && let i+=1
+		local_password=$(dbus get ssconf_basic_password_$index)
+		[ "$local_password" != "$password" ] && dbus set ssconf_basic_password_$index=$password && let i+=1
+
+		if [ "$i" -gt "0" ];then
+			echo_date "修改 Trojan 节点：【$remarks】" && let updatenum+=1
+			echo_date "修改 Trojan 节点：【$remarks】" >> $LOG_FILE
+		else
+			echo_date "Trojan 节点：【$remarks】 参数未发生变化，跳过！" >> $LOG_FILE
+		fi
+	fi
+}
 add_ssr_nodes_offline(){
 	# usleep 100000
 	let NODE_INDEX+=1
@@ -852,7 +919,7 @@ get_oneline_rule_now(){
 	
 	if [ "$ss_basic_online_links_goss" == "1" ]; then
 		open_socks_23456
-		socksopen_b=$(netstat -nlp | grep -w 23456 | grep -E "local|v2ray")
+		socksopen_b=$(netstat -nlp | grep -w 23456 | grep -E "local|v2ray|trojan")
 		if [ -n "$socksopen_b" ]; then
 			echo_date "使用$(get_type_name $ss_basic_type)提供的socks代理网络下载..."
 			curl -4sSk --connect-timeout 8 --socks5-hostname 127.0.0.1:23456 $ssr_subscribe_link > /tmp/ssr_subscribe_file.txt
@@ -925,13 +992,73 @@ get_oneline_rule_now(){
 		NODE_FORMAT1=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^ss://")
 		NODE_FORMAT2=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^ssr://")
 		NODE_FORMAT3=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^vmess://")
+		NODE_FORMAT4=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -E "^trojan://")
+		# 修改为混合订阅 20200525
+
 		if [ -n "$NODE_FORMAT1" ]; then
-			echo_date "暂时不支持ss节点订阅..."
-			echo_date "退出订阅程序..."
-		elif [ -n "$NODE_FORMAT2" ]; then
+			# 每次更新后进行初始化
+			urllinks=""
+			link=""
+			decode_link=""
+			group=""
+			group=$(echo $ssr_subscribe_link|awk -F'[/:]' '{print $4}')
+			# 储存对应订阅链接的group信息
+			dbus set ss_online_group_$z=$group
+			echo $group >> /tmp/group_info.txt	
+			NODE_NU0=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "ss://")
+			echo_date "检测到ss节点格式，共计$NODE_NU0个节点..."
+			urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | grep -E "^ss://" | sed 's/ss:\/\///g')
+			[ -z "$urllinks" ] && continue
+			for link in $urllinks
+			#对节点信息进行拆分			
+			do
+				if [ -n "$(echo -n "$link" | grep "#")" ];then
+					#去掉ss://头部跟#后的标题
+					# new_sslink=YWVzLTEyOC1nY206VlhQaXBpMjlueE1P@shcn21.qiangdong.xyz:152/?plugin=obfs-local%3Bobfs%3Dtls%3Bobfs-host%3Dbebca9215.wns.windows.com&group=RGxlciBDbG91ZA
+					new_sslink=$(echo -n "$link" | awk -F'#' '{print $1}' | sed 's/ss:\/\///g')		
+					# 有些链接被 url 编码过，所以要先 url 解码
+					# link=ss://YWVzLTEyOC1nY206VlhQaXBpMjlueE1P@shcn21.qiangdong.xyz:152/?plugin=obfs-local;obfs=tls;obfs-host=bebca9215.wns.windows.com&group=RGxlciBDbG91ZA#香港高级 CN2 01
+					link=$(printf $(echo -n $link | sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g'))
+					#new_sslink=YWVzLTEyOC1nY206VlhQaXBpMjlueE1P@shcn21.qiangdong.xyz:152/?plugin=obfs-local;obfs=tls;obfs-host=bebca9215.wns.windows.com&group=RGxlciBDbG91ZA
+					new_sslink=$(printf $(echo -n $new_sslink | sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g'))
+					# 因为订阅的  里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装,取出标题
+					#remarks=香港高级CN201
+					remarks=$(echo -n "$link" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g')	
+					
+				else
+					new_sslink=$(echo -n "$link" | sed 's/s:\/\///g')
+					remarks='AddByLink'
+				fi
+				# 链接中有 ? 开始的参数,参数有意义，后面处理
+				#new_ss_link=$(echo -n "$new_sslink" | awk -F'?' '{print $1}')	
+				get_ss_config $new_sslink 
+				[ "$?" == "0" ] && update_ss_config || echo_date "检测到一个错误ss节点，已经跳过！"
+			done
+			
+			# 去除订阅服务器上已经删除的节点
+			#del_none_exist
+			# 节点重新排序
+			#remove_node_gap
+			USER_ADD0=$(($(export -p | grep ssconf_basic_ | grep _name_ | wc -l) - $(export -p | grep ssconf_basic_ | grep _group_ | wc -l))) || "0"
+			ONLINE_GET0=$(dbus list ssconf_basic_ | grep _group_ | wc -l) || "0"
+
+			echo_date "现共有自添加节点：$USER_ADD0 个；" >> $LOG_FILE
+
+			echo_date "现共有订阅SS节点：$ONLINE_GET0 个；" >> $LOG_FILE
+			echo_date "-------------------------------------------------------------------"
+			#echo_date "在线订阅列表更新完成!"	
+		fi
+		#20200526---------------
+		if [ -n "$NODE_FORMAT2" ]; then
+			# 每次更新后进行初始化
+			urllinks=""
+			link=""
+			decode_link=""
+			group=""
 			# SSR 订阅
-			local NODE_NU=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "ssr://")
-			echo_date "检测到ssr节点格式，共计$NODE_NU个节点..."
+			#local NODE_NU=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "ssr://")
+			NODE_NU1=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "ssr://")
+			echo_date "检测到ssr节点格式，共计$NODE_NU1个节点..."
 			# 判断格式
 			maxnum=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | grep "MAX=" | awk -F"=" '{print $2}' | grep -Eo "[0-9]+")
 			if [ -n "$maxnum" ]; then
@@ -939,7 +1066,8 @@ get_oneline_rule_now(){
 				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed '/MAX=/d' | shuf -n $maxnum | sed 's/ssr:\/\///g')
 			else
 				# 生成全部节点的节点信息，并去掉ssr://头部标识
-				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/ssr:\/\///g')
+				#urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/ssr:\/\///g') 20200526
+				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | grep -E "^ssr://" | sed 's/ssr:\/\///g')
 			fi
 			[ -z "$urllinks" ] && continue
 			# 针对每个节点进行解码：decode_link，解析：get_ssr_node_info，添加/修改：update_ssr_nodes
@@ -960,39 +1088,52 @@ get_oneline_rule_now(){
 				[ -n "$group" ] && dbus set ss_online_group_$z=$group
 				[ -n "$group" ] && echo $group >> /tmp/group_info.txt
 			fi
+			
 			# INFO
-			USER_ADD=$(($(export -p | grep ssconf_basic_ | grep _name_ | wc -l) - $(export -p | grep ssconf_basic_ | grep _group_ | wc -l))) || "0"
-			ONLINE_GET=$(dbus list ssconf_basic_ | grep _group_ | wc -l) || "0"
+			USER_ADD1=$(($(export -p | grep ssconf_basic_ | grep _name_ | wc -l) - $(export -p | grep ssconf_basic_ | grep _group_ | wc -l))) || "0"
+			ONLINE_GET1_1=$(dbus list ssconf_basic_ | grep _group_ | wc -l) || "0"
+			let ONLINE_GET1=ONLINE_GET1_1-ONLINE_GET0
+
+
+			echo_date "现共有自添加节点：$USER_ADD1 个；" >> $LOG_FILE
+
+			echo_date "现共有订阅SSR节点：$ONLINE_GET1 个；" >> $LOG_FILE
 			echo_date "-------------------------------------------------------------------"
-			echo_date "本次更新订阅来源【$group】，共有节点$NODE_NU个，其中："
-			echo_date "因关键词排除节点$exclude个，新增节点$addnum个，修改$updatenum个，删除$delnum个；"
-			echo_date "现共有自添加SSR节点：$USER_ADD 个；"
-			echo_date "现共有订阅SSR节点：$ONLINE_GET 个；"
-			echo_date "在线订阅列表更新完成!"
-		elif [ -n "$NODE_FORMAT3" ]; then
+		fi
+		
+		if [ -n "$NODE_FORMAT3" ]; then
+			# 每次更新后进行初始化
+			urllinks=""
+			link=""
+			decode_link=""
+			group=""
 			# v2ray 订阅
 			# use domain as group
-			v2ray_group_tmp=$(echo $ssr_subscribe_link | awk -F'[/:]' '{print $4}')
+			#v2ray_group_tmp=$(echo $ssr_subscribe_link | awk -F'[/:]' '{print $4}')
+			group=$(echo $ssr_subscribe_link | awk -F'[/:]' '{print $4}')
 			# 储存对应订阅链接的group信息
-			dbus set ss_online_group_$z=$v2ray_group_tmp
-			echo $v2ray_group_tmp >> /tmp/group_info.txt
+			dbus set ss_online_group_$z=$group
+			echo $group >> /tmp/group_info.txt
 			# detect format again
 			if [ -n "$NODE_FORMAT1" ]; then
 				#vmess://里夹杂着ss://
-				local NODE_NU=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -Ec "vmess://|ss://")
-				echo_date "检测到vmess和ss节点格式，共计$NODE_NU个节点..."
-				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/ssr:\/\///g')
+				NODE_NU2=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -Ec "vmess://|ss://")
+				echo_date "检测到vmess和ss节点格式，共计$NODE_NU2个节点..."
+				#urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/ssr:\/\///g')
+				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | grep -E "^vmess://|ss://" | sed 's/vmess:\/\///g')
 			else
 				# 纯vmess://
-				local NODE_NU=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -Ec "vmess://")
-				echo_date "检测到vmess节点格式，共计$NODE_NU个节点..."
-				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/vmess:\/\///g')
+				NODE_NU2=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -Ec "vmess://")
+				echo_date "检测到vmess节点格式，共计$NODE_NU2个节点..."
+				echo_date "开始解析vmess节点格式"
+				#urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/vmess:\/\///g')
+				urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | grep -E "^vmess://" | sed 's/vmess:\/\///g')
 				for link in $urllinks
 				do
 					decode_link=$(decode_url_link $link)
 					decode_link=$(echo $decode_link | jq -c .)
 					if [ -n "$decode_link" ]; then
-						get_v2ray_remote_config "$decode_link" "$v2ray_group_tmp"
+						get_v2ray_remote_config "$decode_link" "$group"
 						[ "$?" == "0" ] && update_v2ray_config || echo_date "检测到一个错误节点，已经跳过！"
 					else
 						echo_date "解析失败！！！"
@@ -1000,22 +1141,88 @@ get_oneline_rule_now(){
 				done
 			fi
 			# INFO
-			USER_ADD=$(($(export -p | grep ssconf_basic_ | grep _name_ | wc -l) - $(export -p | grep ssconf_basic_ | grep _group_ | wc -l))) || "0"
-			ONLINE_GET=$(dbus list ssconf_basic_ | grep _group_ | wc -l) || "0"
+			USER_ADD2=$(($(export -p | grep ssconf_basic_ | grep _name_ | wc -l) - $(export -p | grep ssconf_basic_ | grep _group_ | wc -l))) || "0"
+			ONLINE_GET2_1=$(dbus list ssconf_basic_ | grep _group_ | wc -l) || "0"
+			let ONLINE_GET2=ONLINE_GET2_1-ONLINE_GET1-ONLINE_GET0
+			
+			#echo_date "本次更新订阅来源 【$group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
+			echo_date "现共有自添加节点：$USER_ADD2 个。"
+			echo_date "现共有订阅v2ray节点：$ONLINE_GET2 个。"
 			echo_date "-------------------------------------------------------------------"
-			echo_date "本次更新订阅来源 【$v2ray_group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
-			echo_date "现共有自添加节点：$USER_ADD 个。"
-			echo_date "现共有订阅SSR/v2ray节点：$ONLINE_GET 个。"
-			echo_date "在线订阅列表更新完成!"			
-		else
-			return 3
+			#echo_date "在线订阅列表更新完成!"	
+		fi
+		if [ -n "$NODE_FORMAT4" ];then
+			# 每次更新后进行初始化
+			urllinks=""
+			link=""
+			decode_link=""
+			group=""
+			# Trojan 订阅
+			# use domain as group
+			group=$(echo $ssr_subscribe_link|awk -F'[/:]' '{print $4}')
+			# 储存对应订阅链接的group信息
+			dbus set ss_online_group_$z=$group
+			echo $group >> /tmp/group_info.txt
+			# 统计trojan节点数量
+			NODE_NU3=$(cat /tmp/ssr_subscribe_file_temp1.txt | grep -c "trojan://")
+			echo_date "检测到 Trojan 节点格式，共计 $NODE_NU3 个节点..."
+			#urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | sed 's/trojan:\/\///g')
+			urllinks=$(decode_url_link $(cat /tmp/ssr_subscribe_file.txt) | grep -E "^trojan://" | sed 's/trojan:\/\///g')
+			[ -z "$urllinks" ] && continue
+			for link in $urllinks
+			#对节点信息进行拆分
+			
+			do
+				if [ -n "$(echo -n "$link" | grep "#")" ];then
+					new_sslink=$(echo -n "$link" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g')		
+					# 有些链接被 url 编码过，所以要先 url 解码
+					link=$(printf $(echo -n $link | sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g'))
+					# 因为订阅的 trojan 里面有 \r\n ，所以需要先去除，否则就炸了，只能卸载重装
+					remarks=$(echo -n "$link" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g')	
+					
+				else
+					new_sslink=$(echo -n "$link" | sed 's/trojan:\/\///g')
+					remarks='AddByLink'
+				fi
+				# 链接中有 ? 开始的参数，去掉这些参数
+				new_trojan_link=$(echo -n "$new_sslink" | awk -F'?' '{print $1}')	
+				get_trojan_config $new_trojan_link
+				[ "$?" == "0" ] && update_trojan_config || echo_date "检测到一个错误节点，已经跳过！"
+			done
+
+			# 去除订阅服务器上已经删除的节点
+			#del_none_exist
+			# 节点重新排序
+			#remove_node_gap
+			USER_ADD3=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
+			ONLINE_GET3_1=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
+
+			let ONLINE_GET3=ONLINE_GET3_1-ONLINE_GET2-ONLINE_GET1-ONLINE_GET0
+			#echo_date "本次更新订阅来源 【$group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
+			echo_date "现共有自添加 节点：$USER_ADD3 个。"
+			echo_date "现共有订阅 Trojan 节点：$ONLINE_GET3 个。"
+			echo_date "-------------------------------------------------------------------"
+			#echo_date "在线订阅列表更新完成!"		
 		fi
 	else
 		return 1
 	fi
+	USER_ADD=$(($(dbus list ssconf_basic_|grep _name_|wc -l) - $(dbus list ssconf_basic_|grep _group_|wc -l))) || 0
+	#let ONLINE_GET=ONLINE_GET1+ONLINE_GET2+ONLINE_GET3
+	ONLINE_GET=$(dbus list ssconf_basic_|grep _group_|wc -l) || 0
+	echo_date "本次更新订阅来源 【$group】， 新增节点 $addnum 个，修改 $updatenum 个，删除 $delnum 个；"
+	echo_date "现共有自添加 SSR/v2ray/Trojan 节点：$USER_ADD 个。"
+	echo_date "现共有订阅 SSR/v2ray/Trojan 节点：$ONLINE_GET 个。"
+	echo_date "在线订阅列表更新完成!"	
+
+	# 每次更新后进行初始化
+		urllinks=""
+		link=""
+		decode_link=""
+		group=""
 }
 
-# 使用订阅链接订阅ssr/v2ray节点
+# 使用订阅链接订阅ssr/v2ray/trojan节点节点
 start_online_update(){
 	prepare
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
@@ -1160,7 +1367,7 @@ start_online_update(){
 start_offline_update() {
 	echo_date "==================================================================="
 	usleep 100000
-	echo_date "通过SS/SSR/v2ray链接添加节点..."
+	echo_date "通过SS/SSR/v2ray/Trojan链接添加节点..."
 	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/all_localservers.txt >/dev/null 2>&1
 	rm -rf /tmp/all_subscservers.txt >/dev/null 2>&1
@@ -1186,15 +1393,51 @@ start_offline_update() {
 			elif [ -n "$(echo -n "$ssrlink" | grep "ss://")" ]; then
 				echo_date "检测到SS链接...开始尝试解析..."
 				if [ -n "$(echo -n "$ssrlink" | grep "#")" ]; then
+					#去掉ss://头部跟#后的标题
+					#new_sslink=YWVzLTEyOC1nY206VlhQaXBpMjlueE1P@shcn21.qiangdong.xyz:152/?plugin=obfs-local%3Bobfs%3Dtls%3Bobfs-host%3Dbebca9215.wns.windows.com&group=RGxlciBDbG91ZA
 					new_sslink=$(echo -n "$ssrlink" | awk -F'#' '{print $1}' | sed 's/ss:\/\///g')
-					remarks=$(echo -n "$ssrlink" | awk -F'#' '{print $2}')
+					# 有些链接被 url 编码过，所以要先 url 解码
+					#new_sslink=YWVzLTEyOC1nY206VlhQaXBpMjlueE1P@shcn21.qiangdong.xyz:152/?plugin=obfs-local;obfs=tls;obfs-host=bebca9215.wns.windows.com&group=RGxlciBDbG91ZA
+					new_sslink=$(printf $(echo -n $new_sslink | sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g'))
+					#ssrlink=ss://YWVzLTEyOC1nY206VlhQaXBpMjlueE1P@shcn21.qiangdong.xyz:152/?plugin=obfs-local;obfs=tls;obfs-host=bebca9215.wns.windows.com&group=RGxlciBDbG91ZA#香港高级 CN2 01
+					ssrlink=$(printf $(echo -n $ssrlink | sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g'))
+					#remarks=$(echo -n "$ssrlink" | awk -F'#' '{print $2}')
+					#remarks=香港高级CN201
+					remarks=$(echo -n "$ssrlink" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g')
 				else
 					new_sslink=$(echo -n "$ssrlink" | sed 's/ss:\/\///g')
 					remarks='AddByLink'
 				fi
-				decode_sslink=$(decode_url_link $new_sslink)
-				get_ss_config $decode_sslink
-				add_ss_servers
+				#decode_sslink=$(decode_url_link $new_sslink)
+				get_ss_config $new_sslink
+				add_ss_servers 1
+			elif [ -n "$(echo -n "$ssrlink" | grep "trojan://")" ]; then
+				echo_date "检测到 Trojan 链接...开始尝试解析..."
+				if [ -n "$(echo -n "$ssrlink" | grep "#")" ];then
+					#20200521新增++++++++++++++++++++++++
+					if [ -n "$(echo -n "$ssrlink" | grep "?")" ];then
+						new_sslink=$(echo -n "$ssrlink" | awk -F'?' '{print $1}' | sed 's/trojan:\/\///g')	
+					else
+						new_sslink=$(echo -n "$ssrlink" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g')
+					fi	
+				#20200521新增------------------------
+					#new_sslink=$(echo -n "$ssrlink" | awk -F'#' '{print $1}' | sed 's/trojan:\/\///g')
+					
+					#remarks=$(echo -n "$ssrlink" | awk -F'#' '{print $2}')
+					#20200521新增，如果域名是URL编码，先解码
+					if [ -n "$(echo -n "$ssrlink" | grep "%")" ];then
+						remarks=$(echo -n "$ssrlink" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g')
+						remarks=$(printf $(echo -n $remarks| sed 's/\\/\\\\/g;s/\(%\)\([0-9a-fA-F][0-9a-fA-F]\)/\\x\2/g')"\n")
+					else
+						remarks=$(echo -n "$ssrlink" | awk -F'#' '{print $2}' | sed 's/[\r\n ]//g')
+					fi
+					echo "【$remarks】"
+				else
+					new_sslink=$(echo -n "$ssrlink" | sed 's/trojan:\/\///g')
+					remarks='AddByLink'
+				fi
+				get_trojan_config $new_sslink
+				add_trojan_servers 1
 			fi
 		fi
 		dbus remove ss_base64_links
@@ -1246,7 +1489,7 @@ case $2 in
 	unset_lock
 	;;
 3)
-	# 使用订阅链接订阅ssr/v2ray节点
+	# 使用订阅链接订阅ssr/v2ray/trojan节点
 	set_lock
 	echo " " > $LOG_FILE
 	http_response "$1"
@@ -1256,7 +1499,7 @@ case $2 in
 	unset_lock
 	;;
 4)
-	# 添加ss:// ssr:// vmess://离线节点
+	# 添加ss:// ssr:// vmess:// trojan://离线节点
 	set_lock
 	echo " " > $LOG_FILE
 	http_response "$1"
