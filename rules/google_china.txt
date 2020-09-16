@@ -12,11 +12,13 @@ checkin.gstatic.com
 clickserve.dartsearch.net
 clientservices.googleapis.com
 connectivitycheck.gstatic.com
+corp.google.com
 crl.pki.goog
 csi.gstatic.com
 dl.google.com
 dl.l.google.com
 doubleclick.net
+firebase-settings.crashlytics.com
 fonts.googleapis.com
 fonts.gstatic.com
 googleadservices.com
@@ -46,6 +48,7 @@ recaptcha.net
 redirector.gvt1.com
 safebrowsing-cache.google.com
 safebrowsing.googleapis.com
+settings.crashlytics.com
 ssl-google-analytics.l.google.com
 ssl.gstatic.com
 toolbarqueries.google.com
