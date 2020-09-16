@@ -46,7 +46,7 @@ case $(uname -m) in
 		;;
 	armv7l)
 		# cpu架构为armv7，TUF-AX3000，RT-AX82U官改固件可以安装
-		if [ "$MODEL" == "TUF-AX3000" -o "$MODEL" == "RT-AX82U" ] && [ -d "/koolshare" ];then
+		if [ "$MODEL" == "TUF-AX3000" -o "$MODEL" == "RT-AX82U" -o "$MODEL" == "RT-AX95Q" ] && [ -d "/koolshare" ];then
 			echo_date 机型：$MODEL $(_get_type) 符合安装要求，开始安装插件！
 		else
 			exit_install
