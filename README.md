@@ -59,6 +59,7 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 |  固件下载-8   | [RT-AX86U 官改固件](https://koolshare.cn/thread-181845-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |  固件下载-9   | [RT-AX82U 官改固件](https://koolshare.cn/thread-xxxxxx-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |  固件下载-10  | [ZenWiFi AX/灵耀 AX6600M/RT-AX95Q](https://koolshare.cn/thread-187704-1-1.html) |                                                              |                                                              |                                                              |                                                              |
+|  固件下载-11  | [ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4](https://koolshare.cn/thread-187744-1-1.html) |                                                              |                                                              |                                                              |                                                              |
 |   更新日志    | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm384/Changelog.txt) | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_arm/Changelog.txt) |                             null                             | [Changelog.txt](https://github.com/hq450/fancyss/blob/master/fancyss_X64/Changelog.txt) |
 |  离线包下载   | [fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd) | [fancyss_arm384](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384) | [fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm) | [fancyss_mipsel](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mipsel) | [fancyss_x64](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_X64) |
 
@@ -84,6 +85,7 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 | [RT-AX86U/RT-AX86U高达版](https://koolshare.cn/thread-181845-1-1.html) | ks官改   | axhnd.675x | BCM4908 | ARMV8 | ≥ 1.8.3  | asuswrt            |
 | [RT-AX82U/RT-AX82U高达版](https://koolshare.cn/thread-xxxxxx-1-1.html) | ks官改   | axhnd.675x | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt            |
 | [ZenWiFi AX/灵耀 AX6600M/RT-AX95Q](https://koolshare.cn/thread-187704-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt            |
+| [ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4](https://koolshare.cn/thread-187744-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt            |
 
 #### 注意：
 
@@ -94,6 +96,7 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 * TUF-AX3000官改固件使用的是TUF橙色皮肤，插件安装会自动识别机型并安装对应皮肤版本。
 * RT-AX86U和TUF-AX3000两款机型因为是较新的官改固件，只有fancyss_hnd 1.8.3及以上版本能正常使用。
 * ZenWiFi AX/灵耀 AX6600M/RT-AX95Q 这三个名字代表的是一个机型，仅支持≥ 1.8.7的fancyss_hnd插件。
+* ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4 这三个名字代表的是一个机型，仅支持≥ 1.8.8的fancyss_hnd插件。
 * **[1]**：RT-AC86U从384_81918_koolshare固件版本开始，使用的是asuswrt风格ui，而不是rog风格。
 
 #### 相关链接：
