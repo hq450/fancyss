@@ -14,7 +14,8 @@ KEY_WORDS_2=$(echo $ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
 DEL_SUBSCRIBE=0
 SOCKS_FLAG=0
 NODES_SEQ=$(export -p | grep ssconf_basic_ | grep _name_ | cut -d "=" -f1 | cut -d "_" -f4 | sort -n)
-NODE_INDEX=${NODES_SEQ##*[[:space:]]}
+#NODE_INDEX=${NODES_SEQ##*[[:space:]]}
+NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.* //')
 
 # 一个节点里可能有的所有信息
 readonly PREFIX="ssconf_basic_name_
