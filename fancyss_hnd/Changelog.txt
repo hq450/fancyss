@@ -1,5 +1,8 @@
 fancyss_hnd Changelog
 ===========================================
+1.8.9
+   - update	更新安装脚本，现在RT-AC86U 官改固件384_81918及其以后版本默认安装ASUSWRT风格皮肤。
+
 1.8.8
    - add	添加armv7机型：ZenWiFi_XD4（灵耀AX魔方/RT-AX56_XD4）ks官改固件支持。
    - update	同步安装包内置规则到最新。
