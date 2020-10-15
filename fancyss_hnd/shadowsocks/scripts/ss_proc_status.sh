@@ -54,6 +54,9 @@ get_dns_name() {
 	9)
 		echo "SmartDNS"
 		;;
+	10)
+		echo "chinadns-ng"
+		;;
 	esac
 }
 
@@ -71,24 +74,25 @@ echo_version() {
 	fi
 	echo ① 程序版本（插件版本：$SOFVERSION）：
 	echo -----------------------------------------------------------
-	echo "程序			版本		备注"
-	echo "ss-redir		3.3.3		2019年11月03日编译"
-	echo "ss-tunnel		3.3.3		2019年11月03日编译"
-	echo "ss-local		3.3.3		2019年11月03日编译"
-	echo "obfs-local		0.0.5		2018年11月25日编译"
-	echo "v2ray-plugin		1.2.0		2019年10月07日编译"
-	echo "ssrr-redir		3.5.3		2018年12月06日编译"
-	echo "ssrr-local		3.5.3		2018年12月06日编译"
-	echo "haproxy			2.1.2		2020年01月06日编译"
-	echo "dns2socks		V2.0		2017年12月05日编译"
-	echo "cdns			1.0		2017年12月09日编译"
-	echo "chinadns1		1.3.2		2017年12月09日编译"
-	echo "chinadns2		2.0.0		2017年12月09日编译"
-	echo "https_dns_proxy		758f913		2019年02月05日编译"
-	echo "SmartDNS		198d18f1	2020年01月05日编译"
-	echo "httping			2.6		2020年01月06日编译"
-	echo "client_linux_arm5	20180810	kcptun"
-	echo "v2ray			$ss_basic_v2ray_version"
+	echo "程序			版本			备注"
+	echo "ss-redir		3.3.3			2019年11月03日编译"
+	echo "ss-tunnel		3.3.3			2019年11月03日编译"
+	echo "ss-local		3.3.3			2019年11月03日编译"
+	echo "obfs-local		0.0.5			2018年11月25日编译"
+	echo "ssrr-redir		3.5.3			2018年12月06日编译"
+	echo "ssrr-local		3.5.3			2018年12月06日编译"
+	echo "haproxy			2.1.2			2020年01月06日编译"
+	echo "dns2socks		V2.0			2017年12月05日编译"
+	echo "cdns			1.0			2017年12月09日编译"
+	echo "chinadns1		1.3.2			2017年12月09日编译"
+	echo "chinadns2		2.0.0			2017年12月09日编译"
+	echo "chinadns-ng		v1.0-beta.22		2020年06月02日编译"
+	echo "https_dns_proxy		758f913			2019年02月05日编译"
+	echo "httping			2.6			2020年01月06日编译"
+	echo "v2ray			$ss_basic_v2ray_version			2020年06月02日编译"
+	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
+	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
+	echo "kcptun			20200409		Official Release 2020年04月09日"
 	echo -----------------------------------------------------------
 }
 
@@ -106,6 +110,7 @@ check_status() {
 	CDNS=$(pidof cdns)
 	CHINADNS1=$(pidof chinadns1)
 	CHINADNS=$(pidof chinadns)
+	CHINADNS_NG=$(pidof chinadns-ng)
 	KCPTUN=$(pidof client_linux_arm7)
 	HAPROXY=$(pidof haproxy)
 	V2RAY=$(pidof v2ray)
@@ -186,6 +191,8 @@ check_status() {
 			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
 		elif [ "$ss_foreign_dns" == "9" ]; then
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
+		elif [ "$ss_foreign_dns" == "10" ]; then
+			[ -n "${CHINADNS_NG}" ] && echo "chinadns-ng	工作中	pid：${CHINADNS_NG}" || echo "chinadns-ng	未运行"
 		fi
 	fi
 	[ "$ss_dns_china" == "13" ] &&{

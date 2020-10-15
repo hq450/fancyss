@@ -42,6 +42,7 @@ backup_tar(){
 	cp /koolshare/bin/cdns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns1 $TARGET_FOLDER/bin/
+	cp /koolshare/bin/chinadns-ng $TARGET_FOLDER/bin/
 	cp /koolshare/bin/smartdns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/resolveip $TARGET_FOLDER/bin/
 	cp /koolshare/bin/haproxy $TARGET_FOLDER/bin/

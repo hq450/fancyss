@@ -56,6 +56,7 @@ gspe19-cn-ssl.ls.apple.com
 gspe21.ls.apple.com
 gspe21-ssl.ls.apple.com
 gspe35-ssl.ls.apple.com
+iadsdk.apple.com
 icloud.cdn-apple.com
 icloud-cdn.icloud.com.akadns.net
 images.apple.com
@@ -86,6 +87,8 @@ mesu.apple.com
 mesu-cdn.apple.com.akadns.net
 mesu-china.apple.com.akadns.net
 music.apple.com
+ocsp.apple.com
+ocsp-lb.apple.com.akadns.net
 oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
 pancake.apple.com
@@ -98,6 +101,7 @@ s3.mzstatic.com
 s4.mzstatic.com
 s5.mzstatic.com
 s.mzstatic.com
+stocks-sparkline-lb.apple.com.akadns.net
 store.apple.com
 store.apple.com.edgekey.net
 store.apple.com.edgekey.net.globalredir.akadns.net

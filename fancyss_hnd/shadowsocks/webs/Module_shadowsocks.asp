@@ -2901,13 +2901,13 @@ function save_failover() {
 		</td>
 		<td valign="top">
 			<div id="tabMenu" class="submenuBlock"></div>
-			<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0">
+			<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0" style="display: block;">
 				<tr>
-					<td bgcolor="#4D595D" align="left" valign="top">
+					<td align="left" valign="top">
 						<div>
 							<table width="760px" border="0" cellpadding="5" cellspacing="0" bordercolor="#6b8fa3" class="FormTitle" id="FormTitle">
 								<tr>
-									<td colspan="3" valign="top">
+									<td bgcolor="#4D595D" colspan="3" valign="top">
 										<div>&nbsp;</div>
 										<div class="formfonttitle"><% nvram_get("productid"); %> 科学上网插件</div>
 										<div style="float:right; width:15px; height:25px;margin-top:-20px">
@@ -3218,7 +3218,7 @@ function save_failover() {
 											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
 													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "SmartDNS"], ["12", "自定义DNS"]];
-													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["6", "https_dns_proxy"], ["7", "v2ray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
+													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["10", "chinadns-ng"], ["6", "https_dns_proxy"], ["7", "v2ray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
 													var option_dnsr = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "google DNS1【8.8.8.8】"], ["14", "google DNS2【8.8.4.4】"], ["15", "IBM DNS【9.9.9.9】"], ["12", "自定义DNS"]];
 													var ph1 = "需端口号如：8.8.8.8:53"
 													var ph2 = "需端口号如：8.8.8.8#53"

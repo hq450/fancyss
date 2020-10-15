@@ -35,7 +35,7 @@ get_foreign_status(){
 }
 
 PIDC="`ps|grep httping|grep baidu|grep -v grep`"
-PIDF="`ps|grep httping|grep google|grep -v grep`"
+PIDF="`ps|grep httping|grep google.com.tw|grep -v grep`"
 [ -n "$PIDC" ] && echo $LOGTIME1 httping China timeout >> $LOGFILE_C && kill -9 $PIDC
 [ -n "$PIDF" ] && echo $LOGTIME1 httping foreign timeout "[`dbus get ssconf_basic_name_$CURRENT`]" >> $LOGFILE_F && kill -9 $PIDF
 [ -n "`ps|grep ssconfig.sh|grep -v grep`" ] && exit
