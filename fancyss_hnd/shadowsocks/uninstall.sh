@@ -2,8 +2,8 @@
 
 # shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
 
-sh /koolshare/ss/ssconfig.sh stop
-sh /koolshare/scripts/ss_conf.sh koolshare 3
+sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
+sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
 sleep 1
 
 # 如果dnsmasq是mounted状态，先恢复
@@ -32,6 +32,8 @@ rm -rf /koolshare/bin/dnscrypt-proxy
 rm -rf /koolshare/bin/Pcap_DNSProxy
 rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/client_linux_arm*
+rm -rf /koolshare/bin/dnsmasq
+rm -rf /koolshare/bin/cdns
 rm -rf /koolshare/bin/chinadns
 rm -rf /koolshare/bin/chinadns1
 rm -rf /koolshare/bin/smartdns

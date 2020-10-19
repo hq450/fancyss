@@ -1,5 +1,22 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.0
+   - add	添加armv7机型：RT-AX56U_V2（RT-AX56U热血版/青春版）ks官改固件支持。
+    		因为RT-AX56U_V2的JFFS分区只有15MB，而且没有USB接口用以JFFS扩容！
+    		为了RT-AX56U_V2能顺利安装fancyss_hnd，部分功能的二进制文件将不会安装！
+    		安装后以下功能将无法使用，即使界面上显示有该功能！
+    			1. v2ray 功能
+    			2. koolgame 功能
+    			3. kcptun 功能
+    			4. shadowsocks-libev v2ray plugin 功能
+    			5. shadowsocks-libev obfs plugin 功能
+    			6. smartdns、chinadns1、chinadns2 功能
+    			7. udp加速内的所有功能：udp2ray、speederv1、speederv2
+    			8. 负载均衡功能
+    		其它功能，如ss、ssr、dns、负载均衡等不受影响！
+   - update	更新安装脚本：兼容未来可能的[hnd/axhnd/axhnd.675x]平台机型的ks官改固件支持。
+   - fix	修复卸载脚本：修复卸载插件的时候因部分文件没有删除干净，占用jffs分区的问题。
+
 1.8.9
    - update	更新安装脚本，现在RT-AC86U 官改固件384_81918及其以后版本默认安装ASUSWRT风格皮肤。
 
@@ -35,7 +52,7 @@ fancyss_hnd Changelog
     		PS:由于现在DNS方案错综复杂，下个版本应该会较大改动下这块。
    - add	添加TUF-AX3000 koolshare官改固件支持，虽然TUF-AX3000使用的CPU：BCM6750是armv7l 32位cpu，
     		但是其固件基本是和RT-AC86U一样的工具链编译的，所以将TUF-AX3000纳入支持，
-		不过对于目前fancyss_hnd 1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
+    		不过对于目前fancyss_hnd 1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
     		因为这些功能使用的二进制是64位的，BCM6750作为32位cpu是不能运行的，后期版本将逐渐添加支持。		
    
 1.8.1
