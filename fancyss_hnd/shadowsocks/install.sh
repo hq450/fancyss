@@ -5,13 +5,17 @@
 source /koolshare/scripts/base.sh
 eval $(dbus export ss)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
-MODEL=$(nvram get productid)
 ROG_86U=0
 EXT_NU=$(nvram get extendno)
 EXT_NU=${EXT_NU%_*}
 mkdir -p /koolshare/ss
 mkdir -p /tmp/upload
+odmpid=$(nvram get odmpid)
+productid=$(nvram get productid)
+[ -n "${odmpid}" ] && MODEL="${odmpid}" || MODEL="${productid}"
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
+# 获取固件类型
 _get_type() {
 	local FWTYPE=$(nvram get extendno|grep koolshare)
 	if [ -d "/koolshare" ];then
@@ -30,52 +34,46 @@ _get_type() {
 }
 
 exit_install(){
-	echo_date fancyss_hnd适用于【koolshare 梅林改/官改 hnd/axhnd/axhnd.675x】固件平台，你的固件平台不能安装！！！
-	echo_date fancyss_hnd支持机型/平台：https://github.com/hq450/fancyss#fancyss_hnd
-	echo_date 退出安装！
-	rm -rf /tmp/shadowsocks* >/dev/null 2>&1
-	exit 1
+	local state=$1
+	case $state in
+		1)
+			echo_date "fancyss_hnd适用于【koolshare 梅林改/官改 hnd/axhnd/axhnd.675x】固件平台！"
+			echo_date "你的固件平台不能安装！！!"
+			echo_date "fancyss_hnd支持机型/平台：https://github.com/hq450/fancyss#fancyss_hnd"
+			echo_date "退出安装！"
+			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
+			exit 1
+			;;
+		0|*)
+			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
+			exit 0
+			;;
+	esac
 }
 
-# 判断路由架构和平台
-case $(uname -m) in
-	aarch64)
-		# cpu架构为armv8，koolshare 官改/梅林改固件可以安装
-		if [ "$(uname -o|grep Merlin)" ] && [ -d "/koolshare" ];then
-			echo_date 机型：$MODEL $(_get_type) 符合安装要求，开始安装插件！
-		else
-			exit_install
-		fi
-		;;
-	armv7l)
-		# cpu架构为armv7，TUF-AX3000，RT-AX82U官改固件可以安装
-		if [ "$MODEL" == "TUF-AX3000" -o "$MODEL" == "RT-AX82U" -o "$MODEL" == "RT-AX95Q" -o "$MODEL" == "RT-AX56_XD4" ] && [ -d "/koolshare" ];then
-			echo_date 机型：$MODEL $(_get_type) 符合安装要求，开始安装插件！
-		else
-			exit_install
-		fi
-		;;
-	*)
-		exit_install
-	;;
-esac
+# 判断路由架构和平台：koolshare固件，并且linux版本大于等于4.1
+if [ -d "/koolshare" -a -f "/usr/bin/skipd" -a "${LINUX_VER}" -ge "41" ];then
+	echo_date 机型：${MODEL} $(_get_type) 符合安装要求，开始安装插件！
+else
+	exit_install 1
+fi
 
+# 判断固件UI类型
 if [ -n "$(nvram get extendno | grep koolshare)" -a "$(nvram get productid)" == "RT-AC86U" -a "${EXT_NU}" -lt "81918" ];then
 	ROG_86U=1
 fi
 
-# 判断固件需要什么UI
-if [ "$MODEL" == "GT-AC5300" -o "$MODEL" == "GT-AX11000" -o "$ROG_86U" == "1" ];then
+if [ "${MODEL}" == "GT-AC5300" -o "${MODEL}" == "GT-AX11000" -o "${MODEL}" == "GT-AX11000_BO4"  -o "$ROG_86U" == "1" ];then
 	# 官改固件，骚红皮肤
 	ROG=1
 fi
 
-if [ "$MODEL" == "TUF-AX3000" ];then
+if [ "${MODEL}" == "TUF-AX3000" ];then
 	# 官改固件，橙色皮肤
 	TUF=1
 fi
 
-# 先关闭ss
+# 先关闭fancyss
 if [ "$ss_basic_enable" == "1" ];then
 	echo_date 先关闭科学上网插件，保证文件更新成功!
 	[ -f "/koolshare/ss/stop.sh" ] && sh /koolshare/ss/stop.sh stop_all || sh /koolshare/ss/ssconfig.sh stop
@@ -95,7 +93,6 @@ if [ -n "$MOUNTED" ];then
 	service restart_dnsmasq >/dev/null 2>&1
 fi
 
-#升级前先删除无关文件
 echo_date 清理旧文件
 rm -rf /koolshare/ss/*
 rm -rf /koolshare/scripts/ss_*
@@ -136,14 +133,57 @@ rm -rf /koolshare/res/shadowsocks.css
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
+# 对于jffs分区过小的插件，删除某些功能的二进制文件，比如RT-AX56U_V2的jffs只有15MB，所以移除一些功能
+JFFS_TOTAL=$(df|grep -Ew "/jffs" | awk '{print $2}')
+if [ "${JFFS_TOTAL}" -le "20000" ];then
+	echo_date "-------------------------------------------------------------"
+	echo_date "重要提示："
+	echo_date "检测到你的机型${MODEL} jffs分区大小为${JFFS_TOTAL}，小于20MB！"
+	echo_date "为了你的机型能顺利安装fancyss_hnd，部分功能的二进制文件将不会安装！"
+	echo_date "安装后以下功能将无法使用，即使界面上显示有该功能"
+	echo_date "1. v2ray 功能"
+	echo_date "2. koolgame 功能"
+	echo_date "3. kcptun 功能"
+	echo_date "4. shadowsocks-libev v2ray plugin 功能"
+	echo_date "5. shadowsocks-libev obfs plugin 功能"
+	echo_date "6. smartdns、chinadns1、chinadns2 功能"
+	echo_date "7. udp加速内的所有功能：udp2raw、speederv1、speederv2"
+	echo_date "8. 负载均衡功能"
+	echo_date "其它功能，如ss、ssr、dns、负载均衡等功能不受影响！"
+	echo_date "-------------------------------------------------------------"
+	rm -rf /tmp/shadowsocks/bin/v2ray
+	rm -rf /tmp/shadowsocks/bin/v2ctl
+	rm -rf /tmp/shadowsocks/bin/v2ray-plugin
+	rm -rf /tmp/shadowsocks/bin/client_linux_arm7
+	rm -rf /tmp/shadowsocks/bin/koolgame
+	rm -rf /tmp/shadowsocks/bin/pdu
+	rm -rf /tmp/shadowsocks/bin/speederv1
+	rm -rf /tmp/shadowsocks/bin/speederv2
+	rm -rf /tmp/shadowsocks/bin/udp2raw
+	rm -rf /tmp/shadowsocks/bin/haproxy
+	rm -rf /tmp/shadowsocks/bin/obfs-local
+	rm -rf /tmp/shadowsocks/bin/smartdns
+	rm -rf /tmp/shadowsocks/bin/chinadns1
+	rm -rf /tmp/shadowsocks/bin/smartdns
+	rm -rf /tmp/shadowsocks/scripts/ss_lb_config.sh
+	rm -rf /tmp/shadowsocks/webs/Module_shadowsocks_lb.asp
+	sed -i 's/\, \[\"13\"\, \"SmartDNS\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
+	sed -i 's/\, \[\"9\"\, \"SmartDNS\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
+	sed -i 's/\, \[\"5\"\, \"chinadns1\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
+	sed -i 's/\, \[\"2\"\, \"chinadns2\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
+	sed -i 's/\, \"负载均衡设置\"//g' /tmp/shadowsocks/res/ss-menu.js
+	sed -i 's/\, \"Module_shadowsocks_lb\.asp\"//g' /tmp/shadowsocks/res/ss-menu.js
+	echo ".show-btn5, .show-btn6{display: none;}" >> /tmp/shadowsocks/res/shadowsocks.css
+fi
+
 # 检测储存空间是否足够
 echo_date 检测jffs分区剩余空间...
 SPACE_AVAL=$(df|grep jffs | awk '{print $4}')
 SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
 if [ "$SPACE_AVAL" -gt "$SPACE_NEED" ];then
-	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空间满足，继续安装！
+	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间满足，继续安装！
 else
-	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空间不足！
+	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间不足！
 	echo_date 退出安装！
 	exit 1
 fi
