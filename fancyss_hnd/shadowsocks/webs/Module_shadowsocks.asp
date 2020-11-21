@@ -2812,7 +2812,7 @@ function save_online_nodes(action) {
 	dbus_post["ss_basic_exclude"] = E("ss_basic_exclude").value.replace(pattern,"") || "";
 	dbus_post["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 	dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
-	dbus_post["ss_base64_links"] = E("ss_base64_links").value;
+	dbus_post["ss_base64_links"] = Base64.encode(E("ss_base64_links").value);
 	push_data("ss_online_update.sh", action,  dbus_post);
 }
 function v2ray_binary_update(){

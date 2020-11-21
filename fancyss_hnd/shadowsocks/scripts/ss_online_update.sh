@@ -1166,7 +1166,7 @@ start_offline_update() {
 	rm -rf /tmp/all_subscservers.txt >/dev/null 2>&1
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
-	ssrlinks=$(echo $ss_base64_links | sed 's/$/\n/'|sed '/^$/d')
+	ssrlinks=$(echo $ss_base64_links | base64_decode | sed 's/$/\n/'|sed '/^$/d')
 	for ssrlink in $ssrlinks
 	do
 		if [ -n "$ssrlink" ]; then
