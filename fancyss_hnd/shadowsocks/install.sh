@@ -7,7 +7,8 @@ eval $(dbus export ss)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 ROG_86U=0
 EXT_NU=$(nvram get extendno)
-EXT_NU=${EXT_NU%_*}
+EXT_NU=$(echo ${EXT_NU%_*} | grep -Eo "^[0-9]{1,10}$" )
+[ -z "${EXT_NU}" ] && EXT_NU="0"
 mkdir -p /koolshare/ss
 mkdir -p /tmp/upload
 odmpid=$(nvram get odmpid)
@@ -19,7 +20,7 @@ LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 _get_type() {
 	local FWTYPE=$(nvram get extendno|grep koolshare)
 	if [ -d "/koolshare" ];then
-		if [ -n $FWTYPE ];then
+		if [ -n "${FWTYPE}" ];then
 			echo "koolshare官改固件"
 		else
 			echo "koolshare梅林改版固件"
