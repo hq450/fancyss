@@ -342,9 +342,10 @@ kill_process() {
 
 # ================================= ss prestart ===========================
 ss_pre_start() {
+	local IS_LOCAL_ADDR=$(echo $ss_basic_server | grep -o "127.0.0.1")
 	if [ "$ss_lb_enable" == "1" ]; then
 		echo_date ---------------------- 【科学上网】 启动前触发脚本 ----------------------
-		if [ $(echo $ss_basic_server | grep -o "127.0.0.1") ] && [ "$ss_basic_port" == "$ss_lb_port" ]; then
+		if [ -n ${IS_LOCAL_ADDR} -a "$ss_basic_port" == "$ss_lb_port" ]; then
 			echo_date 插件启动前触发:触发启动负载均衡功能！
 			#start haproxy
 			sh /koolshare/scripts/ss_lb_config.sh
@@ -352,9 +353,9 @@ ss_pre_start() {
 			echo_date 插件启动前触发:未选择负载均衡节点，不触发负载均衡启动！
 		fi
 	else
-		if [ $(echo $ss_basic_server | grep -o "127.0.0.1") ] && [ "$ss_basic_port" == "$ss_lb_port" ]; then
+		if [ -n ${IS_LOCAL_ADDR} -a "$ss_basic_port" == "$ss_lb_port" ]; then
 			echo_date 插件启动前触发【警告】：你选择了负载均衡节点，但是负载均衡开关未启用！！
-			#else
+		#else
 			#echo_date ss启动前触发：你选择了普通节点，不触发负载均衡启动！
 		fi
 	fi
@@ -1824,9 +1825,9 @@ flush_nat() {
 	ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
 	#remove_redundant_rule
 	ip_rule_exist=$(ip rule show | grep "lookup 310" | grep -c 310)
-	if [ -n "ip_rule_exist" ]; then
+	if [ -n "${ip_rule_exist}" ]; then
 		#echo_date 清除重复的ip rule规则.
-		until [ "$ip_rule_exist" == "0" ]; do
+		until [ "${ip_rule_exist}" == "0" ]; do
 			IP_ARG=$(ip rule show | grep "lookup 310" | head -n 1 | cut -d " " -f3,4,5,6)
 			ip rule del $IP_ARG
 			ip_rule_exist=$(expr $ip_rule_exist - 1)
