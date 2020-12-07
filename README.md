@@ -87,7 +87,7 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 | [RT-AX82U/RT-AX82U高达版](https://koolshare.cn/thread-xxxxxx-1-1.html) | ks官改   | axhnd.675x | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt            |
 | [ZenWiFi AX/灵耀 AX6600M/RT-AX95Q](https://koolshare.cn/thread-187704-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt            |
 | [ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4](https://koolshare.cn/thread-187744-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt            |
-| [RT-AX56U_V2/RT-AX6U青春版/热血版/刺客信条版](https://koolshare.cn/thread-188683-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt            |
+| [RT-AX56U_V2青春版/热血版/刺客信条版](https://koolshare.cn/thread-188683-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt            |
 
 #### 注意：
 
