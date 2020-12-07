@@ -177,6 +177,13 @@ if [ "${JFFS_TOTAL}" -le "20000" ];then
 	echo ".show-btn5, .show-btn6{display: none;}" >> /tmp/shadowsocks/res/shadowsocks.css
 fi
 
+# 386固件全面使用openssl1.1.1，弃用了openssl1.0.0，所以判断使用openssl1.1.1的使用新版本的httping
+if [ -f "/usr/lib/libcrypto.so.1.1" ];then
+	mv /tmp/shadowsocks/bin/httping_openssl_1.1.1 /tmp/shadowsocks/bin/httping
+else
+	rm -rf /tmp/shadowsocks/bin/httping_openssl_1.1.1
+fi
+
 # 检测储存空间是否足够
 echo_date 检测jffs分区剩余空间...
 SPACE_AVAL=$(df|grep jffs | awk '{print $4}')
