@@ -1,5 +1,10 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.1
+   - update	更新httping，以适配华硕/梅林386改版固件环境；
+   - update	更新安装脚本；
+   - fix	修复ssconfig.sh 主脚本的一些语法错误。
+
 1.9.0
    - add	添加armv7机型：RT-AX56U_V2（RT-AX56U热血版/青春版）ks官改固件支持。
     		因为RT-AX56U_V2的JFFS分区只有15MB，而且没有USB接口用以JFFS扩容！
