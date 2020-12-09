@@ -1627,13 +1627,13 @@ creat_v2ray_json() {
 		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
 		vmess)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r '.outbounds[0].settings.vnext[0].address')
 			;;
 		socks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r '.outbounds[0].settings.servers[0].address')
 			;;
 		shadowsocks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r '.outbounds[0].settings.servers[0].address')
 			;;
 		*)
 			v2ray_server=""
