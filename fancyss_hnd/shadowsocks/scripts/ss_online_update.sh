@@ -869,8 +869,9 @@ get_oneline_rule_now(){
 	if [ "$?" == "0" ]; then
 		#订阅地址有跳转
 		local blank=$(cat /tmp/ssr_subscribe_file.txt | grep -E " |Redirecting|301")
-		if [ -n "$blank" ]; then
-			echo_date "订阅链接可能有跳转，尝试更换wget进行下载..."
+		if [ -n "$blank" -o -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
+			[ -n "$blank" ] && echo_date "订阅链接可能有跳转，尝试更换wget进行下载..."
+			[ -z "$(cat /tmp/ssr_subscribe_file.txt)" ] && echo_date "下载内容为空，尝试更换wget进行下载..."
 			rm /tmp/ssr_subscribe_file.txt
 			if [ -n $(echo $ssr_subscribe_link | grep -E "^https") ]; then
 				wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
