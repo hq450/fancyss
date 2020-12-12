@@ -44,6 +44,7 @@ khm.googleapis.com
 khm.google.com
 ocsp.pki.goog
 pagead-googlehosted.l.google.com
+pki-goog.l.google.com
 recaptcha.net
 redirector.gvt1.com
 safebrowsing-cache.google.com

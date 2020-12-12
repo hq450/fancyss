@@ -95,6 +95,7 @@ pancake.apple.com
 pancake.cdn-apple.com.akadns.net
 phobos.apple.com
 prod-support.apple-support.akadns.net
+reserve-prime.apple.com
 s1.mzstatic.com
 s2.mzstatic.com
 s3.mzstatic.com
