@@ -1,5 +1,9 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.2
+   - fix	修复一些机场下载订阅为空的问题；
+   - update	同步最新规则，并且从gfwlist中移除apple.com域名。
+
 1.9.1
    - update	更新httping，以适配华硕/梅林386改版固件环境；
    - update	更新安装脚本；
