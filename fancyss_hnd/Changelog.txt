@@ -7,9 +7,9 @@ fancyss_hnd Changelog
 
 1.9.0
    - add	添加armv7机型：RT-AX56U_V2（RT-AX56U热血版/青春版）ks官改固件支持。
-    		因为RT-AX56U_V2的JFFS分区只有15MB，而且没有USB接口用以JFFS扩容！
+    		因为RT-AX56U_V2的JFFS分区只有15MB，且没有USB接口用以JFFS扩容！而fancyss_hnd安装包接近20MB！
     		为了RT-AX56U_V2能顺利安装fancyss_hnd，部分功能的二进制文件将不会安装！
-    		安装后以下功能将无法使用，即使界面上显示有该功能！
+    		所以RT-AX56U_V2机型安装后以下功能将无法使用，即使界面上显示有该功能！
     			1. v2ray 功能
     			2. koolgame 功能
     			3. kcptun 功能
@@ -19,6 +19,7 @@ fancyss_hnd Changelog
     			7. udp加速内的所有功能：udp2ray、speederv1、speederv2
     			8. 负载均衡功能
     		其它功能，如ss、ssr、dns、负载均衡等不受影响！
+		其它机型的以上功能不会阉割！
    - update	更新安装脚本：兼容未来可能的[hnd/axhnd/axhnd.675x]平台机型的ks官改固件支持。
    - fix	修复卸载脚本：修复卸载插件的时候因部分文件没有删除干净，占用jffs分区的问题。
 
