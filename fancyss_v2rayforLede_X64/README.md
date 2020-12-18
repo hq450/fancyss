@@ -1,10 +1,10 @@
 # V2ray plugin for Lede softcenter
 
-1. æ›´æ–°äº†v2ray-coreçš„æ›´æ–°è·¯å¾„ï¼Œå¯ä»¥å®ç°åœ¨çº¿æ›´æ–°coreã€‚
-2. æ–°çš„ç‰ˆæœ¬å·ç¼–å†™æ–¹å¼
-3. å¢åŠ softcenteræ‰“åŒ…çš„è„šæœ¬ï¼Œä¸€é”®æ‰“åŒ…ï¼ˆwindowsï¼‰ã€‚
+1. ¸üĞÂÁËv2ray-coreµÄ¸üĞÂÂ·¾¶£¬¿ÉÒÔÊµÏÖÔÚÏß¸üĞÂcore¡£
+2. ĞÂµÄ°æ±¾ºÅ±àĞ´·½Ê½
+3. Ôö¼Ósoftcenter´ò°üµÄ½Å±¾£¬Ò»¼ü´ò°ü£¨windows£©¡£
 
 ## Issues and BUGs
-1. å½“é€‰æ‹©GFWlistæ¨¡å¼æ—¶ï¼Œä»…æœ‰google.comå¯ä»¥ç¿»å¢™ï¼Œå…¶ä»–ç«™ç‚¹ä¸èƒ½ç¿»å¢™
+1. µ±Ñ¡ÔñGFWlistÄ£Ê½Ê±£¬½öÓĞgoogle.com¿ÉÒÔ·­Ç½£¬ÆäËûÕ¾µã²»ÄÜ·­Ç½
 
 V2ray plugin is forked from https://github.com/bbsecxyz/koolv2ray

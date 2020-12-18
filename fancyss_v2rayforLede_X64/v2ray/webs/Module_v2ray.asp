@@ -17,35 +17,35 @@
 		var x = 4;
 		var status_time = 1;
 		var option_mode = [['VMess', 'VMess']];
-		var option_auth = [['1', 'æ— éªŒè¯'], ['2', 'ä½¿ç”¨ç”¨æˆ·åå¯†ç éªŒè¯']];
+		var option_auth = [['1', 'ÎŞÑéÖ¤'], ['2', 'Ê¹ÓÃÓÃ»§ÃûÃÜÂëÑéÖ¤']];
 		var option_ss_method = [['aes-128-cfb', 'aes-128-cfb'], ['aes-256-cfb', 'aes-256-cfb'], ['chacha20', 'chacha20'], ['chacha20-ietf', 'chacha20-ietf'], ['chacha20-poly1305', 'chacha20-poly1305'], ['chacha20-ietf-poly1305', 'chacha20-ietf-poly1305'], ['aes-128-gcm', 'aes-128-gcm'], ['aes-256-gcm', 'aes-256-gcm']];
-		var option_acl_mode = [['0', 'ä¸ä»£ç†'], ['1', 'gfwlisté»‘åå•'], ['2', 'å¤§é™†ç™½åå•'], ['3', 'æ¸¸æˆæ¨¡å¼'], ['4', 'å…¨å±€æ¨¡å¼']];
-		var option_acl_mode_name = ['ä¸ä»£ç†', 'gfwlisté»‘åå•', 'å¤§é™†ç™½åå•', 'æ¸¸æˆæ¨¡å¼', 'å…¨å±€æ¨¡å¼'];
-		var option_dns_china = [['1', 'è¿è¥å•†DNSã€è‡ªåŠ¨è·å–ã€‘'],  ['2', 'é˜¿é‡ŒDNS1ã€223.5.5.5ã€‘'],  ['3', 'é˜¿é‡ŒDNS2ã€223.6.6.6ã€‘'],  ['4', '114DNS1ã€114.114.114.114ã€‘'],  
-								['5', '114DNS1ã€114.114.115.115ã€‘'],  ['6', 'cnnic DNSã€1.2.4.8ã€‘'],  ['7', 'cnnic DNSã€210.2.4.8ã€‘'],  ['8', 'oneDNS1ã€112.124.47.27ã€‘'],  
-								['9', 'oneDNS2ã€114.215.126.16ã€‘'],  ['10', 'ç™¾åº¦DNSã€180.76.76.76ã€‘'],  ['11', 'DNSpod DNSã€119.29.29.29ã€‘'],  ['12', 'è‡ªå®šä¹‰']];
-		var option_v2ray_dns_foreign = [['2', 'google dns\[8.8.8.8\]'], ['3', 'google dns\[8.8.4.4\]'], ['1', 'OpenDNS\[208.67.220.220\]'], ['4', 'è‡ªå®šä¹‰']];
+		var option_acl_mode = [['0', '²»´úÀí'], ['1', 'gfwlistºÚÃûµ¥'], ['2', '´óÂ½°×Ãûµ¥'], ['3', 'ÓÎÏ·Ä£Ê½'], ['4', 'È«¾ÖÄ£Ê½']];
+		var option_acl_mode_name = ['²»´úÀí', 'gfwlistºÚÃûµ¥', '´óÂ½°×Ãûµ¥', 'ÓÎÏ·Ä£Ê½', 'È«¾ÖÄ£Ê½'];
+		var option_dns_china = [['1', 'ÔËÓªÉÌDNS¡¾×Ô¶¯»ñÈ¡¡¿'],  ['2', '°¢ÀïDNS1¡¾223.5.5.5¡¿'],  ['3', '°¢ÀïDNS2¡¾223.6.6.6¡¿'],  ['4', '114DNS1¡¾114.114.114.114¡¿'],  
+								['5', '114DNS1¡¾114.114.115.115¡¿'],  ['6', 'cnnic DNS¡¾1.2.4.8¡¿'],  ['7', 'cnnic DNS¡¾210.2.4.8¡¿'],  ['8', 'oneDNS1¡¾112.124.47.27¡¿'],  
+								['9', 'oneDNS2¡¾114.215.126.16¡¿'],  ['10', '°Ù¶ÈDNS¡¾180.76.76.76¡¿'],  ['11', 'DNSpod DNS¡¾119.29.29.29¡¿'],  ['12', '×Ô¶¨Òå']];
+		var option_v2ray_dns_foreign = [['2', 'google dns\[8.8.8.8\]'], ['3', 'google dns\[8.8.4.4\]'], ['1', 'OpenDNS\[208.67.220.220\]'], ['4', '×Ô¶¨Òå']];
 		var option_dns_foreign = [['1', 'v2ray_dns']];
 		var option_server_list = [];
 		var option_arp_list = [];
 		var option_arp_local = [];
 		var option_arp_web = [];
 		var softcenter = 0;
-		var option_day_time = [["7", "æ¯å¤©"], ["1", "å‘¨ä¸€"], ["2", "å‘¨äºŒ"], ["3", "å‘¨ä¸‰"], ["4", "å‘¨å››"], ["5", "å‘¨äº”"], ["6", "å‘¨å…­"], ["0", "å‘¨æ—¥"]];
-		var option_time_mod = [["1", "è‡ªåŠ¨é‡å¯"], ["2", "åˆ‡æ¢æœåŠ¡å™¨"]];
+		var option_day_time = [["7", "Ã¿Ìì"], ["1", "ÖÜÒ»"], ["2", "ÖÜ¶ş"], ["3", "ÖÜÈı"], ["4", "ÖÜËÄ"], ["5", "ÖÜÎå"], ["6", "ÖÜÁù"], ["0", "ÖÜÈÕ"]];
+		var option_time_mod = [["1", "×Ô¶¯ÖØÆô"], ["2", "ÇĞ»»·şÎñÆ÷"]];
 		var option_time_hour = [];
 		for(var i = 0; i < 24; i++){
-			option_time_hour[i] = [i, i + "ç‚¹"];
+			option_time_hour[i] = [i, i + "µã"];
 		}
 
 		var option_time_minute = [];
 		for(var i = 0; i < 59; i++){
-			option_time_minute[i] = [i, i + "åˆ†"];
+			option_time_minute[i] = [i, i + "·Ö"];
 		}
 
 		var option_time_watch = [];
 		for(var i = 1; i < 60; i++){
-			option_time_watch[i-1] = [i, i + "åˆ†é’Ÿ"];
+			option_time_watch[i-1] = [i, i + "·ÖÖÓ"];
 		}
 
 		if (typeof btoa == "Function") {
@@ -325,7 +325,7 @@
 			{ type: 'text',maxlen:30},	//name
 			{ type: 'text',maxlen:9999}	//name
 			] );
-			this.headerSet( [ 'ID', 'V2rayæœåŠ¡å™¨æ ‡ç­¾', 'V2rayé…ç½®æ–‡ä»¶'] );						
+			this.headerSet( [ 'ID', 'V2ray·şÎñÆ÷±êÇ©', 'V2rayÅäÖÃÎÄ¼ş'] );						
 			for ( var i = 1; i <= dbus["v2ray_server_node_max"]; i++){
 				var t = [
 						String(i),
@@ -342,13 +342,13 @@
 		var v2ray_acl = new TomatoGrid();
 		v2ray_acl.dataToView = function( data ) {
 			if (data[0]){
-				return [ "ã€" + data[0] + "ã€‘", data[1], data[2], option_acl_mode_name[data[3]] ];
+				return [ "¡¾" + data[0] + "¡¿", data[1], data[2], option_acl_mode_name[data[3]] ];
 			}else{
 				if (data[1]){
-					return [ "ã€" + data[1] + "ã€‘", data[1], data[2], option_acl_mode_name[data[3]]];
+					return [ "¡¾" + data[1] + "¡¿", data[1], data[2], option_acl_mode_name[data[3]]];
 				}else{
 					if (data[2]){
-						return [ "ã€" + data[2] + "ã€‘", data[1], data[2], option_acl_mode_name[data[3]] ];
+						return [ "¡¾" + data[2] + "¡¿", data[1], data[2], option_acl_mode_name[data[3]] ];
 					}
 				}
 			}
@@ -393,11 +393,11 @@
 		}
 		v2ray_acl.alter_txt = function() {
 			if (this.tb.rows.length == "4"){
-				$('#footer_ip').html("<i>å…¨éƒ¨ä¸»æœº - ip</i>")
-				$('#footer_mac').html("<i>å…¨éƒ¨ä¸»æœº - mac</i>")
+				$('#footer_ip').html("<i>È«²¿Ö÷»ú - ip</i>")
+				$('#footer_mac').html("<i>È«²¿Ö÷»ú - mac</i>")
 			}else{
-				$('#footer_ip').html("<i>å…¶å®ƒä¸»æœº - ip</i>")
-				$('#footer_mac').html("<i>å…¶å®ƒä¸»æœº - mac</i>")
+				$('#footer_ip').html("<i>ÆäËüÖ÷»ú - ip</i>")
+				$('#footer_mac').html("<i>ÆäËüÖ÷»ú - mac</i>")
 			}
 		}
 		v2ray_acl.onAdd = function() {
@@ -451,11 +451,11 @@
 			{ type: 'text',maxlen:20},	//name
 			{ type: 'select',maxlen:20,options:option_acl_mode}	//control
 			] );
-			this.headerSet( [ 'ä¸»æœºåˆ«å', 'ä¸»æœºIPåœ°å€', 'MACåœ°å€', 'è®¿é—®æ§åˆ¶'] );
+			this.headerSet( [ 'Ö÷»ú±ğÃû', 'Ö÷»úIPµØÖ·', 'MACµØÖ·', '·ÃÎÊ¿ØÖÆ'] );
 			if (typeof(dbus["v2ray_acl_node_max"]) == "undefined"){
-				this.footerSet( [ '<small id="footer_name" style="color:#1bbf35"><i>ç¼ºçœè§„åˆ™</i></small>','<small id="footer_ip" style="color:#1bbf35"><i>å…¨éƒ¨ä¸»æœº - ip</i></small>','<small id="footer_mac" style="color:#1bbf35"><i>å…¨éƒ¨ä¸»æœº - mac</small></i>','<select id="_v2ray_acl_default_mode1" name="v2ray_acl_default_mode1" style="border: 0px solid #222;background: transparent;margin-left:-4px;padding:-0 -0;height:16px;" onchange="verifyFields(this, 1)"><option value="0">ä¸ä»£ç†</option><option value="1">gfwlisté»‘åå•</option><option value="2">å¤§é™†ç™½åå•</option><option value="3">æ¸¸æˆæ¨¡å¼</option><option value="4">å…¨å±€æ¨¡å¼</option></select>']);
+				this.footerSet( [ '<small id="footer_name" style="color:#1bbf35"><i>È±Ê¡¹æÔò</i></small>','<small id="footer_ip" style="color:#1bbf35"><i>È«²¿Ö÷»ú - ip</i></small>','<small id="footer_mac" style="color:#1bbf35"><i>È«²¿Ö÷»ú - mac</small></i>','<select id="_v2ray_acl_default_mode1" name="v2ray_acl_default_mode1" style="border: 0px solid #222;background: transparent;margin-left:-4px;padding:-0 -0;height:16px;" onchange="verifyFields(this, 1)"><option value="0">²»´úÀí</option><option value="1">gfwlistºÚÃûµ¥</option><option value="2">´óÂ½°×Ãûµ¥</option><option value="3">ÓÎÏ·Ä£Ê½</option><option value="4">È«¾ÖÄ£Ê½</option></select>']);
 			}else{
-				this.footerSet( [ '<small id="footer_name" style="color:#1bbf35"><i>ç¼ºçœè§„åˆ™</i></small>','<small id="footer_ip" style="color:#1bbf35"><i>å…¶å®ƒä¸»æœº - ip</i></small>','<small id="footer_mac" style="color:#1bbf35"><i>å…¶å®ƒä¸»æœº - mac</small></i>','<select id="_v2ray_acl_default_mode1" name="v2ray_acl_default_mode1" style="border: 0px solid #222;background: transparent;margin-left:-4px;padding:-0 -0;height:16px;" onchange="verifyFields(this, 1)"><option value="0">ä¸ä»£ç†</option><option value="1">gfwlisté»‘åå•</option><option value="2">å¤§é™†ç™½åå•</option><option value="3">æ¸¸æˆæ¨¡å¼</option><option value="4">å…¨å±€æ¨¡å¼</option></select>']);
+				this.footerSet( [ '<small id="footer_name" style="color:#1bbf35"><i>È±Ê¡¹æÔò</i></small>','<small id="footer_ip" style="color:#1bbf35"><i>ÆäËüÖ÷»ú - ip</i></small>','<small id="footer_mac" style="color:#1bbf35"><i>ÆäËüÖ÷»ú - mac</small></i>','<select id="_v2ray_acl_default_mode1" name="v2ray_acl_default_mode1" style="border: 0px solid #222;background: transparent;margin-left:-4px;padding:-0 -0;height:16px;" onchange="verifyFields(this, 1)"><option value="0">²»´úÀí</option><option value="1">gfwlistºÚÃûµ¥</option><option value="2">´óÂ½°×Ãûµ¥</option><option value="3">ÓÎÏ·Ä£Ê½</option><option value="4">È«¾ÖÄ£Ê½</option></select>']);
 			}
 			
 			if(typeof(dbus["v2ray_acl_default_mode"]) != "undefined" ){
@@ -509,8 +509,8 @@
 		
 		function get_run_status(){
 			if (status_time > 99999){
-				E("_v2ray_basic_status_foreign").innerHTML = "æš‚åœè·å–çŠ¶æ€...";
-				E("_v2ray_basic_status_china").innerHTML = "æš‚åœè·å–çŠ¶æ€...";
+				E("_v2ray_basic_status_foreign").innerHTML = "ÔİÍ£»ñÈ¡×´Ì¬...";
+				E("_v2ray_basic_status_china").innerHTML = "ÔİÍ£»ñÈ¡×´Ì¬...";
 				return false;
 			}
 			var id1 = parseInt(Math.random() * 100000000);
@@ -526,13 +526,13 @@
 					}
 					++status_time;
 					if (response.result == '-2'){
-						E("_v2ray_basic_status_foreign").innerHTML = "è·å–è¿è¡ŒçŠ¶æ€å¤±è´¥ï¼";
-						E("_v2ray_basic_status_china").innerHTML = "è·å–è¿è¡ŒçŠ¶æ€å¤±è´¥ï¼";
+						E("_v2ray_basic_status_foreign").innerHTML = "»ñÈ¡ÔËĞĞ×´Ì¬Ê§°Ü£¡";
+						E("_v2ray_basic_status_china").innerHTML = "»ñÈ¡ÔËĞĞ×´Ì¬Ê§°Ü£¡";
 						setTimeout("get_run_status();", 5000);
 					}else{
 						if(dbus["v2ray_basic_enable"] != "1"){
-							E("_v2ray_basic_status_foreign").innerHTML = "å›½å¤–é“¾æ¥ - å°šæœªæäº¤ï¼Œæš‚åœè·å–çŠ¶æ€ï¼";
-							E("_v2ray_basic_status_china").innerHTML = "å›½å†…é“¾æ¥ - å°šæœªæäº¤ï¼Œæš‚åœè·å–çŠ¶æ€ï¼";
+							E("_v2ray_basic_status_foreign").innerHTML = "¹úÍâÁ´½Ó - ÉĞÎ´Ìá½»£¬ÔİÍ£»ñÈ¡×´Ì¬£¡";
+							E("_v2ray_basic_status_china").innerHTML = "¹úÄÚÁ´½Ó - ÉĞÎ´Ìá½»£¬ÔİÍ£»ñÈ¡×´Ì¬£¡";
 						}else{
 							E("_v2ray_basic_status_foreign").innerHTML = response.result.split("@@")[0];
 							E("_v2ray_basic_status_china").innerHTML = response.result.split("@@")[1];
@@ -544,8 +544,8 @@
 					if(softcenter == 1){
 						return false;
 					}
-					E("_v2ray_basic_status_foreign").innerHTML = "è·å–è¿è¡ŒçŠ¶æ€å¤±è´¥ï¼";
-					E("_v2ray_basic_status_china").innerHTML = "è·å–è¿è¡ŒçŠ¶æ€å¤±è´¥ï¼";
+					E("_v2ray_basic_status_foreign").innerHTML = "»ñÈ¡ÔËĞĞ×´Ì¬Ê§°Ü£¡";
+					E("_v2ray_basic_status_china").innerHTML = "»ñÈ¡ÔËĞĞ×´Ì¬Ê§°Ü£¡";
 					setTimeout("get_run_status();", 5000);
 				}
 			});
@@ -565,11 +565,11 @@
 					if (response.result != "-1"){
 						var s2 = response.result.split( '>' );
 						for ( var i = 0; i < s2.length; ++i ) {
-							option_arp_local[i] = [s2[ i ].split( '<' )[0], "ã€" + s2[ i ].split( '<' )[0] + "ã€‘", s2[ i ].split( '<' )[1], s2[ i ].split( '<' )[2]];
+							option_arp_local[i] = [s2[ i ].split( '<' )[0], "¡¾" + s2[ i ].split( '<' )[0] + "¡¿", s2[ i ].split( '<' )[1], s2[ i ].split( '<' )[2]];
 						}
 						var node_acl = parseInt(dbus["v2ray_acl_node_max"]) || 0;
 						for ( var i = 0; i < node_acl; ++i ) {
-							option_arp_web[i] = [dbus["v2ray_acl_name_" + (i + 1)], "ã€" + dbus["v2ray_acl_name_" + (i + 1)] + "ã€‘", dbus["v2ray_acl_ip_" + (i + 1)], dbus["v2ray_acl_mac_" + (i + 1)]];
+							option_arp_web[i] = [dbus["v2ray_acl_name_" + (i + 1)], "¡¾" + dbus["v2ray_acl_name_" + (i + 1)] + "¡¿", dbus["v2ray_acl_ip_" + (i + 1)], dbus["v2ray_acl_mac_" + (i + 1)]];
 						}			
 						option_arp_list = unique_array(option_arp_local.concat( option_arp_web ));
 						v2ray_acl.setup();
@@ -609,9 +609,9 @@
 			}
 
 			if (E("_v2ray_dns_plan").value == "1"){
-				$('#_v2ray_dns_plan_txt').html("å›½å¤–dnsè§£ægfwliståå•å†…çš„å›½å¤–åŸŸåï¼Œå‰©ä¸‹çš„åŸŸåç”¨å›½å†…dnsè§£æã€‚ ")
+				$('#_v2ray_dns_plan_txt').html("¹úÍâdns½âÎögfwlistÃûµ¥ÄÚµÄ¹úÍâÓòÃû£¬Ê£ÏÂµÄÓòÃûÓÃ¹úÄÚdns½âÎö¡£ ")
 			}else if (E("_v2ray_dns_plan").value == "2"){
-				$('#_v2ray_dns_plan_txt').html("å›½å†…dnsè§£æcdnåå•å†…çš„å›½å†…åŸŸåç”¨ï¼Œå‰©ä¸‹çš„åŸŸåç”¨å›½å¤–dnsè§£æã€‚<font color='#FF3300'>æ¨èï¼</font> ")
+				$('#_v2ray_dns_plan_txt').html("¹úÄÚdns½âÎöcdnÃûµ¥ÄÚµÄ¹úÄÚÓòÃûÓÃ£¬Ê£ÏÂµÄÓòÃûÓÃ¹úÍâdns½âÎö¡£<font color='#FF3300'>ÍÆ¼ö£¡</font> ")
 			}
 			// when check/uncheck v2ray_switch
 			var a  = E('_v2ray_basic_enable').checked;
@@ -677,7 +677,7 @@
 		function auto_node_set(){
 			var n1 = (E('_v2ray_basic_type').value == '1');
 			if (n1){
-				var n2 = (E('_v2ray_basic_server').options[E('_v2ray_basic_server').selectedIndex].innerText == "æ–°å¢é…ç½®");
+				var n2 = (E('_v2ray_basic_server').options[E('_v2ray_basic_server').selectedIndex].innerText == "ĞÂÔöÅäÖÃ");
 				elem.display(PR('_v2ray_basic_tag'), n2);
 				var nid = E('_v2ray_basic_server').value
 				E("_v2ray_basic_config").value = Base64.decode(dbus["v2ray_server_config_" + nid ])
@@ -708,7 +708,7 @@
 					option_server_list[i] = [ dbus["v2ray_server_tag_" + ( i + 1)]];
 					E("_v2ray_basic_server").options[i] = new Option(option_server_list[i], i + 1);
 				}
-				E("_v2ray_basic_server").options[node_v2ray] = new Option("æ–°å¢é…ç½®", node_v2ray + 1);
+				E("_v2ray_basic_server").options[node_v2ray] = new Option("ĞÂÔöÅäÖÃ", node_v2ray + 1);
 			}else{
 				if (typeof(dbus["v2ray_sub_node_max"]) == "undefined"){
 					node_v2ray = 0;
@@ -767,8 +767,8 @@
 			setTimeout("tabSelect('app6')", 500);
 			status_time = 999999990;
 			get_run_status();
-			E("_v2ray_basic_status_foreign").innerHTML = "å›½å¤–é“¾æ¥ - æäº¤ä¸­...æš‚åœè·å–çŠ¶æ€ï¼";
-			E("_v2ray_basic_status_china").innerHTML = "å›½å†…é“¾æ¥ - æäº¤ä¸­...æš‚åœè·å–çŠ¶æ€ï¼";
+			E("_v2ray_basic_status_foreign").innerHTML = "¹úÍâÁ´½Ó - Ìá½»ÖĞ...ÔİÍ£»ñÈ¡×´Ì¬£¡";
+			E("_v2ray_basic_status_china").innerHTML = "¹úÄÚÁ´½Ó - Ìá½»ÖĞ...ÔİÍ£»ñÈ¡×´Ì¬£¡";
 			var paras_chk = ["enable", "sbmode", "sniffing", "socks", "http", "ss", "forward", "dns_chromecast", "gfwlist_update", "chnroute_update", "cdn_update", "cron" ];
 			var paras_inp = ["v2ray_acl_default_mode", "v2ray_dns_plan", "v2ray_dns_china", "v2ray_dns_china_user", "v2ray_dns_foreign_select", "v2ray_dns_foreign", "v2ray_dns_foreign_user", "v2ray_basic_rule_update", "v2ray_basic_rule_update_day", "v2ray_basic_rule_update_hr", "v2ray_basic_watchdog", "v2ray_basic_watchdog_time", "v2ray_basic_watchdog_mod", "v2ray_basic_cron_enablehour", "v2ray_basic_cron_enableminute", "v2ray_basic_cron_disablehour", "v2ray_basic_cron_disableminute", "v2ray_basic_check_releases", "v2ray_basic_server", "v2ray_basic_type", "v2ray_service_auth", "v2ray_service_username", "v2ray_service_passwd", "v2ray_service_ssmethod", "v2ray_service_sspasswd" ];
 			// collect data from checkbox
@@ -830,7 +830,7 @@
 			// now post data
 			var id = parseInt(Math.random() * 100000000);
 			var postData = {"id": id, "method": "v2ray_config.sh", "params":[1], "fields": dbus};
-			showMsg("msg_warring","æ­£åœ¨æäº¤æ•°æ®ï¼","<b>ç­‰å¾…åå°è¿è¡Œå®Œæ¯•ï¼Œè¯·ä¸è¦åˆ·æ–°æœ¬é¡µé¢ï¼</b>");
+			showMsg("msg_warring","ÕıÔÚÌá½»Êı¾İ£¡","<b>µÈ´ıºóÌ¨ÔËĞĞÍê±Ï£¬Çë²»ÒªË¢ĞÂ±¾Ò³Ãæ£¡</b>");
 			$.ajax({
 				url: "/_api/",
 				type: "POST",
@@ -841,7 +841,7 @@
 				success: function(response){
 					if (response.result == id){
 						if(E('_v2ray_basic_enable').checked){
-							showMsg("msg_success","æäº¤æˆåŠŸ","<b>æˆåŠŸæäº¤æ•°æ®</b>");
+							showMsg("msg_success","Ìá½»³É¹¦","<b>³É¹¦Ìá½»Êı¾İ</b>");
 							$('#msg_warring').hide();
 							setTimeout("$('#msg_success').hide()", 500);
 							x = 4;
@@ -849,18 +849,18 @@
 						}else{
 							// when shut down ss finished, close the log tab
 							$('#msg_warring').hide();
-							showMsg("msg_success","æäº¤æˆåŠŸ","<b>v2rayæˆåŠŸå…³é—­ï¼</b>");
+							showMsg("msg_success","Ìá½»³É¹¦","<b>v2ray³É¹¦¹Ø±Õ£¡</b>");
 							setTimeout("$('#msg_success').hide()", 4000);
 							setTimeout("tabSelect('fuckapp')", 4000);
 						}
 					}else{
 						$('#msg_warring').hide();
-						showMsg("msg_error","æäº¤å¤±è´¥","<b>æäº¤æ•°æ®å¤±è´¥ï¼é”™è¯¯ä»£ç ï¼š" + response.result + "</b>");
+						showMsg("msg_error","Ìá½»Ê§°Ü","<b>Ìá½»Êı¾İÊ§°Ü£¡´íÎó´úÂë£º" + response.result + "</b>");
 						setTimeout("window.location.reload()", 500);
 					}
 				},
 				error: function(){
-					showMsg("msg_error","å¤±è´¥","<b>å½“å‰ç³»ç»Ÿå­˜åœ¨å¼‚å¸¸æŸ¥çœ‹ç³»ç»Ÿæ—¥å¿—ï¼</b>");
+					showMsg("msg_error","Ê§°Ü","<b>µ±Ç°ÏµÍ³´æÔÚÒì³£²é¿´ÏµÍ³ÈÕÖ¾£¡</b>");
 					status_time = 1;
 				}
 			});
@@ -896,7 +896,7 @@
 					_responseLen = response.length;
 				},
 				error: function() {
-					E("_v2ray_basic_log").value = "è·å–æ—¥å¿—å¤±è´¥ï¼";
+					E("_v2ray_basic_log").value = "»ñÈ¡ÈÕÖ¾Ê§°Ü£¡";
 				}
 			});
 		}
@@ -974,11 +974,11 @@
 							setTimeout("window.location.reload()", 800);
 						}else if (arg == 9){
 							if (response.result == id){
-								showMsg("msg_success","æäº¤æˆåŠŸ","<b>æœåŠ¡å™¨åˆ—è¡¨ä¿å­˜æˆåŠŸï¼</b>");
+								showMsg("msg_success","Ìá½»³É¹¦","<b>·şÎñÆ÷ÁĞ±í±£´æ³É¹¦£¡</b>");
 								setTimeout("$('#msg_success').hide()", 4000);								
 							}else{
 								$('#msg_warring').hide();
-								showMsg("msg_error","æäº¤å¤±è´¥","<b>æœåŠ¡å™¨åˆ—è¡¨ä¿å­˜å¤±è´¥ï¼é”™è¯¯ä»£ç ï¼š" + response.result + "</b>");
+								showMsg("msg_error","Ìá½»Ê§°Ü","<b>·şÎñÆ÷ÁĞ±í±£´æÊ§°Ü£¡´íÎó´úÂë£º" + response.result + "</b>");
 							}
 							setTimeout("window.location.reload()", 50);
 						}else if (arg == 3){
@@ -1000,7 +1000,7 @@
 		function node_sub(script, arg ,msg){
 			var dbus4 = {};
 			if(arg == 0 || arg == 1){
-				var ask="ä½ ç¡®å®šè¦åˆ é™¤ã€" + msg + "ã€‘ä¿¡æ¯ï¼Ÿ\nåˆ é™¤åä¸å¯æ¢å¤ï¼Œç¡®å®šè¦åˆ é™¤å—ï¼Ÿ";
+				var ask="ÄãÈ·¶¨ÒªÉ¾³ı¡¾" + msg + "¡¿ĞÅÏ¢£¿\nÉ¾³ıºó²»¿É»Ö¸´£¬È·¶¨ÒªÉ¾³ıÂğ£¿";
 				if(!confirm(ask)){
 					return false;
 				}
@@ -1041,12 +1041,12 @@
 			var filelast = filename.split('.');
 			filelast = filelast[filelast.length-1];
 			if(filelast !='sh'){
-				alert('é…ç½®æ–‡ä»¶æ ¼å¼ä¸æ­£ç¡®ï¼');
+				alert('ÅäÖÃÎÄ¼ş¸ñÊ½²»ÕıÈ·£¡');
 				return false;
 			}
 			var formData = new FormData();
 			formData.append('v2ray_conf_backup.sh', $('#file')[0].files[0]);
-			$('.popover').html('æ­£åœ¨æ¢å¤ï¼Œè¯·ç¨åâ€¦â€¦');
+			$('.popover').html('ÕıÔÚ»Ö¸´£¬ÇëÉÔºó¡­¡­');
 			//changeButton(true);
 			$.ajax({
 				url: '/_upload',
@@ -1072,7 +1072,7 @@
 				dataType: 'json',
 				success: function(res) {
 					if (typeof(res["version"]) != "undefined" && typeof(dbus["v2ray_version"]) != "undefined" && res["version"].length > 0 && res["version"] != dbus["v2ray_version"]) {
-						$("#updateBtn").html('å‡çº§åˆ°ï¼š' + res.version);
+						$("#updateBtn").html('Éı¼¶µ½£º' + res.version);
 					}
 				}
 			});
@@ -1081,14 +1081,14 @@
 	<div class="box">
 		<div class="heading">
 			<span id="_v2ray_version"></span>
-			<a href="#/soft-center.asp" class="btn" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">è¿”å›</a>
-			<a href="https://github.com/koolshare/ledesoft/blob/master/v2ray/Changelog.txt" target="_blank" class="btn btn-primary" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">æ›´æ–°æ—¥å¿—</a>
-			<!--<button type="button" id="updateBtn" onclick="check_update()" class="btn btn-primary" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">æ£€æŸ¥æ›´æ–° <i class="icon-upgrade"></i></button>-->
+			<a href="#/soft-center.asp" class="btn" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">·µ»Ø</a>
+			<a href="https://github.com/koolshare/ledesoft/blob/master/v2ray/Changelog.txt" target="_blank" class="btn btn-primary" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">¸üĞÂÈÕÖ¾</a>
+			<!--<button type="button" id="updateBtn" onclick="check_update()" class="btn btn-primary" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">¼ì²é¸üĞÂ <i class="icon-upgrade"></i></button>-->
 		</div>
 		<div class="content">
 			<span class="col" style="line-height:30px;width:700px">
-			V2Ray æ˜¯ä¸€ä¸ªæ¨¡å—åŒ–çš„ä»£ç†è½¯ä»¶åŒ…ï¼Œå®ƒçš„ç›®æ ‡æ˜¯æä¾›å¸¸ç”¨çš„ä»£ç†è½¯ä»¶æ¨¡å—ï¼Œç®€åŒ–ç½‘ç»œä»£ç†è½¯ä»¶çš„å¼€å‘ã€‚<br />
-			ä½ éœ€è¦ä¸º V2Ray å®‰è£…ä¸“ç”¨çš„æœåŠ¡ç«¯ç¨‹åº:<a href="https://github.com/v2fly/v2ray-core" target="_blank"> ã€ç‚¹æ­¤è®¿é—®æºç é¡¹ç›®ã€‘ </a><a href="https://www.v2ray.com/chapter_00/install.html" target="_blank"> ã€ç‚¹æ­¤è®¿é—®ä¸€é”®æœåŠ¡å™¨å®‰è£…è„šæœ¬ã€‘ </a>
+			V2Ray ÊÇÒ»¸öÄ£¿é»¯µÄ´úÀíÈí¼ş°ü£¬ËüµÄÄ¿±êÊÇÌá¹©³£ÓÃµÄ´úÀíÈí¼şÄ£¿é£¬¼ò»¯ÍøÂç´úÀíÈí¼şµÄ¿ª·¢¡£<br />
+			ÄãĞèÒªÎª V2Ray °²×°×¨ÓÃµÄ·şÎñ¶Ë³ÌĞò:<a href="https://github.com/v2fly/v2ray-core" target="_blank"> ¡¾µã´Ë·ÃÎÊÔ´ÂëÏîÄ¿¡¿ </a><a href="https://www.v2ray.com/chapter_00/install.html" target="_blank"> ¡¾µã´Ë·ÃÎÊÒ»¼ü·şÎñÆ÷°²×°½Å±¾¡¿ </a>
 		</div>
 	</div>
 	<div class="box" style="margin-top: 0px;">
@@ -1098,30 +1098,30 @@
 			<div id="v2ray_switch_pannel" class="section" style="margin-top: -20px;"></div>
 			<script type="text/javascript">
 				$('#v2ray_switch_pannel').forms([
-					{ title: 'ä»£ç†å¼€å…³', name:'v2ray_basic_enable',type:'checkbox',  value: dbus.v2ray_basic_enable == 1 }  // ==1 means default close; !=0 means default open
+					{ title: '´úÀí¿ª¹Ø', name:'v2ray_basic_enable',type:'checkbox',  value: dbus.v2ray_basic_enable == 1 }  // ==1 means default close; !=0 means default open
 				]);
 			</script>
 			<hr />
 			<fieldset id="v2ray_status_pannel">
-				<label class="col-sm-3 control-left-label" for="_undefined">ä»£ç†è¿è¡ŒçŠ¶æ€</label>
+				<label class="col-sm-3 control-left-label" for="_undefined">´úÀíÔËĞĞ×´Ì¬</label>
 				<div class="col-sm-9">
-					<font id="_v2ray_basic_status_foreign" name="v2ray_basic_status_foreign" color="#1bbf35">å›½å¤–é“¾æ¥: waiting...</font>
+					<font id="_v2ray_basic_status_foreign" name="v2ray_basic_status_foreign" color="#1bbf35">¹úÍâÁ´½Ó: waiting...</font>
 				</div>
 				<div class="col-sm-9" style="margin-top:2px">
-					<font id="_v2ray_basic_status_china" name="v2ray_basic_status_china" color="#1bbf35">å›½å†…é“¾æ¥: waiting...</font>
+					<font id="_v2ray_basic_status_china" name="v2ray_basic_status_china" color="#1bbf35">¹úÄÚÁ´½Ó: waiting...</font>
 				</div>
 			</fieldset>
 		</div>
 	</div>
 	<ul id="v2ray_tabs" class="nav nav-tabs">
-		<li><a href="javascript:void(0);" onclick="tabSelect('app1');" id="app1-tab" class="active"><i class="icon-system"></i> å¸å·è®¾ç½®</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app8');" id="app8-tab"><i class="icon-cloud"></i> æœåŠ¡å™¨åˆ—è¡¨</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app4');" id="app4-tab"><i class="icon-lock"></i> è®¿é—®æ§åˆ¶</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app2');" id="app2-tab"><i class="icon-tools"></i> DNSè®¾å®š</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app3');" id="app3-tab"><i class="icon-warning"></i> é»‘ç™½åå•</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app7');" id="app7-tab"><i class="icon-cmd"></i> è§„åˆ™ç®¡ç†</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app5');" id="app5-tab"><i class="icon-wake"></i> é™„åŠ è®¾ç½®</a></li>
-		<li><a href="javascript:void(0);" onclick="tabSelect('app6');" id="app6-tab"><i class="icon-hourglass"></i> æŸ¥çœ‹æ—¥å¿—</a></li>	
+		<li><a href="javascript:void(0);" onclick="tabSelect('app1');" id="app1-tab" class="active"><i class="icon-system"></i> ÕÊºÅÉèÖÃ</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app8');" id="app8-tab"><i class="icon-cloud"></i> ·şÎñÆ÷ÁĞ±í</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app4');" id="app4-tab"><i class="icon-lock"></i> ·ÃÎÊ¿ØÖÆ</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app2');" id="app2-tab"><i class="icon-tools"></i> DNSÉè¶¨</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app3');" id="app3-tab"><i class="icon-warning"></i> ºÚ°×Ãûµ¥</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app7');" id="app7-tab"><i class="icon-cmd"></i> ¹æÔò¹ÜÀí</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app5');" id="app5-tab"><i class="icon-wake"></i> ¸½¼ÓÉèÖÃ</a></li>
+		<li><a href="javascript:void(0);" onclick="tabSelect('app6');" id="app6-tab"><i class="icon-hourglass"></i> ²é¿´ÈÕÖ¾</a></li>	
 	</ul>
 	<div class="box boxr1" id="v2ray_basic_tab" style="margin-top: 0px;">
 		<div class="heading"></div>
@@ -1129,47 +1129,47 @@
 			<div id="v2ray_basic_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#v2ray_basic_pannel').forms([
-					{ title: 'ä»£ç†æ¨¡å¼', name:'v2ray_acl_default_mode',type:'select', options:option_acl_mode, value:dbus.v2ray_acl_default_mode },
-					{ title: 'V2rayæœåŠ¡å™¨ç±»å‹', name:'v2ray_basic_type',type:'select',options:[['1', 'è‡ªå»º'], ['2', 'è®¢é˜…']], value: dbus.v2ray_basic_type || '1'},
-					{ title: 'V2rayæœåŠ¡å™¨é€‰æ‹©', name:'v2ray_basic_server',type:'select',options:option_server_list},
-					{ title: 'V2rayè¿›é˜¶è®¾ç½®', multi: [
-						{ name:'v2ray_basic_sbmode',type:'checkbox',value: dbus.v2ray_basic_sbmode == 1,suffix: '&nbsp;&nbsp;å¯ç”¨é…ç½®æ–‡ä»¶routingé¡¹'},
-						{ name:'v2ray_basic_sniffing',type:'checkbox',value: dbus.v2ray_basic_sniffing == 1,suffix: '&nbsp;&nbsp;å¯ç”¨sniffingæµé‡æ¢æµ‹'}
-					], help: 'æœ¬é¡¹ä¸äº†è§£éƒ½ä¸è¦å¼€å¯' },	
-					{ title: 'V2rayæœåŠ¡ç«¯å£', multi: [
-						{ name:'v2ray_basic_socks',type:'checkbox',value: dbus.v2ray_basic_socks == 1,suffix: '&nbsp;&nbsp;å¼€å¯socks5ä»£ç†ï¼ˆç«¯å£1281ï¼‰'},
-						{ name:'v2ray_basic_http',type:'checkbox',value: dbus.v2ray_basic_http == 1,suffix: '&nbsp;&nbsp;å¼€å¯httpä»£ç†ï¼ˆç«¯å£1282ï¼‰'},
-						{ name:'v2ray_basic_ss',type:'checkbox',value: dbus.v2ray_basic_ss == 1,suffix: '&nbsp;&nbsp;å¼€å¯ssä»£ç†ï¼ˆç«¯å£1283ï¼‰'},
-						{ name:'v2ray_basic_forward',type:'checkbox',value: dbus.v2ray_basic_forward == 1,suffix: '&nbsp;&nbsp;å…è®¸è¿œç¨‹è¿æ¥'}
-					], help: 'å¼€å¯ä¸€äº›æœåŠ¡ç«¯å£ç»™å…¶å®ƒå®¢æˆ·ç«¯æœ¬åœ°æˆ–è¿œç¨‹è¿æ¥'},	
-					{ title: 'V2rayæœåŠ¡éªŒè¯æ–¹å¼', name:'v2ray_service_auth',type:'select', options:option_auth ,value: dbus.v2ray_service_auth || '1', help: 'é…ç½®æ˜¯å¦å¯ç”¨éªŒè¯'},	
-					{ title: 'V2rayæœåŠ¡éªŒè¯ä¿¡æ¯', multi: [
-						{ suffix: '&nbsp;&nbsp;ç”¨æˆ·å&nbsp;'},
-						{ name:'v2ray_service_username',type:'text',value: dbus.v2ray_service_username || 'koolshare' ,suffix: '&nbsp;&nbsp;å¯†ç &nbsp;'},
+					{ title: '´úÀíÄ£Ê½', name:'v2ray_acl_default_mode',type:'select', options:option_acl_mode, value:dbus.v2ray_acl_default_mode },
+					{ title: 'V2ray·şÎñÆ÷ÀàĞÍ', name:'v2ray_basic_type',type:'select',options:[['1', '×Ô½¨'], ['2', '¶©ÔÄ']], value: dbus.v2ray_basic_type || '1'},
+					{ title: 'V2ray·şÎñÆ÷Ñ¡Ôñ', name:'v2ray_basic_server',type:'select',options:option_server_list},
+					{ title: 'V2ray½ø½×ÉèÖÃ', multi: [
+						{ name:'v2ray_basic_sbmode',type:'checkbox',value: dbus.v2ray_basic_sbmode == 1,suffix: '&nbsp;&nbsp;ÆôÓÃÅäÖÃÎÄ¼şroutingÏî'},
+						{ name:'v2ray_basic_sniffing',type:'checkbox',value: dbus.v2ray_basic_sniffing == 1,suffix: '&nbsp;&nbsp;ÆôÓÃsniffingÁ÷Á¿Ì½²â'}
+					], help: '±¾Ïî²»ÁË½â¶¼²»Òª¿ªÆô' },	
+					{ title: 'V2ray·şÎñ¶Ë¿Ú', multi: [
+						{ name:'v2ray_basic_socks',type:'checkbox',value: dbus.v2ray_basic_socks == 1,suffix: '&nbsp;&nbsp;¿ªÆôsocks5´úÀí£¨¶Ë¿Ú1281£©'},
+						{ name:'v2ray_basic_http',type:'checkbox',value: dbus.v2ray_basic_http == 1,suffix: '&nbsp;&nbsp;¿ªÆôhttp´úÀí£¨¶Ë¿Ú1282£©'},
+						{ name:'v2ray_basic_ss',type:'checkbox',value: dbus.v2ray_basic_ss == 1,suffix: '&nbsp;&nbsp;¿ªÆôss´úÀí£¨¶Ë¿Ú1283£©'},
+						{ name:'v2ray_basic_forward',type:'checkbox',value: dbus.v2ray_basic_forward == 1,suffix: '&nbsp;&nbsp;ÔÊĞíÔ¶³ÌÁ¬½Ó'}
+					], help: '¿ªÆôÒ»Ğ©·şÎñ¶Ë¿Ú¸øÆäËü¿Í»§¶Ë±¾µØ»òÔ¶³ÌÁ¬½Ó'},	
+					{ title: 'V2ray·şÎñÑéÖ¤·½Ê½', name:'v2ray_service_auth',type:'select', options:option_auth ,value: dbus.v2ray_service_auth || '1', help: 'ÅäÖÃÊÇ·ñÆôÓÃÑéÖ¤'},	
+					{ title: 'V2ray·şÎñÑéÖ¤ĞÅÏ¢', multi: [
+						{ suffix: '&nbsp;&nbsp;ÓÃ»§Ãû&nbsp;'},
+						{ name:'v2ray_service_username',type:'text',value: dbus.v2ray_service_username || 'koolshare' ,suffix: '&nbsp;&nbsp;ÃÜÂë&nbsp;'},
 						{ name:'v2ray_service_passwd',type:'password',value: dbus.v2ray_service_passwd || 'koolshare', peekaboo: 1}
-					], help: 'è®¾ç½®ç”¨æˆ·åå¯†ç '},	
-					{ title: 'V2ray SSæœåŠ¡é…ç½®', multi: [
-						{ suffix: '&nbsp;&nbsp;åŠ å¯†æ–¹å¼'},
-						{ name:'v2ray_service_ssmethod',type:'select', options:option_ss_method,value: dbus.v2ray_service_ssmethod || 'chacha20',suffix: '&nbsp;&nbsp;å¯†ç '},
+					], help: 'ÉèÖÃÓÃ»§ÃûÃÜÂë'},	
+					{ title: 'V2ray SS·şÎñÅäÖÃ', multi: [
+						{ suffix: '&nbsp;&nbsp;¼ÓÃÜ·½Ê½'},
+						{ name:'v2ray_service_ssmethod',type:'select', options:option_ss_method,value: dbus.v2ray_service_ssmethod || 'chacha20',suffix: '&nbsp;&nbsp;ÃÜÂë'},
 						{ name:'v2ray_service_sspasswd',type:'password',value: dbus.v2ray_service_sspasswd || 'koolshare', peekaboo: 1 }
-					], help: 'è®¾ç½®socks5ä»£ç†æˆ–httpä»£ç†è¿æ¥çš„ç”¨æˆ·åå’Œå¯†ç '},	
-					{ title: 'æ–°å¢V2rayé…ç½®æ ‡ç­¾', name:'v2ray_basic_tag',type:'text'},
-					//{ title: '<b>v2rayé…ç½®æ–‡ä»¶</b></br></br><font color="#B2B2B2"># æ­¤å¤„å¡«å…¥v2ray json<br /># è¯·ä¿è¯jsonå†…outboundçš„é…ç½®æ­£ç¡®ï¼</font>', name:'v2ray_basic_config',type:'textarea', value: do_js_beautify(Base64.decode(dbus.v2ray_basic_config))||"", style: 'width: 100%; height:450px;' },
-					{ title: '<b>v2rayé…ç½®æ–‡ä»¶</b></br></br><font color="#B2B2B2"># æ­¤å¤„å¡«å…¥v2ray json<br /># è¯·ä¿è¯jsonå†…outboundçš„é…ç½®æ­£ç¡®ï¼</font>', name:'v2ray_basic_config',type:'textarea', style: 'width: 100%; height:450px;' },
+					], help: 'ÉèÖÃsocks5´úÀí»òhttp´úÀíÁ¬½ÓµÄÓÃ»§ÃûºÍÃÜÂë'},	
+					{ title: 'ĞÂÔöV2rayÅäÖÃ±êÇ©', name:'v2ray_basic_tag',type:'text'},
+					//{ title: '<b>v2rayÅäÖÃÎÄ¼ş</b></br></br><font color="#B2B2B2"># ´Ë´¦ÌîÈëv2ray json<br /># Çë±£Ö¤jsonÄÚoutboundµÄÅäÖÃÕıÈ·£¡</font>', name:'v2ray_basic_config',type:'textarea', value: do_js_beautify(Base64.decode(dbus.v2ray_basic_config))||"", style: 'width: 100%; height:450px;' },
+					{ title: '<b>v2rayÅäÖÃÎÄ¼ş</b></br></br><font color="#B2B2B2"># ´Ë´¦ÌîÈëv2ray json<br /># Çë±£Ö¤jsonÄÚoutboundµÄÅäÖÃÕıÈ·£¡</font>', name:'v2ray_basic_config',type:'textarea', style: 'width: 100%; height:450px;' },
 				]);
 				join_node();
 			</script>
 		</div>
 	</div>
-	<!-- ------------------ æœåŠ¡å™¨åˆ—è¡¨ --------------------- -->
+	<!-- ------------------ ·şÎñÆ÷ÁĞ±í --------------------- -->
 	<div class="box boxr8" id="v2ray_server_tab" style="margin-top: 0px;">
-	<div class="heading">è‡ªå»ºæœåŠ¡å™¨åˆ—è¡¨</div>
+	<div class="heading">×Ô½¨·şÎñÆ÷ÁĞ±í</div>
 		<div class="content">
 			<div class="tabContent">
 				<table class="line-table" cellspacing=1 id="v2ray_server_pannel"></table>
 			</div>
 			<br><hr>
-			<button type="button" value="Save" id="save-server-node" onclick="manipulate_conf('v2ray_config.sh', 9)" class="btn btn-primary">ä¿å­˜æœåŠ¡å™¨åˆ—è¡¨ <i class="icon-check"></i></button>
+			<button type="button" value="Save" id="save-server-node" onclick="manipulate_conf('v2ray_config.sh', 9)" class="btn btn-primary">±£´æ·şÎñÆ÷ÁĞ±í <i class="icon-check"></i></button>
 		</div>
 	</div>
 	<div class="box boxr8" id="v2ray_node_urladd" style="margin-top: 0px;">
@@ -1178,32 +1178,32 @@
 			<div id="v2ray_node_urladd_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#v2ray_node_urladd_pannel').forms([
-					{ title: 'é€šè¿‡vmessé“¾æ¥æ·»åŠ èŠ‚ç‚¹</br></br><font color="#B2B2B2"># å¯ä¸€æ¬¡æ·»åŠ å¤šä¸ªvmess://é“¾æ¥<br /># æ¯ä¸ªé“¾æ¥ä»¥ç©ºæ ¼åˆ†éš”</font>', name: 'v2ray_base64_links',type:'textarea', value: dbus.v2ray_base64_links, style: 'width: 100%; height:100px;' }
+					{ title: 'Í¨¹ıvmessÁ´½ÓÌí¼Ó½Úµã</br></br><font color="#B2B2B2"># ¿ÉÒ»´ÎÌí¼Ó¶à¸övmess://Á´½Ó<br /># Ã¿¸öÁ´½ÓÒÔ¿Õ¸ñ·Ö¸ô</font>', name: 'v2ray_base64_links',type:'textarea', value: dbus.v2ray_base64_links, style: 'width: 100%; height:100px;' }
 				]);
 			</script>
-			<button type="button" value="Save" id="update-addurl-node" onclick="node_sub('v2ray_sub.sh', 4)" class="btn btn-primary" style="float:right;margin-right:20px;">æ·»åŠ èŠ‚ç‚¹ <i class="icon-check"></i></button>
+			<button type="button" value="Save" id="update-addurl-node" onclick="node_sub('v2ray_sub.sh', 4)" class="btn btn-primary" style="float:right;margin-right:20px;">Ìí¼Ó½Úµã <i class="icon-check"></i></button>
 		</div>
 	</div>
 	<div class="box boxr8" id="v2ray_node_subscribe" style="margin-top: 0px;">
-		<div class="heading">èŠ‚ç‚¹è®¢é˜…</div>
+		<div class="heading">½Úµã¶©ÔÄ</div>
 		<div class="content">
 			<div id="v2ray_node_subscribe_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#v2ray_node_subscribe_pannel').forms([
-					{ title: 'è®¢é˜…é…ç½®', multi: [
-						{ suffix: ' å¼€å¯å®šæ—¶æ›´æ–°' },
+					{ title: '¶©ÔÄÅäÖÃ', multi: [
+						{ suffix: ' ¿ªÆô¶¨Ê±¸üĞÂ' },
 						{ name: 'v2ray_basic_node_update',type: 'checkbox',value: dbus.v2ray_basic_node_update == 1 ,suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_basic_node_update_day',type: 'select', options:option_day_time, value: dbus.v2ray_basic_node_update_day || '7' ,suffix: ' &nbsp;' },
-						{ name: 'v2ray_basic_node_update_hr',type: 'select', options:option_time_hour, value: dbus.v2ray_basic_node_update_hr || '3' ,suffix: ' &nbsp;&nbsp;é€šè¿‡V2rayä»£ç†æ›´æ–°èŠ‚ç‚¹ä¿¡æ¯' },
+						{ name: 'v2ray_basic_node_update_hr',type: 'select', options:option_time_hour, value: dbus.v2ray_basic_node_update_hr || '3' ,suffix: ' &nbsp;&nbsp;Í¨¹ıV2ray´úÀí¸üĞÂ½ÚµãĞÅÏ¢' },
 						{ name: 'v2ray_basic_suburl_socks',type: 'checkbox',value: dbus.v2ray_basic_suburl_socks == 1 },
-						{ suffix: '<button id="_remove_sub_node" onclick="node_sub(\'v2ray_sub.sh\', 2 ,\'è®¢é˜…èŠ‚ç‚¹\');" class="btn btn-success">åˆ é™¤è®¢é˜…èŠ‚ç‚¹ <i class="icon-cancel"></i></button>' },
-						{ suffix: '<button id="_remove_all_node" onclick="node_sub(\'v2ray_sub.sh\', 1 ,\'æ‰€æœ‰èŠ‚ç‚¹\');" class="btn btn-success">æ¸…ç©ºæ‰€æœ‰èŠ‚ç‚¹ <i class="icon-disable"></i></button>' },
+						{ suffix: '<button id="_remove_sub_node" onclick="node_sub(\'v2ray_sub.sh\', 2 ,\'¶©ÔÄ½Úµã\');" class="btn btn-success">É¾³ı¶©ÔÄ½Úµã <i class="icon-cancel"></i></button>' },
+						{ suffix: '<button id="_remove_all_node" onclick="node_sub(\'v2ray_sub.sh\', 1 ,\'ËùÓĞ½Úµã\');" class="btn btn-success">Çå¿ÕËùÓĞ½Úµã <i class="icon-disable"></i></button>' },
 					]},
-					{ title: 'è®¢é˜…åœ°å€', name: 'v2ray_basic_suburl',type:'text',size: 100, value: Base64.decode(dbus.v2ray_basic_suburl) }
+					{ title: '¶©ÔÄµØÖ·', name: 'v2ray_basic_suburl',type:'text',size: 100, value: Base64.decode(dbus.v2ray_basic_suburl) }
 				]);
 			</script>
-			<!--<button type="button" value="Save" id="dele-subscribe-node" onclick="delete_online_node()" class="btn" style="float:right;">åˆ é™¤è®¢é˜…èŠ‚ç‚¹ <i class="icon-cancel"></i></button>-->
-			<button type="button" value="Save" id="update-subscribe-node" onclick="node_sub('v2ray_sub.sh', 3)" class="btn btn-primary" style="float:right;margin-right:20px;">ä¿å­˜è®¾ç½®å¹¶æ›´æ–°è®¢é˜… <i class="icon-check"></i></button>
+			<!--<button type="button" value="Save" id="dele-subscribe-node" onclick="delete_online_node()" class="btn" style="float:right;">É¾³ı¶©ÔÄ½Úµã <i class="icon-cancel"></i></button>-->
+			<button type="button" value="Save" id="update-subscribe-node" onclick="node_sub('v2ray_sub.sh', 3)" class="btn btn-primary" style="float:right;margin-right:20px;">±£´æÉèÖÃ²¢¸üĞÂ¶©ÔÄ <i class="icon-check"></i></button>
 		</div>
 	</div>
 	<div class="box boxr2" id="v2ray_dns_tab" style="margin-top: 0px;">
@@ -1212,20 +1212,20 @@
 			<div id="v2ray_dns_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#v2ray_dns_pannel').forms([
-					{ title: 'DNSè§£æåå¥½', name:'v2ray_dns_plan',type:'select',options:[['1', 'å›½å†…ä¼˜å…ˆ'], ['2', 'å›½å¤–ä¼˜å…ˆ']], value: dbus.v2ray_dns_plan || "2", suffix: '<lable id="_v2ray_dns_plan_txt"></lable>'},
-					{ title: 'chromecastæ”¯æŒ (æ¥ç®¡å±€åŸŸç½‘DNSè§£æ)',  name:'v2ray_basic_dns_chromecast',type:'checkbox', value: dbus.v2ray_basic_dns_chromecast != 0, suffix: '<lable>æ­¤å¤„å¼ºçƒˆå»ºè®®å¼€å¯ï¼</lable>' },
-					{ title: 'é€‰æ‹©å›½å†…DNS', multi: [
+					{ title: 'DNS½âÎöÆ«ºÃ', name:'v2ray_dns_plan',type:'select',options:[['1', '¹úÄÚÓÅÏÈ'], ['2', '¹úÍâÓÅÏÈ']], value: dbus.v2ray_dns_plan || "2", suffix: '<lable id="_v2ray_dns_plan_txt"></lable>'},
+					{ title: 'chromecastÖ§³Ö (½Ó¹Ü¾ÖÓòÍøDNS½âÎö)',  name:'v2ray_basic_dns_chromecast',type:'checkbox', value: dbus.v2ray_basic_dns_chromecast != 0, suffix: '<lable>´Ë´¦Ç¿ÁÒ½¨Òé¿ªÆô£¡</lable>' },
+					{ title: 'Ñ¡Ôñ¹úÄÚDNS', multi: [
 						{ name: 'v2ray_dns_china',type:'select', options:option_dns_china, value: dbus.v2ray_dns_china || "1", suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_dns_china_user', type: 'text', value: dbus.v2ray_dns_china_user }
 					]},
 					// dns foreign pcap
-					{ title: 'é€‰æ‹©å›½å¤–DNS', multi: [
+					{ title: 'Ñ¡Ôñ¹úÍâDNS', multi: [
 						{ name: 'v2ray_dns_foreign_select',type: 'select', options:option_dns_foreign, value: dbus.v2ray_dns_dns_foreign || "1", suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_dns_foreign',type: 'select', options:option_v2ray_dns_foreign, value: dbus.v2ray_dns_foreign || "2", suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_dns_foreign_user', type: 'text', value: dbus.v2ray_dns_foreign_user || "8.8.8.8:53" },
-						{ suffix: '<lable>é»˜è®¤ä½¿ç”¨ v2ray å†…ç½®çš„DNSåŠŸèƒ½è§£æå›½å¤–åŸŸåã€‚</lable>' }
+						{ suffix: '<lable>Ä¬ÈÏÊ¹ÓÃ v2ray ÄÚÖÃµÄDNS¹¦ÄÜ½âÎö¹úÍâÓòÃû¡£</lable>' }
 					]},
-					{ title: '<b>è‡ªå®šä¹‰dnsmasq</b></br></br><font color="#B2B2B2">ä¸€è¡Œä¸€ä¸ªï¼Œé”™è¯¯çš„æ ¼å¼ä¼šå¯¼è‡´dnsmasqä¸èƒ½å¯åŠ¨ï¼Œæ ¼å¼ï¼š</br>address=/koolshare.cn/2.2.2.2</br>bogus-nxdomain=220.250.64.18</br>conf-file=/koolshare/mydnsmasq.conf</font>', name: 'v2ray_dnsmasq', type: 'textarea', value: Base64.decode(dbus.v2ray_dnsmasq)||"", style: 'width: 100%; height:150px;' }
+					{ title: '<b>×Ô¶¨Òådnsmasq</b></br></br><font color="#B2B2B2">Ò»ĞĞÒ»¸ö£¬´íÎóµÄ¸ñÊ½»áµ¼ÖÂdnsmasq²»ÄÜÆô¶¯£¬¸ñÊ½£º</br>address=/koolshare.cn/2.2.2.2</br>bogus-nxdomain=220.250.64.18</br>conf-file=/koolshare/mydnsmasq.conf</font>', name: 'v2ray_dnsmasq', type: 'textarea', value: Base64.decode(dbus.v2ray_dnsmasq)||"", style: 'width: 100%; height:150px;' }
 				]);
 			</script>
 		</div>
@@ -1236,10 +1236,10 @@
 			<div id="v2ray_wblist_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#v2ray_wblist_pannel').forms([
-					{ title: '<b>IP/CIDRç™½åå•</b></br></br><font color="#B2B2B2">ä¸éœ€è¦åŠ é€Ÿçš„å¤–ç½‘ip/cidråœ°å€ï¼Œä¸€è¡Œä¸€ä¸ªï¼Œä¾‹å¦‚ï¼š</br>2.2.2.2</br>3.3.0.0/16</font>', name: 'v2ray_wan_white_ip', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_white_ip)||"", style: 'width: 100%; height:150px;' },
-					{ title: '<b>åŸŸåç™½åå•</b></br></br><font color="#B2B2B2">ä¸éœ€è¦åŠ é€Ÿçš„åŸŸåï¼Œä¾‹å¦‚ï¼š</br>google.com</br>facebook.com</font>', name: 'v2ray_wan_white_domain', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_white_domain)||"", style: 'width: 100%; height:150px;' },
-					{ title: '<b>IP/CIDRé»‘åå•</b></br></br><font color="#B2B2B2">éœ€è¦åŠ é€Ÿçš„å¤–ç½‘ip/cidråœ°å€ï¼Œä¸€è¡Œä¸€ä¸ªï¼Œä¾‹å¦‚ï¼š</br>4.4.4.4</br>5.0.0.0/8</font>', name: 'v2ray_wan_black_ip', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_black_ip)||"", style: 'width: 100%; height:150px;' },
-					{ title: '<b>åŸŸåé»‘åå•</b></br></br><font color="#B2B2B2">éœ€è¦åŠ é€Ÿçš„åŸŸå,ä¾‹å¦‚ï¼š</br>baidu.com</br>koolshare.cn</font>', name: 'v2ray_wan_black_domain', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_black_domain)||"", style: 'width: 100%; height:150px;' }
+					{ title: '<b>IP/CIDR°×Ãûµ¥</b></br></br><font color="#B2B2B2">²»ĞèÒª¼ÓËÙµÄÍâÍøip/cidrµØÖ·£¬Ò»ĞĞÒ»¸ö£¬ÀıÈç£º</br>2.2.2.2</br>3.3.0.0/16</font>', name: 'v2ray_wan_white_ip', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_white_ip)||"", style: 'width: 100%; height:150px;' },
+					{ title: '<b>ÓòÃû°×Ãûµ¥</b></br></br><font color="#B2B2B2">²»ĞèÒª¼ÓËÙµÄÓòÃû£¬ÀıÈç£º</br>google.com</br>facebook.com</font>', name: 'v2ray_wan_white_domain', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_white_domain)||"", style: 'width: 100%; height:150px;' },
+					{ title: '<b>IP/CIDRºÚÃûµ¥</b></br></br><font color="#B2B2B2">ĞèÒª¼ÓËÙµÄÍâÍøip/cidrµØÖ·£¬Ò»ĞĞÒ»¸ö£¬ÀıÈç£º</br>4.4.4.4</br>5.0.0.0/8</font>', name: 'v2ray_wan_black_ip', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_black_ip)||"", style: 'width: 100%; height:150px;' },
+					{ title: '<b>ÓòÃûºÚÃûµ¥</b></br></br><font color="#B2B2B2">ĞèÒª¼ÓËÙµÄÓòÃû,ÀıÈç£º</br>baidu.com</br>koolshare.cn</font>', name: 'v2ray_wan_black_domain', type: 'textarea', value: Base64.decode(dbus.v2ray_wan_black_domain)||"", style: 'width: 100%; height:150px;' }
 				]);
 			</script>
 		</div>
@@ -1252,62 +1252,62 @@
 			<br><hr>
 		</div>
 	</div>
-	<!-- ------------------ è§„åˆ™ç®¡ç† --------------------- -->
+	<!-- ------------------ ¹æÔò¹ÜÀí --------------------- -->
 	<div class="box boxr7" id="ss_rule_tab" style="margin-top: 0px;">
 		<div class="heading"></div>
 		<div class="content" style="margin-top: -20px;">
 			<div id="ss_rule_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#ss_rule_pannel').forms([
-					{ title: 'gfwliståŸŸåæ•°é‡', rid:'gfw_number_1', text:'<a id="gfw_number" href="https://raw.githubusercontent.com/hq450/fancyss/master/rules/gfwlist.conf" target="_blank"></a>'},
-					{ title: 'å¤§é™†ç™½åå•IPæ®µæ•°é‡', rid:'chn_number_1', text:'<a id="chn_number" href="https://raw.githubusercontent.com/hq450/fancyss/master/rules/chnroute.txt" target="_blank"></a>'},
-					{ title: 'å›½å†…åŸŸåæ•°é‡ï¼ˆcdnåå•ï¼‰', rid:'cdn_number_1', text:'<a id="cdn_number" href="https://raw.githubusercontent.com/hq450/fancyss/master/rules/cdn.txt" target="_blank"></a>'},
-					{ title: 'è§„åˆ™è‡ªåŠ¨æ›´æ–°', multi: [
-						{ name: 'v2ray_basic_rule_update',type: 'select', options:[['0', 'ç¦ç”¨'], ['1', 'å¼€å¯']], value: dbus.v2ray_basic_rule_update || "1", suffix: ' &nbsp;&nbsp;' },
+					{ title: 'gfwlistÓòÃûÊıÁ¿', rid:'gfw_number_1', text:'<a id="gfw_number" href="https://raw.githubusercontent.com/hq450/fancyss/master/rules/gfwlist.conf" target="_blank"></a>'},
+					{ title: '´óÂ½°×Ãûµ¥IP¶ÎÊıÁ¿', rid:'chn_number_1', text:'<a id="chn_number" href="https://raw.githubusercontent.com/hq450/fancyss/master/rules/chnroute.txt" target="_blank"></a>'},
+					{ title: '¹úÄÚÓòÃûÊıÁ¿£¨cdnÃûµ¥£©', rid:'cdn_number_1', text:'<a id="cdn_number" href="https://raw.githubusercontent.com/hq450/fancyss/master/rules/cdn.txt" target="_blank"></a>'},
+					{ title: '¹æÔò×Ô¶¯¸üĞÂ', multi: [
+						{ name: 'v2ray_basic_rule_update',type: 'select', options:[['0', '½ûÓÃ'], ['1', '¿ªÆô']], value: dbus.v2ray_basic_rule_update || "1", suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_basic_rule_update_day', type: 'select', options:option_day_time, value: dbus.v2ray_basic_rule_update_day || "7",suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_basic_rule_update_hr', type: 'select', options:option_time_hour, value: dbus.v2ray_basic_rule_update_hr || "3",suffix: ' &nbsp;&nbsp;' },
 						{ name: 'v2ray_basic_gfwlist_update',type:'checkbox',value: dbus.v2ray_basic_gfwlist_update != 0, suffix: '<lable id="_v2ray_basic_gfwlist_update_txt">gfwlist</lable>&nbsp;&nbsp;' },
 						{ name: 'v2ray_basic_chnroute_update',type:'checkbox',value: dbus.v2ray_basic_chnroute_update != 0, suffix: '<lable id="_v2ray_basic_chnroute_update_txt">chnroute</lable>&nbsp;&nbsp;' },
 						{ name: 'v2ray_basic_cdn_update',type:'checkbox',value: dbus.v2ray_basic_cdn_update != 0, suffix: '<lable id="_v2ray_basic_cdn_update_txt">cdn_list</lable>&nbsp;&nbsp;' },
-						{ suffix: '<button id="_update_rules_now" onclick="manipulate_conf(\'v2ray_config.sh\', 6);" class="btn btn-success">æ‰‹åŠ¨æ›´æ–° <i class="icon-cloud"></i></button>' }
+						{ suffix: '<button id="_update_rules_now" onclick="manipulate_conf(\'v2ray_config.sh\', 6);" class="btn btn-success">ÊÖ¶¯¸üĞÂ <i class="icon-cloud"></i></button>' }
 					]}
 				]);
-				$('#gfw_number').html(dbus.v2ray_basic_gfw_status || "æœªåˆå§‹åŒ–");
-				$('#chn_number').html(dbus.v2ray_basic_chn_status || "æœªåˆå§‹åŒ–");
-				$('#cdn_number').html(dbus.v2ray_basic_cdn_status || "æœªåˆå§‹åŒ–");
+				$('#gfw_number').html(dbus.v2ray_basic_gfw_status || "Î´³õÊ¼»¯");
+				$('#chn_number').html(dbus.v2ray_basic_chn_status || "Î´³õÊ¼»¯");
+				$('#cdn_number').html(dbus.v2ray_basic_cdn_status || "Î´³õÊ¼»¯");
 			</script>
 		</div>
 	</div>
-	<button type="button" value="Save" id="save-subscribe-node" onclick="manipulate_conf('v2ray_config.sh', 7)" class="btn btn-primary boxr7">ä¿å­˜æœ¬é¡µè®¾ç½® <i class="icon-check"></i></button>
+	<button type="button" value="Save" id="save-subscribe-node" onclick="manipulate_conf('v2ray_config.sh', 7)" class="btn btn-primary boxr7">±£´æ±¾Ò³ÉèÖÃ <i class="icon-check"></i></button>
 	<div class="box boxr5" id="v2ray_addon_tab" style="margin-top: 0px;">
 		<div class="heading"></div>
 		<div class="content" style="margin-top: -20px;">
 			<div id="v2ray_addon_pannel" class="section"></div>
 			<script type="text/javascript">
 				$('#v2ray_addon_pannel').forms([
-					{ title: 'V2Ray è‡ªåŠ¨å®ˆæŠ¤', multi: [
-						{ name: 'v2ray_basic_watchdog',type: 'select', options:[['0', 'ç¦ç”¨'], ['1', 'å¼€å¯']], value: dbus.v2ray_basic_watchdog || "1", suffix: ' &nbsp;&nbsp;æ£€æµ‹é—´éš”ï¼š' },
-						{ name: 'v2ray_basic_watchdog_time', type: 'select', options:option_time_watch, value: dbus.v2ray_basic_watchdog_time || "1",suffix: ' &nbsp;&nbsp;æ‰çº¿é‡è¿æ–¹æ¡ˆï¼š' },
+					{ title: 'V2Ray ×Ô¶¯ÊØ»¤', multi: [
+						{ name: 'v2ray_basic_watchdog',type: 'select', options:[['0', '½ûÓÃ'], ['1', '¿ªÆô']], value: dbus.v2ray_basic_watchdog || "1", suffix: ' &nbsp;&nbsp;¼ì²â¼ä¸ô£º' },
+						{ name: 'v2ray_basic_watchdog_time', type: 'select', options:option_time_watch, value: dbus.v2ray_basic_watchdog_time || "1",suffix: ' &nbsp;&nbsp;µôÏßÖØÁ¬·½°¸£º' },
 						{ name: 'v2ray_basic_watchdog_mod', type: 'select', options:option_time_mod, value: dbus.v2ray_basic_watchdog_mod || "1",suffix: ' &nbsp;&nbsp;' },
 					]},
-					{ title: 'å®šæ—¶è‡ªåŠ¨å¼€å…³', name:'v2ray_basic_cron',type:'checkbox',  value: dbus.v2ray_basic_cron == 1 },
-					{ title: 'å®šæ—¶å¼€å¯', multi: [
-						{ name: 'v2ray_basic_cron_enablehour',type: 'select', options:option_time_hour, value: dbus.v2ray_basic_cron_enablehour || '8' ,suffix: ' æ—¶' },
-						{ name: 'v2ray_basic_cron_enableminute',type: 'select', options:option_time_minute, value: dbus.v2ray_basic_cron_enableminute || '0' ,suffix: ' åˆ†' },
+					{ title: '¶¨Ê±×Ô¶¯¿ª¹Ø', name:'v2ray_basic_cron',type:'checkbox',  value: dbus.v2ray_basic_cron == 1 },
+					{ title: '¶¨Ê±¿ªÆô', multi: [
+						{ name: 'v2ray_basic_cron_enablehour',type: 'select', options:option_time_hour, value: dbus.v2ray_basic_cron_enablehour || '8' ,suffix: ' Ê±' },
+						{ name: 'v2ray_basic_cron_enableminute',type: 'select', options:option_time_minute, value: dbus.v2ray_basic_cron_enableminute || '0' ,suffix: ' ·Ö' },
 					]},
-					{ title: 'å®šæ—¶å…³é—­', multi: [
-						{ name: 'v2ray_basic_cron_disablehour',type: 'select', options:option_time_hour, value: dbus.v2ray_basic_cron_disablehour || '2' ,suffix: ' æ—¶' },
-						{ name: 'v2ray_basic_cron_disableminute',type: 'select', options:option_time_minute, value: dbus.v2ray_basic_cron_disableminute || '30' ,suffix: ' åˆ†' },
+					{ title: '¶¨Ê±¹Ø±Õ', multi: [
+						{ name: 'v2ray_basic_cron_disablehour',type: 'select', options:option_time_hour, value: dbus.v2ray_basic_cron_disablehour || '2' ,suffix: ' Ê±' },
+						{ name: 'v2ray_basic_cron_disableminute',type: 'select', options:option_time_minute, value: dbus.v2ray_basic_cron_disableminute || '30' ,suffix: ' ·Ö' },
 					]},
-					{ title: 'V2Ray æ•°æ®æ“ä½œ', suffix: '<button onclick="manipulate_conf(\'v2ray_config.sh\', 2);" class="btn btn-success">æ¸…é™¤æ‰€æœ‰ v2ray æ•°æ®</button>&nbsp;&nbsp;&nbsp;&nbsp;<button onclick="manipulate_conf(\'v2ray_config.sh\', 3);" class="btn btn-download">å¤‡ä»½æ‰€æœ‰ v2ray æ•°æ®</button>' },
-					{ title: 'V2Ray æ•°æ®æ¢å¤', suffix: '<input type="file" id="file" size="50">&nbsp;&nbsp;<button id="upload1" type="button"  onclick="restore_conf();" class="btn btn-danger">ä¸Šä¼ å¹¶æ¢å¤ <i class="icon-cloud"></i></button>' },
-					{ title: 'V2Ray å½“å‰ç‰ˆæœ¬', suffix: '<a id="v2ray_version" href="https://github.com/v2fly/v2ray-core/releases" target="_blank"></a>'},
-					{ title: 'V2Ray ç‰ˆæœ¬å‡çº§', multi: [
-						{ name:'v2ray_basic_check_releases',type:'select', options:[['0', 'å‡çº§åˆ°æœ€æ–°ç‰ˆï¼ˆåŒ…æ‹¬æµ‹è¯•ç‰ˆï¼‰'], ['1', 'ä»…å‡çº§åˆ°æ­£å¼ç‰ˆ']], value: dbus.v2ray_basic_check_releases || "1" ,suffix: '  &nbsp;&nbsp;'},
-						{ suffix: '<button onclick="manipulate_conf(\'v2ray_config.sh\', 5);" class="btn btn-download">ä¸€é”®å‡çº§v2ray ç‰ˆæœ¬</button>' }
+					{ title: 'V2Ray Êı¾İ²Ù×÷', suffix: '<button onclick="manipulate_conf(\'v2ray_config.sh\', 2);" class="btn btn-success">Çå³ıËùÓĞ v2ray Êı¾İ</button>&nbsp;&nbsp;&nbsp;&nbsp;<button onclick="manipulate_conf(\'v2ray_config.sh\', 3);" class="btn btn-download">±¸·İËùÓĞ v2ray Êı¾İ</button>' },
+					{ title: 'V2Ray Êı¾İ»Ö¸´', suffix: '<input type="file" id="file" size="50">&nbsp;&nbsp;<button id="upload1" type="button"  onclick="restore_conf();" class="btn btn-danger">ÉÏ´«²¢»Ö¸´ <i class="icon-cloud"></i></button>' },
+					{ title: 'V2Ray µ±Ç°°æ±¾', suffix: '<a id="v2ray_version" href="https://github.com/v2fly/v2ray-core/releases" target="_blank"></a>'},
+					{ title: 'V2Ray °æ±¾Éı¼¶', multi: [
+						{ name:'v2ray_basic_check_releases',type:'select', options:[['0', 'Éı¼¶µ½×îĞÂ°æ£¨°üÀ¨²âÊÔ°æ£©'], ['1', '½öÉı¼¶µ½ÕıÊ½°æ']], value: dbus.v2ray_basic_check_releases || "1" ,suffix: '  &nbsp;&nbsp;'},
+						{ suffix: '<button onclick="manipulate_conf(\'v2ray_config.sh\', 5);" class="btn btn-download">Ò»¼üÉı¼¶v2ray °æ±¾</button>' }
 					]}
 				]);
-				$('#v2ray_version').html(dbus.v2ray_basic_version || "æœªåˆå§‹åŒ–");
+				$('#v2ray_version').html(dbus.v2ray_basic_version || "Î´³õÊ¼»¯");
 			</script>
 		</div>
 	</div>
@@ -1325,6 +1325,6 @@
 	<div id="msg_warring" class="alert alert-warning icon" style="display:none;"></div>
 	<div id="msg_success" class="alert alert-success icon" style="display:none;"></div>
 	<div id="msg_error" class="alert alert-error icon" style="display:none;"></div>
-	<button type="button" value="Save" id="save-button" onclick="save()" class="btn btn-primary">æäº¤ <i class="icon-check"></i></button>
+	<button type="button" value="Save" id="save-button" onclick="save()" class="btn btn-primary">Ìá½» <i class="icon-check"></i></button>
 	<script type="text/javascript">init_v2ray();</script>
 </content>

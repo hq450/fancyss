@@ -21,24 +21,24 @@ chmod +x $KSROOT/bin/v2ray
 chmod +x $KSROOT/bin/v2ctl
 
 if [ -n "$v2ray_basic_config" ]; then
-	dbus set v2ray_server_tag_1="èŠ‚ç‚¹1"
-	dbus set v2ray_server_config_1="$v2ray_basic_config"
-	dbus set v2ray_basic_server=1
-	dbus set v2ray_basic_type=1
-	dbus set v2ray_server_node_max=1
-	dbus set v2ray_sub_node_max=0
-	dbus remove v2ray_basic_config
+    dbus set v2ray_server_tag_1="½Úµã1"
+    dbus set v2ray_server_config_1="$v2ray_basic_config"
+    dbus set v2ray_basic_server=1
+    dbus set v2ray_basic_type=1
+    dbus set v2ray_server_node_max=1
+    dbus set v2ray_sub_node_max=0
+    dbus remove v2ray_basic_config
 fi
 
 [ -z "$v2ray_server_tag_1" ] && dbus set v2ray_server_node_max=0
 [ -z "$v2ray_sub_tag_1" ] && dbus set v2ray_sub_node_max=0
 
-dbus set softcenter_module_v2ray_description=æ¨¡å—åŒ–çš„ä»£ç†è½¯ä»¶åŒ…
+dbus set softcenter_module_v2ray_description=Ä£¿é»¯µÄ´úÀíÈí¼ş°ü
 dbus set softcenter_module_v2ray_install=4
 dbus set softcenter_module_v2ray_name=v2ray
 dbus set softcenter_module_v2ray_title="V2Ray"
-dbus set softcenter_module_v2ray_version=2020.11.13
-dbus set v2ray_version=2020.11.13
+dbus set softcenter_module_v2ray_version=2020.11.18
+dbus set v2ray_version=4.33
 
 sleep 1
 rm -rf $KSROOT/v2ray/gfw.txt

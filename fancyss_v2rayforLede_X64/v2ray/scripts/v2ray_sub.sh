@@ -4,7 +4,7 @@
 
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
-alias echo_date='echo ã€$(TZ=UTC-8 date -R +%Yå¹´%mæœˆ%dæ—¥\ %X)ã€‘:'
+alias echo_date='echo ¡¾$(TZ=UTC-8 date -R +%YÄê%mÔÂ%dÈÕ\ %X)¡¿:'
 eval `dbus export v2ray`
 LOCK_FILE=/var/lock/v2ray_sub.lock
 LOG_FILE=/tmp/upload/v2ray_log.txt
@@ -12,7 +12,7 @@ LOG_FILE=/tmp/upload/v2ray_log.txt
 set_lock(){
 	exec 233>"$LOCK_FILE"
 	flock -n 233 || {
-		echo_date "è®¢é˜…è„šæœ¬å·²ç»åœ¨è¿è¡Œï¼Œè¯·ç¨å€™å†è¯•ï¼"
+		echo_date "¶©ÔÄ½Å±¾ÒÑ¾­ÔÚÔËĞĞ£¬ÇëÉÔºòÔÙÊÔ£¡"
 		exit 1
 	}
 }
@@ -229,46 +229,46 @@ add_v2ray_servers(){
 		dbus set "v2ray_sub_tag_$v2rayindex"="$v2ray_ps"
 		dbus set "v2ray_sub_config_$v2rayindex"=$(echo $v2ray_config|base64_encode)
 		dbus set v2ray_sub_node_max=$v2rayindex
-		echo_date V2ray é€šè¿‡è®¢é˜…ï¼šæ–°å¢åŠ  ã€$v2ray_psã€‘ åˆ°èŠ‚ç‚¹åˆ—è¡¨ç¬¬ $v2rayindex ä½ã€‚
+		echo_date V2ray Í¨¹ı¶©ÔÄ£ºĞÂÔö¼Ó ¡¾$v2ray_ps¡¿ µ½½ÚµãÁĞ±íµÚ $v2rayindex Î»¡£
 	else
 		dbus set "v2ray_server_tag_$v2rayindex"="$v2ray_ps"
 		dbus set "v2ray_server_config_$v2rayindex"=$(echo $v2ray_config|base64_encode)
 		dbus set v2ray_server_node_max=$v2rayindex
-		echo_date V2ray é€šè¿‡é“¾æ¥ï¼šæ–°å¢åŠ  ã€$v2ray_psã€‘ åˆ°èŠ‚ç‚¹åˆ—è¡¨ç¬¬ $v2rayindex ä½ã€‚
+		echo_date V2ray Í¨¹ıÁ´½Ó£ºĞÂÔö¼Ó ¡¾$v2ray_ps¡¿ µ½½ÚµãÁĞ±íµÚ $v2rayindex Î»¡£
 	fi
 }
 
 
 get_oneline_rule_now(){
-	# ssè®¢é˜…
+	# ss¶©ÔÄ
 	v2ray_subscribe_link="$1"
 	LINK_FORMAT=`echo "$v2ray_subscribe_link" | grep -E "^http://|^https://"`
 	[ -z "$LINK_FORMAT" ] && return 4
 	
-	echo_date "å¼€å§‹æ›´æ–°åœ¨çº¿è®¢é˜…åˆ—è¡¨..." 
-	echo_date "å¼€å§‹ä¸‹è½½è®¢é˜…é“¾æ¥åˆ°æœ¬åœ°ä¸´æ—¶æ–‡ä»¶ï¼Œè¯·ç¨ç­‰..."
+	echo_date "¿ªÊ¼¸üĞÂÔÚÏß¶©ÔÄÁĞ±í..." 
+	echo_date "¿ªÊ¼ÏÂÔØ¶©ÔÄÁ´½Óµ½±¾µØÁÙÊ±ÎÄ¼ş£¬ÇëÉÔµÈ..."
 	rm -rf /tmp/v2ray_subscribe_file* >/dev/null 2>&1
 	
 	if [ "$v2ray_basic_suburl_socks" == "1" ];then
 		socksopen=`netstat -nlp|grep -w 1280|grep -E "local|v2ray"`
 		if [ -n "$socksopen" ];then
-			echo_date "ä½¿ç”¨ V2ray æä¾›çš„socksä»£ç†ç½‘ç»œä¸‹è½½..."
+			echo_date "Ê¹ÓÃ V2ray Ìá¹©µÄsocks´úÀíÍøÂçÏÂÔØ..."
 			curl --connect-timeout 8 -s -L --socks5-hostname 127.0.0.1:1280 $v2ray_subscribe_link > /tmp/v2ray_subscribe_file.txt
 		else
-			echo_date "æ²¡æœ‰å¯ç”¨çš„socks5ä»£ç†ç«¯å£ï¼Œæ”¹ç”¨å¸¸è§„ç½‘ç»œä¸‹è½½..."
+			echo_date "Ã»ÓĞ¿ÉÓÃµÄsocks5´úÀí¶Ë¿Ú£¬¸ÄÓÃ³£¹æÍøÂçÏÂÔØ..."
 			curl --connect-timeout 8 -s -L $v2ray_subscribe_link > /tmp/v2ray_subscribe_file.txt
 		fi
 	else
-		echo_date "ä½¿ç”¨å¸¸è§„ç½‘ç»œä¸‹è½½..."
+		echo_date "Ê¹ÓÃ³£¹æÍøÂçÏÂÔØ..."
 		curl --connect-timeout 8 -s -L $v2ray_subscribe_link > /tmp/v2ray_subscribe_file.txt
 	fi
 
-	#è™½ç„¶ä¸º0ä½†æ˜¯è¿˜æ˜¯è¦æ£€æµ‹ä¸‹æ˜¯å¦ä¸‹è½½åˆ°æ­£ç¡®çš„å†…å®¹
+	#ËäÈ»Îª0µ«ÊÇ»¹ÊÇÒª¼ì²âÏÂÊÇ·ñÏÂÔØµ½ÕıÈ·µÄÄÚÈİ
 	if [ "$?" == "0" ];then
-		#è®¢é˜…åœ°å€æœ‰è·³è½¬
+		#¶©ÔÄµØÖ·ÓĞÌø×ª
 		blank=`cat /tmp/v2ray_subscribe_file.txt|grep -E " |Redirecting|301"`
 		if [ -n "$blank" ];then
-			echo_date è®¢é˜…é“¾æ¥å¯èƒ½æœ‰è·³è½¬ï¼Œå°è¯•æ›´æ¢wgetè¿›è¡Œä¸‹è½½...
+			echo_date ¶©ÔÄÁ´½Ó¿ÉÄÜÓĞÌø×ª£¬³¢ÊÔ¸ü»»wget½øĞĞÏÂÔØ...
 			rm /tmp/v2ray_subscribe_file.txt
 			if [ "`echo $v2ray_subscribe_link|grep ^https`" ];then
 				wget --no-check-certificate -qO /tmp/v2ray_subscribe_file.txt $v2ray_subscribe_link
@@ -276,12 +276,12 @@ get_oneline_rule_now(){
 				wget -qO /tmp/v2ray_subscribe_file.txt $v2ray_subscribe_link
 			fi
 		fi
-		#ä¸‹è½½ä¸ºç©º...
+		#ÏÂÔØÎª¿Õ...
 		if [ -z "`cat /tmp/v2ray_subscribe_file.txt`" ];then
-			echo_date ä¸‹è½½ä¸ºç©º...
+			echo_date ÏÂÔØÎª¿Õ...
 			return 3
 		fi
-		#äº§å“ä¿¡æ¯é”™è¯¯
+		#²úÆ·ĞÅÏ¢´íÎó
 		wrong1=`cat /tmp/v2ray_subscribe_file.txt|grep "{"`
 		wrong2=`cat /tmp/v2ray_subscribe_file.txt|grep "<"`
 		if [ -n "$wrong1" -o -n "$wrong2" ];then
@@ -292,26 +292,26 @@ get_oneline_rule_now(){
 	fi
 
 	if [ "$?" == "0" ];then
-		echo_date ä¸‹è½½è®¢é˜…æˆåŠŸ...
-		echo_date å¼€å§‹è§£æèŠ‚ç‚¹ä¿¡æ¯...
+		echo_date ÏÂÔØ¶©ÔÄ³É¹¦...
+		echo_date ¿ªÊ¼½âÎö½ÚµãĞÅÏ¢...
 		decode_url_link `cat /tmp/v2ray_subscribe_file.txt` > /tmp/v2ray_subscribe_file_temp1.txt
 		v2ray_group=`echo $v2ray_subscribe_link|awk -F'[/:]' '{print $4}'`
-		# æ£€æµ‹vmess
+		# ¼ì²âvmess
 		NODE_FORMAT1=`cat /tmp/v2ray_subscribe_file_temp1.txt | grep -E "^ss://"`
 		NODE_FORMAT2=`cat /tmp/v2ray_subscribe_file_temp1.txt | grep -E "^vmess://"`
 		if [ -n "$NODE_FORMAT2" ];then
-			# v2ray è®¢é˜…
+			# v2ray ¶©ÔÄ
 			
 			# detect format again
 			if [ -n "$NODE_FORMAT1" ];then
-				#vmess://é‡Œå¤¹æ‚ç€ss://
+				#vmess://Àï¼ĞÔÓ×Åss://
 				NODE_NU=`cat /tmp/v2ray_subscribe_file_temp1.txt | grep -Ec "vmess://|ss://|ssr://"`
-				echo_date æ£€æµ‹åˆ°vmesså’ŒssèŠ‚ç‚¹æ ¼å¼ï¼Œå…±è®¡$NODE_NUä¸ªèŠ‚ç‚¹...
+				echo_date ¼ì²âµ½vmessºÍss½Úµã¸ñÊ½£¬¹²¼Æ$NODE_NU¸ö½Úµã...
 				urllinks=$(decode_url_link `cat /tmp/v2ray_subscribe_file.txt` | sed 's/vmess:\/\///g')
 			else
-				#çº¯vmess://
+				#´¿vmess://
 				NODE_NU=`cat /tmp/v2ray_subscribe_file_temp1.txt | grep -Ec "vmess://"`
-				echo_date æ£€æµ‹åˆ°vmessèŠ‚ç‚¹æ ¼å¼ï¼Œå…±è®¡$NODE_NUä¸ªèŠ‚ç‚¹...
+				echo_date ¼ì²âµ½vmess½Úµã¸ñÊ½£¬¹²¼Æ$NODE_NU¸ö½Úµã...
 				urllinks=$(decode_url_link `cat /tmp/v2ray_subscribe_file.txt` | sed 's/vmess:\/\///g')
 			fi
 
@@ -322,17 +322,17 @@ get_oneline_rule_now(){
 				decode_link=$(echo $decode_link|jq -c .)
 				if [ -n "$decode_link" ];then
 					get_v2ray_remote_config "$decode_link"
-					[ "$?" == "0" ] && add_v2ray_servers || echo_date "æ£€æµ‹åˆ°ä¸€ä¸ªé”™è¯¯èŠ‚ç‚¹ï¼Œå·²ç»è·³è¿‡ï¼"
+					[ "$?" == "0" ] && add_v2ray_servers || echo_date "¼ì²âµ½Ò»¸ö´íÎó½Úµã£¬ÒÑ¾­Ìø¹ı£¡"
 				else
-					echo_date "è§£æå¤±è´¥ï¼ï¼ï¼"
+					echo_date "½âÎöÊ§°Ü£¡£¡£¡"
 				fi
 			done
 
 			ONLINE_GET=$(dbus list v2ray_sub_tag_|wc -l) || 0
-			echo_date "æœ¬æ¬¡æ›´æ–°è®¢é˜…æ¥æº ã€$v2ray_groupã€‘"
-			echo_date "ç°å…±æœ‰è®¢é˜…v2rayèŠ‚ç‚¹ï¼š$ONLINE_GET ä¸ªã€‚"
-			echo_date "åœ¨çº¿è®¢é˜…åˆ—è¡¨æ›´æ–°å®Œæˆ!"
-			echo_date "åœ¨çº¿è®¢é˜…åˆ—è¡¨ä¸ä¼šåœ¨è‡ªå»ºæœåŠ¡åˆ—è¡¨ä¸­æ˜¾ç¤ºï¼Œè¯·åœ¨ã€è´¦å·è®¾ç½®ã€‘-ã€æœåŠ¡å™¨ç±»å‹ã€‘é€‰æ‹©ã€è®¢é˜…ã€‘ä½¿ç”¨ï¼"
+			echo_date "±¾´Î¸üĞÂ¶©ÔÄÀ´Ô´ ¡¾$v2ray_group¡¿"
+			echo_date "ÏÖ¹²ÓĞ¶©ÔÄv2ray½Úµã£º$ONLINE_GET ¸ö¡£"
+			echo_date "ÔÚÏß¶©ÔÄÁĞ±í¸üĞÂÍê³É!"
+			echo_date "ÔÚÏß¶©ÔÄÁĞ±í²»»áÔÚ×Ô½¨·şÎñÁĞ±íÖĞÏÔÊ¾£¬ÇëÔÚ¡¾ÕËºÅÉèÖÃ¡¿-¡¾·şÎñÆ÷ÀàĞÍ¡¿Ñ¡Ôñ¡¾¶©ÔÄ¡¿Ê¹ÓÃ£¡"
 			set_cru
 		else
 			return 3
@@ -347,9 +347,9 @@ start_update(){
 	url=`dbus get v2ray_basic_suburl|base64_decode|awk '{print $1}'|sed -n "$z p"|sed '/^#/d'`
 	[ -z "$url" ] && continue
 	echo_date "==================================================================="
-	echo_date "                             V2ray æœåŠ¡å™¨è®¢é˜…ç¨‹åº"
+	echo_date "                             V2ray ·şÎñÆ÷¶©ÔÄ³ÌĞò"
 	echo_date "==================================================================="
-	echo_date "ä» $url è·å–è®¢é˜…..."
+	echo_date "´Ó $url »ñÈ¡¶©ÔÄ..."
 	addnum=0
 	updatenum=0
 	delnum=0
@@ -360,64 +360,64 @@ start_update(){
 		continue
 		;;
 	2)
-		echo_date "æ— æ³•è·å–äº§å“ä¿¡æ¯ï¼è¯·æ£€æŸ¥ä½ çš„æœåŠ¡å•†æ˜¯å¦æ›´æ¢äº†è®¢é˜…é“¾æ¥ï¼"
+		echo_date "ÎŞ·¨»ñÈ¡²úÆ·ĞÅÏ¢£¡Çë¼ì²éÄãµÄ·şÎñÉÌÊÇ·ñ¸ü»»ÁË¶©ÔÄÁ´½Ó£¡"
 		rm -rf /tmp/v2ray_subscribe_file.txt >/dev/null 2>&1 &
 		sleep 2
-		echo_date "é€€å‡ºè®¢é˜…ç¨‹åº..."
+		echo_date "ÍË³ö¶©ÔÄ³ÌĞò..."
 		exit
 		;;
 	3)
-		echo_date "è¯¥è®¢é˜…é“¾æ¥ä¸åŒ…å«ä»»ä½•èŠ‚ç‚¹ä¿¡æ¯ï¼è¯·æ£€æŸ¥ä½ çš„æœåŠ¡å•†æ˜¯å¦æ›´æ¢äº†è®¢é˜…é“¾æ¥ï¼"
+		echo_date "¸Ã¶©ÔÄÁ´½Ó²»°üº¬ÈÎºÎ½ÚµãĞÅÏ¢£¡Çë¼ì²éÄãµÄ·şÎñÉÌÊÇ·ñ¸ü»»ÁË¶©ÔÄÁ´½Ó£¡"
 		rm -rf /tmp/v2ray_subscribe_file.txt >/dev/null 2>&1 &
 		sleep 2
-		echo_date "é€€å‡ºè®¢é˜…ç¨‹åº..."
+		echo_date "ÍË³ö¶©ÔÄ³ÌĞò..."
 		exit
 		;;
 	4)
-		echo_date "è®¢é˜…åœ°å€é”™è¯¯ï¼æ£€æµ‹åˆ°ä½ è¾“å…¥çš„è®¢é˜…åœ°å€å¹¶ä¸æ˜¯æ ‡å‡†ç½‘å€æ ¼å¼ï¼"
+		echo_date "¶©ÔÄµØÖ·´íÎó£¡¼ì²âµ½ÄãÊäÈëµÄ¶©ÔÄµØÖ·²¢²»ÊÇ±ê×¼ÍøÖ·¸ñÊ½£¡"
 		rm -rf /tmp/v2ray_subscribe_file.txt >/dev/null 2>&1 &
 		sleep 2
-		echo_date "é€€å‡ºè®¢é˜…ç¨‹åº..."
+		echo_date "ÍË³ö¶©ÔÄ³ÌĞò..."
 		exit
 		;;
 	1|*)
-		echo_date "ä¸‹è½½è®¢é˜…å¤±è´¥...è¯·æ£€æŸ¥ä½ çš„ç½‘ç»œ..."
+		echo_date "ÏÂÔØ¶©ÔÄÊ§°Ü...Çë¼ì²éÄãµÄÍøÂç..."
 		rm -rf /tmp/v2ray_subscribe_file.txt >/dev/null 2>&1 &
 		sleep 2
-		echo_date "é€€å‡ºè®¢é˜…ç¨‹åº..."
+		echo_date "ÍË³ö¶©ÔÄ³ÌĞò..."
 		exit
 		;;
 	esac
 
-	# ç»“æŸ
+	# ½áÊø
 	echo_date "-------------------------------------------------------------------"
-	echo_date "ä¸€ç‚¹ç‚¹æ¸…ç†å·¥ä½œ..."
+	echo_date "Ò»µãµãÇåÀí¹¤×÷..."
 	rm -rf /tmp/v2ray_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/v2ray_subscribe_file_temp1.txt >/dev/null 2>&1
 	echo_date "==================================================================="
-	echo_date "æ‰€æœ‰è®¢é˜…ä»»åŠ¡å®Œæˆï¼Œè¯·ç­‰å¾…6ç§’ï¼Œæˆ–è€…æ‰‹åŠ¨å…³é—­æœ¬çª—å£ï¼"
+	echo_date "ËùÓĞ¶©ÔÄÈÎÎñÍê³É£¬ÇëµÈ´ı6Ãë£¬»òÕßÊÖ¶¯¹Ø±Õ±¾´°¿Ú£¡"
 	echo_date "==================================================================="
 }
 
 add() {
 	echo_date "==================================================================="
-	echo_date é€šè¿‡v2rayé“¾æ¥æ·»åŠ èŠ‚ç‚¹...
+	echo_date Í¨¹ıv2rayÁ´½ÓÌí¼Ó½Úµã...
 	rm -rf /tmp/v2ray_subscribe_file.txt >/dev/null 2>&1
 	rm -rf /tmp/v2ray_subscribe_file_temp1.txt >/dev/null 2>&1
-	#echo_date æ·»åŠ é“¾æ¥ä¸ºï¼š`dbus get v2ray_base64_links`
+	#echo_date Ìí¼ÓÁ´½ÓÎª£º`dbus get v2ray_base64_links`
 	v2raylinks=`dbus get v2ray_base64_links|sed 's/$/\n/'|sed '/^$/d'`
 	for v2raylink in $v2raylinks
 	do
 		if [ -n "$v2raylink" ];then
 			if [ -n "`echo -n "$v2raylinks" | grep "vmess://"`" ]; then
-				echo_date æ£€æµ‹åˆ°vmessé“¾æ¥...å¼€å§‹å°è¯•è§£æ...
+				echo_date ¼ì²âµ½vmessÁ´½Ó...¿ªÊ¼³¢ÊÔ½âÎö...
 				new_v2raylink=`echo -n "$v2raylink" | sed 's/vmess:\/\///g'`
 				decode_v2raylink=$(decode_url_link $new_v2raylink)
 				decode_v2raylink=$(echo $decode_v2raylink|jq -c .)
 				get_v2ray_remote_config $decode_v2raylink
 				add_v2ray_servers 1
 			else
-				echo_date æ²¡æœ‰æ£€æµ‹åˆ°vmessä¿¡æ¯ï¼Œæ·»åŠ å¤±è´¥ï¼Œè¯·æ£€æŸ¥è¾“å…¥...
+				echo_date Ã»ÓĞ¼ì²âµ½vmessĞÅÏ¢£¬Ìí¼ÓÊ§°Ü£¬Çë¼ì²éÊäÈë...
 			fi
 		fi
 		dbus remove v2ray_base64_links
@@ -430,36 +430,36 @@ set_cru(){
 		sed -i '/v2raynodeupdate/d' /etc/crontabs/root >/dev/null 2>&1
 		if [ "$v2ray_basic_node_update_day" = "7" ];then
 			echo "0 $v2ray_basic_node_update_hr * * * /koolshare/scripts/v2ray_sub.sh 3 3 #v2raynodeupdate#" >> /etc/crontabs/root
-			echo_date "è®¾ç½®è‡ªåŠ¨æ›´æ–°è®¢é˜…æœåŠ¡åœ¨æ¯å¤© $v2ray_basic_node_update_hr ç‚¹ã€‚" >> $LOG_FILE
+			echo_date "ÉèÖÃ×Ô¶¯¸üĞÂ¶©ÔÄ·şÎñÔÚÃ¿Ìì $v2ray_basic_node_update_hr µã¡£" >> $LOG_FILE
 		else
 			echo "0 $v2ray_basic_node_update_hr * * v2ray_basic_node_update_day /koolshare/scripts/v2ray_sub.sh 3 3 #v2raynodeupdate#" >> /etc/crontabs/root
-			echo_date "è®¾ç½®è‡ªåŠ¨æ›´æ–°è®¢é˜…æœåŠ¡åœ¨æ˜ŸæœŸ $v2ray_basic_node_update_day çš„ $v2ray_basic_node_update_hr ç‚¹ã€‚" >> $LOG_FILE
+			echo_date "ÉèÖÃ×Ô¶¯¸üĞÂ¶©ÔÄ·şÎñÔÚĞÇÆÚ $v2ray_basic_node_update_day µÄ $v2ray_basic_node_update_hr µã¡£" >> $LOG_FILE
 		fi
 	else
-		echo_date "è‡ªåŠ¨æ›´æ–°è®¢é˜…æœåŠ¡å·²å…³é—­ï¼" >> $LOG_FILE
+		echo_date "×Ô¶¯¸üĞÂ¶©ÔÄ·şÎñÒÑ¹Ø±Õ£¡" >> $LOG_FILE
 		sed -i '/v2raynodeupdate/d' /etc/crontabs/root >/dev/null 2>&1
 	fi
 }
 
 remove_server(){
-	# 2 æ¸…é™¤å·²æœ‰çš„ssèŠ‚ç‚¹é…ç½®
-	echo_date åˆ é™¤æ‰€æœ‰æ™®é€šèŠ‚ç‚¹ä¿¡æ¯ï¼
+	# 2 Çå³ıÒÑÓĞµÄss½ÚµãÅäÖÃ
+	echo_date É¾³ıËùÓĞÆÕÍ¨½ÚµãĞÅÏ¢£¡
 	confs=`dbus list v2ray_server_ | cut -d "=" -f 1`
 	for conf in $confs
 	do
-		#echo_date ç§»é™¤$conf
+		#echo_date ÒÆ³ı$conf
 		dbus remove $conf
 	done
 	dbus set v2ray_server_node_max=0
 }
 
 remove_sub(){
-	# 2 æ¸…é™¤å·²æœ‰çš„ssèŠ‚ç‚¹é…ç½®
-	echo_date åˆ é™¤æ‰€æœ‰è®¢é˜…èŠ‚ç‚¹ä¿¡æ¯ï¼
+	# 2 Çå³ıÒÑÓĞµÄss½ÚµãÅäÖÃ
+	echo_date É¾³ıËùÓĞ¶©ÔÄ½ÚµãĞÅÏ¢£¡
 	confs=`dbus list v2ray_sub_ | cut -d "=" -f 1`
 	for conf in $confs
 	do
-		#echo_date ç§»é™¤$conf
+		#echo_date ÒÆ³ı$conf
 		dbus remove $conf
 	done
 	dbus set v2ray_sub_node_max=0
@@ -467,7 +467,7 @@ remove_sub(){
 
 case $2 in
 1)
-	# åˆ é™¤æ‰€æœ‰èŠ‚ç‚¹
+	# É¾³ıËùÓĞ½Úµã
 	set_lock
 	echo " " > $LOG_FILE
 	remove_server >> $LOG_FILE
@@ -477,7 +477,7 @@ case $2 in
 	http_response "$1"
 	;;
 2)
-	# åˆ é™¤æ‰€æœ‰è®¢é˜…èŠ‚ç‚¹
+	# É¾³ıËùÓĞ¶©ÔÄ½Úµã
 	set_lock
 	echo " " > $LOG_FILE
 	remove_sub >> $LOG_FILE
@@ -486,7 +486,7 @@ case $2 in
 	http_response "$1"
 	;;
 3)
-	# è®¢é˜…èŠ‚ç‚¹
+	# ¶©ÔÄ½Úµã
 	set_lock
 	echo " " > $LOG_FILE
 	start_update >> $LOG_FILE
@@ -495,7 +495,7 @@ case $2 in
 	http_response "$1"
 	;;
 4)
-	# é“¾æ¥æ·»åŠ v2ray
+	# Á´½ÓÌí¼Óv2ray
 	set_lock
 	echo " " > $LOG_FILE
 	add >> $LOG_FILE
