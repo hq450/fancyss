@@ -1,7 +1,9 @@
+
 	#!/bin/bash
 
-	cd "$(dirname "$0")"
+	cd c:/tangj15/code
 	pwd
+
 	if [ -n "$1" ]; then
 		msg=$1
 	else
@@ -11,9 +13,6 @@
 			echo "Committing as '$msg'"
 		fi
 	fi
-	git pull
-	git add *
-	git add -A
-	git commit -m "$msg"
-	git push -u
+
+	find . -maxdepth 2 -iname "syncing.sh" -exec chmod +x {} \; -exec {} '$msg'  \;
 
