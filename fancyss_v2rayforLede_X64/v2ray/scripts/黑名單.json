@@ -1,0 +1,155 @@
+{
+    "log": {
+        "access": "/dev/null",
+        "error": "/tmp/v2ray_log.log",
+        "loglevel": "error"
+    },
+    "inbounds": [{
+            "tag": "tproxy",
+            "protocol": "dokodemo-door",
+            "listen": "0.0.0.0",
+            "port": 1280,
+            "settings": {
+                "network": "tcp,udp",
+                "followRedirect": true
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": [
+                    "http",
+                    "tls"
+                ]
+            }
+        },
+        {
+            "tag": "dns",
+            "protocol": "dokodemo-door",
+            "port": 7913,
+            "settings": {
+                "address": "8.8.8.8",
+                "port": 53,
+                "network": "udp",
+                "timeout": 0,
+                "followRedirect": false
+            }
+        }
+    ],
+    "outbounds": [{
+            "protocol": "vmess",
+            "settings": {
+                "vnext": [{
+                    "address": "34.96.252.181",
+                    "port": 52289,
+                    "users": [{
+                        "id": "34079ea1-a7a9-445b-a481-cdbbebfafd56",
+                        "alterId": 233,
+                        "security": "auto"
+                    }]
+                }]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "tcpSettings": {
+                    "header": {
+                        "type": "http",
+                        "request": {
+                            "version": "1.1",
+                            "method": "GET",
+                            "path": [
+                                "/"
+                            ],
+                            "headers": {
+                                "Host": [
+                                    "www.cloudflare.com",
+                                    "www.amazon.com"
+                                ],
+                                "User-Agent": [
+                                    "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/55.0.2883.75Safari/537.36",
+                                    "Mozilla/5.0(WindowsNT6.3;Win64;x64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/61.0.3163.100Safari/537.36",
+                                    "Mozilla/5.0(WindowsNT10.0;Win64;x64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/62.0.3202.75Safari/537.36",
+                                    "Mozilla/5.0(WindowsNT10.0;Win64;x64;rv:57.0)Gecko/20100101Firefox/57.0"
+                                ],
+                                "Accept": [
+                                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"
+                                ],
+                                "Accept-language": [
+                                    "zh-CN,zh;q=0.8,en-US;q=0.6,en;q=0.4"
+                                ],
+                                "Accept-Encoding": [
+                                    "gzip,deflate,br"
+                                ],
+                                "Cache-Control": [
+                                    "no-cache"
+                                ],
+                                "Pragma": "no-cache"
+                            }
+                        }
+                    }
+                }
+            },
+            "mux": {
+                "enabled": true
+            }
+        },
+        {
+            "protocol": "freedom",
+            "settings": {},
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "settings": {},
+            "tag": "blocked"
+        },
+        {
+            "protocol": "dns",
+            "tag": "dns-out"
+        }
+    ],
+    "dns": {
+        "servers": [{
+                "address": "1.1.1.1",
+                "port": 53,
+                "domains": [
+                    "geosite:geolocation-!cn"
+                ]
+            },
+            {
+                "address": "114.114.114.114",
+                "port": 53,
+                "domains": [
+                    "geosite:cn"
+                ],
+                "expectIPs": [
+                    "geoip:cn"
+                ]
+            },
+            "8.8.8.8",
+            "localhost"
+        ]
+    },
+    "routing": {
+        "domainStrategy": "IPOnDemand",
+        "rules": [{
+                "type": "field",
+                "outboundTag": "direct",
+                "domain": [
+                    "geosite:cn"
+                ]
+            },
+            {
+                "type": "field",
+                "outboundTag": "direct",
+                "ip": [
+                    "geoip:cn",
+                    "geoip:private"
+                ]
+            },
+            {
+                "type": "field",
+                "outboundTag": "proxy",
+                "network": "udp,tcp"
+            }
+        ]
+    }
+}
