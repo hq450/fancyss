@@ -3,7 +3,7 @@ export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
 source $KSROOT/bin/helper.sh
 eval `dbus export v2ray_`
-alias echo_date='echo ¡¾$(date +%YÄê%mÔÂ%dÈÕ\ %X)¡¿:'
+alias echo_date='echo ã€$(date +%Yå¹´%mæœˆ%dæ—¥\ %X)ã€‘:'
 lan_ipaddr=`uci get network.lan.ipaddr`
 LOCK_FILE=/var/lock/v2ray.lock
 LOG_FILE=/tmp/upload/v2ray_log.txt
@@ -46,20 +46,20 @@ create_dnsmasq_conf(){
     [ "$v2ray_dns_china" == "12" ] && CDN="$v2ray_dns_china_user"
     # append china site
     [ ! -f /tmp/dnsmasq.d/v2raycdn.conf -a "$v2ray_dns_plan" == "2" ] && {
-        echo_date ´´½¨¹úÄÚCDN½âÎöÓÅ»¯ÅäÖÃÎÄ¼ş
+        echo_date åˆ›å»ºå›½å†…CDNè§£æä¼˜åŒ–é…ç½®æ–‡ä»¶
         cat $KSROOT/v2ray/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN/g" | sort | awk '{if ($0!=line) print;line=$0}' > /tmp/dnsmasq.d/v2raycdn.conf
     }
     [ ! -f /tmp/dnsmasq.d/v2raygfw.conf -a "$v2ray_dns_plan" == "1" -o "$v2ray_acl_default_mode" == "1" ] && {
-        echo_date ´´½¨¹úÍâGFW½âÎöÓÅ»¯ÅäÖÃÎÄ¼ş
+        echo_date åˆ›å»ºå›½å¤–GFWè§£æä¼˜åŒ–é…ç½®æ–‡ä»¶
         #cat $KSROOT/v2ray/gfwlist.conf | awk '{print "server=/"$1"/127.0.0.1#7913\nipset=/"$1"/black_list"}' >> /tmp/dnsmasq.d/v2raygfw.conf
         ln -sf $KSROOT/v2ray/gfwlist.conf /tmp/dnsmasq.d/v2raygfw.conf
     }
     if [ -n "$v2ray_dnsmasq" ];then
-        echo_date Ìí¼Ó×Ô¶¨ÒådnsmasqÉèÖÃµ½/tmp/dnsmasq.d/v2raycustom.conf
+        echo_date æ·»åŠ è‡ªå®šä¹‰dnsmasqè®¾ç½®åˆ°/tmp/dnsmasq.d/v2raycustom.conf
         echo "$v2ray_dnsmasq" | base64_decode | sort -u >> /tmp/dnsmasq.d/v2raycustom.conf
     fi
     [ ! -f "/tmp/dnsmasq.d/v2rayroute.conf" ] && {
-        echo_date ´´½¨×´Ì¬¼ì²â½âÎöÓÅ»¯ÅäÖÃÎÄ¼ş
+        echo_date åˆ›å»ºçŠ¶æ€æ£€æµ‹è§£æä¼˜åŒ–é…ç½®æ–‡ä»¶
 		cat > /tmp/dnsmasq.d/v2rayroute.conf <<-EOF
 			#for router itself
 			server=/.google.com.tw/127.0.0.1#7913
@@ -83,7 +83,7 @@ create_dnsmasq_conf(){
     # append white domain list,not through ss
     wanwhitedomain=$(echo $v2ray_wan_white_domain | base64_decode)
     if [ -n "$v2ray_wan_white_domain" ];then
-        echo_date Ó¦ÓÃÓòÃû°×Ãûµ¥
+        echo_date åº”ç”¨åŸŸåç™½åå•
         echo "#for white_domain" >> /tmp/dnsmasq.d/v2raywblist.conf
         for wan_white_domain in $wanwhitedomain
         do
@@ -91,7 +91,7 @@ create_dnsmasq_conf(){
             echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >> /tmp/dnsmasq.d/v2raywblist.conf
         done
     fi
-    # apple ºÍmicrosoft²»ÄÜ×ß´úÀí
+    # apple å’Œmicrosoftä¸èƒ½èµ°ä»£ç†
     echo "#for special site" >> /tmp/dnsmasq.d/v2raywblist.conf
     for wan_white_domain2 in "apple.com" "microsoft.com"
     do
@@ -102,7 +102,7 @@ create_dnsmasq_conf(){
     # append black domain list,through ss
     wanblackdomain=$(echo $v2ray_wan_black_domain | base64_decode)
     if [ -n "$v2ray_wan_black_domain" ];then
-        echo_date Ó¦ÓÃÓòÃûºÚÃûµ¥
+        echo_date åº”ç”¨åŸŸåé»‘åå•
         echo "#for black_domain" >> /tmp/dnsmasq.d/v2raywblist.conf
         for wan_black_domain in $wanblackdomain
         do
@@ -121,27 +121,27 @@ create_dnsmasq_conf(){
     echo "no-resolv" >> /tmp/dnsmasq.d/v2ray.conf
     if [ "$v2ray_dns_plan" == "1" ] || [ -z "$v2ray_dns_china" ];then
         if [ "$v2ray_dns_china" == "1" ];then
-            echo_date DNS½âÎö·½°¸¹úÄÚÓÅÏÈ£¬Ê¹ÓÃÔËÓªÉÌDNSÓÅÏÈ½âÎö¹úÄÚDNS.
+            echo_date DNSè§£ææ–¹æ¡ˆå›½å†…ä¼˜å…ˆï¼Œä½¿ç”¨è¿è¥å•†DNSä¼˜å…ˆè§£æå›½å†…DNS.
             echo "all-servers" >> /tmp/dnsmasq.d/v2ray.conf
             echo "server=$CDN1" >> /tmp/dnsmasq.d/v2ray.conf
             echo "server=$CDN2" >> /tmp/dnsmasq.d/v2ray.conf
         else
-            echo_date DNS½âÎö·½°¸¹úÄÚÓÅÏÈ£¬Ê¹ÓÃ×Ô¶¨ÒåDNS£º$CDN½øĞĞ½âÎö¹úÄÚDNS.
+            echo_date DNSè§£ææ–¹æ¡ˆå›½å†…ä¼˜å…ˆï¼Œä½¿ç”¨è‡ªå®šä¹‰DNSï¼š$CDNè¿›è¡Œè§£æå›½å†…DNS.
             echo "server=$CDN" >> /tmp/dnsmasq.d/v2ray.conf
         fi
         elif [ "$v2ray_dns_plan" == "2" ];then
-        echo_date DNS½âÎö·½°¸¹úÍâÓÅÏÈ£¬ÓÅÏÈ½âÎö¹úÍâDNS.
+        echo_date DNSè§£ææ–¹æ¡ˆå›½å¤–ä¼˜å…ˆï¼Œä¼˜å…ˆè§£æå›½å¤–DNS.
         echo "server=127.0.0.1#7913" >> /tmp/dnsmasq.d/v2ray.conf
     fi
 }
 restore_dnsmasq_conf(){
     if [ -n "`ls /tmp/dnsmasq.d/v2ray*.conf 2>/dev/null`" ];then
-        echo_date É¾³ı v2ray Ïà¹ØµÄÃûµ¥ÅäÖÃÎÄ¼ş.
+        echo_date åˆ é™¤ v2ray ç›¸å…³çš„åå•é…ç½®æ–‡ä»¶.
         rm -rf /tmp/dnsmasq.d/v2ray*.conf
     fi
 }
 restore_start_file(){
-    echo_date Çå³ıfirewallÖĞÏà¹ØµÄ v2ray Æô¶¯ÃüÁî...
+    echo_date æ¸…é™¤firewallä¸­ç›¸å…³çš„ v2ray å¯åŠ¨å‘½ä»¤...
 	uci -q batch <<-EOT
 	  delete firewall.ks_v2ray
 	  commit firewall
@@ -149,13 +149,13 @@ restore_start_file(){
 }
 kill_process(){
     if [ -n "`pidof v2ray`" ]; then
-        echo_date ¹Ø±Õ v2ray ½ø³Ì...
+        echo_date å…³é—­ v2ray è¿›ç¨‹...
         killall v2ray >/dev/null 2>&1
     fi
 }
 auto_start(){
     # nat start
-    echo_date Ìí¼Ónat-start´¥·¢ÊÂ¼ş...
+    echo_date æ·»åŠ nat-startè§¦å‘äº‹ä»¶...
 	uci -q batch <<-EOT
 	  delete firewall.ks_v2ray
 	  set firewall.ks_v2ray=include
@@ -189,7 +189,7 @@ get_auth_status() {
     esac
 }
 close_in_five(){
-    echo_date "²å¼ş½«ÔÚ5Ãëºó×Ô¶¯¹Ø±Õ£¡£¡"
+    echo_date "æ’ä»¶å°†åœ¨5ç§’åè‡ªåŠ¨å…³é—­ï¼ï¼"
     sleep 1
     echo_date 5
     sleep 1
@@ -204,9 +204,9 @@ close_in_five(){
     echo_date 0
     dbus set v2ray_basic_enable="0"
     stop_v2ray >/dev/null
-    echo_date "Ä³Ğ©ÀÏ°æ±¾¹Ì¼şÒÑ¾­ÎŞ·¨Ê¹ÓÃĞÂ°æ²å¼ş£¬ÇëÉı¼¶µ½×îĞÂ°æ¹Ì¼şÊ¹ÓÃ£¡"
-    echo_date "²å¼şÒÑ¹Ø±Õ£¡£¡"
-    echo_date ------------------------- v2ray ³É¹¦¹Ø±Õ -------------------------
+    echo_date "æŸäº›è€ç‰ˆæœ¬å›ºä»¶å·²ç»æ— æ³•ä½¿ç”¨æ–°ç‰ˆæ’ä»¶ï¼Œè¯·å‡çº§åˆ°æœ€æ–°ç‰ˆå›ºä»¶ä½¿ç”¨ï¼"
+    echo_date "æ’ä»¶å·²å…³é—­ï¼ï¼"
+    echo_date ------------------------- v2ray æˆåŠŸå…³é—­ -------------------------
     echo XU6J03M6
     http_response "233"
     unset_lock
@@ -253,7 +253,7 @@ gen_v2ray_config(){
         server_tag=$(dbus get "v2ray_sub_tag_$v2ray_basic_server")
         server_config=$(dbus get "v2ray_sub_config_$v2ray_basic_server")
     fi
-    echo_date Ê¹ÓÃ $server_tag ÅäÖÃÎÄ¼ş...
+    echo_date ä½¿ç”¨ $server_tag é…ç½®æ–‡ä»¶...
     
     echo $server_config | base64_decode > "$V2RAY_CONFIG_FILE_TMP"
     if [ "$v2ray_basic_sbmode" == "1" ]; then
@@ -273,7 +273,7 @@ gen_v2ray_config(){
         TEMAUTH=""
     fi
     if [ "$v2ray_basic_socks" == "1" ]; then
-        echo_date ¿ªÆôÔÊĞí±¾µØ¾ÖÓòÍø»òÕßÔ¶³ÌÓÃ»§Á¬½ÓµÄsocks5´úÀí·şÎñÆ÷£¬¶Ë¿Ú1281
+        echo_date å¼€å¯å…è®¸æœ¬åœ°å±€åŸŸç½‘æˆ–è€…è¿œç¨‹ç”¨æˆ·è¿æ¥çš„socks5ä»£ç†æœåŠ¡å™¨ï¼Œç«¯å£1281
         TEMSOCKS="{
             \"tag\": \"socks5\",
             \"protocol\": \"socks\",
@@ -299,7 +299,7 @@ gen_v2ray_config(){
         TEMSOCKS=""
     fi
     if [ "$v2ray_basic_http" == "1" ]; then
-        echo_date ¿ªÆôÔÊĞí±¾µØ¾ÖÓòÍø»òÕßÔ¶³ÌÓÃ»§Á¬½ÓµÄhttp´úÀí·şÎñÆ÷£¬¶Ë¿Ú1282
+        echo_date å¼€å¯å…è®¸æœ¬åœ°å±€åŸŸç½‘æˆ–è€…è¿œç¨‹ç”¨æˆ·è¿æ¥çš„httpä»£ç†æœåŠ¡å™¨ï¼Œç«¯å£1282
         TEMHTTP="{
             \"tag\": \"http\",
             \"protocol\": \"http\",
@@ -324,7 +324,7 @@ gen_v2ray_config(){
         TEMHTTP=""
     fi
     if [ "$v2ray_basic_ss" == "1" ]; then
-        echo_date ¿ªÆôÔÊĞí±¾µØ¾ÖÓòÍø»òÕßÔ¶³ÌÓÃ»§Á¬½ÓµÄshadowsocks´úÀí·şÎñÆ÷£¬¶Ë¿Ú1283
+        echo_date å¼€å¯å…è®¸æœ¬åœ°å±€åŸŸç½‘æˆ–è€…è¿œç¨‹ç”¨æˆ·è¿æ¥çš„shadowsocksä»£ç†æœåŠ¡å™¨ï¼Œç«¯å£1283
         TEMSS="{
             \"tag\": \"shadowsocks\",
             \"protocol\": \"shadowsocks\",
@@ -378,12 +378,12 @@ gen_v2ray_config(){
             }
         ]
     }"
-    echo_date ½âÎöV2RayÅäÖÃÎÄ¼ş...
+    echo_date è§£æV2Rayé…ç½®æ–‡ä»¶...
     #echo $TEMPLATE | jq --argjson args "$OUTBOUND" '. + {outbound: $args}' > "$V2RAY_CONFIG_FILE"
     echo $TEMPLATE | jq --argjson args "$JSON_INFO" '. + $args' > "$V2RAY_CONFIG_FILE"
     
-    echo_date V2RayÅäÖÃÎÄ¼şĞ´Èë³É¹¦µ½"$V2RAY_CONFIG_FILE"
-    # ¼ì²âÓÃ»§jsonµÄ·şÎñÆ÷ipµØÖ·
+    echo_date V2Rayé…ç½®æ–‡ä»¶å†™å…¥æˆåŠŸåˆ°"$V2RAY_CONFIG_FILE"
+    # æ£€æµ‹ç”¨æˆ·jsonçš„æœåŠ¡å™¨ipåœ°å€
     v2ray_protocal=`cat "$V2RAY_CONFIG_FILE" | jq -r 'outbound.protocol'`
     [ -z "$v2ray_protocal" -o "$v2ray_protocal" == "null" ] && v2ray_protocal=`cat "$V2RAY_CONFIG_FILE" | jq -r '.outbounds[0].protocol'`
     case $v2ray_protocal in
@@ -420,61 +420,61 @@ gen_v2ray_config(){
         IFIP_VS=`echo $v2ray_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
         if [ -n "$IFIP_VS" ];then
             v2ray_basic_server_ip="$v2ray_server"
-            echo_date "¼ì²âµ½ÄãµÄjsonÅäÖÃµÄv2ray·şÎñÆ÷ÊÇ£º$v2ray_server"
+            echo_date "æ£€æµ‹åˆ°ä½ çš„jsoné…ç½®çš„v2rayæœåŠ¡å™¨æ˜¯ï¼š$v2ray_server"
         else
-            echo_date "¼ì²âµ½ÄãµÄjsonÅäÖÃµÄv2ray·şÎñÆ÷£º$v2ray_server²»ÊÇip¸ñÊ½£¡"
-            echo_date "³¢ÊÔ½âÎöv2ray·şÎñÆ÷µÄipµØÖ·..."
-            # ·şÎñÆ÷µØÖ·Ç¿ÖÆÓÉ114½âÎö£¬ÒÔÃâ²å¼ş»¹Î´¿ªÊ¼¹¤×÷¶øµ¼ÖÂ½âÎöÊ§°Ü
+            echo_date "æ£€æµ‹åˆ°ä½ çš„jsoné…ç½®çš„v2rayæœåŠ¡å™¨ï¼š$v2ray_serverä¸æ˜¯ipæ ¼å¼ï¼"
+            echo_date "å°è¯•è§£æv2rayæœåŠ¡å™¨çš„ipåœ°å€..."
+            # æœåŠ¡å™¨åœ°å€å¼ºåˆ¶ç”±114è§£æï¼Œä»¥å…æ’ä»¶è¿˜æœªå¼€å§‹å·¥ä½œè€Œå¯¼è‡´è§£æå¤±è´¥
             echo "server=/$v2ray_server/114.114.114.114" > /tmp/dnsmasq.d/v2ray_server.conf
             v2ray_server_ip=`nslookup "$v2ray_server" 114.114.114.114 | sed '1,4d' | awk '{print $3}' | grep -v :|awk 'NR==1{print}'`
             if [ "$?" == "0" ]; then
                 v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
             else
-                echo_date v2ray·şÎñÆ÷ÓòÃû½âÎöÊ§°Ü£¡
-                echo_date ³¢ÊÔÓÃresolveip·½Ê½½âÎö...
+                echo_date v2rayæœåŠ¡å™¨åŸŸåè§£æå¤±è´¥ï¼
+                echo_date å°è¯•ç”¨resolveipæ–¹å¼è§£æ...
                 v2ray_server_ip=`resolveip -4 -t 2 $v2ray_server|awk 'NR==1{print}'`
                 if [ "$?" == "0" ];then
                     v2ray_server_ip=`echo $v2ray_server_ip|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
                 fi
             fi
             if [ -n "$v2ray_server_ip" ];then
-                echo_date "v2ray·şÎñÆ÷µÄipµØÖ·½âÎö³É¹¦£º$v2ray_server_ip"
+                echo_date "v2rayæœåŠ¡å™¨çš„ipåœ°å€è§£ææˆåŠŸï¼š$v2ray_server_ip"
                 #echo "address=/$v2ray_server/$v2ray_server_ip" > /tmp/dnsmasq.d/v2ray_host.conf
                 v2ray_basic_server_ip="$v2ray_server_ip"
             else
-                echo_date "v2ray·şÎñÆ÷µÄipµØÖ·½âÎöÊ§°Ü!²å¼ş½«¼ÌĞøÔËĞĞ£¬ÓòÃû½âÎö½«ÓÉv2ray×Ô¼º½øĞĞ£¡"
-                echo_date "Çë×ÔĞĞ½«v2ray·şÎñÆ÷µÄipµØÖ·ÌîÈëIP/CIDR°×Ãûµ¥ÖĞ!"
-                echo_date "ÎªÁËÈ·±£v2rayµÄÕı³£¹¤×÷£¬½¨ÒéÅäÖÃip¸ñÊ½µÄv2ray·şÎñÆ÷µØÖ·£¡"
+                echo_date "v2rayæœåŠ¡å™¨çš„ipåœ°å€è§£æå¤±è´¥!æ’ä»¶å°†ç»§ç»­è¿è¡Œï¼ŒåŸŸåè§£æå°†ç”±v2rayè‡ªå·±è¿›è¡Œï¼"
+                echo_date "è¯·è‡ªè¡Œå°†v2rayæœåŠ¡å™¨çš„ipåœ°å€å¡«å…¥IP/CIDRç™½åå•ä¸­!"
+                echo_date "ä¸ºäº†ç¡®ä¿v2rayçš„æ­£å¸¸å·¥ä½œï¼Œå»ºè®®é…ç½®ipæ ¼å¼çš„v2rayæœåŠ¡å™¨åœ°å€ï¼"
             fi
         fi
     else
-        echo_date "Ã»ÓĞ¼ì²âµ½ÄãµÄv2ray·şÎñÆ÷µØÖ·£¬Èç¹ûÄãÈ·¶¨ÄãµÄÅäÖÃÊÇÕıÈ·µÄ"
-        echo_date "Çë×ÔĞĞ½«v2ray·şÎñÆ÷µÄipµØÖ·ÌîÈë¡¾IP/CIDR¡¿ºÚÃûµ¥ÖĞ£¬ÒÔÈ·±£Õı³£Ê¹ÓÃ"
+        echo_date "æ²¡æœ‰æ£€æµ‹åˆ°ä½ çš„v2rayæœåŠ¡å™¨åœ°å€ï¼Œå¦‚æœä½ ç¡®å®šä½ çš„é…ç½®æ˜¯æ­£ç¡®çš„"
+        echo_date "è¯·è‡ªè¡Œå°†v2rayæœåŠ¡å™¨çš„ipåœ°å€å¡«å…¥ã€IP/CIDRã€‘é»‘åå•ä¸­ï¼Œä»¥ç¡®ä¿æ­£å¸¸ä½¿ç”¨"
     fi
-    echo_date ²âÊÔV2RayÅäÖÃÎÄ¼ş.....
+    echo_date æµ‹è¯•V2Rayé…ç½®æ–‡ä»¶.....
     cd /koolshare/bin
     result=$(v2ray -test -config="$V2RAY_CONFIG_FILE_TMP" | grep "Configuration OK.")
     if [ -n "$result" ];then
         echo_date $result
         if [ -s "$V2RAY_CONFIG_FILE" ];then
-            echo_date V2RayÅäÖÃÎÄ¼şÍ¨¹ı²âÊÔ!!!
+            echo_date V2Rayé…ç½®æ–‡ä»¶é€šè¿‡æµ‹è¯•!!!
         else
-            echo_date V2RayÅäÖÃÎÄ¼şÍ¨¹ı²âÊÔ£¬µ«¹Ì¼ş°æ±¾¹ıµÍ£¬ÎŞ·¨ÕıÈ·½âÎöÅäÖÃÎÄ¼ş£¬ÇëÉı¼¶µ½×îĞÂ¹Ì¼ş£¡
+            echo_date V2Rayé…ç½®æ–‡ä»¶é€šè¿‡æµ‹è¯•ï¼Œä½†å›ºä»¶ç‰ˆæœ¬è¿‡ä½ï¼Œæ— æ³•æ­£ç¡®è§£æé…ç½®æ–‡ä»¶ï¼Œè¯·å‡çº§åˆ°æœ€æ–°å›ºä»¶ï¼
             close_in_five
         fi
     else
         #rm -rf "$V2RAY_CONFIG_FILE_TMP"
         #rm -rf "$V2RAY_CONFIG_FILE"
-        echo_date V2RayÅäÖÃÎÄ¼şÃ»ÓĞÍ¨¹ı²âÊÔ£¬Çë¼ì²éÉèÖÃ!!!
+        echo_date V2Rayé…ç½®æ–‡ä»¶æ²¡æœ‰é€šè¿‡æµ‹è¯•ï¼Œè¯·æ£€æŸ¥è®¾ç½®!!!
         resultstatus=$(v2ray -test -config="$V2RAY_CONFIG_FILE_TMP" | tail -n +3)
-        echo_date ³ö´íÔ­Òò£º$resultstatus
+        echo_date å‡ºé”™åŸå› ï¼š$resultstatus
         close_in_five
     fi
 }
 start_v2ray(){
     optimized_network
     gen_v2ray_config
-    echo_date ¿ªÆô v2ray Ö÷½ø³Ì...
+    echo_date å¼€å¯ v2ray ä¸»è¿›ç¨‹...
     cd /koolshare/bin
     v2ray --config=/koolshare/v2ray/v2ray.json >/dev/null 2>&1 &
     
@@ -484,17 +484,17 @@ start_v2ray(){
         i=$(($i-1))
         V2PID=`pidof v2ray`
         if [ "$i" -lt 1 ];then
-            echo_date "v2ray½ø³ÌÆô¶¯Ê§°Ü£¡"
+            echo_date "v2rayè¿›ç¨‹å¯åŠ¨å¤±è´¥ï¼"
             close_in_five
         fi
         sleep 1
     done
-    echo_date v2rayÆô¶¯³É¹¦£¬pid£º$V2PID
+    echo_date v2rayå¯åŠ¨æˆåŠŸï¼Œpidï¼š$V2PID
 }
 # =======================================================================================================
 flush_nat(){
     local ip_nat_exist ip_mangle_exist chromecast_nu ip_rule_exist service_exist
-    echo_date ³¢ÊÔÏÈÇå³ıÒÑ´æÔÚµÄiptables¹æÔò£¬·ÀÖ¹ÖØ¸´Ìí¼Ó
+    echo_date å°è¯•å…ˆæ¸…é™¤å·²å­˜åœ¨çš„iptablesè§„åˆ™ï¼Œé˜²æ­¢é‡å¤æ·»åŠ 
     # flush rules and set if any
     ip_nat_exist=`iptables -t nat -L PREROUTING | grep -c V2RAY`
     ip_mangle_exist=`iptables -t mangle -L PREROUTING | grep -c V2RAY`
@@ -504,14 +504,14 @@ flush_nat(){
             iptables -t nat -D OUTPUT -j V2RAY > /dev/null 2>&1
             iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 1280 > /dev/null 2>&1
             iptables -t nat -D PREROUTING -p tcp -j V2RAY > /dev/null 2>&1
-            echo_date Çå³ıNAT¹æÔò
+            echo_date æ¸…é™¤NATè§„åˆ™
         done
     fi
     if [ "$ip_mangle_exist" -ne 0 ]; then
         for i in `seq $ip_mangle_exist`
         do
             iptables -t mangle -D PREROUTING -j V2RAY > /dev/null 2>&1
-            echo_date Çå³ıMangle¹æÔò
+            echo_date æ¸…é™¤Mangleè§„åˆ™
         done
     fi
     sleep 1
@@ -535,7 +535,7 @@ flush_nat(){
     fi
     
     #flush_ipset
-    echo_date ÏÈÇå¿ÕÒÑ´æÔÚµÄipsetÃûµ¥£¬·ÀÖ¹ÖØ¸´Ìí¼Ó
+    echo_date å…ˆæ¸…ç©ºå·²å­˜åœ¨çš„ipsetåå•ï¼Œé˜²æ­¢é‡å¤æ·»åŠ 
     ipset -F chnroute >/dev/null 2>&1 && ipset -X chnroute >/dev/null 2>&1
     ipset -F white_list >/dev/null 2>&1 && ipset -X white_list >/dev/null 2>&1
     ipset -F black_list >/dev/null 2>&1 && ipset -X black_list >/dev/null 2>&1
@@ -544,7 +544,7 @@ flush_nat(){
     #remove_redundant_rule
     ip_rule_exist=`ip rule show | grep "fwmark 0x1/0x1 lookup 310" | grep -c 310`
     if [ ! -z "ip_rule_exist" ];then
-        echo_date Çå³ıÖØ¸´µÄip rule¹æÔò.
+        echo_date æ¸…é™¤é‡å¤çš„ip ruleè§„åˆ™.
         until [ "$ip_rule_exist" = "0" ]
         do
             #ip rule del fwmark 0x07 table 310
@@ -553,12 +553,12 @@ flush_nat(){
         done
     fi
     # remove_route_table
-    echo_date É¾³ıip route¹æÔò.
+    echo_date åˆ é™¤ip routeè§„åˆ™.
     ip route del local 0.0.0.0/0 dev lo table 310 >/dev/null 2>&1
 }
 # creat ipset rules
 creat_ipset(){
-    echo_date ´´½¨ipsetÃûµ¥
+    echo_date åˆ›å»ºipsetåå•
     ipset -! create white_list nethash && ipset flush white_list
     ipset -! create black_list nethash && ipset flush black_list
     ipset -! create gfwlist nethash && ipset flush gfwlist
@@ -577,7 +577,7 @@ add_white_black_ip(){
     
     if [ ! -z $v2ray_wan_black_ip ];then
         v2ray_wan_black_ip=`dbus get v2ray_wan_black_ip|base64_decode|sed '/\#/d'`
-        echo_date Ó¦ÓÃIP/CIDRºÚÃûµ¥
+        echo_date åº”ç”¨IP/CIDRé»‘åå•
         for ip in $v2ray_wan_black_ip
         do
             ipset -! add black_list $ip >/dev/null 2>&1
@@ -595,7 +595,7 @@ add_white_black_ip(){
     
     if [ ! -z $v2ray_wan_white_ip ];then
         v2ray_wan_white_ip=`echo $v2ray_wan_white_ip|base64_decode|sed '/\#/d'`
-        echo_date Ó¦ÓÃIP/CIDR°×Ãûµ¥
+        echo_date åº”ç”¨IP/CIDRç™½åå•
         for ip in $v2ray_wan_white_ip
         do
             ipset -! add white_list $ip >/dev/null 2>&1
@@ -624,19 +624,19 @@ get_action_chain() {
 get_mode_name() {
     case "$1" in
         0)
-            echo "²»Í¨¹ı´úÀí"
+            echo "ä¸é€šè¿‡ä»£ç†"
         ;;
         1)
-            echo "gfwlistÄ£Ê½"
+            echo "gfwlistæ¨¡å¼"
         ;;
         2)
-            echo "´óÂ½°×Ãûµ¥Ä£Ê½"
+            echo "å¤§é™†ç™½åå•æ¨¡å¼"
         ;;
         3)
-            echo "ÓÎÏ·Ä£Ê½"
+            echo "æ¸¸æˆæ¨¡å¼"
         ;;
         4)
-            echo "È«¾ÖÄ£Ê½"
+            echo "å…¨å±€æ¨¡å¼"
         ;;
     esac
 }
@@ -668,37 +668,37 @@ lan_acess_control(){
             proxy_mode=`dbus get v2ray_acl_mode_$acl`
             proxy_name=`dbus get v2ray_acl_name_$acl`
             mac=`dbus get v2ray_acl_mac_$acl`
-            [ -n "$ipaddr" ] && [ -z "$mac" ] && echo_date ¼ÓÔØACL¹æÔò£º¡¾$ipaddr¡¿Ä£Ê½Îª£º$(get_mode_name $proxy_mode)
-            [ -z "$ipaddr" ] && [ -n "$mac" ] && echo_date ¼ÓÔØACL¹æÔò£º¡¾$mac¡¿Ä£Ê½Îª£º$(get_mode_name $proxy_mode)
-            [ -n "$ipaddr" ] && [ -n "$mac" ] && echo_date ¼ÓÔØACL¹æÔò£º¡¾$ipaddr¡¿¡¾$mac¡¿Ä£Ê½Îª£º$(get_mode_name $proxy_mode)
+            [ -n "$ipaddr" ] && [ -z "$mac" ] && echo_date åŠ è½½ACLè§„åˆ™ï¼šã€$ipaddrã€‘æ¨¡å¼ä¸ºï¼š$(get_mode_name $proxy_mode)
+            [ -z "$ipaddr" ] && [ -n "$mac" ] && echo_date åŠ è½½ACLè§„åˆ™ï¼šã€$macã€‘æ¨¡å¼ä¸ºï¼š$(get_mode_name $proxy_mode)
+            [ -n "$ipaddr" ] && [ -n "$mac" ] && echo_date åŠ è½½ACLè§„åˆ™ï¼šã€$ipaddrã€‘ã€$macã€‘æ¨¡å¼ä¸ºï¼š$(get_mode_name $proxy_mode)
             # acl in v2ray
             iptables -t mangle -A V2RAY $(factor $ipaddr "-s") $(factor $mac "-m mac --mac-source") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
         done
-        echo_date ¼ÓÔØACL¹æÔò£ºÆäÓàÖ÷»úÄ£Ê½Îª£º$(get_mode_name $v2ray_acl_default_mode)
+        echo_date åŠ è½½ACLè§„åˆ™ï¼šå…¶ä½™ä¸»æœºæ¨¡å¼ä¸ºï¼š$(get_mode_name $v2ray_acl_default_mode)
     else
         #v2ray_acl_default_mode="1"
-        echo_date ¼ÓÔØACL¹æÔò£ºËùÓĞÄ£Ê½Îª£º$(get_mode_name $v2ray_acl_default_mode)
+        echo_date åŠ è½½ACLè§„åˆ™ï¼šæ‰€æœ‰æ¨¡å¼ä¸ºï¼š$(get_mode_name $v2ray_acl_default_mode)
     fi
 }
 apply_nat_rules(){
     local PR_INDEX KP_INDEX
     #----------------------BASIC RULES---------------------
-    echo_date Ğ´Èëiptables¹æÔòµ½mangle±íÖĞ...
-    # ´´½¨v2ray mangle rule
+    echo_date å†™å…¥iptablesè§„åˆ™åˆ°mangleè¡¨ä¸­...
+    # åˆ›å»ºv2ray mangle rule
     iptables -t mangle -N V2RAY
     iptables -t mangle -A PREROUTING -j V2RAY
-    # IP/cidr/°×ÓòÃû °×Ãûµ¥¿ØÖÆ£¨²»×ß´úÀí£© for v2ray
+    # IP/cidr/ç™½åŸŸå ç™½åå•æ§åˆ¶ï¼ˆä¸èµ°ä»£ç†ï¼‰ for v2ray
     iptables -t mangle -A V2RAY -m set --match-set white_list dst -j RETURN
     # MARK 2019 for v2ray
     #iptables -t mangle -A V2RAY -m mark --mark 0x7e3 -j RETURN
     #-----------------------FOR GFWLIST---------------------
-    # ´´½¨gfwlistÄ£Ê½
+    # åˆ›å»ºgfwlistæ¨¡å¼
     iptables -t mangle -N V2RAY_GFW
-    # IP/CIDR/ºÚÓòÃû ºÚÃûµ¥¿ØÖÆ£¨×ß´úÀí£©
+    # IP/CIDR/é»‘åŸŸå é»‘åå•æ§åˆ¶ï¼ˆèµ°ä»£ç†ï¼‰
     iptables -t mangle -A V2RAY_GFW -p tcp -m set --match-set black_list dst -j TTL --ttl-set 188
     iptables -t mangle -A V2RAY_GFW -p tcp -m set --match-set gfwlist dst -j TTL --ttl-set 188
     #-----------------------FOR CHNMODE---------------------
-    # ´´½¨´óÂ½°×Ãûµ¥Ä£Ê½
+    # åˆ›å»ºå¤§é™†ç™½åå•æ¨¡å¼
     iptables -t mangle -N V2RAY_CHN
     iptables -t mangle -A V2RAY_CHN -p tcp -m set --match-set black_list dst -j TTL --ttl-set 188
     if [ "$v2ray_bypass" == "2" ];then
@@ -707,13 +707,13 @@ apply_nat_rules(){
         iptables -t mangle -A V2RAY_CHN -p tcp -m set ! --match-set chnroute dst -j TTL --ttl-set 188
     fi
     #-----------------------FOR GLOABLE---------------------
-    # ´´½¨È«¾ÖÄ£Ê½
+    # åˆ›å»ºå…¨å±€æ¨¡å¼
     iptables -t mangle -N V2RAY_GLO
-    # È«¾ÖÄ£Ê½¿ØÖÆ-È«¾Ö£¨×ß´úÀí£©
+    # å…¨å±€æ¨¡å¼æ§åˆ¶-å…¨å±€ï¼ˆèµ°ä»£ç†ï¼‰
     iptables -t mangle -A V2RAY_GLO -p tcp -j TTL --ttl-set 188
     
     #-----------------------FOR GAMEMODE---------------------
-    # ´´½¨ÓÎÏ·Ä£Ê½
+    # åˆ›å»ºæ¸¸æˆæ¨¡å¼
     iptables -t mangle -N V2RAY_GAM
     iptables -t mangle -A V2RAY_GAM -p tcp -m set --match-set black_list dst -j TTL --ttl-set 188
     if [ "$v2ray_bypass" == "2" ];then
@@ -721,22 +721,22 @@ apply_nat_rules(){
     else
         iptables -t mangle -A V2RAY_GAM -p tcp -m set ! --match-set chnroute dst -j TTL --ttl-set 188
     fi
-    # ÓÎÏ·Ä£Ê½UDP
+    # æ¸¸æˆæ¨¡å¼UDP
     ip rule add fwmark 0x07 table 310 pref 789
     ip route add local 0.0.0.0/0 dev lo table 310
     iptables -t mangle -A V2RAY_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 1280 --tproxy-mark 0x07
-    # cidrºÚÃûµ¥¿ØÖÆ-chnroute£¨×ß´úÀí£©
+    # cidré»‘åå•æ§åˆ¶-chnrouteï¼ˆèµ°ä»£ç†ï¼‰
     if [ "$v2ray_bypass" == "2" ];then
         iptables -t mangle -A V2RAY_GAM -p udp -m geoip ! --destination-country CN -j TPROXY --on-port 1280 --tproxy-mark 0x07
     else
         iptables -t mangle -A V2RAY_GAM -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 1280 --tproxy-mark 0x07
     fi
     #-------------------------------------------------------
-    # ¾ÖÓòÍøºÚÃûµ¥£¨²»×ß´úÀí£©/¾ÖÓòÍøºÚÃûµ¥£¨×ß´úÀí£©
+    # å±€åŸŸç½‘é»‘åå•ï¼ˆä¸èµ°ä»£ç†ï¼‰/å±€åŸŸç½‘é»‘åå•ï¼ˆèµ°ä»£ç†ï¼‰
     lan_acess_control
-    # °Ñ×îºóÊ£ÓàÁ÷Á¿ÖØ¶¨Ïòµ½ÏàÓ¦Ä£Ê½µÄnat±íÖĞ¶Ô¶ÔÓ¦µÄÖ÷Ä£Ê½µÄÁ´
+    # æŠŠæœ€åå‰©ä½™æµé‡é‡å®šå‘åˆ°ç›¸åº”æ¨¡å¼çš„natè¡¨ä¸­å¯¹å¯¹åº”çš„ä¸»æ¨¡å¼çš„é“¾
     iptables -t mangle -A V2RAY -j $(get_action_chain $v2ray_acl_default_mode)
-    #-----------------------NAT±í¹æÔò-----------------------
+    #-----------------------NATè¡¨è§„åˆ™-----------------------
     iptables -t nat -N V2RAY
     # MARK 2019 for v2ray
     #iptables -t nat -A V2RAY -p tcp -m mark --mark 0x7e3 -j RETURN
@@ -745,17 +745,17 @@ apply_nat_rules(){
     [ -n "$PR_INDEX" ] && let RULE_INDEX=$PR_INDEX+1
     KP_INDEX=`iptables -t nat -L PREROUTING|tail -n +3|sed -n -e '/^KOOLPROXY/='`
     [ -n "$KP_INDEX" ] && let RULE_INDEX=$KP_INDEX+1
-    #È·±£Ìí¼Óµ½Ä¬ÈÏ¹æÔòÖ®ºó
+    #ç¡®ä¿æ·»åŠ åˆ°é»˜è®¤è§„åˆ™ä¹‹å
     iptables -t nat -I PREROUTING $RULE_INDEX -p tcp -j V2RAY
-    #-----------------------FOR ROUTER×´Ì¬¼ì²â---------------------
+    #-----------------------FOR ROUTERçŠ¶æ€æ£€æµ‹---------------------
     # router itself
     if [ "$KP_ENABLE" == "1" -o "$v2ray_acl_default_mode" == "0" ]; then
         iptables -t nat -I OUTPUT -j V2RAY
     else
-        echo_date µ±Ç°·À»ğÇ½¹æÔòÎªÎŞKPÄ£Ê½£¬¿ªÆôKPºóĞèÒªÖØÆôV2ray!
+        echo_date å½“å‰é˜²ç«å¢™è§„åˆ™ä¸ºæ— KPæ¨¡å¼ï¼Œå¼€å¯KPåéœ€è¦é‡å¯V2ray!
     fi
     iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 1280
-    #-----------------------FOR ÆäËü·şÎñ¶Ë¿ÚÔ¶³ÌÁ¬½Ó---------------------
+    #-----------------------FOR å…¶å®ƒæœåŠ¡ç«¯å£è¿œç¨‹è¿æ¥---------------------
     [ "$v2ray_basic_forward" == "1" ] && {
         [ "$v2ray_basic_socks" == "1" ] && {
             iptables -I zone_wan_input 2 -p tcp -m tcp --dport 1281 -m comment --comment "softcenter:v2ray" -j ACCEPT >/dev/null 2>&1
@@ -778,16 +778,16 @@ chromecast(){
         if [ -z "$chromecast_nu" -o -z "$is_right_lanip" ]; then
             [ -z "$is_right_lanip" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1
             iptables -t nat -A PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
-            echo_date ¿ªÆôchromecast¹¦ÄÜ£¨DNS½Ù³Ö¹¦ÄÜ£©
+            echo_date å¼€å¯chromecaståŠŸèƒ½ï¼ˆDNSåŠ«æŒåŠŸèƒ½ï¼‰
         else
-            echo_date DNS½Ù³Ö¹æÔòÒÑ´æÔÚ£¬Ìø¹ı~
+            echo_date DNSåŠ«æŒè§„åˆ™å·²å­˜åœ¨ï¼Œè·³è¿‡~
         fi
     else
-        echo_date DNS½Ù³Ö¹æÔòÉèÖÃ²»¿ªÆô£¬Ìø¹ı~
+        echo_date DNSåŠ«æŒè§„åˆ™è®¾ç½®ä¸å¼€å¯ï¼Œè·³è¿‡~
     fi
 }
 optimized_network(){
-    echo_date ÓÅ»¯ÍøÂç²ÎÊı
+    echo_date ä¼˜åŒ–ç½‘ç»œå‚æ•°
     ulimit -HSn 102400
 	cat > /tmp/net_optimized.conf <<-EOF
 		fs.file-max = 51200
@@ -815,7 +815,7 @@ optimized_network(){
 }
 # =======================================================================================================
 load_nat(){
-    echo_date "¼ÓÔØnat¹æÔò!"
+    echo_date "åŠ è½½natè§„åˆ™!"
     #flush_nat
     creat_ipset
     add_white_black_ip
@@ -824,7 +824,7 @@ load_nat(){
 }
 restart_dnsmasq(){
     # Restart dnsmasq
-    echo_date ÖØÆôdnsmasq·şÎñ...
+    echo_date é‡å¯dnsmasqæœåŠ¡...
     /etc/init.d/dnsmasq restart >/dev/null 2>&1
 }
 write_numbers(){
@@ -837,20 +837,20 @@ write_numbers(){
     update_ipset=`cat $KSROOT/v2ray/version | sed -n 1p | sed 's/#/\n/g'| sed -n 1p`
     update_chnroute=`cat $KSROOT/v2ray/version | sed -n 2p | sed 's/#/\n/g'| sed -n 1p`
     update_cdn=`cat $KSROOT/v2ray/version | sed -n 4p | sed 's/#/\n/g'| sed -n 1p`
-    dbus set v2ray_basic_gfw_status="$ipset_numbers Ìõ£¬×îºó¸üĞÂ°æ±¾£º $update_ipset "
-    dbus set v2ray_basic_chn_status="$chnroute_numbers Ìõ£¬×îºó¸üĞÂ°æ±¾£º $update_chnroute "
-    dbus set v2ray_basic_cdn_status="$cdn_numbers Ìõ£¬×îºó¸üĞÂ°æ±¾£º $update_cdn "
+    dbus set v2ray_basic_gfw_status="$ipset_numbers æ¡ï¼Œæœ€åæ›´æ–°ç‰ˆæœ¬ï¼š $update_ipset "
+    dbus set v2ray_basic_chn_status="$chnroute_numbers æ¡ï¼Œæœ€åæ›´æ–°ç‰ˆæœ¬ï¼š $update_chnroute "
+    dbus set v2ray_basic_cdn_status="$cdn_numbers æ¡ï¼Œæœ€åæ›´æ–°ç‰ˆæœ¬ï¼š $update_cdn "
 }
 detect_ss(){
     SS_NU=`iptables -nvL PREROUTING -t nat |sed 1,2d | sed -n '/SHADOWSOCKS/='` 2>/dev/null
     if [ -n "$SS_NU" ];then
-        echo_date ¼ì²âµ½Äã¿ªÆôÁËSS£¡£¡£¡
-        echo_date v2ray²»ÄÜºÍSS»ìÓÃ£¬Çë¹Ø±ÕSSºóÆôÓÃ±¾²å¼ş£¡£¡
-        echo_date ÍË³ö v2ray Æô¶¯...
+        echo_date æ£€æµ‹åˆ°ä½ å¼€å¯äº†SSï¼ï¼ï¼
+        echo_date v2rayä¸èƒ½å’ŒSSæ··ç”¨ï¼Œè¯·å…³é—­SSåå¯ç”¨æœ¬æ’ä»¶ï¼ï¼
+        echo_date é€€å‡º v2ray å¯åŠ¨...
         dbus set v2ray_basic_enable=0
         close_in_five
     else
-        echo_date v2ray·ûºÏÆô¶¯Ìõ¼ş£¡~
+        echo_date v2rayç¬¦åˆå¯åŠ¨æ¡ä»¶ï¼~
     fi
 }
 get_latest_release() {
@@ -858,7 +858,7 @@ get_latest_release() {
 }
 check_update_v2ray(){
     local lastver oldver
-    echo_date ¿ªÊ¼¼ì²é v2ray ×îĞÂ°æ±¾¡£¡£¡£
+    echo_date å¼€å§‹æ£€æŸ¥ v2ray æœ€æ–°ç‰ˆæœ¬ã€‚ã€‚ã€‚
     if [ "$v2ray_basic_check_releases" == "0" ]; then
         lastver=$(wget --no-check-certificate --timeout=8 --tries=2 -qO- "https://github.com/v2fly/v2ray-core/tags"| grep "/v2fly/v2ray-core/releases/tag/"| head -n 1| awk -F "/tag/" '{print $2}'| sed 's/\">//')
     else
@@ -866,19 +866,19 @@ check_update_v2ray(){
     fi
     oldver="v$(v2ray -version|cut -d" " -f 2|sed -n 1p)"
     if [ -n "$lastver" ]; then
-        echo_date µ±Ç°°æ±¾£º$oldver
-        echo_date ×îĞÂ°æ±¾£º$lastver
+        echo_date å½“å‰ç‰ˆæœ¬ï¼š$oldver
+        echo_date æœ€æ–°ç‰ˆæœ¬ï¼š$lastver
         if [ "$lastver" == "$oldver" ]; then
-            echo_date µ±Ç°ÒÑ¾­ÊÇ×îĞÂ°æ±¾£¡
+            echo_date å½“å‰å·²ç»æ˜¯æœ€æ–°ç‰ˆæœ¬ï¼
             dbus set v2ray_basic_version=$lastver
             sleep 3
             echo XU6J03M6
         else
-            echo_date "×¼±¸Éı¼¶µ½×îĞÂ°æ±¾£¬¿ªÊ¼ÏÂÔØ"
+            echo_date "å‡†å¤‡å‡çº§åˆ°æœ€æ–°ç‰ˆæœ¬ï¼Œå¼€å§‹ä¸‹è½½"
             wget --no-check-certificate --timeout=8 -a $LOG_FILE --tries=2 -O - "https://github.com/v2fly/v2ray-core/releases/download/${lastver}/v2ray-linux-64.zip" > /tmp/v2ray_update.zip
             #curl -r 0-100 -L - "https://github.com/v2fly/v2ray-core/releases/download/${lastver}/v2ray-linux-64.zip" -o /tmp/v2ray_update.zip
             if [ "$?" -eq 0 ] ; then
-                echo_date "×îĞÂ°æ±¾ÒÑÏÂÔØ£¬×¼±¸°²×°"
+                echo_date "æœ€æ–°ç‰ˆæœ¬å·²ä¸‹è½½ï¼Œå‡†å¤‡å®‰è£…"
                 kill_process
                 [ -d "/tmp/v2ray_update" ] && rm -rf /tmp/v2ray_update
                 mkdir -p /tmp/v2ray_update
@@ -889,18 +889,18 @@ check_update_v2ray(){
                 chmod a+x $KSROOT/bin/v2ctl
                 rm -rf /tmp/v2ray_update
                 rm -rf /tmp/v2ray_update.zip
-                echo_date "×îĞÂ°æ±¾ÒÑ°²×°£¬×¼±¸ÖØÆô²å¼ş"
+                echo_date "æœ€æ–°ç‰ˆæœ¬å·²å®‰è£…ï¼Œå‡†å¤‡é‡å¯æ’ä»¶"
                 dbus set v2ray_basic_version=$lastver
                 restart_v2ray
             else
-                echo_date "×îĞÂ°æ±¾ÏÂÔØÊ§°Ü£¬Çë¼ì²éÍøÂçµ½githubµÄÁ¬Í¨ºóÔÙÊÔ£¡"
+                echo_date "æœ€æ–°ç‰ˆæœ¬ä¸‹è½½å¤±è´¥ï¼Œè¯·æ£€æŸ¥ç½‘ç»œåˆ°githubçš„è¿é€šåå†è¯•ï¼"
                 dbus set v2ray_basic_version=$oldver
                 sleep 3
                 echo XU6J03M6
             fi
         fi
     else
-        echo_date ×îĞÂ°æ±¾ºÅ¼ì²éÊ§°Ü£¬Çë¼ì²éÍøÂçµ½githubµÄÁ¬Í¨ºóÔÙÊÔ£¡
+        echo_date æœ€æ–°ç‰ˆæœ¬å·æ£€æŸ¥å¤±è´¥ï¼Œè¯·æ£€æŸ¥ç½‘ç»œåˆ°githubçš„è¿é€šåå†è¯•ï¼
         sleep 3
         echo XU6J03M6
     fi
@@ -915,12 +915,12 @@ update_rule(){
     version_cdn1=$(cat $KSROOT/v2ray/version | sed -n 4p | sed 's/ /\n/g'| sed -n 1p)
     version_Routing1=$(cat $KSROOT/v2ray/version | sed -n 5p | sed 's/ /\n/g'| sed -n 1p)
     version_WhiteList1=$(cat $KSROOT/v2ray/version | sed -n 6p | sed 's/ /\n/g'| sed -n 1p)
-    echo_date ¿ªÊ¼¸üĞÂkoolss¹æÔò£¬ÇëµÈ´ı...
+    echo_date å¼€å§‹æ›´æ–°koolssè§„åˆ™ï¼Œè¯·ç­‰å¾…...
     wget --no-check-certificate --timeout=8 -qO - $url_main/version1 > /tmp/version1
     if [ "$?" == "0" ]; then
-        echo_date ¼ì²âµ½ÔÚÏß°æ±¾ÎÄ¼ş£¬¼ÌĞø...
+        echo_date æ£€æµ‹åˆ°åœ¨çº¿ç‰ˆæœ¬æ–‡ä»¶ï¼Œç»§ç»­...
     else
-        echo_date Ã»ÓĞ¼ì²âµ½ÔÚÏß°æ±¾šG£¬¿ÉÄÜÊÇ·ÃÎÊgithubÓĞÎÊÌâ£¬È¥´óÂ½°×Ãûµ¥Ä£Ê½ÊÔÊÔ°É£¡
+        echo_date æ²¡æœ‰æ£€æµ‹åˆ°åœ¨çº¿ç‰ˆæœ¬æ¬¸ï¼Œå¯èƒ½æ˜¯è®¿é—®githubæœ‰é—®é¢˜ï¼Œå»å¤§é™†ç™½åå•æ¨¡å¼è¯•è¯•å§ï¼
         rm -rf /tmp/version1
         exit
     fi
@@ -953,24 +953,24 @@ update_rule(){
         echo_date " ---------------------------------------------------------------------------------------"
         if [ ! -z "$version_gfwlist2" ];then
             if [ "$version_gfwlist1" != "$version_gfwlist2" ];then
-                echo_date ¼ì²âµ½ĞÂ°æ±¾gfwlist£¬¿ªÊ¼¸üĞÂ...
-                echo_date ÏÂÔØgfwlistµ½ÁÙÊ±ÎÄ¼ş...
+                echo_date æ£€æµ‹åˆ°æ–°ç‰ˆæœ¬gfwlistï¼Œå¼€å§‹æ›´æ–°...
+                echo_date ä¸‹è½½gfwliståˆ°ä¸´æ—¶æ–‡ä»¶...
                 wget --no-check-certificate --timeout=8 -qO - $url_main/gfwlist.conf > /tmp/gfwlist.conf
                 md5sum_gfwlist1=$(md5sum /tmp/gfwlist.conf | sed 's/ /\n/g'| sed -n 1p)
                 if [ "$md5sum_gfwlist1"x = "$md5sum_gfwlist2"x ];then
-                    echo_date ÏÂÔØÍê³É£¬Ğ£ÑéÍ¨¹ı£¬½«ÁÙÊ±ÎÄ¼ş¸²¸Çµ½Ô­Ê¼gfwlistÎÄ¼ş
+                    echo_date ä¸‹è½½å®Œæˆï¼Œæ ¡éªŒé€šè¿‡ï¼Œå°†ä¸´æ—¶æ–‡ä»¶è¦†ç›–åˆ°åŸå§‹gfwlistæ–‡ä»¶
                     mv /tmp/gfwlist.conf $KSROOT/v2ray/gfwlist.conf
                     sed -i "1s/.*/$git_line1/" $KSROOT/v2ray/version
                     reboot="1"
-                    echo_date ¡¾¸üĞÂ³É¹¦¡¿ÄãµÄgfwlist¸Õ²ÅÒÑ¾­¸üĞÂµ½×îĞÂÁËÅ¶~
+                    echo_date ã€æ›´æ–°æˆåŠŸã€‘ä½ çš„gfwliståˆšæ‰å·²ç»æ›´æ–°åˆ°æœ€æ–°äº†å“¦~
                 else
-                    echo_date ÏÂÔØÍê³É£¬µ«ÊÇĞ£ÑéÃ»ÓĞÍ¨¹ı£¡
+                    echo_date ä¸‹è½½å®Œæˆï¼Œä½†æ˜¯æ ¡éªŒæ²¡æœ‰é€šè¿‡ï¼
                 fi
             else
-                echo_date ¼ì²âµ½gfwlist±¾µØ°æ±¾ºÅºÍÔÚÏß°æ±¾ºÅÏàÍ¬£¬ÄÇ»¹¸üĞÂ¸öÃ«°¡!
+                echo_date æ£€æµ‹åˆ°gfwlistæœ¬åœ°ç‰ˆæœ¬å·å’Œåœ¨çº¿ç‰ˆæœ¬å·ç›¸åŒï¼Œé‚£è¿˜æ›´æ–°ä¸ªæ¯›å•Š!
             fi
         else
-            echo_date gfwlistÎÄ¼şÏÂÔØÊ§°Ü£¡
+            echo_date gfwlistæ–‡ä»¶ä¸‹è½½å¤±è´¥ï¼
         fi
     fi
     
@@ -980,24 +980,24 @@ update_rule(){
         echo_date " ---------------------------------------------------------------------------------------"
         if [ ! -z "$version_chnroute2" ];then
             if [ "$version_chnroute1" != "$version_chnroute2" ];then
-                echo_date ¼ì²âµ½ĞÂ°æ±¾chnroute£¬¿ªÊ¼¸üĞÂ...
-                echo_date ÏÂÔØchnrouteµ½ÁÙÊ±ÎÄ¼ş...
+                echo_date æ£€æµ‹åˆ°æ–°ç‰ˆæœ¬chnrouteï¼Œå¼€å§‹æ›´æ–°...
+                echo_date ä¸‹è½½chnrouteåˆ°ä¸´æ—¶æ–‡ä»¶...
                 wget --no-check-certificate --timeout=8 -qO - $url_main/chnroute.txt > /tmp/chnroute.txt
                 md5sum_chnroute1=$(md5sum /tmp/chnroute.txt | sed 's/ /\n/g'| sed -n 1p)
                 if [ "$md5sum_chnroute1"x = "$md5sum_chnroute2"x ];then
-                    echo_date ÏÂÔØÍê³É£¬Ğ£ÑéÍ¨¹ı£¬½«ÁÙÊ±ÎÄ¼ş¸²¸Çµ½Ô­Ê¼chnrouteÎÄ¼ş
+                    echo_date ä¸‹è½½å®Œæˆï¼Œæ ¡éªŒé€šè¿‡ï¼Œå°†ä¸´æ—¶æ–‡ä»¶è¦†ç›–åˆ°åŸå§‹chnrouteæ–‡ä»¶
                     mv /tmp/chnroute.txt $KSROOT/v2ray/chnroute.txt
                     sed -i "2s/.*/$git_line2/" $KSROOT/v2ray/version
                     reboot="1"
-                    echo_date ¡¾¸üĞÂ³É¹¦¡¿ÄãµÄchnroute¸Õ²ÅÒÑ¾­¸üĞÂµ½×îĞÂÁËÅ¶~
+                    echo_date ã€æ›´æ–°æˆåŠŸã€‘ä½ çš„chnrouteåˆšæ‰å·²ç»æ›´æ–°åˆ°æœ€æ–°äº†å“¦~
                 else
-                    echo_date md5sum ÏÂÔØÍê³É£¬µ«ÊÇĞ£ÑéÃ»ÓĞÍ¨¹ı£¡
+                    echo_date md5sum ä¸‹è½½å®Œæˆï¼Œä½†æ˜¯æ ¡éªŒæ²¡æœ‰é€šè¿‡ï¼
                 fi
             else
-                echo_date ¼ì²âµ½chnroute±¾µØ°æ±¾ºÅºÍÔÚÏß°æ±¾ºÅÏàÍ¬£¬ÄÇ»¹¸üĞÂ¸öÃ«°¡!
+                echo_date æ£€æµ‹åˆ°chnrouteæœ¬åœ°ç‰ˆæœ¬å·å’Œåœ¨çº¿ç‰ˆæœ¬å·ç›¸åŒï¼Œé‚£è¿˜æ›´æ–°ä¸ªæ¯›å•Š!
             fi
         else
-            echo_date chnrouteÎÄ¼şÏÂÔØÊ§°Ü£¡
+            echo_date chnrouteæ–‡ä»¶ä¸‹è½½å¤±è´¥ï¼
         fi
     fi
     
@@ -1006,24 +1006,24 @@ update_rule(){
         echo_date " ---------------------------------------------------------------------------------------"
         if [ ! -z "$version_cdn2" ];then
             if [ "$version_cdn1" != "$version_cdn2" ];then
-                echo_date ¼ì²âµ½ĞÂ°æ±¾cdnÃûµ¥£¬¿ªÊ¼¸üĞÂ...
-                echo_date ÏÂÔØcdnÃûµ¥µ½ÁÙÊ±ÎÄ¼ş...
+                echo_date æ£€æµ‹åˆ°æ–°ç‰ˆæœ¬cdnåå•ï¼Œå¼€å§‹æ›´æ–°...
+                echo_date ä¸‹è½½cdnåå•åˆ°ä¸´æ—¶æ–‡ä»¶...
                 wget --no-check-certificate --timeout=8 -qO - $url_main/cdn.txt > /tmp/cdn.txt
                 md5sum_cdn1=$(md5sum /tmp/cdn.txt | sed 's/ /\n/g'| sed -n 1p)
                 if [ "$md5sum_cdn1"x = "$md5sum_cdn2"x ];then
-                    echo_date ÏÂÔØÍê³É£¬Ğ£ÑéÍ¨¹ı£¬½«ÁÙÊ±ÎÄ¼ş¸²¸Çµ½Ô­Ê¼cdnÃûµ¥ÎÄ¼ş
+                    echo_date ä¸‹è½½å®Œæˆï¼Œæ ¡éªŒé€šè¿‡ï¼Œå°†ä¸´æ—¶æ–‡ä»¶è¦†ç›–åˆ°åŸå§‹cdnåå•æ–‡ä»¶
                     mv /tmp/cdn.txt $KSROOT/v2ray/cdn.txt
                     sed -i "4s/.*/$git_line4/" $KSROOT/v2ray/version
                     reboot="1"
-                    echo_date ¡¾¸üĞÂ³É¹¦¡¿ÄãµÄcdnÃûµ¥¸Õ²ÅÒÑ¾­¸üĞÂµ½×îĞÂÁËÅ¶~
+                    echo_date ã€æ›´æ–°æˆåŠŸã€‘ä½ çš„cdnåå•åˆšæ‰å·²ç»æ›´æ–°åˆ°æœ€æ–°äº†å“¦~
                 else
-                    echo_date ÏÂÔØÍê³É£¬µ«ÊÇĞ£ÑéÃ»ÓĞÍ¨¹ı£¡
+                    echo_date ä¸‹è½½å®Œæˆï¼Œä½†æ˜¯æ ¡éªŒæ²¡æœ‰é€šè¿‡ï¼
                 fi
             else
-                echo_date ¼ì²âµ½cdnÃûµ¥±¾µØ°æ±¾ºÅºÍÔÚÏß°æ±¾ºÅÏàÍ¬£¬ÄÇ»¹¸üĞÂ¸öÃ«°¡!
+                echo_date æ£€æµ‹åˆ°cdnåå•æœ¬åœ°ç‰ˆæœ¬å·å’Œåœ¨çº¿ç‰ˆæœ¬å·ç›¸åŒï¼Œé‚£è¿˜æ›´æ–°ä¸ªæ¯›å•Š!
             fi
         else
-            echo_date cdnÃûµ¥ÎÄ¼şÏÂÔØÊ§°Ü£¡
+            echo_date cdnåå•æ–‡ä»¶ä¸‹è½½å¤±è´¥ï¼
         fi
     fi
     rm -rf /tmp/gfwlist.conf1
@@ -1031,7 +1031,7 @@ update_rule(){
     rm -rf /tmp/cdn.txt1
     rm -rf /tmp/version1
     
-    echo_date ¹æÔò¸üĞÂ½ø³ÌÔËĞĞÍê±Ï£¡
+    echo_date è§„åˆ™æ›´æ–°è¿›ç¨‹è¿è¡Œå®Œæ¯•ï¼
     # write number
     ipset_numbers=`cat $KSROOT/v2ray/gfwlist.conf | grep -c ipset`
     chnroute_numbers=`cat $KSROOT/v2ray/chnroute.txt | grep -c .`
@@ -1040,13 +1040,13 @@ update_rule(){
     update_ipset=`cat $KSROOT/v2ray/version | sed -n 1p | sed 's/#/\n/g'| sed -n 1p`
     update_chnroute=`cat $KSROOT/v2ray/version | sed -n 2p | sed 's/#/\n/g'| sed -n 1p`
     update_cdn=`cat $KSROOT/v2ray/version | sed -n 4p | sed 's/#/\n/g'| sed -n 1p`
-    dbus set v2ray_basic_gfw_status="$ipset_numbers Ìõ£¬×îºó¸üĞÂ°æ±¾£º $update_ipset "
-    dbus set v2ray_basic_chn_status="$chnroute_numbers Ìõ£¬×îºó¸üĞÂ°æ±¾£º $update_chnroute "
-    dbus set v2ray_basic_cdn_status="$cdn_numbers Ìõ£¬×îºó¸üĞÂ°æ±¾£º $update_cdn "
+    dbus set v2ray_basic_gfw_status="$ipset_numbers æ¡ï¼Œæœ€åæ›´æ–°ç‰ˆæœ¬ï¼š $update_ipset "
+    dbus set v2ray_basic_chn_status="$chnroute_numbers æ¡ï¼Œæœ€åæ›´æ–°ç‰ˆæœ¬ï¼š $update_chnroute "
+    dbus set v2ray_basic_cdn_status="$cdn_numbers æ¡ï¼Œæœ€åæ›´æ–°ç‰ˆæœ¬ï¼š $update_cdn "
     
     # reboot ss
     if [ "$reboot" == "1" ];then
-        echo_date ×Ô¶¯ÖØÆôkoolss£¬ÒÔÓ¦ÓÃĞÂµÄ¹æÔòÎÄ¼ş£¡ÇëÉÔºó£¡
+        echo_date è‡ªåŠ¨é‡å¯koolssï¼Œä»¥åº”ç”¨æ–°çš„è§„åˆ™æ–‡ä»¶ï¼è¯·ç¨åï¼
         $KSROOT/scripts/v2ray_config.sh start
     fi
     echo =======================================================================================================
@@ -1065,7 +1065,7 @@ v2ray_watchdog_status(){
         [ "$?" == "0" ] && {
             if [ "$v2ray_basic_watchdog_mod" == "1" ]; then
                 restart_by_nat >/dev/null 2>&1
-                echo_date ¡¾V2rayÊØ»¤¡¿¼ì²âµ½V2rayÁ¬½Ó³ö´í£¬ÖØÆô²å¼ş£¡ >> $LOG_FILE
+                echo_date ã€V2rayå®ˆæŠ¤ã€‘æ£€æµ‹åˆ°V2rayè¿æ¥å‡ºé”™ï¼Œé‡å¯æ’ä»¶ï¼ >> $LOG_FILE
             else
                 if [ "$v2ray_basic_type" == "1" ]; then
                     rnd=$(rand 1 $v2ray_server_node_max)
@@ -1077,7 +1077,7 @@ v2ray_watchdog_status(){
                     newname=$(dbus get "v2ray_sub_tag_$rnd")
                 fi
                 restart_by_nat >/dev/null 2>&1
-                echo_date ¡¾V2rayÊØ»¤¡¿¼ì²âµ½V2rayÁ¬½Ó³ö´í£¬Ëæ»úÇĞ»»µ½·şÎñÆ÷£º$newname£¡ >> $LOG_FILE
+                echo_date ã€V2rayå®ˆæŠ¤ã€‘æ£€æµ‹åˆ°V2rayè¿æ¥å‡ºé”™ï¼Œéšæœºåˆ‡æ¢åˆ°æœåŠ¡å™¨ï¼š$newnameï¼ >> $LOG_FILE
             fi
         }
     }
@@ -1086,11 +1086,11 @@ set_v2ray_watchdog(){
     if [ "$v2ray_basic_watchdog" == "1" ]; then
         sed -i '/v2raywatchdog/d' /etc/crontabs/root >/dev/null 2>&1
         echo "*/$v2ray_basic_watchdog_time * * * * /koolshare/scripts/v2ray_config.sh watchdog #v2raywatchdog#" >> /etc/crontabs/root
-        echo_date "¿ªÆôV2rayÊØ»¤£¬¼ì²â¼ä¸ô$v2ray_basic_watchdog_time·ÖÖÓ"
+        echo_date "å¼€å¯V2rayå®ˆæŠ¤ï¼Œæ£€æµ‹é—´éš”$v2ray_basic_watchdog_timeåˆ†é’Ÿ"
         check_cron
     else
         sed -i '/v2raywatchdog/d' /etc/crontabs/root >/dev/null 2>&1
-        echo_date V2rayÊØ»¤Î´¿ªÆô
+        echo_date V2rayå®ˆæŠ¤æœªå¼€å¯
     fi
 }
 set_v2ray_cron(){
@@ -1098,15 +1098,15 @@ set_v2ray_cron(){
         sed -i '/v2raytimeswitch/d' /etc/crontabs/root >/dev/null 2>&1
         echo "$v2ray_basic_cron_enableminute $v2ray_basic_cron_enablehour * * * /koolshare/scripts/v2ray_config.sh #v2raytimeswitch#" >> /etc/crontabs/root
         echo "$v2ray_basic_cron_disableminute $v2ray_basic_cron_disablehour * * * /koolshare/scripts/v2ray_config.sh stop #v2raytimeswitch#" >> /etc/crontabs/root
-        echo_date "ÉèÖÃÔÚ$v2ray_basic_cron_enablehour:$v2ray_basic_cron_enableminute×Ô¶¯¿ªÆôV2ray£¬$v2ray_basic_cron_disablehour:$v2ray_basic_cron_disableminute×Ô¶¯¹Ø±ÕV2ray"
+        echo_date "è®¾ç½®åœ¨$v2ray_basic_cron_enablehour:$v2ray_basic_cron_enableminuteè‡ªåŠ¨å¼€å¯V2rayï¼Œ$v2ray_basic_cron_disablehour:$v2ray_basic_cron_disableminuteè‡ªåŠ¨å…³é—­V2ray"
     else
         sed -i '/v2raytimeswitch/d' /etc/crontabs/root >/dev/null 2>&1
-        echo_date V2ray×Ô¶¯¿ª¹ØÎ´ÆôÓÃ
+        echo_date V2rayè‡ªåŠ¨å¼€å…³æœªå¯ç”¨
     fi
 }
 stop_v2ray_watchdog(){
     sed -i '/v2raywatchdog/d' /etc/crontabs/root >/dev/null 2>&1
-    echo_date ¹Ø±ÕV2rayÊØ»¤
+    echo_date å…³é—­V2rayå®ˆæŠ¤
 }
 check_cron(){
     local crontab
@@ -1128,7 +1128,7 @@ clean_server_list(){
 #=====================
 restart_v2ray(){
     ONSTART=`ps -l|grep $PPID|grep -v grep|grep S99v2ray`
-    echo_date ---------------------- LEDE ¹Ì¼ş v2ray -----------------------
+    echo_date ---------------------- LEDE å›ºä»¶ v2ray -----------------------
     detect_ss
     # stop first
     restore_dnsmasq_conf
@@ -1145,10 +1145,10 @@ restart_v2ray(){
     write_numbers
     set_v2ray_watchdog
     set_v2ray_cron
-    echo_date ------------------------- v2ray Æô¶¯Íê±Ï -------------------------
+    echo_date ------------------------- v2ray å¯åŠ¨å®Œæ¯• -------------------------
 }
 stop_v2ray(){
-    echo_date ---------------------- LEDE ¹Ì¼ş v2ray -----------------------
+    echo_date ---------------------- LEDE å›ºä»¶ v2ray -----------------------
     stop_v2ray_watchdog
     set_v2ray_cron
     restore_dnsmasq_conf
@@ -1156,7 +1156,7 @@ stop_v2ray(){
     flush_nat
     restore_start_file
     kill_process
-    echo_date ------------------------- v2ray ³É¹¦¹Ø±Õ -------------------------
+    echo_date ------------------------- v2ray æˆåŠŸå…³é—­ -------------------------
 }
 restart_by_nat(){
     detect_ss
@@ -1209,22 +1209,22 @@ case $2 in
     ;;
     2)
         # remove all v2ray config in skipd
-        echo_date ³¢ÊÔ¹Ø±Õ v2ray... > $LOG_FILE
+        echo_date å°è¯•å…³é—­ v2ray... > $LOG_FILE
         sh $KSROOT/scripts/v2ray_config.sh stop
-        echo_date ¿ªÊ¼ÇåÀí v2ray ÅäÖÃ... >> $LOG_FILE
+        echo_date å¼€å§‹æ¸…ç† v2ray é…ç½®... >> $LOG_FILE
         confs=`dbus list v2ray | cut -d "=" -f 1 | grep -v "version"`
         for conf in $confs
         do
-            echo_date ÒÆ³ı$conf >> $LOG_FILE
+            echo_date ç§»é™¤$conf >> $LOG_FILE
             dbus remove $conf
         done
-        echo_date ÉèÖÃÒ»Ğ©Ä¬ÈÏ²ÎÊı... >> $LOG_FILE
+        echo_date è®¾ç½®ä¸€äº›é»˜è®¤å‚æ•°... >> $LOG_FILE
         dbus set v2ray_basic_enable="0"
-        echo_date Íê³É£¡ >> $LOG_FILE
+        echo_date å®Œæˆï¼ >> $LOG_FILE
         http_response $1
     ;;
     3)
-        #±¸·İÅäÖÃ
+        #å¤‡ä»½é…ç½®
         echo "" > $LOG_FILE
         mkdir -p $KSROOT/webs/files
         dbus list v2ray | grep -v "status" | grep -v "enable" | grep -v "version" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 i\\n' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > $KSROOT/webs/files/v2ray_conf_backup.sh
@@ -1232,15 +1232,15 @@ case $2 in
         echo XU6J03M6 >> $LOG_FILE
     ;;
     4)
-        #ÓÃ±¸·İµÄv2ray_conf_backup.sh È¥»Ö¸´ÅäÖÃ
-        echo_date "¿ªÊ¼»Ö¸´v2rayÅäÖÃ..." > $LOG_FILE
+        #ç”¨å¤‡ä»½çš„v2ray_conf_backup.sh å»æ¢å¤é…ç½®
+        echo_date "å¼€å§‹æ¢å¤v2rayé…ç½®..." > $LOG_FILE
         file_nu=`ls /tmp/upload/v2ray_conf_backup | wc -l`
         i=20
         until [ -n "$file_nu" ]
         do
             i=$(($i-1))
             if [ "$i" -lt 1 ];then
-                echo_date "´íÎó£ºÃ»ÓĞÕÒµ½»Ö¸´ÎÄ¼ş!"
+                echo_date "é”™è¯¯ï¼šæ²¡æœ‰æ‰¾åˆ°æ¢å¤æ–‡ä»¶!"
                 echo XU6J03M6
                 exit
             fi
@@ -1249,31 +1249,31 @@ case $2 in
         done
         format=`cat /tmp/upload/v2ray_conf_backup.sh |grep dbus`
         if [ -n "format" ];then
-            echo_date "¼ì²âµ½ÕıÈ·¸ñÊ½µÄÅäÖÃÎÄ¼ş£¡" >> $LOG_FILE
+            echo_date "æ£€æµ‹åˆ°æ­£ç¡®æ ¼å¼çš„é…ç½®æ–‡ä»¶ï¼" >> $LOG_FILE
             cd /tmp/upload
             chmod +x v2ray_conf_backup.sh
-            echo_date "»Ö¸´ÖĞ..." >> $LOG_FILE
+            echo_date "æ¢å¤ä¸­..." >> $LOG_FILE
             sh v2ray_conf_backup.sh
             sleep 1
             rm -rf /tmp/upload/v2ray_conf_backup.sh
-            echo_date "»Ö¸´Íê±Ï£¡" >> $LOG_FILE
+            echo_date "æ¢å¤å®Œæ¯•ï¼" >> $LOG_FILE
         else
-            echo_date "ÅäÖÃÎÄ¼ş¸ñÊ½´íÎó£¡" >> $LOG_FILE
+            echo_date "é…ç½®æ–‡ä»¶æ ¼å¼é”™è¯¯ï¼" >> $LOG_FILE
         fi
         http_response "$1"
         echo XU6J03M6 >> $LOG_FILE
     ;;
     5)
-        # ¸üĞÂv2ray¶ş½øÖÆ
+        # æ›´æ–°v2rayäºŒè¿›åˆ¶
         echo ======================================================================================================= > $LOG_FILE
         check_update_v2ray >> $LOG_FILE
         http_response "$1"
     ;;
     6)
-        # ¸üĞÂ¹æÔò
+        # æ›´æ–°è§„åˆ™
         if [ "$1" == "cron" ];then
             echo ======================================================================================================= > $LOG_FILE
-            echo_date "¹æÔò¸üĞÂ¶¨Ê±¸üĞÂ¼Æ»®" >> $LOG_FILE
+            echo_date "è§„åˆ™æ›´æ–°å®šæ—¶æ›´æ–°è®¡åˆ’" >> $LOG_FILE
             update_rule >> $LOG_FILE
             echo XU6J03M6 >> $LOG_FILE
         else
@@ -1287,35 +1287,35 @@ case $2 in
         echo "" > $LOG_FILE
         sed -i '/v2raynodeupdate/d' /etc/crontabs/root >/dev/null 2>&1
         if [ "$v2ray_basic_rule_update" = "1" ];then
-            [ "$v2ray_basic_gfwlist_update" == "1" ] && echo_date "¿ªÆôgfwlist¹æÔò×Ô¶¯¸üĞÂ£¡" >> $LOG_FILE ||  echo_date "gfwlist¹æÔò×Ô¶¯¸üĞÂÎ´¿ªÆô£¡" >> $LOG_FILE
-            [ "$v2ray_basic_chnroute_update" == "1" ] && echo_date "¿ªÆôchnrotue¹æÔò×Ô¶¯¸üĞÂ£¡" >> $LOG_FILE ||  echo_date "chnrotue¹æÔò×Ô¶¯¸üĞÂÎ´¿ªÆô£¡" >> $LOG_FILE
-            [ "$v2ray_basic_cdn_update" == "1" ] && echo_date "¿ªÆôcdn¹æÔò×Ô¶¯¸üĞÂ£¡" >> $LOG_FILE ||  echo_date "cdn¹æÔò×Ô¶¯¸üĞÂÎ´¿ªÆô£¡" >> $LOG_FILE
+            [ "$v2ray_basic_gfwlist_update" == "1" ] && echo_date "å¼€å¯gfwlistè§„åˆ™è‡ªåŠ¨æ›´æ–°ï¼" >> $LOG_FILE ||  echo_date "gfwlistè§„åˆ™è‡ªåŠ¨æ›´æ–°æœªå¼€å¯ï¼" >> $LOG_FILE
+            [ "$v2ray_basic_chnroute_update" == "1" ] && echo_date "å¼€å¯chnrotueè§„åˆ™è‡ªåŠ¨æ›´æ–°ï¼" >> $LOG_FILE ||  echo_date "chnrotueè§„åˆ™è‡ªåŠ¨æ›´æ–°æœªå¼€å¯ï¼" >> $LOG_FILE
+            [ "$v2ray_basic_cdn_update" == "1" ] && echo_date "å¼€å¯cdnè§„åˆ™è‡ªåŠ¨æ›´æ–°ï¼" >> $LOG_FILE ||  echo_date "cdnè§„åˆ™è‡ªåŠ¨æ›´æ–°æœªå¼€å¯ï¼" >> $LOG_FILE
             if [ "$v2ray_basic_rule_update_day" = "7" ];then
                 echo "0 $v2ray_basic_rule_update_hr * * * /koolshare/scripts/v2ray_config.sh cron 6 #v2raynodeupdate#" >> /etc/crontabs/root
-                echo_date "ÉèÖÃ¶©ÔÄ·şÎñÆ÷×Ô¶¯¸üĞÂ¶©ÔÄ·şÎñÆ÷ÔÚÃ¿Ìì $v2ray_basic_rule_update_hr µã¡£" >> $LOG_FILE
+                echo_date "è®¾ç½®è®¢é˜…æœåŠ¡å™¨è‡ªåŠ¨æ›´æ–°è®¢é˜…æœåŠ¡å™¨åœ¨æ¯å¤© $v2ray_basic_rule_update_hr ç‚¹ã€‚" >> $LOG_FILE
             else
                 echo "0 $v2ray_basic_rule_update_hr * * $v2ray_basic_rule_update_day /koolshare/scripts/ss_online_update.sh cron 6 #v2raynodeupdate#" >> /etc/crontabs/root
-                echo_date "ÉèÖÃ¶©ÔÄ·şÎñÆ÷×Ô¶¯¸üĞÂ¶©ÔÄ·şÎñÆ÷ÔÚĞÇÆÚ $v2ray_basic_rule_update_day µÄ $v2ray_basic_rule_update_hr µã¡£" >> $LOG_FILE
+                echo_date "è®¾ç½®è®¢é˜…æœåŠ¡å™¨è‡ªåŠ¨æ›´æ–°è®¢é˜…æœåŠ¡å™¨åœ¨æ˜ŸæœŸ $v2ray_basic_rule_update_day çš„ $v2ray_basic_rule_update_hr ç‚¹ã€‚" >> $LOG_FILE
             fi
         else
-            echo_date "¹Ø±Õ¹æÔò¶¨Ê±¸üĞÂ¼Æ»®ÈÎÎñ£¡" >> $LOG_FILE
+            echo_date "å…³é—­è§„åˆ™å®šæ—¶æ›´æ–°è®¡åˆ’ä»»åŠ¡ï¼" >> $LOG_FILE
         fi
         sleep 1
         http_response "$1"
         echo XU6J03M6 >> $LOG_FILE
     ;;
     8)
-        # ¸üĞÂ²å¼ş
+        # æ›´æ–°æ’ä»¶
         check_update_now > $LOG_FILE
         http_response "$1"
     ;;
     9)
-        # ±£´æ·şÎñÆ÷ÁĞ±í
+        # ä¿å­˜æœåŠ¡å™¨åˆ—è¡¨
         clean_server_list
         http_response "$1"
     ;;
     10)
-        # ¸üĞÂ¶©ÔÄÁĞ±í
+        # æ›´æ–°è®¢é˜…åˆ—è¡¨
         http_response "$1"
         echo XU6J03M6 >> $LOG_FILE
     ;;

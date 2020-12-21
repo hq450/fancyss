@@ -1,6 +1,6 @@
 #!/bin/sh
 
-alias echo_date1='echo $(date +%YÄê%mÔÂ%dÈÕ\ %X)'
+alias echo_date1='echo $(date +%Yå¹´%mæœˆ%dæ—¥\ %X)'
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
 date=`echo_date1`
@@ -10,18 +10,18 @@ LOGTIME=$(date "+%Y-%m-%d %H:%M:%S")
 get_china_status(){
 	wget -4 --spider --quiet --tries=2 --timeout=2 www.baidu.com
 	if [ "$?" == "0" ]; then
-		log2='¹úÄÚÁ´½Ó ¡¾'$LOGTIME'¡¿ ?'
+		log2='å›½å†…é“¾æ¥ ã€'$LOGTIME'ã€‘ âˆš'
 	else
-		log2='¹úÄÚÁ´½Ó ¡¾'$LOGTIME'¡¿ <font color='#FF0000'>X</font>'
+		log2='å›½å†…é“¾æ¥ ã€'$LOGTIME'ã€‘ <font color='#FF0000'>X</font>'
 	fi
 }
 
 get_foreign_status(){
 	wget -4 --spider --quiet --tries=2 --timeout=2 www.google.com.tw
 	if [ "$?" == "0" ]; then
-		log1='¹úÍâÁ´½Ó ¡¾'$LOGTIME'¡¿ ?'
+		log1='å›½å¤–é“¾æ¥ ã€'$LOGTIME'ã€‘ âˆš'
 	else
-		log1='¹úÍâÁ´½Ó ¡¾'$LOGTIME'¡¿ <font color='#FF0000'>X</font>'
+		log1='å›½å¤–é“¾æ¥ ã€'$LOGTIME'ã€‘ <font color='#FF0000'>X</font>'
 	fi
 }
 
