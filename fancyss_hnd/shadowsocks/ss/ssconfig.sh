@@ -2103,14 +2103,16 @@ chromecast() {
 # -----------------------------------nat part end--------------------------------------------------------
 
 restart_dnsmasq() {
-	# use use local dns as system resolver
+	# 如果是梅林固件，需要将 【Tool - Other Settings  - Advanced Tweaks and Hacks - Wan: Use local caching DNS server as system resolver (default: No)】此处设置为【是】
+	# 这将确保固件自身的DNS解析使用127.0.0.1，而不是上游的DNS。否则插件的状态检测将无法解析谷歌，导致状态检测失败。
 	local DLC=$(nvram get dns_local_cache)
 	if [ "$DLC" == "0" ]; then
 		nvram set dns_local_cache=1
 		nvram commit
 	fi
-	# 这是个官改固件
-	if [ -z "$DLC" ]; then
+	# 从梅林刷到官改固件，如果不重置固件，则dns_local_cache将会保留，会导致误判，所以需要改写一次以确保OK
+	local LOCAL_DNS=$(cat /etc/resolv.conf|grep "127.0.0.1")
+	if [ -z "$LOCAL_DNS" ]; then
 		cat >/etc/resolv.conf <<-EOF
 			nameserver 127.0.0.1
 		EOF
