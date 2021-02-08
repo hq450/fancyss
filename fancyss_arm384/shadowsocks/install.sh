@@ -1,32 +1,61 @@
 #! /bin/sh
 
-# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
+# shadowsocks script for koolshare merlin armv7l 384/386 router with kernel 2.6.36.4
 
 source /koolshare/scripts/base.sh
 eval $(dbus export ss)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+odmpid=$(nvram get odmpid)
+productid=$(nvram get productid)
+[ -n "${odmpid}" ] && MODEL="${odmpid}" || MODEL="${productid}"
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 mkdir -p /koolshare/ss
 mkdir -p /tmp/upload
 
-# 判断路由架构和平台
-case $(uname -m) in
-	armv7l)
-		if [ "`uname -o|grep Merlin`" ] && [ -d "/koolshare" ] && [ -n "`nvram get buildno|grep 384`" ];then
-			echo_date 固件平台【koolshare merlin armv7l 384】符合安装要求，开始安装插件！
+# 获取固件类型
+_get_type() {
+	local FWTYPE=$(nvram get extendno|grep koolshare)
+	if [ -d "/koolshare" ];then
+		if [ -n "${FWTYPE}" ];then
+			echo "koolshare官改固件"
 		else
-			echo_date 本插件适用于【koolshare merlin armv7l 384】固件平台，你的固件平台不能安装！！！
-			echo_date 退出安装！
-			exit 1
+			echo "koolshare梅林改版固件"
 		fi
-		;;
-	*)
-		echo_date 本插件适用于【koolshare merlin armv7l 384】固件平台，你的平台：$(uname -m)不能安装！！！
-		echo_date 退出安装！
-		exit 1
-	;;
-esac
+	else
+		if [ "$(uname -o|grep Merlin)" ];then
+			echo "梅林原版固件"
+		else
+			echo "华硕官方固件"
+		fi
+	fi
+}
 
-# 先关闭ss
+exit_install(){
+	local state=$1
+	case $state in
+		1)
+			echo_date "本插件适用于【koolshare merlin armv7l 384/386】固件平台！"
+			echo_date "你的固件平台不能安装！！!"
+			echo_date "本插件支持机型/平台：https://github.com/koolshare/rogsoft#rogsoft"
+			echo_date "退出安装！"
+			rm -rf /tmp/${module}* >/dev/null 2>&1
+			exit 1
+			;;
+		0|*)
+			rm -rf /tmp/${module}* >/dev/null 2>&1
+			exit 0
+			;;
+	esac
+}
+
+# 判断路由架构和平台
+if [ -d "/koolshare" -a -f "/usr/bin/skipd" -a "${LINUX_VER}" -eq "26" ];then
+	echo_date 机型：${MODEL} $(_get_type) 符合安装要求，开始安装插件！
+else
+	exit_install 1
+fi
+
+# 先关闭插件
 if [ "$ss_basic_enable" == "1" ];then
 	echo_date 先关闭科学上网插件，保证文件更新成功!
 	[ -f "/koolshare/ss/stop.sh" ] && sh /koolshare/ss/stop.sh stop_all || sh /koolshare/ss/ssconfig.sh stop

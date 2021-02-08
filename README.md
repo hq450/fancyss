@@ -74,23 +74,25 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 
 #### fancyss_hnd 支持机型/固件：
 
-| 机型/固件下载                                                | 类型     | 平台         | CPU     | 架构  | 支持版本 | 皮肤            |
-| ------------------------------------------------------------ | -------- | ------------ | ------- | ----- | -------- | --------------- |
-| [RT-AC86U](http://koolshare.cn/thread-127878-1-1.html)       | ks梅林改 | hnd          | BCM4906 | ARMV8 | 全部     | asuswrt         |
-| [RT-AC86U](http://koolshare.cn/thread-139965-1-1.html)       | ks官改   | hnd          | BCM4906 | ARMV8 | 全部     | rog/asuswrt[^1] |
-| [GT-AC2900](https://koolshare.cn/thread-191639-1-1.html)     | ks梅林改 | hnd          | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt [^2]    |
-| [GT-AC5300](http://koolshare.cn/thread-130902-1-1.html)      | ks官改   | hnd          | BCM4908 | ARMV8 | 全部     | rog  (红色)     |
-| [RT-AX88U](http://koolshare.cn/thread-158199-1-1.html)       | ks梅林改 | axhnd        | BCM4908 | ARMV8 | 全部     | asuswrt         |
-| [NETGEAR RAX80](https://koolshare.cn/thread-177255-1-1.html) | ks梅林改 | axhnd        | BCM4908 | ARMV8 | 全部     | asuswrt         |
-| [GT-AX11000/GT-AX11000_BO4](http://koolshare.cn/thread-159465-1-1.html) | ks官改   | axhnd        | BCM4908 | ARMV8 | 全部     | rog  (红色)     |
-| [RT-AX92U](https://koolshare.cn/thread-191634-1-1.html)      | ks官改   | axhnd        | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
-| [TUF-AX3000](https://koolshare.cn/thread-179968-1-1.html)    | ks官改   | axhnd.675x   | BCM6750 | ARMV7 | ≥ 1.8.3  | tuf（橙色）     |
-| [RT-AX86U/RT-AX86U高达版](https://koolshare.cn/thread-181845-1-1.html) | ks官改   | p1axhnd.675x | BCM4908 | ARMV8 | ≥ 1.8.3  | asuswrt         |
-| [RT-AX86U/RT-AX86U高达版](https://koolshare.cn/thread-181845-1-1.html) | ks梅林改 | p1axhnd.675x | BCM4908 | ARMV8 | ≥ 1.9.1  | asuswrt         |
-| [RT-AX82U/RT-AX82U高达版](https://koolshare.cn/thread-191637-1-1.html) | ks官改   | axhnd.675x   | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
-| [ZenWiFi AX/灵耀 AX6600M/RT-AX95Q](https://koolshare.cn/thread-187704-1-1.html) | ks官改   | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt         |
-| [ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4](https://koolshare.cn/thread-187744-1-1.html) | ks官改   | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt         |
-| [RT-AX56U_V2青春版/热血版/刺客信条版](https://koolshare.cn/thread-188683-1-1.html) | ks官改   | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt         |
+| 机型/固件下载                                                | 类型   | 平台         | CPU     | 架构  | 支持版本 | 皮肤            |
+| ------------------------------------------------------------ | ------ | ------------ | ------- | ----- | -------- | --------------- |
+| [RT-AC86U](http://koolshare.cn/thread-127878-1-1.html)       | 梅林改 | hnd          | BCM4906 | ARMV8 | 全部     | asuswrt         |
+| [RT-AC86U](http://koolshare.cn/thread-139965-1-1.html)       | 官改   | hnd          | BCM4906 | ARMV8 | 全部     | rog/asuswrt[^1] |
+| [GT-AC2900](https://koolshare.cn/thread-191639-1-1.html)     | 梅林改 | hnd          | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt [^2]    |
+| [GT-AC5300](http://koolshare.cn/thread-130902-1-1.html)      | 官改   | hnd          | BCM4908 | ARMV8 | 全部     | rog  (红色)     |
+| [RT-AX88U](http://koolshare.cn/thread-158199-1-1.html)       | 梅林改 | axhnd        | BCM4908 | ARMV8 | 全部     | asuswrt         |
+| [NETGEAR RAX80](https://koolshare.cn/thread-177255-1-1.html) | 梅林改 | axhnd        | BCM4908 | ARMV8 | 全部     | asuswrt         |
+| [GT-AX11000/GT-AX11000_BO4](http://koolshare.cn/thread-159465-1-1.html) | 官改   | axhnd        | BCM4908 | ARMV8 | 全部     | rog  (红色)     |
+| [RT-AX92U](https://koolshare.cn/thread-191634-1-1.html)      | 官改   | axhnd        | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| [TUF-AX3000](https://koolshare.cn/thread-179968-1-1.html)    | 官改   | axhnd.675x   | BCM6750 | ARMV7 | ≥ 1.8.3  | tuf（橙色）     |
+| [RT-AX68U](https://koolshare.cn/thread-191640-1-1.html)      | 官改   | p1axhnd.675x | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| [RT-AX86U/RT-AX86U高达版](https://koolshare.cn/thread-181845-1-1.html) | 官改   | p1axhnd.675x | BCM4908 | ARMV8 | ≥ 1.8.3  | asuswrt         |
+| [RT-AX86U/RT-AX86U高达版](https://koolshare.cn/thread-181845-1-1.html) | 梅林改 | p1axhnd.675x | BCM4908 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| [RT-AX82U/RT-AX82U高达版](https://koolshare.cn/thread-191637-1-1.html) | 官改   | axhnd.675x   | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
+| [ZenWiFi AX/灵耀 AX6600M/RT-AX95Q](https://koolshare.cn/thread-187704-1-1.html) | 官改   | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt         |
+| [ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4](https://koolshare.cn/thread-187744-1-1.html) | 官改   | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt         |
+| [RT-AX56U_V2青春版/热血版/刺客信条版](https://koolshare.cn/thread-188683-1-1.html) | 官改   | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt         |
+| [RT-AX56U](https://koolshare.cn/thread-192282-1-1.html)      | 梅林改 | axhnd.675x   | BCM6755 | ARMV7 | ≥ 1.9.1  | asuswrt         |
 
 #### 注意：
 
@@ -102,6 +104,7 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 * 部分机型只有达到特定版本后才能使用，386固件需要fancyss_hnd ≥ 1.9.1版本才能使用
 
 [^1]: RT-AC86U从384_81918_koolshare固件版本开始，使用的是asuswrt风格ui，而不是rog风格。
+
 [^2]: RT-AC86U从384_81918_koolshare固件版本开始，使用的是asuswrt风格ui，而不是rog风格。
 
 #### 相关链接：
@@ -140,15 +143,16 @@ wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/mast
 
 ### [fancyss_arm384](https://github.com/hq450/fancyss/tree/master/fancyss_arm)
 
-> **fancyss_arm384**离线安装包仅能在koolshare 梅林 arm 384平台，且linux内核为2.6.36.4的armv7架构的机器上使用！
+> **fancyss_arm384**离线安装包仅能在koolshare 梅林 arm 384/386平台，且linux内核为2.6.36.4的armv7架构的机器上使用！
 
-**fancyss_arm384**支持机型（需刷koolshare梅林**384**改版固件，版本：384_1x_x，如384_12_0）：
+**fancyss_arm384**支持机型（需刷koolshare梅林**384/386**改版固件，如384_18、386_1）：
 
 * 华硕系列：`RT-AC68U` `RT-AC66U-B1` `RT-AC1900P` `RT-AC87U` `RT-AC88U` `RT-AC3100` `RT-AC3200` `RT-AC5300`
 
 #### 注意：
 
 * 其它架构/平台固件不能使用fancyss_arm384！
+* **386固件版本的机器只能使用≥ 1.0.5版本的fancyss_arm384！**
 * 使用本插件建议使用chrome或者chrome内核的浏览器！
 * 强烈建议在最新版本的固件和最新版本软件中心上使用fancyss_arm384！
 
