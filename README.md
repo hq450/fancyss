@@ -11,14 +11,7 @@
 sed -i 's/\tdetect_package/\t# detect_package/g' /koolshare/scripts/ks_tar_install.sh
 ```
 
-**提示2：** 如果更新了RT-AC86U 384_81918_koolshare 官改固件后，科学上网插件皮肤和固件主题不匹配的情况，请使用以下命令修复。下个版本1.8.6将会针对此固件UI做出兼容匹配。
-
-```bash
-cd /koolshare/res
-rm shadowsocks.css
-wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_hnd/shadowsocks/rog/res/shadowsocks.css
-```
-运行完毕后进入科学上网插件，使用ctrl + F5强制刷新浏览器缓存。
+**提示2：** 如果更新了梅林386改版固件，状态出现双:x:的，请使用离线装功能覆盖安装一次科学上网插件。
 
 ---
 

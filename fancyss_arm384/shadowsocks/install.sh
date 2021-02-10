@@ -55,19 +55,19 @@ else
 	exit_install 1
 fi
 
-# 先关闭插件
+# 先关闭fancyss
 if [ "$ss_basic_enable" == "1" ];then
 	echo_date 先关闭科学上网插件，保证文件更新成功!
 	[ -f "/koolshare/ss/stop.sh" ] && sh /koolshare/ss/stop.sh stop_all || sh /koolshare/ss/ssconfig.sh stop
 fi
 
-if [ -n "`ls /koolshare/ss/postscripts/P*.sh 2>/dev/null`" ];then
+if [ -n "$(ls /koolshare/ss/postscripts/P*.sh 2>/dev/null)" ];then
 	echo_date 备份触发脚本!
 	find /koolshare/ss/postscripts -name "P*.sh" | xargs -i mv {} -f /tmp/ss_backup
 fi
 
 # 如果dnsmasq是mounted状态，先恢复
-MOUNTED=`mount|grep -o dnsmasq`
+MOUNTED=$(mount|grep -o dnsmasq)
 if [ -n "$MOUNTED" ];then
 	echo_date 恢复dnsmasq-fastlookup为原版dnsmasq
 	killall dnsmasq >/dev/null 2>&1
@@ -75,7 +75,6 @@ if [ -n "$MOUNTED" ];then
 	service restart_dnsmasq >/dev/null 2>&1
 fi
 
-#升级前先删除无关文件
 echo_date 清理旧文件
 rm -rf /koolshare/ss/*
 rm -rf /koolshare/scripts/ss_*
@@ -120,9 +119,9 @@ echo_date 检测jffs分区剩余空间...
 SPACE_AVAL=$(df|grep jffs | awk '{print $4}')
 SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
 if [ "$SPACE_AVAL" -gt "$SPACE_NEED" ];then
-	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空间满足，继续安装！
+	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间满足，继续安装！
 else
-	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装需要"$SPACE_NEED" KB，空间不足！
+	echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间不足！
 	echo_date 退出安装！
 	exit 1
 fi
@@ -149,7 +148,7 @@ chmod 755 /koolshare/ss/*
 chmod 755 /koolshare/scripts/ss*
 chmod 755 /koolshare/bin/*
 
-if [ -n "`ls /tmp/ss_backup/P*.sh 2>/dev/null`" ];then
+if [ -n "$(ls /tmp/ss_backup/P*.sh 2>/dev/null)" ];then
 	echo_date 恢复触发脚本!
 	mkdir -p /koolshare/ss/postscripts
 	find /tmp/ss_backup -name "P*.sh" | xargs -i mv {} -f /koolshare/ss/postscripts
@@ -170,7 +169,7 @@ echo_date 设置一些默认值
 [ -z "$ss_basic_interval" ] && dbus set ss_basic_interval=2
 
 # 离线安装时设置软件中心内储存的版本号和连接
-CUR_VERSION=`cat /koolshare/ss/version`
+CUR_VERSION=$(cat /koolshare/ss/version)
 dbus set ss_basic_version_local="$CUR_VERSION"
 dbus set softcenter_module_shadowsocks_install="4"
 dbus set softcenter_module_shadowsocks_version="$CUR_VERSION"
@@ -191,4 +190,3 @@ if [ "$ss_basic_enable" == "1" ];then
 fi
 
 echo_date 更新完毕，请等待网页自动刷新！
-
