@@ -86,15 +86,6 @@ if [ -n "$(ls /koolshare/ss/postscripts/P*.sh 2>/dev/null)" ];then
 	find /koolshare/ss/postscripts -name "P*.sh" | xargs -i mv {} -f /tmp/ss_backup
 fi
 
-# 如果dnsmasq是mounted状态，先恢复
-MOUNTED=$(mount|grep -o dnsmasq)
-if [ -n "$MOUNTED" ];then
-	echo_date 恢复dnsmasq-fastlookup为原版dnsmasq
-	killall dnsmasq >/dev/null 2>&1
-	umount /usr/sbin/dnsmasq
-	service restart_dnsmasq >/dev/null 2>&1
-fi
-
 echo_date 清理旧文件
 rm -rf /koolshare/ss/*
 rm -rf /koolshare/scripts/ss_*
@@ -112,9 +103,11 @@ rm -rf /koolshare/bin/haproxy
 rm -rf /koolshare/bin/dnscrypt-proxy
 rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/client_linux_arm*
+rm -rf /koolshare/bin/cdns
 rm -rf /koolshare/bin/chinadns
 rm -rf /koolshare/bin/chinadns1
 rm -rf /koolshare/bin/chinadns-ng
+rm -rf /koolshare/bin/smartdns
 rm -rf /koolshare/bin/resolveip
 rm -rf /koolshare/bin/speederv1
 rm -rf /koolshare/bin/speederv2
@@ -123,17 +116,23 @@ rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/https_dns_proxy
-rm -rf /koolshare/bin/haveged
-rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/httping
-rm -rf /koolshare/bin/dnsmassq
+rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/qrcode.js
 rm -rf /koolshare/res/tablednd.js
+rm -rf /koolshare/res/all.png
+rm -rf /koolshare/res/gfw.png
+rm -rf /koolshare/res/chn.png
+rm -rf /koolshare/res/game.png
 rm -rf /koolshare/res/shadowsocks.css
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
+
+# legacy
+rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
+rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
 
 # 对于jffs分区过小的插件，删除某些功能的二进制文件，比如RT-AX56U_V2的jffs只有15MB，所以移除一些功能
 JFFS_TOTAL=$(df|grep -Ew "/jffs" | awk '{print $2}')
