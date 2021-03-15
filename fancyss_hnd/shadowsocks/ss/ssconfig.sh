@@ -337,6 +337,8 @@ kill_process() {
 		echo_date 关闭haveged进程...
 		killall haveged >/dev/null 2>&1
 	fi
+
+	# close tcp_fastopen
 	echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 }
 
@@ -2145,12 +2147,17 @@ write_numbers() {
 set_sys() {
 	# set_ulimit
 	ulimit -n 16384
+
+	# mem
 	echo 1 >/proc/sys/vm/overcommit_memory
 
 	# more entropy
 	# use command `cat /proc/sys/kernel/random/entropy_avail` to check current entropy
-	echo_date "启动haveged，为系统提供更多的可用熵！"
-	haveged -w 1024 >/dev/null 2>&1	
+	# from merlin fw 386.2, jitterentropy-rngd has been intergrated into fw
+	if [ -z "$(pidof jitterentropy-rngd)" ];then
+		echo_date "启动haveged，为系统提供更多的可用熵！"
+		haveged -w 1024 >/dev/null 2>&1
+	fi
 }
 
 remove_ss_reboot_job() {

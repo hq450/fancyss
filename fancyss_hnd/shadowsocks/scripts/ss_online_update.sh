@@ -148,7 +148,7 @@ prepare(){
 	fi
 
 	if [ $REASON == "1" -o $REASON == "3" ]; then
-		# 提取干净的节点配置，并重新排序
+		# 提取干净的节点配置，并重新排序，现在web界面里添加/删除节点后会自动排序，所以以下基本不会运行到
 		echo_date "备份所有节点信息并重新排序..."
 		echo_date "如果节点数量过多，此处可能需要等待较长时间，请耐心等待..."
 		rm -rf $BACKUP_FILE_TMP
@@ -829,8 +829,9 @@ get_fancyss_running_status(){
 	local STATUS_1=$(dbus get ss_basic_enable 2>/dev/null)
 	local STATUS_2=$(iptables --t nat -S|grep SHADOWSOCKS|grep -w "3333" 2>/dev/null)
 	local STATUS_3=$(netstat -nlp|grep -w "3333"|grep -E "ss-redir|v2ray|koolgame" 2>/dev/null)
-	# 当插件状态为开启，iptables状态正常，透明端口进程正常，dns配置文件正常
-	if [ "${STATUS_1}" == "1" -a -n "${STATUS_2}" -a -n "${STATUS_3}" -a -f "/jffs/configs/dnsmasq.d/wblist.conf" ];then
+	local STATUS_4=$(netstat -nlp|grep -w "7913")
+	# 当插件状态为开启，iptables状态正常，透明端口进程正常，DNS端口正常，DNS配置文件正常
+	if [ "${STATUS_1}" == "1" -a -n "${STATUS_2}" -a -n "${STATUS_3}" -a -n "${STATUS_4}" -a -f "/jffs/configs/dnsmasq.d/wblist.conf" ];then
 		echo 1
 	fi
 }
@@ -850,12 +851,13 @@ get_node_name(){
 }
 
 dnsmasq_rule(){
+	# better way todo: resolve first and add ip to ipset:router mannuly
 	local ACTION="$1"
 	local DOMAIN="$2"
 	local DNSF_PORT=7913
 	local DOMAIN_FILE=/jffs/configs/dnsmasq.d/ss_domain.conf
 	if [ "${ACTION}" == "add" ];then
-		if [ ! -f ${DOMAIN_FILE} -o $(grep -c ${DOMAIN} ${DOMAIN_FILE}) != 2 ];then
+		if [ ! -f ${DOMAIN_FILE} -o "$(grep -c ${DOMAIN} ${DOMAIN_FILE} 2>/dev/null)" != "2" ];then
 			echo_date "添加域名：${DOMAIN} 到本机走代理名单..."
 			rm -rf ${DOMAIN_FILE}
 			echo "server=/${DOMAIN}/127.0.0.1#$DNSF_PORT" >>${DOMAIN_FILE}
@@ -898,24 +900,75 @@ download_by_curl(){
 	return 1
 }
 
-get_oneline_rule_now(){
-	# 1. link format
+download_by_wget(){
+	if [ -n $(echo $1 | grep -E "^https") ]; then
+		local EXT_OPT="--no-check-certificate"
+	else
+		local EXT_OPT=""
+	fi
+	
+	echo_date "使用wget下载订阅，第一次尝试下载..."
+	wget -4 -t 1 -T 10 --dns-timeout=5 -q $EXT_OPT "$1" -O /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi
+
+	sleep 1
+
+	echo_date "使用wget下载订阅，第二次尝试下载..."
+	wget -4 -t 1 -T 15 --dns-timeout=10 -q $EXT_OPT "$1" -O /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi	
+	
+	sleep 2
+
+	echo_date "使用wget下载订阅，第三次尝试下载..."
+	wget -4 -t 1 -T 20 --dns-timeout=15 -q $EXT_OPT "$1" -O /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi
+
+	return 1
+}
+
+
+get_online_rule_now(){
+	# 0. variable define
 	local SUB_LINK="$1"
+
+	# 1. link format
 	local LINK_FORMAT=$(echo "$SUB_LINK" | grep -E "^http://|^https://")
 	if [ -z "${LINK_FORMAT}" ];then
 		return 4
 	fi
 
-	# 2. link format
+	# 2. get domain name of node subscribe link
 	local DOMAIN_NAME="$(get_domain_name ${SUB_LINK})"
 	if [ -z "${DOMAIN_NAME}" ];then
 		return 5
 	fi
-	
-	echo_date "开始更新在线订阅列表..." 
-	echo_date "开始下载订阅链接到本地临时文件，请稍等..."
+
+	# 3. remove related files before download
+	echo_date "下载订阅链接到本地临时文件，请稍等..."
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
 
+	# # 4. download through local network
+	# echo_date "首先尝试使用常规本地网络下载..."
+	# dnsmasq_rule remove
+	# download_by_curl "${SUB_LINK}"
+
+	# # 5. download through proxy network
+	# local RETURN_CODE=$?
+	# if [ "$RETURN_CODE" != "0" ]; then
+	# 	if [ "$(get_fancyss_running_status)" == "1" ];then
+	# 		dnsmasq_rule add "${DOMAIN_NAME}"
+	# 		download_by_curl "${SUB_LINK}"
+	# 	else
+
+	# 	fi
+	# fi
+	
 	if [ "${ss_basic_online_links_goss}" == "1" ]; then
 		if [ "$(get_fancyss_running_status)" == "1" ];then
 			echo_date "使用当前$(get_type_name $ss_basic_type)节点：[$(get_node_name)]提供的网络下载..."
@@ -940,14 +993,9 @@ get_oneline_rule_now(){
 			[ -n "$blank" ] && echo_date "订阅链接可能有跳转，尝试更换wget进行下载..."
 			[ -z "$(cat /tmp/ssr_subscribe_file.txt)" ] && echo_date "下载内容为空，尝试更换wget进行下载..."
 			rm /tmp/ssr_subscribe_file.txt
-			if [ -n $(echo ${SUB_LINK} | grep -E "^https") ]; then
-				#wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $SUB_LINK
-				wget -4 -t 2 -T 15 --dns-timeout=10 --header=Accept:text/plain -q --no-check-certificate '$SUB_LINK' -O /tmp/ssr_subscribe_file.txt
-			else
-				#wget -qO /tmp/ssr_subscribe_file.txt $SUB_LINK
-				wget -4 -t 2 -T 15 --dns-timeout=10 --header=Accept:text/plain -q '$SUB_LINK' -O /tmp/ssr_subscribe_file.txt
-			fi
+			download_by_wget "${SUB_LINK}"
 		fi
+		
 		#下载为空...
 		if [ -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
 			echo_date "下载内容为空..."
@@ -962,28 +1010,25 @@ get_oneline_rule_now(){
 	else
 		echo_date "使用curl下载订阅失败，尝试更换wget进行下载..."
 		rm /tmp/ssr_subscribe_file.txt
-		if [ -n $(echo $SUB_LINK | grep -E "^https") ]; then
-			# wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $SUB_LINK
-			wget -4 -t 2 -T 15 --dns-timeout=10 --header=Accept:text/plain -q --no-check-certificate '$SUB_LINK' -O /tmp/ssr_subscribe_file.txt
-		else
-			# wget -qO /tmp/ssr_subscribe_file.txt $SUB_LINK
-			wget -4 -t 2 -T 15 --dns-timeout=10 --header=Accept:text/plain -q '$SUB_LINK' -O /tmp/ssr_subscribe_file.txt
+		download_by_wget "${SUB_LINK}"
+
+		#返回错误
+		if [ "$?" != "0" ]; then
+			echo_date "更换wget下载订阅上次失败！"
+			return 1
 		fi
 
-		if [ "$?" == "0" ]; then
-			#下载为空...
-			if [ -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
-				echo_date "下载内容为空..."
-				return 3
-			fi
-			#产品信息错误
-			local wrong1=$(cat /tmp/ssr_subscribe_file.txt | grep "{")
-			local wrong2=$(cat /tmp/ssr_subscribe_file.txt | grep "<")
-			if [ -n "$wrong1" -o -n "$wrong2" ]; then
-				return 2
-			fi
-		else
-			return 1
+		#下载为空...
+		if [ -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
+			echo_date "下载内容为空..."
+			return 3
+		fi
+		
+		#产品信息错误
+		local wrong1=$(cat /tmp/ssr_subscribe_file.txt | grep "{")
+		local wrong2=$(cat /tmp/ssr_subscribe_file.txt | grep "<")
+		if [ -n "$wrong1" -o -n "$wrong2" ]; then
+			return 2
 		fi
 	fi
 
@@ -1087,9 +1132,11 @@ get_oneline_rule_now(){
 	fi
 }
 
-# 使用订阅链接订阅ssr/v2ray节点
 start_online_update(){
+	# 1.准备工作，检查/重排本地节点
 	prepare
+
+	# 2.清理上次订阅可能遗留的文件
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
 	rm -rf /tmp/all_localservers.txt >/dev/null 2>&1
@@ -1097,7 +1144,8 @@ start_online_update(){
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/multi_*.txt >/dev/null 2>&1
-	
+
+	# 3. 收集当前所有的订阅节点到临时文件，用于比对
 	echo_date "收集本地订阅节点信息到临时文件"
 	local local_indexs=$(export -p | grep ssconf_basic_ | grep _group_ | cut -d "_" -f4 |cut -d "=" -f1 | sort -n)
 	if [ -n "$local_indexs" ]; then
@@ -1114,7 +1162,8 @@ start_online_update(){
 	else
 		touch /tmp/all_localservers.txt
 	fi
-	
+
+	# 4. 下载/解析订阅节点
 	local z=0
 	online_url_nu=$(echo $ss_online_links | base64_decode | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	until [ "$z" == "$online_url_nu" ]; do
@@ -1129,35 +1178,37 @@ start_online_update(){
 		updatenum=0
 		delnum=0
 		exclude=0
-		get_oneline_rule_now "$url"
+		
+		echo_date "开始更新在线订阅列表..." 
+		get_online_rule_now "$url"
 		case $? in
 		0)
 			continue
 			;;
 		2)
 			echo_date "无法获取产品信息！请检查你的服务商是否更换了订阅链接！"
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
 			;;
 		3)
 			echo_date "该订阅链接不包含任何节点信息！请检查你的服务商是否更换了订阅链接！"
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
 			;;
 		4|5)
 			echo_date "订阅地址错误！检测到你输入的订阅地址并不是标准网址格式！"
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
 			;;
 		1|*)
 			echo_date "下载订阅失败，请检查你的网络..."
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
@@ -1165,8 +1216,8 @@ start_online_update(){
 		esac
 	done
 
+	# 尝试删除去掉订阅链接对应的节点
 	if [ "$DEL_SUBSCRIBE" == "0" ]; then
-		# 尝试删除去掉订阅链接对应的节点
 		if [ -f "/tmp/group_info.txt" ]; then
 			export -p | grep ssconf_basic_group_ | cut -d "=" -f2 | sort -u | while read local_group; do
 			local_group=$(echo $local_group | sed "s/'//g")
@@ -1307,7 +1358,7 @@ case $2 in
 3)
 	# 使用订阅链接订阅ssr/v2ray节点
 	set_lock
-	echo " " > $LOG_FILE
+	true > $LOG_FILE
 	http_response "$1"
 	echo_date "开始订阅" | tee -a $LOG_FILE
 	start_online_update | tee -a $LOG_FILE
