@@ -29,7 +29,7 @@ OUTBOUNDS="[]"
 
 cmd() {
 	echo_date "$*" 2>&1
-	"$@"
+	"$@" 2>/dev/null
 }
 
 set_lock() {
@@ -344,10 +344,10 @@ kill_process() {
 
 # ================================= ss prestart ===========================
 ss_pre_start() {
-	local IS_LOCAL_ADDR=$(echo $ss_basic_server | grep -o "127.0.0.1")
+	local IS_LOCAL_ADDR=$(echo "${ss_basic_server}" | grep -o "127.0.0.1" 2>/dev/null)
 	if [ "$ss_lb_enable" == "1" ]; then
 		echo_date ---------------------- 【科学上网】 启动前触发脚本 ----------------------
-		if [ -n ${IS_LOCAL_ADDR} -a "$ss_basic_port" == "$ss_lb_port" ]; then
+		if [ -n "${IS_LOCAL_ADDR}" -a "${ss_basic_port}" == "${ss_lb_port}" ]; then
 			echo_date 插件启动前触发:触发启动负载均衡功能！
 			#start haproxy
 			sh /koolshare/scripts/ss_lb_config.sh
@@ -355,7 +355,7 @@ ss_pre_start() {
 			echo_date 插件启动前触发:未选择负载均衡节点，不触发负载均衡启动！
 		fi
 	else
-		if [ -n ${IS_LOCAL_ADDR} -a "$ss_basic_port" == "$ss_lb_port" ]; then
+		if [ -n "${IS_LOCAL_ADDR}" -a "${ss_basic_port}" == "${ss_lb_port}" ]; then
 			echo_date 插件启动前触发【警告】：你选择了负载均衡节点，但是负载均衡开关未启用！！
 		#else
 			#echo_date ss启动前触发：你选择了普通节点，不触发负载均衡启动！
