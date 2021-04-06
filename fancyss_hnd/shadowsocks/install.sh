@@ -311,7 +311,7 @@ install_now(){
 
 	# dbus value
 	echo_date "设置插件安装参数..."
-	dbus set ${module}_version="${PLVER}"
+	dbus set ss_basic_version="${PLVER}"
 	dbus set softcenter_module_${module}_version="${PLVER}"
 	dbus set softcenter_module_${module}_install="4"
 	dbus set softcenter_module_${module}_name="${module}"
