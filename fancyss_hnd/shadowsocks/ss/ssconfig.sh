@@ -2154,7 +2154,7 @@ set_sys() {
 	# more entropy
 	# use command `cat /proc/sys/kernel/random/entropy_avail` to check current entropy
 	# from merlin fw 386.2, jitterentropy-rngd has been intergrated into fw
-	if [ -z "$(pidof jitterentropy-rngd)" ];then
+	if [ -z "$(which jitterentropy-rngd)" -a -f "/koolshare/bin/haveged" ];then
 		echo_date "启动haveged，为系统提供更多的可用熵！"
 		haveged -w 1024 >/dev/null 2>&1
 	fi
