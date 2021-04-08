@@ -228,6 +228,7 @@ install_now(){
 		sed -i 's/\, \"Module_shadowsocks_lb\.asp\"//g' /tmp/shadowsocks/res/ss-menu.js
 		echo ".show-btn5, .show-btn6{display: none;}" >> /tmp/shadowsocks/res/shadowsocks.css
 	fi
+	sync
 
 	# 检测储存空间是否足够
 	echo_date "检测jffs分区剩余空间..."
@@ -249,7 +250,7 @@ install_now(){
 	cp -rf /tmp/shadowsocks/bin/* /koolshare/bin/
 	
 	echo_date "复制相关的脚本文件！"
-	cp -rf /tmp/shadowsocks/ss/* /koolshare/ss/
+	cp -rf /tmp/shadowsocks/ss /koolshare/
 	cp -rf /tmp/shadowsocks/scripts/* /koolshare/scripts/
 	cp -rf /tmp/shadowsocks/install.sh /koolshare/scripts/ss_install.sh
 	cp -rf /tmp/shadowsocks/uninstall.sh /koolshare/scripts/uninstall_shadowsocks.sh

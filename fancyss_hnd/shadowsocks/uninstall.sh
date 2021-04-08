@@ -6,7 +6,6 @@ sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
 sleep 1
 
-rm -rf /koolshare/ss/*
 rm -rf /koolshare/scripts/ss_*
 rm -rf /koolshare/webs/Module_shadowsocks*
 rm -rf /koolshare/bin/ss-redir
@@ -46,6 +45,7 @@ rm -rf /koolshare/res/gfw.png
 rm -rf /koolshare/res/chn.png
 rm -rf /koolshare/res/game.png
 rm -rf /koolshare/res/shadowsocks.css
+rm -rf /koolshare/ss
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
