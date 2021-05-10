@@ -123,7 +123,7 @@ function get_dbus_data() {
 		url: "/_api/ss",
 		dataType: "json",
 		cache:false,
-		async: false,
+		async: true,
 		success: function(data) {
 			db_ss = data.result[0];
 			conf2obj(db_ss);
