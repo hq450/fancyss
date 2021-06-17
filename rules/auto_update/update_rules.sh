@@ -1,8 +1,9 @@
 #!/bin/bash
+cd `dirname $0`
 CurrentDate=$(date +%Y-%m-%d)
 # ======================================
 # get gfwlist for shadowsocks ipset mode
-./fwlist.py gfwlist_download.conf
+python2 ./fwlist.py gfwlist_download.conf
 
 grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}" gfwlist_download.conf >gfwlist_download_tmp.conf
 
