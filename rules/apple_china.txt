@@ -50,6 +50,7 @@ gsp4-cn.ls.apple.com
 gsp4-cn.ls.apple.com.edgekey.net
 gsp4-cn.ls.apple.com.edgekey.net.globalredir.akadns.net
 gsp5-cn.ls.apple.com
+gsp85-cn-ssl.ls.apple.com
 gspe19-cn.ls.apple.com
 gspe19-cn.ls-apple.com.akadns.net
 gspe19-cn-ssl.ls.apple.com
@@ -96,11 +97,6 @@ pancake.cdn-apple.com.akadns.net
 phobos.apple.com
 prod-support.apple-support.akadns.net
 reserve-prime.apple.com
-s1.mzstatic.com
-s2.mzstatic.com
-s3.mzstatic.com
-s4.mzstatic.com
-s5.mzstatic.com
 s.mzstatic.com
 stocks-sparkline-lb.apple.com.akadns.net
 store.apple.com
