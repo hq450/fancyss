@@ -1,0 +1,35 @@
+name: update rules
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  workflow_dispatch:
+  
+  schedule:
+      - cron: "0 1 * * 1,3,6"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Run update script
+        run: |
+            cd rules/auto_update
+            sh ./update_rules.sh
+        shell: bash
+
+      - name: Commit file changes
+        run: |
+          if [ -n "$(git status -s)" ]; then
+            git config --local user.name "github-actions[bot]"
+            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Auto update rules by github actions." rules/*
+            git push
+          else
+            echo "No modifications."
+          fi

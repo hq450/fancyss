@@ -13,7 +13,7 @@ url_back=""
 get_latest_version(){
 	rm -rf /tmp/v2ray_latest_info.txt
 	echo_date "检测V2Ray最新版本..."
-	curl --connect-timeout 8 -s $url_main/latest.txt > /tmp/v2ray_latest_info.txt
+	curl --connect-timeout 8 -m 20 -s $url_main/latest.txt > /tmp/v2ray_latest_info.txt
 	if [ "$?" == "0" ];then
 		if [ -z "`cat /tmp/v2ray_latest_info.txt`" ];then
 			echo_date "获取V2Ray最新版本信息失败！使用备用服务器检测！"
@@ -107,7 +107,8 @@ update_now(){
 	mkdir -p /tmp/v2ray && cd /tmp/v2ray
 
 	echo_date "开始下载校验文件：md5sum.txt"
-	wget --no-check-certificate --timeout=20 -qO - $url_main/$1/md5sum.txt > /tmp/v2ray/md5sum.txt
+	#wget --no-check-certificate --timeout=20 -qO - $url_main/$1/md5sum.txt > /tmp/v2ray/md5sum.txt
+	curl --connect-timeout 8 -m 20 -s $url_main/$1/md5sum.txt > /tmp/v2ray/md5sum.txt
 	if [ "$?" != "0" ];then
 		echo_date "md5sum.txt下载失败！"
 		md5sum_ok=0
@@ -117,7 +118,8 @@ update_now(){
 	fi
 	
 	echo_date "开始下载v2ray程序"
-	wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ray
+	#wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ray
+	curl --connect-timeout 8 --speed-time 20 --speed-limit 1 -o v2ray $url_main/$1/v2ray
 	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/$1/v2ray
 	if [ "$?" != "0" ];then
 		echo_date "v2ray下载失败！"
@@ -128,7 +130,8 @@ update_now(){
 	fi
 
 	echo_date "开始下载v2ctl程序"
-	wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ctl
+	#wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ctl
+	curl --connect-timeout 8 --speed-time 20 --speed-limit 1 -o $url_main/$1/v2ctl
 	if [ "$?" != "0" ];then
 		echo_date "v2ctl下载失败！"
 		v2ctl_ok=0
