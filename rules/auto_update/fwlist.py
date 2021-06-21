@@ -24,7 +24,8 @@ if len(sys.argv) != 2:
 outfile = sys.argv[1]
  
 # the url of gfwlist
-baseurl = 'https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt'
+baseurl = 'https://raw.githubusercontent.com/Loukky/gfwlist-by-loukky/master/gfwlist.txt'
+# baseurl = 'https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt'
 # baseurl = 'https://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt'
 # match comments/title/whitelist/ip address
 comment_pattern = '^\!|\[|^@@|^\d+\.\d+\.\d+\.\d+'

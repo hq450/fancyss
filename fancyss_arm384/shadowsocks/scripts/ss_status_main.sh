@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for koolshare merlin armv7l 384 router with kernel 2.6.36.4
+# shadowsocks script for koolshare merlin armv7l 384/386 router with kernel 2.6.36.4
 
 source /koolshare/scripts/base.sh
 
@@ -137,7 +137,7 @@ failover_check_3(){
 		return
 	fi
 
-	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s3_1" | grep -E "200 OK"|sed 's/time=//g' | awk '{print $(NF-4)}' | awk '{sum+=$1} END {print sum/NR}' | awk '{printf "%.0f\n",$1}')
+	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s3_1" | grep -E "200 OK" | grep -oe time=[0-9]* | sed 's/time=//g' | awk '{sum+=$1} END {print sum/NR}' | awk '{printf "%.0f\n",$1}')
 	#echo "$LOGTIME1 fancyss：前15次状态平均延迟：$OK_MARK ！"
 	if [ "$OK_MARK" -gt "$ss_failover_s3_2" ];then
 		failover_action 3 "$OK_MARK"

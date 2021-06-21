@@ -1,11 +1,74 @@
 fancyss_hnd Changelog
 ===========================================
-1.8.2 - 1.8.3
-    		-----------------------------------
-    		太久没推送，漏掉一些改动，所以推了1.8.3，结果还漏掉一些，就短时间内重推了1.8.3    		
-    		因为1.8.3版本半小时内推送了两次，如果你的chinadns-ng无法使用，
-    		那么一定是用到了第一个假的1.8.3，重新下载最新的1.8.3离线包覆盖安装一次就好了。见谅~
-    		-----------------------------------   		
+1.9.5
+   - fix	修复插件全新安装时，部分文件无法正确安装的问题。
+   
+1.9.4
+   - update	原先的分流检测不再准确，更换检测网站：https://ip.skk.moe/；
+   - update	更新订阅脚本，增加订阅成功率；并且现在wget也能走代理订阅了；
+   - remove	因dnsmasq-fastlookup版本和固件内dnsmasq版本差距越来越大，且有安全漏洞，故移除dnsmasq-fastlookup功能；
+   - update	因梅林386.2固件使用jitterentropy-rngd为系统提供更多熵，所以符合的固件不再安装haveged程序。
+   - update	更新插件安装脚本，支持GT-AX11000梅林固件。
+   - fix	修复插件启动前触发脚本部分的错误提示；
+
+
+1.9.3
+   - fix	修复部分机型，如RT-AC86U，从梅林固件刷为官改固件后，出现插件状态检测失败，导致故障转移功能无法使用的问题。
+   - fix	修复RT-AC86U 386固件皮肤错误问题。
+
+1.9.2
+   - fix	修复一些机场下载订阅为空的问题；
+   - update	同步最新规则，并且从gfwlist中移除apple.com域名。
+
+1.9.1
+   - update	更新httping，以适配华硕/梅林386改版固件环境；
+   - update	更新安装脚本；
+   - fix	修复ssconfig.sh 主脚本的一些语法错误。
+
+1.9.0
+   - add	添加armv7机型：RT-AX56U_V2（RT-AX56U热血版/青春版）ks官改固件支持。
+    		因为RT-AX56U_V2的JFFS分区只有15MB，且没有USB接口用以JFFS扩容！而fancyss_hnd安装包接近20MB！
+    		为了RT-AX56U_V2能顺利安装fancyss_hnd，部分功能的二进制文件将不会安装！
+    		所以RT-AX56U_V2机型安装后以下功能将无法使用，即使界面上显示有该功能！
+    			1. v2ray 功能
+    			2. koolgame 功能
+    			3. kcptun 功能
+    			4. shadowsocks-libev v2ray plugin 功能
+    			5. shadowsocks-libev obfs plugin 功能
+    			6. smartdns、chinadns1、chinadns2 功能
+    			7. udp加速内的所有功能：udp2ray、speederv1、speederv2
+    			8. 负载均衡功能
+    		其它功能，如ss、ssr、dns、负载均衡等不受影响！
+		其它机型的以上功能不会阉割！
+   - update	更新安装脚本：兼容未来可能的[hnd/axhnd/axhnd.675x]平台机型的ks官改固件支持。
+   - fix	修复卸载脚本：修复卸载插件的时候因部分文件没有删除干净，占用jffs分区的问题。
+
+1.8.9
+   - update	更新安装脚本，现在RT-AC86U 官改固件384_81918及其以后版本默认安装ASUSWRT风格皮肤。
+
+1.8.8
+   - add	添加armv7机型：ZenWiFi_XD4（灵耀AX魔方/RT-AX56_XD4）ks官改固件支持。
+   - update	同步安装包内置规则到最新。
+
+1.8.7
+   - add	添加armv7机型：ZenWiFi AX（灵耀 AX6600M/RT-AX95Q）ks官改固件支持。
+
+1.8.6
+   - update	repack；
+    		
+1.8.5
+   - revert	暂时回滚v2ray 到 v4.22.1，待近日v2ray-core的几个漏洞得到较好修复后再同步。
+
+1.8.4
+   - add	添加armv7机型：RT-AX82U官改固件支持。
+   - update	chinadns-ng、v2ray-plugin、smartdns更换为32位程序，以兼容BCM6750机型（TUF-AX3000、RT-AX82U等）
+   - update	更新chinadns-ng v1.0-beta.22 <https://github.com/zfl9/chinadns-ng>
+   - update	更新smartdns 1.2020.05.04-0005
+   - update	更新v2ray-plugin v1.3.1
+   - update	更新v2ray v4.23.3
+   - update	更新kcptun 20200409
+
+1.8.3	
    - update	更新httping，支持ssl；
    - update	更新smartdns二进制到(commit:198d18f)；
    - update	更新haproxy二进制到2.1.2；
@@ -15,7 +78,7 @@ fancyss_hnd Changelog
     		PS:由于现在DNS方案错综复杂，下个版本应该会较大改动下这块。
    - add	添加TUF-AX3000 koolshare官改固件支持，虽然TUF-AX3000使用的CPU：BCM6750是armv7l 32位cpu，
     		但是其固件基本是和RT-AC86U一样的工具链编译的，所以将TUF-AX3000纳入支持，
-		不过对于目前fancyss_hnd 1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
+    		不过对于目前fancyss_hnd 1.8.2版本，TUF-AX3000暂时不能使用chinadns-ng，smartdns，v2ray-plugin这三个功能，
     		因为这些功能使用的二进制是64位的，BCM6750作为32位cpu是不能运行的，后期版本将逐渐添加支持。		
    
 1.8.1

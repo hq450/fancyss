@@ -1,0 +1,7 @@
+fancyss_qca Changelog
+===========================================
+
+2.0.0
+   - add	添加 fancyss_qca 科学上网插件，该插件目前仅适用于华硕高通平台路由器RT-AX89X。
+    		基于fancyss_hnd 1.8.5修改而来，首个版本2.0.0，以区别fancyss_arm384，
+    		如无特殊说明，fancyss_hnd有的功能，fancyss_qca也有。

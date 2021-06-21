@@ -1026,8 +1026,6 @@ flush_nat(){
 	# flush iptables rules
 	iptables -t nat -D OUTPUT -j SHADOWSOCKS > /dev/null 2>&1
 	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 > /dev/null 2>&1
-	iptables -t nat -D OUTPUT -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333 > /dev/null 2>&1
-	iptables -t nat -D OUTPUT -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333 > /dev/null 2>&1
 	nat_indexs=`iptables -nvL PREROUTING -t nat |sed 1,2d | sed -n '/SHADOWSOCKS/='|sort -r`
 	for nat_index in $nat_indexs
 	do
@@ -1323,8 +1321,6 @@ apply_nat_rules(){
 	# router itself
 	iptables -t nat -I OUTPUT -j SHADOWSOCKS
 	iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
-	iptables -t nat -A OUTPUT -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
-	iptables -t nat -A OUTPUT -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 }
 
 chromecast(){

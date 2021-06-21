@@ -12,7 +12,6 @@ BACKUP_FILE=/tmp/ss_conf.sh
 KEY_WORDS_1=$(echo $ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(echo $ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
 DEL_SUBSCRIBE=0
-SOCKS_FLAG=0
 NODES_SEQ=$(export -p | grep ssconf_basic_ | grep _name_ | cut -d "=" -f1 | cut -d "_" -f4 | sort -n)
 NODE_INDEX=${NODES_SEQ##*[[:space:]]}
 
@@ -55,8 +54,15 @@ readonly PREFIX="ssconf_basic_name_
 set_lock(){
 	exec 233>"$LOCK_FILE"
 	flock -n 233 || {
-		echo_date "订阅脚本已经在运行，请稍候再试！"
-		exit 1
+		local PID1=$$
+		local PID2=$(ps|grep -w "ss_online_update.sh"|grep -vw "grep"|grep -vw ${PID1})
+		if [ -n "${PID2}" ];then
+			echo_date "订阅脚本已经在运行，请稍候再试！"
+			exit 1			
+		else
+			rm -rf $LOCK_FILE
+		fi
+
 	}
 }
 
@@ -142,7 +148,7 @@ prepare(){
 	fi
 
 	if [ $REASON == "1" -o $REASON == "3" ]; then
-		# 提取干净的节点配置，并重新排序
+		# 提取干净的节点配置，并重新排序，现在web界面里添加/删除节点后会自动排序，所以以下基本不会运行到
 		echo_date "备份所有节点信息并重新排序..."
 		echo_date "如果节点数量过多，此处可能需要等待较长时间，请耐心等待..."
 		rm -rf $BACKUP_FILE_TMP
@@ -466,7 +472,7 @@ get_ssr_node_info(){
 	[ -n "$obfsparam_temp" ] && obfsparam=$(decode_url_link $obfsparam_temp) || obfsparam=''
 	
 	protoparam_temp=$(echo "$decode_link" | awk -F':' '{print $6}' | grep -Eo "protoparam.+" | sed 's/protoparam=//g' | awk -F'&' '{print $1}')
-	[ -n "$protoparam_temp" ] && protoparam=$(decode_url_link $protoparam_temp | sed 's/_compatible//g') || protoparam=''
+	[ -n "$protoparam_temp" ] && protoparam=$(decode_url_link $protoparam_temp | sed 's/_compatible//g' | sed 's/\s//g') || protoparam=''
 	
 	remarks_temp=$(echo "$decode_link" | awk -F':' '{print $6}' | grep -Eo "remarks.+" | sed 's/remarks=//g' | awk -F'&' '{print $1}')
 	if [ "$action" == "1" ]; then
@@ -678,31 +684,30 @@ update_ssr_nodes(){
 			let delnum+=1
 		else
 			# 在本地的订阅节点中找到该节点，检测下配置是否更改，如果更改，则更新配置
-			local local_mode=$(eval echo \$ssconf_basic_mode_$index)
-			local local_remark=$(eval echo \$ssconf_basic_name_$index)
-			local local_server=$(eval echo \$ssconf_basic_server_$index)
-			local local_server_port=$(eval echo \$ssconf_basic_port_$index)
-			local local_password=$(eval echo \$ssconf_basic_password_$index)
-			local local_encrypt_method=$(eval echo \$ssconf_basic_method_$index)
-			local local_protocol=$(eval echo \$ssconf_basic_rss_protocol_$index)
-			local local_protocol_param=$(eval echo \$ssconf_basic_rss_protocol_param_$index)
-			local local_obfs=$(eval echo \$ssconf_basic_rss_obfs_$index)
-			local local_obfsparam=$(eval echo \$ssconf_basic_rss_obfs_param_$index)
+			local local_mode="$(eval echo \$ssconf_basic_mode_$index)"
+			local local_remark="$(eval echo \$ssconf_basic_name_$index)"
+			local local_server="$(eval echo \$ssconf_basic_server_$index)"
+			local local_server_port="$(eval echo \$ssconf_basic_port_$index)"
+			local local_password="$(eval echo \$ssconf_basic_password_$index)"
+			local local_encrypt_method="$(eval echo \$ssconf_basic_method_$index)"
+			local local_protocol="$(eval echo \$ssconf_basic_rss_protocol_$index)"
+			local local_protocol_param="$(eval echo \$ssconf_basic_rss_protocol_param_$index)"
+			local local_obfs="$(eval echo \$ssconf_basic_rss_obfs_$index)"
+			local local_obfsparam="$(eval echo \$ssconf_basic_rss_obfs_param_$index)"
 			
-			[ "$local_mode" != "$ssr_subscribe_mode" ] && dbus set ssconf_basic_mode_$index=$ssr_subscribe_mode && INFO="${INFO}模式"
-			[ "$SKIPDB_FLAG" == "2" ] && [ "$local_remark" != "$remarks" ] && dbus set ssconf_basic_name_$index=$remarks && INFO="${INFO}名称 "
-			[ "$SKIPDB_FLAG" == "1" ] && [ "$local_server" != "$server" ] && dbus set ssconf_basic_server_$index=$server && INFO="${INFO}服务器地址 "
-			[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index=$server_port && INFO="${INFO}端口 "
-			[ "$local_password" != "$password" ] && dbus set ssconf_basic_password_$index=$password && INFO="${INFO}密码 "
-			[ "$local_encrypt_method" != "$encrypt_method" ] && dbus set ssconf_basic_method_$index=$encrypt_method && INFO="${INFO}加密 "
-			[ "$local_protocol" != "$protocol" ] && dbus set ssconf_basic_rss_protocol_$index=$protocol && INFO="${INFO}协议 "
-			[ "$local_protocol_param" != "$protoparam" ] && dbus set ssconf_basic_rss_protocol_param_$index=$protoparam && INFO="${INFO}协议参数 "
+			[ "$local_mode" != "$ssr_subscribe_mode" ] && dbus set ssconf_basic_mode_$index="$ssr_subscribe_mode" && INFO="${INFO}模式"
+			[ "$SKIPDB_FLAG" == "2" ] && [ "$local_remark" != "$remarks" ] && dbus set ssconf_basic_name_$index="$remarks" && INFO="${INFO}名称 "
+			[ "$SKIPDB_FLAG" == "1" ] && [ "$local_server" != "$server" ] && dbus set ssconf_basic_server_$index="$server" && INFO="${INFO}服务器地址 "
+			[ "$local_server_port" != "$server_port" ] && dbus set ssconf_basic_port_$index="$server_port" && INFO="${INFO}端口 "
+			[ "$local_password" != "$password" ] && dbus set ssconf_basic_password_$index="$password" && INFO="${INFO}密码 "
+			[ "$local_encrypt_method" != "$encrypt_method" ] && dbus set ssconf_basic_method_$index="$encrypt_method" && INFO="${INFO}加密 "
+			[ "$local_protocol" != "$protocol" ] && dbus set ssconf_basic_rss_protocol_$index="$protocol" && INFO="${INFO}协议 "
 			if [ -z "$protoparam" ]; then
 				[ -n "$local_protocol_param" ] && dbus remove ssconf_basic_rss_protocol_param_$index && INFO="${INFO}协议参数 "
 			else
-				[ "$local_protocol_param" != "$protoparam" ] && dbus set ssconf_basic_rss_protocol_param_$index=$protoparam && INFO="${INFO}协议参数 "
+				[ "$local_protocol_param" != "$protoparam" ] && dbus set ssconf_basic_rss_protocol_param_$index="$protoparam" && INFO="${INFO}协议参数 "
 			fi
-			[ "$local_obfs" != "$obfs" ] && dbus set ssconf_basic_rss_obfs_$index=$obfs && INFO="${INFO}混淆 "
+			[ "$local_obfs" != "$obfs" ] && dbus set ssconf_basic_rss_obfs_$index="$obfs" && INFO="${INFO}混淆 "
 			[ "$ssr_subscribe_obfspara" == "0" ] && [ -n "$local_obfsparam" ] dbus remove ssconf_basic_rss_obfs_param_$index && INFO="${INFO}混淆参数 "
 			[ "$ssr_subscribe_obfspara" == "1" ] && {
 				if [ -z "$obfsparam" ]; then
@@ -820,64 +825,177 @@ gap_test(){
 	done
 }
 
-open_socks_23456(){
-	socksopen_a=$(netstat -nlp | grep -w 23456 | grep -E "local|v2ray")
-	if [ -z "$socksopen_a" ]; then
-		if [ "$ss_basic_type" == "1" ]; then
-			SOCKS_FLAG=1
-			echo_date "开启ssr-local，提供socks5代理端口：23456"
-			rss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-		elif  [ "$ss_basic_type" == "0" ]; then
-			SOCKS_FLAG=2
-			echo_date "开启ss-local，提供socks5代理端口：23456"
-			if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
-				ss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-			else
-				ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-			fi
-		fi
+get_fancyss_running_status(){
+	local STATUS_1=$(dbus get ss_basic_enable 2>/dev/null)
+	local STATUS_2=$(iptables --t nat -S|grep SHADOWSOCKS|grep -w "3333" 2>/dev/null)
+	local STATUS_3=$(netstat -nlp|grep -w "3333"|grep -E "ss-redir|v2ray|koolgame" 2>/dev/null)
+	local STATUS_4=$(netstat -nlp|grep -w "7913")
+	# 当插件状态为开启，iptables状态正常，透明端口进程正常，DNS端口正常，DNS配置文件正常
+	if [ "${STATUS_1}" == "1" -a -n "${STATUS_2}" -a -n "${STATUS_3}" -a -n "${STATUS_4}" -a -f "/jffs/configs/dnsmasq.d/wblist.conf" ];then
+		echo 1
 	fi
-	sleep 2
 }
 
-get_oneline_rule_now(){
-	# ss订阅
-	ssr_subscribe_link="$1"
-	LINK_FORMAT=$(echo "$ssr_subscribe_link" | grep -E "^http://|^https://")
-	[ -z "$LINK_FORMAT" ] && return 4
+get_domain_name(){
+	echo "$1" | sed -e 's|^[^/]*//||' -e 's|/.*$||'
+}
+
+get_node_name(){
+	local CURRENT=$(dbus get ssconf_basic_node)
+	local NODE_NAME=$(dbus get ssconf_basic_name_$CURRENT)
+	if [ -n "${NODE_NAME}" ];then
+		echo "${NODE_NAME}"
+	else
+		echo ""
+	fi
+}
+
+dnsmasq_rule(){
+	# better way todo: resolve first and add ip to ipset:router mannuly
+	local ACTION="$1"
+	local DOMAIN="$2"
+	local DNSF_PORT=7913
+	local DOMAIN_FILE=/jffs/configs/dnsmasq.d/ss_domain.conf
+	if [ "${ACTION}" == "add" ];then
+		if [ ! -f ${DOMAIN_FILE} -o "$(grep -c ${DOMAIN} ${DOMAIN_FILE} 2>/dev/null)" != "2" ];then
+			echo_date "添加域名：${DOMAIN} 到本机走代理名单..."
+			rm -rf ${DOMAIN_FILE}
+			echo "server=/${DOMAIN}/127.0.0.1#$DNSF_PORT" >>${DOMAIN_FILE}
+			echo "ipset=/${DOMAIN}/router" >>${DOMAIN_FILE}
+			sync
+			service restart_dnsmasq >/dev/null 2>&1
+		fi
+	elif [ "${ACTION}" == "remove" ];then
+		if [ -f ${DOMAIN_FILE} ];then
+			rm -rf ${DOMAIN_FILE}
+			sync
+			service restart_dnsmasq >/dev/null 2>&1
+		fi
+	fi
+}
+
+download_by_curl(){
+	echo_date "使用curl下载订阅，第一次尝试下载..."
+	curl -4sSk --connect-timeout 6 "$1" > /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi
+
+	sleep 1
 	
-	echo_date "开始更新在线订阅列表..." 
-	echo_date "开始下载订阅链接到本地临时文件，请稍等..."
+	echo_date "使用curl下载订阅失败，第二次尝试下载..."
+	curl -4sSk --connect-timeout 10 "$1" > /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi
+
+	sleep 2
+
+	echo_date "使用curl下载订阅失败，第三次尝试下载..."
+	curl -4sSk --connect-timeout 12 "$1" > /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi	
+
+	return 1
+}
+
+download_by_wget(){
+	if [ -n $(echo $1 | grep -E "^https") ]; then
+		local EXT_OPT="--no-check-certificate"
+	else
+		local EXT_OPT=""
+	fi
+	
+	echo_date "使用wget下载订阅，第一次尝试下载..."
+	wget -4 -t 1 -T 10 --dns-timeout=5 -q $EXT_OPT "$1" -O /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi
+
+	sleep 1
+
+	echo_date "使用wget下载订阅，第二次尝试下载..."
+	wget -4 -t 1 -T 15 --dns-timeout=10 -q $EXT_OPT "$1" -O /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi	
+	
+	sleep 2
+
+	echo_date "使用wget下载订阅，第三次尝试下载..."
+	wget -4 -t 1 -T 20 --dns-timeout=15 -q $EXT_OPT "$1" -O /tmp/ssr_subscribe_file.txt
+	if [ "$?" == "0" ]; then
+		return 0
+	fi
+
+	return 1
+}
+
+
+get_online_rule_now(){
+	# 0. variable define
+	local SUB_LINK="$1"
+
+	# 1. link format
+	local LINK_FORMAT=$(echo "$SUB_LINK" | grep -E "^http://|^https://")
+	if [ -z "${LINK_FORMAT}" ];then
+		return 4
+	fi
+
+	# 2. get domain name of node subscribe link
+	local DOMAIN_NAME="$(get_domain_name ${SUB_LINK})"
+	if [ -z "${DOMAIN_NAME}" ];then
+		return 5
+	fi
+
+	# 3. remove related files before download
+	echo_date "下载订阅链接到本地临时文件，请稍等..."
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
+
+	# # 4. download through local network
+	# echo_date "首先尝试使用常规本地网络下载..."
+	# dnsmasq_rule remove
+	# download_by_curl "${SUB_LINK}"
+
+	# # 5. download through proxy network
+	# local RETURN_CODE=$?
+	# if [ "$RETURN_CODE" != "0" ]; then
+	# 	if [ "$(get_fancyss_running_status)" == "1" ];then
+	# 		dnsmasq_rule add "${DOMAIN_NAME}"
+	# 		download_by_curl "${SUB_LINK}"
+	# 	else
+
+	# 	fi
+	# fi
 	
-	if [ "$ss_basic_online_links_goss" == "1" ]; then
-		open_socks_23456
-		socksopen_b=$(netstat -nlp | grep -w 23456 | grep -E "local|v2ray")
-		if [ -n "$socksopen_b" ]; then
-			echo_date "使用$(get_type_name $ss_basic_type)提供的socks代理网络下载..."
-			curl -4sSk --connect-timeout 8 --socks5-hostname 127.0.0.1:23456 $ssr_subscribe_link > /tmp/ssr_subscribe_file.txt
+	if [ "${ss_basic_online_links_goss}" == "1" ]; then
+		if [ "$(get_fancyss_running_status)" == "1" ];then
+			echo_date "使用当前$(get_type_name $ss_basic_type)节点：[$(get_node_name)]提供的网络下载..."
+			dnsmasq_rule add "${DOMAIN_NAME}"
 		else
-			echo_date "没有可用的socks5代理端口，改用常规网络下载..."
-			curl -4sSk --connect-timeout 8 $ssr_subscribe_link > /tmp/ssr_subscribe_file.txt
+			echo_date "当前$(get_type_name $ss_basic_type)节点工作异常，改用常规网络下载..."
+			dnsmasq_rule remove
 		fi
 	else
 		echo_date "使用常规网络下载..."
-		curl -4sSk --connect-timeout 8 $ssr_subscribe_link > /tmp/ssr_subscribe_file.txt
+		dnsmasq_rule remove
 	fi
+	
+	# 3. download by curl
+	download_by_curl "${SUB_LINK}"
 
 	#虽然为0但是还是要检测下是否下载到正确的内容
 	if [ "$?" == "0" ]; then
 		#订阅地址有跳转
 		local blank=$(cat /tmp/ssr_subscribe_file.txt | grep -E " |Redirecting|301")
-		if [ -n "$blank" ]; then
-			echo_date "订阅链接可能有跳转，尝试更换wget进行下载..."
+		if [ -n "$blank" -o -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
+			[ -n "$blank" ] && echo_date "订阅链接可能有跳转，尝试更换wget进行下载..."
+			[ -z "$(cat /tmp/ssr_subscribe_file.txt)" ] && echo_date "下载内容为空，尝试更换wget进行下载..."
 			rm /tmp/ssr_subscribe_file.txt
-			if [ -n $(echo $ssr_subscribe_link | grep -E "^https") ]; then
-				wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
-			else
-				wget -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
-			fi
+			download_by_wget "${SUB_LINK}"
 		fi
+		
 		#下载为空...
 		if [ -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
 			echo_date "下载内容为空..."
@@ -892,26 +1010,25 @@ get_oneline_rule_now(){
 	else
 		echo_date "使用curl下载订阅失败，尝试更换wget进行下载..."
 		rm /tmp/ssr_subscribe_file.txt
-		if [ -n $(echo $ssr_subscribe_link | grep -E "^https") ]; then
-			wget --no-check-certificate --timeout=15 -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
-		else
-			wget -qO /tmp/ssr_subscribe_file.txt $ssr_subscribe_link
+		download_by_wget "${SUB_LINK}"
+
+		#返回错误
+		if [ "$?" != "0" ]; then
+			echo_date "更换wget下载订阅上次失败！"
+			return 1
 		fi
 
-		if [ "$?" == "0" ]; then
-			#下载为空...
-			if [ -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
-				echo_date "下载内容为空..."
-				return 3
-			fi
-			#产品信息错误
-			local wrong1=$(cat /tmp/ssr_subscribe_file.txt | grep "{")
-			local wrong2=$(cat /tmp/ssr_subscribe_file.txt | grep "<")
-			if [ -n "$wrong1" -o -n "$wrong2" ]; then
-				return 2
-			fi
-		else
-			return 1
+		#下载为空...
+		if [ -z "$(cat /tmp/ssr_subscribe_file.txt)" ]; then
+			echo_date "下载内容为空..."
+			return 3
+		fi
+		
+		#产品信息错误
+		local wrong1=$(cat /tmp/ssr_subscribe_file.txt | grep "{")
+		local wrong2=$(cat /tmp/ssr_subscribe_file.txt | grep "<")
+		if [ -n "$wrong1" -o -n "$wrong2" ]; then
+			return 2
 		fi
 	fi
 
@@ -972,7 +1089,7 @@ get_oneline_rule_now(){
 		elif [ -n "$NODE_FORMAT3" ]; then
 			# v2ray 订阅
 			# use domain as group
-			v2ray_group_tmp=$(echo $ssr_subscribe_link | awk -F'[/:]' '{print $4}')
+			v2ray_group_tmp=$(echo $SUB_LINK | awk -F'[/:]' '{print $4}')
 			# 储存对应订阅链接的group信息
 			dbus set ss_online_group_$z=$v2ray_group_tmp
 			echo $v2ray_group_tmp >> /tmp/group_info.txt
@@ -1015,9 +1132,11 @@ get_oneline_rule_now(){
 	fi
 }
 
-# 使用订阅链接订阅ssr/v2ray节点
 start_online_update(){
+	# 1.准备工作，检查/重排本地节点
 	prepare
+
+	# 2.清理上次订阅可能遗留的文件
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
 	rm -rf /tmp/ssr_subscribe_file_temp1.txt >/dev/null 2>&1
 	rm -rf /tmp/all_localservers.txt >/dev/null 2>&1
@@ -1025,7 +1144,8 @@ start_online_update(){
 	rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/group_info.txt >/dev/null 2>&1
 	rm -rf /tmp/multi_*.txt >/dev/null 2>&1
-	
+
+	# 3. 收集当前所有的订阅节点到临时文件，用于比对
 	echo_date "收集本地订阅节点信息到临时文件"
 	local local_indexs=$(export -p | grep ssconf_basic_ | grep _group_ | cut -d "_" -f4 |cut -d "=" -f1 | sort -n)
 	if [ -n "$local_indexs" ]; then
@@ -1042,7 +1162,8 @@ start_online_update(){
 	else
 		touch /tmp/all_localservers.txt
 	fi
-	
+
+	# 4. 下载/解析订阅节点
 	local z=0
 	online_url_nu=$(echo $ss_online_links | base64_decode | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	until [ "$z" == "$online_url_nu" ]; do
@@ -1057,35 +1178,37 @@ start_online_update(){
 		updatenum=0
 		delnum=0
 		exclude=0
-		get_oneline_rule_now "$url"
+		
+		echo_date "开始更新在线订阅列表..." 
+		get_online_rule_now "$url"
 		case $? in
 		0)
 			continue
 			;;
 		2)
 			echo_date "无法获取产品信息！请检查你的服务商是否更换了订阅链接！"
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
 			;;
 		3)
 			echo_date "该订阅链接不包含任何节点信息！请检查你的服务商是否更换了订阅链接！"
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
 			;;
-		4)
+		4|5)
 			echo_date "订阅地址错误！检测到你输入的订阅地址并不是标准网址格式！"
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
 			;;
 		1|*)
 			echo_date "下载订阅失败，请检查你的网络..."
-			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1 &
+			rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 			let DEL_SUBSCRIBE+=1
 			sleep 2
 			echo_date "退出订阅程序..."
@@ -1093,8 +1216,8 @@ start_online_update(){
 		esac
 	done
 
+	# 尝试删除去掉订阅链接对应的节点
 	if [ "$DEL_SUBSCRIBE" == "0" ]; then
-		# 尝试删除去掉订阅链接对应的节点
 		if [ -f "/tmp/group_info.txt" ]; then
 			export -p | grep ssconf_basic_group_ | cut -d "=" -f2 | sort -u | while read local_group; do
 			local_group=$(echo $local_group | sed "s/'//g")
@@ -1130,21 +1253,8 @@ start_online_update(){
 
 	# 结束
 	echo_date "-------------------------------------------------------------------"
-	if [ "$SOCKS_FLAG" == "1" ]; then
-		ssrlocal=$(ps | grep -w rss-local | grep -v "grep" | grep -w "23456" | awk '{print $1}')
-		if [ -n "$ssrlocal" ]; then 
-			echo_date "关闭因订阅临时开启的ssr-local进程:23456端口..."
-			kill $ssrlocal  >/dev/null 2>&1
-		fi
-	elif [ "$SOCKS_FLAG" == "2" ]; then
-		sslocal=$(ps | grep -w ss-local | grep -v "grep" | grep -w "23456" | awk '{print $1}')
-		if [ -n "$sslocal" ]; then 
-			echo_date  "关闭因订阅临时开启ss-local进程:23456端口..."
-			kill $sslocal  >/dev/null 2>&1
-		fi
-	fi
 	echo_date "一点点清理工作..."
-	rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
+	#rm -rf /tmp/ssr_subscribe_file.txt >/dev/null 2>&1
 	#rm -rf /tmp/all_localservers.txt >/dev/null 2>&1
 	#rm -rf /tmp/all_subscservers.txt >/dev/null 2>&1
 	#rm -rf /tmp/all_group_info.txt >/dev/null 2>&1
@@ -1248,7 +1358,7 @@ case $2 in
 3)
 	# 使用订阅链接订阅ssr/v2ray节点
 	set_lock
-	echo " " > $LOG_FILE
+	true > $LOG_FILE
 	http_response "$1"
 	echo_date "开始订阅" | tee -a $LOG_FILE
 	start_online_update | tee -a $LOG_FILE
