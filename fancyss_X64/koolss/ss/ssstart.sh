@@ -488,14 +488,14 @@ start_haproxy(){
 					ha_resolved_action $lb_dest
 				else
 					echo_date 【"$nick_name"】节点ip解析失败，尝试获取以前储存的ip.
-					if [ "ss_lb_type" == 1 ];then
+					if [ "$ss_lb_type" == 1 ];then
 						lb_server_ip=`dbus get ssconf_basic_server_ip_$node`
 					else
 						lb_server_ip=`dbus get ssrconf_basic_server_ip_$node`
 					fi
 					if [ -z "$lb_server_ip" ];then
 						echo_date 【"$nick_name"】没有获取到以前储存的ip，将由haproxy自己尝试解析.
-						if [ "ss_lb_type" == 1 ];then
+						if [ "$ss_lb_type" == 1 ];then
 							lb_server=`dbus get ssconf_basic_server_$node`
 						else
 							lb_server=`dbus get ssrconf_basic_server_$node`
@@ -864,7 +864,7 @@ create_dnsmasq_conf(){
 	if [ -n "$ss_wan_white_domain" ];then
 		wanwhitedomain=$(echo $ss_wan_white_domain | base64_decode)
 		echo_date 应用域名白名单
-		echo "#for white_domain" >> //tmp/wblist.conf
+		echo "#for white_domain" >> /tmp/wblist.conf
 		for wan_white_domain in $wanwhitedomain
 		do 
 			echo "$wan_white_domain" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
@@ -872,7 +872,7 @@ create_dnsmasq_conf(){
 		done
 	fi
 	# apple 和microsoft不能走ss
-	echo "#for special site" >> //tmp/wblist.conf
+	echo "#for special site" >> /tmp/wblist.conf
 	for wan_white_domain2 in "apple.com" "microsoft.com"
 	do 
 		echo "$wan_white_domain2" | sed "s/^/server=&\/./g" | sed "s/$/\/$CDN#53/g" >> /tmp/wblist.conf
