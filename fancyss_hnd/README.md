@@ -18,7 +18,7 @@
 | [ZenWiFi AX/灵耀 AX6600M/RT-AX95Q](https://koolshare.cn/thread-187704-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt            |
 | [ZenWiFi_XD4/灵耀AX魔方/RT-AX56_XD4](https://koolshare.cn/thread-187744-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt            |
 | [RT-AX56U_V2/RT-AX6U青春版/热血版](https://koolshare.cn/thread-188683-1-1.html) | ks官改   | axhnd.675x | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt            |
-
+ 
 #### 注意：
 
 * fancyss_hnd目前仅支持以上改版固件机型，其它架构/平台固件，原版固件均不能使用fancyss_hnd！
