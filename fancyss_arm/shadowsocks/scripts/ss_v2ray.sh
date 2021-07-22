@@ -131,7 +131,7 @@ update_now(){
 
 	echo_date "开始下载v2ctl程序"
 	#wget --no-check-certificate --timeout=20 --tries=1 $url_main/$1/v2ctl
-	curl --connect-timeout 8 --speed-time 20 --speed-limit 1 -o $url_main/$1/v2ctl
+	curl --connect-timeout 8 --speed-time 20 --speed-limit 1 -o v2ctl $url_main/$1/v2ctl
 	if [ "$?" != "0" ];then
 		echo_date "v2ctl下载失败！"
 		v2ctl_ok=0
