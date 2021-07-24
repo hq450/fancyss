@@ -45,7 +45,7 @@ backup_tar(){
 	cp /koolshare/bin/smartdns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/resolveip $TARGET_FOLDER/bin/
 	cp /koolshare/bin/haproxy $TARGET_FOLDER/bin/
-	cp /koolshare/bin/client_linux_arm7 $TARGET_FOLDER/bin/
+	cp /koolshare/bin/client_linux_arm5 $TARGET_FOLDER/bin/
 	cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
 	cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/

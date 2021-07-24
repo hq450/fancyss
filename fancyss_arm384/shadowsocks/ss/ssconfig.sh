@@ -297,7 +297,7 @@ kill_process() {
 		echo_date 关闭pdu进程...
 		kill -9 $pdu >/dev/null 2>&1
 	fi
-	client_linux_arm5_process=$(pidof client_linux_arm7)
+	client_linux_arm5_process=$(pidof client_linux_arm5)
 	if [ -n "$client_linux_arm5_process" ]; then
 		echo_date 关闭kcp协议进程...
 		killall client_linux_arm5 >/dev/null 2>&1
