@@ -116,6 +116,7 @@ swscan-cdn.apple.com.akadns.net
 swscan.apple.com
 updates-http.cdn-apple.com
 updates-http.cdn-apple.com.akadns.net
+updates.cdn-apple.com
 valid.apple.com
 valid.origin-apple.com.akadns.net
 www.apple.com
