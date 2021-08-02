@@ -1,7 +1,7 @@
 -e [Local Hosts]
 ## China mainland domains
 ## Source: https://github.com/felixonmars/dnsmasq-china-list
-## Last update: 2021-07-31
+## Last update: 2021-08-02
 -e 
 
 Server=/0-100.com/
@@ -7674,7 +7674,6 @@ Server=/99jiaoshi.com/
 Server=/99k5.com/
 Server=/99kgames.com/
 Server=/99lb.net/
-Server=/99leba.com/
 Server=/99max.me/
 Server=/99mc.com/
 Server=/99meiju.tv/
@@ -39434,7 +39433,6 @@ Server=/maijiabashi.com/
 Server=/maijiakan.com/
 Server=/maijichuang.net/
 Server=/maijx.com/
-Server=/maike51.com/
 Server=/maikenu.com/
 Server=/mail-qq.com/
 Server=/mail163.com/
@@ -47663,7 +47661,6 @@ Server=/renrentrack.com/
 Server=/renrentui.com/
 Server=/renrenyee.com/
 Server=/renrk.com/
-Server=/renrousousuo.com/
 Server=/renrzx.com/
 Server=/rensheng123.com/
 Server=/rensheng2.com/
@@ -52586,7 +52583,6 @@ Server=/szairport.com/
 Server=/szaisino.com/
 Server=/szaiten.com/
 Server=/szande.com/
-Server=/szaodis.com/
 Server=/szaudio.com/
 Server=/szbbs.org/
 Server=/szbcase.com/
@@ -55932,6 +55928,7 @@ Server=/upanboot.com/
 Server=/upandashi.com/
 Server=/upanok.com/
 Server=/upanshadu.com/
+Server=/upanso.com/
 Server=/upanxitong.com/
 Server=/upbz.net/
 Server=/upcdn.net/
@@ -56210,7 +56207,6 @@ Server=/uzshare.com/
 Server=/uzuzuz.com/
 Server=/uzzf.com/
 Server=/v-56.com/
-Server=/v-acfun.com/
 Server=/v-beautysalon.com/
 Server=/v-danci.com/
 Server=/v-ka.com/
@@ -65842,7 +65838,6 @@ Server=/zerobreeze.com/
 Server=/zerobyw.com/
 Server=/zerobywps2.com/
 Server=/zerocollege.com/
-Server=/zerodream.net/
 Server=/zerogfans.com/
 Server=/zerokeeper.com/
 Server=/zeroling.com/

@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2021-07-31
+-e ## Last update: 2021-08-02
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -7674,7 +7674,6 @@
 .*\b99k5\.com
 .*\b99kgames\.com
 .*\b99lb\.net
-.*\b99leba\.com
 .*\b99max\.me
 .*\b99mc\.com
 .*\b99meiju\.tv
@@ -39434,7 +39433,6 @@
 .*\bmaijiakan\.com
 .*\bmaijichuang\.net
 .*\bmaijx\.com
-.*\bmaike51\.com
 .*\bmaikenu\.com
 .*\bmail-qq\.com
 .*\bmail163\.com
@@ -47663,7 +47661,6 @@
 .*\brenrentui\.com
 .*\brenrenyee\.com
 .*\brenrk\.com
-.*\brenrousousuo\.com
 .*\brenrzx\.com
 .*\brensheng123\.com
 .*\brensheng2\.com
@@ -52586,7 +52583,6 @@
 .*\bszaisino\.com
 .*\bszaiten\.com
 .*\bszande\.com
-.*\bszaodis\.com
 .*\bszaudio\.com
 .*\bszbbs\.org
 .*\bszbcase\.com
@@ -55932,6 +55928,7 @@
 .*\bupandashi\.com
 .*\bupanok\.com
 .*\bupanshadu\.com
+.*\bupanso\.com
 .*\bupanxitong\.com
 .*\bupbz\.net
 .*\bupcdn\.net
@@ -56210,7 +56207,6 @@
 .*\buzuzuz\.com
 .*\buzzf\.com
 .*\bv-56\.com
-.*\bv-acfun\.com
 .*\bv-beautysalon\.com
 .*\bv-danci\.com
 .*\bv-ka\.com
@@ -65842,7 +65838,6 @@
 .*\bzerobyw\.com
 .*\bzerobywps2\.com
 .*\bzerocollege\.com
-.*\bzerodream\.net
 .*\bzerogfans\.com
 .*\bzerokeeper\.com
 .*\bzeroling\.com
