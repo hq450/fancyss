@@ -128,7 +128,7 @@ write_haproxy_cfg(){
 		    maxconn                 3000
 	
 		listen admin_status
-		    bind 0.0.0.0:1188
+		    bind :::1188 v4v6
 		    mode http                
 		    stats refresh 30s    
 		    stats uri  /
@@ -142,7 +142,7 @@ write_haproxy_cfg(){
 		    timeout retry         2s
 		    hold valid           10s
 		listen shadowscoks_balance_load
-		    bind 0.0.0.0:$ss_lb_port
+		    bind :::$ss_lb_port v4v6
 		    mode tcp
 		    balance roundrobin
 	EOF

@@ -114,12 +114,12 @@ creat_ss_json(){
 start_sslocal(){
 	echo_date ┣开启ss-local,为dns2socks提供socks5端口：23456
 	if [ "$ss_basic_use_rss" == "1" ];then
-		rss-local -b 0.0.0.0 -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+		rss-local -b :: -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	elif  [ "$ss_basic_use_rss" == "0" ];then
 		if [ "$ss_basic_ss_obfs" == "0" ];then
-			ss-local -b 0.0.0.0 -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+			ss-local -b :: -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 		else
-			ss-local -b 0.0.0.0 -l 23456 -c $CONFIG_FILE -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sslocal1.pid >/dev/null 2>&1
+			ss-local -b :: -l 23456 -c $CONFIG_FILE -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sslocal1.pid >/dev/null 2>&1
 		fi
 	fi
 }
@@ -141,13 +141,13 @@ start_dns(){
 	if [ "2" == "$ss_dns_foreign" ];then
 		if [ "$ss_basic_use_rss" == "1" ];then
 			echo_date 开启ssr-tunnel...
-			rss-tunnel -b 0.0.0.0 -c /koolshare/ss/ss.json -l $DNS_PORT -L "$gs" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			rss-tunnel -b :: -c /koolshare/ss/ss.json -l $DNS_PORT -L "$gs" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 		elif  [ "$ss_basic_use_rss" == "0" ];then
 			echo_date 开启ss-tunnel...
 			if [ "$ss_basic_ss_obfs" == "0" ];then
-				ss-tunnel -b 0.0.0.0 -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$gs" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+				ss-tunnel -b :: -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$gs" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 			else
-				ss-tunnel -b 0.0.0.0 -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$gs" -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sstunnel.pid >/dev/null 2>&1
+				ss-tunnel -b :: -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$gs" -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sstunnel.pid >/dev/null 2>&1
 			fi
 		fi
 	fi
@@ -202,13 +202,13 @@ start_dns(){
 				[ "$ss_pdnsd_udp_server_ss_tunnel" == "4" ] && dns1="$ss_pdnsd_udp_server_ss_tunnel_user"
 				if [ "$ss_basic_use_rss" == "1" ];then
 					echo_date 开启ssr-tunnel作为pdnsd的上游服务器.
-					rss-tunnel -b 0.0.0.0 -c /koolshare/ss/ss.json -l 1099 -L "$dns1" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+					rss-tunnel -b :: -c /koolshare/ss/ss.json -l 1099 -L "$dns1" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 				elif  [ "$ss_basic_use_rss" == "0" ];then
 					echo_date 开启ss-tunnel作为pdnsd的上游服务器.
 					if [ "$ss_basic_ss_obfs" == "0" ];then
-						ss-tunnel -b 0.0.0.0 -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$dns1" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+						ss-tunnel -b :: -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$dns1" -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 					else
-						ss-tunnel -b 0.0.0.0 -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$dns1" -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sstunnel.pid >/dev/null 2>&1
+						ss-tunnel -b :: -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l $DNS_PORT -L "$dns1" -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sstunnel.pid >/dev/null 2>&1
 					fi
 				fi
 			fi
@@ -293,9 +293,9 @@ start_dns(){
 			elif  [ "$ss_basic_use_rss" == "0" ];then
 				echo_date ┣开启ss-tunnel，作为chinaDNS上游国外dns，转发dns：$rcfs
 				if [ "$ss_basic_ss_obfs" == "0" ];then
-					ss-tunnel -b 0.0.0.0 -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l 1055 -L "$rcfs" -u -f /var/run/sstunnel.pid
+					ss-tunnel -b :: -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l 1055 -L "$rcfs" -u -f /var/run/sstunnel.pid
 				else
-					ss-tunnel -b 0.0.0.0 -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l 1055 -L "$rcfs" -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sstunnel.pid >/dev/null 2>&1
+					ss-tunnel -b :: -s $ss_basic_server -p $ss_basic_port -m $ss_basic_method -k $ss_basic_password -l 1055 -L "$rcfs" -u --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/sstunnel.pid >/dev/null 2>&1
 				fi
 			fi
 		elif [ "$ss_chinadns_foreign_method" == "4" ];then
@@ -477,13 +477,13 @@ start_ss_redir(){
 	# Start ss-redir
 	if [ "$ss_basic_use_rss" == "1" ];then
 		echo_date 开启ssr-redir进程，用于透明代理.
-		rss-redir -b 0.0.0.0 -c $CONFIG_FILE -f /var/run/shadowsocks.pid >/dev/null 2>&1
+		rss-redir -b :: -c $CONFIG_FILE -f /var/run/shadowsocks.pid >/dev/null 2>&1
 	elif  [ "$ss_basic_use_rss" == "0" ];then
 		echo_date 开启ss-redir进程，用于透明代理.
 		if [ "$ss_basic_ss_obfs" == "0" ];then
-			ss-redir -b 0.0.0.0 -c $CONFIG_FILE -f /var/run/shadowsocks.pid >/dev/null 2>&1
+			ss-redir -b :: -c $CONFIG_FILE -f /var/run/shadowsocks.pid >/dev/null 2>&1
 		else
-			ss-redir -b 0.0.0.0 -c $CONFIG_FILE --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/shadowsocks.pid >/dev/null 2>&1
+			ss-redir -b :: -c $CONFIG_FILE --plugin obfs-local --plugin-opts "$ARG_OBFS" -f /var/run/shadowsocks.pid >/dev/null 2>&1
 		fi
 	fi
 }

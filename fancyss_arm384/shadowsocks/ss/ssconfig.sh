@@ -446,7 +446,7 @@ creat_ss_json() {
 			{
 			    "server":"$ss_basic_server",
 			    "server_port":$ss_basic_port,
-			    "local_address":"0.0.0.0",
+			    "local_address":"::",
 			    "local_port":3333,
 			    "password":"$ss_basic_password",
 			    "timeout":600,
@@ -458,7 +458,7 @@ creat_ss_json() {
 			{
 			    "server":"$ss_basic_server",
 			    "server_port":$ss_basic_port,
-			    "local_address":"0.0.0.0",
+			    "local_address":"::",
 			    "local_port":3333,
 			    "password":"$ss_basic_password",
 			    "timeout":600,
@@ -1040,11 +1040,11 @@ start_speeder() {
 
 				if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
 					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
-					speederv1 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key1 $ss_basic_udpv1_password \
+					speederv1 -c -l :::1092 -r 127.0.0.1:1093 $key1 $ss_basic_udpv1_password \
 						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu >/dev/null 2>&1 &
 					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
 				else
-					speederv1 -c -l 0.0.0.0:1092 -r $ss_basic_udpv1_rserver:$ss_basic_udpv1_rport $key1 \
+					speederv1 -c -l :::1092 -r $ss_basic_udpv1_rserver:$ss_basic_udpv1_rport $key1 \
 						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu >/dev/null 2>&1 &
 				fi
 			elif [ "$ss_basic_udp_software" == "2" ]; then
@@ -1064,11 +1064,11 @@ start_speeder() {
 
 				if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
 					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
-					speederv2 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key2 \
+					speederv2 -c -l :::1092 -r 127.0.0.1:1093 $key2 \
 						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
 					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
 				else
-					speederv2 -c -l 0.0.0.0:1092 -r $ss_basic_udpv2_rserver:$ss_basic_udpv2_rport $key2 \
+					speederv2 -c -l :::1092 -r $ss_basic_udpv2_rserver:$ss_basic_udpv2_rport $key2 \
 						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
 				fi
 			fi
@@ -1082,7 +1082,7 @@ start_speeder() {
 			[ -n "$ss_basic_udp2raw_lowerlevel" ] && UD2RAW_LOW="--lower-level $ss_basic_udp2raw_lowerlevel" || UD2RAW_LOW=""
 			[ -n "$ss_basic_udp2raw_password" ] && key3="-k $ss_basic_udp2raw_password" || key3=""
 
-			udp2raw -c -l 0.0.0.0:1093 -r $ss_basic_udp2raw_rserver:$ss_basic_udp2raw_rport $key3 $UD2RAW_EX1 $UD2RAW_EX2 \
+			udp2raw -c -l :::1093 -r $ss_basic_udp2raw_rserver:$ss_basic_udp2raw_rport $key3 $UD2RAW_EX1 $UD2RAW_EX2 \
 				--raw-mode $ss_basic_udp2raw_rawmode --cipher-mode $ss_basic_udp2raw_ciphermode --auth-mode $ss_basic_udp2raw_authmode \
 				$UD2RAW_LOW $ss_basic_udp2raw_other >/dev/null 2>&1 &
 		fi
@@ -1413,7 +1413,7 @@ creat_v2ray_json() {
 						}
 					},
 					{
-						"listen": "0.0.0.0",
+						"listen": "::",
 						"port": 3333,
 						"protocol": "dokodemo-door",
 						"settings": {
@@ -1429,7 +1429,7 @@ creat_v2ray_json() {
 				"inbounds": [
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "::",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -1440,7 +1440,7 @@ creat_v2ray_json() {
 						"streamSettings": null
 					},
 					{
-						"listen": "0.0.0.0",
+						"listen": "::",
 						"port": 3333,
 						"protocol": "dokodemo-door",
 						"settings": {
@@ -1529,7 +1529,7 @@ creat_v2ray_json() {
 										}
 									},
 									{
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"::\",
 										\"port\": 3333,
 										\"protocol\": \"dokodemo-door\",
 										\"settings\": {
@@ -1549,7 +1549,7 @@ creat_v2ray_json() {
 								\"inbounds\": [
 									{
 										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"::\",
 										\"protocol\": \"socks\",
 										\"settings\": {
 											\"auth\": \"noauth\",
@@ -1560,7 +1560,7 @@ creat_v2ray_json() {
 										\"streamSettings\": null
 									},
 									{
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"::\",
 										\"port\": 3333,
 										\"protocol\": \"dokodemo-door\",
 										\"settings\": {
@@ -1816,7 +1816,7 @@ add_white_black_ip() {
 	[ -n "$ss_basic_server_ip" ] && SERVER_IP="$ss_basic_server_ip" || SERVER_IP=""
 	[ -n "$IFIP_DNS1" ] && ISP_DNS_a="$ISP_DNS1" || ISP_DNS_a=""
 	[ -n "$IFIP_DNS2" ] && ISP_DNS_b="$ISP_DNS2" || ISP_DNS_a=""
-	ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 $ISP_DNS_a $ISP_DNS_b $SERVER_IP $(get_wan0_cidr)"
+	ip_lan="::/8 1::/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 24::/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 $ISP_DNS_a $ISP_DNS_b $SERVER_IP $(get_wan0_cidr)"
 	for ip in $ip_lan; do
 		ipset -! add white_list $ip >/dev/null 2>&1
 	done
@@ -1991,7 +1991,7 @@ apply_nat_rules() {
 
 	[ "$mangle" == "1" ] && load_tproxy
 	[ "$mangle" == "1" ] && ip rule add fwmark 0x07 table 310
-	[ "$mangle" == "1" ] && ip route add local 0.0.0.0/0 dev lo table 310
+	[ "$mangle" == "1" ] && ip route add local ::/0 dev lo table 310
 	# 创建游戏模式udp rule
 	[ "$mangle" == "1" ] && iptables -t mangle -N SHADOWSOCKS
 	# IP/cidr/白域名 白名单控制（不走ss）

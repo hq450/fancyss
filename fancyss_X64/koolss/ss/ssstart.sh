@@ -356,7 +356,7 @@ creat_ss_json(){
 			    "server":"$ss_basic_server",
 			    "server_port":$ss_basic_port,
 			    "local_port":3333,
-			    "local_address": "0.0.0.0",
+			    "local_address": "::",
 			    "password":"$ss_basic_password",
 			    "timeout":600,
 			    "mptcp": $mptcpmod,
@@ -369,7 +369,7 @@ creat_ss_json(){
 			    "server":"$ss_basic_server",
 			    "server_port":$ss_basic_port,
 			    "local_port":3333,
-			    "local_address": "0.0.0.0",
+			    "local_address": "::",
 			    "password":"$ss_basic_password",
 			    "timeout":600,
 			    "protocol":"$ss_basic_rss_protocal",
@@ -427,7 +427,7 @@ start_haproxy(){
 		    timeout check           10s
 		    maxconn                 3000
 		listen admin_status
-		    bind 0.0.0.0:1188
+		    bind :::1188 v4v6
 		    mode http                
 		    stats refresh 30s    
 		    stats uri  /
@@ -441,7 +441,7 @@ start_haproxy(){
 		    timeout retry         2s
 		    hold valid           10s
 		listen shadowscoks_balance_load
-		    bind 0.0.0.0:$ss_lb_port
+		    bind :::$ss_lb_port v4v6
 		    mode tcp
 		    balance roundrobin
 	EOF

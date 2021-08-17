@@ -3946,7 +3946,7 @@ taobao.com
 												<tr id="ss_kcp_l_server_port_tr">
 													<th width="35%">kcp本地监听地址：端口 （-l）</th>
 													<td>
-														<input type="text" name="ss_basic_kcp_lserver" id="ss_basic_kcp_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="0.0.0.0" readonly/>
+														<input type="text" name="ss_basic_kcp_lserver" id="ss_basic_kcp_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="::" readonly/>
 														:
 														<input type="text" name="ss_basic_kcp_lport" id="ss_basic_kcp_lport" class="input_ss_table" style="width:44px;" maxlength="200" value="1091" readonly/>
 														<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(90)"><font color="#ffcc00"><u>帮助</u></font></a>
@@ -4131,7 +4131,7 @@ taobao.com
 												<tr id="ss_basic_udpv1_l_server_port_tr">
 													<th width="35%">* 本地监听地址：端口 （-l）</th>
 													<td>
-														<input type="text" name="ss_basic_udpv1_lserver" id="ss_basic_udpv1_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="0.0.0.0" readonly/>
+														<input type="text" name="ss_basic_udpv1_lserver" id="ss_basic_udpv1_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="::" readonly/>
 														:
 														<input type="text" name="ss_basic_udpv1_lport" id="ss_basic_udpv1_lport" class="input_ss_table" style="width:44px;" maxlength="200" value="1092" readonly/>
 														<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>
@@ -4211,7 +4211,7 @@ taobao.com
 												<tr id="ss_basic_udpv2_l_server_port_tr">
 													<th width="35%">* 本地监听地址：端口 （-l）</th>
 													<td>
-														<input type="text" name="ss_basic_udpv2_lserver" id="ss_basic_udpv2_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="0.0.0.0" readonly/>
+														<input type="text" name="ss_basic_udpv2_lserver" id="ss_basic_udpv2_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="::" readonly/>
 														:
 														<input type="text" name="ss_basic_udpv2_lport" id="ss_basic_udpv2_lport" class="input_ss_table" style="width:44px;" maxlength="200" value="1092" readonly/>
 														<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>
@@ -4344,7 +4344,7 @@ taobao.com
 												<tr id="ss_basic_udp2raw_l_server_port_tr">
 													<th width="35%">* 本地监听地址：端口 （-l）</th>
 													<td>
-														<input type="text" name="ss_basic_udp2raw_lserver" id="ss_basic_udp2raw_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="0.0.0.0" readonly/>
+														<input type="text" name="ss_basic_udp2raw_lserver" id="ss_basic_udp2raw_lserver" class="input_ss_table" style="width:120px;" maxlength="200" value="::" readonly/>
 														:
 														<input type="text" name="ss_basic_udp2raw_lport" id="ss_basic_udp2raw_lport" class="input_ss_table" style="width:44px;" maxlength="200" value="1093" readonly/>
 														<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(101)"><font color="#ffcc00"><u>帮助</u></font></a>

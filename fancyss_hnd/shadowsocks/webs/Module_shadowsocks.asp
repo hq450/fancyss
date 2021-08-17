@@ -3279,7 +3279,7 @@ function save_failover() {
 														{ title: 'KCP加速开关', id:'ss_basic_use_kcp', type:'checkbox', func:'v', value:false},
 														{ title: 'KCP参数配置方式', id:'ss_basic_kcp_method', type:'select', func:'v', options:[["1", "选择模式"], ["2", "输入模式"]], value:'2'},
 														{ title: 'kcp本地监听地址：端口 （-l）', multi: [
-															{ id: 'ss_basic_kcp_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+															{ id: 'ss_basic_kcp_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'::'},
 															{ suffix: '&nbsp;:&nbsp;' },
 															{ id: 'ss_basic_kcp_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1091'},
 															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(90)"><font color="#ffcc00"><u>帮助</u></font></a>' },
@@ -3352,7 +3352,7 @@ function save_failover() {
 														//speederv1
 														{ title: '<em>UDPspeederV1 参数设置</em>', th:'2', class:'speederv1'},
 														{ title: '* 本地监听地址：端口 （-l）', class:'speederv1', multi: [
-															{ id: 'ss_basic_udpv1_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+															{ id: 'ss_basic_udpv1_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'::'},
 															{ suffix: '&nbsp;:&nbsp;' },
 															{ id: 'ss_basic_udpv1_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
 															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
@@ -3375,7 +3375,7 @@ function save_failover() {
 														//speederv2
 														{ title: '<em>UDPspeederV2 参数设置</em>', th:'2', class:'speederv2'},
 														{ title: '* 本地监听地址：端口 （-l）', class:'speederv2', multi: [
-															{ id: 'ss_basic_udpv2_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+															{ id: 'ss_basic_udpv2_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'::'},
 															{ suffix: '&nbsp;:&nbsp;' },
 															{ id: 'ss_basic_udpv2_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
 															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
@@ -3410,7 +3410,7 @@ function save_failover() {
 														{ title: 'UDP2raw开关', id:'ss_basic_udp2raw_boost_enable', type:'checkbox', class:'udp2raw', value:false},
 														{ title: '<em>UDP2raw 参数设置</em>', th:'2', class:'udp2raw'},
 														{ title: '* 本地监听地址：端口 （-l）', class:'udp2raw', multi: [
-															{ id: 'ss_basic_udp2raw_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+															{ id: 'ss_basic_udp2raw_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'::'},
 															{ suffix: '&nbsp;:&nbsp;' },
 															{ id: 'ss_basic_udp2raw_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1093'},
 															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(101)"><font color="#ffcc00"><u>帮助</u></font></a>' },

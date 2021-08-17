@@ -60,7 +60,7 @@ start_webtest(){
 			    "method":"$array4"
 			}
 		EOF
-			rss-local -b 0.0.0.0 -l 23458 -c /tmp/tmp_ss.json -u -f /var/run/sslocal2.pid >/dev/null 2>&1
+			rss-local -b :: -l 23458 -c /tmp/tmp_ss.json -u -f /var/run/sslocal2.pid >/dev/null 2>&1
 			result=`curl -o /dev/null -s -w %{time_total}:%{speed_download} --socks5-hostname 127.0.0.1:23458 $ssconf_basic_test_domain`
 			# result=`curl -o /dev/null -s -w %{time_connect}:%{time_starttransfer}:%{time_total}:%{speed_download} --socks5-hostname 127.0.0.1:23456 https://www.google.com/`
 			sleep 1
@@ -69,7 +69,7 @@ start_webtest(){
 			kill -9 `ps|grep ss-local|grep 23458|awk '{print $1}'`
 			rm -rf /tmp/tmp_ss.json
 		else
-			ss-local -b 0.0.0.0 -l 23458 -s $array1 -p $array2 -k $array3 -m $array4 -u $ARG_OTA $ARG_OBFS -f /var/run/sslocal3.pid >/dev/null 2>&1
+			ss-local -b :: -l 23458 -s $array1 -p $array2 -k $array3 -m $array4 -u $ARG_OTA $ARG_OBFS -f /var/run/sslocal3.pid >/dev/null 2>&1
 			result=`curl -o /dev/null -s -w %{time_total}:%{speed_download} --socks5-hostname 127.0.0.1:23458 $ssconf_basic_test_domain`
 			sleep 1
 			dbus set ssconf_basic_webtest_$nu=$result

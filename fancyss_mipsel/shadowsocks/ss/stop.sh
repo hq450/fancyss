@@ -66,8 +66,8 @@ restore_nat(){
 	iptables -t nat -D OUTPUT -p tcp -m set --set router dst -j REDIRECT --to-ports 3333 >/dev/null 2>&1
 	iptables -t nat -D PREROUTING -p udp --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
 	
-	#ip route del local 0.0.0.0/0 dev lo table 300  >/dev/null 2>&1
-	/usr/sbin/ip route del local 0.0.0.0/0 dev lo table 310 >/dev/null 2>&1
+	#ip route del local ::/0 dev lo table 300  >/dev/null 2>&1
+	/usr/sbin/ip route del local ::/0 dev lo table 310 >/dev/null 2>&1
 	
 	
 	

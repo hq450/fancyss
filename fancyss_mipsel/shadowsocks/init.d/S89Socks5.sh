@@ -13,7 +13,7 @@ start_socks5(){
 	
 	if [ "$ss_local_enable" == "1" ]; then
 		echo $(date): enable ss_local...
-		ss-local -b 0.0.0.0 -s "$ss_local_server" -p "$ss_local_port" -l "$ss_local_proxyport" -k "$ss_local_password" -m "$ss_local_method" -u -f /var/run/ss_local.pid
+		ss-local -b :: -s "$ss_local_server" -p "$ss_local_port" -l "$ss_local_proxyport" -k "$ss_local_password" -m "$ss_local_method" -u -f /var/run/ss_local.pid
 		echo $(date): done
 		echo $(date):
 	fi
