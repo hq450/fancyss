@@ -155,14 +155,14 @@ function pop_111() {
 			type: 2,
 			shade: .7,
 			scrollbar: 0,
-			title: '国内外分流信息:https://ip.koolcenter.com/all',
-			area: ['850px', '350px'],
+			title: '国内外分流信息来源：<a style="color:#00F" href="https://ip.skk.moe/" target="_blank">https://ip.skk.moe/</a>',
+			area: ['850px', '760px'],
 			fixed: false,
 			maxmin: true,
 			shadeClose: 1,
 			id: 'LAY_layuipro',
 			btnAlign: 'c',
-			content: ['https://ip.koolcenter.com/all', 'no'],
+			content: ['https://ip.skk.moe/', 'yes'],
 		});
 	});
 }

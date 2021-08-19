@@ -1,5 +1,21 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.5
+   - fix	修复插件全新安装时，部分文件无法正确安装的问题。
+   
+1.9.4
+   - update	原先的分流检测不再准确，更换检测网站：https://ip.skk.moe/；
+   - update	更新订阅脚本，增加订阅成功率；并且现在wget也能走代理订阅了；
+   - remove	因dnsmasq-fastlookup版本和固件内dnsmasq版本差距越来越大，且有安全漏洞，故移除dnsmasq-fastlookup功能；
+   - update	因梅林386.2固件使用jitterentropy-rngd为系统提供更多熵，所以符合的固件不再安装haveged程序。
+   - update	更新插件安装脚本，支持GT-AX11000梅林固件。
+   - fix	修复插件启动前触发脚本部分的错误提示；
+
+
+1.9.3
+   - fix	修复部分机型，如RT-AC86U，从梅林固件刷为官改固件后，出现插件状态检测失败，导致故障转移功能无法使用的问题。
+   - fix	修复RT-AC86U 386固件皮肤错误问题。
+
 1.9.2
    - fix	修复一些机场下载订阅为空的问题；
    - update	同步最新规则，并且从gfwlist中移除apple.com域名。

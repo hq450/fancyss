@@ -29,7 +29,7 @@ OUTBOUNDS="[]"
 
 cmd() {
 	echo_date "$*" 2>&1
-	"$@"
+	"$@" 2>/dev/null
 }
 
 set_lock() {
@@ -337,15 +337,17 @@ kill_process() {
 		echo_date 关闭haveged进程...
 		killall haveged >/dev/null 2>&1
 	fi
+
+	# close tcp_fastopen
 	echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 }
 
 # ================================= ss prestart ===========================
 ss_pre_start() {
-	local IS_LOCAL_ADDR=$(echo $ss_basic_server | grep -o "127.0.0.1")
+	local IS_LOCAL_ADDR=$(echo "${ss_basic_server}" | grep -o "127.0.0.1" 2>/dev/null)
 	if [ "$ss_lb_enable" == "1" ]; then
 		echo_date ---------------------- 【科学上网】 启动前触发脚本 ----------------------
-		if [ -n ${IS_LOCAL_ADDR} -a "$ss_basic_port" == "$ss_lb_port" ]; then
+		if [ -n "${IS_LOCAL_ADDR}" -a "${ss_basic_port}" == "${ss_lb_port}" ]; then
 			echo_date 插件启动前触发:触发启动负载均衡功能！
 			#start haproxy
 			sh /koolshare/scripts/ss_lb_config.sh
@@ -353,7 +355,7 @@ ss_pre_start() {
 			echo_date 插件启动前触发:未选择负载均衡节点，不触发负载均衡启动！
 		fi
 	else
-		if [ -n ${IS_LOCAL_ADDR} -a "$ss_basic_port" == "$ss_lb_port" ]; then
+		if [ -n "${IS_LOCAL_ADDR}" -a "${ss_basic_port}" == "${ss_lb_port}" ]; then
 			echo_date 插件启动前触发【警告】：你选择了负载均衡节点，但是负载均衡开关未启用！！
 		#else
 			#echo_date ss启动前触发：你选择了普通节点，不触发负载均衡启动！
@@ -2103,14 +2105,16 @@ chromecast() {
 # -----------------------------------nat part end--------------------------------------------------------
 
 restart_dnsmasq() {
-	# use use local dns as system resolver
+	# 如果是梅林固件，需要将 【Tool - Other Settings  - Advanced Tweaks and Hacks - Wan: Use local caching DNS server as system resolver (default: No)】此处设置为【是】
+	# 这将确保固件自身的DNS解析使用127.0.0.1，而不是上游的DNS。否则插件的状态检测将无法解析谷歌，导致状态检测失败。
 	local DLC=$(nvram get dns_local_cache)
 	if [ "$DLC" == "0" ]; then
 		nvram set dns_local_cache=1
 		nvram commit
 	fi
-	# 这是个官改固件
-	if [ -z "$DLC" ]; then
+	# 从梅林刷到官改固件，如果不重置固件，则dns_local_cache将会保留，会导致误判，所以需要改写一次以确保OK
+	local LOCAL_DNS=$(cat /etc/resolv.conf|grep "127.0.0.1")
+	if [ -z "$LOCAL_DNS" ]; then
 		cat >/etc/resolv.conf <<-EOF
 			nameserver 127.0.0.1
 		EOF
@@ -2143,12 +2147,17 @@ write_numbers() {
 set_sys() {
 	# set_ulimit
 	ulimit -n 16384
+
+	# mem
 	echo 1 >/proc/sys/vm/overcommit_memory
 
 	# more entropy
 	# use command `cat /proc/sys/kernel/random/entropy_avail` to check current entropy
-	echo_date "启动haveged，为系统提供更多的可用熵！"
-	haveged -w 1024 >/dev/null 2>&1	
+	# from merlin fw 386.2, jitterentropy-rngd has been intergrated into fw
+	if [ -z "$(which jitterentropy-rngd)" -a -f "/koolshare/bin/haveged" ];then
+		echo_date "启动haveged，为系统提供更多的可用熵！"
+		haveged -w 1024 >/dev/null 2>&1
+	fi
 }
 
 remove_ss_reboot_job() {
@@ -2303,71 +2312,6 @@ detect() {
 	fi
 }
 
-mount_dnsmasq() {
-	killall dnsmasq >/dev/null 2>&1
-	mount --bind /koolshare/bin/dnsmasq /usr/sbin/dnsmasq
-}
-
-umount_dnsmasq() {
-	killall dnsmasq >/dev/null 2>&1
-	umount /usr/sbin/dnsmasq
-}
-
-mount_dnsmasq_now() {
-	local MOUNTED=$(mount | grep -o dnsmasq)
-	case $ss_basic_dnsmasq_fastlookup in
-	0)
-		if [ -n "$MOUNTED" ]; then
-			echo_date "【dnsmasq替换】：从dnsmasq-fastlookup切换为原版dnsmasq"
-			umount_dnsmasq
-		fi
-		;;
-	1 | 3)
-		if [ -n "$MOUNTED" ]; then
-			echo_date "【dnsmasq替换】：dnsmasq-fastlookup已经替换过了！"
-		else
-			echo_date "【dnsmasq替换】：用dnsmasq-fastlookup替换原版dnsmasq！"
-			mount_dnsmasq
-		fi
-		;;
-	2)
-		if [ -L "/jffs/configs/dnsmasq.d/cdn.conf" ]; then
-			if [ -z "$MOUNTED" ]; then
-				echo_date "【dnsmasq替换】：检测到cdn.conf，用dnsmasq-fastlookup替换原版dnsmasq！"
-				mount_dnsmasq
-			fi
-		else
-			if [ -n "$MOUNTED" ]; then
-				echo_date "【dnsmasq替换】：没有检测到cdn.conf，从dnsmasq-fastlookup切换为原版dnsmasq"
-				umount_dnsmasq
-			else
-				echo_date "【dnsmasq替换】：没有检测到cdn.conf，不替换dnsmasq-fastlookup"
-			fi
-		fi
-		;;
-	esac
-}
-
-umount_dnsmasq_now() {
-	local MOUNTED=$(mount | grep -o dnsmasq)
-	case $ss_basic_dnsmasq_fastlookup in
-	0 | 1 | 2)
-		if [ -n "$MOUNTED" ]; then
-			echo_date "【dnsmasq替换】：从dnsmasq-fastlookup切换为原版dnsmasq"
-			umount_dnsmasq
-		fi
-		;;
-	3)
-		if [ -n "$MOUNTED" ]; then
-			echo_date "【dnsmasq替换】：dnsmasq-fastlookup已经替换过了，插件关闭后保持替换！"
-		else
-			echo_date "【dnsmasq替换】：用dnsmasq-fastlookup替换原版dnsmasq！且插件关闭后保持替换！"
-			mount_dnsmasq
-		fi
-		;;
-	esac
-}
-
 httping_check() {
 	[ "$ss_basic_check" != "1" ] && return
 	echo "--------------------------------------------------------------------------------------"
@@ -2420,7 +2364,6 @@ disable_ss() {
 	remove_ss_trigger_job
 	remove_ss_reboot_job
 	restore_conf
-	umount_dnsmasq_now
 	restart_dnsmasq
 	flush_nat
 	kill_cron_job
@@ -2439,7 +2382,6 @@ apply_ss() {
 	remove_ss_reboot_job
 	restore_conf
 	# restart dnsmasq when ss server is not ip or on router boot
-	umount_dnsmasq_now
 	restart_dnsmasq
 	flush_nat
 	kill_cron_job
@@ -2466,7 +2408,6 @@ apply_ss() {
 	#===load nat start===
 	load_nat
 	#===load nat end===
-	mount_dnsmasq_now
 	restart_dnsmasq
 	auto_start
 	write_cron_job

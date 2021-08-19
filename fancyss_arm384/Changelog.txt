@@ -1,5 +1,9 @@
 fancyss_arm384 Changelog
 ===========================================
+1.0.5
+   - update	同步fancyss_hnd的订阅脚本
+   - update	更新安装脚本，适配386固件
+
 1.0.4
    - info	同步fancyss_hnd 1.7.2 - 1.8.1之间的更新：https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt，具体如下：
    - add	添加SmartDNS支持；
