@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2021-09-13
+-e ## Last update: 2021-09-15
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -5253,7 +5253,6 @@
 .*\b58xs\.com
 .*\b58xs\.la
 .*\b58xs\.tw
-.*\b58xuechewang\.com
 .*\b58xuexi\.com
 .*\b58yiji\.com
 .*\b58yuefu\.com
@@ -19664,6 +19663,7 @@
 .*\bdiyifangdai\.com
 .*\bdiyifanwen\.com
 .*\bdiyifanwen\.net
+.*\bdiyigaokao\.com
 .*\bdiyihuifu\.com
 .*\bdiyijuzi\.com
 .*\bdiyinews\.com
@@ -43996,6 +43996,7 @@
 .*\bpatchallin\.com
 .*\bpatchew\.org
 .*\bpatent-cn\.com
+.*\bpatent9\.com
 .*\bpatexplorer\.com
 .*\bpatindex\.com
 .*\bpatmm\.com
@@ -48819,6 +48820,7 @@
 .*\bsevencdn\.com
 .*\bsevenseas-china\.com
 .*\bsewise\.com
+.*\bsexytea2013\.com
 .*\bsf-airlines\.com
 .*\bsf-bearing\.com
 .*\bsf-card\.com
@@ -55431,6 +55433,7 @@
 .*\bunclicks\.com
 .*\bundefined\.ltd
 .*\bunderfill\.cc
+.*\buneed\.com
 .*\bunfish\.net
 .*\bungifts\.com
 .*\buni-perfect\.com
@@ -59947,6 +59950,7 @@
 .*\bxiald\.com
 .*\bxialingying\.cc
 .*\bxialv\.com
+.*\bxiamai\.net
 .*\bxiamenair\.com
 .*\bxiamentianqi114\.com
 .*\bxiami\.com
@@ -60159,7 +60163,6 @@
 .*\bxiaohe97\.com
 .*\bxiaohei\.com
 .*\bxiaoheima\.com
-.*\bxiaohongblog\.com
 .*\bxiaohongchun\.com
 .*\bxiaohongdian\.wang
 .*\bxiaohongshu\.com
@@ -60251,6 +60254,7 @@
 .*\bxiaominfo\.com
 .*\bxiaoming\.me
 .*\bxiaomingming\.org
+.*\bxiaomiqiu\.com
 .*\bxiaomiquan\.com
 .*\bxiaomishu\.com
 .*\bxiaomiwujiecao\.com
@@ -60653,6 +60657,7 @@
 .*\bxingfagroup\.com
 .*\bxingfudu\.com
 .*\bxingfufangdai\.com
+.*\bxingfulizhaofang\.com
 .*\bxingfunancun\.com
 .*\bxingfuu\.com
 .*\bxinggan\.com
@@ -61908,6 +61913,7 @@
 .*\bxxlinux\.com
 .*\bxxliudsp\.com
 .*\bxxlwin\.com
+.*\bxxm\.plus
 .*\bxxmac\.com
 .*\bxxmanhua\.info
 .*\bxxmh117\.com
@@ -63751,6 +63757,7 @@
 .*\byoudiancms\.com
 .*\byoudnser\.com
 .*\byoudu\.im
+.*\byoudwh\.com
 .*\byouease\.net
 .*\byouedata\.com
 .*\byoueryun\.com
@@ -66002,6 +66009,7 @@
 .*\bzhh\.me
 .*\bzhhainiao\.com
 .*\bzhhs-china\.com
+.*\bzhhtxt\.com
 .*\bzhhuahui\.com
 .*\bzhhy-oa\.com
 .*\bzhi-bo\.net

@@ -5249,7 +5249,6 @@
 58xs.com
 58xs.la
 58xs.tw
-58xuechewang.com
 58xuexi.com
 58yiji.com
 58yuefu.com
@@ -19717,6 +19716,7 @@ diyidan.net
 diyifangdai.com
 diyifanwen.com
 diyifanwen.net
+diyigaokao.com
 diyihuifu.com
 diyijuzi.com
 diyinews.com
@@ -44126,6 +44126,7 @@ patachina.org
 patchallin.com
 patchew.org
 patent-cn.com
+patent9.com
 patexplorer.com
 patindex.com
 patmm.com
@@ -48959,6 +48960,7 @@ seven7777.eu
 sevencdn.com
 sevenseas-china.com
 sewise.com
+sexytea2013.com
 sf-airlines.com
 sf-bearing.com
 sf-card.com
@@ -55594,6 +55596,7 @@ unclenowayapi.com
 unclicks.com
 undefined.ltd
 underfill.cc
+uneed.com
 unfish.net
 ungifts.com
 uni-perfect.com
@@ -60120,6 +60123,7 @@ xialatong.com
 xiald.com
 xialingying.cc
 xialv.com
+xiamai.net
 xiamenair.com
 xiamentianqi114.com
 xiami.com
@@ -60332,7 +60336,6 @@ xiaohe666.com
 xiaohe97.com
 xiaohei.com
 xiaoheima.com
-xiaohongblog.com
 xiaohongchun.com
 xiaohongdian.wang
 xiaohongshu.com
@@ -60424,6 +60427,7 @@ xiaominet.com
 xiaominfo.com
 xiaoming.me
 xiaomingming.org
+xiaomiqiu.com
 xiaomiquan.com
 xiaomishu.com
 xiaomiwujiecao.com
@@ -60826,6 +60830,7 @@ xinge.com
 xingfagroup.com
 xingfudu.com
 xingfufangdai.com
+xingfulizhaofang.com
 xingfunancun.com
 xingfuu.com
 xinggan.com
@@ -62081,6 +62086,7 @@ xxlcn.com
 xxlinux.com
 xxliudsp.com
 xxlwin.com
+xxm.plus
 xxmac.com
 xxmanhua.info
 xxmh117.com
@@ -63924,6 +63930,7 @@ youdemai.com
 youdiancms.com
 youdnser.com
 youdu.im
+youdwh.com
 youease.net
 youedata.com
 youeryun.com
@@ -66175,6 +66182,7 @@ zhguoguo.com
 zhh.me
 zhhainiao.com
 zhhs-china.com
+zhhtxt.com
 zhhuahui.com
 zhhy-oa.com
 zhi-bo.net
