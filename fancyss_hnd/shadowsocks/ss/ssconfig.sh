@@ -2371,7 +2371,6 @@ disable_ss() {
 }
 
 apply_ss() {
-	ss_pre_stop
 	# now stop first
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
