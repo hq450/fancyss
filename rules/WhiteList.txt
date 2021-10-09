@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2021-10-06
+-e ## Last update: 2021-10-09
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -3024,7 +3024,6 @@
 .*\b35pic\.com
 .*\b35q\.com
 .*\b35rc\.com
-.*\b35tyc\.com
 .*\b35vvv\.com
 .*\b35zw\.com
 .*\b35zww\.com
@@ -11476,6 +11475,7 @@
 .*\bbilibili\.ru
 .*\bbilibiligame\.net
 .*\bbilibilihelper\.com
+.*\bbilibilijj\.com
 .*\bbilibiliyoo\.com
 .*\bbilicdn1\.com
 .*\bbilicdn2\.com
@@ -22983,6 +22983,7 @@
 .*\bfengniaosearch\.com
 .*\bfengone\.com
 .*\bfengpengjun\.com
+.*\bfengpintech\.com
 .*\bfengqiangboy\.com
 .*\bfengqiyc\.com
 .*\bfengqu\.com
@@ -26307,6 +26308,7 @@
 .*\bgzxhdyc\.com
 .*\bgzxiaopeng\.com
 .*\bgzxict\.com
+.*\bgzxidu\.com
 .*\bgzxjzc\.com
 .*\bgzxszf\.com
 .*\bgzxtsg\.com
@@ -29351,6 +29353,7 @@
 .*\bhuijiame\.com
 .*\bhuijiaoyun\.com
 .*\bhuijidata\.com
+.*\bhuijiewei\.com
 .*\bhuijimall\.com
 .*\bhuijistatic\.com
 .*\bhuijitrans\.com
@@ -31707,7 +31710,6 @@
 .*\bitamt\.com
 .*\bitangbole\.com
 .*\bitangyuan\.com
-.*\bitanhang\.com
 .*\bitanlian\.com
 .*\bitanzi\.com
 .*\bitao\.com
@@ -35560,6 +35562,7 @@
 .*\bkoofun\.com
 .*\bkookong\.com
 .*\bkoolbao\.com
+.*\bkoolcenter\.com
 .*\bkooldns\.com
 .*\bkoolearn\.com
 .*\bkoolproxy\.com
@@ -38322,6 +38325,7 @@
 .*\blsjacg\.com
 .*\blsjczj\.com
 .*\blsjgcx\.com
+.*\blsjlp8\.com
 .*\blsjrcdn\.com
 .*\blsjsm\.com
 .*\blsjtfinance\.com
@@ -41015,7 +41019,6 @@
 .*\bmrjiang\.com
 .*\bmrjjxw\.com
 .*\bmrkevin\.net
-.*\bmrm1336\.com
 .*\bmro9\.com
 .*\bmrpyq\.com
 .*\bmrqf\.com
@@ -45489,6 +45492,7 @@
 .*\bqiangqiang5\.com
 .*\bqianhai12315\.com
 .*\bqianhaiaiaitie\.com
+.*\bqianhaibs\.com
 .*\bqianhuaweb\.com
 .*\bqianhujz\.com
 .*\bqianinfo\.com
@@ -46909,7 +46913,6 @@
 .*\brayuu\.com
 .*\brayyo\.com
 .*\brayyzx\.com
-.*\brazifredz\.com
 .*\brazonyang\.com
 .*\brazrlele\.com
 .*\braztb\.com
@@ -46953,7 +46956,6 @@
 .*\brdplat\.com
 .*\brdsdk\.com
 .*\brdsvsh\.com
-.*\brdtoc\.com
 .*\brdtuijian\.com
 .*\brdwork\.com
 .*\brdxmt\.com
@@ -52846,6 +52848,7 @@
 .*\bteambuy\.cc
 .*\bteamlogs\.com
 .*\bteamminus\.com
+.*\bteamotto\.net
 .*\bteamshub\.com
 .*\bteamtopgame\.com
 .*\bteamyi\.com
@@ -61253,6 +61256,7 @@
 .*\bxsjwyx\.com
 .*\bxsjx\.net
 .*\bxskhome\.com
+.*\bxslb\.me
 .*\bxsldh\.net
 .*\bxslou\.com
 .*\bxsmaofa\.com
@@ -62452,6 +62456,7 @@
 .*\byginsight\.com
 .*\bygjj\.com
 .*\bygjoy\.com
+.*\bygo\.wiki
 .*\bygodl\.com
 .*\bygread\.com
 .*\bygsdmedia\.com
@@ -62592,6 +62597,7 @@
 .*\byifake\.com
 .*\byifanghy\.com
 .*\byifanmedia\.net
+.*\byifansuo\.com
 .*\byifatong\.com
 .*\byifeisoft\.com
 .*\byifeiyuan\.me
@@ -63930,6 +63936,7 @@
 .*\byszx99\.com
 .*\byszyun\.com
 .*\byszyz\.com
+.*\byszzlt\.com
 .*\byt1998\.com
 .*\byt698\.com
 .*\byta-tech\.com
@@ -64430,6 +64437,7 @@
 .*\byunxin123\.com
 .*\byunxindai\.com
 .*\byunxindns\.com
+.*\byunxinfa\.com
 .*\byunxinshi\.com
 .*\byunxiu\.com
 .*\byunxs\.com
