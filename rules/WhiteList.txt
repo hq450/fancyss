@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2021-11-29
+-e ## Last update: 2021-12-01
 
 .*\b0-100\.com
 .*\b0-6\.com
