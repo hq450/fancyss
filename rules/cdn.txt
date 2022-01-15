@@ -1209,7 +1209,6 @@
 123hao.com
 123hdp.com
 123huodong.com
-123ku.com
 123lihun.com
 123meiyan.com
 123nice.net
@@ -2532,6 +2531,7 @@
 263ytx.com
 263zw.com
 264006.com
+265.com
 2656000.com
 265660.com
 26595.com
@@ -2690,6 +2690,7 @@
 2lieqi.com
 2loveyou.com
 2m2j.com
+2mdn.net
 2mjob.com
 2mould.com
 2or3m.com
@@ -4967,6 +4968,7 @@
 53tct.com
 53xjd.com
 53yao.com
+53yu.com
 53zw.net
 54.com
 54114.com
@@ -4991,6 +4993,7 @@
 54kefu.net
 54lol.com
 54manong.com
+54md.com
 54op.com
 54share.com
 54tf.com
@@ -6464,7 +6467,6 @@
 80juqing.com
 80kongjian.com
 80kuku.com
-80lib.com
 80ml.com
 80nb.com
 80note.com
@@ -7021,6 +7023,7 @@
 91daizhang.com
 91danji.com
 91data.com
+91datong.com
 91dba.com
 91dbb.com
 91dbq.com
@@ -7085,7 +7088,6 @@
 91mariadb.com
 91maths.com
 91mitang.com
-91mjw.com
 91money.com
 91muzhi.com
 91nzh.com
@@ -7621,7 +7623,6 @@
 99read.com
 99rom.com
 99sky.com
-99suliao.com
 99sun.com
 99sushe.com
 99vf.com
@@ -7793,18 +7794,23 @@ a0b88.com
 a0bi.com
 a0c00.com
 a0c77.com
+a1.mzstatic.com
 a1166.com
 a135.net
 a166.com
 a1714.com
 a1a.me
+a2.mzstatic.com
 a2048.com
 a21fs.com
 a21yishion.com
 a234567.com
 a2dongman.com
+a3.mzstatic.com
 a3p4.com
+a4.mzstatic.com
 a4s6.com
+a5.mzstatic.com
 a5.net
 a5628.com
 a5805.com
@@ -8057,6 +8063,8 @@ adbxb.com
 adc-expo.com
 adccd.com
 adcdn.com
+adcdownload.apple.com
+adcdownload.apple.com.akadns.net
 adconfer.com
 addaad.com
 addgog.com
@@ -8137,6 +8145,7 @@ adsage.com
 adsagedsp.com
 adsame.com
 adscover.com
+adservice.google.com
 adsjdy.com
 adslr.com
 adsmogo.com
@@ -9551,6 +9560,7 @@ apowogame.com
 apoyl.com
 app-123.com
 app-echo.com
+app-measurement.com
 app-router.com
 app-sage.com
 app-store.name
@@ -9598,6 +9608,8 @@ appjzy.com
 appkaifa.com
 appkefu.com
 appkg.com
+appldnld.apple.com
+appldnld.g.aaplimg.com
 apple110.com
 apple4.us
 apple88.net
@@ -9606,6 +9618,7 @@ appleads-trk.com
 appleadstech.com
 applebl.com
 applehunt.com
+appleid.cdn-apple.com
 apples.com
 appletuan.com
 applex.net
@@ -9620,6 +9633,8 @@ apppoo.com
 appqingshu.com
 apprcn.com
 appresource.net
+apps.apple.com
+apps.mzstatic.com
 apps.samsung.com
 apps121.com
 appscan.io
@@ -10075,7 +10090,6 @@ avicsec.com
 avicui.com
 avivaqueen.com
 avivasign.com
-avjoy.me
 avlsec.com
 avlyun.com
 avnpc.com
@@ -11013,6 +11027,10 @@ bdysite.com
 bdyxzx.com
 be-xx.com
 be90.com
+beacons.gcp.gvt2.com
+beacons.gvt2.com
+beacons2.gvt2.com
+beacons3.gvt2.com
 beadwallet.com
 bear20.com
 bearad.com
@@ -11067,7 +11085,6 @@ bei1688.com
 beian88.com
 beianapi29.com
 beianapi30.com
-beianbaba.com
 beianidc.com
 beianw.net
 beibaozq.com
@@ -11206,7 +11223,6 @@ benshouji.com
 benyh.com
 benyht.com
 benyouhui.com
-benz-photo.com
 benzhb.com
 benzhibbs.com
 benztu.com
@@ -11586,7 +11602,6 @@ bingzhilv.com
 binkery.com
 binmt.cc
 binmtplus.com
-binospace.com
 binpang.me
 binqsoft.com
 binstream.live
@@ -13012,6 +13027,8 @@ c-sky.com
 c-sz.com
 c-t.work
 c-yl.com
+c.admob.com
+c.android.clients.google.com
 c.citic
 c.team
 c0594.com
@@ -13087,6 +13104,7 @@ cabontek.com
 cabplink.com
 cacfo.com
 cacg.cc
+cache.pack.google.com
 cachekit.com
 cachepro.com
 cachetime.com
@@ -13821,6 +13839,10 @@ cdn-789.com
 cdn-baidu.net
 cdn-cdn.net
 cdn-chuang.com
+cdn-cn1.apple-mapkit.com
+cdn-cn2.apple-mapkit.com
+cdn-cn3.apple-mapkit.com
+cdn-cn4.apple-mapkit.com
 cdn-data-cloud.com
 cdn-dns-kubo.com
 cdn-files.net
@@ -13828,6 +13850,7 @@ cdn-hotels.com
 cdn-ng.net
 cdn-speed.com
 cdn-v.com
+cdn.apple-mapkit.com
 cdn.fun
 cdn.marketplaceimages.windowsphone.com
 cdn.razersynapse.com
@@ -13835,16 +13858,20 @@ cdn.samsung.com
 cdn.shanghai.nyu.edu
 cdn.zhuji5.com
 cdn08.com
+cdn1.apple-mapkit.com
 cdn1218.com
+cdn2.apple-mapkit.com
 cdn20.com
 cdn20.info
 cdn20.org
 cdn2000.com
 cdn2020.com
+cdn3.apple-mapkit.com
 cdn30.com
 cdn30.org
 cdn3344.com
 cdn35.com
+cdn4.apple-mapkit.com
 cdn56.com
 cdn86.net
 cdn88.cc
@@ -13910,6 +13937,9 @@ cdronghai.com
 cdrtvu.com
 cdruzhu.com
 cdryny.com
+cds-cdn.v.aaplimg.com
+cds.apple.com
+cds.apple.com.akadns.net
 cdsb.com
 cdsb.mobi
 cdsenfa.com
@@ -14490,6 +14520,7 @@ chebao360.com
 checheboke.com
 chechong.com
 check.cc
+checkin.gstatic.com
 checkip.biz
 checkip.pw
 checkoo.com
@@ -16007,8 +16038,20 @@ cl-clw.com
 cl-hs.com
 cl-kongtiao.com
 cl0438.com
+cl1-cdn.origin-apple.com.akadns.net
+cl1.apple.com
+cl2-cn.apple.com
+cl2.apple.com
+cl2.apple.com.edgekey.net.globalredir.akadns.net
 cl2009.com
+cl3-cdn.origin-apple.com.akadns.net
+cl3.apple.com
 cl3000.com
+cl4-cdn.origin-apple.com.akadns.net
+cl4-cn.apple.com
+cl4.apple.com
+cl5-cdn.origin-apple.com.akadns.net
+cl5.apple.com
 cl597.com
 clabso.com
 clady.cc
@@ -16043,9 +16086,13 @@ cli.im
 click-v.com
 click369.com
 clicksdiy.com
+clickserve.dartsearch.net
 clicksun.net
 clickwifi.net
 client51.com
+clientflow.apple.com
+clientflow.apple.com.akadns.net
+clientservices.googleapis.com
 cliffordtrading.com
 cliim.com
 cliim.net
@@ -17113,6 +17160,8 @@ comvps.com
 conbagroup.com
 conchdesktop.com
 concox.net
+configuration.apple.com
+configuration.apple.com.akadns.net
 confuciusinstitute.net
 cong9184.com
 congm.in
@@ -17120,6 +17169,7 @@ congrongfund.com
 congyicn.com
 congzao.com
 congzhi.com
+connectivitycheck.gstatic.com
 connector-systems.com
 conoha.vip
 conohavps.com
@@ -17218,6 +17268,7 @@ corachic.com
 coralsec.com
 corebai.com
 coreldrawchina.com
+corp.google.com
 corpautohome.com
 corpease.net
 corpize.com
@@ -17541,6 +17592,7 @@ crispstata.com
 crjfw.com
 crl.globalsign.net
 crl.kaspersky.com
+crl.pki.goog
 crlcn.com
 crlf0710.com
 crlg.com
@@ -17641,6 +17693,7 @@ cshnkj.com
 cshu360.com
 cshxdc.com
 cshzw.com
+csi.gstatic.com
 csiaexpo.com
 csic-711.com
 csic-ljtech.com
@@ -17709,6 +17762,7 @@ csswgq.com
 cssxt.com
 cssyq.com
 cssyzxx.com
+cstat.apple.com
 cstccloud.org
 cstcloud.net
 cstea.org
@@ -18826,6 +18880,7 @@ dcwj168.com
 dcxnews.com
 dczou.com
 dd-advisor.com
+dd-cdn.origin-apple.com.akadns.net
 dd-img.com
 dd.net
 dd128.com
@@ -19203,7 +19258,6 @@ dgggs.com
 dggjqw.com
 dggkj.com
 dggvip.net
-dghfw.com
 dghqmotor.com
 dginfo.com
 dgjiuqi.com
@@ -19591,7 +19645,6 @@ diqiuw.com
 diqu114.com
 diqua.com
 dir001.com
-dircha.com
 directui.com
 discourse-studies.com
 discoversources.com
@@ -19728,6 +19781,8 @@ dl-origin.ubnt.com
 dl-rc.com
 dl.delivery.mp.microsoft.com
 dl.djicdn.com
+dl.google.com
+dl.l.google.com
 dl.ubnt.com
 dl0728.com
 dl158.net
@@ -19795,6 +19850,7 @@ dm176.com
 dm190.com
 dm300.com
 dm321.net
+dm4mm.com
 dm5.com
 dm77.com
 dm789.com
@@ -20180,6 +20236,7 @@ doubean.com
 doubi.ren
 doubimeizhi.com
 doubimm.net
+doubleclick.net
 douboshi.net
 doubozhibo.com
 douc.cc
@@ -20285,6 +20342,7 @@ downi9.com
 downjoy.com
 downkr.com
 downkuai.com
+download.developer.apple.com
 download.microsoft.com
 download.visualstudio.microsoft.com
 download.windowsupdate.com
@@ -20594,6 +20652,7 @@ duoduodashi.com
 duoduotv.com
 duoduoyin.com
 duoduoyouli888.com
+duoduozb.com
 duoduozhifu.com
 duoente.net
 duoerpharmacy.com
@@ -22568,7 +22627,6 @@ fanglimei.com
 fanglist.com
 fanglitong.com
 fangmeileju.com
-fangniaowang.net
 fangqk.com
 fangshanzi.com
 fangshuitan888.com
@@ -23267,6 +23325,7 @@ fir.vip
 firadio.net
 fire233.com
 fire2333.com
+firebase-settings.crashlytics.com
 firebirdprint.com
 fireemblem.net
 fireemulator.com
@@ -23421,7 +23480,6 @@ flashmemoryworld.com
 flashv8.com
 flashwar.com
 flashwing.net
-flashyl.com
 flatshare365.com
 flawcache.com
 flduo.com
@@ -23564,6 +23622,8 @@ font168.com
 font5.com
 font6.com
 fontke.com
+fonts.googleapis.com
+fonts.gstatic.com
 foodbk.com
 foodjx.com
 foodmate.net
@@ -24165,6 +24225,7 @@ fzzrlh.com
 g-emall.com
 g-photography.net
 g-var.com
+g1.gstatic.com
 g12345.com
 g12e.com
 g168.net
@@ -24172,6 +24233,7 @@ g188.net
 g1c5.com
 g1d.net
 g1f5.com
+g2.gstatic.com
 g2.link
 g207.com
 g2g1.com
@@ -25450,8 +25512,15 @@ goodstudydayup.com
 goodtea.cc
 goodtp.com
 goofish.com
+google-analytics.com
+googleadservices.com
+googleanalytics.com
 googlebridge.com
 googlefonts.net
+googleoptimize.com
+googlesyndication.com
+googletagmanager.com
+googletagservices.com
 googlevip8.com
 googlevoice.org
 googleyixia.com
@@ -25580,7 +25649,6 @@ gplqdb.com
 gpnewtech.com
 gppapp.com
 gps8.com
-gpshk.cc
 gpslook.net
 gpsoo.net
 gpsspg.com
@@ -25686,6 +25754,8 @@ gruntjs.net
 grvape.com
 gryu.net
 grzmz.com
+gs-loc-cn.apple.com
+gs-loc.apple.com
 gs.ww.np.dl.playstation.net
 gs14.com
 gs2.ww.prod.dl.playstation.net
@@ -25713,8 +25783,23 @@ gskyty.com
 gslxrc.com
 gsmpers.com
 gsmyi.com
+gsp10-ssl-cn.ls.apple.com
+gsp11-cn.ls.apple.com
+gsp12-cn.ls.apple.com
+gsp13-cn.ls.apple.com
+gsp4-cn.ls.apple.com
+gsp4-cn.ls.apple.com.edgekey.net
+gsp4-cn.ls.apple.com.edgekey.net.globalredir.akadns.net
+gsp5-cn.ls.apple.com
+gsp85-cn-ssl.ls.apple.com
 gspaceteam.com
 gspcc.com
+gspe19-cn-ssl.ls.apple.com
+gspe19-cn.ls-apple.com.akadns.net
+gspe19-cn.ls.apple.com
+gspe21-ssl.ls.apple.com
+gspe21.ls.apple.com
+gspe35-ssl.ls.apple.com
 gsqx.com
 gsrcu.com
 gsrecv.com
@@ -25723,6 +25808,7 @@ gssfgk.com
 gsstaf.com
 gst-china.net
 gstarcad.com
+gstaticadssl.l.google.com
 gstdt.com
 gston.cc
 gstonegames.com
@@ -25778,6 +25864,7 @@ gtm-a4b9.com
 gtm-a5b4.com
 gtm-i1d6.com
 gtm-i1d9.com
+gtm.oasisfeng.com
 gtmlufax.com
 gtn9.com
 gtnqk.com
@@ -25911,6 +25998,7 @@ gudaiba.com
 gudaovision.com
 gudi.cc
 gudianhr.com
+guduodata.com
 guer.org
 guestops.com
 gufeiposuiji.com
@@ -26463,6 +26551,7 @@ h-sea.net
 h-shgroup.com
 h-ui.net
 h-world.com
+h-zl.net
 h0591.com
 h0758.net
 h0f.me
@@ -28321,7 +28410,6 @@ hkpanamie.com
 hkpep.com
 hkproperty.com
 hkqbh.com
-hkqq8.com
 hkskyloyd.com
 hkstv.tv
 hkt4.com
@@ -28756,7 +28844,6 @@ horizonfuelcell.com
 horizonrcg.com
 horn-yacht.com
 horsa.org
-horsehr.com
 horti-expo2019.com
 horti-expo2019.org
 hortor.net
@@ -29593,6 +29680,7 @@ huitouche.com
 huitouyu.com
 huitouzi.com
 huitu.com
+huitun.com
 huiurl.com
 huivo.com
 huiweixin.com
@@ -29715,7 +29803,6 @@ huocai.com
 huocc.com
 huochai.mobi
 huochaihe.cc
-huoche.biz
 huoche.com
 huoche.net
 huoche.wiki
@@ -30272,6 +30359,7 @@ ia-shenzhen.com
 iacblog.com
 iadmob.com
 iadmore.com
+iadsdk.apple.com
 iaeac.org
 iaikx.com
 iakmai.com
@@ -30354,6 +30442,7 @@ ibgbuy.com
 ibianqu.com
 ibiaozhi.com
 ibicn.com
+ibidian.com
 ibiji.com
 ibimawen.com
 ibimuyu.com
@@ -30503,6 +30592,8 @@ ickey.cc
 ickimg.com
 iclicash.com
 iclickstatic.com
+icloud-cdn.icloud.com.akadns.net
+icloud.cdn-apple.com
 icloudgslb.com
 icloudnews.net
 iclouds.work
@@ -31180,6 +31271,9 @@ imagelol.com
 imageoss.com
 imagepy.org
 images-cache.com
+images.apple.com
+images.apple.com.akadns.net
+images.apple.com.edgekey.net.globalredir.akadns.net
 images.benchmarkemail.com
 images.samsung.com
 imageter.com
@@ -31198,6 +31292,7 @@ imanhuaw.net
 imaojiang.com
 imarketchina.com
 imaschina.com
+imasdk.googleapis.com
 imatchic.com
 imatlas.com
 imayitxt.com
@@ -31462,6 +31557,12 @@ inicoapp.com
 inidc.net
 inimc.com
 ininin.com
+init-p01md-lb.push-apple.com.akadns.net
+init-p01md.apple.com
+init-p01st-lb.push-apple.com.akadns.net
+init-p01st.push.apple.com
+init-s01st-lb.push-apple.com.akadns.net
+init-s01st.push.apple.com
 initialview.com
 initnil.com
 inja.com
@@ -31596,6 +31697,7 @@ iopenhec.com
 ioperat.com
 ioqq.com
 ios1234.com
+iosapps.itunes.g.aaplimg.com
 iosappx.com
 iosask.com
 iosfengwo.com
@@ -31676,6 +31778,7 @@ ipfen.com
 ipfsbit.com
 ipgoal.com
 iph123.com
+iphone-ld.apple.com
 iphonediule.com
 iphp8.com
 ipianchang.com
@@ -31796,8 +31899,18 @@ iruixing.com
 irukou.com
 irunyan.com
 is-programmer.com
+is1-ssl.mzstatic.com
+is1.mzstatic.com
+is2-ssl.mzstatic.com
+is2.mzstatic.com
 is26.com
+is3-ssl.mzstatic.com
+is3.mzstatic.com
 is36.com
+is4-ssl.mzstatic.com
+is4.mzstatic.com
+is5-ssl.mzstatic.com
+is5.mzstatic.com
 isaced.com
 isamanhua.com
 isaonian.com
@@ -32118,6 +32231,9 @@ ituba.cc
 itugo.com
 ituibar.com
 ituite.com
+itunes-apple.com.akadns.net
+itunes.apple.com
+itunesconnect.apple.com
 itushuo.com
 itutu.tv
 ituu.net
@@ -33341,7 +33457,6 @@ jingwei.link
 jingwentian.com
 jingwuhui.com
 jingxi.com
-jingxialai.com
 jingxianglawfirm.com
 jingxinad.com
 jingxingseo.com
@@ -34277,6 +34392,7 @@ jsningyi.com
 jsnx.net
 jsnxs.com
 jsocr.com
+json-json.com
 jsonin.com
 jsonnode.com
 jsososo.com
@@ -38594,6 +38710,7 @@ ls12.me
 ls666.com
 lsbankchina.com
 lsbchina.com
+lsbin.com
 lsccb.com
 lsfyw.net
 lsg3.com
@@ -40170,6 +40287,9 @@ meshang.net
 meshiot.com
 mesince.com
 mesresearch.com
+mesu-cdn.apple.com.akadns.net
+mesu-china.apple.com.akadns.net
+mesu.apple.com
 mesule.com
 met.red
 met169.com
@@ -41462,6 +41582,7 @@ muse-ui.org
 mushafa.net
 mushapi.com
 mushroomchina.com
+music.apple.com
 music163.com
 music4x.com
 musicbody.net
@@ -43139,7 +43260,10 @@ ocooca.com
 ocpan.org
 ocri-genomics.org
 ocrmaker.com
+ocsp-lb.apple.com.akadns.net
+ocsp.apple.com
 ocsp.globalsign.com
+ocsp.pki.goog
 ocsp.us.cdnetworks.com
 ocsp2.globalsign.com
 oct-asia.com
@@ -43638,6 +43762,8 @@ osbzr.com
 oscarma.com
 oscartutor.com
 oscarzhoud.com
+oscdn.apple.com
+oscdn.origin-apple.com.akadns.net
 oschina.com
 oschina.io
 oschina.net
@@ -43886,6 +44012,7 @@ padding.me
 paddlepaddle.org
 paddlewaver.com
 paedu.net
+pagead-googlehosted.l.google.com
 pageadmin.net
 pagechoice.com
 pagechoice.net
@@ -43945,6 +44072,8 @@ pan58.com
 pan8.net
 panabit.com
 panbaidu.com
+pancake.apple.com
+pancake.cdn-apple.com.akadns.net
 panchuang.net
 pancishe.com
 panda-home.com
@@ -44087,6 +44216,7 @@ parkbees.com
 parkchina.net
 parkdaily.com
 parkingjet.com
+parkingquickly.com
 parkmecn.com
 parkviewgreen.com
 parnassusdata.com
@@ -44411,6 +44541,7 @@ phlexing.com
 phnamedns.com
 phnixpool.com
 pho.so
+phobos.apple.com
 phodal.com
 phoemix.net
 phoenixos.com
@@ -44759,6 +44890,7 @@ pkbkok.com
 pkdyplayer.com
 pkfj.xyz
 pkgklk.com
+pki-goog.l.google.com
 pkm360.com
 pkmmo.com
 pko123.com
@@ -45160,6 +45292,7 @@ pro6e.com
 procar.cc
 process-safety-lab.com
 processon.com
+prod-support.apple-support.akadns.net
 product1.djicdn.com
 productivity.wiki
 proginn.com
@@ -45477,7 +45610,6 @@ qbxs5.com
 qbxz.com
 qc-dds.net
 qc-hr.com
-qc-pm.com
 qc027.com
 qc178.com
 qc188.com
@@ -46640,9 +46772,11 @@ qthnews.com
 qtimes.net
 qtj5.com
 qtlcdn.com
+qtlcdncn.info
 qtlcn.com
 qtlglb.com
 qtlglb.info
+qtlgslbcn.info
 qtluyuan.com
 qtmojo.com
 qtonghua.com
@@ -47283,6 +47417,7 @@ rebo5566.com
 rebohu.com
 rebooo.com
 reborncodinglife.com
+recaptcha.net
 recgo.com
 rechaos.com
 rechuandao.com
@@ -47310,6 +47445,7 @@ redianzixun.com
 rediao.com
 redicecn.com
 redidc.com
+redirector.gvt1.com
 redisbook.com
 redisdoc.com
 redisfans.com
@@ -47344,6 +47480,7 @@ refined-x.com
 reformdata.org
 refractorywin.com
 reg007.com
+regioninfo-pa.googleapis.com
 regishome.com
 reglogo.net
 regtm.com
@@ -47436,6 +47573,7 @@ repianimg.com
 replays.net
 res0w.com
 resclassaction.com
+reserve-prime.apple.com
 resheji.com
 resistor.today
 resouxs.com
@@ -47568,6 +47706,7 @@ ritaomeng.com
 ritarpower.com
 ritering.com
 rivergame.net
+riyuanma.com
 riyuba.com
 riyuexing.org
 riyuezhuan.com
@@ -48054,6 +48193,7 @@ s-ns.com
 s-reader.com
 s-sgames.com
 s-ts.net
+s.mzstatic.com
 s06661.com
 s135.com
 s163.com
@@ -48095,6 +48235,8 @@ sact-digital.com
 sadhen.com
 sae-china.org
 saebbs.com
+safebrowsing-cache.google.com
+safebrowsing.googleapis.com
 safecenter.com
 safehoo.com
 safejmp.com
@@ -49043,6 +49185,7 @@ shaddockfishing.com
 shadow-forum.com
 shadowedu.net
 shadowq.com
+shaduizi.com
 shafa.com
 shafaguanjia.com
 shahaizi.com
@@ -50506,7 +50649,6 @@ sjdzp.com
 sjdzp.net
 sjetdz.com
 sjfcdn.com
-sjfkai.com
 sjfpro.com
 sjfx.com
 sjfzxm.com
@@ -51456,6 +51598,8 @@ ssjlicai.com
 ssjxx.com
 ssjzw.com
 ssky123.com
+ssl-google-analytics.l.google.com
+ssl.gstatic.com
 sslaaa.com
 sslceshi.com
 sslchaoshi.com
@@ -51617,6 +51761,7 @@ stnts.com
 sto80.com
 stock8m.com
 stockhn.com
+stocks-sparkline-lb.apple.com.akadns.net
 stockstar.com
 stockwei.com
 stockxp.com
@@ -51633,8 +51778,13 @@ stoneu.com
 stonexp.com
 stor-age.com
 storagesemicon.com
+store.apple.com
+store.apple.com.edgekey.net
+store.apple.com.edgekey.net.globalredir.akadns.net
 store.dji.com
 store.nike.com
+store.storeimages.apple.com.akadns.net
+store.storeimages.cdn-apple.com
 storeedgefd.dsx.mp.microsoft.com
 storkapp.me
 stormorai.com
@@ -51979,7 +52129,9 @@ supmil.net
 supoin.com
 supool.com
 suporpe.com
+support-china.apple-support.akadns.net
 support-cn.samsung.com
+support.apple.com
 support.globalsign.com
 support.lenovo.com
 supumall.com
@@ -52006,7 +52158,6 @@ survivor99.com
 sushouka688.com
 susong51.com
 susongbbs.com
-susouth.com
 sustc.us
 susudm.com
 suteidc.com
@@ -52065,8 +52216,14 @@ swarma.net
 swarma.org
 swatou.com
 swbbsc.com
+swcatalog-cdn.apple.com.akadns.net
+swcatalog.apple.com
+swcdn.apple.com
+swcdn.g.aaplimg.com
 swchina.org
 swcpu.com
+swdist.apple.com
+swdist.apple.com.akadns.net
 sweet-data.com
 sweetalkos.com
 sweetdan.com
@@ -52106,6 +52263,8 @@ swordtt.com
 swotbbs.com
 swothouse.com
 swsbw.com
+swscan-cdn.apple.com.akadns.net
+swscan.apple.com
 swsm.net
 swsmu.com
 swstsg.com
@@ -53316,6 +53475,7 @@ tensafe.com
 tenshi.cc
 tensorchip.com
 tensornews.net
+tenstars.net
 tensynad.com
 tensynchina.com
 tentrue.com
@@ -54183,10 +54343,13 @@ tool.cx
 tool.la
 tool.lu
 tool77.com
+toolbarqueries.google.com
 toolinbox.net
 toolmall.com
 toolmao.com
 toolnb.com
+tools.google.com
+tools.l.google.com
 tools1000.com
 toolsdaquan.com
 tooming.com
@@ -54229,6 +54392,7 @@ topeet.com
 topeetboard.com
 topenergy.org
 topengroup.net
+topfisc.com
 topflames.com
 topfreeweb.net
 topgslb.com
@@ -54255,6 +54419,7 @@ topmba.mobi
 topnews9.com
 topomel.com
 toppdu.com
+topperuse.com
 toppiao.net
 topproio.com
 topqh.net
@@ -54430,7 +54595,9 @@ transcn.org
 transformer-cn.com
 transfu.com
 transfun.net
+translate.googleapis.com
 translation-dictionary.net
+translation.googleapis.com
 translationchina.com
 transn.com
 transnbox.com
@@ -55677,6 +55844,10 @@ upchina.com
 upchinapro.com
 upchinaproduct.com
 upd.kaspersky.com
+update.googleapis.com
+updates-http.cdn-apple.com
+updates-http.cdn-apple.com.akadns.net
+updates.cdn-apple.com
 updba.com
 updrv.com
 upe.net
@@ -55999,6 +56170,8 @@ vaeliu.com
 vaikan.com
 vaillant2.com
 vakku.com
+valid.apple.com
+valid.origin-apple.com.akadns.net
 validform.club
 valinbl.com
 valinresources.com
@@ -58913,6 +59086,7 @@ wpchina.org
 wpcnzz.com
 wpdaxue.com
 wpengapp.com
+wper.com
 wpgdadatong.com
 wpgdadawant.com
 wphonelife.com
@@ -59316,11 +59490,16 @@ www-175345.com
 www-4620.com
 www-63608.com
 www-api.ibm.com
+www-google-analytics.l.google.com
+www-googletagmanager.l.google.com
 www.adobe.com
 www.agoda.com
 www.akamai.com
 www.amd.com
 www.analog.com
+www.apple.com
+www.apple.com.edgekey.net
+www.apple.com.edgekey.net.globalredir.akadns.net
 www.cc
 www.cdnetworks.com
 www.cg
@@ -59331,6 +59510,7 @@ www.dji.com
 www.djivideos.com
 www.ericsson.com
 www.globalsign.com
+www.gstatic.com
 www.htc.com
 www.htcsense.com
 www.kaspersky.com
@@ -59542,7 +59722,6 @@ wzrhjr.com
 wzright.com
 wzsee.com
 wzsky.net
-wzssbs.com
 wzstationery.com
 wztf121.com
 wzwmw.com
@@ -61583,7 +61762,6 @@ xshuoba.com
 xshuotxt.com
 xshwp.com
 xsina.net
-xsj2020888.com
 xsj2021888.com
 xsjedu.org
 xsjsource.com
@@ -63160,7 +63338,6 @@ yingmei.me
 yingmi.com
 yingmile.com
 yingming.net
-yingmishi.com
 yingmoo.com
 yingpingji.com
 yingsheng.com
@@ -65637,6 +65814,7 @@ zggcks.com
 zggdjj.com
 zggjgy.com
 zgglkx.com
+zgglyun.com
 zggonglue.com
 zggqzp.com
 zggx.net
@@ -65711,6 +65889,7 @@ zgsclp.com
 zgsd.net
 zgsee.net
 zgserver.com
+zgshici.com
 zgshifu.com
 zgshige.com
 zgshjj.com
@@ -66423,6 +66602,7 @@ zhongguohuo.com
 zhongguojianmenguan.com
 zhongguojie.org
 zhongguojie.wang
+zhongguojinrongtouziwang.com
 zhongguojixiewang.com
 zhongguomap.com
 zhongguopeixun.net
