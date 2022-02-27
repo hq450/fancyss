@@ -188,7 +188,7 @@ install_now(){
 	fi
 
 	# 对于jffs分区过小的插件，删除某些功能的二进制文件，比如RT-AX56U_V2的jffs只有15MB，所以移除一些功能
-	JFFS_TOTAL=$(df|grep -Ew "/jffs" | awk '{print $2}')
+	JFFS_TOTAL=$(df | grep -w "/jffs" | awk '{print $2}')
 	if [ "${JFFS_TOTAL}" -le "20000" ];then
 		echo_date "-------------------------------------------------------------"
 		echo_date "重要提示："
@@ -233,7 +233,7 @@ install_now(){
 
 	# 检测储存空间是否足够
 	echo_date "检测jffs分区剩余空间..."
-	SPACE_AVAL=$(df|grep jffs | awk '{print $4}')
+	SPACE_AVAL=$(df | grep -w "/jffs" | awk '{print $4}')
 	SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
 	if [ "$SPACE_AVAL" -gt "$SPACE_NEED" ];then
 		echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间满足，继续安装！
