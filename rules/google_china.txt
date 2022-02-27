@@ -27,6 +27,7 @@ g2.gstatic.com
 googleadservices.com
 google-analytics.com
 googleanalytics.com
+googleoptimize.com
 googlesyndication.com
 googletagmanager.com
 googletagservices.com
@@ -41,7 +42,6 @@ redirector.gvt1.com
 regioninfo-pa.googleapis.com
 safebrowsing-cache.google.com
 safebrowsing.googleapis.com
-settings.crashlytics.com
 ssl-google-analytics.l.google.com
 ssl.gstatic.com
 toolbarqueries.google.com

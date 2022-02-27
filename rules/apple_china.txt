@@ -7,6 +7,7 @@ adcdownload.apple.com
 adcdownload.apple.com.akadns.net
 appldnld.apple.com
 appldnld.g.aaplimg.com
+appleid.cdn-apple.com
 apps.apple.com
 apps.mzstatic.com
 cdn1.apple-mapkit.com
@@ -114,6 +115,7 @@ swdist.apple.com
 swdist.apple.com.akadns.net
 swscan.apple.com
 swscan-cdn.apple.com.akadns.net
+updates.cdn-apple.com
 updates-http.cdn-apple.com
 updates-http.cdn-apple.com.akadns.net
 valid.apple.com
