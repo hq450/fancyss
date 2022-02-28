@@ -8031,10 +8031,8 @@ admire.so
 admpub.com
 admqr.com
 adnineplus.com
-adnmb.com
 adnmb1.com
 adnmb2.com
-adnmb3.com
 adnyg.com
 adobe55.com
 adobeae.com
@@ -8174,7 +8172,6 @@ agiso.com
 agnezanna.com
 agora.io
 agrantsem.com
-agri35.com
 agrittex.com
 agrochemshow.com
 agrodt.com
@@ -9561,6 +9558,7 @@ appzhu.com
 apsgo.com
 apt.so
 aptchina.com
+aptchip.com
 aptenon.com
 apusic.com
 apxm.net
@@ -12419,6 +12417,7 @@ bqg26.com
 bqg5.cc
 bqg8.cc
 bqg8.la
+bqgwu.com
 bqgyy.com
 bqiapp.com
 bqimg.com
@@ -17521,6 +17520,7 @@ csehms.com
 csflgg.com
 csftyy.com
 csgm168.com
+csgokai.com
 csgpc.org
 csgwbn.com
 csharpkit.com
@@ -18470,6 +18470,7 @@ daqiso.com
 daqsoft.com
 daquan.com
 darczpw.com
+darenceping.com
 darevip.com
 darkmi.com
 darmao.com
@@ -22615,6 +22616,7 @@ fastsoc.com
 fastsoso.cc
 fat999.com
 fatedier.com
+fateskins.com
 fatiao.pro
 fatjiong.com
 fatkun.com
@@ -27646,7 +27648,6 @@ henanjubao.com
 henanlvyi.com
 henanpige.com
 henansenli.com
-henanxiaochi.com
 henanyouth.com
 henbt.com
 hencin.com
@@ -30922,7 +30923,6 @@ ilaisa.com
 ilaitui.com
 ilancai.com
 ilanluo.com
-ilanni.com
 ilanx.net
 ilanx0.net
 ilaw66.com
@@ -31377,7 +31377,6 @@ intlgame.com
 intlscdn.com
 intmedic.com
 intmian.com
-intnet.net
 intohard.com
 intopet.com
 intovfx.com
@@ -33403,7 +33402,6 @@ jiucool.org
 jiuday.com
 jiudianjiu.com
 jiudianyuedu.com
-jiuding18.com
 jiudingcapital.com
 jiudingdalv.com
 jiugang.com
@@ -41155,7 +41153,6 @@ mtdpgame.com
 mtdx.net
 mtedu.com
 mtestin.com
-mtf.wiki
 mtgchina.com
 mti100.com
 mtiancity.com
@@ -44159,6 +44156,7 @@ pgc.tv
 pgcog.com
 pgjcqm.com
 pgl-world.com
+pglstatp-toutiao-b.com
 pglstatp-toutiao.com
 pgnan.com
 pgsql.tech
@@ -47296,6 +47294,7 @@ ripic.xyz
 rippleos.com
 risc-v1.com
 riscv-mcu.com
+riscv.club
 risecd.net
 risecenter.com
 risechina.org
@@ -49535,7 +49534,6 @@ shouyoucdn.com
 shouyoujz.com
 shouyoumen.com
 shouyouqianxian.com
-shouyouribao.com
 shouyoushenqi.com
 shouyoutan.com
 shouyoutv.com
@@ -60190,7 +60188,6 @@ xiaoyida.net
 xiaoying.co
 xiaoying.com
 xiaoying.tv
-xiaoyiquan.com
 xiaoyiwo.net
 xiaoyouxi100.com
 xiaoyouxiqun.com
@@ -62630,7 +62627,6 @@ yidianhulian.com
 yidianling.com
 yidiansz.com
 yidianting.xin
-yidianzhidao.com
 yidianzixun.com
 yidianzx.com
 yidmall.com

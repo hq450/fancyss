@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2022-02-26
+-e ## Last update: 2022-02-28
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -8028,10 +8028,8 @@
 .*\badmpub\.com
 .*\badmqr\.com
 .*\badnineplus\.com
-.*\badnmb\.com
 .*\badnmb1\.com
 .*\badnmb2\.com
-.*\badnmb3\.com
 .*\badnyg\.com
 .*\badobe55\.com
 .*\badobeae\.com
@@ -8170,7 +8168,6 @@
 .*\bagnezanna\.com
 .*\bagora\.io
 .*\bagrantsem\.com
-.*\bagri35\.com
 .*\bagrittex\.com
 .*\bagrochemshow\.com
 .*\bagrodt\.com
@@ -9551,6 +9548,7 @@
 .*\bapsgo\.com
 .*\bapt\.so
 .*\baptchina\.com
+.*\baptchip\.com
 .*\baptenon\.com
 .*\bapusic\.com
 .*\bapxm\.net
@@ -12406,6 +12404,7 @@
 .*\bbqg5\.cc
 .*\bbqg8\.cc
 .*\bbqg8\.la
+.*\bbqgwu\.com
 .*\bbqgyy\.com
 .*\bbqiapp\.com
 .*\bbqimg\.com
@@ -17471,6 +17470,7 @@
 .*\bcsflgg\.com
 .*\bcsftyy\.com
 .*\bcsgm168\.com
+.*\bcsgokai\.com
 .*\bcsgpc\.org
 .*\bcsgwbn\.com
 .*\bcsharpkit\.com
@@ -18418,6 +18418,7 @@
 .*\bdaqsoft\.com
 .*\bdaquan\.com
 .*\bdarczpw\.com
+.*\bdarenceping\.com
 .*\bdarevip\.com
 .*\bdarkmi\.com
 .*\bdarmao\.com
@@ -22558,6 +22559,7 @@
 .*\bfastsoso\.cc
 .*\bfat999\.com
 .*\bfatedier\.com
+.*\bfateskins\.com
 .*\bfatiao\.pro
 .*\bfatjiong\.com
 .*\bfatkun\.com
@@ -27559,7 +27561,6 @@
 .*\bhenanlvyi\.com
 .*\bhenanpige\.com
 .*\bhenansenli\.com
-.*\bhenanxiaochi\.com
 .*\bhenanyouth\.com
 .*\bhenbt\.com
 .*\bhencin\.com
@@ -30832,7 +30833,6 @@
 .*\bilaitui\.com
 .*\bilancai\.com
 .*\bilanluo\.com
-.*\bilanni\.com
 .*\bilanx\.net
 .*\bilanx0\.net
 .*\bilaw66\.com
@@ -31277,7 +31277,6 @@
 .*\bintlscdn\.com
 .*\bintmedic\.com
 .*\bintmian\.com
-.*\bintnet\.net
 .*\bintohard\.com
 .*\bintopet\.com
 .*\bintovfx\.com
@@ -33288,7 +33287,6 @@
 .*\bjiuday\.com
 .*\bjiudianjiu\.com
 .*\bjiudianyuedu\.com
-.*\bjiuding18\.com
 .*\bjiudingcapital\.com
 .*\bjiudingdalv\.com
 .*\bjiugang\.com
@@ -41034,7 +41032,6 @@
 .*\bmtdx\.net
 .*\bmtedu\.com
 .*\bmtestin\.com
-.*\bmtf\.wiki
 .*\bmtgchina\.com
 .*\bmti100\.com
 .*\bmtiancity\.com
@@ -44029,6 +44026,7 @@
 .*\bpgcog\.com
 .*\bpgjcqm\.com
 .*\bpgl-world\.com
+.*\bpglstatp-toutiao-b\.com
 .*\bpglstatp-toutiao\.com
 .*\bpgnan\.com
 .*\bpgsql\.tech
@@ -47159,6 +47157,7 @@
 .*\brippleos\.com
 .*\brisc-v1\.com
 .*\briscv-mcu\.com
+.*\briscv\.club
 .*\brisecd\.net
 .*\brisecenter\.com
 .*\brisechina\.org
@@ -49395,7 +49394,6 @@
 .*\bshouyoujz\.com
 .*\bshouyoumen\.com
 .*\bshouyouqianxian\.com
-.*\bshouyouribao\.com
 .*\bshouyoushenqi\.com
 .*\bshouyoutan\.com
 .*\bshouyoutv\.com
@@ -60018,7 +60016,6 @@
 .*\bxiaoying\.co
 .*\bxiaoying\.com
 .*\bxiaoying\.tv
-.*\bxiaoyiquan\.com
 .*\bxiaoyiwo\.net
 .*\bxiaoyouxi100\.com
 .*\bxiaoyouxiqun\.com
@@ -62458,7 +62455,6 @@
 .*\byidianling\.com
 .*\byidiansz\.com
 .*\byidianting\.xin
-.*\byidianzhidao\.com
 .*\byidianzixun\.com
 .*\byidianzx\.com
 .*\byidmall\.com
