@@ -1769,7 +1769,8 @@ load_tproxy() {
 
 	for MODULE in $MODULES; do
 		if ! checkmoduleisloaded; then
-			insmod /lib/modules/${OS}/kernel/net/netfilter/${MODULE}.ko
+			#insmod /lib/modules/${OS}/kernel/net/netfilter/${MODULE}.ko
+			modprobe ${MODULE}.ko
 		fi
 	done
 
