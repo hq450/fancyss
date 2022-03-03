@@ -332,8 +332,9 @@ kill_process() {
 		echo_date 关闭https_dns_proxy进程...
 		killall https_dns_proxy >/dev/null 2>&1
 	fi
-	haveged_process=$(pidof haveged)
-	if [ -n "$haveged_process" ]; then
+	# only close haveged form fancyss, not haveged from system
+	haveged_pid=$(ps |grep "/koolshare/bin/haveged"|grep -v grep|awk '{print $1}')
+	if [ -n "${haveged_pid}" ]; then
 		echo_date 关闭haveged进程...
 		killall haveged >/dev/null 2>&1
 	fi
@@ -2154,10 +2155,15 @@ set_sys() {
 
 	# more entropy
 	# use command `cat /proc/sys/kernel/random/entropy_avail` to check current entropy
-	# from merlin fw 386.2, jitterentropy-rngd has been intergrated into fw
-	if [ -z "$(which jitterentropy-rngd)" -a -f "/koolshare/bin/haveged" ];then
+	# few scenario should be noticed below:
+	# 1. from merlin fw 386.2, jitterentropy-rngd has been intergrated into fw, so havege form fancyss should not be used
+	# 2. from merlin fw 386.4, jitterentropy-rngd was replaced by haveged, so havege form fancyss should not be used
+	# 3. newer asus fw or asus_ks_mod fw like GT-AX6000 use jitterentropy-rngd, so havege form fancyss should not be used
+	# 4. older merlin or asus_ks_mod fw do not have jitterentropy-rngd or haveged, so havege form fancyss should be used
+	if [ -z "$(pidof jitterentropy-rngd)" -a -z "$(pidof haveged)" -a -f "/koolshare/bin/haveged" ];then
+		# run haveged form fancyss only there are not entropy software running
 		echo_date "启动haveged，为系统提供更多的可用熵！"
-		haveged -w 1024 >/dev/null 2>&1
+		/koolshare/bin/haveged -w 1024 >/dev/null 2>&1
 	fi
 }
 
