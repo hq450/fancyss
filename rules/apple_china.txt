@@ -26,7 +26,6 @@ cl1-cdn.origin-apple.com.akadns.net
 cl1.apple.com
 cl2-cn.apple.com
 cl2.apple.com
-cl2.apple.com.edgekey.net.globalredir.akadns.net
 cl3-cdn.origin-apple.com.akadns.net
 cl3.apple.com
 cl4-cdn.origin-apple.com.akadns.net

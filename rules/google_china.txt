@@ -40,11 +40,9 @@ pki-goog.l.google.com
 recaptcha.net
 redirector.gvt1.com
 regioninfo-pa.googleapis.com
-safebrowsing-cache.google.com
 safebrowsing.googleapis.com
 ssl-google-analytics.l.google.com
 ssl.gstatic.com
-toolbarqueries.google.com
 tools.google.com
 tools.l.google.com
 translate.googleapis.com
