@@ -4,29 +4,34 @@
 
 #### fancyss_hnd 支持机型/固件：
 
-| 机型/固件下载                    | 类型   | 平台           | CPU     | 架构  | 支持版本 | 皮肤            |
-| -------------------------------- | ------ | -------------- | ------- | ----- | -------- | --------------- |
-| RT-AC86U                         | 梅林改 | hnd            | BCM4906 | ARMV8 | 全部     | asuswrt         |
-| RT-AC86U                         | 官改   | hnd            | BCM4906 | ARMV8 | 全部     | rog/asuswrt[^1] |
-| GT-AC2900                        | 梅林改 | hnd            | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt [^2]    |
-| GT-AC5300                        | 官改   | hnd            | BCM4908 | ARMV8 | 全部     | rog             |
-| RT-AX88U                         | 梅林改 | axhnd          | BCM4908 | ARMV8 | 全部     | asuswrt         |
-| NETGEAR RAX80                    | 梅林改 | axhnd          | BCM4908 | ARMV8 | 全部     | asuswrt         |
-| GT-AX11000/GT-AX11000_BO4        | 官改   | axhnd          | BCM4908 | ARMV8 | 全部     | rog             |
-| RT-AX92U                         | 官改   | axhnd          | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
-| TUF-AX3000                       | 官改   | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.3  | tuf             |
-| RT-AX58U/RT-AX3000               | 梅林改 | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
-| NETGEAR RAX50                    | 梅林改 | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
-| RT-AX68U                         | 官改   | p1axhnd.675x   | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
-| RT-AX86U                         | 官改   | p1axhnd.675x   | BCM4908 | ARMV8 | ≥ 1.8.3  | asuswrt         |
-| RT-AX86U                         | 梅林改 | p1axhnd.675x   | BCM4908 | ARMV8 | ≥ 1.9.1  | asuswrt         |
-| RT-AX82U                         | 官改   | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
-| ZenWiFi AX/灵耀 AX6600M          | 官改   | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt         |
-| ZenWiFi_XD4/灵耀AX魔方           | 官改   | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt         |
-| RT-AX56U_V2                      | 官改   | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt         |
-| RT-AX56U                         | 梅林改 | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.9.1  | asuswrt         |
-| GT-AX6000                        | 官改   | 5.04axhnd.675x | BCM4912 | ARMV8 | ≥ 1.9.6  | rog             |
-| ZenWiFi_Pro_XT12/灵耀Pro_AX11000 | 官改   | 5.04axhnd.675x | BCM4912 | ARMV8 | ≥ 1.9.6  | asuswrt         |
+| 机型/固件下载    | 类型   | 平台           | CPU     | 架构  | 支持版本 | 皮肤            |
+| ---------------- | ------ | -------------- | ------- | ----- | -------- | --------------- |
+| RT-AC86U         | 梅林改 | hnd            | BCM4906 | ARMV8 | 全部     | asuswrt         |
+| RT-AC86U         | 官改   | hnd            | BCM4906 | ARMV8 | 全部     | rog/asuswrt[^1] |
+| GT-AC2900        | 梅林改 | hnd            | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt [^2]    |
+| GT-AC5300        | 官改   | hnd            | BCM4908 | ARMV8 | 全部     | rog             |
+| RT-AX88U         | 梅林改 | axhnd          | BCM4908 | ARMV8 | 全部     | asuswrt         |
+| RAX80            | 梅林改 | axhnd          | BCM4908 | ARMV8 | 全部     | asuswrt         |
+| GT-AX11000       | 官改   | axhnd          | BCM4908 | ARMV8 | 全部     | rog             |
+| RT-AX92U         | 官改   | axhnd          | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| TUF-AX3000       | 官改   | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.3  | tuf             |
+| TUF-AX5400       | 梅林改 | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.9.7  | tuf             |
+| RT-AX58U         | 梅林改 | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
+| RAX50            | 梅林改 | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
+| RT-AX82U         | 官改   | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.8.4  | asuswrt         |
+| RT-AX82U         | 梅林改 | axhnd.675x     | BCM6750 | ARMV7 | ≥ 1.9.1  | asuswrt         |
+| ZenWiFi_XT8      | 官改   | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.8.7  | asuswrt         |
+| ZenWiFi_XT8      | 梅林改 | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.9.1  | asuswrt         |
+| ZenWiFi_XD4      | 官改   | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.8.8  | asuswrt         |
+| RT-AX56U_V2      | 官改   | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.9.0  | asuswrt         |
+| RT-AX56U         | 梅林改 | axhnd.675x     | BCM6755 | ARMV7 | ≥ 1.9.1  | asuswrt         |
+| RT-AX68U         | 官改   | p1axhnd.675x   | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| RT-AX68U         | 梅林改 | p1axhnd.675x   | BCM4906 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| RT-AX86U         | 官改   | p1axhnd.675x   | BCM4908 | ARMV8 | ≥ 1.8.3  | asuswrt         |
+| RT-AX86U         | 梅林改 | p1axhnd.675x   | BCM4908 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| GT-AXE11000      | 梅林改 | p1axhnd.675x   | BCM4908 | ARMV8 | ≥ 1.9.1  | asuswrt         |
+| GT-AX6000        | 官改   | 5.04axhnd.675x | BCM4912 | ARMV8 | ≥ 1.9.6  | rog             |
+| ZenWiFi_Pro_XT12 | 官改   | 5.04axhnd.675x | BCM4912 | ARMV8 | ≥ 1.9.6  | asuswrt         |
 
 #### 注意：
 
