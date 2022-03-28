@@ -43,8 +43,6 @@ download.developer.apple.com
 gs-loc-cn.apple.com
 gs-loc.apple.com
 gsp10-ssl-cn.ls.apple.com
-gsp11-cn.ls.apple.com
-gsp12-cn.ls.apple.com
 gsp13-cn.ls.apple.com
 gsp4-cn.ls.apple.com
 gsp4-cn.ls.apple.com.edgekey.net
