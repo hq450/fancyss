@@ -25,7 +25,6 @@ cds-cdn.v.aaplimg.com
 cl1.apple.com
 cl1-cdn.origin-apple.com.akadns.net
 cl2.apple.com
-cl2.apple.com.edgekey.net.globalredir.akadns.net
 cl2-cn.apple.com
 cl3.apple.com
 cl3-cdn.origin-apple.com.akadns.net
@@ -44,8 +43,6 @@ download.developer.apple.com
 gs-loc.apple.com
 gs-loc-cn.apple.com
 gsp10-ssl-cn.ls.apple.com
-gsp11-cn.ls.apple.com
-gsp12-cn.ls.apple.com
 gsp13-cn.ls.apple.com
 gsp4-cn.ls.apple.com
 gsp4-cn.ls.apple.com.edgekey.net
