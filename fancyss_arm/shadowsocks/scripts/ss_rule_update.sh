@@ -8,7 +8,8 @@ source /koolshare/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 
 start_update(){
-	url_main="https://raw.githubusercontent.com/hq450/fancyss/master/rules"
+	#url_main="https://raw.githubusercontent.com/hq450/fancyss/master/rules"
+	url_main="https://cdn.jsdelivr.net/gh/hq450/fancyss/rules"
 	url_back=""
 	# version dectet
 	version_gfwlist1=$(cat /koolshare/ss/rules/version | sed -n 1p | sed 's/ /\n/g'| sed -n 1p)
