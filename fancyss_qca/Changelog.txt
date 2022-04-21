@@ -1,5 +1,8 @@
 fancyss_qca Changelog
 ===========================================
+2.1.1
+   - fix	修复分流检测按钮，使用：https://ip.skk.moe/
+
 2.1.0
    - update	同步fancyss_hnd 1.9.8
    - fix	修复订阅脚本中对空格的处理问题
