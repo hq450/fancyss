@@ -13,7 +13,7 @@ KEY_WORDS_1=$(echo $ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(echo $ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
 DEL_SUBSCRIBE=0
 NODES_SEQ=$(export -p | grep ssconf_basic_ | grep _name_ | cut -d "=" -f1 | cut -d "_" -f4 | sort -n)
-NODE_INDEX=${NODES_SEQ##*[[:space:]]}
+NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.* //')
 
 # 一个节点里可能有的所有信息
 readonly PREFIX="ssconf_basic_name_
@@ -72,9 +72,9 @@ unset_lock(){
 }
 
 trim_string() {
-    trim=${1#${1%%[![:space:]]*}}
-    trim=${trim%${trim##*[![:space:]]}}
-    printf '%s\n' "$trim"
+	trim=${1#${1%%[![:space:]]*}}
+	trim=${trim%${trim##*[![:space:]]}}
+	printf '%s\n' "$trim"
 }
 
 get_type_name() {
@@ -97,7 +97,7 @@ get_type_name() {
 # 清除已有的所有节点配置
 remove_all_node(){
 	echo_date "删除所有节点信息！"
-	confs=$(export -p | grep ssconf_basic_ | cut -d "=" -f1)
+	confs=$(export -p | grep ssconf_basic_ | cut -d "=" -f1 | awk '{print $NF}')
 	for conf in $confs
 	do
 		echo_date "移除$conf"
@@ -1316,7 +1316,7 @@ case $2 in
 0)
 	# 删除所有节点
 	set_lock
-	echo " " > $LOG_FILE
+	true > $LOG_FILE
 	http_response "$1"
 	remove_all_node | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
@@ -1325,7 +1325,7 @@ case $2 in
 1)
 	# 删除所有订阅节点
 	set_lock
-	echo " " > $LOG_FILE
+	true > $LOG_FILE
 	http_response "$1"
 	remove_sub_node | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
@@ -1334,7 +1334,7 @@ case $2 in
 2)
 	# 保存订阅设置但是不订阅
 	set_lock
-	echo " " > $LOG_FILE
+	true > $LOG_FILE
 	http_response "$1"
 	local_groups=$(export -p | grep ssconf_basic_ | grep _group_ | cut -d "=" -f2 | sort -u | wc -l)
 	online_group=$(echo $ss_online_links | base64_decode | sed 's/$/\n/' | sed '/^$/d' | wc -l)
@@ -1368,7 +1368,7 @@ case $2 in
 4)
 	# 添加ss:// ssr:// vmess://离线节点
 	set_lock
-	echo " " > $LOG_FILE
+	true > $LOG_FILE
 	http_response "$1"
 	start_offline_update | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
