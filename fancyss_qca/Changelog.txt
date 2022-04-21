@@ -1,5 +1,8 @@
 fancyss_qca Changelog
 ===========================================
+2.1.0
+   - update	同步fancyss_hnd 1.9.8
+   - fix	修复订阅脚本中对空格的处理问题
 
 2.0.0
    - add	添加 fancyss_qca 科学上网插件，该插件目前仅适用于华硕高通平台路由器RT-AX89X。
