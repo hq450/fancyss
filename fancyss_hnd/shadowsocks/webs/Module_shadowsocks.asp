@@ -218,35 +218,57 @@ function refresh_options() {
 
 	for (var field in confs) {
 		var c = confs[field];
-		if (c.rss_protocol) {
-			if (c.group) {
+		if (c.group) {
+			var real_group = c.group.split("_")[0];
+			if (c.rss_protocol) {
 				option.append($("<option>", {
 					value: field,
-					text: c.use_kcp == "1" ? "【SSR+KCP】" + c.group + " - " + c.name : "【SSR】" + c.group + " - " + c.name
+					text: c.use_kcp == "1" ? "【SSR+KCP】" + real_group + " - " + c.name : "【SSR】" + real_group + " - " + c.name
 				}));
 			} else {
+				if (c.koolgame_udp == "0" || c.koolgame_udp == "1") {
+					option.append($("<option>", {
+						value: field,
+						text: c.use_kcp == "1" ? "【koolgame+KCP】" + real_group + " - " + c.name : "【koolgame】" + real_group + " - " + c.name
+					}));
+				} else {
+					if(c["v2ray_use_json"] == "0" || c["v2ray_use_json"] == "1") {
+						option.append($("<option>", {
+							value: field,
+							text: c.use_kcp == "1" ? "【V2+KCP】" + real_group + " - " + c.name : "【V2】" + real_group + " - " + c.name
+						}));
+					}else{
+						option.append($("<option>", {
+							value: field,
+							text: c.use_kcp == "1" ? "【SS+KCP】" + real_group + " - " + c.name : "【SS】" + real_group + " - " + c.name
+						}));
+					}
+				}
+			}
+		} else {
+			if (c.rss_protocol) {
 				option.append($("<option>", {
 					value: field,
 					text: c.use_kcp == "1" ? "【SSR+KCP】" + c.name : "【SSR】" + c.name
 				}));
-			}
-		} else {
-			if (c.koolgame_udp == "0" || c.koolgame_udp == "1") {
-				option.append($("<option>", {
-					value: field,
-					text: c.use_kcp == "1" ? "【koolgame+KCP】" + c.name : "【koolgame】" + c.name
-				}));
 			} else {
-				if(c["v2ray_use_json"] == "0" || c["v2ray_use_json"] == "1") {
+				if (c.koolgame_udp == "0" || c.koolgame_udp == "1") {
 					option.append($("<option>", {
 						value: field,
-						text: c.use_kcp == "1" ? "【V2Ray+KCP】" + c.name : "【V2Ray】" + c.name
+						text: c.use_kcp == "1" ? "【koolgame+KCP】" + c.name : "【koolgame】" + c.name
 					}));
-				}else{
-					option.append($("<option>", {
-						value: field,
-						text: c.use_kcp == "1" ? "【SS+KCP】" + c.name : "【SS】" + c.name
-					}));
+				} else {
+					if(c["v2ray_use_json"] == "0" || c["v2ray_use_json"] == "1") {
+						option.append($("<option>", {
+							value: field,
+							text: c.use_kcp == "1" ? "【V2+KCP】" + c.name : "【V2】" + c.name
+						}));
+					}else{
+						option.append($("<option>", {
+							value: field,
+							text: c.use_kcp == "1" ? "【SS+KCP】" + c.name : "【SS】" + c.name
+						}));
+					}
 				}
 			}
 		}
@@ -678,7 +700,7 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("edit_node").style.display = "none";
 	E("continue_add").style.display = "";
 	$("#vpnc_settings").fadeIn(300);
-	$(".contentM_qis").css("top", nodeH - 280 + "px");
+	$(".contentM_qis").css("top", nodeH - 580 + "px");
 }
 function cancel_add_rule() { //点击添加节点面板上的返回
 	$("#vpnc_settings").fadeOut(300);
@@ -3509,8 +3531,8 @@ function save_failover() {
 													var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
 													$('#table_subscribe').forms([
 														{ title: 'SSR/v2ray订阅设置', thead:'1'},
-														{ title: '订阅地址管理（支持SSR/v2ray）', id:'ss_online_links', type:'textarea', rows:'8', ph:ph1},
-														{ title: '订阅节点模式设定（SSR/v2ray）', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
+														{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/v2ray</font>', id:'ss_online_links', type:'textarea', rows:'8', ph:ph1},
+														{ title: '订阅节点模式设定', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
 														{ title: '订阅节点混淆参数设定（SSR）', multi: [
 															{ id:'ssr_subscribe_obfspara', type:'select', style:'width:auto', func:'u', options:[["0", "留空"], ["1", "使用订阅设定"], ["2", "自定义"]], value:'1'},
 															{ id:'ssr_subscribe_obfspara_val', type:'text', style:'width:350px', maxlen:'300', value:'www.baidu.com'},
@@ -3527,10 +3549,15 @@ function save_failover() {
 															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(0)">删除全部节点</a>'},
 															{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(1)">删除全部订阅节点</a>'},
 														]},
-														{ title: '订阅操作', multi: [
+														{ title: '保存配置', multi: [
 															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(2)">仅保存设置</a>'},
-															{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(3)">保存并订阅</a>'},
 														]},
+														{ title: '节点订阅', hint:'112', multi: [
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(3)">保存并订阅</a>'},
+														]},
+														//{ title: '快速订阅', hint:'113', multi: [
+														//	{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(6)">快速订阅</a>'},
+														//]},
 													]);
 												</script>
 											</table>

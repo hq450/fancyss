@@ -1,5 +1,10 @@
 fancyss_qca Changelog
 ===========================================
+2.1.2
+   - update	更新订阅脚本，支持SS节点订阅，支持带obfs-local混淆的ss节点订阅（带v2ray-plugin的ss订阅暂不支持）
+    		由于手上ss机场不多，所以支持不一定完美，不过手上的nextitally机场是支持OK的！
+   - update	订阅脚本其它的一些bug修复和细节优化！
+
 2.1.1
    - fix	修复分流检测按钮，使用：https://ip.skk.moe/
 

@@ -898,6 +898,12 @@ function openssHint(itemNum) {
 	} else if (itemNum == 111) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
 		_caption = "[包括]关键词：";
+	} else if (itemNum == 112) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;原有订阅方式，支持ss/ssr/v2ray订阅，订阅时会将订阅节点和本地节点交叉对比后添加/更改/删除。<br /><br /><b>优点：</b>订阅信息详细，知道新增/修改/删除了什么节点。<br /><br /><b>缺点：</b>订阅速度较为慢，长时间订阅更新后节点排序可能会被打乱。"
+		_caption = "节点订阅";
+	} else if (itemNum == 113) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;新订阅方式，成功获取远程节点后，先一次性删除本地订阅节点，然后再一次性写入远程节点。<br /><br /><b>优点：</b>因一次性写入，不需要做交叉对比，所以订阅速度快，且节点不会乱序。<br /><br /><b>缺点：</b>订阅信息较少，不知道订阅前后是否有节点变化！"
+		_caption = "快速订阅";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 
