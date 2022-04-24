@@ -243,7 +243,7 @@ input[type=checkbox]{
 #app[skin=ASUSWRT] .show-btn0, #app[skin=ASUSWRT] .show-btn1, #app[skin=ASUSWRT] .show-btn2, #app[skin=ASUSWRT] .show-btn3, #app[skin=ASUSWRT] .show-btn4, #app[skin=ASUSWRT] .show-btn5, #app[skin=ASUSWRT] .show-btn6, #app[skin=ASUSWRT] .show-btn7, #app[skin=ASUSWRT] .show-btn8, #app[skin=ASUSWRT] .show-btn9, #app[skin=ASUSWRT] .show-btn10, #app[skin=ASUSWRT] .sub-node1, #app[skin=ASUSWRT] .sub-node2 {
 	font-size:10pt;
 	color: #fff;
-	padding: 10px 3#app[skin=ASUSWRT] .75px;
+	padding: 10px 3.75px;
 	border-radius: 5px 5px 0px 0px;
 	width:8.42%;
 	border-left: 1px solid #67767d;
