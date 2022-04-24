@@ -1,6 +1,16 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.10
+   - note	此版本不涉及任何功能性更新，主要解决ROG机型官改梅林互刷，插件的皮肤显示问题
+   - update	升级fancyss_hnd科学上网插件的皮肤控制，现在皮肤完全由nvram值sc_skin控制
+       		sc_skin=ASUSWRT, 华硕auswrt皮肤
+       		sc_skin=ROG, ROG骚红皮肤
+       		sc_skin=TUF, TFU橙黑皮肤
+       		比如GT-AC2900、GT-AX11000、GT-AX6000在官改和梅林改之间来回刷机，之前的版本需要覆盖安装一次本插件才能切换插件皮肤
+       		现在可以做到自动切换，不需用户干预了（sc_skin值由软件中心负责定义）。
+
 1.9.9
+   - note	升级到此版本后，已经订阅的节点可能需要删除重新订阅，或者连续订阅两次才能正常
    - update	更新订阅脚本，支持SS节点订阅，支持带obfs-local混淆的ss节点订阅（带v2ray-plugin的ss订阅暂不支持）
     		由于手上ss机场不多，所以支持不一定完美，不过手上的nextitally机场是支持OK的！
    - update	订阅脚本其它的一些bug修复和细节优化！

@@ -2,8 +2,6 @@
 source /koolshare/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 MODEL=
-UI_TYPE=ASUSWRT
-FW_TYPE_CODE=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
 module=${DIR##*/}
@@ -22,18 +20,14 @@ get_fw_type() {
 	local KS_TAG=$(nvram get extendno|grep koolshare)
 	if [ -d "/koolshare" ];then
 		if [ -n "${KS_TAG}" ];then
-			FW_TYPE_CODE="2"
 			FW_TYPE_NAME="koolshare官改固件"
 		else
-			FW_TYPE_CODE="4"
 			FW_TYPE_NAME="koolshare梅林改版固件"
 		fi
 	else
 		if [ "$(uname -o|grep Merlin)" ];then
-			FW_TYPE_CODE="3"
 			FW_TYPE_NAME="梅林原版固件"
 		else
-			FW_TYPE_CODE="1"
 			FW_TYPE_NAME="华硕官方固件"
 		fi
 	fi
@@ -48,15 +42,22 @@ platform_test(){
 	fi
 }
 
-get_ui_type(){
-	UI_TYPE=ASUSWRT
-	ROG_FLAG=$(grep -o "680516" /www/form_style.css|head -n1)
-	TUF_FLAG=$(grep -o "D0982C" /www/form_style.css|head -n1)
+set_skin(){
+	local UI_TYPE=ASUSWRT
+	local SC_SKIN=$(nvram get sc_skin)
+	local ROG_FLAG=$(grep -o "680516" /www/form_style.css|head -n1)
+	local TUF_FLAG=$(grep -o "D0982C" /www/form_style.css|head -n1)
 	if [ -n "${ROG_FLAG}" ];then
 		UI_TYPE="ROG"
 	fi
 	if [ -n "${TUF_FLAG}" ];then
 		UI_TYPE="TUF"
+	fi
+	
+	if [ -z "${SC_SKIN}" -o "${SC_SKIN}" != "${UI_TYPE}" ];then
+		echo_date "安装${UI_TYPE}皮肤！"
+		nvram set sc_skin="${UI_TYPE}"
+		nvram commit
 	fi
 }
 
@@ -242,21 +243,7 @@ install_now(){
 	chmod 755 /koolshare/bin/* >/dev/null 2>&1
 
 	# intall different UI
-	get_ui_type
-	if [ "${UI_TYPE}" == "ROG" ];then
-		echo_date "为插件安装ROG UI..."
-		cp -rf /tmp/shadowsocks/rog/res/shadowsocks.css /koolshare/res/
-	fi
-	
-	if [ "${UI_TYPE}" == "TUF" ];then
-		echo_date "为插件安装TUF UI..."
-		sed -i 's/3e030d/3e2902/g;s/91071f/92650F/g;s/680516/D0982C/g;s/cf0a2c/c58813/g;s/700618/74500b/g;s/530412/92650F/g' /tmp/shadowsocks/rog/res/shadowsocks.css >/dev/null 2>&1
-		cp -rf /tmp/shadowsocks/rog/res/shadowsocks.css /koolshare/res/
-	fi
-
-	if [ "${UI_TYPE}" == "ASUSWRT" ];then
-		echo_date "为插件安装ASUSWRT UI..."
-	fi
+	set_skin
 
 	# restore backup
 	if [ -n "$(ls /tmp/ss_backup/P*.sh 2>/dev/null)" ];then
