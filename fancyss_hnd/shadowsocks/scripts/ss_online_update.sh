@@ -773,14 +773,14 @@ get_ssr_node_info(){
 	if [ "${action}" == "1" ]; then
 		if [ -n "${remarks_temp}" ];then
 			remarks=$(decode_url_link ${remarks_temp})
-			remarks=$(echo ${remarks}|urldecode)
+			#remarks=$(echo ${remarks}|urldecode)
 		else
 			remarks=""
 		fi
 	elif [ "$action" == "2" ]; then
 		if [ -n "${remarks_temp}" ];then
 			remarks=$(decode_url_link ${remarks_temp})
-			remarks=$(echo ${remarks}|urldecode)
+			#remarks=$(echo ${remarks}|urldecode)
 		else
 			remarks='AutoSuB'
 		fi
