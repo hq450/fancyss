@@ -15,6 +15,7 @@ DEL_SUBSCRIBE=0
 NODES_SEQ=$(export -p | grep ssconf_basic_ | grep _name_ | cut -d "=" -f1 | cut -d "_" -f4 | sort -n)
 #NODE_INDEX=${NODES_SEQ##*[[:space:]]}
 NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.*[[:space:]]//')
+alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
 
 # 一个节点里可能有的所有信息
 readonly PREFIX="ssconf_basic_name_
@@ -52,16 +53,6 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_ss_v2ray_opts_
 				ssconf_basic_type_"
 
-#set_lock() {
-#	exec 233>"${LOCK_FILE}"
-#	flock -x 233
-#}
-#
-#unset_lock() {
-#	flock -u 233
-#	rm -rf "${LOCK_FILE}"
-#}
-
 set_lock(){
 	exec 233>"${LOCK_FILE}"
 	flock -n 233 || {
@@ -96,13 +87,6 @@ get_type_name() {
 			echo "v2ray"
 		;;
 	esac
-}
-
-urldecode() {
-    # urldecode <string>
- 
-    local url_encoded="${1//+/ }"
-    printf '%b' "${url_encoded//%/\\x}"
 }
 
 remove_node_info(){
@@ -494,8 +478,7 @@ get_ss_node_info(){
 	server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
 	server=$(echo "${server_raw}" | awk -F':' '{print $1}')
 	server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
-	remarks=$(echo "${decode_link}" | sed -n 's/.\+#\(\)/\1/p'|sed 's/@/|/g;s/:/|/g;s/?/|/g'|cut -d "|" -f1)
-	remarks=$(urldecode ${remarks})
+	remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}'|urldecode)
 	encrypt_info=$(echo "${decode_link}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f1)
 	decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
 	encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
@@ -567,7 +550,7 @@ update_ss_nodes(){
 	local INFO
 
 	if [ "${FAILED_FLAG}" == "1" ]; then
-		echo_date "检测到一个错误节点，跳过！"
+		echo_date "ss订阅：检测到一个错误节点，跳过！"
 		return 1
 	fi
 	
@@ -788,9 +771,19 @@ get_ssr_node_info(){
 	
 	remarks_temp=$(echo "${decode_link}" | awk -F':' '{print $6}' | grep -Eo "remarks.+" | sed 's/remarks=//g' | awk -F'&' '{print $1}')
 	if [ "${action}" == "1" ]; then
-		[ -n "${remarks_temp}" ] && remarks=$(decode_url_link ${remarks_temp}) || remarks=""
+		if [ -n "${remarks_temp}" ];then
+			remarks=$(decode_url_link ${remarks_temp})
+			remarks=$(echo ${remarks}|urldecode)
+		else
+			remarks=""
+		fi
 	elif [ "$action" == "2" ]; then
-		[ -n "${remarks_temp}" ] && remarks=$(decode_url_link ${remarks_temp}) || remarks='AutoSuB'
+		if [ -n "${remarks_temp}" ];then
+			remarks=$(decode_url_link ${remarks_temp})
+			remarks=$(echo ${remarks}|urldecode)
+		else
+			remarks='AutoSuB'
+		fi
 	fi
 	
 	group_temp=$(echo "${decode_link}" | awk -F':' '{print $6}' | grep -Eo "group.+" | sed 's/group=//g' | awk -F'&' '{print $1}')
@@ -853,7 +846,7 @@ update_ssr_nodes(){
 	local INFO
 
 	if [ "${FAILED_FLAG}" == "1" ]; then
-		echo_date "检测到一个错误节点，跳过！"
+		echo_date "ssr订阅：检测到一个错误节点，跳过！"
 		return 1
 	fi
 	
@@ -1403,6 +1396,15 @@ get_online_rule_now(){
 
 	# 解析订阅原始文本，第一次
 	decode_url_link $(cat /tmp/ssr_subscribe_file.txt) > /tmp/ssr_subscribe_file_temp.txt
+
+	# 一些机场使用的换行符是dos格式（\r\n\)，在路由Linux下会出问题！转换成unix格式
+	if [ -n "$(which dos2unix)" ];then
+		dos2unix -u /tmp/ssr_subscribe_file_temp.txt
+	else
+		tr -d '\r' < /tmp/ssr_subscribe_file_temp.txt > /tmp/ssr_subscribe_file_temp_0.txt
+		mv /tmp/ssr_subscribe_file_temp_0.txt /tmp/ssr_subscribe_file_temp.txt
+	fi
+	
 	echo "" >> /tmp/ssr_subscribe_file_temp.txt
 	local NODE_NU_RAW=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -c "://")
 	echo_date "初步解析成功！共获得${NODE_NU_RAW}个节点！"
@@ -1411,8 +1413,8 @@ get_online_rule_now(){
 	maxnum=$(cat /tmp/ssr_subscribe_file_temp.txt | grep "MAX=" | awk -F"=" '{print $2}' | grep -Eo "[0-9]+")
 	if [ -n "${maxnum}" ]; then
 		echo_date "根据机场要求，从${NODE_NU_RAW}个节点中，随机选取${maxnum}个用于订阅！"
-		cat /tmp/ssr_subscribe_file_temp.txt | sed '/MAX=/d' | shuf -n $maxnum > /tmp/ssr_subscribe_file_temp0.txt
-		mv /tmp/ssr_subscribe_file_temp0.txt /tmp/ssr_subscribe_file_temp.txt
+		cat /tmp/ssr_subscribe_file_temp.txt | sed '/MAX=/d' | shuf -n $maxnum > /tmp/ssr_subscribe_file_temp_1.txt
+		mv /tmp/ssr_subscribe_file_temp_1.txt /tmp/ssr_subscribe_file_temp.txt
 	fi
 	
 	# 检测 ss ssr vmess
@@ -1427,45 +1429,44 @@ get_online_rule_now(){
 	local NODE_NU_SS=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^ss://") || "0"
 	local NODE_NU_SR=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^ssr://") || "0"
 	local NODE_NU_V2=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^vmess://") || "0"
-	local NODE_NU_TT=$(($NODE_NU_SS + $NODE_NU_SR + $NODE_NU_V2))
+	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_V2}))
 	if [ "${NODE_NU_TT}" -lt "${NODE_NU_RAW}" ];then
 		echo_date "${NODE_NU_RAW}个节点中，一共检测到$NODE_NU_TT个支持节点！"
 	fi
 	echo_date "具体情况如下："
-	echo_date "ss节点：$NODE_NU_SS个"
-	echo_date "ssr节点：$NODE_NU_SR个"
-	echo_date "vmess节点：$NODE_NU_V2个"
+	echo_date "ss节点：${NODE_NU_SS}个"
+	echo_date "ssr节点：${NODE_NU_SR}个"
+	echo_date "vmess节点：${NODE_NU_V2}个"
 	echo_date "-------------------------------------------------------------------"
 	while read node; do
 		local node_type
-		local node_type_ss=$(echo $node | grep -E "^ss://")
-		local node_type_sr=$(echo $node | grep -E "^ssr://")
-		local node_type_v2=$(echo $node | grep -E "^vmess://")
+		local node_type_ss=$(echo ${node} | grep -E "^ss://")
+		local node_type_sr=$(echo ${node} | grep -E "^ssr://")
+		local node_type_v2=$(echo ${node} | grep -E "^vmess://")
 		# ss
 		if [ -n "${node_type_ss}" ];then
-			local urllink=$(echo ${node} | sed 's/ss:\/\///g')
-			ss_group_name=$(echo $SUB_LINK | md5sum | awk '{print $1}')
-			get_ss_node_info $urllink 1
+			local urllink=$(echo "${node}" | sed 's/ss:\/\///g' )
+			get_ss_node_info ${urllink} 1
 			update_ss_nodes $?
 		fi
 		# ssr
 		if [ -n "${node_type_sr}" ];then
 			local urllink=$(echo ${node} | sed 's/ssr:\/\///g')
-			decode_link=$(decode_url_link $urllink)
+			decode_link=$(decode_url_link ${urllink})
 			get_ssr_node_info ${decode_link} 1
 			update_ssr_nodes $?
 		fi
 		# v2ray
 		if [ -n "${node_type_v2}" ];then
 			local urllink=$(echo ${node} | sed 's/vmess:\/\///g')
-			local decode_link=$(decode_url_link $urllink)
+			local decode_link=$(decode_url_link ${urllink})
 			local decode_link=$(echo ${decode_link} | jq -c .)
 			if [ -n "${decode_link}" ]; then
 				get_v2ray_remote_config "${decode_link}"
 				if [ "$?" == "0" ];then
 					update_v2ray_config
 				else
-					echo_date "检测到一个错误节点，已经跳过！"
+					echo_date "v2ray订阅：检测到一个错误节点，已经跳过！"
 				fi
 			else
 				echo_date "解析失败！！！"
