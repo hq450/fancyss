@@ -37,14 +37,7 @@ var dbus = {}
 var params = ["ss_lb_passwd", "ss_lb_port", "ss_lb_heartbeat", "ss_lb_up", "ss_lb_down", "ss_lb_interval", "ss_lb_name", "ss_lb_weight", "ss_lb_mode"];
 function init() {
 	show_menu(menu_hook);
-	set_skin();
 	get_dbus_data();
-}
-function set_skin(){
-	var SKN = '<% nvram_get("sc_skin"); %>';
-	if(SKN){
-		$("#app").attr("skin", '<% nvram_get("sc_skin"); %>');
-	}
 }
 function get_dbus_data() {
 	$.ajax({
@@ -455,7 +448,7 @@ function count_down_close() {
 }
 </script>
 </head>
-<body id="app" skin="ASUSWRT" onload="init();">
+<body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">
 	<div id="TopBanner"></div>
 	<div id="Loading" class="popup_bg"></div>
 	<div id="LoadingBar" class="popup_bar_bg_ks">

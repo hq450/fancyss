@@ -30,15 +30,8 @@ var _responseLen;
 var params = ["ss_local_server", "ss_local_port", "ss_local_password", "ss_local_method", "ss_local_timeout", "ss_local_proxyport", "ss_local_obfs", "ss_local_acl"];
 function init() {
 	show_menu(menu_hook);
-	set_skin();
 	get_dbus_data();
 }
-function set_skin(){
-	var SKN = '<% nvram_get("sc_skin"); %>';
-	if(SKN){
-		$("#app").attr("skin", '<% nvram_get("sc_skin"); %>');
-	}
-}	
 function get_dbus_data() {
 	$.ajax({
 		type: "GET",
@@ -143,7 +136,7 @@ function update_visibility(){
 }
 </script>
 </head>
-<body id="app" skin="ASUSWRT" onload="init();">
+<body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">
 	<div id="TopBanner"></div>
 	<div id="Loading" class="popup_bg"></div>
 	<div id="LoadingBar" class="popup_bar_bg_ks">

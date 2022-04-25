@@ -42,6 +42,25 @@ unset_lock() {
 	rm -rf "$LOCK_FILE"
 }
 
+set_skin(){
+	local UI_TYPE=ASUSWRT
+	local SC_SKIN=$(nvram get sc_skin)
+	local ROG_FLAG=$(grep -o "680516" /www/form_style.css|head -n1)
+	local TUF_FLAG=$(grep -o "D0982C" /www/form_style.css|head -n1)
+	if [ -n "${ROG_FLAG}" ];then
+		UI_TYPE="ROG"
+	fi
+	if [ -n "${TUF_FLAG}" ];then
+		UI_TYPE="TUF"
+	fi
+	
+	if [ -z "${SC_SKIN}" -o "${SC_SKIN}" != "${UI_TYPE}" ];then
+		echo_date "安装${UI_TYPE}皮肤！"
+		nvram set sc_skin="${UI_TYPE}"
+		nvram commit
+	fi
+}
+
 get_lan_cidr() {
 	local netmask=$(nvram get lan_netmask)
 	local x=${netmask##*255.}
@@ -2383,6 +2402,7 @@ apply_ss() {
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	echo_date ------------------------- 启动【科学上网】 -----------------------------
+	set_skin
 	stop_status
 	kill_process
 	remove_ss_trigger_job

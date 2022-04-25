@@ -63,17 +63,9 @@ var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"
 var heart_count = 1;
 const pattern=/[`~!@#$^&*()=|{}':;'\\\[\]\.<>\/?~！@#￥……&*（）——|{}%【】'；：""'。，、？\s]/g;
 
-
 function init() {
 	show_menu(menu_hook);
-	set_skin();
 	get_dbus_data();
-}
-function set_skin(){
-	var SKN = '<% nvram_get("sc_skin"); %>';
-	if(SKN){
-		$("#app").attr("skin", '<% nvram_get("sc_skin"); %>');
-	}
 }
 function refresh_dbss() {
 	$.ajax({
@@ -2902,7 +2894,7 @@ function save_failover() {
 }
 </script>
 </head>
-<body id="app" skin="ASUSWRT" onload="init();">
+<body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">
 <div id="TopBanner"></div>
 <div id="Loading" class="popup_bg"></div>
 <div id="LoadingBar" class="popup_bar_bg_ks" style="z-index: 200;" >

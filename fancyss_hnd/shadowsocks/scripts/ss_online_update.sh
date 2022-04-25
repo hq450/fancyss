@@ -471,16 +471,28 @@ update_v2ray_config(){
 
 get_ss_node_info(){
 	decode_link="$1"
-	action="$2"
 	unset server_raw server server_port remarks encrypt_info decrypt_info encrypt_method password plugin_support obfs_para plugin_prog obfs_method obfs_host group
 	
 	# 机场众多，各家的格式有点点不一样，不保证完全兼容，以下SS订阅根据nexitally和JMS机场
-	server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
-	server=$(echo "${server_raw}" | awk -F':' '{print $1}')
-	server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
 	remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}'|urldecode)
+	server_raw_1=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	if [ -n "${server_raw_1}" ];then
+		server_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $1}')
+		server_port_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $2}')
+	fi
 	encrypt_info=$(echo "${decode_link}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f1)
 	decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
+	server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	if [ -n "${server_raw_2}" ];then
+		server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
+		server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
+	fi
+	if [ -n "${server_tmp}" ];then
+		server=${server_tmp}
+	fi
+	if [ -n "${server_port_tmp}" ];then
+		server_port=${server_port_tmp}
+	fi
 	encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
 	password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
 	password=$(echo ${password} | base64_encode | sed 's/[[:space:]]//g')
