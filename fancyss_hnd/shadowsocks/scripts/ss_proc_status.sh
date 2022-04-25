@@ -89,7 +89,7 @@ echo_version() {
 	echo "chinadns-ng		v1.0-beta.22		2020年06月02日编译"
 	echo "https_dns_proxy		758f913			2019年02月05日编译"
 	echo "httping			2.6			2020年01月06日编译"
-	echo "v2ray			$ss_basic_v2ray_version			2020年06月02日编译"
+	echo "v2ray			$ss_basic_v2ray_version			2022年04月26日编译"
 	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
 	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
 	echo "kcptun			20200409		Official Release 2020年04月09日"

@@ -195,7 +195,7 @@ install_now(){
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
 
 	# 设置v2ray 版本号
-	dbus set ss_basic_v2ray_version="v4.22.0"
+	dbus set ss_basic_v2ray_version="v4.44.0"
 
 	# dbus value
 	echo_date "设置插件安装参数..."
