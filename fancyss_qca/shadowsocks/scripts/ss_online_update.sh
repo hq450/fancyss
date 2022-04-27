@@ -1433,14 +1433,16 @@ get_online_rule_now(){
 	NODE_FORMAT1=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -E "^ss://")
 	NODE_FORMAT2=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -E "^ssr://")
 	NODE_FORMAT3=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -E "^vmess://")
-	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" ];then
-		echo_date "订阅中不包含任何ss/ssr/v2ray节点，退出！"
+	NODE_FORMAT4=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -E "^trojan://")
+	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" ];then
+		echo_date "订阅中不包含任何ss/ssr/v2ray/trojan节点，退出！"
 		return 1
 	fi
 	
 	local NODE_NU_SS=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^ss://") || "0"
 	local NODE_NU_SR=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^ssr://") || "0"
 	local NODE_NU_V2=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^vmess://") || "0"
+	local NODE_NU_TJ=$(cat /tmp/ssr_subscribe_file_temp.txt | grep -Ec "^trojan://") || "0"
 	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_V2}))
 	if [ "${NODE_NU_TT}" -lt "${NODE_NU_RAW}" ];then
 		echo_date "${NODE_NU_RAW}个节点中，一共检测到$NODE_NU_TT个支持节点！"
@@ -1449,12 +1451,14 @@ get_online_rule_now(){
 	echo_date "ss节点：${NODE_NU_SS}个"
 	echo_date "ssr节点：${NODE_NU_SR}个"
 	echo_date "vmess节点：${NODE_NU_V2}个"
+	echo_date "trojan节点：${NODE_NU_TJ}个"
 	echo_date "-------------------------------------------------------------------"
 	while read node; do
 		local node_type
 		local node_type_ss=$(echo ${node} | grep -E "^ss://")
 		local node_type_sr=$(echo ${node} | grep -E "^ssr://")
 		local node_type_v2=$(echo ${node} | grep -E "^vmess://")
+		local node_type_tj=$(echo ${node} | grep -E "^trojan://")
 		# ss
 		if [ -n "${node_type_ss}" ];then
 			local urllink=$(echo "${node}" | sed 's/ss:\/\///g' )
@@ -1483,6 +1487,10 @@ get_online_rule_now(){
 			else
 				echo_date "解析失败！！！"
 			fi
+		fi
+		# trojan
+		if [ -n "${node_type_tj}" ];then
+			echo_date "检测到一个trojan节点，本插件目前不支持trojan节点订阅，跳过！"
 		fi
 	done < /tmp/ssr_subscribe_file_temp.txt
 
@@ -1814,4 +1822,3 @@ case $2 in
 	unset_lock
 	;;
 esac
-

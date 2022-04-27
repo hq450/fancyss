@@ -144,29 +144,79 @@ move_binary(){
 	echo_date "v2ray二进制文件替换成功... "
 }
 
-start_v2ray(){
-	echo_date "开启v2ray进程... "
-	cd /koolshare/bin
-	export GOGC=30
-	v2ray --config=/koolshare/ss/v2ray.json >/dev/null 2>&1 &
+start_v2ray() {
+	# set vcore name
+	if [ "${ss_basic_vcore}" == "1" ];then
+		VCORE_NAME=Xray
+		V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
+	else
+		VCORE_NAME=V2ray
+		V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
+	fi
 	
-	local i=10
-	until [ -n "$V2PID" ]
-	do
-		i=$(($i-1))
-		V2PID=`pidof v2ray`
-		if [ "$i" -lt 1 ];then
-			echo_date "v2ray进程启动失败！"
-			close_in_five
+	# tfo start
+	if [ "$ss_basic_tfo" == "1" ]; then
+		echo_date 开启tcp fast open支持.
+		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	fi
+	if [ "${ss_basic_vcore}" == "1" ];then
+		# xray start
+		if [ "${ss_basic_xguard}" == "1" ];then
+			echo_date "开启Xray主进程 + Xray守护..."
+			# use perp to start xray
+			mkdir -p /koolshare/perp/xray/
+			cat >/koolshare/perp/xray/rc.main <<-EOF
+				#!/bin/sh
+				source /koolshare/scripts/base.sh
+				CMD="xray run -c /koolshare/ss/xray.json"
+				
+				exec 2>&1
+				exec \$CMD
+				
+			EOF
+			chmod +x /koolshare/perp/xray/rc.main
+			chmod +t /koolshare/perp/xray/
+			perpctl -u xray >/dev/null 2>&1
+		else
+			echo_date "开启Xray主进程..."
+			cd /koolshare/bin
+			xray run -c $V2RAY_CONFIG_FILE >/dev/null 2>&1 &
 		fi
-		sleep 1
-	done
-	echo_date v2ray启动成功，pid：$V2PID
+		local XPID
+		local i=25
+		until [ -n "$XPID" ]; do
+			i=$(($i - 1))
+			XPID=$(pidof xray)
+			if [ "$i" -lt 1 ]; then
+				echo_date "${VCORE_NAME}进程启动失败！"
+				close_in_five
+			fi
+			usleep 250000
+		done
+		echo_date ${VCORE_NAME}启动成功，pid：$XPID
+	else
+		# v2ray start
+		echo_date "开启V2ray主进程..."
+		cd /koolshare/bin
+		v2ray --config=$V2RAY_CONFIG_FILE >/dev/null 2>&1 &
+		local V2PID
+		local i=25
+		until [ -n "$V2PID" ]; do
+			i=$(($i - 1))
+			V2PID=$(pidof v2ray)
+			if [ "$i" -lt 1 ]; then
+				echo_date "${VCORE_NAME}进程启动失败！"
+				close_in_five
+			fi
+			usleep 250000
+		done
+		echo_date ${VCORE_NAME}启动成功，pid：$V2PID
+	fi
 }
 
 case $2 in
 1)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	http_response "$1"
 	echo_date "===================================================================" >> /tmp/upload/ss_log.txt
 	echo_date "                v2ray程序更新(Shell by sadog)" >> /tmp/upload/ss_log.txt

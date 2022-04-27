@@ -89,7 +89,8 @@ echo_version() {
 	echo "chinadns-ng		v1.0-beta.22		2020年09月27日编译"
 	echo "https_dns_proxy		2adeafb			2020年09月27日编译"
 	echo "httping			2.6			2020年09月27日编译"
-	echo "v2ray			$ss_basic_v2ray_version			2022年04月26日编译"
+	echo "v2ray			$(v2ray -version|head -n1|awk '{print $2}')			2022年4月26日编译"
+	echo "xray			$(xray -version|head -n1|awk '{print $2}')			2022年04月27日编译"
 	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
 	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
 	echo "kcptun			20200409		Official Release 2020年04月09日"
@@ -114,6 +115,7 @@ check_status() {
 	KCPTUN=$(pidof client_linux_arm7)
 	HAPROXY=$(pidof haproxy)
 	V2RAY=$(pidof v2ray)
+	XRAY=$(pidof xray)
 	HDP=$(pidof https_dns_proxy)
 	DMQ=$(pidof dnsmasq)
 	SMD=$(pidof smartdns)
@@ -146,10 +148,24 @@ check_status() {
 	elif [ "$ss_basic_type" == "3" ]; then
 		echo_version
 		echo
-		echo ② 检测当前相关进程工作状态：（你正在使用V2Ray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo -----------------------------------------------------------
-		echo "程序		状态	PID"
-		[ -n "$V2RAY" ] && echo "v2ray		工作中	pid：$V2RAY" || echo "v2ray	未运行"
+		if [ "${ss_basic_vcore}" == "1" ];then
+			echo ② 检测当前相关进程工作状态：（你正在使用Xray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo -----------------------------------------------------------
+			echo "程序		状态	PID"
+			if [ -n "${XRAY}" ];then
+				xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
+				if [ -n "${xray_time}" ];then
+					echo "Xray		工作中	pid：$XRAY	工作时长: ${xray_time}"
+				fi
+			else
+				echo "Xray	未运行"
+			fi
+		else
+			echo ② 检测当前相关进程工作状态：（你正在使用V2Ray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo -----------------------------------------------------------
+			echo "程序		状态	PID"
+			[ -n "$V2RAY" ] && echo "v2ray		工作中	pid：$V2RAY" || echo "v2ray	未运行"
+		fi
 	fi
 
 	if [ -z "$ss_basic_koolgame_udp" ]; then
@@ -247,6 +263,7 @@ check_status() {
 }
 
 if [ "$ss_basic_enable" == "1" ]; then
+	rm -rf /tmp/upload/ss_proc_status.txt
 	check_status >/tmp/upload/ss_proc_status.txt 2>&1
 	#echo XU6J03M6 >> /tmp/upload/ss_proc_status.txt
 else

@@ -28,12 +28,10 @@ var x = 5;
 var noChange = 0;
 var _responseLen;
 var params = ["ss_local_server", "ss_local_port", "ss_local_password", "ss_local_method", "ss_local_timeout", "ss_local_proxyport", "ss_local_obfs", "ss_local_acl"];
-
 function init() {
 	show_menu(menu_hook);
 	get_dbus_data();
 }
-
 function get_dbus_data() {
 	$.ajax({
 		type: "GET",
@@ -47,7 +45,6 @@ function get_dbus_data() {
 		}
 	});
 }
-
 function conf2obj(){
 	E("ss_local_enable").checked = db_ss["ss_local_enable"] == "1";
 	for (var i = 0; i < params.length; i++) {
@@ -56,7 +53,6 @@ function conf2obj(){
 		}
 	}
 }
-
 function save() {
 	var dbus = {};
 	//checkbox
@@ -70,7 +66,6 @@ function save() {
 	db_ss["ss_basic_action"] = 14;
 	push_data("ss_socks5.sh", "start",  dbus);
 }
-
 function push_data(script, arg, obj){
 	showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
@@ -88,7 +83,6 @@ function push_data(script, arg, obj){
 		}
 	});
 }
-
 function get_realtime_log() {
 	$.ajax({
 		url: '/_temp/ss_log.txt',
@@ -125,7 +119,6 @@ function get_realtime_log() {
 		}
 	});
 }
-
 function count_down_close() {
 	if (x == "0") {
 		hideSSLoadingBar();
@@ -138,14 +131,12 @@ function count_down_close() {
 		--x;
 	setTimeout("count_down_close();", 1000);
 }
-
 function update_visibility(){
 	showhide("ss_obfs_host", (E("ss_local_obfs").value !== "0" ));
 }
-
 </script>
 </head>
-<body onload="init();">
+<body id="app" skin="ASUSWRT" onload="init();">
 	<div id="TopBanner"></div>
 	<div id="Loading" class="popup_bg"></div>
 	<div id="LoadingBar" class="popup_bar_bg_ks">
@@ -323,4 +314,3 @@ function update_visibility(){
 <div id="footer"></div>
 </body>
 </html>
-

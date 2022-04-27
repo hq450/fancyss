@@ -277,13 +277,13 @@ esac
 
 case "$2" in
 	1)
-		echo " " > /tmp/upload/ss_log.txt
+		true > /tmp/upload/ss_log.txt
 		http_response "$1"
 		set_ss_reboot_job >> /tmp/upload/ss_log.txt
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 	;;
 	2)
-		echo " " > /tmp/upload/ss_log.txt
+		true > /tmp/upload/ss_log.txt
 		http_response "$1"
 		set_ss_trigger_job >> /tmp/upload/ss_log.txt
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt

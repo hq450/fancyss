@@ -14,8 +14,8 @@
 <link rel="stylesheet" type="text/css" href="ParentalControl.css">
 <link rel="stylesheet" type="text/css" href="css/icon.css">
 <link rel="stylesheet" type="text/css" href="css/element.css">
-<link rel="stylesheet" type="text/css" href="/res/shadowsocks.css">
 <link rel="stylesheet" type="text/css" href="/res/softcenter.css">
+<link rel="stylesheet" type="text/css" href="/res/shadowsocks.css">
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
@@ -35,12 +35,10 @@ var lb_node_nu = 0;
 var node_global_max = 0;
 var dbus = {}
 var params = ["ss_lb_passwd", "ss_lb_port", "ss_lb_heartbeat", "ss_lb_up", "ss_lb_down", "ss_lb_interval", "ss_lb_name", "ss_lb_weight", "ss_lb_mode"];
-
 function init() {
 	show_menu(menu_hook);
 	get_dbus_data();
 }
-
 function get_dbus_data() {
 	$.ajax({
 		type: "GET",
@@ -60,7 +58,6 @@ function get_dbus_data() {
 		}
 	});
 }
-
 function buildswitch() {
 	$("#ss_lb_enable").click(
 	function() {
@@ -73,7 +70,6 @@ function buildswitch() {
 			x = -1;
 		});
 }
-
 function conf2obj(){
 	E("ss_lb_enable").checked = db_ss["ss_lb_enable"] == "1";
 	for (var i = 0; i < params.length; i++) {
@@ -82,7 +78,6 @@ function conf2obj(){
 		}
 	}
 }
-
 function save() {
 	lb_enable = E("ss_lb_enable").checked ? '1' : '0';
 	if (lb_enable == 0) {
@@ -96,7 +91,6 @@ function save() {
 	}
 	//checkbox
 	dbus["ss_lb_enable"] = lb_enable;
-
 	//input
 	for (var i = 0; i < params.length; i++) {
 		if (E(params[i])) {
@@ -107,7 +101,6 @@ function save() {
 	console.log(dbus);
 	push_data("ss_lb_config.sh", "start",  dbus);
 }
-
 function push_data(script, arg, obj){
 	showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
@@ -125,7 +118,6 @@ function push_data(script, arg, obj){
 		}
 	});
 }
-
 function get_realtime_log() {
 	$.ajax({
 		url: '/_temp/ss_log.txt',
@@ -162,7 +154,6 @@ function get_realtime_log() {
 		}
 	});
 }
-
 function getAllConfigs() {
 	var dic = {};
 	for (var field in db_ss) {
@@ -206,7 +197,6 @@ function getAllConfigs() {
 		} else {
 			obj["use_lb"] = db_ss[p + "_use_lb_" + field];
 		}
-		
 		if (typeof db_ss[p + "_server_" + field] == "undefined") {
 			if(db_ss[p + "_v2ray_use_json_" + field] ==  "1"){
 				obj["server"] = "v2ray json";
@@ -216,7 +206,6 @@ function getAllConfigs() {
 		} else {
 			obj["server"] = db_ss[p + "_server_" + field];
 		}
-
 		if (typeof db_ss[p + "_port_" + field] == "undefined") {
 			if(db_ss[p + "_v2ray_use_json_" + field] ==  "1"){
 				obj["port"] = "json";
@@ -226,7 +215,6 @@ function getAllConfigs() {
 		} else {
 			obj["port"] = db_ss[p + "_port_" + field];
 		}
-
 		if (typeof db_ss[p + "_method_" + field] == "undefined") {
 			if(db_ss[p + "_v2ray_use_json_" + field] ==  "0"){
 				obj["method"] = db_ss[p + "_v2ray_security_" + field];
@@ -238,7 +226,6 @@ function getAllConfigs() {
 		} else {
 			obj["method"] = db_ss[p + "_method_" + field];
 		}
-
 		var params = ["password", "mode", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "group", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + field;
@@ -260,7 +247,6 @@ function getAllConfigs() {
 	//console.log(confs)
 	return confs;
 }
-
 function load_lb_node_nu() {
 	confs = getAllConfigs();
 	for (var field in confs) {
@@ -270,7 +256,6 @@ function load_lb_node_nu() {
 		}
 	}
 }
-
 function loadBasicOptions(confs) { //载入节点选择列表
 	var option = $("#ss_lb_node");
 	option.find('option').remove().end();
@@ -284,14 +269,11 @@ function loadBasicOptions(confs) { //载入节点选择列表
 		}
 	}
 }
-
 function add_new_lb_node() {
 	confs = getAllConfigs();
 	cur_lb_node = node_global_max + 1;
-	
 	for (var field in confs) {
 		var c = confs[field];
-
 		if (c["server"] == "127.0.0.1" && c["port"] == db_ss['ss_lb_port']) {
 			cur_lb_node = field;
 		}
@@ -315,18 +297,15 @@ function add_new_lb_node() {
 	dbus["ssconf_basic_rss_obfs_param_" + cur_lb_node] = db_ss['ssconf_basic_rss_obfs_param_' + min_lb_node];
 	//dbus["ssconf_basic_koolgame_udp" + cur_lb_node] = db_ss['ss_basic_koolgame_udp' + min_lb_node];
 }
-
 function del_lb_node(o) {
 	confs = getAllConfigs();
 	cur_lb_node = node_global_max + 1;
 	for (var field in confs) {
 		var c = confs[field];
-
 		if (c["server"] == "127.0.0.1" && c["port"] == db_ss['ss_lb_port']) {
 			cur_lb_node = field;
 		}
 	}
-
 	var ns = {};
 	dbus["ssconf_basic_name_" + cur_lb_node] = "";
 	dbus["ssconf_basic_server_" + cur_lb_node] = "";
@@ -342,7 +321,6 @@ function del_lb_node(o) {
 	dbus["ssconf_basic_rss_obfs_param_" + cur_lb_node] = "";
 	dbus["ssconf_basic_koolgame_udp" + cur_lb_node] = "";
 }
-
 function addTr() { //点击添加按钮动作
 	lb_node_nu++;
 	var ns = {};
@@ -355,7 +333,6 @@ function addTr() { //点击添加按钮动作
 		alert("不支持koolgame节点负载均衡！")
 		return false;
 	}
-	
 	ns["ssconf_basic_use_lb_" + node_sel] = "1";
 	ns["ssconf_basic_weight_" + node_sel] = E("ss_lb_weight").value;
 	ns["ssconf_basic_lbmode_" + node_sel] = E("ss_lb_mode").value;
@@ -376,7 +353,6 @@ function addTr() { //点击添加按钮动作
 		}
 	});
 }
-
 function delTr(o) { //删除节点功能
 	lb_node_nu--;
 	var id = $(o).attr("id");
@@ -403,7 +379,6 @@ function delTr(o) { //删除节点功能
 		}
 	});
 }
-
 function refresh_table() {
 	$.ajax({
 		type: "GET",
@@ -417,7 +392,6 @@ function refresh_table() {
 		}
 	});
 }
-
 function refresh_html() {
 	confs = getAllConfigs();
 	var html = '';
@@ -448,22 +422,18 @@ function refresh_html() {
 	html = html + '</table>';
 	return html;
 }
-
 function loadAllConfigs() {
 	confs = getAllConfigs();
 	loadBasicOptions(confs);
 }
-
 function generate_link() {
 	var link = window.btoa("http://" + '<% nvram_get("lan_ipaddr"); %>' + ":1188")
 	E("link4.1").href = "http://" + '<% nvram_get("lan_ipaddr"); %>' + ":1188";
 	E("link4.1").innerHTML = "<i><u>http://" + '<% nvram_get("lan_ipaddr"); %>' + ":1188</i></u>";
 }
-
 function update_visibility() {
 	showhide("heartbeat_detai", (E("ss_lb_heartbeat").value == "1"));
 }
-
 function count_down_close() {
 	if (x == "0") {
 		hideSSLoadingBar();
@@ -478,7 +448,7 @@ function count_down_close() {
 }
 </script>
 </head>
-<body onload="init();">
+<body id="app" skin="ASUSWRT" onload="init();">
 	<div id="TopBanner"></div>
 	<div id="Loading" class="popup_bg"></div>
 	<div id="LoadingBar" class="popup_bar_bg_ks">
@@ -524,40 +494,40 @@ function count_down_close() {
 										</div>
 										<div style="margin:10px 0 25px 5px;" class="splitLine"></div>
 										<table width="100%" height="150px" style="border-collapse:collapse;">
-                                            <tr>
-                                                <td colspan="5" class="cloud_main_radius">
-                                                    <div style="padding:10px;width:95%;font-style:italic;font-size:14px;">
-                                                        <br/><br/>
-                                                        <table width="100%" >
-                                                            <tr>
-                                                                <td>
-                                                                    <ul style="margin-top:-80px;padding-left:15px;" >
-                                                                        <li style="margin-top:-5px;">
-                                                                            <h3 id="push_content1" >在此页面可以设置多个shadowsocks或者shadowsocksR帐号负载均衡，同时具有故障转移、自动恢复的功能。</h3>
-                                                                        </li>
-                                                                        <li  style="margin-top:-5px;">
-                                                                            <h3 id="push_content2"><font color="#FFCC00">注意：负载均衡的节点需要加密方式和密码完全一致！SS、SSR、KCP之间不支持设置负载均衡；不支持v2ray节点的负载均衡。</font></h3>
-                                                                        </li>
-                                                                        <li id="push_content3_li" style="margin-top:-5px;">
-                                                                            <h3 id="push_content3">提交设置后会开启haproxy，并在ss节点配置中增加一个服务器IP为127.0.0.1，端口为负载均衡服务器端口的帐号；</h3>
-                                                                        </li>
-                                                                        <li id="push_content4_li" style="margin-top:-5px;">
-                                                                            <h3 id="push_content4">负载均衡模式下不支持udp转发：不能使用游戏模式，不能使用ss-tunnel作为国外dns方案。</h3>
-                                                                        </li>
-                                                                        <li id="push_content5_li" style="margin-top:-5px;">
-                                                                            <h3 id="push_content4">强烈建议需要负载均衡的ss节点使用ip格式，使用域名会使haproxy进程加载过慢！</h3>
-                                                                        </li>
-                                                                    </ul>
-                                                                </td>
-                                                            </tr>
-                                                        </table>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr height="10px">
-                                                <td colspan="3"></td>
-                                            </tr>
-                                        </table>
+											<tr>
+												<td colspan="5" class="cloud_main_radius">
+													<div style="padding:10px;width:95%;font-style:italic;font-size:14px;">
+														<br/><br/>
+														<table width="100%" >
+															<tr>
+																<td>
+																	<ul style="margin-top:-80px;padding-left:15px;" >
+																		<li style="margin-top:-5px;">
+																			<h3 id="push_content1" >在此页面可以设置多个shadowsocks或者shadowsocksR帐号负载均衡，同时具有故障转移、自动恢复的功能。</h3>
+																		</li>
+																		<li  style="margin-top:-5px;">
+																			<h3 id="push_content2"><font color="#FFCC00">注意：负载均衡的节点需要加密方式和密码完全一致！SS、SSR、KCP之间不支持设置负载均衡；不支持v2ray节点的负载均衡。</font></h3>
+																		</li>
+																		<li id="push_content3_li" style="margin-top:-5px;">
+																			<h3 id="push_content3">提交设置后会开启haproxy，并在ss节点配置中增加一个服务器IP为127.0.0.1，端口为负载均衡服务器端口的帐号；</h3>
+																		</li>
+																		<li id="push_content4_li" style="margin-top:-5px;">
+																			<h3 id="push_content4">负载均衡模式下不支持udp转发：不能使用游戏模式，不能使用ss-tunnel作为国外dns方案。</h3>
+																		</li>
+																		<li id="push_content5_li" style="margin-top:-5px;">
+																			<h3 id="push_content4">强烈建议需要负载均衡的ss节点使用ip格式，使用域名会使haproxy进程加载过慢！</h3>
+																		</li>
+																	</ul>
+																</td>
+															</tr>
+														</table>
+													</div>
+												</td>
+											</tr>
+											<tr height="10px">
+												<td colspan="3"></td>
+											</tr>
+										</table>
 										<div id="lb_setting" style="margin:-25px 0px 0px 0px;">
 											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="routing_table">
 												<thead>
@@ -583,26 +553,25 @@ function count_down_close() {
 														</div>
 													</td>
 												</tr>
-                                				<tr>
-                                				   <th style="width:25%;">Haproxy控制台</th>
-                                				   <td>
-                                				      <div style="padding-top:5px;">
-                                				         <a id="link4.1" href="http://aria2.me/glutton/" target="_blank"></a>
-														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-														登录帐号：<i><% nvram_get("http_username"); %></i>
-														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-														登录密码：
-													  	<input type="password" maxlength="64" id="ss_lb_passwd" name="ss_lb_passwd" value="<% nvram_get("http_passwd"); %>" class="input_ss_table" style="width:80px;" autocorrect="off" autocapitalize="off" readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute('readonly');"/>
-                                				      </div>
-                                				    </td>
-                                				</tr>
+												<tr>
+													<th style="width:25%;">Haproxy控制台</th>
+													<td>
+														<div style="padding-top:5px;">
+															<a id="link4.1" href="http://aria2.me/glutton/" target="_blank"></a>
+															&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+															登录帐号：<i><% nvram_get("http_username"); %></i>
+															&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+															登录密码：
+															<input type="password" maxlength="64" id="ss_lb_passwd" name="ss_lb_passwd" value="<% nvram_get("http_passwd"); %>" class="input_ss_table" style="width:80px;" autocorrect="off" autocapitalize="off" readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute('readonly');"/>
+														</div>
+													</td>
+												</tr>
 												<tr>
 													<th>Haproxy端口(用于ss监听)</th>
 													<td>
-													  	<input type="text" maxlength="64" id="ss_lb_port" name="ss_lb_port" value="1181" class="input_ss_table" style="width:60px;" autocorrect="off" autocapitalize="off"/>
+														<input type="text" maxlength="64" id="ss_lb_port" name="ss_lb_port" value="1181" class="input_ss_table" style="width:60px;" autocorrect="off" autocapitalize="off"/>
 													</td>
 												</tr>
-
 												<tr>
 													<th>Haproxy故障检测心跳</th>
 													<td>
@@ -613,15 +582,15 @@ function count_down_close() {
 														<span id="heartbeat_detai">
 														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 														成功:
-													  	<input type="text" maxlength="64" id="ss_lb_up" name="ss_lb_up" value="2" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
+														<input type="text" maxlength="64" id="ss_lb_up" name="ss_lb_up" value="2" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
 														次;
 														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 														失败:
-													  	<input type="text" maxlength="64" id="ss_lb_down" name="ss_lb_down" value="3" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
+														<input type="text" maxlength="64" id="ss_lb_down" name="ss_lb_down" value="3" class="input_ss_table" style="width:20px;" autocorrect="off" autocapitalize="off"/>
 														次;
 														&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 														心跳间隔:
-													  	<input type="text" maxlength="64" id="ss_lb_interval" name="ss_lb_interval" value="2000" class="input_ss_table" style="width:40px;" autocorrect="off" autocapitalize="off"/>
+														<input type="text" maxlength="64" id="ss_lb_interval" name="ss_lb_interval" value="2000" class="input_ss_table" style="width:40px;" autocorrect="off" autocapitalize="off"/>
 														ms
 														</span>
 													</td>
@@ -634,24 +603,22 @@ function count_down_close() {
 												</tr>
 												<tr>
 													<th>服务器添加</th>
-                                        			<td>
-                                        			    <select id="ss_lb_node" name="ss_lb_node" style="width:130px;margin:0px 0px 0px 2px;" class="input_option" >
-                                        			    </select>
-                                        			    &nbsp;&nbsp;&nbsp;&nbsp;
-                                        			    权重:
+													<td>
+														<select id="ss_lb_node" name="ss_lb_node" style="width:130px;margin:0px 0px 0px 2px;" class="input_option" ></select>
+														&nbsp;&nbsp;&nbsp;&nbsp;
+														权重:
 														<input type="text" class="input_ss_table" style="width:30px" id="ss_lb_weight" name="ss_lb_weight" maxlength="100" value="50"/>
-                                        			    &nbsp;&nbsp;&nbsp;&nbsp;
+														&nbsp;&nbsp;&nbsp;&nbsp;
 														属性:
 														<select id="ss_lb_mode" name="ss_lb_mode" style="width:90px;margin:0px 0px 0px 2px;" class="input_option" onchange="update_visibility();">
 															<option value="1" selected>负载均衡</option>
 															<option value="2">主用节点</option>
 															<option value="3">备用节点</option>
 														</select>
-														
-                                        			    <input style="float:left;margin-top:-28px;margin-left:370px;" type="button" class="add_btn" onclick="addTr()" value=""/>
-                                        			</td>
+														<input style="float:left;margin-top:-28px;margin-left:370px;" type="button" class="add_btn" onclick="addTr()" value=""/>
+													</td>
 												</tr>
-                                    		</table>
+											</table>
 										</div>
 										<div id="lb_list" style="margin:20px 0px 0px 0px;">
 											<table id="lb_node_table" style="margin:-1px 0px 0px 0px;" width="750px" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable_table">
@@ -667,10 +634,9 @@ function count_down_close() {
 												</tr>
 											</table>
 										</div>
-                                    	<div id="log_content" style="margin-top:10px;display: none;">
+										<div id="log_content" style="margin-top:10px;display: none;">
 											<textarea cols="63" rows="21" wrap="off" readonly="readonly" id="log_content1" style="width:99%; font-family:'Lucida Console'; font-size:11px;background:#475A5F;color:#FFFFFF;"></textarea>
 										</div>
-                                    	
 										<div class="apply_gen">
 											<input id="cmdBtn" class="button_gen" type="button" onclick="save()" value="提交">
 										</div>

@@ -17,7 +17,7 @@ get_model(){
 }
 
 get_fw_type() {
-	local KS_TAG=$(nvram get extendno|grep koolshare)
+	local KS_TAG=$(nvram get extendno|grep -E "_kool")
 	if [ -d "/koolshare" ];then
 		if [ -n "${KS_TAG}" ];then
 			FW_TYPE_NAME="koolshare官改固件"

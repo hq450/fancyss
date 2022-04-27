@@ -2,7 +2,6 @@
 source /koolshare/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 MODEL=
-FW_TYPE_CODE=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
 module=${DIR##*/}
@@ -21,18 +20,14 @@ get_fw_type() {
 	local KS_TAG=$(nvram get extendno|grep -E "_kool")
 	if [ -d "/koolshare" ];then
 		if [ -n "${KS_TAG}" ];then
-			FW_TYPE_CODE="2"
 			FW_TYPE_NAME="koolshare官改固件"
 		else
-			FW_TYPE_CODE="4"
 			FW_TYPE_NAME="koolshare梅林改版固件"
 		fi
 	else
 		if [ "$(uname -o|grep Merlin)" ];then
-			FW_TYPE_CODE="3"
 			FW_TYPE_NAME="梅林原版固件"
 		else
-			FW_TYPE_CODE="1"
 			FW_TYPE_NAME="华硕官方固件"
 		fi
 	fi
@@ -44,6 +39,25 @@ platform_test(){
 		echo_date 机型："${MODEL} ${FW_TYPE_NAME} 符合安装要求，开始安装插件！"
 	else
 		exit_install 1
+	fi
+}
+
+set_skin(){
+	local UI_TYPE=ASUSWRT
+	local SC_SKIN=$(nvram get sc_skin)
+	local ROG_FLAG=$(grep -o "680516" /www/form_style.css|head -n1)
+	local TUF_FLAG=$(grep -o "D0982C" /www/form_style.css|head -n1)
+	if [ -n "${ROG_FLAG}" ];then
+		UI_TYPE="ROG"
+	fi
+	if [ -n "${TUF_FLAG}" ];then
+		UI_TYPE="TUF"
+	fi
+	
+	if [ -z "${SC_SKIN}" -o "${SC_SKIN}" != "${UI_TYPE}" ];then
+		echo_date "安装${UI_TYPE}皮肤！"
+		nvram set sc_skin="${UI_TYPE}"
+		nvram commit
 	fi
 }
 
@@ -112,6 +126,7 @@ install_now(){
 	rm -rf /koolshare/bin/speederv1
 	rm -rf /koolshare/bin/speederv2
 	rm -rf /koolshare/bin/udp2raw
+	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
 	rm -rf /koolshare/bin/v2ctl
 	rm -rf /koolshare/bin/v2ray-plugin
@@ -171,6 +186,9 @@ install_now(){
 	chmod 755 /koolshare/ss/* >/dev/null 2>&1
 	chmod 755 /koolshare/scripts/ss* >/dev/null 2>&1
 	chmod 755 /koolshare/bin/* >/dev/null 2>&1
+
+	# intall different UI
+	set_skin
 
 	# restore backup
 	if [ -n "$(ls /tmp/ss_backup/P*.sh 2>/dev/null)" ];then

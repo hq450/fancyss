@@ -255,7 +255,7 @@ fi
 case $2 in
 start)
 	if [ "$ss_lb_enable" == "1" ];then
-		echo " " > /tmp/upload/ss_log.txt
+		true > /tmp/upload/ss_log.txt
 		http_response "$1"
 		killall haproxy > /dev/null 2>&1
 		write_haproxy_cfg >> /tmp/upload/ss_log.txt
@@ -263,7 +263,7 @@ start)
 		echo_date 成功！ >> /tmp/upload/ss_log.txt
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 	else
-		echo " " > /tmp/upload/ss_log.txt
+		true > /tmp/upload/ss_log.txt
 		http_response "$1"
 		echo_date 关闭haproxy进程！>> /tmp/upload/ss_log.txt
 		killall haproxy >/dev/null 2>&1

@@ -57,7 +57,7 @@ backup_tar(){
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/httping $TARGET_FOLDER/bin/
 	cp /koolshare/bin/haveged $TARGET_FOLDER/bin/
-	cp /koolshare/bin/dnsmasq $TARGET_FOLDER/bin/
+	#cp /koolshare/bin/dnsmasq $TARGET_FOLDER/bin/
 	cp /koolshare/webs/Module_shadowsocks*.asp $TARGET_FOLDER/webs/
 	cp /koolshare/res/accountadd.png $TARGET_FOLDER/res/
 	cp /koolshare/res/accountdelete.png $TARGET_FOLDER/res/

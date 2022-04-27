@@ -27,7 +27,7 @@ check_status(){
 }
 
 
-echo " " > $LOGFILE
+true > $LOGFILE
 http_response "$1"
 usleep 200000
 if [ "$ss_failover_enable" == "1" ];then
