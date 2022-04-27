@@ -1,5 +1,18 @@
 fancyss_qca Changelog
 ===========================================
+2.1.5
+   - add	添加xray支持，版本1.5.4，使用官方的Xray-linux-arm32-v7a二进制，且二进制经过upx压缩；
+       		在【附加功能】标签页中，你可以使用Xray核心替代V2ray核心
+       		1. 你可以用Xray-core跑所有的vmess和vless节点
+       		2. 使用Xray-core你还可以配置VLESS-TCP + XTLS节点，这点V2ray无法做到。
+       		3. 如果你的vmess节点不工作，也可以尝试使用Xray核心，看看是否正常。
+       		说明：目前还没有单独的vless协议节点的添加功能，但是你可以使用v2ray的json节点配置来添加vless节点！
+   - add	添加xray守护功能，同样可以在【附加功能】标签页中开启。
+   - fix	修复一些vmess/vless的json格式节点添加报错的问题。
+   - update	优化了故障转移的国内外日志显示，现在用emoji符号代替部分文字，尽量避日志免宽度超出又边框的问题。
+   - update	从此版本起，插件更新、规则更新、二进制更新强制使用ipv4。
+   - note	此版本更新后，fancyss_qca插件包大小已经非常大了，后面会进行一些插件功能的精简，比如移除koolgame支持等。
+
 2.1.4
    - update	更新v2ray 二进制到最新release版本：4.44.0
    - fix	修复某些ss机场无法订阅ss节点的问题（旧的订阅格式）
