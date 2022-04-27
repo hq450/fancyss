@@ -697,8 +697,9 @@ function openssHint(itemNum) {
 	} else if (itemNum == 27) {
 		statusmenu = "</br><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
 		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vmess作为传出协议，不支持sock，shadowsocks；提交后会根据你的配置自动生成v2ray的json配置。"
-		statusmenu += "</br></br><font color='#CC0066'><b>1:勾选（自定义json）：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传出协议，插件会取你的json的outbound部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
+		statusmenu += "</br></br><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传出协议，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
+		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;如果使用Xray作为核心，json方式还可以配置仅xray支持的协议，比如vless-tcp + xtls。"
 		_caption = "使用json配置";
 	} else if (itemNum == 28) {
 		width = "750px";
@@ -904,6 +905,12 @@ function openssHint(itemNum) {
 	} else if (itemNum == 113) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;新订阅方式，成功获取远程节点后，先一次性删除本地订阅节点，然后再一次性写入远程节点。<br /><br /><b>优点：</b>因一次性写入，不需要做交叉对比，所以订阅速度快，且节点不会乱序。<br /><br /><b>缺点：</b>订阅信息较少，不知道订阅前后是否有节点变化！"
 		_caption = "快速订阅";
+	} else if (itemNum == 114) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/XTLS/Xray-core' target='_blank'><u><font color='#00F'>Xray-core</font></u></a> 是 v2ray-core 的超集，含更好的整体性能和 XTLS 等一系列增强，且完全兼容 v2ray-core 的功能及配置。<br /><br />1. 你可以用Xray-core跑所有的vmess和vless节点<br />2. 使用Xray-core你还可以配置VLESS-TCP + XTLS节点，这点V2ray无法做到。<br />3. 如果你的vmess节点不工作，也可以尝试使用Xray核心。"
+		_caption = "说明";
+	} else if (itemNum == 115) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一般来说你用不到这个选项，但是如果你的xray进程不稳定，你可以尝试开启此功能，此功能使用perp实时守护进程！。"
+		_caption = "说明";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

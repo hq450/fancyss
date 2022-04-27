@@ -66,7 +66,7 @@ esac
 
 case $2 in
 start)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	http_response "$1"
 	if [ "$ss_local_enable" == "1" ];then
 		kill_socks5 >> /tmp/upload/ss_log.txt

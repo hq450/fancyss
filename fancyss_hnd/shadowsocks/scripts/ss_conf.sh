@@ -50,6 +50,7 @@ backup_tar(){
 	cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
 	cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
+	cp /koolshare/bin/xray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
@@ -275,12 +276,12 @@ download_ssc(){
 
 case $2 in
 1)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	backup_conf
 	http_response "$1"
 	;;
 2)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	backup_tar >> /tmp/upload/ss_log.txt
 	sleep 1
 	http_response "$1"
@@ -288,13 +289,13 @@ case $2 in
 	echo XU6J03M6 >> /tmp/upload/ss_log.txt
 	;;
 3)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	http_response "$1"
 	remove_now >> /tmp/upload/ss_log.txt
 	echo XU6J03M6 >> /tmp/upload/ss_log.txt
 	;;
 4)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	http_response "$1"
 	remove_silent >> /tmp/upload/ss_log.txt
 	restore_now >> /tmp/upload/ss_log.txt
@@ -304,12 +305,12 @@ case $2 in
 	reomve_ping
 	;;
 6)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	download_ssf
 	http_response "$1"
 	;;
 7)
-	echo " " > /tmp/upload/ss_log.txt
+	true > /tmp/upload/ss_log.txt
 	download_ssc
 	http_response "$1"
 	;;

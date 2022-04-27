@@ -6,7 +6,7 @@ source /koolshare/scripts/base.sh
 
 LOGFILE_F=/tmp/upload/ssf_status.txt
 LOGFILE_C=/tmp/upload/ssc_status.txt
-LOGTIME1=$(TZ=UTC-8 date -R "+%m-%d %H:%M:%S")
+LOGTIME1=📅$(TZ=UTC-8 date -R "+%m-%d/%H:%M:%S")
 CURRENT=$(dbus get ssconf_basic_node)
 CHK_INTER=$(dbus get ss_basic_interval)
 COUNT=1
@@ -137,7 +137,7 @@ failover_check_3(){
 		return
 	fi
 
-	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s3_1" | grep -E "200 OK" | grep -oe time=[0-9]* | sed 's/time=//g' | awk '{sum+=$1} END {print sum/NR}' | awk '{printf "%.0f\n",$1}')
+	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s3_1" | grep -E "200 OK" | grep -oe "⏱ [0-9].* ms" | sed 's/⏱ //g'| sed 's/ ms//g' | awk '{sum+=$1} END {print sum/NR}' | awk '{printf "%.0f\n",$1}')
 	#echo "$LOGTIME1 fancyss：前15次状态平均延迟：$OK_MARK ！"
 	if [ "$OK_MARK" -gt "$ss_failover_s3_2" ];then
 		failover_action 3 "$OK_MARK"
