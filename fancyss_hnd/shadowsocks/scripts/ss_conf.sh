@@ -52,7 +52,7 @@ backup_tar(){
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
 	cp /koolshare/bin/xray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
-	cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
+	#cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/httping $TARGET_FOLDER/bin/

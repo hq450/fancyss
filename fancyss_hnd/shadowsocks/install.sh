@@ -128,7 +128,6 @@ install_now(){
 	rm -rf /koolshare/bin/udp2raw
 	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
-	rm -rf /koolshare/bin/v2ctl
 	rm -rf /koolshare/bin/v2ray-plugin
 	rm -rf /koolshare/bin/https_dns_proxy
 	rm -rf /koolshare/bin/httping
@@ -146,6 +145,7 @@ install_now(){
 	find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf >/dev/null 2>&1
 
 	# legacy files should be removed
+	rm -rf /koolshare/bin/v2ctl >/dev/null 2>&1
 	rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 	rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
 
