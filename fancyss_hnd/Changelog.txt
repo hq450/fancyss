@@ -2,7 +2,7 @@ fancyss_hnd Changelog
 ===========================================
 1.9.14 (to be release)
    - update	更新shadowsocks-libev 二进制到最新v3.3.5版本
-   - update 同步kcptun二进制为官方最新release版本：20210922
+   - update	同步kcptun二进制为官方最新release版本：20210922
    - update	在v2ray json节点中配置VLESS-TCP + XTLS节点会自动启用Xray核心。
    - update	同步最新内置规则；
    - fix	修复v2ray二进制更新；
