@@ -1667,6 +1667,18 @@ creat_v2ray_json() {
 		echo $TEMPLATE | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date ${VCORE_NAME}配置文件写入成功到"$V2RAY_CONFIG_FILE"
 
+		# 检查v2ray json是否配置了xtls，如果是，则自动切换为xray
+		if [ -f "/koolshare/ss/v2ray.json" ];then
+			local IS_XTLS=$(cat /koolshare/ss/v2ray.json | jq -r .outbounds[0].streamSettings.security 2>/dev/null)
+			if [ "${IS_XTLS}" == "xtls" -a "${ss_basic_vcore}" != "1" ];then
+				echo_date "ℹ️检测到你配置了支持xtls节点，而V2ray不支持xtls，自动切换为Xray核心！"
+				ss_basic_vcore=1
+				VCORE_NAME=Xray
+				mv /koolshare/ss/v2ray.json /koolshare/ss/xray.json 
+				V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
+			fi
+		fi
+
 		# 检测用户json的服务器ip地址
 		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
@@ -1997,7 +2009,7 @@ get_action_chain() {
 get_mode_name() {
 	case "$1" in
 	0)
-		echo "不通过SS"
+		echo "不通过代理"
 		;;
 	1)
 		echo "gfwlist模式"

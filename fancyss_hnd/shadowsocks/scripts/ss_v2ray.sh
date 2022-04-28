@@ -32,7 +32,7 @@ get_latest_version(){
 		else
 			CUR_VER=$(v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
 			[ -z "${CUR_VER}" ] && CUR_VER="0"
-			echo_date "当前已安装V2Ray版本：v$CUR_VER"
+			echo_date "当前已安装V2Ray版本：v${CUR_VER}"
 		fi
 		COMP=$(versioncmp ${CUR_VER} ${V2VERSION})
 		if [ "${COMP}" == "1" ];then
@@ -73,7 +73,7 @@ update_now(){
 	fi
 	
 	echo_date "开始下载v2ray程序"
-	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/v2ray
+	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/v2ray_armv7
 	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/$1/v2ray
 	if [ "$?" != "0" ];then
 		echo_date "v2ray下载失败！"
@@ -81,10 +81,11 @@ update_now(){
 	else
 		v2ray_ok=1
 		echo_date "v2ray程序下载成功..."
+		mv v2ray_armv7 v2ray
 	fi
 
 
-	if [ "${md5sum_ok}" == "1" -a "${v2ray_ok}" == "1" ]then
+	if [ "${md5sum_ok}" == "1" -a "${v2ray_ok}" == "1" ];then
 		check_md5sum
 	else
 		echo_date "使用备用服务器下载..."
@@ -99,7 +100,7 @@ check_md5sum(){
 	cd /tmp/v2ray
 	echo_date "校验下载的文件!"
 	V2RAY_LOCAL_MD5=$(md5sum v2ray|awk '{print $1}')
-	V2RAY_ONLINE_MD5=$(cat md5sum.txt|grep -w v2ray|awk '{print $1}')
+	V2RAY_ONLINE_MD5=$(cat md5sum.txt|grep -w v2ray_armv7|awk '{print $1}')
 	if [ "${V2RAY_LOCAL_MD5}" == "${V2RAY_ONLINE_MD5}" ];then
 		echo_date "文件校验通过!"
 		install_binary
@@ -209,11 +210,11 @@ case $2 in
 1)
 	true > /tmp/upload/ss_log.txt
 	http_response "$1"
-	echo_date "===================================================================" >> /tmp/upload/ss_log.txt
-	echo_date "                v2ray程序更新(Shell by sadog)" >> /tmp/upload/ss_log.txt
-	echo_date "===================================================================" >> /tmp/upload/ss_log.txt
-	get_latest_version >> /tmp/upload/ss_log.txt 2>&1
-	echo_date "===================================================================" >> /tmp/upload/ss_log.txt
-	echo XU6J03M6 >> /tmp/upload/ss_log.txt
+	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
+	echo_date "                v2ray程序更新(Shell by sadog)" | tee -a /tmp/upload/ss_log.txt
+	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
+	get_latest_version | tee -a /tmp/upload/ss_log.txt 2>&1
+	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
+	echo XU6J03M6 | tee -a /tmp/upload/ss_log.txt
 	;;
 esac
