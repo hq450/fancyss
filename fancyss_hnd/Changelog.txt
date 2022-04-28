@@ -5,7 +5,7 @@ fancyss_hnd Changelog
    - fix	修复v2ray二进制更新；
    - update	同步最新内置规则；
    - update	在v2ray json节点中配置VLESS-TCP + XTLS节点会自动启用Xray核心。
-   - todo
+   - update	更新shadowsocks-libev 二进制到最新v3.3.5版本
    - todo
    - todo
 
