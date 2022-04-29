@@ -1,14 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
-1.9.14 (to be release)
+1.9.14
    - update	更新shadowsocks-libev 二进制到最新v3.3.5版本
    - update	同步kcptun二进制为官方最新release版本：20210922
    - update	在v2ray json节点中配置VLESS-TCP + XTLS节点会自动启用Xray核心。
    - update	同步最新内置规则；
    - fix	修复v2ray二进制更新；
    - remove	移除v2ctl二进制文件；
-   - todo
-   - todo
 
 1.9.13
    - add	添加xray支持，版本1.5.4，为了更好的支持fancyss_hnd支持的众多机型，使用官方的Xray-linux-arm32-v7a二进制，且二进制经过upx压缩；
