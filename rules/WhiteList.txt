@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2022-05-02
+-e ## Last update: 2022-05-04
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -4626,6 +4626,7 @@
 .*\b52hejia\.com
 .*\b52help\.net
 .*\b52hibuy\.com
+.*\b52homedecor\.com
 .*\b52hotel\.net
 .*\b52hrtt\.com
 .*\b52hrttpic\.com
@@ -6361,7 +6362,6 @@
 .*\b8421\.com
 .*\b84399\.com
 .*\b844a\.com
-.*\b844dns\.net
 .*\b844wan\.com
 .*\b84519\.com
 .*\b84684\.net
@@ -6686,7 +6686,6 @@
 .*\b900ppt\.com
 .*\b900top\.com
 .*\b90123\.com
-.*\b903518\.com
 .*\b90370\.com
 .*\b90432\.net
 .*\b90576\.com
@@ -6856,6 +6855,7 @@
 .*\b91muzhi\.com
 .*\b91nzh\.com
 .*\b91open\.com
+.*\b91pandian\.com
 .*\b91paobao\.com
 .*\b91pdf\.com
 .*\b91pet\.net
@@ -7029,6 +7029,7 @@
 .*\b93soso\.com
 .*\b93tyy\.com
 .*\b93wgames\.com
+.*\b93x\.net
 .*\b93zp\.com
 .*\b93zw\.com
 .*\b941\.so
@@ -7111,7 +7112,6 @@
 .*\b9564\.com
 .*\b9565\.com
 .*\b9588\.com
-.*\b958jbs\.com
 .*\b959249\.com
 .*\b95949c\.com
 .*\b9596956\.com
@@ -9926,6 +9926,7 @@
 .*\bb3inside\.com
 .*\bb5200\.net
 .*\bb5b6\.com
+.*\bb5csgo\.plus
 .*\bb5esports\.me
 .*\bb5m\.com
 .*\bb612\.me
@@ -12461,7 +12462,6 @@
 .*\bbuylabel\.com
 .*\bbuysun\.net
 .*\bbuysweet\.com
-.*\bbuyu46\.com
 .*\bbuzhi5\.com
 .*\bbuzhibushi\.com
 .*\bbuzzads\.com
@@ -15300,7 +15300,6 @@
 .*\bchunboimg\.com
 .*\bchuncui\.net
 .*\bchuncuinet\.com
-.*\bchundakj99\.com
 .*\bchundi\.com
 .*\bchundi\.org
 .*\bchunengauto\.com
@@ -19393,7 +19392,6 @@
 .*\bdns002\.com
 .*\bdns0755\.net
 .*\bdns100\.net
-.*\bdns102\.com
 .*\bdns110\.com
 .*\bdns123\.net
 .*\bdns12345\.com
@@ -21649,6 +21647,7 @@
 .*\beverstray\.com
 .*\beverturst\.com
 .*\bevervc\.com
+.*\beverybodygame\.com
 .*\beverychina\.com
 .*\beverydo\.com
 .*\beveryinch\.net
@@ -22317,7 +22316,6 @@
 .*\bfdeent\.org
 .*\bfdemo\.com
 .*\bfdevops\.com
-.*\bfdjyw\.com
 .*\bfdjzu\.com
 .*\bfdkjgz\.com
 .*\bfdkm88\.com
@@ -27144,7 +27142,6 @@
 .*\bhenanjianling\.com
 .*\bhenanjubao\.com
 .*\bhenanlvyi\.com
-.*\bhenanpige\.com
 .*\bhenansenli\.com
 .*\bhenanyouth\.com
 .*\bhenbt\.com
@@ -36015,7 +36012,6 @@
 .*\blbl520\.com
 .*\blboyue\.com
 .*\blbwbw\.com
-.*\blbx\.cc
 .*\blbx777\.com
 .*\blbxcn\.com
 .*\blbxdrugs\.com
@@ -47389,6 +47385,7 @@
 .*\bscimao\.com
 .*\bscinno-cn\.com
 .*\bscinormem\.com
+.*\bscio\.icu
 .*\bscipaper\.net
 .*\bsciping\.com
 .*\bsciscanpub\.com
@@ -48988,6 +48985,7 @@
 .*\bshuobao\.com
 .*\bshuobofootball\.xyz
 .*\bshuoboku\.com
+.*\bshuocdn\.com
 .*\bshuodedui\.com
 .*\bshuomingshu\.net
 .*\bshuomingshuku\.com
@@ -65336,6 +65334,7 @@
 .*\bzhujiwu\.com
 .*\bzhujiyou\.com
 .*\bzhuke\.com
+.*\bzhul\.in
 .*\bzhulang\.com
 .*\bzhulanli\.com
 .*\bzhuli\.me
