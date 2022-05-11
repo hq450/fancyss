@@ -1,7 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
-1.9.16 （todo）
+1.9.17 （todo）
    - todo	1. 添加trojan支持（包括trojan节点添加，在线订阅）
+   
+1.9.16
+   - fix	【订阅脚本】修复ss + simple-obfs节点在线订阅节点不正确的问题
+   - fix	修复ss + simple-obfs节点启动后工作不正常的问题
+   - note	上个版本更新太多有点遗漏，快速迭一个版本好了，trojan的坑留在1.9.17
 	
 1.9.15
    - 摘要	1. 完善xray支持（包括vless节点添加，订阅）

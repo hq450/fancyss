@@ -474,13 +474,13 @@ ss_arg() {
 		ARG_OBFS="--plugin v2ray-plugin --plugin-opts $ss_basic_ss_v2ray_opts"
 		echo_date "检测到开启了v2ray-plugin，将忽略obfs设置。"
 	elif [ "$ss_basic_ss_obfs" == "http" ]; then
-		echo_date "检测到开启了obfs。"
+		echo_date "检测到开启了simple-obfs。"
 		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
 		if [ -n "$ss_basic_ss_obfs_host" ]; then
 			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
 		fi
 	elif [ "$ss_basic_ss_obfs" == "tls" ]; then
-		echo_date "检测到开启了obfs。"
+		echo_date "检测到开启了simple-obfs。"
 		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
 		if [ -n "$ss_basic_ss_obfs_host" ]; then
 			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
@@ -602,11 +602,7 @@ start_sslocal() {
 		rss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	elif [ "$ss_basic_type" == "0" ]; then
 		echo_date 开启ss-local，提供socks5代理端口：23456
-		if [ "$ss_basic_ss_obfs" != "1" -a "$ss_basic_ss_v2ray" != "1" ]; then
-			ss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-		else
-			ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-		fi
+		ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	fi
 }
 
@@ -692,11 +688,7 @@ start_dns() {
 		elif [ "$ss_basic_type" == "0" ]; then
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启ss-tunnel，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启ss-tunnel，用于【国外所有网站】的DNS解析..."
-			if [ "$ss_basic_ss_obfs" != "1" -a "$ss_basic_ss_v2ray" != "1" ]; then
-				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
-			else
-				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
-			fi
+			ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
 		elif [ "$ss_basic_type" == "3" ]; then
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
@@ -1192,12 +1184,7 @@ start_ss_redir() {
 	elif [ "$ss_basic_type" == "0" ]; then
 		# ss-libev需要大于160的熵才能正常工作
 		echo_date 开启ss-redir进程，用于透明代理.
-		if [ "$ss_basic_ss_obfs" != "1" -a "$ss_basic_ss_v2ray" != "1" ]; then
-			BIN=ss-redir
-			ARG_OBFS=""
-		else
-			BIN=ss-redir
-		fi
+		BIN=ss-redir
 	fi
 
 	if [ "$ss_basic_udp_boost_enable" == "1" ]; then

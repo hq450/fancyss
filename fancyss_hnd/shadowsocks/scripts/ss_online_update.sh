@@ -470,8 +470,8 @@ add_ss_node(){
 	dbus_eset ssconf_basic_password_${NODE_INDEX} "${password}"
 	dbus_eset ssconf_basic_type_${NODE_INDEX} "0"
 	dbus_eset ssconf_basic_group_${NODE_INDEX} "${ss_group_hash}"
-	dbus_eset ssconf_basic_ss_obfs_${NODE_INDEX} "${obfs_method}"
-	dbus_eset ssconf_basic_ss_obfs_host_${NODE_INDEX} "${obfs_host}"
+	dbus_eset ssconf_basic_ss_obfs_${NODE_INDEX} "${ss_obfs}"
+	dbus_eset ssconf_basic_ss_obfs_host_${NODE_INDEX} "${ss_obfs_host}"
 	dbus_eset ssconf_basic_ss_v2ray_${NODE_INDEX} "${ss_v2ray}"
 	dbus_eset ssconf_basic_ss_v2ray_opts_${NODE_INDEX} "${v2_plugin_opts}"
 	let addnum+=1
@@ -608,27 +608,27 @@ update_ss_node(){
 
 		if [ -n "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ]; then
 			if [ -n "${KEY_MATCH_3}" ]; then
-				echo_date "SSR节点：移除本地【${remarks}】节点，因为匹配了[排除]关键词"
+				echo_date "SS节点：移除本地【${remarks}】节点，因为匹配了[排除]关键词"
 				local DELETE_FLAG=1
 			else
 				local DELETE_FLAG=0
 			fi
 		elif [ -z "${KEY_WORDS_1}" -a -n "${KEY_WORDS_2}" ]; then
 			if [ -z "${KEY_MATCH_4}" ]; then
-				echo_date "SSR节点：移除本地【${remarks}】节点，因为不匹配[包括]关键词"
+				echo_date "SS节点：移除本地【${remarks}】节点，因为不匹配[包括]关键词"
 				local DELETE_FLAG=1
 			else
 				local DELETE_FLAG=0
 			fi
 		elif [ -n "${KEY_WORDS_1}" -a -n "${KEY_WORDS_2}" ]; then
 			if [ -n "${KEY_MATCH_3}" -a -z "${KEY_MATCH_4}" ]; then
-				echo_date "SSR节点：移除本地【${remarks}】节点，因为匹配了[排除+包括]关键词"
+				echo_date "SS节点：移除本地【${remarks}】节点，因为匹配了[排除+包括]关键词"
 				local DELETE_FLAG=1
 			elif [ -n "${KEY_MATCH_3}" -a -n "${KEY_MATCH_4}" ]; then
-				echo_date "SSR节点：移除本地【${remarks}】节点，因为匹配了[排除]关键词"
+				echo_date "SS节点：移除本地【${remarks}】节点，因为匹配了[排除]关键词"
 				local DELETE_FLAG=1
 			elif  [ -z "${KEY_MATCH_3}" -a -z "${KEY_MATCH_4}" ]; then
-				echo_date "SSR节点：移除本地【${remarks}】节点，因为不匹配[包括]关键词"
+				echo_date "SS节点：移除本地【${remarks}】节点，因为不匹配[包括]关键词"
 				local DELETE_FLAG=1
 			else
 				local DELETE_FLAG=0
