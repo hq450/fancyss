@@ -54,7 +54,8 @@ function createFormFields(data, settings) {
 		}
 		if (v.ignore) return;
 		if (v.th) {
-			form += '<tr' + ((v.class) ? ' class="' + v.class + '"' : '') + '><th colspan="2">' + v.title + '</th></tr>';
+			// todo add vid support?
+			form += '<tr' + ((v.class) ? ' class="' + v.class + '"' : '') + '><th colspan="' + v.th + '">' + v.title + '</th></tr>';
 			return;
 		}
 		if (v.thead) {
@@ -157,7 +158,8 @@ function pop_111() {
 			scrollbar: 0,
 			title: '国内外分流信息来源：<a style="color:#00F" href="https://ip.skk.moe/" target="_blank">https://ip.skk.moe/</a>',
 			area: ['850px', '760px'],
-			fixed: false,
+			fixed: false,   
+			move: false,
 			maxmin: true,
 			shadeClose: 1,
 			id: 'LAY_layuipro',
@@ -479,6 +481,9 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 19) {
 		document.getElementById("loading_block3").innerHTML = "设置故障转移 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，应用中 ...</font></li>");
+	} else if (action == 20) {
+		document.getElementById("loading_block3").innerHTML = "XRay 二进制文件更新 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，更新中 ...</font></li>");
 	}
 }
 function hideSSLoadingBar() {
@@ -490,39 +495,35 @@ function hideSSLoadingBar() {
 function openssHint(itemNum) {
 	statusmenu = "";
 	width = "350px";
-
-	if (itemNum == 10) {
-		statusmenu = "如果发现开关不能开启，那么请检查<a href='Advanced_System_Content.asp'><u><font color='#00F'>系统管理 -- 系统设置</font></u></a>页面内Enable JFFS custom scripts and configs是否开启。";
-		_caption = "服务器说明";
-	}
 	if (itemNum == 0) {
 		width = "850px";
 		bgcolor = "#CC0066",
 			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后默认在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
-		statusmenu += "</br><li>国内、国外状态检测的历史记录会显示在【故障转移】内的日志窗口，该日志记录会实时更新，且最新的一条记录即为插件顶部的【插件运行状态】；</li>"
-		statusmenu += "</br><li>状态检测反应的是路由器本身访问www.google.com.tw的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用科学上网中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
-		statusmenu += "</br><b><font color='#CC0066'>1：双√，不能访问被墙网站：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.1：电脑DNS缓存：</font>可能你在未开启ss的时候访问过被墙域名，DNS缓存受到了污染，只需要简单的刷新下缓存，window电脑通过在CMD中运行命令：<font color='#669900'>ipconfig /flushdns</font>刷新电脑DNS缓存，手机端可以通过尝试开启飞行模式后关闭飞行模式刷新DNS缓存。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.2：电脑自定义DNS：</font>很多用户喜欢自己在电脑上定义DNS来使用，这样访问google等被墙网站，解析出来的域名基本都是污染的，因此建议将DNS解析改为自动获取。如果你的路由器很多人使用，你不能阻止别人自定义DNS，那么建议开启chromecast功能，路由器会将所有自定义的DNS劫持到自己的DNS服务器上，避免DNS污染。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.3：电脑host：</font>电脑端以前设置过host翻墙，host翻墙失效快，DNS解析将通过host完成，不过路由器，如果host失效，使用chnroute翻墙的模式将无法使用；即使未失效，在gfwlist模式下，域名解析通过电脑host完成，而无法进入ipset，同样使得翻墙无法使用，因此强烈建议清除相关host！"
-		statusmenu += "</br><b><font color='#CC0066'>2：国内√，国外<font color='#FF0000'>X</font>：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.1：检查你的科学上网账号：</font>在电脑端用相应客户端检查是否正常；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.2：是否使用了域名：</font>一些机场提供的域名，特别是较为复杂的域名，可能有解析不了的问题，可尝试更换为IP地址，或者更换节点解析DNS；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.3：是否使用了含有特殊字符的密码：</font>极少数情况下，电脑端账号使用正常，路由端却<font color='#FF0000'>X</font>是因为使用了包含特殊字符的密码；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.4：尝试更换国外dns：</font>此部分详细解析，请看DNS部分帮助文档；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.5：更换shadowsocks主程序：</font>meirlin ss一直使用最新的shadowsocks-libev和shadowsocksR-libev代码编译主程序，如果某次更新后出现这种情况，在检查了以上均无问题后，可能出现的问题就是路由器内的ss主程序和服务器端的不匹配，此时你可以通过下载历史安装包，将旧的主程序替换掉新的，主程序位于路由器下的/koolshare/bin目录，shadowsocks-libev：ss-redir,ss-local,ss-tunnel；shadowsocksR-libev：rss-redir,rss-local,rss-tunnel；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.6：更新服务器端：</font>如果你不希望更换路由器端主程序，可以更新最新服务器端来尝试解决问题，另外建议使用原版SS的朋友,在服务器端部署和路由器端相同版本的shadowsocks-libev；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.7：ntp时间问题：</font>如果你使用SSR，一些混淆协议是需要验证ss服务器和路由器的时间的，如果时间相差太多，那么就会出现<font color='#FF0000'>X</font> 。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.8：是否在插件内定义了错误格式的黑白名单</font>：如果定义的格式错误，会造成路由器dnsmasq无法启动，从而无法正常解析域名。"
-		statusmenu += "</br><b><font color='#CC0066'>3：双<font color='#FF0000'>X</font>：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.1：更换国内DNS：</font>在电脑端用SS客户端检查是否正常；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.2：逐项检查第2点中每个项目。</font>"
-		statusmenu += "</br><b><font color='#CC0066'>4：国内<font color='#FF0000'>X</font>，国外√：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>4.1：尝试更换国内DNS。</font>"
-		statusmenu += "</br><b><font color='#CC0066'>5：国外间歇性<font color='#FF0000'>X</font>：</font></b>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.1：检查你的SS服务器ping和丢包：</font>一些线路可能在高峰期或者线路调整期，导致丢包过多，获取状态失败；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.2：升级新版本后出现这种情况：</font>merlin ss插件从2015年6月，其核心部分就基本无改动，升级新版本出现这种情况，最大可能的原因，新版本升级了最新的ss或者ssr的主程序，解决方法可以通过回滚路由器内程序，也可以升级你的服务器端到最新，如果你是自己搭建的用户,建议最新原版shadowsocks-libev程序。"
-		statusmenu += "</br><b><font color='#CC0066'>6：你遇到了非常少见的情况：</font></b>来这里反馈吧：<a href='https://telegram.me/joinchat/DCq55kC7pgWKX9J4cJ4dJw' target='_blank'><u><font color='#00F'>telegram</font></u></a>。"
+		statusmenu += "<br /><li>国内、国外状态检测的历史记录会显示在【故障转移】内的日志窗口，该日志记录会实时更新，且最新的一条记录即为插件顶部的【插件运行状态】；</li>"
+		statusmenu += "<br /><li>状态检测反应的是路由器本身访问www.google.com.tw的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用科学上网中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
+		statusmenu += "<br /><b><font color='#CC0066'>1：双√，不能访问被墙网站：</font></b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.1：电脑DNS缓存：</font>可能你在未开启ss的时候访问过被墙域名，DNS缓存受到了污染，只需要简单的刷新下缓存，window电脑通过在CMD中运行命令：<font color='#669900'>ipconfig /flushdns</font>刷新电脑DNS缓存，手机端可以通过尝试开启飞行模式后关闭飞行模式刷新DNS缓存。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.2：电脑自定义DNS：</font>很多用户喜欢自己在电脑上定义DNS来使用，这样访问google等被墙网站，解析出来的域名基本都是污染的，因此建议将DNS解析改为自动获取。如果你的路由器很多人使用，你不能阻止别人自定义DNS，那么建议开启chromecast功能，路由器会将所有自定义的DNS劫持到自己的DNS服务器上，避免DNS污染。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.3：电脑host：</font>电脑端以前设置过host翻墙，host翻墙失效快，DNS解析将通过host完成，不过路由器，如果host失效，使用chnroute翻墙的模式将无法使用；即使未失效，在gfwlist模式下，域名解析通过电脑host完成，而无法进入ipset，同样使得翻墙无法使用，因此强烈建议清除相关host！"
+		statusmenu += "<br /><b><font color='#CC0066'>2：国内√，国外<font color='#FF0000'>X</font>：</font></b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.1：检查你的科学上网账号：</font>在电脑端用相应客户端检查是否正常；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.2：是否使用了域名：</font>一些机场提供的域名，特别是较为复杂的域名，可能有解析不了的问题，可尝试更换为IP地址，或者更换节点解析DNS；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.3：是否使用了含有特殊字符的密码：</font>极少数情况下，电脑端账号使用正常，路由端却<font color='#FF0000'>X</font>是因为使用了包含特殊字符的密码；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.4：尝试更换国外DNS：</font>此部分详细解析，请看DNS部分帮助文档；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.5：检查程序运行状态：</font>在本插件内点击【详细状态按钮】，可以看到当前程序运行状态，如果某个程序显示未运行，就会导致错误。尝试重启插件/重启路由器/添加虚拟内存等操作，也许可以解决此问题"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.5：检查iptables工作状态：</font>在本插件内点击【详细状态按钮】，可以看到当前iptables状态，如果某个iptables链下没有规则，就会导致错误，这可能是由于其它插件冲突导致的，包括但不限于系统防火墙、qos、其它插件！请关闭相应服务后，重启科学上网插件看是否恢复正常！"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.7：更新服务器端程序：</font>一些代理软件，由于更新后导致新旧版本不兼容，所以一半要求服务器端和客户端部署相同版本号的程序。如果你不希望更换路由器端主程序，可以更新最新服务器端来尝试解决问题，另外建议使用原版SS的朋友,在服务器端部署和路由器端相同版本的shadowsocks-libev；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.8：ntp时间问题：</font>如果你使用ssr或者V2ray，一些协议是需要验证服务器和路由器的时间的，如果时间相差太多，那么就会出现<font color='#FF0000'>X</font> 。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.9：是否在插件内定义了错误格式的黑白名单</font>：如果定义的格式错误，会造成路由器dnsmasq无法启动，从而无法正常解析域名。点击【详细状态按钮】按钮能看到dnsmasq运行状态！"
+		statusmenu += "<br /><b><font color='#CC0066'>3：双<font color='#FF0000'>X</font>：</font></b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.1：更换国内DNS：</font>在电脑端用SS客户端检查是否正常；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.2：逐项检查第2点中每个项目。</font>"
+		statusmenu += "<br /><b><font color='#CC0066'>4：国内<font color='#FF0000'>X</font>，国外√：</font></b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>4.1：尝试更换国内DNS。</font>"
+		statusmenu += "<br /><b><font color='#CC0066'>5：国外间歇性<font color='#FF0000'>X</font>：</font></b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.1：检查你的服务器ping和丢包：</font>一些线路可能在高峰期或者线路调整期，导致丢包过多，获取状态失败；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.2：如果是升级新版本科学上网插件后出现这种情况：</font>fancyss插件从2015年6月，其核心部分就基本无改动，升级新版本出现这种情况，最大可能的原因，新版本升级了最新的ss或者ssr的主程序，解决方法可以通过回滚路由器内程序，也可以升级你的服务器端到最新，如果你是自己搭建的用户,建议最新原版shadowsocks-libev程序。"
+		statusmenu += "<br /><b><font color='#CC0066'>6：你遇到了非常少见的情况：</font></b>来这里反馈吧：<a href='https://telegram.me/joinchat/DCq55kC7pgWKX9J4cJ4dJw' target='_blank'><u><font color='#00F'>telegram</font></u></a>。"
 		_caption = "状态检测";
 		return overlib(statusmenu, OFFSETX, -460, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	}
@@ -530,70 +531,74 @@ function openssHint(itemNum) {
 		width = "700px";
 		bgcolor = "#CC0066",
 		//gfwlist
-		statusmenu = "<span><b><font color='#CC0066'>【1】gfwlist模式:</font></b></br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;该模式使用gfwlist区分流量，Shadowsocks会将所有访问gfwlist内域名的TCP链接转发到Shadowsocks服务器，实现透明代理；</br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;和真正的gfwlist模式相比较，路由器内的gfwlist模式还是有一定缺点，因为它没法做到像gfwlist PAC文件一样，对某些域名的二级域名有例外规则。</br>"
-		statusmenu += "<b><font color='#669900'>优点：</font></b>节省SS流量，可防止迅雷和PT流量。</br>"
-		statusmenu += "<b><font color='#669900'>缺点：</font></b>代理受限于名单内的4000多个被墙网站，需要维护黑名单。一些不走域名解析的应用，比如telegram，需要单独添加IP/CIDR黑名单。</span></br></br>"
+		statusmenu = "<span><b><font color='#CC0066'>【1】gfwlist模式:</font></b><br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;该模式使用gfwlist区分流量，Shadowsocks会将所有访问gfwlist内域名的TCP链接转发到Shadowsocks服务器，实现透明代理；<br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;和真正的gfwlist模式相比较，路由器内的gfwlist模式还是有一定缺点，因为它没法做到像gfwlist PAC文件一样，对某些域名的二级域名有例外规则。<br />"
+		statusmenu += "<b><font color='#669900'>优点：</font></b>节省节点流量，可防止迅雷和PT流量。<br />"
+		statusmenu += "<b><font color='#669900'>缺点：</font></b>代理受限于名单内的4000多个被墙网站，需要维护黑名单。一些不走域名解析的应用，比如telegram，需要单独添加IP/CIDR黑名单。</span><br /><br />"
 		//redchn
-		statusmenu += "<span><b><font color='#CC0066'>【2】大陆白名单模式:</font></b></br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;该模式使用chnroute IP网段区分国内外流量，ss-redir将流量转发到Shadowsocks服务器，实现透明代理；</br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;由于采用了预先定义的ip地址块(chnroute)，所以DNS解析就非常重要，如果一个国内有的网站被解析到了国外地址，那么这个国内网站是会走ss的；</br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;因为使用了大量的cdn名单，能够保证常用的国内网站都获得国内的解析结果，但是即使如此还是不能完全保证国内的一些网站解析到国内地址，这个时候就推荐使用具备cdn解析能力的cdns或者chinadns2。</br>"
-		statusmenu += "<b><font color='#669900'>优点：</font></b>所有被墙国外网站均能通过代理访问，无需维护域名黑名单；主机玩家用此模式可以实现TCP代理UDP国内直连。</br>"
-		statusmenu += "<b><font color='#669900'>缺点：</font></b>消耗更多的Shadowsocks流量，迅雷下载和BT可能消耗SS流量。</span></br></br>"
+		statusmenu += "<span><b><font color='#CC0066'>【2】大陆白名单模式:</font></b><br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;该模式使用chnroute IP网段区分国内外流量，ss-redir将流量转发到Shadowsocks服务器，实现透明代理；<br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;由于采用了预先定义的ip地址块(chnroute)，所以DNS解析就非常重要，如果一个国内有的网站被解析到了国外地址，那么这个国内网站是会走ss的；<br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;因为使用了大量的cdn名单，能够保证常用的国内网站都获得国内的解析结果，但是即使如此还是不能完全保证国内的一些网站解析到国内地址，这个时候就推荐使用具备cdn解析能力的cdns或者chinadns2。<br />"
+		statusmenu += "<b><font color='#669900'>优点：</font></b>所有被墙国外网站均能通过代理访问，无需维护域名黑名单；主机玩家用此模式可以实现TCP代理UDP国内直连。<br />"
+		statusmenu += "<b><font color='#669900'>缺点：</font></b>消耗更多的Shadowsocks流量，迅雷下载和BT可能消耗代理流量。</span><br /><br />"
 		//game
-		statusmenu += "<span><b><font color='#CC0066'>【3】游戏模式:</font></b></br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;游戏模式较于其它模式最大的特点就是支持UDP代理，能让游戏的UDP链接走SS，主机玩家用此模式可以实现TCP+UDP走SS代理；</br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;由于采用了预先定义的ip地址块(chnroute)，所以DNS解析就非常重要，如果一个国内有的网站被解析到了国外地址，那么这个国内网站是会走ss的。</br>"
-		statusmenu += "<b><font color='#669900'>优点：</font></b>除了具有大陆白名单模式的优点外，还能代理UDP链接，并且实现主机游戏<b> NAT2!</b></br>"
-		statusmenu += "<b><font color='#669900'>缺点：</font></b>由于UDP链接也走SS，而迅雷等BT下载多为UDP链接，如果下载资源的P2P链接中有国外链接，这部分流量就会走SS！</span></br></br>"
+		statusmenu += "<span><b><font color='#CC0066'>【3】游戏模式:</font></b><br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;游戏模式较于其它模式最大的特点就是支持UDP代理，能让游戏的UDP链接走代理，主机玩家用此模式可以实现TCP+UDP走代理；<br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;由于采用了预先定义的ip地址块(chnroute)，所以DNS解析就非常重要，如果一个国内有的网站被解析到了国外地址，那么这个国内网站是会走ss的。<br />"
+		statusmenu += "<b><font color='#669900'>优点：</font></b>除了具有大陆白名单模式的优点外，还能代理UDP链接，并且实现主机游戏<b> NAT2!</b><br />"
+		statusmenu += "<b><font color='#669900'>缺点：</font></b>由于UDP链接也走代理，而迅雷等BT下载多为UDP链接，如果下载资源的P2P链接中有国外链接，这部分流量就会走代理！</span><br /><br />"
 		//overall
-		statusmenu += "<span><b><font color='#CC0066'>【4】全局模式:</font></b></br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;除局域网和ss服务器等流量不走代理，其它都走代理(udp不走)，高级设置中提供了对代理协议的选择。</br>"
-		statusmenu += "<b><font color='#669900'>优点：</font></b>简单暴力，全部出国；可选仅web浏览走ss，还是全部tcp代理走ss，因为不需要区分国内外流量，因此性能最好。</br>"
-		statusmenu += "<b><font color='#669900'>缺点：</font></b>国内网站全部走ss，迅雷下载和BT全部走SS流量。</span></br></br>"
+		statusmenu += "<span><b><font color='#CC0066'>【4】全局模式:</font></b><br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;除局域网和ss服务器等流量不走代理，其它都走代理(udp不走)，高级设置中提供了对代理协议的选择。<br />"
+		statusmenu += "<b><font color='#669900'>优点：</font></b>简单暴力，全部出国；可选仅web浏览走ss，还是全部tcp代理走ss，因为不需要区分国内外流量，因此性能最好。<br />"
+		statusmenu += "<b><font color='#669900'>缺点：</font></b>国内网站全部走ss，迅雷下载和BT全部走代理流量。</span><br /><br />"
 		//overall
-		statusmenu += "<span><b><font color='#CC0066'>【5】回国模式:</font></b></br>"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;提供给国外的朋友，通过在中间服务器翻回来，以享受一些视频、音乐等网络服务。</br>"
-		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~</br>"
+		statusmenu += "<span><b><font color='#CC0066'>【5】回国模式:</font></b><br />"
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;提供给国外的朋友，通过在中间服务器翻回来，以享受一些视频、音乐等网络服务。<br />"
+		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~<br />"
 		_caption = "模式说明";
 		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
-	} else if (itemNum == 5) {
-		statusmenu = "此处填入你的ss/ssr/koolgame服务器的加密方式。</br><font color='#F46'>建议</font>如果是自己搭建服务器，建议使用对路由器负担比较小的加密方式，例如chacha20,chacha20-ietf等。";
+	} else if (itemNum == 2) {
+		statusmenu = "此处填入你的ss/ssr/koolgame服务器的加密方式。<br /><font color='#F46'>建议</font>如果是自己搭建服务器，建议使用对路由器负担比较小的加密方式，例如chacha20,chacha20-ietf等。";
 		_caption = "服务器加密方式";
 	} else if (itemNum == 6) {
-		statusmenu = "此处选择你希望UDP的通道。</br>很多游戏都走udp的初衷就是加速udp连接。</br>如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
+		statusmenu = "此处选择你希望UDP的通道。<br />很多游戏都走udp的初衷就是加速udp连接。<br />如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
 		_caption = "游戏模式V2 UDP通道";
 	} else if (itemNum == 7) {
 		statusmenu = "请注意：本设置<b>不是v2ray使用shadowsocks协议！</b>";
 		statusmenu += "而是基于v2ray的<a href='https://www.v2ray.com/chapter_02/05_transport.html' target='_blank'><u><font color='#00F'>传输配置</font></u></a>作为SS的混淆方式。";
-		statusmenu += "</br>因为v2ray-plugin与simple-obfs同为Shadowsocks <a href='https://github.com/shadowsocks/shadowsocks-org/wiki/Plugin' target='_blank'><font color='#00F'><u>SIP003插件</u></font></a>的实现，";
+		statusmenu += "<br />因为v2ray-plugin与simple-obfs同为Shadowsocks <a href='https://github.com/shadowsocks/shadowsocks-org/wiki/Plugin' target='_blank'><font color='#00F'><u>SIP003插件</u></font></a>的实现，";
 		statusmenu += "所以打开v2ray-plugin会<b>忽略原混淆(obfs)</b>的设置。";
-		statusmenu += "</br>关于这个插件的信息以及参数(opts)，请查看仓库：<a href='https://github.com/shadowsocks/v2ray-plugin' target='_blank'><u><font color='#00F'>v2ray-plugin</font></u></a>";
+		statusmenu += "<br />关于这个插件的信息以及参数(opts)，请查看仓库：<a href='https://github.com/shadowsocks/v2ray-plugin' target='_blank'><u><font color='#00F'>v2ray-plugin</font></u></a>";
 		_caption = "v2ray-plugin设置";
+	if (itemNum == 10) {
+		statusmenu = "如果发现开关不能开启，那么请检查<a href='Advanced_System_Content.asp'><u><font color='#00F'>系统管理 -- 系统设置</font></u></a>页面内Enable JFFS custom scripts and configs是否开启。";
+		_caption = "服务器说明";
+	}
 	} else if (itemNum == 11) {
 		statusmenu = "如果不知道如何填写，请一定留空，不然可能带来副作用！"
-		statusmenu += "</br></br>请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
-		statusmenu += "</br></br>更多信息，请参考<a href='https://github.com/koolshare/shadowsocks-rss/blob/master/ssr.md' target='_blank'><u><font color='#00F'>ShadowsocksR 协议插件文档</font></u></a>"
+		statusmenu += "<br /><br />请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
+		statusmenu += "<br /><br />更多信息，请参考<a href='https://github.com/koolshare/shadowsocks-rss/blob/master/ssr.md' target='_blank'><u><font color='#00F'>ShadowsocksR 协议插件文档</font></u></a>"
 		_caption = "自定义参数 (obfs_param)";
 	} else if (itemNum == 12) {
 		width = "500px";
 		statusmenu = "此处显示你的SS插件当前的版本号，当前版本：<% dbus_get_def("ss_basic_version_local", "未知"); %>,如果需要回滚SS版本，请参考以下操作步骤：";
-		statusmenu += "</br></br><font color='#CC0066'>1&nbsp;&nbsp;</font>进入<a href='Tools_Shell.asp' target='_blank'><u><font color='#00F'>webshell</font></u></a>或者其他telnet,ssh等能输入命令的工具";
-		statusmenu += "</br><font color='#CC0066'>2&nbsp;&nbsp;</font>请依次输入以下命令，等待上一条命令执行完后再运行下一条(这里以回滚1.5.7为例)：";
-		statusmenu += "</br></br>&nbsp;&nbsp;&nbsp;&nbsp;cd /tmp";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss_history_package/master/fancyss_hnd/shadowsocks_1.5.7.tar.gz";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;mv shadowsocks_1.5.7.tar.gz shadowsocks.tar.gz";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;tar -zxvf /tmp/shadowsocks.tar.gz";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;chmod +x /tmp/shadowsocks/install.sh";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;sh /tmp/shadowsocks/install.sh";
-		statusmenu += "</br></br>最后一条命令输入完后不会有任何打印信息。";
-		statusmenu += "</br>回滚其它版本号，请参考<a href='https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd' target='_blank'><u><font color='#00F'>版本历史列表</font></u></a>";
+		statusmenu += "<br /><br /><font color='#CC0066'>1&nbsp;&nbsp;</font>进入<a href='Tools_Shell.asp' target='_blank'><u><font color='#00F'>webshell</font></u></a>或者其他telnet,ssh等能输入命令的工具";
+		statusmenu += "<br /><font color='#CC0066'>2&nbsp;&nbsp;</font>请依次输入以下命令，等待上一条命令执行完后再运行下一条(这里以回滚1.5.7为例)：";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;cd /tmp";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss_history_package/master/fancyss_hnd/shadowsocks_1.5.7.tar.gz";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;mv shadowsocks_1.5.7.tar.gz shadowsocks.tar.gz";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;tar -zxvf /tmp/shadowsocks.tar.gz";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;chmod +x /tmp/shadowsocks/install.sh";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;sh /tmp/shadowsocks/install.sh";
+		statusmenu += "<br /><br />最后一条命令输入完后不会有任何打印信息。";
+		statusmenu += "<br />回滚其它版本号，请参考<a href='https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd' target='_blank'><u><font color='#00F'>版本历史列表</font></u></a>";
 		_caption = "shadowsocks for merlin 版本";
 	} else if (itemNum == 13) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;SSR表示shadowwocksR-libev，相比较原版shadowwocksR-libev，其提供了强大的协议混淆插件，让你避开gfw的侦测。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;虽然你在节点编辑界面能够指定使用SS的类型，不过这里还是提供了勾选使用SSR的选项，是为了方便一些服务器端是兼容原版协议的用户，快速切换SS账号类型而设定。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;虽然你在节点编辑界面能够指定使用SS的类型，不过这里还是提供了勾选使用SSR的选项，是为了方便一些服务器端是兼容原版协议的用户，快速切换SS账号类型而设定。";
 		_caption = "使用SSR";
 	} else if (itemNum == 15) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;点击右侧的铅笔图标，进入节点界面，在节点界面，你可以进行节点的添加，修改，删除，应用，检查节点ping，和web访问性等操作。"
@@ -609,200 +614,214 @@ function openssHint(itemNum) {
 		_caption = "服务器地址";
 	} else if (itemNum == 19) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;ping/丢包功能用于检测你的路由器到ss服务器的ping值和丢包；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;比如一些游戏线路对ping值和丢包有要求，可以选择ping值较低，丢包较少的节点；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;一些奇葩的运营商可能会禁ping，一些SS服务器也会禁止ping，此处检测就会failed，所以遇到这种情况不必惊恐。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;比如一些游戏线路对ping值和丢包有要求，可以选择ping值较低，丢包较少的节点；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;一些奇葩的运营商可能会禁ping，一些SS服务器也会禁止ping，此处检测就会failed，所以遇到这种情况不必惊恐。"
 		_caption = "ping/丢包";
 	} else if (itemNum == 21) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;编辑节点功能能帮助你快速的更改ss某个节点的设置，比如服务商更换IP地址之后，可以快速更改；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;编辑节点目前只支持相同类型节点的编辑，比如不能将ss节点编辑为ssr节点，如果你的ssr节点是兼容原版协议的，建议你在主面板用使用ssr勾选框来进行更改。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;编辑节点目前只支持相同类型节点的编辑，比如不能将ss节点编辑为ssr节点，如果你的ssr节点是兼容原版协议的，建议你在主面板用使用ssr勾选框来进行更改。"
 		_caption = "编辑节点";
 	} else if (itemNum == 22) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;删除节点功能能快速的删除某个特定的节点，为了方便快速删除，删除节点点击后生效，不会有是否确认弹出。"
 		_caption = "编辑节点";
 	} else if (itemNum == 23) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;点击使用节点能快速的将该节点填入主面板，但是你需要在主面板点击提交，才能使用该节点。</br>不同的颜色代表了不同的节点类型，SS：蓝色；SSR；粉色，V2：绿色"
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;点击使用节点能快速的将该节点填入主面板，但是你需要在主面板点击提交，才能使用该节点。<br />不同的颜色代表了不同的节点类型，SS：蓝色；SSR；粉色，V2：绿色"
 		_caption = "使用节点";
 	} else if (itemNum == 24) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;导出功能可以将ss所有的设置全部导出，包括节点信息，dns设定，黑白名单设定等；"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;恢复配置功能可以使用之前导出的文件，也可以使用标准的json格式节点文件。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;恢复配置功能可以使用之前导出的文件，也可以使用标准的json格式节点文件。"
 		_caption = "导出恢复";
 	} else if (itemNum == 26) {
 		width = "1000px";
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;国外DNS为大家提供了丰富的选择，其目的有二，一是为了保证大家有能用的国外DNS服务；二是在有能用的基础上，能够选择多种DNS解析方案，达到最佳的解析效果；所以如果你切换到某个DNS程序，导致国外连接<font color='#FF0000'>X</font>， 那么更换能用的就好，不用纠结某个解析方案不能用。"
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;</br></br>名词约定："
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>此模式以gfwlist为分流方式，如gfwlist模式";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>此模式以chnroute为分流方式，如大陆白名单模式、游戏模式";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>vps：</b>SS/SSR/V2ray服务器端";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;</br></br>各DNS方案做简单介绍："
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />名词约定："
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>此模式以gfwlist为分流方式，如gfwlist模式";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>此模式以chnroute为分流方式，如大陆白名单模式、游戏模式";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>vps：</b>SS/SSR/V2ray服务器端";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />各DNS方案做简单介绍："
 		//dns2socks
-		statusmenu += "</br><font color='#CC0066'><b>1:dns2socks：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;万金油方案，DNS请求通过socks5隧道（由本地ss-local/ssr-local/v2ray提供）转发到vps，然后由vps向你定义的DNS服务器发起tcp dns解析请求，和下文中ss-tunnel类似，不过dns2socks是利用了socks5隧道代理，ss-tunnel是利用了加密UDP；该DNS方案不受到ss服务是否支持udp限制，只要能建立socoks5链接，就能使用。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用dns2socks，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用dns2socks。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
+		statusmenu += "<br /><font color='#CC0066'><b>1:dns2socks：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;万金油方案，DNS请求通过socks5隧道（由本地ss-local/ssr-local/v2ray提供）转发到vps，然后由vps向你定义的DNS服务器发起tcp dns解析请求，和下文中ss-tunnel类似，不过dns2socks是利用了socks5隧道代理，ss-tunnel是利用了加密UDP；该DNS方案不受到ss服务是否支持udp限制，只要能建立socoks5链接，就能使用。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用dns2socks，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用dns2socks。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//ss-tunnel
-		statusmenu += "</br><font color='#CC0066'><b>2:ss-tunnel：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;原理是将DNS请求通过ss-tunnel/ssr-tunnel利用udp协议发送到vps，然后由vps向你定义的DNS发起udp dns解析请求，解析到正确的IP地址，其解析效果和dns2socks应该是一样的。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用ss-tunnel，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用ss-tunnel。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
+		statusmenu += "<br /><font color='#CC0066'><b>2:ss-tunnel：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;原理是将DNS请求通过ss-tunnel/ssr-tunnel利用udp协议发送到vps，然后由vps向你定义的DNS发起udp dns解析请求，解析到正确的IP地址，其解析效果和dns2socks应该是一样的。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用ss-tunnel，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用ss-tunnel。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		_caption = "国外DNS";
 		//cdns
-		statusmenu += "</br><font color='#CC0066'><b>3:cdns：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;和chinadns2一样，支持ECS（EDNS Client Subnet），DNS请求时携带一个EDNS标签，解析成功后返回带该标签的解析结果，gfw投毒的解析结果则不会带该标签，以达到防dns污染的目的！";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用cdns，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用cdns";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
+		statusmenu += "<br /><font color='#CC0066'><b>3:cdns：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;和chinadns2一样，支持ECS（EDNS Client Subnet），DNS请求时携带一个EDNS标签，解析成功后返回带该标签的解析结果，gfw投毒的解析结果则不会带该标签，以达到防dns污染的目的！";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用cdns，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用cdns";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//chinadns1
-		statusmenu += "</br><font color='#CC0066'><b>4:chinadns1：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;使用dns2socks作为chinadns1上游DNS解析工具获取无污染的解析结果，通过chinadns1中设定的中国DNS进行请求获取国内解析结果";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用chinadns1，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用chinadns1，DNS解析国内外分流在chinadns1内部实现";		
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下不需要cdn.txt作为国内加速，对cpu负担稍小。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>注意1：</b>当国内DNS设定为SmartDNS的时候，国外DNS无法设定为chinadns1！";
+		statusmenu += "<br /><font color='#CC0066'><b>4:chinadns1：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;使用dns2socks作为chinadns1上游DNS解析工具获取无污染的解析结果，通过chinadns1中设定的中国DNS进行请求获取国内解析结果";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用chinadns1，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用chinadns1，DNS解析国内外分流在chinadns1内部实现";		
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下不需要cdn.txt作为国内加速，对cpu负担稍小。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意1：</b>当国内DNS设定为SmartDNS的时候，国外DNS无法设定为chinadns1！";
 		//chinadns2
-		statusmenu += "</br><font color='#CC0066'><b>5:chinadns2：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;支持ECS，并且chinadns2根据本地公网ip和vps的ip，发送两个带EDNS标签的请求，DNS服务器会根据此信息选择离你最近的解析结果返回给你，因此具有非常好的cdn效果！例如对于国内解析淘宝www.taobao.com，谷歌DNS服务器8.8.8.8:53收到了你的国内解析请求，并且知道你的路由器公网地址是123.123.123.123（北京联通），谷歌DNS服务器将会根据你的IP地址，返回较快的123.123.124.124（北京联通），而不是211.142.151.123（河南移动）。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用chinadns2，其余全部使用你选择的中国DNS解析";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用chinadns2，DNS解析国内外分流在chinadns2内部依靠ECS实现";	
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下不需要cdn.txt作为国内加速，对cpu负担稍小。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>注意：</b>chinadns2需要上游DNS服务器支持ECS，所以此处默认设定为直连谷歌DNS（8.8.8.8:53），如果你的网络到谷歌DNS丢包严重、不通或你的上级路由开了国外代理，请不要使用此方案！";
+		statusmenu += "<br /><font color='#CC0066'><b>5:chinadns2：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;支持ECS，并且chinadns2根据本地公网ip和vps的ip，发送两个带EDNS标签的请求，DNS服务器会根据此信息选择离你最近的解析结果返回给你，因此具有非常好的cdn效果！例如对于国内解析淘宝www.taobao.com，谷歌DNS服务器8.8.8.8:53收到了你的国内解析请求，并且知道你的路由器公网地址是123.123.123.123（北京联通），谷歌DNS服务器将会根据你的IP地址，返回较快的123.123.124.124（北京联通），而不是211.142.151.123（河南移动）。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用chinadns2，其余全部使用你选择的中国DNS解析";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用chinadns2，DNS解析国内外分流在chinadns2内部依靠ECS实现";	
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下不需要cdn.txt作为国内加速，对cpu负担稍小。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意：</b>chinadns2需要上游DNS服务器支持ECS，所以此处默认设定为直连谷歌DNS（8.8.8.8:53），如果你的网络到谷歌DNS丢包严重、不通或你的上级路由开了国外代理，请不要使用此方案！";
 		//https_dns_proxy
-		statusmenu += "</br><font color='#CC0066'><b>6:https_dns_proxy：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！此处默认使用了cloudflare的服务（1.1.1.1和1.0.0.1）";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用https_dns_proxy，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用https_dns_proxy，DNS解析国内外分流在chinadns2内部依靠ECS实现";	
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
+		statusmenu += "<br /><font color='#CC0066'><b>6:https_dns_proxy：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！此处默认使用了cloudflare的服务（1.1.1.1和1.0.0.1）";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用https_dns_proxy，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>所有国内网站+国外网站的解析全部使用https_dns_proxy，DNS解析国内外分流在chinadns2内部依靠ECS实现";	
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//v2ray dns
-		statusmenu += "</br><font color='#CC0066'><b>7:v2ray_dns：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;v2ray自带的dns，通过在v2ray的json配置文件中添加一个新的传入连接来转发dns请求，使用效果应该和ss/ssr下使用ss-tunnel一样";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用v2ray_dns，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用v2ray_dns。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
+		statusmenu += "<br /><font color='#CC0066'><b>7:v2ray_dns：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;v2ray自带的dns，通过在v2ray的json配置文件中添加一个新的传入连接来转发dns请求，使用效果应该和ss/ssr下使用ss-tunnel一样";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用v2ray_dns，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用v2ray_dns。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
 		//SmartDNS
-		statusmenu += "</br><font color='#CC0066'><b>8:SmartDNS：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;SmartDNS是一个运行在本地的DNS服务器，SmartDNS接受本地客户端的DNS查询请求，从多个上游DNS服务器获取DNS查询结果，并将访问速度最快的结果返回给客户端，提高网络访问速度。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;在本插件中，SmartDNS根据运行方式的不同，会生成不同的配置文件，简单的来说：SmartDNS的7913端口负责国外解析，SmartDNS的5335端口负责国内解析，具体如下。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅中国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用你选择的外国DNS方案，其余全部使用SmartDNS的5335端口解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅外国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（中国DNS和外国DNS均设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用SmartDNS的5335端口解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅中国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用使用你选择外国DNS方案解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅外国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用你选择的中国DNS解析，其余全部使用SmartDNS的7913端口解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（中国DNS和外国DNS均设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用SmartDNS的7913端口解析。";
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。另外因为SmartDNS只会给出一个\"最优的\"解析结果，而可能对一些靠多个cdn解析同时连接下载加速的应用造成速度损失。";
+		statusmenu += "<br /><font color='#CC0066'><b>8:SmartDNS：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;SmartDNS是一个运行在本地的DNS服务器，SmartDNS接受本地客户端的DNS查询请求，从多个上游DNS服务器获取DNS查询结果，并将访问速度最快的结果返回给客户端，提高网络访问速度。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;在本插件中，SmartDNS根据运行方式的不同，会生成不同的配置文件，简单的来说：SmartDNS的7913端口负责国外解析，SmartDNS的5335端口负责国内解析，具体如下。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅中国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用你选择的外国DNS方案，其余全部使用SmartDNS的5335端口解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅外国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用你选择的中国DNS解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（中国DNS和外国DNS均设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用SmartDNS的5335端口解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅中国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用使用你选择外国DNS方案解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅外国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用你选择的中国DNS解析，其余全部使用SmartDNS的7913端口解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（中国DNS和外国DNS均设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用SmartDNS的7913端口解析。";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。另外因为SmartDNS只会给出一个\"最优的\"解析结果，而可能对一些靠多个cdn解析同时连接下载加速的应用造成速度损失。";
 		//直连
-		statusmenu += "</br><font color='#CC0066'><b>9:直连：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;本地直接向DNS服务器请求获取国外网站的解析地址，目前此选项仅限于回国模式使用，因为在国外网络下查询国外DNS服务器不会有DNS污染。";
+		statusmenu += "<br /><font color='#CC0066'><b>9:直连：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;本地直接向DNS服务器请求获取国外网站的解析地址，目前此选项仅限于回国模式使用，因为在国外网络下查询国外DNS服务器不会有DNS污染。";
 		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 27) {
-		statusmenu = "</br><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vmess作为传出协议，不支持sock，shadowsocks；提交后会根据你的配置自动生成v2ray的json配置。"
-		statusmenu += "</br></br><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传出协议，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
-		statusmenu += "</br>&nbsp;&nbsp;&nbsp;&nbsp;如果使用Xray作为核心，json方式还可以配置仅xray支持的协议，比如vless-tcp + xtls。"
+		statusmenu = "<br /><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vmess作为传出协议，不支持socks，shadowsocks，vless；提交后会根据你的配置自动生成v2ray的json配置。"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传出协议，包括vmess、vless、socks，shadowsocks等，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;如果使用Xray作为核心【附加功能处启用】，v2ray json配置方式还可以配置仅xray支持的协议，比如vless-tcp + xtls。"
+		_caption = "使用json配置";
+	}  else if (itemNum == 25) {
+		statusmenu = "<br /><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vless作为传出协议，不支持socks，shadowsocks，vmess；提交后会根据你的配置自动生成xray的json配置。"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置xray支持的所有传出协议，包括vmess、vless、socks，shadowsocks等，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
 		_caption = "使用json配置";
 	} else if (itemNum == 28) {
 		width = "750px";
 		statusmenu = "<b>如果客户端json配置文件内没有此项，此处请留空！</b>"
-		statusmenu += "</br></br><font color='#CC0066'><b>1:传输协议tcp + 伪装类型http：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;此参数在客户端json配置文件的【outbound → streamSettings → tcpSettings → headers → Host】位置"
-		statusmenu += "</br>&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
-		statusmenu += "</br></br><font color='#CC0066'><b>2:传输协议ws：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;此参数在客户端json配置文件的【outbound → streamSettings → wsSettings → headers → Host】位置"
-		statusmenu += "</br></br><font color='#CC0066'><b>3:传输协议h2：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;此参数在客户端json配置文件的【outbound → streamSettings → httpSettings → host】位置"
-		statusmenu += "</br>&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>1:传输协议tcp + 伪装类型http：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → headers → Host】位置"
+		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>2:传输协议ws：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → wsSettings → headers → Host】位置"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>3:传输协议h2：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → httpSettings → host】位置"
+		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>4:传输协议quic：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → quicSettings → security】位置"
+		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
 		_caption = "伪装域名 (host)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 29) {
 		width = "750px";
-		statusmenu = "<b>如果客户端json配置文件内没有此项，此处请留空！</b></br></br>path的设定应该和服务器端保持一致，值应该和你nginx或者candy的配置内的一致！"
-		statusmenu += "</br></br><font color='#CC0066'><b>1:ws path：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;此参数在客户端json配置文件的【outbound → streamSettings → wsSettings → path】位置"
-		statusmenu += "</br></br><font color='#CC0066'><b>2:h2 path：</b></font>"
-		statusmenu += "</br>&nbsp;&nbsp;此参数在客户端json配置文件的【outbound → streamSettings → httpSettings → path】位置"
+		statusmenu = "<b>如果客户端json配置文件内没有此项，此处请留空！</b><br /><br />path的设定应该和服务器端保持一致，值应该和你nginx或者candy的配置内的一致！"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>1:[tcp + http] path：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → header → request → path】位置"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>2:ws path：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → wsSettings → path】位置"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>3:h2 path：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → httpSettings → path】位置"
+		statusmenu += "<br /><br /><font color='#CC0066'><b>4:quic path：</b></font>"
+		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → quicSettings → key】位置"
 		_caption = "路径 (path)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 30) {
 		width = "750px";
-		statusmenu = "<b>此处控制开启或者关闭tls传输</b>"
-		statusmenu += "</br></br>此参数在客户端json配置文件的【outbound → streamSettings → security】位置"
+		statusmenu = "<b>1. 对于V2ray：此处设定开启或者关闭tls传输</b><br />"
+		statusmenu += "<b>2. 对于Xray：此处设定开启tls/xtls，或者关闭tls传输</b>"
+		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → security】位置"
 		_caption = "底层传输安全";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 31) {
 		width = "400px";
 		statusmenu = "<b>此处控制开启或者关闭多路复用 (Mux)</b>"
-		statusmenu += "</br></br>此参数在客户端json配置文件的【outbound → mux → enabled】位置"
+		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → mux → enabled】位置"
 		_caption = "多路复用 (Mux)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 32) {
 		width = "750px";
 		statusmenu = "<b>控制Mux并发连接数，默认值：8，如果客户端json配置文件没有请留空</b>"
-		statusmenu += "</br></br>此参数在客户端json配置文件的【outbound → mux → concurrency】位置，如果没有，请留空"
+		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → mux → concurrency】位置，如果没有，请留空"
 		_caption = "Mux并发连接数";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 33) {
 		statusmenu = "填入需要强制用国内DNS解析的域名，一行一个，格式如下：。"
-		statusmenu += "</br>注意：不支持通配符！"
-		statusmenu += "</br></br>koolshare.cn"
-		statusmenu += "</br>baidu.com"
-		statusmenu += "</br></br>需要注意的是，这里要填写的一定是网站的一级域名，比如taobao.com才是正确的，www.taobao.com，http://www.taobao.com/这些格式都是错误的！"
+		statusmenu += "<br />注意：不支持通配符！"
+		statusmenu += "<br /><br />koolshare.cn"
+		statusmenu += "<br />baidu.com"
+		statusmenu += "<br /><br />需要注意的是，这里要填写的一定是网站的一级域名，比如taobao.com才是正确的，www.taobao.com，http://www.taobao.com/这些格式都是错误的！"
 		_caption = "自定义需要CDN加速网站";
 	} else if (itemNum == 34) {
 		statusmenu = "填入自定义的dnsmasq设置，一行一个，格式如下：。"
-		statusmenu += "</br></br>#例如hosts设置："
-		statusmenu += "</br>address=/koolshare.cn/2.2.2.2"
-		statusmenu += "</br></br>#防DNS劫持设置"
-		statusmenu += "</br>bogus-nxdomain=220.250.64.18"
-		statusmenu += "</br></br>#指定config设置"
-		statusmenu += "</br>conf-file=/jffs/mydnsmasq.conf"
-		statusmenu += "</br></br>如果填入了错误的格式，可能导致dnsmasq启动失败！"
-		statusmenu += "</br></br>如果填入的信息里带有英文逗号的，也会导致dnsmasq启动失败！"
+		statusmenu += "<br /><br />#例如hosts设置："
+		statusmenu += "<br />address=/koolshare.cn/2.2.2.2"
+		statusmenu += "<br /><br />#防DNS劫持设置"
+		statusmenu += "<br />bogus-nxdomain=220.250.64.18"
+		statusmenu += "<br /><br />#指定config设置"
+		statusmenu += "<br />conf-file=/jffs/mydnsmasq.conf"
+		statusmenu += "<br /><br />如果填入了错误的格式，可能导致dnsmasq启动失败！"
+		statusmenu += "<br /><br />如果填入的信息里带有英文逗号的，也会导致dnsmasq启动失败！"
 		_caption = "自定义dnsamsq";
 	} else if (itemNum == 35) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → streamSettings → network】位置"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → network】位置"
 		_caption = "传输协议 (network)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 36) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → streamSettings → tcpSettings → header → type】位置，如果没有此参数，则为不伪装"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → header → type】位置，如果没有此参数，则为不伪装"
 		_caption = "tcp伪装类型 (type)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 37) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → streamSettings → kcpSettings → header → type】位置，如果参数为none，则为不伪装"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → kcpSettings → header → type】位置，如果参数为none，则为不伪装"
 		_caption = "kcp伪装类型 (type)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 38) {
 		statusmenu = "填入不需要走代理的外网ip/cidr地址，一行一个，格式如下：。"
-		statusmenu += "</br></br>2.2.2.2"
-		statusmenu += "</br>3.3.3.3"
-		statusmenu += "</br>4.4.4.4/24"
+		statusmenu += "<br /><br />2.2.2.2"
+		statusmenu += "<br />3.3.3.3"
+		statusmenu += "<br />4.4.4.4/24"
 		_caption = "IP/CIDR白名单";
 	} else if (itemNum == 39) {
 		statusmenu = "填入不需要走代理的域名，一行一个，格式如下：。"
-		statusmenu += "</br></br>google.com"
-		statusmenu += "</br>facebook.com"
-		statusmenu += "</br></br>需要注意的是，这里要填写的一定是网站的一级域名，比如google.com才是正确的，www.google.com，https://www.google.com/这些格式都是错误的！"
-		statusmenu += "</br></br>需要清空电脑DNS缓存，才能立即看到效果"
+		statusmenu += "<br /><br />google.com"
+		statusmenu += "<br />facebook.com"
+		statusmenu += "<br /><br />需要注意的是，这里要填写的一定是网站的一级域名，比如google.com才是正确的，www.google.com，https://www.google.com/这些格式都是错误的！"
+		statusmenu += "<br /><br />需要清空电脑DNS缓存，才能立即看到效果"
 		_caption = "域名白名单";
 	} else if (itemNum == 40) {
 		statusmenu = "填入需要强制走代理的外网ip/cidr地址，，一行一个，格式如下：。"
-		statusmenu += "</br></br>5.5.5.5"
-		statusmenu += "</br>6.6.6.6"
-		statusmenu += "</br>7.7.7.7/8"
+		statusmenu += "<br /><br />5.5.5.5"
+		statusmenu += "<br />6.6.6.6"
+		statusmenu += "<br />7.7.7.7/8"
 		_caption = "IP/CIDR黑名单";
 	} else if (itemNum == 41) {
 		statusmenu = "填入需要强制走代理的域名，，一行一个，格式如下：。"
-		statusmenu += "</br></br>baidu.com"
-		statusmenu += "</br>taobao.com"
-		statusmenu += "</br></br>需要注意的是，这里要填写的一定是网站的一级域名，比如google.com才是正确的，www.baidu.com，http://www.baidu.com/这些格式都是错误的！"
-		statusmenu += "</br></br>需要清空电脑DNS缓存，才能立即看到效果。"
+		statusmenu += "<br /><br />baidu.com"
+		statusmenu += "<br />taobao.com"
+		statusmenu += "<br /><br />需要注意的是，这里要填写的一定是网站的一级域名，比如google.com才是正确的，www.baidu.com，http://www.baidu.com/这些格式都是错误的！"
+		statusmenu += "<br /><br />需要清空电脑DNS缓存，才能立即看到效果。"
 		_caption = "IP/CIDR黑名单";
 	} else if (itemNum == 44) {
 		statusmenu = "shadowsocks规则更新包括了gfwlist模式中用到的<a href='https://github.com/hq450/fancyss/blob/master/rules/gfwlist.conf' target='_blank'><font color='#00F'><u>gfwlist</u></font></a>，在大陆白名单模式和游戏模式中用到的<a href='https://github.com/hq450/fancyss/blob/master/rules/chnroute.txt' target='_blank'><u><font color='#00F'>chnroute</font></u></a>和<a href='https://github.com/hq450/fancyss/blob/master/rules/cdn.txt' target='_blank'><u><font color='#00F'>国内cdn名单</font></u></a>"
-		statusmenu += "</br>建议更新时间在凌晨闲时进行，以避免更新时重启ss服务器造成网络访问问题。"
+		statusmenu += "<br />建议更新时间在凌晨闲时进行，以避免更新时重启ss服务器造成网络访问问题。"
 		_caption = "shadowsocks规则自动更新";
 	} else if (itemNum == 45) {
 		statusmenu = "通过局域网客户端控制功能，你能定义在当前模式下某个局域网地址是否走SS。"
@@ -812,32 +831,47 @@ function openssHint(itemNum) {
 		_caption = "开机启动延迟";
 	} else if (itemNum == 47) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → settings → vnext → users → security】位置"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → security】位置"
 		_caption = "加密方式 (security)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 48) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → settings → vnext → users → alterId】位置"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → alterId】位置"
 		_caption = "额外ID (Alterld)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 49) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → settings → vnext → users → id】位置"
-		_caption = "加密方式 (security)";
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → id】位置<br /><br />"
+		_caption = "用户id (id)";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 50) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → settings → vnext → port】位置"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → port】位置"
 		_caption = "端口（port）";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 51) {
 		width = "750px";
-		statusmenu = "</br>此参数在客户端json配置文件的【outbound → settings → vnext → address】位置"
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → address】位置"
 		_caption = "地址（address）";
 		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 54) {
 		statusmenu = "更多信息，请参考<a href='https://breakwa11.blogspot.jp/2017/01/shadowsocksr-mu.html' target='_blank'><u><font color='#00F'>ShadowsocksR 协议参数文档</font></u></a>"
 		_caption = "协议参数（protocol）";
+	} else if (itemNum == 55) {
+		width = "750px";
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → encryption】位置<br /><br />此参数仅用于Xray的VLESS协议，不过目前VLESS没有自带加密。所以目前都设置为none，请用于可靠信道，如 TLS。<br /><br />参考文档：<a href='https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject' target='_blank'><font color='#00F'><u>https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject</u></font></a>"
+		_caption = "加密（encryption）";
+		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
+	} else if (itemNum == 55) {
+		width = "750px";
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → flow】位置<br /><br />此参数仅用于Xray的VLESS协议，此处设置流控模式，用于选择 XTLS 的算法，仅在xtls开启后此处设置才会生效！。<br /><br />参考文档：<a href='https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject' target='_blank'><font color='#00F'><u>https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject</u></font></a>"
+		_caption = "加密（encryption）";
+		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
+	} else if (itemNum == 56) {
+		width = "750px";
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tlsSettings】位置<br /><br />设置为false表示安全，true表示不安全。很多机场没有配置tls证书的，需要设置为true才能使得节点正常工作<br />"
+		_caption = "加密（encryption）";
+		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 90) {
 		statusmenu = "此处设定为预设不可更改。<br />&nbsp;&nbsp;&nbsp;&nbsp;1. 单开KCPTUN的情况下，ss-redir的TCP流量都会转发到此；<br />&nbsp;&nbsp;&nbsp;&nbsp;2. KCPTUN和UDP2raw串联的模式下，ss-redir的TCP流量才会转发到UDP2raw；"
 		_caption = "说明：";
@@ -894,10 +928,10 @@ function openssHint(itemNum) {
 		statusmenu = "插件触发重启设定说明：<br />&nbsp;&nbsp;&nbsp;&nbsp;当你的ss/ssr/koolgame/v2ray服务器，或者负载均衡服务器节点使用域名的时候，可以在此处设定定时解析域名时间，当检测到相应的解析地址发生改变的时候，定时任务会自动重启插件，以应用新的ip地址。<br />&nbsp;&nbsp;&nbsp;&nbsp;服务器有多个解析地址的建议不要使用！！v2ray开了cdn的也建议不要使用！！因为这可能会导致每次检测到的ip都不一样而让插件在后台频繁重启！"
 		_caption = "说明：";
 	} else if (itemNum == 110) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点不会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>测试,过期,剩余,曼谷,M247,D01,硅谷</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点不会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>测试,过期,剩余,曼谷,M247,D01,硅谷</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能支持SS/SSR/V2ray/Xray订阅，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
 		_caption = "[排除]关键词：";
 	} else if (itemNum == 111) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能仅支持SSR订阅，v2ray订阅不会起作用，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能支持SS/SSR/V2ray/Xray订阅，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
 		_caption = "[包括]关键词：";
 	} else if (itemNum == 112) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;原有订阅方式，支持ss/ssr/v2ray订阅，订阅时会将订阅节点和本地节点交叉对比后添加/更改/删除。<br /><br /><b>优点：</b>订阅信息详细，知道新增/修改/删除了什么节点。<br /><br /><b>缺点：</b>订阅速度较为慢，长时间订阅更新后节点排序可能会被打乱。"
@@ -911,6 +945,12 @@ function openssHint(itemNum) {
 	} else if (itemNum == 115) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一般来说你用不到这个选项，但是如果你的xray进程不稳定，你可以尝试开启此功能，此功能使用perp实时守护进程！。"
 		_caption = "说明";
+	} else if (itemNum == 116) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！<br />&nbsp;&nbsp;&nbsp;&nbsp;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：<br />-------------------------------------------------<br />🚀魅影极速<br />https://subserver.maying.io/xxx<br /><br />🛩️nextitally<br />https://naixisubs.com/downloadConfig/xxx<br />-------------------------------------------------"
+		_caption = "订阅地址管理";
+	} else if (itemNum == 117) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;使用此方式添加节点不会和已有节点进行对比，多次使用相同链接会让相同节点被添加多次，请注意！"
+		_caption = "通过ss/ssr/vmess/vless链接添加节点";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 
