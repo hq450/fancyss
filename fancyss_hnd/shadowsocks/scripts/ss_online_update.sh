@@ -42,6 +42,7 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_v2ray_network_
 				ssconf_basic_v2ray_headtype_tcp_
 				ssconf_basic_v2ray_headtype_kcp_
+				ssconf_basic_v2ray_kcp_seed
 				ssconf_basic_v2ray_headtype_quic_
 				ssconf_basic_v2ray_grpc_mode_
 				ssconf_basic_v2ray_network_path_
@@ -61,6 +62,7 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_xray_network_
 				ssconf_basic_xray_headtype_tcp_
 				ssconf_basic_xray_headtype_kcp_
+				ssconf_basic_xray_kcp_seed
 				ssconf_basic_xray_headtype_quic_
 				ssconf_basic_xray_grpc_mode_
 				ssconf_basic_xray_network_path_
@@ -1050,7 +1052,7 @@ get_vmess_node(){
 	local urllink="$1"
 	local action="$2"
 	unset v2ray_ps_tmp v2ray_remark_tmp v2ray_ps v2ray_add v2ray_port v2ray_id v2ray_aid v2ray_scy v2ray_net v2ray_type_tmp v2ray_type
-	unset v2ray_headerType_tmp v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_tls_tmp v2ray_tls
+	unset v2ray_headerType_tmp v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_tls_tmp v2ray_tls v2ray_kcp_seed
 	unset v2ray_ai_tmp v2ray_ai v2ray_alpn v2ray_alpn_h2_tmp v2ray_alpn_http_tmp v2ray_alpn_h2 v2ray_alpn_http v2ray_sni v2ray_v v2ray_host v2ray_path v2ray_group v2ray_group_hash
 	local decrypt_info=$(decode_url_link ${urllink} flag | jq -c .)
 	
@@ -1234,34 +1236,24 @@ get_vmess_node(){
 		v2ray_path=""
 	fi
 
+	# host is not needed in kcp and grpc
+	if [ "${v2ray_net}" == "kcp" -o "${v2ray_net}" == "grpc" ];then 
+		v2ray_host=""
+	fi
+
+	if [ "${v2ray_net}" == "kcp" ];then 
+		v2ray_kcp_seed=${v2ray_path}
+	fi
+	
 	# 根据订阅版本不同，来设置host path
-	if [ "${v2ray_v}" == "2" ]; then
-		if [ "${v2ray_net}" == "kcp" ];then 
+	if [ "${v2ray_v}" != "2" -a "${v2ray_net}" == "ws" -a -n "${v2ray_host}" ]; then
+		format_ws=$(echo ${v2ray_host} | grep -E ";")
+		if [ -n "${format_ws}" ]; then
+			v2ray_host=$(echo ${v2ray_host} | cut -d ";" -f1)
+			v2ray_path=$(echo ${v2ray_host} | cut -d ";" -f2)
+		else
 			v2ray_host=""
-			v2ray_path=""
-		fi
-		if [ "${v2ray_net}" == "grpc" ];then 
-			v2ray_host=""
-		fi
-	else
-		if [ "${v2ray_net}" == "kcp" ];then 
-			v2ray_host=""
-			v2ray_path=""
-		fi
-		if [ "${v2ray_net}" == "ws" ];then 
-			if [ -n "${v2ray_host}" ]; then
-				format_ws=$(echo ${v2ray_host} | grep -E ";")
-				if [ -n "${format_ws}" ]; then
-					v2ray_host=$(echo ${v2ray_host} | cut -d ";" -f1)
-					v2ray_path=$(echo ${v2ray_host} | cut -d ";" -f2)
-				else
-					v2ray_host=""
-					v2ray_path=${v2ray_host}
-				fi
-			fi
-		fi
-		if [ "${v2ray_net}" == "grpc" ];then 
-			v2ray_host=""
+			v2ray_path=${v2ray_host}
 		fi
 	fi
 
@@ -1343,6 +1335,7 @@ add_vmess_node(){
 	dbus_eset ssconf_basic_v2ray_network_security_sni_${NODE_INDEX} "${v2ray_sni}"
 	dbus_eset ssconf_basic_v2ray_network_host_${NODE_INDEX} "${v2ray_host}"
 	dbus_eset ssconf_basic_v2ray_network_path_${NODE_INDEX} "${v2ray_path}"
+	dbus_eset ssconf_basic_v2ray_kcp_seed_${NODE_INDEX} "${v2ray_kcp_seed}"
 	dbus_eset ssconf_basic_v2ray_mux_enable_${NODE_INDEX}
 	let addnum+=1
 }
@@ -1562,6 +1555,9 @@ update_vmess_node(){
 			dbus_cset "ssconf_basic_v2ray_network_path_${index}" "${v2ray_path}"
 			[ "$?" == "1" ] && INFO="${INFO}路径 "
 
+			dbus_cset "ssconf_basic_v2ray_kcp_seed_${index}" "${v2ray_kcp_seed}"
+			[ "$?" == "1" ] && INFO="${INFO}路径 "
+
 			dbus_cset "ssconf_basic_v2ray_network_security_${index}" "${v2ray_tls}"
 			[ "$?" == "1" ] && INFO="${INFO}底层传输安全 "
 
@@ -1595,7 +1591,7 @@ get_vless_node(){
 	local action="$2"
 	unset x_server_raw x_server x_server_port x_remarks x_uuid x_host x_path x_encryption x_type
 	unset x_headerType x_headtype_tcp x_headtype_kcp x_headtype_quic x_grpc_modex_security_tmp x_security
-	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash
+	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash x_kcp_seed
 	# c33db6d4-633d-37f2-920a-860c76158c88@jp1.23697.naifei.vip:55442?encryption=none&type=ws&security=tls&host=jpx1.ms66.ga&sni=jpx1.ms66.ga&path=%2Fms&headerType=none#%F0%9F%87%AF%F0%9F%87%B5+%E6%97%A5%E6%9C%AC+JP
 	# ab836dd4-3cfa-48a4-8ca2-9c00224f5d40@kooldog.me:7896?encryption=none&flow=xtls-rprx-origin&security=xtls&sni=www.kooldog.me&alpn=h2%2Chttp%2F1.1&type=tcp&headerType=http&host=kooldog.me#test2%3Akooldog.me
 
@@ -1671,6 +1667,15 @@ get_vless_node(){
 		fi
 		;;
 	esac
+
+	# host is not needed in kcp and grpc
+	if [ "${x_type}" == "kcp" -o "${x_type}" == "grpc" ];then 
+		x_host=""
+	fi
+
+	if [ "${x_type}" == "kcp" ];then 
+		x_kcp_seed=${x_path}
+	fi
 
 	# 底层传输安全：none, tls, xtls
 	x_security_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "security" | awk -F"=" '{print $2}')
@@ -1782,6 +1787,7 @@ add_vless_node(){
 	dbus_eset ssconf_basic_xray_grpc_mode_${NODE_INDEX} "${x_grpc_mode}"
 	dbus_eset ssconf_basic_xray_network_host_${NODE_INDEX} "${x_host}"
 	dbus_eset ssconf_basic_xray_network_path_${NODE_INDEX} "${x_path}"
+	dbus_eset ssconf_basic_xray_kcp_seed_${NODE_INDEX} "${x_kcp_seed}"
 	dbus_eset ssconf_basic_xray_network_security_${NODE_INDEX} "${x_security}"
 	# 允许不安全，订阅中不提供此字段，默认不设置
 	dbus_eset ssconf_basic_xray_network_security_ai_${NODE_INDEX}
@@ -1998,6 +2004,9 @@ update_vless_node(){
 			[ "$?" == "1" ] && INFO="${INFO}伪装域名 "
 			
 			dbus_cset "ssconf_basic_xray_network_path_${index}" "${x_path}"
+			[ "$?" == "1" ] && INFO="${INFO}路径 "
+
+			dbus_cset "ssconf_basic_xray_kcp_seed_${index}" "${x_kcp_seed}"
 			[ "$?" == "1" ] && INFO="${INFO}路径 "
 
 			dbus_cset "ssconf_basic_xray_network_security_${index}" "${x_security}"

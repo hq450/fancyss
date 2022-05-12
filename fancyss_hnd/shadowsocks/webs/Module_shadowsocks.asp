@@ -32,6 +32,7 @@
 var db_ss = {};
 var dbus = {};
 var confs = {};
+var obj_node = {};
 var node_max = 0;
 var node_nu = 0;
 var ss_nodes = [];
@@ -192,22 +193,20 @@ function conf2obj(obj, action) {
 	}
 }
 function ssconf_node2obj(node_sel) {
+	obj_node = {};
 	var p = "ssconf_basic";
-	var obj = {};
 	var params_tt_0 = ["ss_obfs", "ss_v2ray", "use_kcp", "v2ray_use_json", "v2ray_network_security_ai", "v2ray_mux_enable", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
-	var params_tt_1 = ["server", "mode", "port", "password", "method", "ss_obfs_host", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json"];
+	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json"];
 
 	for (var i = 0; i < params_tt_0.length; i++) {
-		obj["ss_basic_" + params_tt_0[i]] = db_ss[p + "_" + params_tt_0[i] + "_" + node_sel] || "0";
+		obj_node["ss_basic_" + params_tt_0[i]] = db_ss[p + "_" + params_tt_0[i] + "_" + node_sel] || "0";
 	}
 
 	for (var i = 0; i < params_tt_1.length; i++) {
-		obj["ss_basic_" + params_tt_1[i]] = db_ss[p + "_" + params_tt_1[i] + "_" + node_sel] || "";
+		obj_node["ss_basic_" + params_tt_1[i]] = db_ss[p + "_" + params_tt_1[i] + "_" + node_sel] || "";
 	}
-	obj["ssconf_basic_node"] = node_sel;
-	return obj;
-	//console.log(obj);
-	return obj;
+	obj_node["ssconf_basic_node"] = node_sel;
+	return obj_node;
 }
 function ss_node_sel() {
 	var node_sel = E("ssconf_basic_node").value;
@@ -392,7 +391,7 @@ function save() {
 		// for v2ray json, we need to encode json format
 		dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value;
 		if (E("ss_basic_v2ray_use_json").checked == true){
-			var params_vr_more = ["server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
+			var params_vr_more = ["server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 			for (var i = 0; i < params_vr_more.length; i++) {
 				dbus["ssconf_basic_" + params_vr_more[i] + "_" + node_sel] = "";
 			}
@@ -426,6 +425,7 @@ function save() {
 			}
 			if(E("ss_basic_v2ray_network").value == "kcp"){
 				dbus["ssconf_basic_v2ray_headtype_kcp_" + node_sel] = E("ss_basic_v2ray_headtype_kcp").value;
+				dbus["ssconf_basic_v2ray_kcp_seed_" + node_sel] = E("ss_basic_v2ray_kcp_seed").value;
 			}
 			if(E("ss_basic_v2ray_network").value == "ws" || E("ss_basic_v2ray_network").value == "h2"){
 				dbus["ssconf_basic_v2ray_network_host_" + node_sel] = E("ss_basic_v2ray_network_host").value;
@@ -445,12 +445,18 @@ function save() {
 				dbus["ssconf_basic_v2ray_network_security_ai_" + node_sel] = E("ss_basic_v2ray_network_security_ai").checked ? '1' : '';
 				dbus["ssconf_basic_v2ray_network_security_alpn_h2_" + node_sel] = E("ss_basic_v2ray_network_security_alpn_h2").checked ? '1' : '';
 				dbus["ssconf_basic_v2ray_network_security_alpn_http_" + node_sel] = E("ss_basic_v2ray_network_security_alpn_http").checked ? '1' : '';
-				dbus["ssconf_basic_v2ray_network_security_alpn_http_" + node_sel] = E("ss_basic_v2ray_network_security_sni").value;
+				dbus["ssconf_basic_v2ray_network_security_sni_" + node_sel] = E("ss_basic_v2ray_network_security_sni").value;
 			}else{
 				dbus["ssconf_basic_v2ray_network_security_ai_" + node_sel] = "";
 				dbus["ssconf_basic_v2ray_network_security_alpn_h2_" + node_sel] = "";
 				dbus["ssconf_basic_v2ray_network_security_alpn_http_" + node_sel] = "";
-				dbus["ssconf_basic_v2ray_network_security_alpn_http_" + node_sel] = "";
+				dbus["ssconf_basic_v2ray_network_security_sni_" + node_sel] = "";
+			}
+			dbus["ssconf_basic_v2ray_mux_enable_" + node_sel] = E("ss_basic_v2ray_mux_enable").checked ? '1' : '';
+			if(E("ss_basic_v2ray_mux_enable").checked == false){
+				dbus["ssconf_basic_v2ray_mux_concurrency_" + node_sel] = "";
+			}else{
+				dbus["ssconf_basic_v2ray_mux_concurrency_" + node_sel] = E("ss_basic_v2ray_mux_concurrency").value;
 			}
 		}
 	}
@@ -491,6 +497,7 @@ function save() {
 			}
 			if(E("ss_basic_xray_network").value == "kcp"){
 				dbus["ssconf_basic_xray_headtype_kcp_" + node_sel] = E("ss_basic_xray_headtype_kcp").value;
+				dbus["ssconf_basic_xray_kcp_seed_" + node_sel] = E("ss_basic_xray_kcp_seed").value;
 			}
 			if(E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2"){
 				dbus["ssconf_basic_xray_network_host_" + node_sel] = E("ss_basic_xray_network_host").value;
@@ -511,13 +518,13 @@ function save() {
 				dbus["ssconf_basic_xray_network_security_ai_" + node_sel] = E("ss_basic_xray_network_security_ai").checked ? '1' : '';
 				dbus["ssconf_basic_xray_network_security_alpn_h2_" + node_sel] = E("ss_basic_xray_network_security_alpn_h2").checked ? '1' : '';
 				dbus["ssconf_basic_xray_network_security_alpn_http_" + node_sel] = E("ss_basic_xray_network_security_alpn_http").checked ? '1' : '';
-				dbus["ssconf_basic_xray_network_security_alpn_http_" + node_sel] = E("ss_basic_xray_network_security_sni").value;
+				dbus["ssconf_basic_xray_network_security_sni_" + node_sel] = E("ss_basic_xray_network_security_sni").value;
 			}else if(E("ss_basic_xray_network_security").value == "xtls"){
 				dbus["ssconf_basic_xray_flow_" + node_sel] = E("ss_basic_xray_flow").value;
 				dbus["ssconf_basic_xray_network_security_ai_" + node_sel] = E("ss_basic_xray_network_security_ai").checked ? '1' : '';
 				dbus["ssconf_basic_xray_network_security_alpn_h2_" + node_sel] = E("ss_basic_xray_network_security_alpn_h2").checked ? '1' : '';
 				dbus["ssconf_basic_xray_network_security_alpn_http_" + node_sel] = E("ss_basic_xray_network_security_alpn_http").checked ? '1' : '';
-				dbus["ssconf_basic_xray_network_security_alpn_http_" + node_sel] = E("ss_basic_xray_network_security_sni").value;
+				dbus["ssconf_basic_xray_network_security_sni_" + node_sel] = E("ss_basic_xray_network_security_sni").value;
 			}else{
 				dbus["ssconf_basic_xray_flow_" + node_sel] = "";
 				dbus["ssconf_basic_xray_network_security_ai_" + node_sel] = "";
@@ -530,19 +537,19 @@ function save() {
 	
 	// adjust some value when switch node between ss ssr v2ray koolgame
 	// if (db_ss["ssconf_basic_type_" + node_sel] =="0" ){
-	// 	var remove_ss = ["rss_obfs", "rss_obfs_param", "rss_protocol", "rss_protocol_param", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json", "xray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json"];
+	// 	var remove_ss = ["rss_obfs", "rss_obfs_param", "rss_protocol", "rss_protocol_param", "koolgame_udp", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json", "xray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json"];
 	// 	for (var i = 0; i < remove_ss.length; i++) {
 	// 		dbus["ss_basic_" + remove_ss[i]] = "";
 	// 		dbus["ssconf_basic_" + remove_ss[i] + "_" + node_sel] = "";
 	// 	}
 	// }else if (db_ss["ssconf_basic_type_" + node_sel] =="1" ){
-	// 	var remove_sr = ["ss_obfs", "ss_obfs_host", "koolgame_udp", "ss_v2ray", "ss_v2ray_opts", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json", "xray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json"];		
+	// 	var remove_sr = ["ss_obfs", "ss_obfs_host", "koolgame_udp", "ss_v2ray", "ss_v2ray_opts", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json", "xray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json"];		
 	// 	for (var i = 0; i < remove_sr.length; i++) {
 	// 		dbus["ss_basic_" + remove_sr[i]] = "";
 	// 		dbus["ssconf_basic_" + remove_sr[i] + "_" + node_sel] = "";
 	// 	}
 	// }else if (db_ss["ssconf_basic_type_" + node_sel] =="2" ){
-	// 	var remove_kg = ["ss_obfs", "ss_obfs_host", "rss_obfs", "rss_obfs_param", "rss_protocol", "rss_protocol_param", "ss_v2ray", "ss_v2ray_opts", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json", "xray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json"];		
+	// 	var remove_kg = ["ss_obfs", "ss_obfs_host", "rss_obfs", "rss_obfs_param", "rss_protocol", "rss_protocol_param", "ss_v2ray", "ss_v2ray_opts", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json", "xray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json"];		
 	// 	for (var i = 0; i < remove_kg.length; i++) {
 	// 		dbus["ss_basic_" + remove_kg[i]] = "";
 	// 		dbus["ssconf_basic_" + remove_kg[i] + "_" + node_sel] = "";
@@ -554,7 +561,7 @@ function save() {
 	// 		dbus["ssconf_basic_" + remove_vr[i] + "_" + node_sel] = "";
 	// 	}
 	// }else if (db_ss["ssconf_basic_type_" + node_sel] =="4" ){
-	// 	var remove_xr = ["method", "password", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_obfs", "rss_obfs_param", "rss_protocol", "rss_protocol_param", "ss_v2ray", "ss_v2ray_opts", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
+	// 	var remove_xr = ["method", "password", "ss_obfs", "ss_obfs_host", "koolgame_udp", "rss_obfs", "rss_obfs_param", "rss_protocol", "rss_protocol_param", "ss_v2ray", "ss_v2ray_opts", "v2ray_use_json", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_enable", "v2ray_mux_concurrency", "v2ray_json"];
 	// 	for (var i = 0; i < remove_xr.length; i++) {
 	// 		dbus["ss_basic_" + remove_xr[i]] = "";
 	// 		dbus["ssconf_basic_" + remove_xr[i] + "_" + node_sel] = "";
@@ -663,8 +670,6 @@ function verifyFields(r) {
 	var x_path_on = E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2" || E("ss_basic_xray_network").value == "quic" || E("ss_basic_xray_network").value == "grpc" || x_http_on;
 	var x_tls_on = E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls";
 	var x_xtls_on = E("ss_basic_xray_network_security").value == "xtls";
-	console.log("v2ray_on: ", v2ray_on);
-	console.log("xray_on: ", xray_on);
 	//ss-libev
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
@@ -690,6 +695,7 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_v2ray_network', 'tr'), (v2ray_on && v_json_off));
 	elem.display(elem.parentElem('ss_basic_v2ray_headtype_tcp', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "tcp"));
 	elem.display(elem.parentElem('ss_basic_v2ray_headtype_kcp', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "kcp"));
+	elem.display(elem.parentElem('ss_basic_v2ray_kcp_seed', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "kcp"));
 	elem.display(elem.parentElem('ss_basic_v2ray_headtype_quic', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "quic"));
 	elem.display(elem.parentElem('ss_basic_v2ray_grpc_mode', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "grpc"));
 	elem.display(elem.parentElem('ss_basic_v2ray_network_host', 'tr'), (v2ray_on && v_json_off && v_host_on));
@@ -710,6 +716,7 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_xray_network', 'tr'), (xray_on && x_json_off));
 	elem.display(elem.parentElem('ss_basic_xray_headtype_tcp', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "tcp"));
 	elem.display(elem.parentElem('ss_basic_xray_headtype_kcp', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "kcp"));
+	elem.display(elem.parentElem('ss_basic_xray_kcp_seed', 'tr'), (xray_on && v_json_off && E("ss_basic_xray_network").value == "kcp"));
 	elem.display(elem.parentElem('ss_basic_xray_headtype_quic', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "quic"));
 	elem.display(elem.parentElem('ss_basic_xray_grpc_mode', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "grpc"));
 	elem.display(elem.parentElem('ss_basic_xray_network_host', 'tr'), (xray_on && x_json_off && x_host_on));
@@ -745,6 +752,7 @@ function verifyFields(r) {
 			E('v2ray_grpc_mode_tr').style.display = "none";
 			E('v2ray_network_path_tr').style.display = "none";
 			E('v2ray_network_host_tr').style.display = "none";
+			E('v2ray_kcp_seed_tr').style.display = "none";
 			E('v2ray_network_security_tr').style.display = "none";
 			E('v2ray_network_security_ai_tr').style.display = "none";
 			E('v2ray_network_security_alpn_tr').style.display = "none";
@@ -766,9 +774,10 @@ function verifyFields(r) {
 			E('v2ray_grpc_mode_tr').style.display = "";
 			E('v2ray_network_path_tr').style.display = "";
 			E('v2ray_network_host_tr').style.display = "";
+			E('v2ray_kcp_seed_tr').style.display = "none";
 			E('v2ray_network_security_tr').style.display = "";
-			E('v2ray_network_security_ai_tr').style.display = "";
-			E('v2ray_network_security_alpn_tr').style.display = "";
+			E('v2ray_network_security_ai_tr').style.display = "none";
+			E('v2ray_network_security_alpn_tr').style.display = "none";
 			E('v2ray_network_security_sni_tr').style.display = "none";
 			E('v2ray_mux_enable_tr').style.display = "";
 			E('v2ray_mux_concurrency_tr').style.display = "";
@@ -779,6 +788,7 @@ function verifyFields(r) {
 			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls" || E("ss_node_table_v2ray_network_security").value == "xtls";
 			showhide("v2ray_headtype_tcp_tr", (E("ss_node_table_v2ray_network").value == "tcp"));
 			showhide("v2ray_headtype_kcp_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
+			showhide("v2ray_kcp_seed_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
 			showhide("v2ray_headtype_quic_tr", (E("ss_node_table_v2ray_network").value == "quic"));
 			showhide("v2ray_grpc_mode_tr", (E("ss_node_table_v2ray_network").value == "grpc"));
 			showhide("v2ray_network_host_tr", v_host_on_2);
@@ -805,6 +815,7 @@ function verifyFields(r) {
 			E('xray_grpc_mode_tr').style.display = "none";
 			E('xray_network_path_tr').style.display = "none";
 			E('xray_network_host_tr').style.display = "none";
+			E('xray_kcp_seed_tr').style.display = "none";
 			E('xray_network_security_tr').style.display = "none";
 			E('xray_network_security_ai_tr').style.display = "none";
 			E('xray_network_security_alpn_tr').style.display = "none";
@@ -824,6 +835,7 @@ function verifyFields(r) {
 			E('xray_grpc_mode_tr').style.display = "";
 			E('xray_network_path_tr').style.display = "";
 			E('xray_network_host_tr').style.display = "";
+			E('xray_kcp_seed_tr').style.display = "none";
 			E('xray_network_security_tr').style.display = "";
 			E('xray_network_security_ai_tr').style.display = "";
 			E('xray_network_security_alpn_tr').style.display = "";
@@ -836,6 +848,7 @@ function verifyFields(r) {
 			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
 			showhide("xray_headtype_tcp_tr", (E("ss_node_table_xray_network").value == "tcp"));
 			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
+			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
 			showhide("xray_grpc_mode_tr", (E("ss_node_table_xray_network").value == "grpc"));
 			showhide("xray_network_host_tr", x_host_on_2);
@@ -953,19 +966,32 @@ function update_visibility() {
 	showhide("ss_basic_server_resolver_user", h);
 	showhide("ss_chinadns_user", (f == "2"));
 	showhide("ss_dns2socks_user", (f == "3"));
+	showhide("ss_v2_note", (f == "7"));
+	showhide("ss_doh_note", (f == "6"));
 	showhide("ss_disable_aaaa", (f == "10"));
+	showhide("ss_disable_aaaa_note", (f == "10"));
 	showhide("ss_sstunnel_user", (f == "4"));
+	showhide("ss_sstunnel_user_note", (f == "4"));
 	showhide("ss_chinadns1_user", (f == "5"));
 	showhide("ss_direct_user", (f == "8"));
+	showhide("ss_direct_user_note", (f == "8"));
 	showhide("ss_basic_tri_reboot_time_note", (g != "0"));
 	showhide("ss_basic_ping_method", i);
 	showhide("ss_basic_ping_btn", i);
-	if(f == "6"){
-		$("#ss_foreign_dns_note").html('DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~');
-	}else if(f == "7"){
-		$("#ss_foreign_dns_note").html('v2ray_dns只有启用v2ray节点的时能使用');
+	var type = obj_node["ss_basic_type"];
+	console.log(type);
+	if(type == "3"){
+		$("#ss_v2_note").html('&nbsp;&nbsp;v2ray_dns只有启用v2ray节点的时能使用</span>');
+		$('#ss_foreign_dns option:contains("v2ray/xray_dns")').text('v2ray_dns');
+		$('#ss_foreign_dns option:contains("xray_dns")').text('v2ray_dns');
+	}else if(type == "4"){
+		$("#ss_v2_note").html('&nbsp;&nbsp;xray_dns只有启用xray节点的时能使用</span>');
+		$('#ss_foreign_dns option:contains("v2ray/xray_dns")').text('xray_dns');
+		$('#ss_foreign_dns option:contains("v2ray_dns")').text('xray_dns');
 	}else{
-		$("#ss_foreign_dns_note").html('');
+		$("#ss_v2_note").html('&nbsp;&nbsp;v2ray/xray_dns只有启用v2ray/xray节点的时能使用</span>');
+		$('#ss_foreign_dns option:contains("xray_dns")').text('v2ray/xray_dns');
+		$('#ss_foreign_dns option:contains("v2ray_dns")').text('v2ray/xray_dns');
 	}
 }
 function Add_profile() { //点击节点页面内添加节点动作
@@ -1047,6 +1073,7 @@ function tabclickhandler(_type) {
 		E('v2ray_grpc_mode_tr').style.display = "none";
 		E('v2ray_network_path_tr').style.display = "none";
 		E('v2ray_network_host_tr').style.display = "none";
+		E('v2ray_kcp_seed_tr').style.display = "none";
 		E('v2ray_network_security_tr').style.display = "none";
 		E('v2ray_network_security_ai_tr').style.display = "none";
 		E('v2ray_network_security_alpn_tr').style.display = "none";
@@ -1065,6 +1092,7 @@ function tabclickhandler(_type) {
 		E('xray_grpc_mode_tr').style.display = "none";
 		E('xray_network_path_tr').style.display = "none";
 		E('xray_network_host_tr').style.display = "none";
+		E('xray_kcp_seed_tr').style.display = "none";
 		E('xray_network_security_tr').style.display = "none";
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
@@ -1104,6 +1132,7 @@ function tabclickhandler(_type) {
 		E('v2ray_grpc_mode_tr').style.display = "none";
 		E('v2ray_network_path_tr').style.display = "none";
 		E('v2ray_network_host_tr').style.display = "none";
+		E('v2ray_kcp_seed_tr').style.display = "none";
 		E('v2ray_network_security_tr').style.display = "none";
 		E('v2ray_network_security_ai_tr').style.display = "none";
 		E('v2ray_network_security_alpn_tr').style.display = "none";
@@ -1122,6 +1151,7 @@ function tabclickhandler(_type) {
 		E('xray_grpc_mode_tr').style.display = "none";
 		E('xray_network_path_tr').style.display = "none";
 		E('xray_network_host_tr').style.display = "none";
+		E('xray_kcp_seed_tr').style.display = "none";
 		E('xray_network_security_tr').style.display = "none";
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
@@ -1157,6 +1187,7 @@ function tabclickhandler(_type) {
 		E('v2ray_grpc_mode_tr').style.display = "none";
 		E('v2ray_network_path_tr').style.display = "none";
 		E('v2ray_network_host_tr').style.display = "none";
+		E('v2ray_kcp_seed_tr').style.display = "none";
 		E('v2ray_network_security_tr').style.display = "none";
 		E('v2ray_network_security_ai_tr').style.display = "none";
 		E('v2ray_network_security_alpn_tr').style.display = "none";
@@ -1175,6 +1206,7 @@ function tabclickhandler(_type) {
 		E('xray_grpc_mode_tr').style.display = "none";
 		E('xray_network_path_tr').style.display = "none";
 		E('xray_network_host_tr').style.display = "none";
+		E('xray_kcp_seed_tr').style.display = "none";
 		E('xray_network_security_tr').style.display = "none";
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
@@ -1208,6 +1240,7 @@ function tabclickhandler(_type) {
 		E('v2ray_grpc_mode_tr').style.display = "";
 		E('v2ray_network_path_tr').style.display = "";
 		E('v2ray_network_host_tr').style.display = "";
+		E('v2ray_kcp_seed_tr').style.display = "";
 		E('v2ray_network_security_tr').style.display = "";
 		E('v2ray_network_security_ai_tr').style.display = "";
 		E('v2ray_network_security_alpn_tr').style.display = "";
@@ -1226,6 +1259,7 @@ function tabclickhandler(_type) {
 		E('xray_grpc_mode_tr').style.display = "none";
 		E('xray_network_path_tr').style.display = "none";
 		E('xray_network_host_tr').style.display = "none";
+		E('xray_kcp_seed_tr').style.display = "none";
 		E('xray_network_security_tr').style.display = "none";
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
@@ -1245,6 +1279,7 @@ function tabclickhandler(_type) {
 			E('v2ray_grpc_mode_tr').style.display = "none";
 			E('v2ray_network_path_tr').style.display = "none";
 			E('v2ray_network_host_tr').style.display = "none";
+			E('v2ray_kcp_seed_tr').style.display = "none";
 			E('v2ray_network_security_tr').style.display = "none";
 			E('v2ray_network_security_ai_tr').style.display = "none";
 			E('v2ray_network_security_alpn_tr').style.display = "none";
@@ -1266,6 +1301,7 @@ function tabclickhandler(_type) {
 			E('v2ray_grpc_mode_tr').style.display = "";
 			E('v2ray_network_path_tr').style.display = "";
 			E('v2ray_network_host_tr').style.display = "";
+			E('v2ray_kcp_seed_tr').style.display = "";
 			E('v2ray_network_security_tr').style.display = "";
 			E('v2ray_network_security_ai_tr').style.display = "";
 			E('v2ray_network_security_alpn_tr').style.display = "";
@@ -1279,6 +1315,7 @@ function tabclickhandler(_type) {
 			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls";
 			showhide("v2ray_headtype_tcp_tr", (E("ss_node_table_v2ray_network").value == "tcp"));
 			showhide("v2ray_headtype_kcp_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
+			showhide("v2ray_kcp_seed_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
 			showhide("v2ray_headtype_quic_tr", (E("ss_node_table_v2ray_network").value == "quic"));
 			showhide("v2ray_grpc_mode_tr", (E("ss_node_table_v2ray_network").value == "grpc"));
 			showhide("v2ray_network_host_tr", v_host_on_2);
@@ -1317,6 +1354,7 @@ function tabclickhandler(_type) {
 		E('v2ray_grpc_mode_tr').style.display = "none";
 		E('v2ray_network_path_tr').style.display = "none";
 		E('v2ray_network_host_tr').style.display = "none";
+		E('v2ray_kcp_seed_tr').style.display = "none";
 		E('v2ray_network_security_tr').style.display = "none";
 		E('v2ray_network_security_ai_tr').style.display = "none";
 		E('v2ray_network_security_alpn_tr').style.display = "none";
@@ -1335,6 +1373,7 @@ function tabclickhandler(_type) {
 		E('xray_grpc_mode_tr').style.display = "";
 		E('xray_network_path_tr').style.display = "";
 		E('xray_network_host_tr').style.display = "";
+		E('xray_kcp_seed_tr').style.display = "";
 		E('xray_network_security_tr').style.display = "";
 		E('xray_network_security_ai_tr').style.display = "";
 		E('xray_network_security_alpn_tr').style.display = "";
@@ -1354,6 +1393,7 @@ function tabclickhandler(_type) {
 			E('xray_grpc_mode_tr').style.display = "none";
 			E('xray_network_path_tr').style.display = "none";
 			E('xray_network_host_tr').style.display = "none";
+			E('xray_kcp_seed_tr').style.display = "none";
 			E('xray_network_security_tr').style.display = "none";
 			E('xray_network_security_ai_tr').style.display = "none";
 			E('xray_network_security_alpn_tr').style.display = "none";
@@ -1373,6 +1413,7 @@ function tabclickhandler(_type) {
 			E('xray_grpc_mode_tr').style.display = "";
 			E('xray_network_path_tr').style.display = "";
 			E('xray_network_host_tr').style.display = "";
+			E('xray_kcp_seed_tr').style.display = "";
 			E('xray_network_security_tr').style.display = "";
 			E('xray_network_security_ai_tr').style.display = "";
 			E('xray_network_security_alpn_tr').style.display = "";
@@ -1385,6 +1426,7 @@ function tabclickhandler(_type) {
 			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
 			showhide("xray_headtype_tcp_tr", (E("ss_node_table_xray_network").value == "tcp"));
 			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
+			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
 			showhide("xray_grpc_mode_tr", (E("ss_node_table_xray_network").value == "grpc"));
 			showhide("xray_network_host_tr", x_host_on_2);
@@ -1405,7 +1447,7 @@ function add_ss_node_conf(flag) {
 	var params1 = ["mode", "name", "server", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts"];
 	var params2 = ["mode", "name", "server", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 	var params3 = ["mode", "name", "server", "port", "method", "koolgame_udp"];
-	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
+	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
 	var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 	var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni"]; //for xray
 	var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
@@ -1529,7 +1571,7 @@ function remove_conf_table(o) {
 
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -1580,7 +1622,7 @@ function edit_conf_table(o) {
 	var c = confs[id];
 	var params1_base64 = ["password"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -1665,7 +1707,7 @@ function edit_ss_node_conf(flag) {
 	var params1 = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts"];
 	var params2 = ["name", "server", "mode", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 	var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"]
-	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
+	var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
 	var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 	var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni"]; //for xray
 	var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
@@ -1805,7 +1847,7 @@ function generate_node_info() {
 			obj["type"] = db_ss["ssconf_basic_type_" + idx];
 		}
 		//这些值统一处理
-		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json", "xray_use_json"];
+		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json", "xray_use_json"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + idx;
 			if (typeof db_ss[ofield] == "undefined") {
@@ -2096,7 +2138,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -2669,7 +2711,8 @@ function toggle_func() {
 		function() {
 			tabSelect(0);
 			$('#apply_button').show();
-			//ss_node_sel();
+			ss_node_sel();
+			showhide("table_basic", (node_max != 0));
 		});
 	$(".show-btn1").click(
 		function() {
@@ -3710,6 +3753,7 @@ function save_failover() {
 																	{ title: '* grpc模式', rid:'v2ray_grpc_mode_tr', id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
 																	{ title: '* 伪装域名 (host)', rid:'v2ray_network_host_tr', id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:338px'},
 																	{ title: '* 路径 (path)', rid:'v2ray_network_path_tr', id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
+																	{ title: '* kcp seed', rid:'v2ray_kcp_seed_tr', id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
 																	{ title: '底层传输安全', rid:'v2ray_network_security_tr', id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:350px', value: "none"},
 																	{ title: '* 跳过证书验证 (AllowInsecure)', rid:'v2ray_network_security_ai_tr', id:'ss_node_table_v2ray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
 																	{ title: '* alpn', rid:'v2ray_network_security_alpn_tr', multi: [
@@ -3731,6 +3775,7 @@ function save_failover() {
 																	{ title: '* grpc模式', rid:'xray_grpc_mode_tr', id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
 																	{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:338px'},
 																	{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
+																	{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
 																	{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"]], style:'width:350px', value: "none"},
 																	{ title: '* 跳过证书验证 (AllowInsecure)', rid:'xray_network_security_ai_tr', id:'ss_node_table_xray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
 																	{ title: '* alpn', rid:'xray_network_security_alpn_tr', multi: [
@@ -3785,6 +3830,7 @@ function save_failover() {
 														{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', type:'select', options:option_grpcmode},
 														{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
 														{ title: '* 路径 (path)', id:'ss_basic_v2ray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+														{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
 														{ title: '底层传输安全', id:'ss_basic_v2ray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"]]},
 														{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_v2ray_network_security_ai', type:'checkbox', hint:'56'},
 														{ title: '* alpn', id:'ss_basic_v2ray_network_security_alpn', multi: [
@@ -3805,6 +3851,7 @@ function save_failover() {
 														{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', type:'select', options:option_grpcmode},
 														{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
 														{ title: '* 路径 (path)', id:'ss_basic_xray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+														{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
 														{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"]]},
 														{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', hint:'56'},
 														{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', multi: [
@@ -3895,7 +3942,7 @@ function save_failover() {
 											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
 													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "SmartDNS"], ["12", "自定义DNS"]];
-													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["10", "chinadns-ng"], ["6", "https_dns_proxy"], ["7", "v2ray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
+													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["10", "chinadns-ng"], ["6", "https_dns_proxy"], ["7", "v2ray/xray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
 													var option_dnsr = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "google DNS1【8.8.8.8】"], ["14", "google DNS2【8.8.4.4】"], ["15", "IBM DNS【9.9.9.9】"], ["12", "自定义DNS"]];
 													var ph1 = "需端口号如：8.8.8.8:53"
 													var ph2 = "需端口号如：8.8.8.8#53"
@@ -3912,8 +3959,11 @@ function save_failover() {
 															{ id: 'ss_chinadns_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
 															{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
 															{ id: 'ss_direct_user', type: 'text', value:'8.8.8.8#53', ph:ph2 },
-															{ prefix: '&nbsp;&nbsp;丢弃AAAA记录（禁止解析到ipv6地址）', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
-															{ suffix: '&nbsp;&nbsp;<span id="ss_foreign_dns_note"></span>' },
+															{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},
+															{ prefix: '<span id="ss_direct_user_note">&nbsp;&nbsp;请自行解决DNS污染问题</span>'},
+															{ prefix: '<span id="ss_disable_aaaa_note">&nbsp;&nbsp;丢弃AAAA记录（禁止解析到ipv6地址）</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
+															{ suffix: '<span id="ss_doh_note">&nbsp;&nbsp;DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~</span>' },
+															{ suffix: '<span id="ss_v2_note"></span>' },
 														]},
 														{ title: '选择外国DNS', rid:'dns_plan_foreign_game2', multi: [
 															{ id: 'ss_game2_dns_foreign', type:'select', func:'u', disabled:'1', options:[["1", "koolgame内置"]], style:'width:auto;'},

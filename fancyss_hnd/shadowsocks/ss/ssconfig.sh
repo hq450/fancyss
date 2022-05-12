@@ -759,7 +759,7 @@ start_dns() {
 
 	# start v2ray DNSF_PORT
 	if [ "$ss_foreign_dns" == "7" ]; then
-		if [ "$ss_basic_type" == "3" ]; then
+		if [ "$ss_basic_type" == "3" -o "$ss_basic_type" == "4" ]; then
 			return 0
 		else
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持${VCORE_NAME} dns，改用dns2socks！
@@ -1338,6 +1338,23 @@ start_koolgame() {
 	fi
 }
 
+get_path_empty() {
+	if [ -n "$1" ]; then
+		echo [\"$1\"]
+	else
+		echo [\"/\"]
+	fi
+}
+
+
+get_host_empty() {
+	if [ -n "$1" ]; then
+		echo [\"$1\"]
+	else
+		echo [\"\"]
+	fi
+}
+
 get_function_switch() {
 	case "$1" in
 	1)
@@ -1352,10 +1369,10 @@ get_function_switch() {
 get_grpc_multimode(){
 	case "$1" in
 	multi)
-		echo "true"
+		echo true
 		;;
 	gun|*)
-		echo "false"
+		echo false
 		;;
 	esac
 }
@@ -1364,7 +1381,7 @@ get_ws_header() {
 	if [ -n "$1" ]; then
 		echo {\"Host\": \"$1\"}
 	else
-		echo "null"
+		echo null
 	fi
 }
 
@@ -1372,23 +1389,24 @@ get_host() {
 	if [ -n "$1" ]; then
 		echo [\"$1\"]
 	else
-		echo "null"
+		echo null
 	fi
 }
+
 
 get_value_null(){
 	if [ -n "$1" ]; then
 		echo \"$1\"
 	else
-		echo "null"
+		echo null
 	fi
 }
 
-get_value_null2(){
+get_value_empty(){
 	if [ -n "$1" ]; then
 		echo \"$1\"
 	else
-		echo null
+		echo \"\"
 	fi
 }
 
@@ -1406,7 +1424,7 @@ creat_v2ray_json() {
 	local tmp v2ray_server_ip
 	rm -rf "$V2RAY_CONFIG_FILE_TMP"
 	rm -rf "$V2RAY_CONFIG_FILE"
-	if [ "$ss_basic_v2ray_use_json" != "1" ]; then
+	if [ "${ss_basic_v2ray_use_json}" != "1" ]; then
 		echo_date 生成${VCORE_NAME}配置文件...
 		local tcp="null"
 		local kcp="null"
@@ -1424,8 +1442,15 @@ creat_v2ray_json() {
 			local ss_basic_v2ray_mux_concurrency="-1"
 		fi
 		
+		if [ -z "$ss_basic_v2ray_network_security" ];then
+			local ss_basic_v2ray_network_security="none"
+		fi
+
 		if [ "$ss_basic_v2ray_network_security" == "none" ];then
-			local ss_basic_v2ray_network_security=""
+			ss_basic_v2ray_network_security_ai=""
+			ss_basic_v2ray_network_security_alpn_h2=""
+			ss_basic_v2ray_network_security_alpn_http=""
+			ss_basic_v2ray_network_security_sni=""
 		fi
 
 		local alpn_h2=${ss_basic_v2ray_network_security_alpn_h2}
@@ -1441,19 +1466,20 @@ creat_v2ray_json() {
 			local apln="null"
 		fi
 
+		# 如果sni空，host不空，用host代替
 		if [ -z "${ss_basic_v2ray_network_security_sni}" ];then
 			if [ -n "${ss_basic_v2ray_network_host}" ];then
 				local ss_basic_v2ray_network_security_sni="${ss_basic_v2ray_network_host}"
 			else
-				local ss_basic_v2ray_network_security_sni="null"
+				local ss_basic_v2ray_network_security_sni=""
 			fi
 		fi
 
 		if [ "${ss_basic_v2ray_network_security}" == "tls" ];then
 			local tls="{
-					\"allowInsecure\": $(get_function_switch $ss_basic_v2ray_network_security_ai),
-					\"alpn\": ${apln},
-					\"serverName\": \"${ss_basic_v2ray_network_security_sni}\"
+					\"allowInsecure\": $(get_function_switch $ss_basic_v2ray_network_security_ai)
+					,\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null $ss_basic_v2ray_network_security_sni)
 					}"
 		else
 			local tls="null"
@@ -1469,21 +1495,20 @@ creat_v2ray_json() {
 			if [ "$ss_basic_v2ray_headtype_tcp" == "http" ]; then
 				local tcp="{
 					\"header\": {
-					\"type\": \"http\",
-					\"request\": {
-					\"version\": \"1.1\",
-					\"method\": \"GET\",
-					\"path\": [\"$(get_value_null $ss_basic_v2ray_network_path)\"],
-					\"headers\": {
-					\"Host\": [\"www.kooldog.me\"],
-					\"Host\": [\"${ss_basic_v2ray_network_host}\"],
+					\"type\": \"http\"
+					,\"request\": {
+					\"version\": \"1.1\"
+					,\"method\": \"GET\"
+					,\"path\": $(get_path_empty $ss_basic_v2ray_network_path)
+					,\"headers\": {
+					\"Host\": $(get_host_empty $ss_basic_v2ray_network_host),
 					\"User-Agent\": [
-					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\",
-					\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
-					],
-					\"Accept-Encoding\": [\"gzip, deflate\"],
-					\"Connection\": [\"keep-alive\"],
-					\"Pragma\": \"no-cache\"
+					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
+					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
+					]
+					,\"Accept-Encoding\": [\"gzip, deflate\"]
+					,\"Connection\": [\"keep-alive\"]
+					,\"Pragma\": \"no-cache\"
 					}
 					}
 					}
@@ -1494,35 +1519,48 @@ creat_v2ray_json() {
 			;;
 		kcp)
 			local kcp="{
-				\"mtu\": 1350,
-				\"tti\": 50,
-				\"uplinkCapacity\": 12,
-				\"downlinkCapacity\": 100,
-				\"congestion\": false,
-				\"readBufferSize\": 2,
-				\"writeBufferSize\": 2,
-				\"header\": {
-				\"type\": \"$ss_basic_v2ray_headtype_kcp\",
-				},
-				\"seed\": \"$(get_value_null $ss_basic_v2ray_network_path)\"
+				\"mtu\": 1350
+				,\"tti\": 50
+				,\"uplinkCapacity\": 12
+				,\"downlinkCapacity\": 100
+				,\"congestion\": false
+				,\"readBufferSize\": 2
+				,\"writeBufferSize\": 2
+				,\"header\": {
+				\"type\": \"$ss_basic_v2ray_headtype_kcp\"
+				}
+				,\"seed\": $(get_value_null $ss_basic_v2ray_kcp_seed)
 				}"
 			;;
 		ws)
-			local ws="{
-				\"path\": $(get_value_null $ss_basic_v2ray_network_path),
-				\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
-				}"
+			if [ -z "$ss_basic_v2ray_network_path" -a -z "$ss_basic_v2ray_network_host" ]; then
+				local ws="{}"
+			elif [ -z "$ss_basic_v2ray_network_path" -a -n "$ss_basic_v2ray_network_host" ]; then
+				local ws="{
+					\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
+					}"
+			elif [ -n "$ss_basic_v2ray_network_path" -a -z "$ss_basic_v2ray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_v2ray_network_path)
+					}"
+			elif [ -n "$ss_basic_v2ray_network_path" -a -n "$ss_basic_v2ray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_v2ray_network_path),
+					\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
+					}"
+			fi
 			;;
 		h2)
+
 			local h2="{
-				\"path\": $(get_value_null $ss_basic_v2ray_network_path),
-				\"host\": $(get_host $ss_basic_v2ray_network_host)
+				\"path\": $(get_value_empty $ss_basic_v2ray_network_path)
+				,\"host\": $(get_host $ss_basic_v2ray_network_host)
 				}"
 			;;
 		quic)
 			local qc="{
-				\"security\": \"${ss_basic_v2ray_network_host}\",
-				\"key\": $(get_value_null $ss_basic_v2ray_network_path),
+				\"security\": $(get_value_empty $ss_basic_v2ray_network_host),
+				\"key\": $(get_value_empty $ss_basic_v2ray_network_path),
 				\"header\": {
 				\"type\": \"${ss_basic_v2ray_headtype_quic}\"
 				}
@@ -1530,13 +1568,13 @@ creat_v2ray_json() {
 			;;
 		grpc)
 			local gr="{
-				\"serviceName\": $(get_value_null $ss_basic_v2ray_network_path),
+				\"serviceName\": $(get_value_empty $ss_basic_v2ray_network_path),
 				\"multiMode\": $(get_grpc_multimode ${ss_basic_v2ray_grpc_mode})
 				}"
 			;;
 		esac
 		# log area
-		cat >"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+		cat >"${V2RAY_CONFIG_FILE_TMP}" <<-EOF
 			{
 			"log": {
 				"access": "/dev/null",
@@ -1545,13 +1583,13 @@ creat_v2ray_json() {
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
-		if [ "$ss_foreign_dns" == "7" ]; then
+		if [ "${ss_foreign_dns}" == "7" ]; then
 			echo_date 配置${VCORE_NAME} dns，用于dns解析...
-			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+			cat >>"${V2RAY_CONFIG_FILE_TMP}" <<-EOF
 				"inbounds": [
 					{
 					"protocol": "dokodemo-door",
-					"port": $DNSF_PORT,
+					"port": ${DNSF_PORT},
 					"settings": {
 						"address": "8.8.8.8",
 						"port": 53,
@@ -1582,10 +1620,8 @@ creat_v2ray_json() {
 						"settings": {
 							"auth": "noauth",
 							"udp": true,
-							"ip": "127.0.0.1",
-							"clients": null
-						},
-						"streamSettings": null
+							"ip": "127.0.0.1"
+						}
 					},
 					{
 						"listen": "0.0.0.0",
@@ -1612,24 +1648,24 @@ creat_v2ray_json() {
 								"port": $ss_basic_port,
 								"users": [
 									{
-										"id": "$ss_basic_v2ray_uuid",
-										"alterId": $ss_basic_v2ray_alterid,
-										"security": "$ss_basic_v2ray_security"
+										"id": "$ss_basic_v2ray_uuid"
+										,"alterId": $ss_basic_v2ray_alterid
+										,"security": "$ss_basic_v2ray_security"
 									}
 								]
 							}
 						]
 					},
 					"streamSettings": {
-						"network": "$ss_basic_v2ray_network",
-						"security": "$ss_basic_v2ray_network_security",
-						"tlsSettings": $tls,
-						"tcpSettings": $tcp,
-						"kcpSettings": $kcp,
-						"wsSettings": $ws,
-						"httpSettings": $h2,
-						"quicSettings": $qc,
-						"grpcSettings": $gr
+						"network": "$ss_basic_v2ray_network"
+						,"security": "$ss_basic_v2ray_network_security"
+						,"tlsSettings": $tls
+						,"tcpSettings": $tcp
+						,"kcpSettings": $kcp
+						,"wsSettings": $ws
+						,"httpSettings": $h2
+						,"quicSettings": $qc
+						,"grpcSettings": $gr
 					},
 					"mux": {
 						"enabled": $(get_function_switch $ss_basic_v2ray_mux_enable),
@@ -1640,7 +1676,8 @@ creat_v2ray_json() {
 			}
 		EOF
 		echo_date 解析${VCORE_NAME}配置文件...
-		jq --tab . $V2RAY_CONFIG_FILE_TMP >/tmp/jq_para_tmp.txt 2>&1
+		sed -i '/null/d' ${V2RAY_CONFIG_FILE_TMP} 2>/dev/null
+		jq --tab . ${V2RAY_CONFIG_FILE_TMP} >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -1913,8 +1950,19 @@ creat_xray_json() {
 		local tls="null"
 		local xtls="null"
 
+		if [ -z "$ss_basic_xray_network_security" ];then
+			local ss_basic_xray_network_security="none"
+		fi
+
 		if [ "${ss_basic_xray_network_security}" == "none" ];then
-			ss_basic_xray_network_security=""
+			ss_basic_xray_flow=""
+			ss_basic_xray_network_security_ai=""
+			ss_basic_xray_network_security_alpn_h2=""
+			ss_basic_xray_network_security_alpn_http=""
+			ss_basic_xray_network_security_sni=""
+		fi
+
+		if [ "${ss_basic_xray_network_security}" == "tls" ];then
 			ss_basic_xray_flow=""
 		fi
 
@@ -1930,20 +1978,20 @@ creat_xray_json() {
 			local apln="null"
 		fi
 
-		#if [ -z "${ss_basic_xray_network_security_sni}" ];then
-		#	if [ -n "${ss_basic_xray_network_host}" ];then
-		#		local ss_basic_xray_network_security_sni="${ss_basic_xray_network_host}"
-		#	else
-		#		local ss_basic_xray_network_security_sni="null"
-		#	fi
-		#fi
+		# 如果sni空，host不空，用host代替
+		if [ -z "${ss_basic_xray_network_security_sni}" ];then
+			if [ -n "${ss_basic_xray_network_host}" ];then
+				local ss_basic_xray_network_security_sni="${ss_basicxray_network_host}"
+			else
+				local ss_basic_xray_network_security_sni=""
+			fi
+		fi
 
 		if [ "${ss_basic_xray_network_security}" == "tls" ];then
-			ss_basic_xray_flow=""
 			local tls="{
-					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai),
-					\"alpn\": ${apln},
-					\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
+					,\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
 					}"
 		else
 			local tls="null"
@@ -1951,9 +1999,9 @@ creat_xray_json() {
 
 		if [ "${ss_basic_xray_network_security}" == "xtls" ];then
 			local xtls="{
-					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai),
-					\"alpn\": ${apln},
-					\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
+					,\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
 					}"
 		else
 			local xtls="null"
@@ -1969,21 +2017,20 @@ creat_xray_json() {
 			if [ "${ss_basic_xray_headtype_tcp}" == "http" ]; then
 				local tcp="{
 					\"header\": {
-					\"type\": \"http\",
-					\"request\": {
-					\"version\": \"1.1\",
-					\"method\": \"GET\",
-					\"path\": [\"$(get_value_null $ss_basic_xray_network_path)\"],
-					\"headers\": {
-					\"Host\": [\"www.kooldog.me\"],
-					\"Host\": [\"${ss_basic_xray_network_host}\"],
+					\"type\": \"http\"
+					,\"request\": {
+					\"version\": \"1.1\"
+					,\"method\": \"GET\"
+					,\"path\": $(get_path_empty $ss_basic_xray_network_path)
+					,\"headers\": {
+					\"Host\": $(get_host_empty $ss_basic_xray_network_host),
 					\"User-Agent\": [
-					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\",
-					\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
-					],
-					\"Accept-Encoding\": [\"gzip, deflate\"],
-					\"Connection\": [\"keep-alive\"],
-					\"Pragma\": \"no-cache\"
+					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
+					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
+					]
+					,\"Accept-Encoding\": [\"gzip, deflate\"]
+					,\"Connection\": [\"keep-alive\"]
+					,\"Pragma\": \"no-cache\"
 					}
 					}
 					}
@@ -1994,35 +2041,47 @@ creat_xray_json() {
 			;;
 		kcp)
 			local kcp="{
-				\"mtu\": 1350,
-				\"tti\": 50,
-				\"uplinkCapacity\": 12,
-				\"downlinkCapacity\": 100,
-				\"congestion\": false,
-				\"readBufferSize\": 2,
-				\"writeBufferSize\": 2,
-				\"header\": {
-				\"type\": \"$ss_basic_xray_headtype_kcp\",
-				},
-				\"seed\": \"$(get_value_null $ss_basic_xray_network_path)\"
+				\"mtu\": 1350
+				,\"tti\": 50
+				,\"uplinkCapacity\": 12
+				,\"downlinkCapacity\": 100
+				,\"congestion\": false
+				,\"readBufferSize\": 2
+				,\"writeBufferSize\": 2
+				,\"header\": {
+				\"type\": \"$ss_basic_xray_headtype_kcp\"
+				}
+				,\"seed\": $(get_value_null $ss_basic_xray_kcp_seed)
 				}"
 			;;
 		ws)
-			local ws="{
-				\"path\": $(get_value_null $ss_basic_xray_network_path),
-				\"headers\": $(get_ws_header $ss_basic_xray_network_host)
-				}"
+			if [ -z "$ss_basic_xray_network_path" -a -z "$ss_basic_xray_network_host" ]; then
+				local ws="{}"
+			elif [ -z "$ss_basic_xray_network_path" -a -n "$ss_basic_xray_network_host" ]; then
+				local ws="{
+					\"headers\": $(get_ws_header $ss_basic_xray_network_host)
+					}"
+			elif [ -n "$ss_basic_xray_network_path" -a -z "$ss_basic_xray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_xray_network_path)
+					}"
+			elif [ -n "$ss_basic_xray_network_path" -a -n "$ss_basic_xray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_xray_network_path),
+					\"headers\": $(get_ws_header $ss_basic_xray_network_host)
+					}"
+			fi
 			;;
 		h2)
 			local h2="{
-				\"path\": $(get_value_null $ss_basic_xray_network_path),
-				\"host\": $(get_host $ss_basic_xray_network_host)
+				\"path\": $(get_value_empty $ss_basic_xray_network_path)
+				,\"host\": $(get_host $ss_basic_xray_network_host)
 				}"
 			;;
 		quic)
 			local qc="{
-				\"security\": \"${ss_basic_xray_network_host}\",
-				\"key\": $(get_value_null $ss_basic_xray_network_path),
+				\"security\": $(get_value_empty $ss_basic_xray_network_host),
+				\"key\": $(get_value_empty $ss_basic_xray_network_path),
 				\"header\": {
 				\"type\": \"${ss_basic_xray_headtype_quic}\"
 				}
@@ -2030,7 +2089,7 @@ creat_xray_json() {
 			;;
 		grpc)
 			local gr="{
-				\"serviceName\": $(get_value_null $ss_basic_xray_network_path),
+				\"serviceName\": $(get_value_empty $ss_basic_xray_network_path),
 				\"multiMode\": $(get_grpc_multimode ${ss_basic_xray_grpc_mode})
 				}"
 			;;
@@ -2045,13 +2104,13 @@ creat_xray_json() {
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
-		if [ "$ss_foreign_dns" == "7" ]; then
+		if [ "${ss_foreign_dns}" == "7" ]; then
 			echo_date 配置xray dns，用于dns解析...
-			cat >>"$XRAY_CONFIG_FILE_TMP" <<-EOF
+			cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
 				"inbounds": [
 					{
 					"protocol": "dokodemo-door",
-					"port": $DNSF_PORT,
+					"port": ${DNSF_PORT},
 					"settings": {
 						"address": "8.8.8.8",
 						"port": 53,
@@ -2073,7 +2132,7 @@ creat_xray_json() {
 			EOF
 		else
 			# inbounds area (23456 for socks5)
-			cat >>"$XRAY_CONFIG_FILE_TMP" <<-EOF
+			cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
 				"inbounds": [
 					{
 						"port": 23456,
@@ -2082,10 +2141,8 @@ creat_xray_json() {
 						"settings": {
 							"auth": "noauth",
 							"udp": true,
-							"ip": "127.0.0.1",
-							"clients": null
-						},
-						"streamSettings": null
+							"ip": "127.0.0.1"
+						}
 					},
 					{
 						"listen": "0.0.0.0",
@@ -2100,7 +2157,7 @@ creat_xray_json() {
 			EOF
 		fi
 		# outbounds area
-		cat >>"$XRAY_CONFIG_FILE_TMP" <<-EOF
+		cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
@@ -2112,26 +2169,26 @@ creat_xray_json() {
 								"port": $ss_basic_port,
 								"users": [
 									{
-										"id": "$ss_basic_xray_uuid",
-										"security": "auto",
-										"encryption": "$ss_basic_xray_encryption",
-										"flow": $(get_value_null2 $ss_basic_xray_flow)
+										"id": "$ss_basic_xray_uuid"
+										,"security": "auto"
+										,"encryption": "$ss_basic_xray_encryption"
+										,"flow": $(get_value_null $ss_basic_xray_flow)
 									}
 								]
 							}
 						]
 					},
 					"streamSettings": {
-						"network": "$ss_basic_xray_network",
-						"security": "$ss_basic_xray_network_security",
-						"tlsSettings": $tls,
-						"xtlsSettings": $xtls,
-						"tcpSettings": $tcp,
-						"kcpSettings": $kcp,
-						"wsSettings": $ws,
-						"httpSettings": $h2,
-						"quicSettings": $qc,
-						"grpcSettings": $gr
+						"network": "$ss_basic_xray_network"
+						,"security": "$ss_basic_xray_network_security"
+						,"tlsSettings": $tls
+						,"xtlsSettings": $xtls
+						,"tcpSettings": $tcp
+						,"kcpSettings": $kcp
+						,"wsSettings": $ws
+						,"httpSettings": $h2
+						,"quicSettings": $qc
+						,"grpcSettings": $gr
 					},
 					"mux": {
 						"enabled": false,
@@ -2142,6 +2199,7 @@ creat_xray_json() {
 			}
 		EOF
 		echo_date 解析Xray配置文件...
+		sed -i '/null/d' ${XRAY_CONFIG_FILE_TMP} 2>/dev/null
 		jq --tab . $XRAY_CONFIG_FILE_TMP >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："

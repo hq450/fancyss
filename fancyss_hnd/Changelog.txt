@@ -1,8 +1,18 @@
 fancyss_hnd Changelog
 ===========================================
-1.9.17 （todo）
+1.9.xx （todo）
    - todo	1. 添加trojan支持（包括trojan节点添加，在线订阅）
    
+1.9.17
+   - note	继续修补1.9.15大更新带来的一些新问题，trojan的坑留继续往后推
+   - update	现在v2ray和xray节点非json模式下生成的配置文件将不会再带有null值
+   - fix	修复v2ray和xray节点在一些情况下生成错误的配置问题件问题
+   - fix	修复xray节点下无法使用v2ray/xray dns的问题
+   - fix	修复v2ray节点[SNI]，[多路复用 (Mux)], [Mux并发连接数]在主面板更改后无法保存的问题
+   - fix	修复xray节点[SNI]在主面板更改后无法保存的问题
+   - fix	修复v2ray和xray节点，使用kcp传输协议时，没有kcp seed选项的问题
+   - update	现在在没有节点的情况下，账号设置主面板将不会显示任何内容，直到用户添加了节点
+
 1.9.16
    - fix	【订阅脚本】修复ss + simple-obfs节点在线订阅节点不正确的问题
    - fix	修复ss + simple-obfs节点启动后工作不正常的问题
