@@ -61,15 +61,22 @@ set_skin(){
 
 pre_set(){
 	# set vcore name
+	XRAY_CONFIG_FILE_TMP="/tmp/xray_tmp.json"
+	XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 	if [ "${ss_basic_vcore}" == "1" ];then
 		VCORE_NAME=Xray
-		V2RAY_CONFIG_FILE_TMP="/tmp/xray_tmp.json"
+		V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
 		V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
 	else
 		VCORE_NAME=V2ray
-		V2RAY_CONFIG_FILE_TMP="/tmp/v2ray_tmp.json"
+		V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
 		V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 	fi
+
+	TROJAN_CONFIG_TEMP="/tmp/trojan_nat_tmp.json"
+	TROJAN_CONFIG_FILE="/koolshare/ss/trojan.json"
+	TROJAN_CONFIG_TEMP_SOCKS="/tmp/trojan_client_tmp.json"
+	TROJAN_CONFIG_FILE_SOCKS="/koolshare/ss/trojan_client.json"
 
 	# set skin
 	set_skin
@@ -129,11 +136,17 @@ __get_type_full_name() {
 	3)
 		echo "${VCORE_NAME}"
 		;;
+	4)
+		echo "Xray"
+		;;
+	5)
+		echo "Trojan"
+		;;
 	esac
 }
 
 __get_type_abbr_name() {
-	case "$ss_basic_type" in
+	case "${ss_basic_type}" in
 	0)
 		echo "ss"
 		;;
@@ -146,6 +159,12 @@ __get_type_abbr_name() {
 	3)
 		echo "${VCORE_NAME}"
 		;;
+	4)
+		echo "Xray"
+		;;
+	5)
+		echo "Trojan"
+		;;
 	esac
 }
 
@@ -153,10 +172,10 @@ __valid_ip() {
 	# 验证是否为ipv4或者ipv6地址，是则正确返回，不是返回空值
 	local format_4=$(echo "$1" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 	local format_6=$(echo "$1" | grep -Eo '^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*')
-	if [ -n "$format_4" ] && [ -z "$format_6" ]; then
+	if [ -n "$format_4" -a -z "$format_6" ]; then
 		echo "$format_4"
 		return 0
-	elif [ -z "$format_4" ] && [ -n "$format_6" ]; then
+	elif [ -z "$format_4" -a -n "$format_6" ]; then
 		echo "$format_6"
 		return 0
 	else
@@ -218,7 +237,7 @@ __get_server_resolver_port() {
 __resolve_ip() {
 	local domain1=$(echo "$1" | grep -E "^https://|^http://|/")
 	local domain2=$(echo "$1" | grep -E "\.")
-	if [ -n "$domain1" ] || [ -z "$domain2" ]; then
+	if [ -n "$domain1" -o -z "$domain2" ]; then
 		# not ip, not domain
 		echo ""
 		return 2
@@ -272,6 +291,11 @@ kill_process() {
 		rm -rf /koolshare/perp/xray
 		killall xray >/dev/null 2>&1
 		kill -9 "$xray_process" >/dev/null 2>&1
+	fi
+	trojan_process=$(pidof trojan)
+	if [ -n "$trojan_process" ]; then
+		echo_date 关闭trojan进程...
+		killall trojan >/dev/null 2>&1
 	fi
 	ssredir=$(pidof ss-redir)
 	if [ -n "$ssredir" ]; then
@@ -393,8 +417,8 @@ ss_pre_start() {
 			echo_date 插件启动前触发:触发启动负载均衡功能！
 			#start haproxy
 			sh /koolshare/scripts/ss_lb_config.sh
-		else
-			echo_date 插件启动前触发:未选择负载均衡节点，不触发负载均衡启动！
+		#else
+			#echo_date 插件启动前触发:未选择负载均衡节点，不触发负载均衡启动！
 		fi
 	else
 		if [ -n "${IS_LOCAL_ADDR}" -a "${ss_basic_port}" == "${ss_lb_port}" ]; then
@@ -408,8 +432,11 @@ ss_pre_start() {
 
 resolv_server_ip() {
 	local tmp server_ip
-	if [ "$ss_basic_type" == "3" ] && [ "$ss_basic_v2ray_use_json" == "1" ]; then
+	if [ "$ss_basic_type" == "3" -a "$ss_basic_v2ray_use_json" == "1" ]; then
 		#v2ray json配置在后面单独处理
+		return 1
+	elif [ "$ss_basic_type" == "4" -a "$ss_basic_xray_use_json" == "1" ]; then
+		#xray json配置在后面单独处理
 		return 1
 	else
 		# 判断服务器域名格式
@@ -446,7 +473,7 @@ resolv_server_ip() {
 				;;
 			2)
 				# server is not ip either domain!
-				echo_date "错误！！检测到你设置的服务器域名既不是ip地址，也不是域名格式！"
+				echo_date "错误2！！检测到你设置的服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
 				echo_date "请更正你的错误然后重试！！"
 				close_in_five
 				;;
@@ -463,13 +490,13 @@ ss_arg() {
 		ARG_OBFS="--plugin v2ray-plugin --plugin-opts $ss_basic_ss_v2ray_opts"
 		echo_date "检测到开启了v2ray-plugin，将忽略obfs设置。"
 	elif [ "$ss_basic_ss_obfs" == "http" ]; then
-		echo_date "检测到开启了obfs。"
+		echo_date "检测到开启了simple-obfs。"
 		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
 		if [ -n "$ss_basic_ss_obfs_host" ]; then
 			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
 		fi
 	elif [ "$ss_basic_ss_obfs" == "tls" ]; then
-		echo_date "检测到开启了obfs。"
+		echo_date "检测到开启了simple-obfs。"
 		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
 		if [ -n "$ss_basic_ss_obfs_host" ]; then
 			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
@@ -537,8 +564,8 @@ creat_ss_json() {
 		EOF
 	fi
 
-	if [ "$ss_basic_udp2raw_boost_enable" == "1" ] || [ "$ss_basic_udp_boost_enable" == "1" ]; then
-		if [ "$ss_basic_udp_upstream_mtu" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
+	if [ "$ss_basic_udp2raw_boost_enable" == "1" -o "$ss_basic_udp_boost_enable" == "1" ]; then
+		if [ "$ss_basic_udp_upstream_mtu" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
 			echo_date 设定MTU为 $ss_basic_udp_upstream_mtu_value
 			cat /koolshare/ss/ss.json | jq --argjson MTU $ss_basic_udp_upstream_mtu_value '. + {MTU: $MTU}' >/koolshare/ss/ss_tmp.json
 			mv /koolshare/ss/ss_tmp.json /koolshare/ss/ss.json
@@ -591,17 +618,13 @@ start_sslocal() {
 		rss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	elif [ "$ss_basic_type" == "0" ]; then
 		echo_date 开启ss-local，提供socks5代理端口：23456
-		if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
-			ss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-		else
-			ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
-		fi
+		ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	fi
 }
 
 start_dns() {
 	# 判断使用何种DNS优先方案
-	if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" ] || [ "$ss_basic_mode" == "6" ];then
+	if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" -o "$ss_basic_mode" == "6" ];then
 		# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
 		# 回国模式下自动判断使用国内优先
 		local DNS_PLAN=1
@@ -632,7 +655,7 @@ start_dns() {
 		if [ -z "$public_ip" ]; then
 			# 路由公网ip为空则获取
 			public_ip=$(curl --connect-timeout 1 --retry 0 --max-time 1 -s 'http://members.3322.org/dyndns/getip')
-			if [ "$?" == "0" ] && [ -n "$public_ip" ]; then
+			if [ "$?" == "0" -a -n "$public_ip" ]; then
 				# 获取成功
 				echo_date 你的公网ip地址是：$public_ip
 				dbus set ss_basic_publicip="$public_ip"
@@ -664,7 +687,7 @@ start_dns() {
 	fi
 
 	# Start DNS2SOCKS (default)
-	if [ "$ss_foreign_dns" == "3" ] || [ -z "$ss_foreign_dns" ]; then
+	if [ "$ss_foreign_dns" == "3" -o -z "$ss_foreign_dns" ]; then
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
 		start_sslocal
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
@@ -681,12 +704,8 @@ start_dns() {
 		elif [ "$ss_basic_type" == "0" ]; then
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启ss-tunnel，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启ss-tunnel，用于【国外所有网站】的DNS解析..."
-			if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
-				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
-			else
-				ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
-			fi
-		elif [ "$ss_basic_type" == "3" ]; then
+			ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+		elif [ "$ss_basic_type" == "3" -o "$ss_basic_type" == "4" -o "$ss_basic_type" == "5" ]; then
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
 			start_sslocal
@@ -725,7 +744,12 @@ start_dns() {
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外所有网站】的DNS解析..."
 		cat /koolshare/ss/rules/gfwlist.conf|sed '/^server=/d'|sed 's/ipset=\/.//g'|sed 's/\/gfwlist//g' > /tmp/gfwlist.txt
-		chinadns-ng -l ${DNSF_PORT} -c ${CDN}#${DNSC_PORT} -t 127.0.0.1#1055 -g /tmp/gfwlist.txt -m /koolshare/ss/rules/cdn.txt -M >/dev/null 2>&1 &
+		if [ "${ss_disable_aaaa}" == "1" ];then
+			local EXT="-N"
+		else
+			local EXT=""
+		fi
+		chinadns-ng ${EXT} -l ${DNSF_PORT} -c ${CDN}#${DNSC_PORT} -t 127.0.0.1#1055 -g /tmp/gfwlist.txt -m /koolshare/ss/rules/cdn.txt -M >/dev/null 2>&1 &
 	fi
 
 	#start https_dns_proxy
@@ -751,7 +775,7 @@ start_dns() {
 
 	# start v2ray DNSF_PORT
 	if [ "$ss_foreign_dns" == "7" ]; then
-		if [ "$ss_basic_type" == "3" ]; then
+		if [ "$ss_basic_type" == "3" -o "$ss_basic_type" == "4" ]; then
 			return 0
 		else
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持${VCORE_NAME} dns，改用dns2socks！
@@ -764,7 +788,7 @@ start_dns() {
 	fi
 
 	# 开启SmartDNS
-	if [ "$ss_dns_china" == "13" ] && [ "$ss_foreign_dns" == "9" ]; then
+	if [ "$ss_dns_china" == "13" -a "$ss_foreign_dns" == "9" ]; then
 		# 国内国外都启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式也不需要使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外所有网站】的DNS解析..."
@@ -775,7 +799,7 @@ start_dns() {
 			sed '/^#/d /^$/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
 		#fi
 		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
-	elif [ "$ss_dns_china" == "13" ] && [ "$ss_foreign_dns" != "9" ]; then
+	elif [ "$ss_dns_china" == "13" -a "$ss_foreign_dns" != "9" ]; then
 		# 国内启用SmartDNS，国外不启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则是根据国外DNS的选择而决定是否使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国内cdn网站】的DNS解析..."
@@ -786,7 +810,7 @@ start_dns() {
 			sed '/^#/d /^$/d /foreign/d' /koolshare/ss/rules/smartdns_template.conf > /tmp/smartdns.conf
 		#fi
 		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
-	elif [ "$ss_dns_china" != "13" ] && [ "$ss_foreign_dns" == "9" ]; then
+	elif [ "$ss_dns_china" != "13" -a "$ss_foreign_dns" == "9" ]; then
 		# 国内不启用SmartDNS，国外启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则需要使用cdn.conf）
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启SmartDNS，用于【国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启SmartDNS，用于【国外所有网站】的DNS解析..."
@@ -818,7 +842,7 @@ start_dns() {
 detect_domain() {
 	domain1=$(echo $1 | grep -E "^https://|^http://|www|/")
 	domain2=$(echo $1 | grep -E "\.")
-	if [ -n "$domain1" ] || [ -z "$domain2" ]; then
+	if [ -n "$domain1" -o -z "$domain2" ]; then
 		return 1
 	else
 		return 0
@@ -990,14 +1014,14 @@ create_dnsmasq_conf() {
 		# 回国模式中，因为国外DNS无论如何都不会污染的，所以采取的策略是直连就行，默认国内优先即可
 		echo_date 自动判断在回国模式中使用国内优先模式，不加载cdn.conf
 	else
-		if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" ] || [ "$ss_basic_mode" == "6" ]; then
+		if [ "$ss_basic_mode" == "1" -a -z "$chn_on" -a -z "$all_on" -o "$ss_basic_mode" == "6" ]; then
 			# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
 			# 回国模式下自动判断使用国内优先
 			echo_date 自动判断使用国内优先模式，不加载cdn.conf
 		else
 			# 其它情况，均使用国外优先模式，以下区分是否加载cdn.conf
-			# if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" ] || [ "$ss_foreign_dns" == "9" -a "$ss_dns_china" == "13" ]; then
-			if [ "$ss_foreign_dns" == "2" ] || [ "$ss_foreign_dns" == "5" -a "$ss_dns_china" != "13" ] || [ "$ss_foreign_dns" == "10" ]; then
+			# if [ "$ss_foreign_dns" == "2" -o "$ss_foreign_dns" == "5" -o "$ss_foreign_dns" == "9" -a "$ss_dns_china" == "13" ]; then
+			if [ "$ss_foreign_dns" == "2" -o "$ss_foreign_dns" == "5" -a "$ss_dns_china" != "13" -o "$ss_foreign_dns" == "10" ]; then
 				# 因为chinadns1 chinadns2自带国内cdn，所以也不需要cdn.conf
 				echo_date 自动判断dns解析使用国外优先模式...
 				echo_date 国外解析方案【$(get_dns_name $ss_foreign_dns)】自带国内cdn，无需加载cdn.conf，路由器开销小...
@@ -1031,7 +1055,7 @@ create_dnsmasq_conf() {
 	if [ "$ss_basic_mode" == "1" ]; then
 		echo_date 创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
 		ln -sf /koolshare/ss/rules/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
-	elif [ "$ss_basic_mode" == "2" ] || [ "$ss_basic_mode" == "3" ]; then
+	elif [ "$ss_basic_mode" == "2" -o "$ss_basic_mode" == "3" ]; then
 		if [ -n "$gfw_on" ]; then
 			echo_date 创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹.
 			ln -sf /koolshare/ss/rules/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
@@ -1093,17 +1117,17 @@ start_kcp() {
 
 start_speeder() {
 	#只有游戏模式下或者访问控制中有游戏模式主机，且udp加速节点和当前使用节点一致
-	if [ "$ss_basic_use_kcp" == "1" ] && [ "$ss_basic_kcp_server" == "127.0.0.1" ] && [ "$ss_basic_kcp_port" == "1092" ]; then
+	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1092" ]; then
 		echo_date 检测到你配置了KCP与UDPspeeder串联.
 		SPEED_KCP=1
 	fi
 
-	if [ "$ss_basic_use_kcp" == "1" ] && [ "$ss_basic_kcp_server" == "127.0.0.1" ] && [ "$ss_basic_kcp_port" == "1093" ]; then
+	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1093" ]; then
 		echo_date 检测到你配置了KCP与UDP2raw串联.
 		SPEED_KCP=2
 	fi
 
-	if [ "$mangle" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ] || [ "$SPEED_KCP" == "1" ] || [ "$SPEED_KCP" == "2" ]; then
+	if [ "$mangle" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" -o "$SPEED_KCP" == "1" -o "$SPEED_KCP" == "2" ]; then
 		#开启udpspeeder
 		if [ "$ss_basic_udp_boost_enable" == "1" ]; then
 			if [ "$ss_basic_udp_software" == "1" ]; then
@@ -1176,12 +1200,7 @@ start_ss_redir() {
 	elif [ "$ss_basic_type" == "0" ]; then
 		# ss-libev需要大于160的熵才能正常工作
 		echo_date 开启ss-redir进程，用于透明代理.
-		if [ "$ss_basic_ss_obfs" == "0" ] && [ "$ss_basic_ss_v2ray" == "0" ]; then
-			BIN=ss-redir
-			ARG_OBFS=""
-		else
-			BIN=ss-redir
-		fi
+		BIN=ss-redir
 	fi
 
 	if [ "$ss_basic_udp_boost_enable" == "1" ]; then
@@ -1192,22 +1211,22 @@ start_ss_redir() {
 		SPEED_PORT=1093
 	fi
 
-	if [ "$ss_basic_udp2raw_boost_enable" == "1" ] || [ "$ss_basic_udp_boost_enable" == "1" ]; then
+	if [ "$ss_basic_udp2raw_boost_enable" == "1" -o "$ss_basic_udp_boost_enable" == "1" ]; then
 		#udp2raw开启，udpspeeder未开启则ss-redir的udp流量应该转发到1093
 		SPEED_UDP=1
 	fi
 
-	if [ "$ss_basic_use_kcp" == "1" ] && [ "$ss_basic_kcp_server" == "127.0.0.1" ] && [ "$ss_basic_kcp_port" == "1092" ]; then
+	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1092" ]; then
 		SPEED_KCP=1
 	fi
 
-	if [ "$ss_basic_use_kcp" == "1" ] && [ "$ss_basic_kcp_server" == "127.0.0.1" ] && [ "$ss_basic_kcp_port" == "1093" ]; then
+	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1093" ]; then
 		SPEED_KCP=2
 	fi
 	# Start ss-redir
 	if [ "$ss_basic_use_kcp" == "1" ]; then
 		if [ "$mangle" == "1" ]; then
-			if [ "$SPEED_UDP" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
+			if [ "$SPEED_UDP" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
 				# tcp go kcp
 				if [ "$SPEED_KCP" == "1" ]; then
 					echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
@@ -1218,10 +1237,10 @@ start_ss_redir() {
 				fi
 				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				# udp go udpspeeder
-				[ "$ss_basic_udp2raw_boost_enable" == "1" ] && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
-				[ "$ss_basic_udp2raw_boost_enable" == "1" ] && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" ] && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" ] && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
+				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
+				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
+				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
+				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
 				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			else
 				# tcp go kcp
@@ -1251,15 +1270,15 @@ start_ss_redir() {
 		fi
 	else
 		if [ "$mangle" == "1" ]; then
-			if [ "$SPEED_UDP" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
+			if [ "$SPEED_UDP" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
 				# tcp go ss
 				echo_date $BIN的 tcp 走$BIN.
 				$BIN -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				# udp go udpspeeder
-				[ "$ss_basic_udp2raw_boost_enable" == "1" ] && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
-				[ "$ss_basic_udp2raw_boost_enable" == "1" ] && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" ] && [ "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" ] && [ "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
+				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
+				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
+				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
+				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
 				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			else
 				# tcp udp go ss
@@ -1280,15 +1299,15 @@ start_ss_redir() {
 }
 
 fire_redir() {
-	[ "$ss_basic_type" == "0" ] && [ "$ss_basic_mcore" == "1" ] && local ARG_1="--reuse-port" || local ARG_1=""
+	[ "$ss_basic_type" == "0" -a "$ss_basic_mcore" == "1" ] && local ARG_1="--reuse-port" || local ARG_1=""
 	local ARG_2=""
-	if [ "$ss_basic_type" == "0" ] && [ "$ss_basic_tfo" == "1" ]; then
+	if [ "$ss_basic_type" == "0" -a "$ss_basic_tfo" == "1" ]; then
 		local ARG_2="--fast-open"
 		echo_date $BIN开启tcp fast open支持.
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
 
-	if [ "$ss_basic_type" == "0" ] && [ "$ss_basic_tnd" == "1" ]; then
+	if [ "$ss_basic_type" == "0" -a "$ss_basic_tnd" == "1" ]; then
 		echo_date $BIN开启TCP_NODELAY支持.
 		local ARG_3="--no-delay"
 	else
@@ -1318,7 +1337,7 @@ start_koolgame() {
 	echo_date 开启koolgame主进程...
 	start-stop-daemon -S -q -b -m -p /tmp/var/koolgame.pid -x /koolshare/bin/koolgame -- -c $CONFIG_FILE
 
-	if [ "$mangle" == "1" ] && [ "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
+	if [ "$mangle" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
 		if [ "$ss_basic_udp_boost_enable" == "1" ]; then
 			if [ "$ss_basic_udp_software" == "1" ]; then
 				echo_date 检测到你启用了UDPspeederV1，但是koolgame下不支持UDPspeederV1加速，不启用！
@@ -1335,6 +1354,23 @@ start_koolgame() {
 	fi
 }
 
+get_path_empty() {
+	if [ -n "$1" ]; then
+		echo [\"$1\"]
+	else
+		echo [\"/\"]
+	fi
+}
+
+
+get_host_empty() {
+	if [ -n "$1" ]; then
+		echo [\"$1\"]
+	else
+		echo [\"\"]
+	fi
+}
+
 get_function_switch() {
 	case "$1" in
 	1)
@@ -1346,27 +1382,58 @@ get_function_switch() {
 	esac
 }
 
+get_reverse_switch() {
+	case "$1" in
+	1)
+		echo "false"
+		;;
+	0|*)
+		echo "true"
+		;;
+	esac
+}
+
+get_grpc_multimode(){
+	case "$1" in
+	multi)
+		echo true
+		;;
+	gun|*)
+		echo false
+		;;
+	esac
+}
+
 get_ws_header() {
 	if [ -n "$1" ]; then
 		echo {\"Host\": \"$1\"}
 	else
-		echo "null"
+		echo null
 	fi
 }
 
-get_h2_host() {
+get_host() {
 	if [ -n "$1" ]; then
 		echo [\"$1\"]
 	else
-		echo "null"
+		echo null
 	fi
 }
 
-get_path() {
+
+get_value_null(){
 	if [ -n "$1" ]; then
 		echo \"$1\"
 	else
-		echo "null"
+		echo null
+	fi
+}
+
+get_value_empty(){
+	if [ -n "$1" ]; then
+		echo \"$1\"
+	else
+		echo \"\"
 	fi
 }
 
@@ -1378,36 +1445,73 @@ creat_v2ray_json() {
 		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 		return 0
 	else
-		echo_date "创建$(__get_type_abbr_name)配置文件到$V2RAY_CONFIG_FILE"
+		echo_date "创建$(__get_type_abbr_name)配置文件到${V2RAY_CONFIG_FILE}"
 	fi
 
 	local tmp v2ray_server_ip
-	rm -rf "$V2RAY_CONFIG_FILE_TMP"
-	rm -rf "$V2RAY_CONFIG_FILE"
-	if [ "$ss_basic_v2ray_use_json" == "0" ]; then
+	rm -rf "${V2RAY_CONFIG_TEMP}"
+	rm -rf "${V2RAY_CONFIG_FILE}"
+	if [ "${ss_basic_v2ray_use_json}" != "1" ]; then
 		echo_date 生成${VCORE_NAME}配置文件...
-		local kcp="null"
 		local tcp="null"
+		local kcp="null"
 		local ws="null"
 		local h2="null"
+		local qc="null"
+		local gr="null"
 		local tls="null"
 
-		# tcp和kcp下tlsSettings为null，ws和h2下tlsSettings
-		[ -z "$ss_basic_v2ray_mux_concurrency" ] && local ss_basic_v2ray_mux_concurrency=8
-		[ "$ss_basic_v2ray_network_security" == "none" ] && local ss_basic_v2ray_network_security=""
-		#if [ "$ss_basic_v2ray_network" == "ws" -o "$ss_basic_v2ray_network" == "h2" ];then
-		case "$ss_basic_v2ray_network_security" in
-		tls)
+		if [ "$ss_basic_v2ray_mux_enable" == "1" -a -z "$ss_basic_v2ray_mux_concurrency" ];then
+			local ss_basic_v2ray_mux_concurrency=8
+		fi
+
+		if [ "$ss_basic_v2ray_mux_enable" != "1" ];then
+			local ss_basic_v2ray_mux_concurrency="-1"
+		fi
+		
+		if [ -z "$ss_basic_v2ray_network_security" ];then
+			local ss_basic_v2ray_network_security="none"
+		fi
+
+		if [ "$ss_basic_v2ray_network_security" == "none" ];then
+			ss_basic_v2ray_network_security_ai=""
+			ss_basic_v2ray_network_security_alpn_h2=""
+			ss_basic_v2ray_network_security_alpn_http=""
+			ss_basic_v2ray_network_security_sni=""
+		fi
+
+		local alpn_h2=${ss_basic_v2ray_network_security_alpn_h2}
+		local alpn_ht=${ss_basic_v2ray_network_security_alpn_http}
+
+		if [ "${alpn_h2}" == "1" -a "${alpn_ht}" == "1" ];then
+			local apln="[\"h2\",\"http/1.1\"]"
+		elif [ "${alpn_h2}" != "1" -a "${alpn_ht}" == "1" ];then
+			local apln="[\"http/1.1\"]"
+		elif [ "${alpn_h2}" == "1" -a "${alpn_ht}" != "1" ];then
+			local apln="[\"h2\"]"
+		elif [ "${alpn_h2}" != "1" -a "${alpn_ht}" != "1" ];then
+			local apln="null"
+		fi
+
+		# 如果sni空，host不空，用host代替
+		if [ -z "${ss_basic_v2ray_network_security_sni}" ];then
+			if [ -n "${ss_basic_v2ray_network_host}" ];then
+				local ss_basic_v2ray_network_security_sni="${ss_basic_v2ray_network_host}"
+			else
+				local ss_basic_v2ray_network_security_sni=""
+			fi
+		fi
+
+		if [ "${ss_basic_v2ray_network_security}" == "tls" ];then
 			local tls="{
-					\"allowInsecure\": true,
-					\"serverName\": null
+					\"allowInsecure\": $(get_function_switch $ss_basic_v2ray_network_security_ai)
+					,\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null $ss_basic_v2ray_network_security_sni)
 					}"
-			;;
-		*)
+		else
 			local tls="null"
-			;;
-		esac
-		#fi
+		fi
+
 		# incase multi-domain input
 		if [ "$(echo $ss_basic_v2ray_network_host | grep ",")" ]; then
 			ss_basic_v2ray_network_host=$(echo $ss_basic_v2ray_network_host | sed 's/,/", "/g')
@@ -1417,30 +1521,21 @@ creat_v2ray_json() {
 		tcp)
 			if [ "$ss_basic_v2ray_headtype_tcp" == "http" ]; then
 				local tcp="{
-					\"connectionReuse\": true,
 					\"header\": {
-					\"type\": \"http\",
-					\"request\": {
-					\"version\": \"1.1\",
-					\"method\": \"GET\",
-					\"path\": [\"/\"],
-					\"headers\": {
-					\"Host\": [\"$ss_basic_v2ray_network_host\"],
-					\"User-Agent\": [\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\",\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"],
-					\"Accept-Encoding\": [\"gzip, deflate\"],
-					\"Connection\": [\"keep-alive\"],
-					\"Pragma\": \"no-cache\"
-					}
-					},
-					\"response\": {
-					\"version\": \"1.1\",
-					\"status\": \"200\",
-					\"reason\": \"OK\",
-					\"headers\": {
-					\"Content-Type\": [\"application/octet-stream\",\"video/mpeg\"],
-					\"Transfer-Encoding\": [\"chunked\"],
-					\"Connection\": [\"keep-alive\"],
-					\"Pragma\": \"no-cache\"
+					\"type\": \"http\"
+					,\"request\": {
+					\"version\": \"1.1\"
+					,\"method\": \"GET\"
+					,\"path\": $(get_path_empty $ss_basic_v2ray_network_path)
+					,\"headers\": {
+					\"Host\": $(get_host_empty $ss_basic_v2ray_network_host),
+					\"User-Agent\": [
+					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
+					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
+					]
+					,\"Accept-Encoding\": [\"gzip, deflate\"]
+					,\"Connection\": [\"keep-alive\"]
+					,\"Pragma\": \"no-cache\"
 					}
 					}
 					}
@@ -1451,36 +1546,62 @@ creat_v2ray_json() {
 			;;
 		kcp)
 			local kcp="{
-				\"mtu\": 1350,
-				\"tti\": 50,
-				\"uplinkCapacity\": 12,
-				\"downlinkCapacity\": 100,
-				\"congestion\": false,
-				\"readBufferSize\": 2,
-				\"writeBufferSize\": 2,
-				\"header\": {
-				\"type\": \"$ss_basic_v2ray_headtype_kcp\",
-				\"request\": null,
-				\"response\": null
+				\"mtu\": 1350
+				,\"tti\": 50
+				,\"uplinkCapacity\": 12
+				,\"downlinkCapacity\": 100
+				,\"congestion\": false
+				,\"readBufferSize\": 2
+				,\"writeBufferSize\": 2
+				,\"header\": {
+				\"type\": \"$ss_basic_v2ray_headtype_kcp\"
 				}
+				,\"seed\": $(get_value_null $ss_basic_v2ray_kcp_seed)
 				}"
 			;;
 		ws)
-			local ws="{
-				\"connectionReuse\": true,
-				\"path\": $(get_path $ss_basic_v2ray_network_path),
-				\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
-				}"
+			if [ -z "$ss_basic_v2ray_network_path" -a -z "$ss_basic_v2ray_network_host" ]; then
+				local ws="{}"
+			elif [ -z "$ss_basic_v2ray_network_path" -a -n "$ss_basic_v2ray_network_host" ]; then
+				local ws="{
+					\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
+					}"
+			elif [ -n "$ss_basic_v2ray_network_path" -a -z "$ss_basic_v2ray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_v2ray_network_path)
+					}"
+			elif [ -n "$ss_basic_v2ray_network_path" -a -n "$ss_basic_v2ray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_v2ray_network_path),
+					\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
+					}"
+			fi
 			;;
 		h2)
+
 			local h2="{
-				\"path\": $(get_path $ss_basic_v2ray_network_path),
-				\"host\": $(get_h2_host $ss_basic_v2ray_network_host)
+				\"path\": $(get_value_empty $ss_basic_v2ray_network_path)
+				,\"host\": $(get_host $ss_basic_v2ray_network_host)
+				}"
+			;;
+		quic)
+			local qc="{
+				\"security\": $(get_value_empty $ss_basic_v2ray_network_host),
+				\"key\": $(get_value_empty $ss_basic_v2ray_network_path),
+				\"header\": {
+				\"type\": \"${ss_basic_v2ray_headtype_quic}\"
+				}
+				}"
+			;;
+		grpc)
+			local gr="{
+				\"serviceName\": $(get_value_empty $ss_basic_v2ray_network_path),
+				\"multiMode\": $(get_grpc_multimode ${ss_basic_v2ray_grpc_mode})
 				}"
 			;;
 		esac
 		# log area
-		cat >"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+		cat >"${V2RAY_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
 				"access": "/dev/null",
@@ -1489,13 +1610,13 @@ creat_v2ray_json() {
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
-		if [ "$ss_foreign_dns" == "7" ]; then
+		if [ "${ss_foreign_dns}" == "7" ]; then
 			echo_date 配置${VCORE_NAME} dns，用于dns解析...
-			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+			cat >>"${V2RAY_CONFIG_TEMP}" <<-EOF
 				"inbounds": [
 					{
 					"protocol": "dokodemo-door",
-					"port": $DNSF_PORT,
+					"port": ${DNSF_PORT},
 					"settings": {
 						"address": "8.8.8.8",
 						"port": 53,
@@ -1517,7 +1638,7 @@ creat_v2ray_json() {
 			EOF
 		else
 			# inbounds area (23456 for socks5)
-			cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+			cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
 				"inbounds": [
 					{
 						"port": 23456,
@@ -1526,10 +1647,8 @@ creat_v2ray_json() {
 						"settings": {
 							"auth": "noauth",
 							"udp": true,
-							"ip": "127.0.0.1",
-							"clients": null
-						},
-						"streamSettings": null
+							"ip": "127.0.0.1"
+						}
 					},
 					{
 						"listen": "0.0.0.0",
@@ -1544,10 +1663,10 @@ creat_v2ray_json() {
 			EOF
 		fi
 		# outbounds area
-		cat >>"$V2RAY_CONFIG_FILE_TMP" <<-EOF
+		cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
 			"outbounds": [
 				{
-					"tag": "agentout",
+					"tag": "proxy",
 					"protocol": "vmess",
 					"settings": {
 						"vnext": [
@@ -1556,23 +1675,24 @@ creat_v2ray_json() {
 								"port": $ss_basic_port,
 								"users": [
 									{
-										"id": "$ss_basic_v2ray_uuid",
-										"alterId": $ss_basic_v2ray_alterid,
-										"security": "$ss_basic_v2ray_security"
+										"id": "$ss_basic_v2ray_uuid"
+										,"alterId": $ss_basic_v2ray_alterid
+										,"security": "$ss_basic_v2ray_security"
 									}
 								]
 							}
-						],
-						"servers": null
+						]
 					},
 					"streamSettings": {
-						"network": "$ss_basic_v2ray_network",
-						"security": "$ss_basic_v2ray_network_security",
-						"tlsSettings": $tls,
-						"tcpSettings": $tcp,
-						"kcpSettings": $kcp,
-						"wsSettings": $ws,
-						"httpSettings": $h2
+						"network": "$ss_basic_v2ray_network"
+						,"security": "$ss_basic_v2ray_network_security"
+						,"tlsSettings": $tls
+						,"tcpSettings": $tcp
+						,"kcpSettings": $kcp
+						,"wsSettings": $ws
+						,"httpSettings": $h2
+						,"quicSettings": $qc
+						,"grpcSettings": $gr
 					},
 					"mux": {
 						"enabled": $(get_function_switch $ss_basic_v2ray_mux_enable),
@@ -1583,22 +1703,31 @@ creat_v2ray_json() {
 			}
 		EOF
 		echo_date 解析${VCORE_NAME}配置文件...
-		cat "$V2RAY_CONFIG_FILE_TMP" | jq --tab . >"$V2RAY_CONFIG_FILE"
+		sed -i '/null/d' ${V2RAY_CONFIG_TEMP} 2>/dev/null
+		jq --tab . ${V2RAY_CONFIG_TEMP} >/tmp/jq_para_tmp.txt 2>&1
+		if [ "$?" != "0" ];then
+			echo_date "json配置解析错误，错误信息如下："
+			echo_date $(cat /tmp/jq_para_tmp.txt) 
+			echo_date "请更正你的错误然后重试！！"
+			rm -rf /tmp/jq_para_tmp.txt
+			close_in_five
+		fi
+		jq --tab . $V2RAY_CONFIG_TEMP >"$V2RAY_CONFIG_FILE"
 		echo_date ${VCORE_NAME}配置文件写入成功到"$V2RAY_CONFIG_FILE"
-	elif [ "$ss_basic_v2ray_use_json" == "1" ];then
+	else
 		echo_date 使用自定义的${VCORE_NAME} json配置文件...
-		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_FILE_TMP"
-		local OB=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
-		local OBS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds)
+		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_TEMP"
+		local OB=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbound)
+		local OBS=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbounds)
 
 		# 兼容旧格式：outbound
 		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbound)
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbound)
 		fi
 		
 		# 新格式：outbound[]
 		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat "$V2RAY_CONFIG_FILE_TMP" | jq .outbounds[0])
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbounds[0])
 		fi
 		
 		if [ "$ss_foreign_dns" == "7" ]; then
@@ -1667,6 +1796,18 @@ creat_v2ray_json() {
 		echo $TEMPLATE | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date ${VCORE_NAME}配置文件写入成功到"$V2RAY_CONFIG_FILE"
 
+		# 检查v2ray json是否配置了xtls，如果是，则自动切换为xray
+		if [ -f "/koolshare/ss/v2ray.json" ];then
+			local IS_XTLS=$(cat /koolshare/ss/v2ray.json | jq -r .outbounds[0].streamSettings.security 2>/dev/null)
+			if [ "${IS_XTLS}" == "xtls" -a "${ss_basic_vcore}" != "1" ];then
+				echo_date "ℹ️检测到你配置了支持xtls节点，而V2ray不支持xtls，自动切换为Xray核心！"
+				ss_basic_vcore=1
+				VCORE_NAME=Xray
+				mv /koolshare/ss/v2ray.json /koolshare/ss/xray.json 
+				V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
+			fi
+		fi
+
 		# 检测用户json的服务器ip地址
 		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
@@ -1716,7 +1857,7 @@ creat_v2ray_json() {
 					;;
 				2)
 					# server is not ip either domain!
-					echo_date "错误！！检测到json配置内的${VCORE_NAME}服务器既不是ip地址，也不是域名格式！"
+					echo_date "错误3！！检测到json配置内的${VCORE_NAME}服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
 					echo_date "请更正你的错误然后重试！！"
 					close_in_five
 					;;
@@ -1743,8 +1884,8 @@ creat_v2ray_json() {
 			echo_date ${VCORE_NAME}配置文件通过测试!!!
 		else
 			echo_date ${VCORE_NAME}配置文件没有通过测试，请检查设置!!!
-			rm -rf "$V2RAY_CONFIG_FILE_TMP"
-			rm -rf "$V2RAY_CONFIG_FILE"
+			#rm -rf "$V2RAY_CONFIG_TEMP"
+			#rm -rf "$V2RAY_CONFIG_FILE"
 			close_in_five
 		fi
 	fi
@@ -1808,6 +1949,657 @@ start_v2ray() {
 			usleep 250000
 		done
 		echo_date ${VCORE_NAME}启动成功，pid：$V2PID
+	fi
+}
+
+creat_xray_json() {
+	if [ -n "${WAN_ACTION}" ]; then
+		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	elif [ -n "${NAT_ACTION}" ]; then
+		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	else
+		echo_date "创建$(__get_type_abbr_name)配置文件到${XRAY_CONFIG_FILE}"
+	fi
+
+	local tmp xray_server_ip
+	rm -rf "${XRAY_CONFIG_FILE_TMP}"
+	rm -rf "${XRAY_CONFIG_FILE}"
+	if [ "${ss_basic_xray_use_json}" != "1" ]; then
+		echo_date 生成Xray配置文件...
+		local tcp="null"
+		local kcp="null"
+		local ws="null"
+		local h2="null"
+		local qc="null"
+		local gr="null"
+		local tls="null"
+		local xtls="null"
+
+		if [ -z "$ss_basic_xray_network_security" ];then
+			local ss_basic_xray_network_security="none"
+		fi
+
+		if [ "${ss_basic_xray_network_security}" == "none" ];then
+			ss_basic_xray_flow=""
+			ss_basic_xray_network_security_ai=""
+			ss_basic_xray_network_security_alpn_h2=""
+			ss_basic_xray_network_security_alpn_http=""
+			ss_basic_xray_network_security_sni=""
+		fi
+
+		if [ "${ss_basic_xray_network_security}" == "tls" ];then
+			ss_basic_xray_flow=""
+		fi
+
+		local alpn_h2=${ss_basic_xray_network_security_alpn_h2}
+		local alpn_ht=${ss_basic_xray_network_security_alpn_http}
+		if [ "${alpn_h2}" == "1" -a "${alpn_ht}" == "1" ];then
+			local apln="[\"h2\",\"http/1.1\"]"
+		elif [ "${alpn_h2}" != "1" -a "${alpn_ht}" == "1" ];then
+			local apln="[\"http/1.1\"]"
+		elif [ "${alpn_h2}" == "1" -a "${alpn_ht}" != "1" ];then
+			local apln="[\"h2\"]"
+		elif [ "${alpn_h2}" != "1" -a "${alpn_ht}" != "1" ];then
+			local apln="null"
+		fi
+
+		# 如果sni空，host不空，用host代替
+		if [ -z "${ss_basic_xray_network_security_sni}" ];then
+			if [ -n "${ss_basic_xray_network_host}" ];then
+				local ss_basic_xray_network_security_sni="${ss_basicxray_network_host}"
+			else
+				local ss_basic_xray_network_security_sni=""
+			fi
+		fi
+
+		if [ "${ss_basic_xray_network_security}" == "tls" ];then
+			local tls="{
+					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
+					,\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					}"
+		else
+			local tls="null"
+		fi
+
+		if [ "${ss_basic_xray_network_security}" == "xtls" ];then
+			local xtls="{
+					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
+					,\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					}"
+		else
+			local xtls="null"
+		fi
+		
+		# incase multi-domain input
+		if [ "$(echo $ss_basic_xray_network_host | grep ",")" ]; then
+			ss_basic_xray_network_host=$(echo ${ss_basic_xray_network_host} | sed 's/,/", "/g')
+		fi
+
+		case "${ss_basic_xray_network}" in
+		tcp)
+			if [ "${ss_basic_xray_headtype_tcp}" == "http" ]; then
+				local tcp="{
+					\"header\": {
+					\"type\": \"http\"
+					,\"request\": {
+					\"version\": \"1.1\"
+					,\"method\": \"GET\"
+					,\"path\": $(get_path_empty $ss_basic_xray_network_path)
+					,\"headers\": {
+					\"Host\": $(get_host_empty $ss_basic_xray_network_host),
+					\"User-Agent\": [
+					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
+					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
+					]
+					,\"Accept-Encoding\": [\"gzip, deflate\"]
+					,\"Connection\": [\"keep-alive\"]
+					,\"Pragma\": \"no-cache\"
+					}
+					}
+					}
+					}"
+			else
+				local tcp="null"
+			fi
+			;;
+		kcp)
+			local kcp="{
+				\"mtu\": 1350
+				,\"tti\": 50
+				,\"uplinkCapacity\": 12
+				,\"downlinkCapacity\": 100
+				,\"congestion\": false
+				,\"readBufferSize\": 2
+				,\"writeBufferSize\": 2
+				,\"header\": {
+				\"type\": \"$ss_basic_xray_headtype_kcp\"
+				}
+				,\"seed\": $(get_value_null $ss_basic_xray_kcp_seed)
+				}"
+			;;
+		ws)
+			if [ -z "$ss_basic_xray_network_path" -a -z "$ss_basic_xray_network_host" ]; then
+				local ws="{}"
+			elif [ -z "$ss_basic_xray_network_path" -a -n "$ss_basic_xray_network_host" ]; then
+				local ws="{
+					\"headers\": $(get_ws_header $ss_basic_xray_network_host)
+					}"
+			elif [ -n "$ss_basic_xray_network_path" -a -z "$ss_basic_xray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_xray_network_path)
+					}"
+			elif [ -n "$ss_basic_xray_network_path" -a -n "$ss_basic_xray_network_host" ]; then
+				local ws="{
+					\"path\": $(get_value_null $ss_basic_xray_network_path),
+					\"headers\": $(get_ws_header $ss_basic_xray_network_host)
+					}"
+			fi
+			;;
+		h2)
+			local h2="{
+				\"path\": $(get_value_empty $ss_basic_xray_network_path)
+				,\"host\": $(get_host $ss_basic_xray_network_host)
+				}"
+			;;
+		quic)
+			local qc="{
+				\"security\": $(get_value_empty $ss_basic_xray_network_host),
+				\"key\": $(get_value_empty $ss_basic_xray_network_path),
+				\"header\": {
+				\"type\": \"${ss_basic_xray_headtype_quic}\"
+				}
+				}"
+			;;
+		grpc)
+			local gr="{
+				\"serviceName\": $(get_value_empty $ss_basic_xray_network_path),
+				\"multiMode\": $(get_grpc_multimode ${ss_basic_xray_grpc_mode})
+				}"
+			;;
+		esac
+		# log area
+		cat >"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+			{
+			"log": {
+				"access": "/dev/null",
+				"error": "/tmp/xray_log.log",
+				"loglevel": "error"
+			},
+		EOF
+		# inbounds area (7913 for dns resolve)
+		if [ "${ss_foreign_dns}" == "7" ]; then
+			echo_date 配置xray dns，用于dns解析...
+			cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+				"inbounds": [
+					{
+					"protocol": "dokodemo-door",
+					"port": ${DNSF_PORT},
+					"settings": {
+						"address": "8.8.8.8",
+						"port": 53,
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
+					},
+					{
+						"listen": "0.0.0.0",
+						"port": 3333,
+						"protocol": "dokodemo-door",
+						"settings": {
+							"network": "tcp,udp",
+							"followRedirect": true
+						}
+					}
+				],
+			EOF
+		else
+			# inbounds area (23456 for socks5)
+			cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+				"inbounds": [
+					{
+						"port": 23456,
+						"listen": "0.0.0.0",
+						"protocol": "socks",
+						"settings": {
+							"auth": "noauth",
+							"udp": true,
+							"ip": "127.0.0.1"
+						}
+					},
+					{
+						"listen": "0.0.0.0",
+						"port": 3333,
+						"protocol": "dokodemo-door",
+						"settings": {
+							"network": "tcp,udp",
+							"followRedirect": true
+						}
+					}
+				],
+			EOF
+		fi
+		# outbounds area
+		cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+			"outbounds": [
+				{
+					"tag": "proxy",
+					"protocol": "vless",
+					"settings": {
+						"vnext": [
+							{
+								"address": "$ss_basic_server_orig",
+								"port": $ss_basic_port,
+								"users": [
+									{
+										"id": "$ss_basic_xray_uuid"
+										,"security": "auto"
+										,"encryption": "$ss_basic_xray_encryption"
+										,"flow": $(get_value_null $ss_basic_xray_flow)
+									}
+								]
+							}
+						]
+					},
+					"streamSettings": {
+						"network": "$ss_basic_xray_network"
+						,"security": "$ss_basic_xray_network_security"
+						,"tlsSettings": $tls
+						,"xtlsSettings": $xtls
+						,"tcpSettings": $tcp
+						,"kcpSettings": $kcp
+						,"wsSettings": $ws
+						,"httpSettings": $h2
+						,"quicSettings": $qc
+						,"grpcSettings": $gr
+					},
+					"mux": {
+						"enabled": false,
+						"concurrency": -1
+					}
+				}
+			]
+			}
+		EOF
+		echo_date 解析Xray配置文件...
+		sed -i '/null/d' ${XRAY_CONFIG_FILE_TMP} 2>/dev/null
+		jq --tab . $XRAY_CONFIG_FILE_TMP >/tmp/jq_para_tmp.txt 2>&1
+		if [ "$?" != "0" ];then
+			echo_date "json配置解析错误，错误信息如下："
+			echo_date $(cat /tmp/jq_para_tmp.txt) 
+			echo_date "请更正你的错误然后重试！！"
+			rm -rf /tmp/jq_para_tmp.txt
+			close_in_five
+		fi
+		jq --tab . $XRAY_CONFIG_FILE_TMP >"$XRAY_CONFIG_FILE"
+		echo_date Xray配置文件写入成功到"$XRAY_CONFIG_FILE"
+	else
+		echo_date 使用自定义的Xray json配置文件...
+		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_FILE_TMP"
+		local OB=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbound)
+		local OBS=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbounds)
+
+		# 兼容旧格式：outbound
+		if [ "$OB" != "null" ]; then
+			OUTBOUNDS=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbound)
+		fi
+		
+		# 新格式：outbound[]
+		if [ "$OBS" != "null" ]; then
+			OUTBOUNDS=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbounds[0])
+		fi
+		
+		if [ "$ss_foreign_dns" == "7" ]; then
+			local TEMPLATE="{
+								\"log\": {
+									\"access\": \"/dev/null\",
+									\"error\": \"/tmp/xray_log.log\",
+									\"loglevel\": \"error\"
+								},
+								\"inbounds\": [
+									{
+										\"protocol\": \"dokodemo-door\", 
+										\"port\": $DNSF_PORT,
+										\"settings\": {
+											\"address\": \"8.8.8.8\",
+											\"port\": 53,
+											\"network\": \"udp\",
+											\"timeout\": 0,
+											\"followRedirect\": false
+										}
+									},
+									{
+										\"listen\": \"0.0.0.0\",
+										\"port\": 3333,
+										\"protocol\": \"dokodemo-door\",
+										\"settings\": {
+											\"network\": \"tcp,udp\",
+											\"followRedirect\": true
+										}
+									}
+								]
+							}"
+		else
+			local TEMPLATE="{
+								\"log\": {
+									\"access\": \"/dev/null\",
+									\"error\": \"/tmp/xray_log.log\",
+									\"loglevel\": \"error\"
+								},
+								\"inbounds\": [
+									{
+										\"port\": 23456,
+										\"listen\": \"0.0.0.0\",
+										\"protocol\": \"socks\",
+										\"settings\": {
+											\"auth\": \"noauth\",
+											\"udp\": true,
+											\"ip\": \"127.0.0.1\",
+											\"clients\": null
+										},
+										\"streamSettings\": null
+									},
+									{
+										\"listen\": \"0.0.0.0\",
+										\"port\": 3333,
+										\"protocol\": \"dokodemo-door\",
+										\"settings\": {
+											\"network\": \"tcp,udp\",
+											\"followRedirect\": true
+										}
+									}
+								]
+							}"
+		fi
+		echo_date 解析Xray配置文件...
+		echo $TEMPLATE | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$XRAY_CONFIG_FILE"
+		echo_date Xray配置文件写入成功到"$XRAY_CONFIG_FILE"
+
+		# 检查xray json是否配置了xtls，如果是，则自动切换为xray
+		if [ -f "/koolshare/ss/xray.json" ];then
+			local IS_XTLS=$(cat /koolshare/ss/xray.json | jq -r .outbounds[0].streamSettings.security 2>/dev/null)
+			if [ "${IS_XTLS}" == "xtls" -a "${ss_basic_vcore}" != "1" ];then
+				echo_date "ℹ️检测到你配置了支持xtls节点，而Xray不支持xtls，自动切换为Xray核心！"
+				ss_basic_vcore=1
+				VCORE_NAME=Xray
+				mv /koolshare/ss/xray.json /koolshare/ss/xray.json 
+				XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
+			fi
+		fi
+
+		# 检测用户json的服务器ip地址
+		xray_protocal=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
+		case $xray_protocal in
+		vmess|vless)
+			xray_server=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
+			;;
+		socks)
+			xray_server=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
+			;;
+		shadowsocks)
+			xray_server=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
+			;;
+		*)
+			xray_server=""
+			;;
+		esac
+
+		if [ -n "$xray_server" -a "$xray_server" != "null" ]; then
+			# 服务器地址强制由用户选择的DNS解析，以免插件还未开始工作而导致解析失败
+			echo "server=/$xray_server/$(__get_server_resolver)#$(__get_server_resolver_port)" >/jffs/configs/dnsmasq.d/ss_server.conf
+			# 判断服务器域名格式
+			tmp=$(__valid_ip "$xray_server")
+			if [ "$?" == "0" ]; then
+				echo_date "检测到你的json配置的Xray服务器是：$xray_server"
+				ss_basic_server_ip="$xray_server"
+			else
+				echo_date "检测到你的json配置的Xray服务器：【$xray_server】不是ip格式！"
+				echo_date "尝试解析Xray服务器的ip地址，使用DNS：$(__get_server_resolver):$(__get_server_resolver_port)"
+				echo_date "如果此处等待时间较久，建议在【节点域名解析DNS服务器】处更换DNS服务器..."
+				xray_server_ip=$(__resolve_ip "$xray_server")
+				case $? in
+				0)
+					# server is domain format and success resolved.
+					echo_date "Xray服务器的ip地址解析成功：$xray_server_ip"
+					# 解析并记录一次ip，方便插件触发重启设定工作
+					echo "address=/$xray_server/$xray_server_ip" >/tmp/ss_host.conf
+					# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
+					#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
+					ss_basic_server_ip="$xray_server_ip"
+					;;
+				1)
+					# server is domain format and failed to resolve.
+					unset ss_basic_server_ip
+					echo_date "Xray服务器的ip地址解析失败!插件将继续运行，域名解析将由Xray自己进行！"
+					echo_date "请自行将Xray服务器的ip地址填入IP/CIDR白名单中!"
+					echo_date "为了确保Xray的正常工作，建议配置ip格式的Xray服务器地址！"
+					;;
+				2)
+					# server is not ip either domain!
+					echo_date "错误1！！检测到json配置内的Xray服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
+					echo_date "请更正你的错误然后重试！！"
+					close_in_five
+					;;
+				esac
+			fi
+			# write xray server
+			dbus set ssconf_basic_server_${ssconf_basic_node}=${xray_server}
+		else
+			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+			echo_date "+       没有检测到你的Xray服务器地址，如果你确定你的配置是正确的        +"
+			echo_date "+   请自行将Xray服务器的ip地址填入【IP/CIDR】黑名单中，以确保正常使用   +"
+			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		fi
+	fi
+}
+
+start_xray() {
+	# tfo start
+	if [ "$ss_basic_tfo" == "1" ]; then
+		echo_date 开启tcp fast open支持.
+		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	fi
+	# xray start
+	if [ "${ss_basic_xguard}" == "1" ];then
+		echo_date "开启Xray主进程 + Xray守护..."
+		# use perp to start xray
+		mkdir -p /koolshare/perp/xray/
+		cat >/koolshare/perp/xray/rc.main <<-EOF
+			#!/bin/sh
+			source /koolshare/scripts/base.sh
+			CMD="xray run -c /koolshare/ss/xray.json"
+			
+			exec 2>&1
+			exec \$CMD
+			
+		EOF
+		chmod +x /koolshare/perp/xray/rc.main
+		chmod +t /koolshare/perp/xray/
+		perpctl -u xray >/dev/null 2>&1
+	else
+		echo_date "开启Xray主进程..."
+		cd /koolshare/bin
+		xray run -c $XRAY_CONFIG_FILE >/dev/null 2>&1 &
+	fi
+	local XPID
+	local i=25
+	until [ -n "$XPID" ]; do
+		i=$(($i - 1))
+		XPID=$(pidof xray)
+		if [ "$i" -lt 1 ]; then
+			echo_date "Xray进程启动失败！"
+			close_in_five
+		fi
+		usleep 250000
+	done
+	echo_date Xray启动成功，pid：$XPID
+}
+
+creat_trojan_json(){
+	if [ "$ss_foreign_dns" == "3" -o "$ss_foreign_dns" == "4" -o "$ss_foreign_dns" == "5" -o "$ss_foreign_dns" == "10" ]; then
+		trojan_socks=1
+	fi
+	
+	if [ -n "$WAN_ACTION" ]; then
+		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	elif [ -n "$NAT_ACTION" ]; then
+		
+		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+		return 0
+	else
+		echo_date "创建$(__get_type_abbr_name)的nat配置文件到${TROJAN_CONFIG_FILE}"
+		[ "${trojan_socks}" == "1" ] && echo_date "创建$(__get_type_abbr_name)的client配置文件到${TROJAN_CONFIG_FILE_SOCKS}"
+	fi
+	
+	rm -rf "${TROJAN_CONFIG_TEMP}"
+	rm -rf "${TROJAN_CONFIG_FILE}"
+	rm -rf "${TROJAN_CONFIG_TEMP_SOCKS}"
+	rm -rf "${TROJAN_CONFIG_FILE_SOCKS}"
+	
+	cat > "${TROJAN_CONFIG_TEMP}" <<-EOF
+		{
+			"run_type": "nat",
+			"local_addr": "0.0.0.0",
+			"local_port": 3333,
+			"remote_addr": "${ss_basic_server}",
+			"remote_port": ${ss_basic_port},
+			"password": ["${ss_basic_trojan_uuid}"],
+			"log_level": 1,
+			"ssl": {
+				"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
+				"verify_hostname": true,
+				"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+				"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+				"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+				"sni": $(get_value_null ${ss_basic_trojan_sni}),
+				"alpn": ["h2","http/1.1"],
+				"reuse_session": true,
+				"session_ticket": false,
+				"curves": ""
+			},
+			"tcp": {
+			"no_delay": true,
+			"keep_alive": true,
+			"reuse_port": $(get_function_switch ${ss_basic_mcore}),
+			"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+			"fast_open_qlen": 20
+			}
+		}
+	EOF
+	echo_date "解析trojan的nat配置文件..."
+	jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
+	if [ "$?" != "0" ];then
+		echo_date "json配置解析错误，错误信息如下："
+		echo_date $(cat /tmp/trojan_para_tmp.txt) 
+		echo_date "请更正你的错误然后重试！！"
+		rm -rf /tmp/trojan_para_tmp.txt
+		close_in_five
+	fi
+	jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
+	echo_date "解析成功！trojan的nat配置文件成功写入到${TROJAN_CONFIG_FILE}"
+
+	echo_date 测试trojan的nat配置文件....
+	result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE} 2>&1 | grep "The config file looks good.")
+	if [ -n "${result}" ]; then
+		echo_date 测试结果：${result}
+		echo_date trojan的nat配置文件通过测试!!!
+	else
+		echo_date trojan的nat配置文件没有通过测试，请检查设置!!!
+		rm -rf ${TROJAN_CONFIG_TEMP}
+		rm -rf ${TROJAN_CONFIG_FILE}
+		close_in_five
+	fi
+	
+	if [ "${trojan_socks}" == "1" ]; then
+		# 3:  dns2socks
+		# 4:  ss-tunnel    →   fall back to dns2socks
+		# 5:  chinadns1    →   use dns2socks as upstream
+		# 7:  v2ray_dns    →   fall back to dns2socks
+		# 10: chinadns-ng  →   use dns2socks as upstream
+		cat > "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+			{
+				"run_type": "client",
+				"local_addr": "127.0.0.1",
+				"local_port": 23456,
+				"remote_addr": "${ss_basic_server}",
+				"remote_port": ${ss_basic_port},
+				"password": ["${ss_basic_trojan_uuid}"],
+				"log_level": 1,
+				"ssl": {
+					"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
+					"verify_hostname": true,
+					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+					"sni": $(get_value_null ${ss_basic_trojan_sni}),
+					"alpn": ["h2","http/1.1"],
+					"reuse_session": true,
+					"session_ticket": false,
+					"curves": ""
+				},
+				"tcp": {
+				"no_delay": true,
+				"keep_alive": true,
+				"reuse_port": false,
+				"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+				"fast_open_qlen": 20
+				}
+			}
+		EOF
+		echo_date 解析trojan的client配置文件...
+		jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
+		if [ "$?" != "0" ];then
+			echo_date "json配置解析错误，错误信息如下："
+			echo_date $(cat /tmp/trojan_para_tmp.txt) 
+			echo_date "请更正你的错误然后重试！！"
+			rm -rf /tmp/trojan_para_tmp.txt
+			close_in_five
+		fi
+		jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
+		echo_date "解析成功！trojan的client配置文件成功写入到${TROJAN_CONFIG_FILE_SOCKS}"
+
+		echo_date 测试trojan的client配置文件....
+		result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
+		if [ -n "${result}" ]; then
+			echo_date 测试结果：${result}
+			echo_date trojan的client配置文件通过测试!!!
+		else
+			echo_date trojan的client配置文件没有通过测试，请检查设置!!!
+			rm -rf ${TROJAN_CONFIG_TEMP_SOCKS}
+			rm -rf ${TROJAN_CONFIG_FILE_SOCKS}
+			close_in_five
+		fi
+	fi
+}
+
+start_trojan(){
+	# tfo
+	if [ "${ss_basic_trojan_tfo}" == "1" ]; then
+		echo_date trojan开启tcp fast open支持.
+		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	else
+		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+	fi
+	
+	# start trojan
+	if [ "${ss_basic_mcore}" == "1" ]; then
+		echo_date trojan开启$THREAD线程支持.
+		local i=1
+		while [ $i -le $THREAD ]; do
+			trojan >/dev/null 2>&1 &
+			let i++
+		done
+	else
+		trojan >/dev/null 2>&1 &
+	fi
+
+	if [ "${trojan_socks}" == "1" ];then
+		trojan -c ${TROJAN_CONFIG_FILE_SOCKS} >/dev/null 2>&1 &
 	fi
 }
 
@@ -1997,7 +2789,7 @@ get_action_chain() {
 get_mode_name() {
 	case "$1" in
 	0)
-		echo "不通过SS"
+		echo "不通过代理"
 		;;
 	1)
 		echo "gfwlist模式"
@@ -2018,7 +2810,7 @@ get_mode_name() {
 }
 
 factor() {
-	if [ -z "$1" ] || [ -z "$2" ]; then
+	if [ -z "$1" -o -z "$2" ]; then
 		echo ""
 	else
 		echo "$2 $1"
@@ -2158,7 +2950,7 @@ apply_nat_rules() {
 	# 如果是主模式游戏模式，则把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM链
 	# 如果主模式不是游戏模式，则不需要把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM，不然会造成其他模式主机的udp也走游戏模式
 	###[ "$mangle" == "1" ] && ss_acl_default_mode=3
-	[ "$ss_acl_default_mode" != "0" ] && [ "$ss_acl_default_mode" != "3" ] && ss_acl_default_mode=0
+	[ "$ss_acl_default_mode" != "0" -a "$ss_acl_default_mode" != "3" ] && ss_acl_default_mode=0
 	[ "$ss_basic_mode" == "3" ] && iptables -t mangle -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
 	# 重定所有流量到 SHADOWSOCKS
 	KP_NU=$(iptables -nvL PREROUTING -t nat | sed 1,2d | sed -n '/KOOLPROXY/=' | head -n1)
@@ -2169,7 +2961,7 @@ apply_nat_rules() {
 	# QOS开启的情况下
 	QOSO=$(iptables -t mangle -S | grep -o QOSO | wc -l)
 	RRULE=$(iptables -t mangle -S | grep "A QOSO" | head -n1 | grep RETURN)
-	if [ "$QOSO" -gt "1" ] && [ -z "$RRULE" ]; then
+	if [ "$QOSO" -gt "1" -a -z "$RRULE" ]; then
 		iptables -t mangle -I QOSO0 -m mark --mark "$ip_prefix_hex" -j RETURN
 	fi
 }
@@ -2212,7 +3004,7 @@ restart_dnsmasq() {
 load_module() {
 	xt=$(lsmod | grep xt_set)
 	OS=$(uname -r)
-	if [ -f /lib/modules/${OS}/kernel/net/netfilter/xt_set.ko ] && [ -z "$xt" ]; then
+	if [ -f /lib/modules/${OS}/kernel/net/netfilter/xt_set.ko -a -z "$xt" ]; then
 		echo_date "加载xt_set.ko内核模块！"
 		insmod /lib/modules/${OS}/kernel/net/netfilter/xt_set.ko
 	fi
@@ -2499,11 +3291,15 @@ apply_ss() {
 	creat_ipset
 	create_dnsmasq_conf
 	# do not re generate json on router start, use old one
-	[ "$ss_basic_type" != "3" ] && creat_ss_json
-	[ "$ss_basic_type" = "3" ] && creat_v2ray_json
-	[ "$ss_basic_type" == "0" ] || [ "$ss_basic_type" == "1" ] && start_ss_redir
+	[ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" -o "$ss_basic_type" == "2" ] && creat_ss_json
+	[ "$ss_basic_type" == "3" ] && creat_v2ray_json
+	[ "$ss_basic_type" == "4" ] && creat_xray_json
+	[ "$ss_basic_type" == "5" ] && creat_trojan_json
+	[ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" ] && start_ss_redir
 	[ "$ss_basic_type" == "2" ] && start_koolgame
 	[ "$ss_basic_type" == "3" ] && start_v2ray
+	[ "$ss_basic_type" == "4" ] && start_xray
+	[ "$ss_basic_type" == "5" ] && start_trojan
 	[ "$ss_basic_type" != "2" ] && start_kcp
 	[ "$ss_basic_type" != "2" ] && start_dns
 	#===load nat start===

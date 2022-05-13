@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+# shadowsocks script for qca-ipq806x platform router
 
 source /koolshare/scripts/base.sh
 LOGFILE_F=/tmp/upload/ssf_status.txt

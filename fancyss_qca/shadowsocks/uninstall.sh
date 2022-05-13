@@ -30,13 +30,14 @@ rm -rf /koolshare/bin/resolveip
 rm -rf /koolshare/bin/speederv1
 rm -rf /koolshare/bin/speederv2
 rm -rf /koolshare/bin/udp2raw
+rm -rf /koolshare/bin/trojan
 rm -rf /koolshare/bin/xray
 rm -rf /koolshare/bin/v2ray
-rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/httping
 rm -rf /koolshare/bin/haveged
+rm -rf /koolshare/bin/isutf8
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/qrcode.js
@@ -51,6 +52,7 @@ find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
 # legacy
+rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
 

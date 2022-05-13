@@ -139,6 +139,9 @@ __get_type_full_name() {
 	4)
 		echo "Xray"
 		;;
+	5)
+		echo "Trojan"
+		;;
 	esac
 }
 

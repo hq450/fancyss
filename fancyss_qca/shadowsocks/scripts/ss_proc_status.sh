@@ -18,6 +18,9 @@ get_mode_name() {
 	5)
 		echo "【全局模式】"
 		;;
+	6)
+		echo "【回国模式】"
+		;;
 	esac
 }
 
@@ -61,44 +64,36 @@ get_dns_name() {
 }
 
 echo_version() {
-	echo_date
-	SOFVERSION=$(cat /koolshare/ss/version)
-	if [ -z "$ss_basic_v2ray_version" ]; then
-		ss_basic_v2ray_version_tmp=$(/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
-		if [ -n "$ss_basic_v2ray_version_tmp" ]; then
-			ss_basic_v2ray_version="$ss_basic_v2ray_version_tmp"
-			dbus set ss_basic_v2ray_version="$ss_basic_v2ray_version_tmp"
-		else
-			ss_basic_v2ray_version="null"
-		fi
-	fi
-	echo ① 程序版本（插件版本：$SOFVERSION）：
-	echo -----------------------------------------------------------
+	echo 2️⃣插件主要二进制程序版本：
+	echo ---------------------------------------------------------------------------------
 	echo "程序			版本			备注"
-	echo "ss-redir		3.3.3			2019年11月03日编译"
-	echo "ss-tunnel		3.3.3			2019年11月03日编译"
-	echo "ss-local		3.3.3			2019年11月03日编译"
+	echo "ss-redir		3.3.5			2022年04月29日编译"
+	echo "ss-tunnel		3.3.5			2022年04月29日编译"
+	echo "ss-local		3.3.5			2022年04月29日编译"
 	echo "obfs-local		0.0.5			2018年11月25日编译"
 	echo "ssrr-redir		3.5.3			2018年12月06日编译"
 	echo "ssrr-local		3.5.3			2018年12月06日编译"
 	echo "haproxy			2.1.2			2020年01月06日编译"
-	echo "dns2socks		V2.0			2020年09月27日编译"
+	echo "dns2socks		V2.0			2017年12月05日编译"
 	echo "cdns			1.0			2017年12月09日编译"
 	echo "chinadns1		1.3.2			2017年12月09日编译"
 	echo "chinadns2		2.0.0			2017年12月09日编译"
-	echo "chinadns-ng		v1.0-beta.22		2020年09月27日编译"
-	echo "https_dns_proxy		2adeafb			2020年09月27日编译"
-	echo "httping			2.6			2020年09月27日编译"
-	echo "v2ray			$(v2ray -version|head -n1|awk '{print $2}')			2022年4月26日编译"
-	echo "xray			$(xray -version|head -n1|awk '{print $2}')			2022年04月27日编译"
+	echo "chinadns-ng		v1.0-beta.25		2020年06月02日编译"
+	echo "https_dns_proxy		758f913			2019年02月05日编译"
+	echo "httping			2.6			2020年01月06日编译"
+	echo "trojan			1.16.0			2020年01月19日编译"
+	echo "v2ray			$(v2ray -version|head -n1|awk '{print $2}')			2022年04月26日编译"
+	echo "xray			$(xray -version|head -n1|awk '{print $2}')			2022年05月11日编译"
 	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
 	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
-	echo "kcptun			20200409		Official Release 2020年04月09日"
-	echo -----------------------------------------------------------
+	echo "kcptun			20210922		Official Release 2021年09月22日"
+	echo ---------------------------------------------------------------------------------
 }
 
 check_status() {
-	#echo
+	CURR_TIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
+	echo "*️⃣${CURR_TIME}: fancyss插件版本：$(cat /koolshare/ss/version)"
+	echo
 	SS_REDIR=$(pidof ss-redir)
 	SS_TUNNEL=$(pidof ss-tunnel)
 	SS_V2RAY=$(pidof v2ray-plugin)
@@ -119,53 +114,67 @@ check_status() {
 	HDP=$(pidof https_dns_proxy)
 	DMQ=$(pidof dnsmasq)
 	SMD=$(pidof smartdns)
+	TROJAN=$(pidof trojan)
 	game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep 3)
 
 	if [ "$ss_basic_type" == "0" ]; then
-		echo_version
-		echo
-		echo ② 检测当前相关进程工作状态：（你正在使用SS-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo -----------------------------------------------------------
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用SS-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo ---------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		[ -n "$SS_REDIR" ] && echo "ss-redir	工作中	pid：$SS_REDIR" || echo "ss-redir	未运行"
 		if [ -n "$SS_V2RAY" ]; then
 			echo "v2ray-plugin	工作中	pid：$SS_V2RAY"
 		fi
 	elif [ "$ss_basic_type" == "1" ]; then
-		echo_version
-		echo
-		echo ② 检测当前相关进程工作状态：（你正在使用SSR-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo -----------------------------------------------------------
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用SSR-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo ---------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		[ -n "$SSR_REDIR" ] && echo "ssr-redir	工作中	pid：$SSR_REDIR" || echo "ssr-redir	未运行"
 	elif [ "$ss_basic_type" == "2" ]; then
-		echo_version
-		echo
-		echo ② 检测当前相关进程工作状态：（你正在使用koolgame,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name 8)）
-		echo -----------------------------------------------------------
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用koolgame,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name 8)）
+		echo ---------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		[ -n "$KOOLGAME" ] && echo "koolgame	工作中	pid：$KOOLGAME" || echo "koolgame	未运行"
 	elif [ "$ss_basic_type" == "3" ]; then
-		echo_version
-		echo
 		if [ "${ss_basic_vcore}" == "1" ];then
-			echo ② 检测当前相关进程工作状态：（你正在使用Xray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-			echo -----------------------------------------------------------
+			echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo ---------------------------------------------------------------------------------
 			echo "程序		状态	PID"
 			if [ -n "${XRAY}" ];then
 				xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
 				if [ -n "${xray_time}" ];then
 					echo "Xray		工作中	pid：$XRAY	工作时长: ${xray_time}"
+				else
+					echo "Xray		工作中	pid：$XRAY"
 				fi
 			else
 				echo "Xray	未运行"
 			fi
 		else
-			echo ② 检测当前相关进程工作状态：（你正在使用V2Ray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-			echo -----------------------------------------------------------
+			echo 1️⃣检测当前相关进程工作状态：（你正在使用V2ray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo ---------------------------------------------------------------------------------
 			echo "程序		状态	PID"
 			[ -n "$V2RAY" ] && echo "v2ray		工作中	pid：$V2RAY" || echo "v2ray	未运行"
 		fi
+	elif [ "$ss_basic_type" == "4" ]; then
+		echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo ---------------------------------------------------------------------------------
+		echo "程序		状态	PID"
+		if [ -n "${XRAY}" ];then
+			xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
+			if [ -n "${xray_time}" ];then
+				echo "Xray		工作中	pid：$XRAY	工作时长: ${xray_time}"
+			else
+				echo "Xray		工作中	pid：$XRAY"
+			fi
+		else
+			echo "Xray	未运行"
+		fi
+	elif [ "$ss_basic_type" == "5" ]; then
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用trojan,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo ---------------------------------------------------------------------------------
+		echo "程序		状态	PID"
+		[ -n "${TROJAN}" ] && echo "trojan		工作中	pid：${TROJAN}" || echo "trojan		未运行"
 	fi
 
 	if [ -z "$ss_basic_koolgame_udp" ]; then
@@ -205,9 +214,12 @@ check_status() {
 			[ -n "$CHINADNS1" ] && echo "chinadns1	工作中	pid：$CHINADNS1" || echo "chinadns1	未运行"
 		elif [ "$ss_foreign_dns" == "6" ]; then
 			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
+		elif [ "$ss_foreign_dns" == "7" ]; then
+			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
 		elif [ "$ss_foreign_dns" == "9" ]; then
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
 		elif [ "$ss_foreign_dns" == "10" ]; then
+			[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
 			[ -n "${CHINADNS_NG}" ] && echo "chinadns-ng	工作中	pid：${CHINADNS_NG}" || echo "chinadns-ng	未运行"
 		fi
 	fi
@@ -217,11 +229,14 @@ check_status() {
 		fi
 	}
 	[ -n "$DMQ" ] && echo "dnsmasq		工作中	pid：$DMQ" || echo "dnsmasq	未运行"
+	echo ---------------------------------------------------------------------------------
 
-	echo -----------------------------------------------------------
+	echo
+	echo_version
+
 	echo
 	echo
-	echo ③ 检测iptbales工作状态：
+	echo 3️⃣检测iptbales工作状态：
 	echo ----------------------------------------------------- nat表 PREROUTING 链 --------------------------------------------------------
 	iptables -nvL PREROUTING -t nat
 	echo
@@ -258,8 +273,8 @@ check_status() {
 	[ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && echo
 	[ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && echo ------------------------------------------------------ mangle表 SHADOWSOCKS_GAM 链 -------------------------------------------------------
 	[ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && iptables -nvL SHADOWSOCKS_GAM -t mangle
-	echo -----------------------------------------------------------------------------------------------------------------------------------
-	echo
+	[ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && echo -----------------------------------------------------------------------------------------------------------------------------------
+	[ -n "$game_on" ] || [ "$ss_basic_mode" == "3" ] && echo
 }
 
 if [ "$ss_basic_enable" == "1" ]; then

@@ -126,12 +126,13 @@ install_now(){
 	rm -rf /koolshare/bin/speederv1
 	rm -rf /koolshare/bin/speederv2
 	rm -rf /koolshare/bin/udp2raw
+	rm -rf /koolshare/bin/trojan
 	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
-	rm -rf /koolshare/bin/v2ctl
 	rm -rf /koolshare/bin/v2ray-plugin
 	rm -rf /koolshare/bin/https_dns_proxy
 	rm -rf /koolshare/bin/httping
+	rm -rf /koolshare/bin/isutf8
 	rm -rf /koolshare/bin/haveged
 	rm -rf /koolshare/res/icon-shadowsocks.png
 	rm -rf /koolshare/res/ss-menu.js
@@ -146,6 +147,7 @@ install_now(){
 	find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf >/dev/null 2>&1
 
 	# legacy files should be removed
+	rm -rf /koolshare/bin/v2ctl >/dev/null 2>&1
 	rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 	rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
 
@@ -206,14 +208,15 @@ install_now(){
 
 	# default values
 	echo_date "设置一些默认值..."
-	[ -z "$(dbus get ss_dns_china)" ] && dbus set ss_dns_china=11
-	[ -z "$(dbus get ss_dns_foreign)" ] && dbus set ss_dns_foreign=1
+	# 1.9.15：国内DNS默认使用运营商DNS
+	[ -z "$(dbus get ss_dns_china)" ] && dbus set ss_dns_china=1
+	# 1.9.15：国外dns解析设置为chinadns-ng，并默认丢掉AAAA记录
+	[ -z "$(dbus get ss_dns_foreign)" ] && dbus set ss_dns_foreign=10
+	[ -z "$(dbus get ss_disable_aaaa)" ] && dbus set ss_disable_aaaa=1
+	# 
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
-
-	# 设置v2ray 版本号
-	dbus set ss_basic_v2ray_version="v4.44.0"
 
 	# dbus value
 	echo_date "设置插件安装参数..."

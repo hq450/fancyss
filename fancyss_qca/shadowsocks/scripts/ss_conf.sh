@@ -30,6 +30,7 @@ backup_tar(){
 	cp /koolshare/scripts/ss_install.sh $TARGET_FOLDER/install.sh
 	cp /koolshare/scripts/uninstall_shadowsocks.sh $TARGET_FOLDER/uninstall.sh
 	cp /koolshare/scripts/ss_* $TARGET_FOLDER/scripts/
+	cp /koolshare/bin/isutf8 $TARGET_FOLDER/bin/
 	cp /koolshare/bin/ss-local $TARGET_FOLDER/bin/
 	cp /koolshare/bin/ss-redir $TARGET_FOLDER/bin/
 	cp /koolshare/bin/ss-tunnel $TARGET_FOLDER/bin/
@@ -50,9 +51,10 @@ backup_tar(){
 	cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
 	cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
+	cp /koolshare/bin/trojan $TARGET_FOLDER/bin/
 	cp /koolshare/bin/xray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
-	cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
+	#cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/httping $TARGET_FOLDER/bin/
@@ -77,29 +79,41 @@ backup_tar(){
 
 remove_now(){
 	echo_date 开始清理shadowsocks配置...
-	confs=`dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign"`
+	confs=$(dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign")
 	for conf in $confs
 	do
 		echo_date 移除$conf
 		dbus remove $conf
 	done
 	echo_date 设置一些默认参数...
+
+	# default values
+	echo_date "设置一些默认值..."
+	# 1.9.15：国内DNS默认使用运营商DNS
 	dbus set ss_basic_enable="0"
-	dbus set ss_basic_version_local=`cat /koolshare/ss/version` 
+	[ -z "$(dbus get ss_dns_china)" ] && dbus set ss_dns_china=1
+	# 1.9.15：国外dns解析设置为chinadns-ng，并默认丢掉AAAA记录
+	[ -z "$(dbus get ss_dns_foreign)" ] && dbus set ss_dns_foreign=10
+	[ -z "$(dbus get ss_disable_aaaa)" ] && dbus set ss_disable_aaaa=1
+	# 
+	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
+	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
+	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
+	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	echo_date 尝试关闭shadowsocks...
 	sh /koolshare/ss/ssconfig.sh stop
 }
 
 remove_silent(){
 	echo_date 先清除已有的参数...
-	confs=`dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign"`
+	confs=$(dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign")
 	for conf in $confs
 	do
 		echo_date 移除$conf
 		dbus remove $conf
 	done
 	echo_date 设置一些默认参数...
-	dbus set ss_basic_version_local=`cat /koolshare/ss/version` 
+	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	echo_date "--------------------"
 }
 
@@ -109,43 +123,43 @@ restore_sh(){
 	chmod +x /tmp/upload/ssconf_backup.sh
 	sh /tmp/upload/ssconf_backup.sh
 	dbus set ss_basic_enable="0"
-	dbus set ss_basic_version_local=`cat /koolshare/ss/version` 
+	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	echo_date 配置恢复成功！
 }
 
 restore_json(){
 	echo_date 检测到ss json配置文件...
-	ss_format=`echo $confs|grep "obfs"`
+	ss_format=$(echo $confs|grep "obfs")
 	cat /tmp/ssconf_backup.json | jq --tab . > /tmp/ssconf_backup_formated.json
 	if [ -z "$ss_format" ];then
 		# SS json
 		echo_date 检测到ss json配置文件...
 		servers=$(cat /tmp/ssconf_backup_formated.json |grep -w server|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		ports=`cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		passwords=`cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		methods=`cat /tmp/ssconf_backup_formated.json |grep -w method|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		remarks=`cat /tmp/ssconf_backup_formated.json |grep -w remarks|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
+		ports=$(cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		passwords=$(cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		methods=$(cat /tmp/ssconf_backup_formated.json |grep -w method|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		remarks=$(cat /tmp/ssconf_backup_formated.json |grep -w remarks|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
 		
 		echo_date 开始导入配置...导入json配置不会覆盖原有配置.
-		last_node=`dbus list ssconf_basic_server|cut -d "=" -f 1| cut -d "_" -f 4| sort -nr|head -n 1`
+		last_node=$(dbus list ssconf_basic_server|cut -d "=" -f 1| cut -d "_" -f 4| sort -nr|head -n 1)
 		if [ ! -z "$last_node" ];then
-			k=`expr $last_node + 1`
+			k=$(expr $last_node + 1)
 		else
 			k=1
 		fi
 		min=1
-		max=`cat /tmp/ssconf_backup_formated.json |grep -wc server`
+		max=$(cat /tmp/ssconf_backup_formated.json |grep -wc server)
 		while [ $min -le $max ]
 		do
 		    echo_date "==============="
 		    echo_date import node $min
 		    echo_date $k
 		    
-		    server=`echo $servers | awk "{print $"$min"}"`
-			port=`echo $ports | awk "{print $"$min"}"`
-			password=`echo $passwords | awk "{print $"$min"}"`
-			method=`echo $methods | awk "{print $"$min"}"`
-			remark=`echo $remarks | awk "{print $"$min"}"`
+		    server=$(echo $servers | awk "{print $"$min"}")
+			port=$(echo $ports | awk "{print $"$min"}")
+			password=$(echo $passwords | awk "{print $"$min"}")
+			method=$(echo $methods | awk "{print $"$min"}")
+			remark=$(echo $remarks | awk "{print $"$min"}")
 			
 			echo_date $server
 			echo_date $port
@@ -155,52 +169,52 @@ restore_json(){
 			
 			dbus set ssconf_basic_server_"$k"="$server"
 			dbus set ssconf_basic_port_"$k"="$port"
-			dbus set ssconf_basic_password_"$k"=`echo "$password" | base64_encode`
+			dbus set ssconf_basic_password_"$k"=$(echo "$password" | base64_encode)
 			dbus set ssconf_basic_method_"$k"="$method"
 			dbus set ssconf_basic_name_"$k"="$remark"
 			dbus set ssconf_basic_use_rss_"$k"=0
 			dbus set ssconf_basic_mode_"$k"=2
-		    min=`expr $min + 1`
-		    k=`expr $k + 1`
+		    min=$(expr $min + 1)
+		    k=$(expr $k + 1)
 		done
 		echo_date 导入配置成功！
 	else
 		# SSR json
 		echo_date 检测到ssr json配置文件...
 		servers=$(cat /tmp/ssconf_backup_formated.json |grep -w server|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		ports=`cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		passwords=`cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		methods=`cat /tmp/ssconf_backup_formated.json |grep -w method|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		remarks=`cat /tmp/ssconf_backup_formated.json |grep -w remarks|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		obfs=`cat /tmp/ssconf_backup_formated.json |grep -w obfs|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		obfsparam=`cat /tmp/ssconf_backup_formated.json |grep -w obfsparam|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		protocol=`cat /tmp/ssconf_backup_formated.json |grep -w protocol|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2`
-		protocolparam=`cat /tmp/ssconf_backup_formated.json |grep -w protocolparam|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|sed 's/protocolparam://g'`
+		ports=$(cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		passwords=$(cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		methods=$(cat /tmp/ssconf_backup_formated.json |grep -w method|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		remarks=$(cat /tmp/ssconf_backup_formated.json |grep -w remarks|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		obfs=$(cat /tmp/ssconf_backup_formated.json |grep -w obfs|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		obfsparam=$(cat /tmp/ssconf_backup_formated.json |grep -w obfsparam|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		protocol=$(cat /tmp/ssconf_backup_formated.json |grep -w protocol|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
+		protocolparam=$(cat /tmp/ssconf_backup_formated.json |grep -w protocolparam|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|sed 's/protocolparam://g')
 		
 		echo_date 开始导入配置...导入json配置不会覆盖原有配置.
-		last_node=`dbus list ssconf_basic_server|cut -d "=" -f 1| cut -d "_" -f 4| sort -nr|head -n 1`
+		last_node=$(dbus list ssconf_basic_server|cut -d "=" -f 1| cut -d "_" -f 4| sort -nr|head -n 1)
 		if [ ! -z "$last_node" ];then
-			k=`expr $last_node + 1`
+			k=$(expr $last_node + 1)
 		else
 			k=1
 		fi
 		min=1
-		max=`cat /tmp/ssconf_backup_formated.json |grep -wc server`
+		max=$(cat /tmp/ssconf_backup_formated.json |grep -wc server)
 		while [ $min -le $max ]
 		do
 		    echo_date "==============="
 		    echo_date import node $min
 		    echo_date $k
 		    
-		    server=`echo $servers | awk "{print $"$min"}"`
-			port=`echo $ports | awk "{print $"$min"}"`
-			password=`echo $passwords | awk "{print $"$min"}"`
-			method=`echo $methods | awk "{print $"$min"}"`
-			remark=`echo $remarks | awk "{print $"$min"}"`
-			obf=`echo $obfs | awk "{print $"$min"}"`
-			obfspara=`echo $obfsparam | awk "{print $"$min"}"`
-			protoco=`echo $protocol | awk "{print $"$min"}"`
-			protocolpara=`echo $protocolparam | awk "{print $"$min"}"`
+		    server=$(echo $servers | awk "{print $"$min"}")
+			port=$(echo $ports | awk "{print $"$min"}")
+			password=$(echo $passwords | awk "{print $"$min"}")
+			method=$(echo $methods | awk "{print $"$min"}")
+			remark=$(echo $remarks | awk "{print $"$min"}")
+			obf=$(echo $obfs | awk "{print $"$min"}")
+			obfspara=$(echo $obfsparam | awk "{print $"$min"}")
+			protoco=$(echo $protocol | awk "{print $"$min"}")
+			protocolpara=$(echo $protocolparam | awk "{print $"$min"}")
 			
 			echo_date $server
 			echo_date $port
@@ -214,7 +228,7 @@ restore_json(){
 			
 			dbus set ssconf_basic_server_"$k"="$server"
 			dbus set ssconf_basic_port_"$k"="$port"
-			dbus set ssconf_basic_password_"$k"=`echo "$password" | base64_encode`
+			dbus set ssconf_basic_password_"$k"=$(echo "$password" | base64_encode)
 			dbus set ssconf_basic_method_"$k"="$method"
 			dbus set ssconf_basic_name_"$k"="$remark"
 			dbus set ssconf_basic_rss_obfs_"$k"="$obf"
@@ -223,8 +237,8 @@ restore_json(){
 			dbus set ssconf_basic_rss_protocol_para_"$k"="$protocolpara"
 			dbus set ssconf_basic_use_rss_"$k"=1
 			dbus set ssconf_basic_mode_"$k"=2
-		    min=`expr $min + 1`
-		    k=`expr $k + 1`
+		    min=$(expr $min + 1)
+		    k=$(expr $k + 1)
 		done
 		echo_date 导入配置成功！
 	fi
@@ -240,7 +254,7 @@ restore_now(){
 
 reomve_ping(){
 	# flush previous ping value in the table
-	pings=`dbus list ssconf_basic_ping | sort -n -t "_" -k 4|cut -d "=" -f 1`
+	pings=$(dbus list ssconf_basic_ping | sort -n -t "_" -k 4|cut -d "=" -f 1)
 	if [ -n "$pings" ];then
 		for ping in $pings
 		do

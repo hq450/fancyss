@@ -78,7 +78,7 @@ echo_version() {
 	echo "cdns			1.0			2017年12月09日编译"
 	echo "chinadns1		1.3.2			2017年12月09日编译"
 	echo "chinadns2		2.0.0			2017年12月09日编译"
-	echo "chinadns-ng		v1.0-beta.22		2020年06月02日编译"
+	echo "chinadns-ng		v1.0-beta.25		2020年06月02日编译"
 	echo "https_dns_proxy		758f913			2019年02月05日编译"
 	echo "httping			2.6			2020年01月06日编译"
 	echo "trojan			1.16.0			2020年01月19日编译"
