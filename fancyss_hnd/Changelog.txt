@@ -1,7 +1,9 @@
 fancyss_hnd Changelog
 ===========================================
-1.9.xx （todo）
-   - todo	1. 添加trojan支持（包括trojan节点添加，在线订阅）
+1.9.18
+   - add	添加trojan支持，使用trojan-gfw作为核心（包括trojan节点添加，在线订阅）
+   - fix	修复修改v2ray和xray json节点无法保存的问题
+   - note	xray + trojan的坑基本填完，后续再继续对现有版本查漏补缺。
    
 1.9.17
    - note	继续修补1.9.15大更新带来的一些新问题，trojan的坑留继续往后推
