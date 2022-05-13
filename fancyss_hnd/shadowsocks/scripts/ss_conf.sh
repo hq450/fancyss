@@ -51,6 +51,7 @@ backup_tar(){
 	cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
 	cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
+	cp /koolshare/bin/trojan $TARGET_FOLDER/bin/
 	cp /koolshare/bin/xray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
 	#cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/

@@ -25,6 +25,8 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_port_
 				ssconf_basic_ss_obfs_
 				ssconf_basic_ss_obfs_host_
+				ssconf_basic_ss_v2ray_
+				ssconf_basic_ss_v2ray_opts_
 				ssconf_basic_rss_obfs_
 				ssconf_basic_rss_obfs_param_
 				ssconf_basic_rss_protocol_
@@ -73,8 +75,10 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_xray_network_security_alpn_http_
 				ssconf_basic_xray_network_security_sni_
 				ssconf_basic_xray_json_
-				ssconf_basic_ss_v2ray_
-				ssconf_basic_ss_v2ray_opts_
+				ssconf_basic_trojan_ai_
+				ssconf_basic_trojan_uuid_
+				ssconf_basic_trojan_sni_
+				ssconf_basic_trojan_tfo_
 				ssconf_basic_type_"
 
 set_lock(){
@@ -1592,8 +1596,6 @@ get_vless_node(){
 	unset x_server_raw x_server x_server_port x_remarks x_uuid x_host x_path x_encryption x_type
 	unset x_headerType x_headtype_tcp x_headtype_kcp x_headtype_quic x_grpc_modex_security_tmp x_security
 	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash x_kcp_seed
-	# c33db6d4-633d-37f2-920a-860c76158c88@jp1.23697.naifei.vip:55442?encryption=none&type=ws&security=tls&host=jpx1.ms66.ga&sni=jpx1.ms66.ga&path=%2Fms&headerType=none#%F0%9F%87%AF%F0%9F%87%B5+%E6%97%A5%E6%9C%AC+JP
-	# ab836dd4-3cfa-48a4-8ca2-9c00224f5d40@kooldog.me:7896?encryption=none&flow=xtls-rprx-origin&security=xtls&sni=www.kooldog.me&alpn=h2%2Chttp%2F1.1&type=tcp&headerType=http&host=kooldog.me#test2%3Akooldog.me
 
 	x_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
 	x_server=$(echo "${x_server_raw}" | awk -F':' '{print $1}')
@@ -2037,6 +2039,308 @@ update_vless_node(){
 	echo ${x_group} >> /tmp/sub_group_info.txt
 }
 
+get_trojan_node(){
+	local decode_link="$1"
+	local action="$2"
+
+	t_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	t_server=$(echo "${t_server_raw}" | awk -F':' '{print $1}')
+	t_server_port=$(echo "${t_server_raw}" | awk -F':' '{print $2}')
+
+	echo "${decode_link}" | grep -Eqo "#"
+	if [ "$?" != "0" ];then
+		t_remarks=${t_server}
+	else
+		t_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}' | urldecode)
+	fi
+
+	t_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
+	t_ai=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "allowInsecure" | awk -F"=" '{print $2}')
+	t_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
+	t_tfo=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "tfo" | awk -F"=" '{print $2}')
+
+	if [ "${action}" == "1" ];then
+		t_group=${DOMAIN_NAME}
+		t_group_hash="${t_group}_${SUB_LINK_HASH:0:4}"
+	fi
+	if [ "${action}" == "2" ]; then
+		# 离线离线添加节点，group不需要
+		t_group=""
+		t_group_hash=""
+	fi
+	
+	# for debug, please keep it here
+	# echo ------------
+	# echo group: ${t_group}
+	# echo remarks: ${t_remarks}
+	# echo server_raw: ${t_server_raw}
+	# echo server: ${t_server}
+	# echo port: ${t_server_port}
+	# echo password: ${t_uuid}
+	# echo allowInsecure: ${t_ai}
+	# echo SNI: ${t_sni}
+	# echo TFO: ${t_tfo}
+	# echo ------------	
+
+	if [ "${action}" == "1" ];then
+		if [ -n "${t_group}" -a -n "${t_server}" -a -n "${t_remarks}" -a -n "${t_server_port}" -a -n "${t_uuid}" ]; then
+			server_base64=$(echo ${t_server} | base64_encode | sed 's/ -//g')
+			group_base64=$(echo ${t_group_hash} | base64_encode | sed 's/ -//g')
+			remark_base64=$(echo ${t_remarks} | base64_encode | sed 's/ -//g')
+			echo ${server_base64} ${group_base64} ${remark_base64} >> /tmp/cur_subscservers.txt
+		else
+			return 1
+		fi
+	fi
+	if [ "${action}" == "2" ];then
+		if [ -n "${t_server}" -a -n "${t_remarks}" -a -n "${t_server_port}" -a -n "${t_uuid}" ]; then
+			# 保留有效节点
+			return 0
+		else
+			# 丢弃无效节点
+			return 1
+		fi
+	fi
+}
+
+add_trojan_node(){
+	local flag="$1"
+	if [ "${flag}" == "1" ]; then
+		echo_date "trojan节点：检测到一个错误节点，跳过！"
+		exit 1
+	fi
+	let NODE_INDEX+=1
+	echo_date "trojan节点：新增加【${t_remarks}】到节点列表第 ${NODE_INDEX} 位。"
+	dbus_eset ssconf_basic_type_${NODE_INDEX} "5"
+	dbus_eset ssconf_basic_mode_${NODE_INDEX} "${ssr_subscribe_mode}"
+	dbus_eset ssconf_basic_name_${NODE_INDEX} "${t_remarks}"
+	dbus_eset ssconf_basic_server_${NODE_INDEX} "${t_server}"
+	dbus_eset ssconf_basic_port_${NODE_INDEX} "${t_server_port}"
+	dbus_eset ssconf_basic_trojan_uuid_${NODE_INDEX} "${t_uuid}"
+	dbus_eset ssconf_basic_trojan_ai_${NODE_INDEX} "${t_ai}"
+	dbus_eset ssconf_basic_trojan_sni_${NODE_INDEX} "${t_sni}"
+	dbus_eset ssconf_basic_trojan_tfo_${NODE_INDEX} "${t_tfo}"
+	dbus_eset ssconf_basic_group_${NODE_INDEX} "${t_group_hash}"
+	let addnum+=1
+}
+
+
+update_trojan_node(){
+	local FAILED_FLAG=$1
+	local UPDATE_FLAG
+	local DELETE_FLAG
+	local SKIPDB_FLAG
+	local INFO
+
+	if [ "${FAILED_FLAG}" == "1" ]; then
+		echo_date "xray订阅：检测到一个错误节点，跳过！"
+		return 1
+	fi
+
+	# ------------------------------- 关键词匹配逻辑 -------------------------------
+	# 用[排除]和[包括]关键词去匹配，剔除掉用户不需要的节点，剩下的需要的节点：UPDATE_FLAG=0，
+	# UPDATE_FLAG=0,需要的节点；1.判断本地是否有此节点，2.如果有就添加，没有就判断是否需要更新
+	# UPDATE_FLAG=2,不需要的节点；1. 判断本地是否有此节点，2.如果有就删除，没有就不管
+
+	[ -n "${KEY_WORDS_1}" ] && local KEY_MATCH_1=$(echo ${t_remarks} ${t_server} | grep -Eo "${KEY_WORDS_1}")
+	[ -n "${KEY_WORDS_2}" ] && local KEY_MATCH_2=$(echo ${t_remarks} ${t_server} | grep -Eo "${KEY_WORDS_2}")
+	if [ -n "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ]; then
+		# 排除节点：yes，包括节点：no
+		if [ -n "${KEY_MATCH_1}" ]; then
+			echo_date "trojan节点：不添加【${t_remarks}】节点，因为匹配了[排除]关键词"
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		else
+			local UPDATE_FLAG=0
+		fi
+	elif [ -z "${KEY_WORDS_1}" -a -n "${KEY_WORDS_2}" ]; then
+		# 排除节点：no，包括节点：yes
+		if [ -z "${KEY_MATCH_2}" ]; then
+			echo_date "trojan节点：不添加【${t_remarks}】节点，因为不匹配[包括]关键词"
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		else
+			local UPDATE_FLAG=0
+		fi
+	elif [ -n "${KEY_WORDS_1}" -a -n "${KEY_WORDS_2}" ]; then
+		# 排除节点：yes，包括节点：yes
+		if [ -n "${KEY_MATCH_1}" -a -z "${KEY_MATCH_2}" ]; then
+			echo_date "trojan节点：不添加【${t_remarks}】节点，因为匹配了[排除+包括]关键词"
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		elif [ -n "${KEY_MATCH_1}" -a -n "${KEY_MATCH_2}" ]; then
+			echo_date "trojan节点：不添加【${t_remarks}】节点，因为匹配了[排除]关键词"
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		elif  [ -z "${KEY_MATCH_1}" -a -z "${KEY_MATCH_2}" ]; then
+			echo_date "trojan节点：不添加【${t_remarks}】节点，因为不匹配[包括]关键词"
+			let exclude+=1 
+			local UPDATE_FLAG=2
+		else
+			local UPDATE_FLAG=0
+		fi
+	else
+		local UPDATE_FLAG=0
+	fi
+
+	# ------------------------------- 节点添加/修改逻辑 -------------------------------
+	local isadded_server=$(cat /tmp/cur_localservers.txt | grep ${group_base64} | awk '{print $1}' | grep -wc ${server_base64} | head -n1)
+	local isadded_remark=$(cat /tmp/cur_localservers.txt | grep ${group_base64} | awk '{print $3}' | grep -wc ${remark_base64} | head -n1)
+	if [ "${isadded_server}" == "0" -a "${isadded_remark}" == "0" ]; then
+		#地址匹配：no，名称匹配：no；说明是本地没有的新节点，添加它！
+		if [ "${UPDATE_FLAG}" == "0" ]; then
+			add_trojan_node
+		fi
+	elif [ "${isadded_server}" == "0" -a "${isadded_remark}" != "0" ]; then
+		#地址匹配：no，名称匹配：yes；说明可能是机场更改了节点名以外的参数，如节点域名！通过节点名称获取index
+		local index_line_remark=$(cat /tmp/cur_localservers.txt | grep ${group_base64} | grep -w ${remark_base64} | awk '{print $4}' | wc -l)
+		if [ "${index_line_remark}" == "1" ]; then
+			local index=$(cat /tmp/cur_localservers.txt| grep ${group_base64} | grep -w ${remark_base64} | awk '{print $4}')
+			local SKIPDB_FLAG=1
+		else
+			# 如果有些机场有名称重复的节点（垃圾机场！），把同名节点序号写进文件-1后依次去取节点号
+			local tmp_file=$(echo ${remark_base64} | sed 's/\=//g')
+			if [ ! -f /tmp/multi_remark_${tmp_file}.txt ]; then
+				# 节点名称的base64值，去掉"="后，作为文件名写入/tmp，后面遇到该节点（节点名称相同的节点）就能从里面取值啦
+				cat /tmp/cur_localservers.txt | grep ${group_base64} | grep -w ${remark_base64} | awk '{print $4}' > /tmp/multi_remark_${tmp_file}.txt
+			fi
+			
+			if [ "$(cat /tmp/multi_remark_${tmp_file}.txt | wc -l)" == "0" ]; then
+				# 取值已经拿完了，不能删除该文件，但是还有新的同名称节点出现，那么就直接添加该节点
+				if [ "${UPDATE_FLAG}" == "0" ]; then
+					add_trojan_node
+				fi
+			else
+				# add SKIPDB_FLAG
+				local SKIPDB_FLAG=1
+				local index=$(cat /tmp/multi_remark_${tmp_file}.txt | sed -n '1p')
+				sed -i '1d' /tmp/multi_remark_${tmp_file}.txt
+			fi
+		fi
+	else
+		# 地址匹配：yes，名称匹配：yes/no；说明可能是机场更改了节点地址以外的参数，如名字或其它参数，通过节点名称获取index
+		local index_line_server=$(cat /tmp/cur_localservers.txt | grep ${group_base64} | grep -w ${server_base64} | awk '{print $4}' | wc -l)
+		if [ "${index_line_server}" == "1" ]; then
+			local index=$(cat /tmp/cur_localservers.txt| grep ${group_base64} | grep -w ${server_base64} | awk '{print $4}')
+			local SKIPDB_FLAG=2
+		else
+			# 如果有些机场有域名重复的节点，如一些用于流量提示和过期日期提醒的假节点，把同名节点序号写进文件-2后依次去取节点号
+			local tmp_file=$(echo ${server_base64} | sed 's/\=//g')
+			if [ ! -f /tmp/multi_server_${tmp_file}.txt ]; then
+				# 节点的base64值，去掉"="后，作为文件名写入/tmp，后面遇到该节点（server值相同的节点）就能从里面取值啦
+				cat /tmp/cur_localservers.txt | grep ${group_base64} | grep -w ${server_base64} | awk '{print $4}' > /tmp/multi_server_${tmp_file}.txt
+			fi
+			
+			if [ "$(cat /tmp/multi_server_${tmp_file}.txt | wc -l)" == "0" ]; then
+				# 取值已经拿完了，不能删除该文件，但是还有新的同server节点出现，那么就直接添加该节点
+				if [ "${UPDATE_FLAG}" == "0" ]; then
+					add_trojan_node
+				fi
+			else
+				# add SKIPDB_FLAG
+				local SKIPDB_FLAG=2
+				local index=$(cat /tmp/multi_server_${tmp_file}.txt | sed -n '1p')
+				sed -i '1d' /tmp/multi_server_${tmp_file}.txt
+			fi
+		fi
+	fi
+
+	# SKIPDB_FLAG不为空，说明本地找到对应节点，且拿到了节点的index
+	if [ "${SKIPDB_FLAG}" == "1" -o "${SKIPDB_FLAG}" == "2" ]; then
+		# 在本地的节点中找到该节点，但是该节点被用户定义定义的关键词过滤了，那么删除它
+		local KEY_LOCAL_NAME=$(cat /tmp/cur_localservers.txt | grep ${group_base64} | grep -w ${index} | awk '{print $3}' | base64 -d)
+		local KEY_LOCAL_SERVER=$(cat /tmp/cur_localservers.txt | grep ${group_base64} | grep -w ${index} | awk '{print $1}'| base64 -d)
+
+		[ -n "${KEY_WORDS_1}" ] && local KEY_MATCH_3=$(echo ${KEY_LOCAL_NAME} ${KEY_LOCAL_SERVER} | grep -Eo "${KEY_WORDS_1}")
+		[ -n "${KEY_WORDS_2}" ] && local KEY_MATCH_4=$(echo ${KEY_LOCAL_NAME} ${KEY_LOCAL_SERVER} | grep -Eo "${KEY_WORDS_2}")
+
+		if [ -n "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ]; then
+			if [ -n "${KEY_MATCH_3}" ]; then
+				echo_date "trojan节点：移除本地【${x_remarks}】节点，因为匹配了[排除]关键词"
+				local DELETE_FLAG=1
+			else
+				local DELETE_FLAG=0
+			fi
+		elif [ -z "${KEY_WORDS_1}" -a -n "${KEY_WORDS_2}" ]; then
+			if [ -z "${KEY_MATCH_4}" ]; then
+				echo_date "trojan节点：移除本地【${x_remarks}】节点，因为不匹配[包括]关键词"
+				local DELETE_FLAG=1
+			else
+				local DELETE_FLAG=0
+			fi
+		elif [ -n "${KEY_WORDS_1}" -a -n "${KEY_WORDS_2}" ]; then
+			if [ -n "${KEY_MATCH_3}" -a -z "${KEY_MATCH_4}" ]; then
+				echo_date "trojan节点：移除本地【${x_remarks}】节点，因为匹配了[排除+包括]关键词"
+				local DELETE_FLAG=1
+			elif [ -n "${KEY_MATCH_3}" -a -n "${KEY_MATCH_4}" ]; then
+				echo_date "trojan节点：移除本地【${x_remarks}】节点，因为匹配了[排除]关键词"
+				local DELETE_FLAG=1
+			elif  [ -z "${KEY_MATCH_3}" -a -z "${KEY_MATCH_4}" ]; then
+				echo_date "trojan节点：移除本地【${x_remarks}】节点，因为不匹配[包括]关键词"
+				local DELETE_FLAG=1
+			else
+				local DELETE_FLAG=0
+			fi
+		else
+			local DELETE_FLAG=0
+		fi
+
+		if [ "${DELETE_FLAG}" == "1" ]; then
+			# 删除此节点
+			for item in ${PREFIX}
+			do
+				if [ -n "$(dbus get ${item}${index})" ]; then
+					dbus remove ${item}${index}
+				fi
+			done
+			let delnum+=1
+		else
+			dbus_cset "ssconf_basic_group_${index}" "${t_group_hash}"
+			[ "$?" == "1" ] && INFO="${INFO}分组信息 "
+				
+			dbus_cset "ssconf_basic_mode_${index}" "${ssr_subscribe_mode}"
+			[ "$?" == "1" ] && INFO="${INFO}模式 "
+			
+			if [ "${SKIPDB_FLAG}" == "2" ];then
+				dbus_cset "ssconf_basic_name_${index}" "${t_remarks}"
+				[ "$?" == "1" ] && INFO="${INFO}节点名 "
+			fi
+			
+			if [ "${SKIPDB_FLAG}" == "1" ];then
+				dbus_cset "ssconf_basic_server_${index}" "${t_server}"
+				[ "$?" == "1" ] && INFO="${INFO}节点地址 "
+			fi
+			
+			dbus_cset "ssconf_basic_port_${index}" "${t_server_port}"
+			[ "$?" == "1" ] && INFO="${INFO}端口 "
+			
+			dbus_cset "ssconf_basic_trojan_uuid_${index}" "${t_uuid}"
+			[ "$?" == "1" ] && INFO="${INFO}密码 "
+
+			dbus_cset "ssconf_basic_trojan_ai_${index}" "${t_ai}"
+			[ "$?" == "1" ] && INFO="${INFO}证书验证 "
+
+			dbus_cset "ssconf_basic_trojan_sni_${index}" "${t_sni}"
+			[ "$?" == "1" ] && INFO="${INFO}SNI "
+
+			dbus_cset "ssconf_basic_trojan_tfo_${index}" "${t_tfo}"
+			[ "$?" == "1" ] && INFO="${INFO}tfo "
+
+			if [ -n "${INFO}" ]; then
+				INFO=$(echo "${INFO}" | sed 's/[[:space:]]$//' | sed 's/[[:space:]]/ + /g')
+				echo_date "trojan节点：【${t_remarks}】更新！原因：节点的【${INFO}】发生了更改！"
+				let updatenum+=1
+			else
+				echo_date "trojan节点：【${t_remarks}】参数未发生变化，跳过！"
+			fi
+		fi
+	fi
+	# 添加/更改完成一个节点后，将该节点的group信息写入到文件备用
+	echo ${t_group} >> /tmp/sub_group_info.txt
+	
+}
+
+
 remove_node_gap(){
 	# 虽然web上已经可以自动化无缝重排序了，但是考虑到有的用户设置了插件自动化，长期不进入web，而后台更新节点持续一段时间后，节点顺序还是会很乱，所以保留此功能
 	SEQ=$(dbus list ss | grep "ssconf_basic" | grep _name_ | cut -d "_" -f 4 | cut -d "=" -f 1 | sort -n)
@@ -2386,7 +2690,7 @@ get_online_rule_now(){
 	[ "${NODE_NU_SR}" -gt "0" ] && echo_date "ssr节点：${NODE_NU_SR}个"
 	[ "${NODE_NU_VM}" -gt "0" ] && echo_date "vmess节点：${NODE_NU_VM}个"
 	[ "${NODE_NU_VL}" -gt "0" ] && echo_date "vless节点：${NODE_NU_VL}个"
-	[ "${NODE_NU_TJ}" -gt "0" ] && echo_date "trojan节点：${NODE_NU_TJ}个（暂不支持trojan节点订阅）"
+	[ "${NODE_NU_TJ}" -gt "0" ] && echo_date "trojan节点：${NODE_NU_TJ}个"
 	echo_date "-------------------------------------------------------------------"
 
 	# 12. 开始解析并写入节点
@@ -2422,7 +2726,9 @@ get_online_rule_now(){
 		fi
 		# trojan
 		if [ -n "${node_type_tj}" ];then
-			echo_date "检测到一个trojan节点，本插件目前不支持trojan节点订阅，跳过！"
+			local urllink=$(echo "${node}" | sed 's/trojan:\/\///g' )
+			get_trojan_node ${urllink} 1
+			update_trojan_node $?
 		fi
 	done < /tmp/ssr_subscribe_file_temp.txt
 
@@ -2658,6 +2964,13 @@ start_offline_update() {
 			echo_date "检测到vless链接...开始尝试解析..."
 			get_vless_node ${urllink} 2
 			add_vless_node $?
+		fi
+		# trojan offline
+		if [ -n "${node_type_tj}" ];then
+			local urllink=$(echo "${node}" | sed 's/trojan:\/\///g' )
+			echo_date "检测到trojan链接...开始尝试解析..."
+			get_trojan_node ${urllink} 2
+			add_trojan_node $?
 		fi
 		dbus remove ss_base64_links
 	done

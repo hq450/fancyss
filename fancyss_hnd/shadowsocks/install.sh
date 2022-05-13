@@ -126,6 +126,7 @@ install_now(){
 	rm -rf /koolshare/bin/speederv1
 	rm -rf /koolshare/bin/speederv2
 	rm -rf /koolshare/bin/udp2raw
+	rm -rf /koolshare/bin/trojan
 	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
 	rm -rf /koolshare/bin/v2ray-plugin

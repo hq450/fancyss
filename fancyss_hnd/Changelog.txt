@@ -1,8 +1,11 @@
 fancyss_hnd Changelog
 ===========================================
 1.9.18
-   - add	添加trojan支持，使用trojan-gfw作为核心（包括trojan节点添加，在线订阅）
+   - add	添加trojan支持，使用trojan-gfw作为核心（版本1.16.0）
+   - add	添加trojan节点添加、在线订阅、trojan://xxx链接添加节点功能。
+   - update	同步以下最新的内置规则。
    - fix	修复修改v2ray和xray json节点无法保存的问题
+   - note	不再兼容1.2.0及之前版本直升上来的配置，如果是这种情况，请直接卸载重装插件。
    - note	xray + trojan的坑基本填完，后续再继续对现有版本查漏补缺。
    
 1.9.17

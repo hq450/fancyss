@@ -183,14 +183,21 @@ function pop_help() {
 			btnAlign: 'c',
 			moveType: 1,
 			content: '<div style="padding: 50px; line-height: 22px; background-color: #393D49; color: #fff; font-weight: 300;">\
-				<b><% nvram_get("productid"); %> - 科学上网插件 - ' + db_ss["ss_basic_version_local"] + '</b><br><br>\
-				本插件是支持<a target="_blank" href="https://github.com/shadowsocks/shadowsocks-libev" ><u>SS</u></a>、<a target="_blank" href="https://github.com/shadowsocksrr/shadowsocksr-libev"><u>SSR</u></a>、<a target="_blank" href="http://firmware.koolshare.cn/binary/koolgame"><u>KoolGame</u></a>、<a target="_blank" href="https://github.com/v2ray/v2ray-core"><u>V2Ray</u></a>四种客户端的科学上网、游戏加速工具。<br>\
-				本插件仅支持Asuswrt/Merlin hnd platform 4.1.27内核的固件，请不要用于其它固件安装。<br>\
-				使用本插件有任何问题，可以前往<a style="color:#e7bd16" target="_blank" href="https://github.com/hq450/fancyss/issues"><u>github的issue页面</u></a>反馈~<br><br>\
-				● SS/SSR一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/onekeyshell/kcptun_for_ss_ssr/tree/master"><u>一键安装KCPTUN for SS/SSR on Linux</u></a><br>\
-				● koolgame一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/clangcn/game-server"><u>一键安装koolgame服务器端脚本，完美支持nat2</u></a><br>\
-				● V2Ray一键脚本：<a style="color:#e7bd16" target="_blank" href="https://233blog.com/post/17/"><u>V2Ray 搭建和优化详细图文教程</u></a><br>\
-				● 插件交流：<a style="color:#e7bd16" target="_blank" href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw"><u>加入telegram群组</u></a><br><br>\
+				<b><% nvram_get("productid"); %> - 科学上网插件 - ' + db_ss["ss_basic_version_local"] + '</b><br \><br \>\
+				本插件是支持\
+				<a target="_blank" href="https://github.com/shadowsocks/shadowsocks-libev"><u>SS</u></a>、\
+				<a target="_blank" href="https://github.com/shadowsocksrr/shadowsocksr-libev"><u>SSR</u></a>、\
+				<a target="_blank" href="http://firmware.koolshare.cn/binary/koolgame"><u>KoolGame</u></a>、\
+				<a target="_blank" href="https://github.com/v2ray/v2ray-core"><u>V2ray</u></a>、\
+				<a target="_blank" href="https://github.com/XTLS/xray-core"><u>Xray</u></a>、\
+				<a target="_blank" href="https://github.com/trojan-gfw/trojan"><u>Trojan</u></a>\
+				六种客户端的科学上网、游戏加速工具。<br \>\
+				本插件仅支持Asuswrt/Merlin hnd platform 固件，请不要用于其它固件安装。<br \>\
+				使用本插件有任何问题，可以前往<a style="color:#e7bd16" target="_blank" href="https://github.com/hq450/fancyss/issues"><u>github的issue页面</u></a>反馈~<br \><br \>\
+				● SS/SSR一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/onekeyshell/kcptun_for_ss_ssr/tree/master"><u>一键安装KCPTUN for SS/SSR on Linux</u></a><br \>\
+				● koolgame一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/clangcn/game-server"><u>一键安装koolgame服务器端脚本，完美支持nat2</u></a><br \>\
+				● V2Ray一键脚本：<a style="color:#e7bd16" target="_blank" href="https://233blog.com/post/17/"><u>V2Ray 搭建和优化详细图文教程</u></a><br \>\
+				● 插件交流：<a style="color:#e7bd16" target="_blank" href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw"><u>加入telegram群组</u></a><br \><br \>\
 				我们的征途是星辰大海 ^_^</div>'
 		});
 	});
@@ -922,7 +929,7 @@ function openssHint(itemNum) {
 		statusmenu = "节点域名解析DNS服务器.<br />&nbsp;&nbsp;&nbsp;&nbsp;一些SS/SSR/V2RAY的服务器为域名格式，在启用的时候需要对其进行解析，以获取正确的IP地址，此处定义用以解析服务器域名的DNS服务器。<br />&nbsp;&nbsp;&nbsp;&nbsp;一些机场节点的域名托管在国外服务商，此时自定义定义国外的DNS服务器效果可能更好。"
 		_caption = "说明：";
 	} else if (itemNum == 108) {
-		statusmenu = "ss/ssr多核心支持.<br />&nbsp;&nbsp;&nbsp;&nbsp;开启后ss-redir/rss-redir将同时运行在路由器的全部核心上，最大化ss-redir/rss-redir的性能。注意：如果线路速度不存在瓶颈，可能使CPU全部核心满载，影响路由的稳定性。"
+		statusmenu = "ss/ssr/trojan多核心支持.<br />&nbsp;&nbsp;&nbsp;&nbsp;开启后ss-redir/rss-redir/trojan将同时运行在路由器的全部核心上，最大化ss-redir/rss-redir/trojan的性能。注意：如果线路速度不存在瓶颈，可能使CPU全部核心满载，影响路由的稳定性。"
 		_caption = "说明：";
 	} else if (itemNum == 109) {
 		statusmenu = "插件触发重启设定说明：<br />&nbsp;&nbsp;&nbsp;&nbsp;当你的ss/ssr/koolgame/v2ray服务器，或者负载均衡服务器节点使用域名的时候，可以在此处设定定时解析域名时间，当检测到相应的解析地址发生改变的时候，定时任务会自动重启插件，以应用新的ip地址。<br />&nbsp;&nbsp;&nbsp;&nbsp;服务器有多个解析地址的建议不要使用！！v2ray开了cdn的也建议不要使用！！因为这可能会导致每次检测到的ip都不一样而让插件在后台频繁重启！"

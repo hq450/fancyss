@@ -18,6 +18,9 @@ get_mode_name() {
 	5)
 		echo "【全局模式】"
 		;;
+	6)
+		echo "【回国模式】"
+		;;
 	esac
 }
 
@@ -78,6 +81,7 @@ echo_version() {
 	echo "chinadns-ng		v1.0-beta.22		2020年06月02日编译"
 	echo "https_dns_proxy		758f913			2019年02月05日编译"
 	echo "httping			2.6			2020年01月06日编译"
+	echo "trojan			1.16.0			2020年01月19日编译"
 	echo "v2ray			$(v2ray -version|head -n1|awk '{print $2}')			2022年04月26日编译"
 	echo "xray			$(xray -version|head -n1|awk '{print $2}')			2022年05月11日编译"
 	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
@@ -110,6 +114,7 @@ check_status() {
 	HDP=$(pidof https_dns_proxy)
 	DMQ=$(pidof dnsmasq)
 	SMD=$(pidof smartdns)
+	TROJAN=$(pidof trojan)
 	game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep 3)
 
 	if [ "$ss_basic_type" == "0" ]; then
@@ -165,6 +170,11 @@ check_status() {
 		else
 			echo "Xray	未运行"
 		fi
+	elif [ "$ss_basic_type" == "5" ]; then
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用trojan,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo ---------------------------------------------------------------------------------
+		echo "程序		状态	PID"
+		[ -n "${TROJAN}" ] && echo "trojan		工作中	pid：${TROJAN}" || echo "trojan		未运行"
 	fi
 
 	if [ -z "$ss_basic_koolgame_udp" ]; then
@@ -204,9 +214,12 @@ check_status() {
 			[ -n "$CHINADNS1" ] && echo "chinadns1	工作中	pid：$CHINADNS1" || echo "chinadns1	未运行"
 		elif [ "$ss_foreign_dns" == "6" ]; then
 			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
+		elif [ "$ss_foreign_dns" == "7" ]; then
+			[ -n "$HDP" ] && echo "https_dns_proxy	工作中	pid：$HDP" || echo "https_dns_proxy	未运行"
 		elif [ "$ss_foreign_dns" == "9" ]; then
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
 		elif [ "$ss_foreign_dns" == "10" ]; then
+			[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
 			[ -n "${CHINADNS_NG}" ] && echo "chinadns-ng	工作中	pid：${CHINADNS_NG}" || echo "chinadns-ng	未运行"
 		fi
 	fi
