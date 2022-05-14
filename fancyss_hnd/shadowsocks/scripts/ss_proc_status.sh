@@ -82,7 +82,9 @@ echo_version() {
 	echo "https_dns_proxy		758f913			2019年02月05日编译"
 	echo "httping			2.6			2020年01月06日编译"
 	echo "trojan			1.16.0			2020年01月19日编译"
-	echo "v2ray			$(v2ray -version|head -n1|awk '{print $2}')			2022年04月26日编译"
+	local v2_info_all=$(v2ray -version|head -n1)
+	local v2_info_date=$(echo ${v2_info_all}|head -n1|awk '{print $4}')
+	echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			${v2_info_date::4}年${v2_info_date:4:2}月${v2_info_date:6:2}日编译"
 	echo "xray			$(xray -version|head -n1|awk '{print $2}')			2022年05月11日编译"
 	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
 	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
@@ -195,7 +197,7 @@ check_status() {
 				[ -n "$SSR_LOCAL" ] && echo "ssr-local	工作中	pid：$SSR_LOCAL" || echo "ssr-local	未运行"
 				[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
 			else
-				if [ "$ss_basic_type" != "3" ]; then
+				if [ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" ]; then
 					[ -n "$SS_LOCAL" ] && echo "ss-local	工作中	pid：$SS_LOCAL" || echo "ss-local	未运行"
 				fi
 				[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
@@ -207,7 +209,7 @@ check_status() {
 				[ -n "$SS_TUNNEL" ] && echo "ss-tunnel	工作中	pid：$SS_TUNNEL" || echo "ss-tunnel	未运行"
 			fi
 		elif [ "$ss_foreign_dns" == "5" ]; then
-			if [ "$ss_basic_type" != "3" ]; then
+			if [ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" ]; then
 				[ -n "$SSR_LOCAL" ] && echo "ssr-local	工作中	pid：$SSR_LOCAL" || echo "ssr-local	未运行"
 			fi
 			[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
