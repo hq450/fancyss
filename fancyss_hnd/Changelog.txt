@@ -3,6 +3,7 @@ fancyss_hnd Changelog
 1.9.19
    - add	添加shadowsokcs-rust替换shadowsocks-libev功能。
    - note	离线安装包默认不包含shadowsokcs-rust二进制文件sslocal，使用时会尝试自动下载，或者可以提前手动下载好。
+   - note	在我自己的测试种，shadowsokcs-rust速度并没有shadowsocks-libev速度快，所以目前尚未有完全用rust版本替代libev版本的计划
    - update	v2ray二进制更新到v4.45。
    - update	shadowsokcs在线订阅支持更多机场。
    - fix	修复详细状态脚本
