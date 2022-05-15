@@ -956,8 +956,14 @@ function openssHint(itemNum) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！<br />&nbsp;&nbsp;&nbsp;&nbsp;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：<br />-------------------------------------------------<br />🚀魅影极速<br />https://subserver.maying.io/xxx<br /><br />🛩️nextitally<br />https://naixisubs.com/downloadConfig/xxx<br />-------------------------------------------------"
 		_caption = "订阅地址管理";
 	} else if (itemNum == 117) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;使用此方式添加节点不会和已有节点进行对比，多次使用相同链接会让相同节点被添加多次，请注意！"
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;使用此方式添加节点不会和已有节点进行对比，多次使用相同链接会让相同节点被添加多次，请注意！";
 		_caption = "通过ss/ssr/vmess/vless链接添加节点";
+	} else if (itemNum == 118) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;勾选此选项将会用shadowsocks-rust替换shadowsocks-libev！";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意1：</b>fancyss插件包默认不提供shadowsocks-rust的二进制文件，所以你需要点击右侧按钮下载shadowsocks-rust二进制文件！";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意2：</b>shadowsocks-rust支持的加密方式如下：plain, none, aes-128-gcm, aes-256-gcm, chacha20-ietf-poly1305, 2022-blake3-aes-128-gcm, 2022-blake3-aes-256-gcm, 2022-blake3-chacha20-poly1305";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;如果你使用的节点不是这些加密方式，那改节点肯定会出现工作异常！";
+		_caption = "用shadowsocks-rust替代shadowsocks-libev";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

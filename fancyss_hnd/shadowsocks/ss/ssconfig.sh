@@ -82,6 +82,16 @@ pre_set(){
 	set_skin
 }
 
+donwload_binary(){
+	# 二进制下载应该在fancyss关闭/重启前运行，这样可以利用代理进行下载
+	if [ "${ss_basic_type}" == "0" -a "${ss_basic_rust}" == "1" -a "${ACTION}" == "restart" ]; then
+		if [ ! -x "/koolshare/bin/sslocal" ];then
+			echo_date "没有检测到shadowsocks-rust二进制文件:sslocal，准备下载..."
+			sh /koolshare/scripts/ss_rust_update.sh download
+		fi
+	fi	
+}
+
 get_lan_cidr() {
 	local netmask=$(nvram get lan_netmask)
 	local x=${netmask##*255.}
@@ -125,7 +135,11 @@ close_in_five() {
 __get_type_full_name() {
 	case "$1" in
 	0)
-		echo "shadowsocks-libev"
+		if [ "${ss_basic_rust}" == "1" ];then
+			echo "shadowsocks-rust"
+		else
+			echo "shadowsocks-libev"
+		fi
 		;;
 	1)
 		echo "shadowsocksR-libev"
@@ -148,7 +162,11 @@ __get_type_full_name() {
 __get_type_abbr_name() {
 	case "${ss_basic_type}" in
 	0)
-		echo "ss"
+		if [ "${ss_basic_rust}" == "1" ];then
+			echo "ss-rust"
+		else
+			echo "ss"
+		fi
 		;;
 	1)
 		echo "ssr"
@@ -317,9 +335,14 @@ kill_process() {
 		echo_date 关闭ssr-local进程:23456端口...
 		kill $ssrlocal >/dev/null 2>&1
 	fi
+	ssrustlocal=$(ps | grep -w sslocal)
+	if [ -n "$ssrustlocal" ]; then
+		echo_date 关闭sslocal进程:23456端口...
+		kill $ssrustlocal >/dev/null 2>&1
+	fi
 	sstunnel=$(pidof ss-tunnel)
 	if [ -n "$sstunnel" ]; then
-		echo_date 关闭ss-tunnel进程...
+		echo_date 关闭进程...
 		killall ss-tunnel >/dev/null 2>&1
 	fi
 	rsstunnel=$(pidof rss-tunnel)
@@ -483,53 +506,93 @@ resolv_server_ip() {
 }
 
 ss_arg() {
-	[ "$ss_basic_type" != "0" ] && return
-	
-	# v2ray-plugin or simple obfs
-	if [ "$ss_basic_ss_v2ray" == "1" ]; then
-		ARG_OBFS="--plugin v2ray-plugin --plugin-opts $ss_basic_ss_v2ray_opts"
-		echo_date "检测到开启了v2ray-plugin，将忽略obfs设置。"
-	elif [ "$ss_basic_ss_obfs" == "http" ]; then
-		echo_date "检测到开启了simple-obfs。"
-		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
-		if [ -n "$ss_basic_ss_obfs_host" ]; then
-			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
+	if [ "${ss_basic_type}" != "0" ];then
+		return
+	fi
+
+	if [ "${ss_basic_ss_v2ray}" == "1" ]; then
+		if [ "${ss_basic_ss_obfs}" == "tls" -o "${ss_basic_ss_obfs}" == "tls" ]; then
+			echo_date "检测到你同时开启了obfs-local和v2ray-plugin！。"
+			echo_date "插件只能支持开启一个SIP002插件！"
+			echo_date "请更正设置后重试！"
+			close_in_five
 		fi
-	elif [ "$ss_basic_ss_obfs" == "tls" ]; then
+		ARG_OBFS="--plugin v2ray-plugin --plugin-opts ${ss_basic_ss_v2ray_opts}"
+		echo_date "检测到开启了v2ray-plugin。"
+	fi
+	
+	if [ "${ss_basic_ss_obfs}" == "http" ]; then
 		echo_date "检测到开启了simple-obfs。"
-		ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
-		if [ -n "$ss_basic_ss_obfs_host" ]; then
-			ARG_OBFS=$ARG_OBFS";obfs-host=$ss_basic_ss_obfs_host"
+		if [ -n "${ss_basic_ss_obfs_host}" ]; then
+			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http;obfs-host=${ss_basic_ss_obfs_host}"
+		else
+			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
+		fi
+	elif [ "${ss_basic_ss_obfs}" == "tls" ]; then
+		echo_date "检测到开启了simple-obfs。"
+		if [ -n "${ss_basic_ss_obfs_host}" ]; then
+			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=${ss_basic_ss_obfs_host}"
+		else
+			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
 		fi
 	else
-		echo_date "没有开启任何ss插件设置。"
 		ARG_OBFS=""
 	fi
 }
 # create shadowsocks config file...
 creat_ss_json() {
-	if [ -n "$WAN_ACTION" ]; then
+	if [ -n "${WAN_ACTION}" ]; then
 		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 		return 0
-	elif [ -n "$NAT_ACTION" ]; then
+	elif [ -n "${NAT_ACTION}" ]; then
 		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 		return 0
+	fi
+	
+	if [ "$ss_basic_type" == "0" -a "${ss_basic_rust}" == "1" ]; then
+		echo_date "ℹ️使用shadowsocks-rust替换shadowsocks-libev..."
+		#if [ ! -x /koolshare/bin/sslocal ];then
+		#	echo_date "没有检测到shadowsocks-rust二进制文件:sslocal，准备下载..."
+		#	sh /koolshare/scripts/ss_rust_update.sh download
+		#fi
 	else
-		echo_date "创建$(__get_type_abbr_name)配置文件到$CONFIG_FILE"
+		echo_date "创建$(__get_type_abbr_name)配置文件到${CONFIG_FILE}"
 	fi
 
 	if [ "$ss_basic_type" == "0" ]; then
-		cat >$CONFIG_FILE <<-EOF
-			{
-			    "server":"$ss_basic_server",
-			    "server_port":$ss_basic_port,
-			    "local_address":"0.0.0.0",
-			    "local_port":3333,
-			    "password":"$ss_basic_password",
-			    "timeout":600,
-			    "method":"$ss_basic_method"
-			}
-		EOF
+		if [ "${ss_basic_rust}" == "1" ];then
+			if [ "${ss_basic_tfo}" == "1" ]; then
+				RUST_ARG_1="--fast-open"
+				echo_date ss-rust开启tcp fast open支持.
+				echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+			else
+				RUST_ARG_1=""
+			fi
+
+			if [ "${ss_basic_tnd}" == "1" ]; then
+				echo_date ss-rust开启TCP_NODELAY支持.
+				RUST_ARG_2="--no-delay"
+			else
+				RUST_ARG_2=""
+			fi
+
+			ARG_RUST_REDIR="--protocol redir -b 0.0.0.0:3333 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+			ARG_RUST_TUNNEL="--protocol tunnel -b 0.0.0.0:${DNSF_PORT} -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+			ARG_RUST_SOCKS="-b 127.0.0.1:23456 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+			ARG_RUST_REDIR_NS="--protocol redir -b 0.0.0.0:3333 -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+		else
+			cat >$CONFIG_FILE <<-EOF
+				{
+				    "server":"$ss_basic_server",
+				    "server_port":$ss_basic_port,
+				    "local_address":"0.0.0.0",
+				    "local_port":3333,
+				    "password":"$ss_basic_password",
+				    "timeout":600,
+				    "method":"$ss_basic_method"
+				}
+			EOF
+		fi
 	elif [ "$ss_basic_type" == "1" ]; then
 		cat >$CONFIG_FILE <<-EOF
 			{
@@ -612,13 +675,18 @@ get_dns_name() {
 	esac
 }
 
-start_sslocal() {
+start_ss_local() {
 	if [ "$ss_basic_type" == "1" ]; then
 		echo_date 开启ssr-local，提供socks5代理端口：23456
 		rss-local -l 23456 -c $CONFIG_FILE -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 	elif [ "$ss_basic_type" == "0" ]; then
-		echo_date 开启ss-local，提供socks5代理端口：23456
-		ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+		if [ "${ss_basic_rust}" == "1" ];then
+			echo_date 开启sslocal，提供socks5代理端口：23456
+			sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d >/dev/null 2>&1
+		else
+			echo_date 开启ss-local，提供socks5代理端口：23456
+			ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+		fi
 	fi
 }
 
@@ -689,7 +757,7 @@ start_dns() {
 	# Start DNS2SOCKS (default)
 	if [ "$ss_foreign_dns" == "3" -o -z "$ss_foreign_dns" ]; then
 		[ -z "$ss_foreign_dns" ] && dbus set ss_foreign_dns="3"
-		start_sslocal
+		start_ss_local
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 		dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
@@ -704,11 +772,15 @@ start_dns() {
 		elif [ "$ss_basic_type" == "0" ]; then
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启ss-tunnel，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启ss-tunnel，用于【国外所有网站】的DNS解析..."
-			ss-tunnel -c $CONFIG_FILE -l $DNSF_PORT -L $ss_sstunnel_user $ARG_OBFS -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			if [ "${ss_basic_rust}" == "1" ];then
+				sslocal ${ARG_RUST_TUNNEL} -f ${ss_sstunnel_user} ${ARG_OBFS} -u -d >/dev/null 2>&1
+			else
+				ss-tunnel -c ${CONFIG_FILE} -l ${DNSF_PORT} -L ${ss_sstunnel_user} ${ARG_OBFS} -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			fi
 		elif [ "$ss_basic_type" == "3" -o "$ss_basic_type" == "4" -o "$ss_basic_type" == "5" ]; then
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
-			start_sslocal
+			start_ss_local
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
@@ -722,12 +794,12 @@ start_dns() {
 			echo_date "！！中国DNS选择SmartDNS和外国DNS选择chiandns1冲突，将外国DNS默认改为dns2socks！！"
 			ss_foreign_dns="3"
 			dbus set ss_foreign_dns="3"
-			start_sslocal
+			start_ss_local
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
 		else
-			start_sslocal
+			start_ss_local
 			echo_date 开启dns2socks，用于chinadns1上游...
 			dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns1，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
@@ -738,7 +810,7 @@ start_dns() {
 
 	#start chinadns_ng
 	if [ "$ss_foreign_dns" == "10" ]; then
-		start_sslocal
+		start_ss_local
 		echo_date 开启dns2socks，用于chinadns-ng的国外上游...
 		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
@@ -780,7 +852,7 @@ start_dns() {
 		else
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持${VCORE_NAME} dns，改用dns2socks！
 			dbus set ss_foreign_dns=3
-			start_sslocal
+			start_ss_local
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
@@ -830,7 +902,7 @@ start_dns() {
 		else
 			echo_date 非回国模式，国外DNS直连解析不能使用，自动切换到dns2socks方案。
 			dbus set ss_foreign_dns=3
-			start_sslocal
+			start_ss_local
 			[ "$DNS_PLAN" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "$DNS_PLAN" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			dns2socks 127.0.0.1:23456 "$ss_dns2socks_user" 127.0.0.1:$DNSF_PORT >/dev/null 2>&1 &
@@ -1028,7 +1100,6 @@ create_dnsmasq_conf() {
 			else
 				echo_date 自动判断dns解析使用国外优先模式...
 				echo_date 国外解析方案【$(get_dns_name $ss_foreign_dns)】，需要加载cdn.conf提供国内cdn...
-				echo_date 建议将系统dnsmasq替换为dnsmasq-fastlookup，以减轻路由cpu消耗...
 				echo_date 生成cdn加速列表到/tmp/sscdn.conf，加速用的dns：$CDN
 				echo "#for china site CDN acclerate" >>/tmp/sscdn.conf
 				cat /koolshare/ss/rules/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN#$DNSC_PORT/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/sscdn.conf
@@ -1199,8 +1270,13 @@ start_ss_redir() {
 		ARG_OBFS=""
 	elif [ "$ss_basic_type" == "0" ]; then
 		# ss-libev需要大于160的熵才能正常工作
-		echo_date 开启ss-redir进程，用于透明代理.
-		BIN=ss-redir
+		if [ "${ss_basic_rust}" == "1" ];then
+			echo_date "开启shadowsocks-rust的sslocal进程，用于透明代理."
+			BIN=sslocal
+		else
+			echo_date "开启ss-redir进程，用于透明代理."
+			BIN=ss-redir
+		fi
 	fi
 
 	if [ "$ss_basic_udp_boost_enable" == "1" ]; then
@@ -1229,71 +1305,137 @@ start_ss_redir() {
 			if [ "$SPEED_UDP" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
 				# tcp go kcp
 				if [ "$SPEED_KCP" == "1" ]; then
-					echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
+					echo_date ${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
 				elif [ "$SPEED_KCP" == "2" ]; then
-					echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpraw
+					echo_date ${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpraw
 				else
-					echo_date $BIN的 tcp 走kcptun.
+					echo_date ${BIN}的 tcp 走kcptun.
 				fi
-				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				if [ "$ss_basic_type" == "1" ]; then
+					rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				else
+					if [ "${ss_basic_rust}" == "1" ];then
+						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+					else
+						ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					fi
+				fi
 				# udp go udpspeeder
-				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
-				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
-				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
-			else
-				# tcp go kcp
-				if [ "$SPEED_KCP" == "1" ]; then
-					echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
-				elif [ "$SPEED_KCP" == "2" ]; then
-					echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpraw
+				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date ${BIN}的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
+				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date ${BIN}的 udp 走udpraw.
+				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date ${BIN}的 udp 走udpspeeder.
+				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date ${BIN}的 udp 走${BIN}.
+				if [ "$ss_basic_type" == "1" ]; then
+					rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
-					echo_date $BIN的 tcp 走kcptun.
+					if [ "${ss_basic_rust}" == "1" ];then
+						sslocal -s "127.0.0.1:${SPEED_PORT}" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+					else
+						ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					fi
 				fi
-				$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
-				# udp go ss
-				echo_date $BIN的 udp 走$BIN.
-				$BIN -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+			else
+				# tcp go kcp, udp go ss
+				if [ "${SPEED_KCP}" == "1" ]; then
+					echo_date ${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
+				elif [ "${SPEED_KCP}" == "2" ]; then
+					echo_date ${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpraw
+				else
+					echo_date ${BIN}的 tcp 走kcptun.
+				fi
+				
+				if [ "${ss_basic_type}" == "1" ]; then
+					rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					rss-redir -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				else
+					if [ "${ss_basic_rust}" == "1" ];then
+						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+						sslocal ${ARG_RUST_REDIR} --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+					else
+						ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					fi
+				fi
 			fi
 		else
 			# tcp only go kcp
-			if [ "$SPEED_KCP" == "1" ]; then
-				echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
-			elif [ "$SPEED_KCP" == "2" ]; then
-				echo_date $BIN的 tcp 走kcptun, kcptun的 udp 走 udpraw
+			if [ "${SPEED_KCP}" == "1" ]; then
+				echo_date ${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpspeeder
+			elif [ "${SPEED_KCP}" == "2" ]; then
+				echo_date ${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpraw
 			else
-				echo_date $BIN的 tcp 走kcptun.
+				echo_date ${BIN}的 tcp 走kcptun.
 			fi
-			echo_date $BIN的 udp 未开启.
-			$BIN -s 127.0.0.1 -p 1091 -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+			echo_date ${BIN}的 udp 未开启.
+			if [ "${ss_basic_type}" == "1" ]; then
+				rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+			else
+				if [ "${ss_basic_rust}" == "1" ];then
+					sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+				else
+					ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				fi
+			fi
 		fi
 	else
-		if [ "$mangle" == "1" ]; then
-			if [ "$SPEED_UDP" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
+		if [ "${mangle}" == "1" ]; then
+			if [ "${SPEED_UDP}" == "1" -a "${ss_basic_udp_node}" == "${ssconf_basic_node}" ]; then
 				# tcp go ss
-				echo_date $BIN的 tcp 走$BIN.
-				$BIN -c $CONFIG_FILE $ARG_OBFS -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				echo_date ${BIN}的 tcp 走${BIN}.
+				if [ "${ss_basic_type}" == "1" ]; then
+					rss-redir -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				else
+					if [ "${ss_basic_rust}" == "1" ];then
+						sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+					else
+						ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					fi
+				fi
 				# udp go udpspeeder
-				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
-				[ "$ss_basic_udp2raw_boost_enable" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走udpraw.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date $BIN的 udp 走udpspeeder.
-				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date $BIN的 udp 走$BIN.
-				$BIN -s 127.0.0.1 -p $SPEED_PORT -c $CONFIG_FILE $ARG_OBFS -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				[ "${ss_basic_udp2raw_boost_enable}" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date ${BIN}的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw
+				[ "${ss_basic_udp2raw_boost_enable}" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date ${BIN}的 udp 走udpraw.
+				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date ${BIN}的 udp 走udpspeeder.
+				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date ${BIN}的 udp 走${BIN}.
+
+				if [ "${ss_basic_type}" == "1" ]; then
+					rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				else
+					if [ "${ss_basic_rust}" == "1" ];then
+						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+					else
+						ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					fi
+				fi
 			else
 				# tcp udp go ss
-				echo_date $BIN的 tcp 走$BIN.
-				echo_date $BIN的 udp 走$BIN.
-				fire_redir "$BIN -c $CONFIG_FILE $ARG_OBFS -u"
+				echo_date ${BIN}的 tcp 走${BIN}.
+				echo_date ${BIN}的 udp 走${BIN}.
+				if [ "${ss_basic_type}" == "1" ]; then
+					fire_redir "rss-redir -c ${CONFIG_FILE} -u"
+				else
+					if [ "${ss_basic_rust}" == "1" ];then
+						sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+					else
+						fire_redir "ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -u"
+					fi
+				fi
 			fi
 		else
 			# tcp only go ss
-			echo_date $BIN的 tcp 走$BIN.
-			echo_date $BIN的 udp 未开启.
-			fire_redir "$BIN -c $CONFIG_FILE $ARG_OBFS"
+			echo_date ${BIN}的 tcp 走${BIN}.
+			echo_date ${BIN}的 udp 未开启.
+			if [ "${ss_basic_type}" == "1" ]; then
+				fire_redir "rss-redir -c ${CONFIG_FILE}"
+			else
+				if [ "${ss_basic_rust}" == "1" ];then
+					sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+				else
+					fire_redir "ss-redir -c ${CONFIG_FILE} ${ARG_OBFS}"
+				fi
+			fi
 		fi
 	fi
-	echo_date $BIN 启动完毕！.
+	echo_date ${BIN} 启动完毕！.
 
 	start_speeder
 }
@@ -3376,6 +3518,7 @@ stop)
 	;;
 restart)
 	set_lock
+	donwload_binary
 	apply_ss
 	echo_date
 	echo_date "Across the Great Wall we can reach every corner in the world!"

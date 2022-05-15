@@ -1,5 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.19
+   - add	添加shadowsokcs-rust替换shadowsocks-libev功能。
+   - note	离线安装包默认不包含shadowsokcs-rust二进制文件sslocal，使用时会尝试自动下载，或者可以提前手动下载好。
+   - update	v2ray二进制更新到v4.45。
+   - update	shadowsokcs在线订阅支持更多机场。
+   - fix	修复详细状态脚本
+
 1.9.18
    - add	添加trojan支持，使用trojan-gfw作为核心（版本1.16.0）
    - add	添加trojan节点添加、在线订阅、trojan://xxx链接添加节点功能。
