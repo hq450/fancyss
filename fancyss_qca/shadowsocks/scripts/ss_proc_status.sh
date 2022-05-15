@@ -67,6 +67,12 @@ echo_version() {
 	echo 2️⃣插件主要二进制程序版本：
 	echo ---------------------------------------------------------------------------------
 	echo "程序			版本			备注"
+	if [ -x "/koolshare/bin/sslocal" ];then
+		local SSRUST_VER=$(/koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
+		if [ -n "${SSRUST_VER}" ];then
+			echo "sslocal			${SSRUST_VER}		shadowsocks-rust"
+		fi
+	fi
 	echo "ss-redir		3.3.5			2022年04月29日编译"
 	echo "ss-tunnel		3.3.5			2022年04月29日编译"
 	echo "ss-local		3.3.5			2022年04月29日编译"
@@ -96,6 +102,8 @@ check_status() {
 	CURR_TIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 	echo "*️⃣${CURR_TIME}: fancyss插件版本：$(cat /koolshare/ss/version)"
 	echo
+	SS_RUST=$(pidof sslocal)
+	SIMPLEOBFS=$(pidof obfs-local)
 	SS_REDIR=$(pidof ss-redir)
 	SS_TUNNEL=$(pidof ss-tunnel)
 	SS_V2RAY=$(pidof v2ray-plugin)
@@ -123,9 +131,16 @@ check_status() {
 		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用SS-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
 		echo ---------------------------------------------------------------------------------
 		echo "程序		状态	PID"
-		[ -n "$SS_REDIR" ] && echo "ss-redir	工作中	pid：$SS_REDIR" || echo "ss-redir	未运行"
+		if [ "$ss_basic_rust" == "1" ]; then
+			[ -n "$SS_RUST" ] && echo "sslocal		工作中	pid：$SS_RUST" || echo "sslocal	未运行"
+		else
+			[ -n "$SS_REDIR" ] && echo "ss-redir	工作中	pid：$SS_REDIR" || echo "ss-redir	未运行"
+		fi
 		if [ -n "$SS_V2RAY" ]; then
 			echo "v2ray-plugin	工作中	pid：$SS_V2RAY"
+		fi
+		if [ -n "$SIMPLEOBFS" ]; then
+			echo "obfs-local	工作中	pid：$SIMPLEOBFS"
 		fi
 	elif [ "$ss_basic_type" == "1" ]; then
 		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用SSR-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
@@ -206,7 +221,9 @@ check_status() {
 			if [ -n "$ss_basic_rss_obfs" ]; then
 				[ -n "$SSR_TUNNEL" ] && echo "ssr-tunnel	工作中	pid：$SSR_TUNNEL" || echo "ssr-tunnel	未运行"
 			else
-				[ -n "$SS_TUNNEL" ] && echo "ss-tunnel	工作中	pid：$SS_TUNNEL" || echo "ss-tunnel	未运行"
+				if [ "$ss_basic_rust" != "1" ]; then
+					[ -n "$SS_TUNNEL" ] && echo "ss-tunnel	工作中	pid：$SS_TUNNEL" || echo "ss-tunnel	未运行"
+				fi
 			fi
 		elif [ "$ss_foreign_dns" == "5" ]; then
 			if [ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" ]; then

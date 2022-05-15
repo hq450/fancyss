@@ -1,5 +1,13 @@
 fancyss_qca Changelog
 ===========================================
+2.1.7
+   - add	添加shadowsokcs-rust替换shadowsocks-libev功能。
+   - note	离线安装包默认不包含shadowsokcs-rust二进制文件sslocal，使用时会尝试自动下载，或者可以提前手动下载好。
+   - note	在我自己的测试中，shadowsokcs-rust速度略慢于shadowsocks-libev，所以目前尚未有完全用rust版本替代libev版本的计划
+   - update	v2ray二进制更新到v4.45。
+   - update	shadowsokcs在线订阅支持更多机场。
+   - fix	修复详细状态脚本
+
 2.1.6
    - 摘要	1. 添加trojan支持（包括trojan节点添加，订阅）
        		2. 完善xray支持（包括vless节点添加，订阅）
