@@ -1329,7 +1329,7 @@ start_ss_redir() {
 					rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal -s "127.0.0.1:${SPEED_PORT}" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+						sslocal -s "127.0.0.1:${SPEED_PORT}" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
 					else
 						ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
@@ -1350,7 +1350,7 @@ start_ss_redir() {
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
 						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-						sslocal ${ARG_RUST_REDIR} --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+						sslocal ${ARG_RUST_REDIR} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
 					else
 						ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 						ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
@@ -1401,7 +1401,7 @@ start_ss_redir() {
 					rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
 					else
 						ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
@@ -1414,7 +1414,7 @@ start_ss_redir() {
 					fire_redir "rss-redir -c ${CONFIG_FILE} -u"
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" --udp-redir "tproxy" ${ARG_OBFS} -d >/dev/null 2>&1
+						sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" --udp-redir "tproxy" ${ARG_OBFS} -U -d >/dev/null 2>&1
 					else
 						fire_redir "ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -u"
 					fi

@@ -344,6 +344,7 @@ function save() {
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
+	dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value;
 	// ss
 	if (db_ss["ssconf_basic_type_" + node_sel] =="0" ){
 		var params_ssi_1 = ["mode", "server", "port", "method", "ss_obfs_host", "ss_v2ray_opts"];
@@ -392,7 +393,6 @@ function save() {
 	//v2ray
 	if (db_ss["ssconf_basic_type_" + node_sel] =="3" ){
 		// for v2ray json, we need to encode json format
-		dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value;
 		if (E("ss_basic_v2ray_use_json").checked == true){
 			var params_vr_more = ["server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 			for (var i = 0; i < params_vr_more.length; i++) {
