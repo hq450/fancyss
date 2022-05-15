@@ -1,5 +1,10 @@
 fancyss_qca Changelog
 ===========================================
+2.1.8
+   - fix	修复在账号设置面板内，无法修改节点模式的问题
+   - fix	修复shadowsocks-rust下游戏模式udp不通的问题
+   - fix	修复shadowsocks-rust下订阅无法走代理的问题
+
 2.1.7
    - add	添加shadowsokcs-rust替换shadowsocks-libev功能。
    - note	离线安装包默认不包含shadowsokcs-rust二进制文件sslocal，使用时会尝试自动下载，或者可以提前手动下载好。

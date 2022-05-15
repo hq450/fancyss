@@ -2392,8 +2392,8 @@ remove_node_gap(){
 get_fancyss_running_status(){
 	local STATUS_1=$(dbus get ss_basic_enable 2>/dev/null)
 	local STATUS_2=$(iptables --t nat -S|grep SHADOWSOCKS|grep -w "3333" 2>/dev/null)
-	local STATUS_3=$(netstat -nlp|grep -w "3333"|grep -E "ss-redir|v2ray|koolgame|xray" 2>/dev/null)
-	local STATUS_4=$(netstat -nlp|grep -w "7913")
+	local STATUS_3=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -E "ss-redir|sslocal|v2ray|koolgame|xray")
+	local STATUS_4=$(netstat -nlp 2>/dev/null|grep -w "7913")
 	# 当插件状态为开启，iptables状态正常，透明端口进程正常，DNS端口正常，DNS配置文件正常
 	if [ "${STATUS_1}" == "1" -a -n "${STATUS_2}" -a -n "${STATUS_3}" -a -n "${STATUS_4}" -a -f "/jffs/configs/dnsmasq.d/wblist.conf" ];then
 		echo 1
