@@ -1,5 +1,11 @@
 fancyss_qca Changelog
 ===========================================
+2.1.9
+   - fix	修复shadowsocks-libev在开启多核心支持时，节点无法正常工作的问题
+   - fix	修复ss + v2ray-plugin下，v2ray-plugin没有启动的问题
+   - update	将v2ray-plugin更新到v4.45.0（秋水逸冰编译版本：https://github.com/teddysun/v2ray-plugin）
+   - fix	修复国外dns方案为chinadns-ng下，使用ss/ssr不显示ss-local工作状态的问题
+
 2.1.8
    - fix	修复在账号设置面板内，无法修改节点模式的问题
    - fix	修复shadowsocks-rust下游戏模式udp不通的问题

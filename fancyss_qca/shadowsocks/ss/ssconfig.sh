@@ -517,26 +517,30 @@ ss_arg() {
 			echo_date "请更正设置后重试！"
 			close_in_five
 		fi
-		ARG_OBFS="--plugin v2ray-plugin --plugin-opts ${ss_basic_ss_v2ray_opts}"
+		if [ -n "${ss_basic_ss_v2ray_opts}" ];then
+			ARG_OBFS="--plugin v2ray-plugin --plugin-opts ${ss_basic_ss_v2ray_opts}"
+		else
+			ARG_OBFS="--plugin v2ray-plugin"
+		fi
 		echo_date "检测到开启了v2ray-plugin。"
-	fi
-	
-	if [ "${ss_basic_ss_obfs}" == "http" ]; then
-		echo_date "检测到开启了simple-obfs。"
-		if [ -n "${ss_basic_ss_obfs_host}" ]; then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http;obfs-host=${ss_basic_ss_obfs_host}"
-		else
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
-		fi
-	elif [ "${ss_basic_ss_obfs}" == "tls" ]; then
-		echo_date "检测到开启了simple-obfs。"
-		if [ -n "${ss_basic_ss_obfs_host}" ]; then
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=${ss_basic_ss_obfs_host}"
-		else
-			ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
-		fi
 	else
-		ARG_OBFS=""
+		if [ "${ss_basic_ss_obfs}" == "http" ]; then
+			echo_date "检测到开启了simple-obfs。"
+			if [ -n "${ss_basic_ss_obfs_host}" ]; then
+				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http;obfs-host=${ss_basic_ss_obfs_host}"
+			else
+				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
+			fi
+		elif [ "${ss_basic_ss_obfs}" == "tls" ]; then
+			echo_date "检测到开启了simple-obfs。"
+			if [ -n "${ss_basic_ss_obfs_host}" ]; then
+				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=${ss_basic_ss_obfs_host}"
+			else
+				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
+			fi
+		else
+			ARG_OBFS=""
+		fi
 	fi
 }
 # create shadowsocks config file...

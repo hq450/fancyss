@@ -92,7 +92,7 @@ echo_version() {
 	local v2_info_date=$(echo ${v2_info_all}|head -n1|awk '{print $4}')
 	echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			${v2_info_date::4}年${v2_info_date:4:2}月${v2_info_date:6:2}日编译"
 	echo "xray			$(xray -version|head -n1|awk '{print $2}')			2022年05月11日编译"
-	echo "v2ray-plugin		v1.3.1			Official Release 2020年06月01日"
+	echo "v2ray-plugin		$(v2ray-plugin -version|head -n1|awk '{print $2}')			https://github.com/teddysun/v2ray-plugin"
 	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
 	echo "kcptun			20210922		Official Release 2021年09月22日"
 	echo ---------------------------------------------------------------------------------
@@ -213,7 +213,9 @@ check_status() {
 				[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
 			else
 				if [ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" ]; then
-					[ -n "$SS_LOCAL" ] && echo "ss-local	工作中	pid：$SS_LOCAL" || echo "ss-local	未运行"
+					if [ "$ss_basic_rust" != "1" ]; then
+						[ -n "$SS_LOCAL" ] && echo "ss-local	工作中	pid：$SS_LOCAL" || echo "ss-local	未运行"
+					fi
 				fi
 				[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
 			fi
@@ -238,6 +240,11 @@ check_status() {
 		elif [ "$ss_foreign_dns" == "9" ]; then
 			[ -n "$SMD" ] && echo "SmartDNS	工作中	pid：$SMD" || echo "SmartDNS	未运行"
 		elif [ "$ss_foreign_dns" == "10" ]; then
+			if [ "$ss_basic_type" == "0" -o "$ss_basic_type" == "1" ]; then
+				if [ "$ss_basic_rust" != "1" ]; then
+					[ -n "$SS_LOCAL" ] && echo "ss-local	工作中	pid：$SS_LOCAL" || echo "ss-local	未运行"
+				fi
+			fi
 			[ -n "$DNS2SOCKS" ] && echo "dns2socks	工作中	pid：$DNS2SOCKS" || echo "dns2socks	未运行"
 			[ -n "${CHINADNS_NG}" ] && echo "chinadns-ng	工作中	pid：${CHINADNS_NG}" || echo "chinadns-ng	未运行"
 		fi
