@@ -117,6 +117,7 @@ updates-http.cdn-apple.com.akadns.net
 updates.cdn-apple.com
 valid.apple.com
 valid.origin-apple.com.akadns.net
+weather-data.apple.com
 www.apple.com
 www.apple.com.edgekey.net
 www.apple.com.edgekey.net.globalredir.akadns.net
