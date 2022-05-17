@@ -2042,10 +2042,8 @@ update_vless_node(){
 get_trojan_node(){
 	local decode_link="$1"
 	local action="$2"
-
-	t_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+#\).\+/\1/p' | sed 's/#//g')
-	t_server=$(echo "${t_server_raw}" | awk -F':' '{print $1}')
-	t_server_port=$(echo "${t_server_raw}" | awk -F':' '{print $2}')
+	t_server=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $2}')
+	t_server_port=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $3}')
 
 	echo "${decode_link}" | grep -Eqo "#"
 	if [ "$?" != "0" ];then
@@ -2073,7 +2071,6 @@ get_trojan_node(){
 	# echo ------------
 	# echo group: ${t_group}
 	# echo remarks: ${t_remarks}
-	# echo server_raw: ${t_server_raw}
 	# echo server: ${t_server}
 	# echo port: ${t_server_port}
 	# echo password: ${t_uuid}
