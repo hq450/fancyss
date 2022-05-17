@@ -2043,7 +2043,7 @@ get_trojan_node(){
 	local decode_link="$1"
 	local action="$2"
 
-	t_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	t_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+#\).\+/\1/p' | sed 's/#//g')
 	t_server=$(echo "${t_server_raw}" | awk -F':' '{print $1}')
 	t_server_port=$(echo "${t_server_raw}" | awk -F':' '{print $2}')
 
