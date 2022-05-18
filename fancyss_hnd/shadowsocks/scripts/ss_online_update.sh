@@ -748,7 +748,7 @@ get_ssr_node(){
 	# 离线订阅自动添加一个remarks信息
 	if [ "${action}" == "2" ]; then
 		if [ -n "${remarks_temp}" ];then
-			remarks=$(decode_url_link ${remarks_Wtemp})
+			remarks=$(decode_url_link ${remarks_temp})
 		else
 			remarks="${server}"
 		fi
