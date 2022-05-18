@@ -1,5 +1,10 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.22
+   - fix	修复某些机场的trojan订阅端口不正确的问题
+   - fix	修复某些机场的trojan订阅SNI为空的问题
+   - fix	修复ssr://链接添加节点显示节点错误的问题
+
 1.9.21
    - fix	修复shadowsocks-libev在开启多核心支持时，节点无法正常工作的问题
    - fix	修复ss + v2ray-plugin下，v2ray-plugin没有启动的问题

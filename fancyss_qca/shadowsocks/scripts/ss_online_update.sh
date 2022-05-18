@@ -748,7 +748,7 @@ get_ssr_node(){
 	# 离线订阅自动添加一个remarks信息
 	if [ "${action}" == "2" ]; then
 		if [ -n "${remarks_temp}" ];then
-			remarks=$(decode_url_link ${remarks_Wtemp})
+			remarks=$(decode_url_link ${remarks_temp})
 		else
 			remarks="${server}"
 		fi
@@ -2042,6 +2042,8 @@ update_vless_node(){
 get_trojan_node(){
 	local decode_link="$1"
 	local action="$2"
+	unset t_server t_server_port t_remarks t_uuid t_ai t_tfo t_sni_tmp t_peer_tmp t_sni t_group t_group_hash
+	
 	t_server=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $2}')
 	t_server_port=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $3}')
 
@@ -2054,8 +2056,16 @@ get_trojan_node(){
 
 	t_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
 	t_ai=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "allowInsecure" | awk -F"=" '{print $2}')
-	t_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
 	t_tfo=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "tfo" | awk -F"=" '{print $2}')
+	t_sni_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
+	t_peer_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "peer" | awk -F"=" '{print $2}')
+	if [ -n "${t_sni_tmp}" ];then
+		t_sni=${t_sni}
+	else
+		if [ -n "${t_peer_tmp}" ];then
+			t_sni=${t_peer_tmp}
+		fi
+	fi
 
 	if [ "${action}" == "1" ];then
 		t_group=${DOMAIN_NAME}
