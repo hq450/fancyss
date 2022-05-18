@@ -2060,7 +2060,7 @@ get_trojan_node(){
 	t_sni_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
 	t_peer_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "peer" | awk -F"=" '{print $2}')
 	if [ -n "${t_sni_tmp}" ];then
-		t_sni=${t_sni}
+		t_sni=${t_sni_tmp}
 	else
 		if [ -n "${t_peer_tmp}" ];then
 			t_sni=${t_peer_tmp}
