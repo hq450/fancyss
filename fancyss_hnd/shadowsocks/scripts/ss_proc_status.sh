@@ -65,7 +65,7 @@ get_dns_name() {
 
 echo_version() {
 	echo 2️⃣插件主要二进制程序版本：
-	echo ---------------------------------------------------------------------------------
+	echo --------------------------------------------------------------------------------------------------------
 	echo "程序			版本			备注"
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(/koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
@@ -95,7 +95,7 @@ echo_version() {
 	echo "v2ray-plugin		$(v2ray-plugin -version|head -n1|awk '{print $2}')			https://github.com/teddysun/v2ray-plugin"
 	echo "SmartDNS		1.2020.05.04-0005	Official Release 2020年05月04日"
 	echo "kcptun			20210922		Official Release 2021年09月22日"
-	echo ---------------------------------------------------------------------------------
+	echo --------------------------------------------------------------------------------------------------------
 }
 
 check_status() {
@@ -117,7 +117,7 @@ check_status() {
 	CHINADNS1=$(pidof chinadns1)
 	CHINADNS=$(pidof chinadns)
 	CHINADNS_NG=$(pidof chinadns-ng)
-	KCPTUN=$(pidof client_linux_arm7)
+	KCPTUN=$(pidof kcptun)
 	HAPROXY=$(pidof haproxy)
 	V2RAY=$(pidof v2ray)
 	XRAY=$(pidof xray)
@@ -128,8 +128,12 @@ check_status() {
 	game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep 3)
 
 	if [ "$ss_basic_type" == "0" ]; then
-		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用SS-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo ---------------------------------------------------------------------------------
+		if [ "$ss_basic_rust" == "1" ]; then
+			echo 1️⃣ 检测当前相关进程工作状态：（你正在使用shadowsocks-rust，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		else
+			echo 1️⃣ 检测当前相关进程工作状态：（你正在使用shadowsocks-libev，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		fi
+		echo --------------------------------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		if [ "$ss_basic_rust" == "1" ]; then
 			[ -n "$SS_RUST" ] && echo "sslocal		工作中	pid：$SS_RUST" || echo "sslocal	未运行"
@@ -143,19 +147,19 @@ check_status() {
 			echo "obfs-local	工作中	pid：$SIMPLEOBFS"
 		fi
 	elif [ "$ss_basic_type" == "1" ]; then
-		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用SSR-libev,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo ---------------------------------------------------------------------------------
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用shadowsocks-libev，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo --------------------------------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		[ -n "$SSR_REDIR" ] && echo "ssr-redir	工作中	pid：$SSR_REDIR" || echo "ssr-redir	未运行"
 	elif [ "$ss_basic_type" == "2" ]; then
-		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用koolgame,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name 8)）
-		echo ---------------------------------------------------------------------------------
+		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用koolgame，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name 8)）
+		echo --------------------------------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		[ -n "$KOOLGAME" ] && echo "koolgame	工作中	pid：$KOOLGAME" || echo "koolgame	未运行"
 	elif [ "$ss_basic_type" == "3" ]; then
 		if [ "${ss_basic_vcore}" == "1" ];then
-			echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-			echo ---------------------------------------------------------------------------------
+			echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray运行v2ray节点，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo --------------------------------------------------------------------------------------------------------
 			echo "程序		状态	PID"
 			if [ -n "${XRAY}" ];then
 				xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
@@ -168,14 +172,14 @@ check_status() {
 				echo "Xray	未运行"
 			fi
 		else
-			echo 1️⃣检测当前相关进程工作状态：（你正在使用V2ray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-			echo ---------------------------------------------------------------------------------
+			echo 1️⃣检测当前相关进程工作状态：（你正在使用V2ray，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo --------------------------------------------------------------------------------------------------------
 			echo "程序		状态	PID"
 			[ -n "$V2RAY" ] && echo "v2ray		工作中	pid：$V2RAY" || echo "v2ray	未运行"
 		fi
 	elif [ "$ss_basic_type" == "4" ]; then
-		echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo ---------------------------------------------------------------------------------
+		echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+		echo --------------------------------------------------------------------------------------------------------
 		echo "程序		状态	PID"
 		if [ -n "${XRAY}" ];then
 			xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
@@ -188,10 +192,26 @@ check_status() {
 			echo "Xray	未运行"
 		fi
 	elif [ "$ss_basic_type" == "5" ]; then
-		echo 1️⃣ 检测当前相关进程工作状态：（你正在使用trojan,选择的模式是$(get_mode_name $ss_basic_mode),国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
-		echo ---------------------------------------------------------------------------------
-		echo "程序		状态	PID"
-		[ -n "${TROJAN}" ] && echo "trojan		工作中	pid：${TROJAN}" || echo "trojan		未运行"
+		if [ "${ss_basic_tcore}" == "1" ];then
+			echo 1️⃣检测当前相关进程工作状态：（你正在使用Xray运行trojan节点，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo --------------------------------------------------------------------------------------------------------
+			echo "程序		状态	PID"
+			if [ -n "${XRAY}" ];then
+				xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
+				if [ -n "${xray_time}" ];then
+					echo "Xray		工作中	pid：$XRAY	工作时长: ${xray_time}"
+				else
+					echo "Xray		工作中	pid：$XRAY"
+				fi
+			else
+				echo "Xray	未运行"
+			fi
+		else
+			echo 1️⃣ 检测当前相关进程工作状态：（你正在使用trojan，选择的模式是$(get_mode_name $ss_basic_mode)，国外DNS解析方案是：$(get_dns_name $ss_foreign_dns)）
+			echo --------------------------------------------------------------------------------------------------------
+			echo "程序		状态	PID"
+			[ -n "${TROJAN}" ] && echo "trojan		工作中	pid：${TROJAN}" || echo "trojan		未运行"
+		fi
 	fi
 
 	if [ -z "$ss_basic_koolgame_udp" ]; then
@@ -255,7 +275,7 @@ check_status() {
 		fi
 	}
 	[ -n "$DMQ" ] && echo "dnsmasq		工作中	pid：$DMQ" || echo "dnsmasq	未运行"
-	echo ---------------------------------------------------------------------------------
+	echo --------------------------------------------------------------------------------------------------------
 
 	echo
 	echo_version

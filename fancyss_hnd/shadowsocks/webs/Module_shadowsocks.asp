@@ -54,8 +54,8 @@ var ping_result = "";
 var save_flag = "";
 var STATUS_FLAG;
 var refreshRate;
-var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
-var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
+var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
+var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var option_modes = [["1", "gfwlist模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"]];
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305", "plain", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305" ];
 var option_protocals = [ "origin", "verify_simple", "verify_sha1", "auth_sha1", "auth_sha1_v2", "auth_sha1_v4", "auth_aes128_md5", "auth_aes128_sha1", "auth_chain_a", "auth_chain_b", "auth_chain_c", "auth_chain_d", "auth_chain_e", "auth_chain_f" ];
@@ -306,7 +306,7 @@ function save() {
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 	// key define
 	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
-	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_disable_aaaa", "ss_basic_mcore"];
+	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_tcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_disable_aaaa", "ss_basic_mcore"];
 	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
 	var params_no_store = ["ss_base64_links"];
 	var params_base64_b = ["ss_basic_custom"];
@@ -664,7 +664,7 @@ function verifyFields(r) {
 	var x_path_on = E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2" || E("ss_basic_xray_network").value == "quic" || E("ss_basic_xray_network").value == "grpc" || x_http_on;
 	var x_tls_on = E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls";
 	var x_xtls_on = E("ss_basic_xray_network_security").value == "xtls";
-	//ss-libev
+	//ss
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
 	elem.display(elem.parentElem('ss_basic_ss_v2ray', 'tr'), ss_on);
@@ -2020,56 +2020,135 @@ function generate_node_info() {
 		if(db_ss[p + "_v2ray_use_json_" + idx] ==  "1"){
 			//对v2ray json节点的处理
 			var json = JSON.parse(Base64.decode(db_ss[p + "_v2ray_json_" + idx]));
-			var server_addr_1;
-			var server_addr_2;
-			server_addr_1 = json["outbound"];
-			server_addr_1 = (server_addr_1 != undefined) ? server_addr_1 : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.settings : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.vnext["0"] : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.address : ""
-			if(server_addr_1){
-				obj["server"] = server_addr_1;
-			}else{
-				obj["server"] = '';
+			var server_addr = '';
+			var server_prot = '';
+			if("outbound" in json){
+				if(isArray(json.outbound)){
+					//array
+					if(json.outbound[0].settings.servers){
+						if(isArray(json.outbound[0].settings.servers)){
+							server_add = json.outbound[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbound[0].settings.vnext){
+						if(isArray(json.outbound[0].settings.vnext)){
+							server_add = json.outbound[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound[0].protocol;
+				}else{
+					//object
+					if(json.outbound.settings.servers){
+						if(isArray(json.outbound.settings.servers)){
+							server_add = json.outbound.settings.servers[0].address;
+						}
+					}
+					if(json.outbound.settings.vnext){
+						if(isArray(json.outbound.settings.vnext)){
+							server_add = json.outbound.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound.protocol;
+				}
 			}
 
-			server_addr_2 = json["outbounds"][0];
-			server_addr_2 = (server_addr_2 != undefined) ? server_addr_2 : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.settings : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.vnext["0"] : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.address : ""
-			if(server_addr_2){
-				obj["server"] = server_addr_2;
-			}else{
-				obj["server"] = '';
+			if("outbounds" in json){
+				if(isArray(json.outbounds)){
+					//array
+					if(json.outbounds[0].settings.servers){
+						if(isArray(json.outbounds[0].settings.servers)){
+							server_add = json.outbounds[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbounds[0].settings.vnext){
+						if(isArray(json.outbounds[0].settings.vnext)){
+							server_add = json.outbounds[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds[0].protocol;
+				}else{
+					//object
+					if(json.outbounds.settings.servers){
+						if(isArray(json.outbounds.settings.servers)){
+							server_add = json.outbounds.settings.servers[0].address;
+						}
+					}
+					if(json.outbounds.settings.vnext){
+						if(isArray(json.outbounds.settings.vnext)){
+							server_add = json.outbounds.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds.protocol;
+				}
 			}
+			obj["server"] = server_add;
+			obj["protoc"] = server_prot;
 		}else if(db_ss[p + "_xray_use_json_" + idx] ==  "1"){
 			//对xray json节点的处理
 			var json = JSON.parse(Base64.decode(db_ss[p + "_xray_json_" + idx]));
-			var server_addr;
-			var server_addr_1;
-			var server_addr_2;
-			server_addr_1 = json["outbound"];
-			server_addr_1 = (server_addr_1 != undefined) ? server_addr_1 : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.settings : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.vnext["0"] : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.address : ""
-			if(server_addr_1){
-				obj["server"] = server_addr_1;
-			}else{
-				obj["server"] = '';
+			var server_addr = '';
+			var server_prot = '';
+			if("outbound" in json){
+				if(isArray(json.outbound)){
+					//array
+					if(json.outbound[0].settings.servers){
+						if(isArray(json.outbound[0].settings.servers)){
+							server_addr = json.outbound[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbound[0].settings.vnext){
+						if(isArray(json.outbound[0].settings.vnext)){
+							server_addr = json.outbound[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound[0].protocol;
+				}else{
+					//object
+					if(json.outbound.settings.servers){
+						if(isArray(json.outbound.settings.servers)){
+							server_addr = json.outbound.settings.servers[0].address;
+						}
+					}
+					if(json.outbound.settings.vnext){
+						if(isArray(json.outbound.settings.vnext)){
+							server_addr = json.outbound.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound.protocol;
+				}
 			}
 
-			server_addr_2 = json["outbounds"][0];
-			server_addr_2 = (server_addr_2 != undefined) ? server_addr_2 : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.settings : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.vnext["0"] : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.address : ""
-			if(server_addr_2){
-				obj["server"] = server_addr_2;
-			}else{
-				obj["server"] = '';
+			if("outbounds" in json){
+				if(isArray(json.outbounds)){
+					//array
+					if(json.outbounds[0].settings.servers){
+						if(isArray(json.outbounds[0].settings.servers)){
+							server_addr = json.outbounds[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbounds[0].settings.vnext){
+						if(isArray(json.outbounds[0].settings.vnext)){
+							server_addr = json.outbounds[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds[0].protocol;
+				}else{
+					//object
+					if(json.outbounds.settings.servers){
+						if(isArray(json.outbounds.settings.servers)){
+							server_addr = json.outbounds.settings.servers[0].address;
+						}
+					}
+					if(json.outbounds.settings.vnext){
+						if(isArray(json.outbounds.settings.vnext)){
+							server_addr = json.outbounds.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds.protocol;
+				}
 			}
+			obj["server"] = server_addr;
+			obj["protoc"] = server_prot;
 		}else{
 			if (typeof db_ss[p + "_server_" + idx] == "undefined") {
 				obj["server"] = '';
@@ -2142,9 +2221,9 @@ function refresh_html() {
 	
 	// define col width in different situation
 	if(node_nu && E("ss_basic_ping_node") != "off" && E("ss_basic_ping_node") != ""){
-		var width = ["", "5%", "30%", "30%", "8%", "12%", "10%", "5%", ];
+		var width = ["", "5%", "28%", "28%", "14%", "10%", "10%", "5%", ];
 	}else{
-		var width = ["", "6%", "32%", "32%", "10%", "10%", "10%" ];
+		var width = ["", "6%", "30%", "30%", "14%", "10%", "10%" ];
 	}
 	// make dynamic element
 	var html = '';
@@ -2194,10 +2273,22 @@ function refresh_html() {
 		html +='<td style="width:' + width[4] + ';">';
 		switch(c["type"]) {
 			case '0' :
-				if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
-					html +='ss+obfs';
+				if(E("ss_basic_vcore").checked){
+					if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
+						html +='ss_rust-obfs';
+					}else if(c["ss_v2ray"] == "1"){
+						html +='ss_rust-v2ray';
+					}else{
+						html +='ss_rust';
+					}
 				}else{
-					html +='ss';
+					if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
+						html +='ss_libev-obfs';
+					}else if(c["ss_v2ray"] == "1"){
+						html +='ss_libev-v2ray';
+					}else{
+						html +='ss_libev';
+					}
 				}
 				break;
 			case '1' :
@@ -2207,13 +2298,33 @@ function refresh_html() {
 				html +='koolgame';
 				break;
 			case '3' :
-				html +='v2ray';
+				if(E("ss_basic_vcore").checked){
+					if(c["protoc"]){
+						html +='xray-' + c["protoc"];
+					}else{
+						html +='xray-vless';
+					}
+				}else{
+					if(c["protoc"]){
+						html +='v2ray-' + c["protoc"];
+					}else{
+						html +='v2ray-vmess';
+					}
+				}
 				break;
 			case '4' :
-				html +='xray';
+				if(c["protoc"]){
+					html +='xray-' + c["protoc"];
+				}else{
+					html +='xray-vless';
+				}
 				break;
 			case '5' :
-				html +='trojan';
+				if(E("ss_basic_vcore").checked){
+					html +='xray-trojan';
+				}else{
+					html +='trojan';
+				}
 				break;
 		}
 		html +='</td>';
@@ -4598,9 +4709,10 @@ function save_failover() {
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;设置节点列表为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev / v2ray / xray 开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev 开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心替换V2ray', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss / v2ray / xray 开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行V2ray节点', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行trojan节点', id:'ss_basic_tcore', help:'119', type:'checkbox', value:false},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;Xray启用进程守护', id:'ss_basic_xguard', hint:'115', type:'checkbox', value:false},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [
 															{ id:'ss_basic_rust', type:'checkbox', value:false},

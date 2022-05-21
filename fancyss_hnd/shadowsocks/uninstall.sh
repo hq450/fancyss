@@ -20,7 +20,7 @@ rm -rf /koolshare/bin/pdu
 rm -rf /koolshare/bin/haproxy
 rm -rf /koolshare/bin/dnscrypt-proxy
 rm -rf /koolshare/bin/dns2socks
-rm -rf /koolshare/bin/client_linux_arm*
+rm -rf /koolshare/bin/kcptun
 rm -rf /koolshare/bin/cdns
 rm -rf /koolshare/bin/chinadns
 rm -rf /koolshare/bin/chinadns1
@@ -55,6 +55,7 @@ find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
+rm -rf /koolshare/bin/client_linux_arm*
 
 dbus remove softcenter_module_shadowsocks_home_url
 dbus remove softcenter_module_shadowsocks_install

@@ -61,7 +61,7 @@ set_skin(){
 
 pre_set(){
 	# set vcore name
-	XRAY_CONFIG_FILE_TMP="/tmp/xray_tmp.json"
+	XRAY_CONFIG_TEMP="/tmp/xray_tmp.json"
 	XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 	if [ "${ss_basic_vcore}" == "1" ];then
 		VCORE_NAME=Xray
@@ -73,10 +73,17 @@ pre_set(){
 		V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 	fi
 
-	TROJAN_CONFIG_TEMP="/tmp/trojan_nat_tmp.json"
-	TROJAN_CONFIG_FILE="/koolshare/ss/trojan.json"
-	TROJAN_CONFIG_TEMP_SOCKS="/tmp/trojan_client_tmp.json"
-	TROJAN_CONFIG_FILE_SOCKS="/koolshare/ss/trojan_client.json"
+	if [ "${ss_basic_tcore}" == "1" ];then
+		TCORE_NAME=Xray
+		TROJAN_CONFIG_TEMP="/tmp/xray_tmp.json"
+		TROJAN_CONFIG_FILE="/koolshare/ss/xray.json"
+	else
+		TCORE_NAME=trojan
+		TROJAN_CONFIG_TEMP="/tmp/trojan_nat_tmp.json"
+		TROJAN_CONFIG_FILE="/koolshare/ss/trojan.json"
+		TROJAN_CONFIG_TEMP_SOCKS="/tmp/trojan_client_tmp.json"
+		TROJAN_CONFIG_FILE_SOCKS="/koolshare/ss/trojan_client.json"
+	fi
 
 	# set skin
 	set_skin
@@ -390,10 +397,10 @@ kill_process() {
 		echo_date 关闭pdu进程...
 		kill -9 $pdu >/dev/null 2>&1
 	fi
-	client_linux_arm7_process=$(pidof client_linux_arm7)
-	if [ -n "$client_linux_arm7_process" ]; then
+	kcptun_process=$(pidof kcptun)
+	if [ -n "$kcptun_process" ]; then
 		echo_date 关闭kcp协议进程...
-		killall client_linux_arm7 >/dev/null 2>&1
+		killall kcptun >/dev/null 2>&1
 	fi
 	haproxy_process=$(pidof haproxy)
 	if [ -n "$haproxy_process" ]; then
@@ -853,6 +860,8 @@ start_dns() {
 	if [ "$ss_foreign_dns" == "7" ]; then
 		if [ "$ss_basic_type" == "3" -o "$ss_basic_type" == "4" ]; then
 			return 0
+		elif [ "$ss_basic_type" == "5" -a "$ss_basic_tcore" == "1" ]; then
+			return 0
 		else
 			echo_date $(__get_type_full_name $ss_basic_type)下不支持${VCORE_NAME} dns，改用dns2socks！
 			dbus set ss_foreign_dns=3
@@ -1175,14 +1184,14 @@ start_kcp() {
 
 			start-stop-daemon -S -q -b -m \
 				-p /tmp/var/kcp.pid \
-				-x /koolshare/bin/client_linux_arm7 \
+				-x /koolshare/bin/kcptun \
 				-- -l 127.0.0.1:1091 \
 				-r $ss_basic_kcp_server:$ss_basic_kcp_port \
 				$KCP_CRYPT $KCP_KEY $KCP_SNDWND $KCP_RNDWND $KCP_MTU $KCP_CONN $COMP $KCP_MODE $ss_basic_kcp_extra
 		else
 			start-stop-daemon -S -q -b -m \
 				-p /tmp/var/kcp.pid \
-				-x /koolshare/bin/client_linux_arm7 \
+				-x /koolshare/bin/kcptun \
 				-- -l 127.0.0.1:1091 \
 				-r $ss_basic_kcp_server:$ss_basic_kcp_port \
 				$ss_basic_kcp_parameter
@@ -2110,7 +2119,7 @@ creat_xray_json() {
 	fi
 
 	local tmp xray_server_ip
-	rm -rf "${XRAY_CONFIG_FILE_TMP}"
+	rm -rf "${XRAY_CONFIG_TEMP}"
 	rm -rf "${XRAY_CONFIG_FILE}"
 	if [ "${ss_basic_xray_use_json}" != "1" ]; then
 		echo_date 生成Xray配置文件...
@@ -2268,7 +2277,7 @@ creat_xray_json() {
 			;;
 		esac
 		# log area
-		cat >"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+		cat >"${XRAY_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
 				"access": "/dev/null",
@@ -2279,7 +2288,7 @@ creat_xray_json() {
 		# inbounds area (7913 for dns resolve)
 		if [ "${ss_foreign_dns}" == "7" ]; then
 			echo_date 配置xray dns，用于dns解析...
-			cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+			cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
 				"inbounds": [
 					{
 					"protocol": "dokodemo-door",
@@ -2305,7 +2314,7 @@ creat_xray_json() {
 			EOF
 		else
 			# inbounds area (23456 for socks5)
-			cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+			cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
 				"inbounds": [
 					{
 						"port": 23456,
@@ -2330,7 +2339,7 @@ creat_xray_json() {
 			EOF
 		fi
 		# outbounds area
-		cat >>"${XRAY_CONFIG_FILE_TMP}" <<-EOF
+		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
@@ -2362,6 +2371,8 @@ creat_xray_json() {
 						,"httpSettings": $h2
 						,"quicSettings": $qc
 						,"grpcSettings": $gr
+						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
+						
 					},
 					"mux": {
 						"enabled": false,
@@ -2371,9 +2382,9 @@ creat_xray_json() {
 			]
 			}
 		EOF
-		echo_date 解析Xray配置文件...
-		sed -i '/null/d' ${XRAY_CONFIG_FILE_TMP} 2>/dev/null
-		jq --tab . $XRAY_CONFIG_FILE_TMP >/tmp/jq_para_tmp.txt 2>&1
+		echo_date "解析Xray配置文件..."
+		sed -i '/null/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		jq --tab . $XRAY_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -2381,22 +2392,22 @@ creat_xray_json() {
 			rm -rf /tmp/jq_para_tmp.txt
 			close_in_five
 		fi
-		jq --tab . $XRAY_CONFIG_FILE_TMP >"$XRAY_CONFIG_FILE"
-		echo_date Xray配置文件写入成功到"$XRAY_CONFIG_FILE"
+		jq --tab . $XRAY_CONFIG_TEMP >$XRAY_CONFIG_FILE
+		echo_date "Xray配置文件写入成功到$XRAY_CONFIG_FILE"
 	else
 		echo_date 使用自定义的Xray json配置文件...
-		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_FILE_TMP"
-		local OB=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbound)
-		local OBS=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbounds)
+		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_TEMP"
+		local OB=$(cat "$XRAY_CONFIG_TEMP" | jq .outbound)
+		local OBS=$(cat "$XRAY_CONFIG_TEMP" | jq .outbounds)
 
 		# 兼容旧格式：outbound
 		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbound)
+			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | jq .outbound)
 		fi
 		
 		# 新格式：outbound[]
 		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat "$XRAY_CONFIG_FILE_TMP" | jq .outbounds[0])
+			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | jq .outbounds[0])
 		fi
 		
 		if [ "$ss_foreign_dns" == "7" ]; then
@@ -2483,10 +2494,7 @@ creat_xray_json() {
 		vmess|vless)
 			xray_server=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
 			;;
-		socks)
-			xray_server=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
-			;;
-		shadowsocks)
+		socks|shadowsocks|trojan)
 			xray_server=$(cat "$XRAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
@@ -2548,6 +2556,8 @@ start_xray() {
 	if [ "$ss_basic_tfo" == "1" ]; then
 		echo_date 开启tcp fast open支持.
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	else
+		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
 	# xray start
 	if [ "${ss_basic_xguard}" == "1" ];then
@@ -2598,80 +2608,141 @@ creat_trojan_json(){
 		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 		return 0
 	else
-		echo_date "创建$(__get_type_abbr_name)的nat配置文件到${TROJAN_CONFIG_FILE}"
-		[ "${trojan_socks}" == "1" ] && echo_date "创建$(__get_type_abbr_name)的client配置文件到${TROJAN_CONFIG_FILE_SOCKS}"
+		if [ "${ss_basic_tcore}" == "1" ];then
+			echo_date "创建xray的trojan配置文件到${TROJAN_CONFIG_FILE}"
+		else
+			echo_date "创建$(__get_type_abbr_name)的配置文件到${TROJAN_CONFIG_FILE}"
+			[ "${trojan_socks}" == "1" ] && echo_date "创建$(__get_type_abbr_name)的client配置文件到${TROJAN_CONFIG_FILE_SOCKS}"
+		fi
 	fi
-	
-	rm -rf "${TROJAN_CONFIG_TEMP}"
-	rm -rf "${TROJAN_CONFIG_FILE}"
-	rm -rf "${TROJAN_CONFIG_TEMP_SOCKS}"
-	rm -rf "${TROJAN_CONFIG_FILE_SOCKS}"
-	
-	cat > "${TROJAN_CONFIG_TEMP}" <<-EOF
-		{
-			"run_type": "nat",
-			"local_addr": "0.0.0.0",
-			"local_port": 3333,
-			"remote_addr": "${ss_basic_server}",
-			"remote_port": ${ss_basic_port},
-			"password": ["${ss_basic_trojan_uuid}"],
-			"log_level": 1,
-			"ssl": {
-				"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
-				"verify_hostname": true,
-				"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
-				"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
-				"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
-				"sni": $(get_value_null ${ss_basic_trojan_sni}),
-				"alpn": ["h2","http/1.1"],
-				"reuse_session": true,
-				"session_ticket": false,
-				"curves": ""
-			},
-			"tcp": {
-			"no_delay": true,
-			"keep_alive": true,
-			"reuse_port": $(get_function_switch ${ss_basic_mcore}),
-			"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
-			"fast_open_qlen": 20
-			}
-		}
-	EOF
-	echo_date "解析trojan的nat配置文件..."
-	jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
-	if [ "$?" != "0" ];then
-		echo_date "json配置解析错误，错误信息如下："
-		echo_date $(cat /tmp/trojan_para_tmp.txt) 
-		echo_date "请更正你的错误然后重试！！"
-		rm -rf /tmp/trojan_para_tmp.txt
-		close_in_five
-	fi
-	jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
-	echo_date "解析成功！trojan的nat配置文件成功写入到${TROJAN_CONFIG_FILE}"
 
-	echo_date 测试trojan的nat配置文件....
-	result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE} 2>&1 | grep "The config file looks good.")
-	if [ -n "${result}" ]; then
-		echo_date 测试结果：${result}
-		echo_date trojan的nat配置文件通过测试!!!
-	else
-		echo_date trojan的nat配置文件没有通过测试，请检查设置!!!
-		rm -rf ${TROJAN_CONFIG_TEMP}
-		rm -rf ${TROJAN_CONFIG_FILE}
-		close_in_five
-	fi
-	
-	if [ "${trojan_socks}" == "1" ]; then
-		# 3:  dns2socks
-		# 4:  ss-tunnel    →   fall back to dns2socks
-		# 5:  chinadns1    →   use dns2socks as upstream
-		# 7:  v2ray_dns    →   fall back to dns2socks
-		# 10: chinadns-ng  →   use dns2socks as upstream
-		cat > "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+	if [ "${ss_basic_tcore}" == "1" ];then
+		rm -rf "${TROJAN_CONFIG_TEMP}"
+		rm -rf "${TROJAN_CONFIG_FILE}"
+		# log area
+		cat >"${TROJAN_CONFIG_TEMP}" <<-EOF
 			{
-				"run_type": "client",
-				"local_addr": "127.0.0.1",
-				"local_port": 23456,
+			"log": {
+				"access": "/dev/null",
+				"error": "/tmp/${VCORE_NAME}_log.log",
+				"loglevel": "error"
+			},
+		EOF
+		if [ "${ss_foreign_dns}" == "7" ]; then
+			echo_date 配置${TCORE_NAME} dns，用于dns解析...
+			cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
+				"inbounds": [
+					{
+					"protocol": "dokodemo-door",
+					"port": ${DNSF_PORT},
+					"settings": {
+						"address": "8.8.8.8",
+						"port": 53,
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
+					},
+					{
+						"listen": "0.0.0.0",
+						"port": 3333,
+						"protocol": "dokodemo-door",
+						"settings": {
+							"network": "tcp,udp",
+							"followRedirect": true
+						}
+					}
+				],
+			EOF
+		else
+			if [ "${trojan_socks}" == "1" ];then
+				# inbounds area (23456 for socks5)
+				cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
+					"inbounds": [
+						{
+							"port": 23456,
+							"listen": "0.0.0.0",
+							"protocol": "socks",
+							"settings": {
+								"auth": "noauth",
+								"udp": true,
+								"ip": "127.0.0.1"
+							}
+						},
+						{
+							"listen": "0.0.0.0",
+							"port": 3333,
+							"protocol": "dokodemo-door",
+							"settings": {
+								"network": "tcp,udp",
+								"followRedirect": true
+							}
+						}
+					],
+				EOF
+			else
+				# inbounds area
+				cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
+					"inbounds": [
+						{
+							"listen": "0.0.0.0",
+							"port": 3333,
+							"protocol": "dokodemo-door",
+							"settings": {
+								"network": "tcp,udp",
+								"followRedirect": true
+							}
+						}
+					],
+				EOF
+			fi
+		fi
+		# outbounds area
+		cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
+			"outbounds": [
+				{
+					"protocol": "trojan",
+					"settings": {
+						"servers": [{
+						"address": "${ss_basic_server}",
+						"port": ${ss_basic_port},
+						"password": "${ss_basic_trojan_uuid}"
+						}]
+					},
+					"streamSettings": {
+						"network": "tcp",
+						"security": "tls",
+						"tlsSettings": {
+							"serverName": $(get_value_null ${ss_basic_trojan_sni}),
+							"allowInsecure": $(get_function_switch ${ss_basic_trojan_ai})
+      					},"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
+    				}
+  				}
+  			]
+  			}
+		EOF
+		echo_date "解析xray的trojan配置文件..."
+		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
+		if [ "$?" != "0" ];then
+			echo_date "json配置解析错误，错误信息如下："
+			echo_date $(cat /tmp/trojan_para_tmp.txt) 
+			echo_date "请更正你的错误然后重试！！"
+			rm -rf /tmp/trojan_para_tmp.txt
+			close_in_five
+		fi
+		jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
+		echo_date "解析成功！xray的trojan配置文件成功写入到${TROJAN_CONFIG_FILE}"
+	else
+		rm -rf "${TROJAN_CONFIG_TEMP}"
+		rm -rf "${TROJAN_CONFIG_FILE}"
+		rm -rf "${TROJAN_CONFIG_TEMP_SOCKS}"
+		rm -rf "${TROJAN_CONFIG_FILE_SOCKS}"
+		
+		cat > "${TROJAN_CONFIG_TEMP}" <<-EOF
+			{
+				"run_type": "nat",
+				"local_addr": "0.0.0.0",
+				"local_port": 3333,
 				"remote_addr": "${ss_basic_server}",
 				"remote_port": ${ss_basic_port},
 				"password": ["${ss_basic_trojan_uuid}"],
@@ -2691,14 +2762,14 @@ creat_trojan_json(){
 				"tcp": {
 				"no_delay": true,
 				"keep_alive": true,
-				"reuse_port": false,
+				"reuse_port": $(get_function_switch ${ss_basic_mcore}),
 				"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
 				"fast_open_qlen": 20
 				}
 			}
 		EOF
-		echo_date 解析trojan的client配置文件...
-		jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
+		echo_date "解析trojan的nat配置文件..."
+		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/trojan_para_tmp.txt) 
@@ -2706,19 +2777,80 @@ creat_trojan_json(){
 			rm -rf /tmp/trojan_para_tmp.txt
 			close_in_five
 		fi
-		jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
-		echo_date "解析成功！trojan的client配置文件成功写入到${TROJAN_CONFIG_FILE_SOCKS}"
+		jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
+		echo_date "解析成功！trojan的nat配置文件成功写入到${TROJAN_CONFIG_FILE}"
 
-		echo_date 测试trojan的client配置文件....
-		result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
+		echo_date 测试trojan的nat配置文件....
+		result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE} 2>&1 | grep "The config file looks good.")
 		if [ -n "${result}" ]; then
 			echo_date 测试结果：${result}
-			echo_date trojan的client配置文件通过测试!!!
+			echo_date trojan的nat配置文件通过测试!!!
 		else
-			echo_date trojan的client配置文件没有通过测试，请检查设置!!!
-			rm -rf ${TROJAN_CONFIG_TEMP_SOCKS}
-			rm -rf ${TROJAN_CONFIG_FILE_SOCKS}
+			echo_date trojan的nat配置文件没有通过测试，请检查设置!!!
+			rm -rf ${TROJAN_CONFIG_TEMP}
+			rm -rf ${TROJAN_CONFIG_FILE}
 			close_in_five
+		fi
+		
+		if [ "${trojan_socks}" == "1" ]; then
+			# 3:  dns2socks
+			# 4:  ss-tunnel    →   fall back to dns2socks
+			# 5:  chinadns1    →   use dns2socks as upstream
+			# 7:  v2ray_dns    →   fall back to dns2socks
+			# 10: chinadns-ng  →   use dns2socks as upstream
+			cat > "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+				{
+					"run_type": "client",
+					"local_addr": "127.0.0.1",
+					"local_port": 23456,
+					"remote_addr": "${ss_basic_server}",
+					"remote_port": ${ss_basic_port},
+					"password": ["${ss_basic_trojan_uuid}"],
+					"log_level": 1,
+					"ssl": {
+						"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
+						"verify_hostname": true,
+						"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+						"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+						"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+						"sni": $(get_value_null ${ss_basic_trojan_sni}),
+						"alpn": ["h2","http/1.1"],
+						"reuse_session": true,
+						"session_ticket": false,
+						"curves": ""
+					},
+					"tcp": {
+					"no_delay": true,
+					"keep_alive": true,
+					"reuse_port": false,
+					"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+					"fast_open_qlen": 20
+					}
+				}
+			EOF
+			echo_date 解析trojan的client配置文件...
+			jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
+			if [ "$?" != "0" ];then
+				echo_date "json配置解析错误，错误信息如下："
+				echo_date $(cat /tmp/trojan_para_tmp.txt) 
+				echo_date "请更正你的错误然后重试！！"
+				rm -rf /tmp/trojan_para_tmp.txt
+				close_in_five
+			fi
+			jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
+			echo_date "解析成功！trojan的client配置文件成功写入到${TROJAN_CONFIG_FILE_SOCKS}"
+
+			echo_date 测试trojan的client配置文件....
+			result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
+			if [ -n "${result}" ]; then
+				echo_date 测试结果：${result}
+				echo_date trojan的client配置文件通过测试!!!
+			else
+				echo_date trojan的client配置文件没有通过测试，请检查设置!!!
+				rm -rf ${TROJAN_CONFIG_TEMP_SOCKS}
+				rm -rf ${TROJAN_CONFIG_FILE_SOCKS}
+				close_in_five
+			fi
 		fi
 	fi
 }
@@ -2726,26 +2858,62 @@ creat_trojan_json(){
 start_trojan(){
 	# tfo
 	if [ "${ss_basic_trojan_tfo}" == "1" ]; then
-		echo_date trojan开启tcp fast open支持.
+		echo_date ${TCORE_NAME}开启tcp fast open支持.
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 	else
 		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
-	
-	# start trojan
-	if [ "${ss_basic_mcore}" == "1" ]; then
-		echo_date trojan开启$THREAD线程支持.
-		local i=1
-		while [ $i -le $THREAD ]; do
-			trojan >/dev/null 2>&1 &
-			let i++
-		done
-	else
-		trojan >/dev/null 2>&1 &
-	fi
 
-	if [ "${trojan_socks}" == "1" ];then
-		trojan -c ${TROJAN_CONFIG_FILE_SOCKS} >/dev/null 2>&1 &
+	if [ "${ss_basic_tcore}" == "1" ];then
+		if [ "${ss_basic_xguard}" == "1" ];then
+			echo_date "开启Xray主进程 + Xray守护，用以运行trojan协议节点..."
+			# use perp to start xray
+			mkdir -p /koolshare/perp/xray/
+			cat >/koolshare/perp/xray/rc.main <<-EOF
+				#!/bin/sh
+				source /koolshare/scripts/base.sh
+				CMD="xray run -c /koolshare/ss/xray.json"
+				
+				exec 2>&1
+				exec \$CMD
+				
+			EOF
+			chmod +x /koolshare/perp/xray/rc.main
+			chmod +t /koolshare/perp/xray/
+			perpctl -u xray >/dev/null 2>&1
+		else
+			echo_date "开启Xray主进程，用以运行trojan协议节点..."
+			cd /koolshare/bin
+			xray run -c $XRAY_CONFIG_FILE >/dev/null 2>&1 &
+		fi
+		local XPID
+		local i=25
+		until [ -n "$XPID" ]; do
+			i=$(($i - 1))
+			XPID=$(pidof xray)
+			if [ "$i" -lt 1 ]; then
+				echo_date "Xray进程启动失败！"
+				close_in_five
+			fi
+			usleep 250000
+		done
+		echo_date Xray启动成功，pid：$XPID
+	else
+		# start trojan
+		if [ "${ss_basic_mcore}" == "1" ]; then
+			echo_date trojan开启$THREAD线程支持.
+			local i=1
+			while [ $i -le $THREAD ]; do
+				trojan >/dev/null 2>&1 &
+				let i++
+			done
+		else
+			trojan >/dev/null 2>&1 &
+		fi
+
+		if [ "${trojan_socks}" == "1" ];then
+			trojan -c ${TROJAN_CONFIG_FILE_SOCKS} >/dev/null 2>&1 &
+		fi
 	fi
 }
 
@@ -3345,6 +3513,14 @@ detect() {
 			echo_date "ℹ️使用Xray-core替换V2ray-core..."
 		else
 			echo_date "ℹ️使用V2ray-core..."
+		fi
+	fi
+
+	if [ "${ss_basic_type}" == "5" ];then
+		if [ "${ss_basic_tcore}" == "1" ];then
+			echo_date "ℹ️使用Xray-core运行trojan协议节点..."
+		else
+			echo_date "ℹ️使用trojan二进制运行trojan协议节点..."
 		fi
 	fi
 }

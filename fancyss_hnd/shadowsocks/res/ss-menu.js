@@ -715,9 +715,9 @@ function openssHint(itemNum) {
 		_caption = "使用json配置";
 	}  else if (itemNum == 25) {
 		statusmenu = "<br /><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vless作为传出协议，不支持socks，shadowsocks，vmess；提交后会根据你的配置自动生成xray的json配置。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vless作为传出协议，不支持socks、shadowsocks、vmess、trojan；提交后会根据你的配置自动生成xray的json配置，配置文件在/koolshare/ss/xray.json。"
 		statusmenu += "<br /><br /><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置xray支持的所有传出协议，包括vmess、vless、socks，shadowsocks等，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置xray支持的所有传出协议，包括vmess、vless、socks、shadowsocks、trojan等协议，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
 		_caption = "使用json配置";
 	} else if (itemNum == 28) {
 		width = "750px";
@@ -964,6 +964,9 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意2：</b>shadowsocks-rust支持的加密方式如下：plain, none, aes-128-gcm, aes-256-gcm, chacha20-ietf-poly1305, 2022-blake3-aes-128-gcm, 2022-blake3-aes-256-gcm, 2022-blake3-chacha20-poly1305";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;如果你使用的节点不是这些加密方式，那改节点肯定会出现工作异常！";
 		_caption = "用shadowsocks-rust替代shadowsocks-libev";
+	} else if (itemNum == 119) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;Xray-core是支持trojan协议的，所以trojan节点不仅可以用trojan程序来运行，还能用Xray核心来运行";
+		_caption = "说明";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

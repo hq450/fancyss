@@ -1,5 +1,12 @@
 fancyss_hnd Changelog
 ===========================================
+1.9.24
+   - fix	修复添加Xray Json配置，WebUI就丢失的问题 #32818
+   - add	现在可以用xray核心来跑trojan协议的节点了，功能位于【附加功能】
+   - update	完善xray和trojan的tcp fast open支持
+   - update	优化节点列表里类型的显示，替换核心后类型也会跟随变化
+   - update	kcptun二进制不再使用client_linux_armv7作为名字，更名为kcptun
+
 1.9.22 - 1.9.23
    - fix	修复某些机场的trojan订阅端口不正确的问题
    - fix	修复某些机场的trojan订阅SNI为空的问题

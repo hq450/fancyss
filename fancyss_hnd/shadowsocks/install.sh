@@ -116,7 +116,7 @@ install_now(){
 	rm -rf /koolshare/bin/haproxy
 	rm -rf /koolshare/bin/dnscrypt-proxy
 	rm -rf /koolshare/bin/dns2socks
-	rm -rf /koolshare/bin/client_linux_arm*
+	rm -rf /koolshare/bin/kcptun
 	rm -rf /koolshare/bin/cdns
 	rm -rf /koolshare/bin/chinadns
 	rm -rf /koolshare/bin/chinadns1
@@ -150,6 +150,10 @@ install_now(){
 	rm -rf /koolshare/bin/v2ctl >/dev/null 2>&1
 	rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 	rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
+	rm -rf /koolshare/bin/client_linux_arm*
+
+	# optional files should keep
+	# rm -rf /koolshare/bin/sslocal >/dev/null 2>&1
 
 	# 386固件全面使用openssl1.1.1，弃用了openssl1.0.0，所以判断使用openssl1.1.1的使用新版本的httping
 	if [ -f "/usr/lib/libcrypto.so.1.1" ];then
@@ -184,7 +188,7 @@ install_now(){
 		rm -rf /tmp/shadowsocks/bin/v2ray
 		rm -rf /tmp/shadowsocks/bin/v2ctl
 		rm -rf /tmp/shadowsocks/bin/v2ray-plugin
-		rm -rf /tmp/shadowsocks/bin/client_linux_arm7
+		rm -rf /tmp/shadowsocks/bin/kcptun
 		rm -rf /tmp/shadowsocks/bin/koolgame
 		rm -rf /tmp/shadowsocks/bin/pdu
 		rm -rf /tmp/shadowsocks/bin/speederv1
