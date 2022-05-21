@@ -5,6 +5,12 @@ VERSION=$(cat ./shadowsocks/ss/version|sed -n 1p)
 TITLE=科学上网
 DESCRIPTION=科学上网
 HOME_URL=Module_shadowsocks.asp
+DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
+
+prepare(){
+	cd $DIR
+	cp -rf fancyss shadowsocks
+}
 
 cp_rules(){
 	cp -rf ../rules/gfwlist.conf shadowsocks/ss/rules/
@@ -61,8 +67,9 @@ do_backup(){
 	echo $backup_tar_md5 ${MODULE}_$backup_version.tar.gz >> "$HISTORY_DIR"/md5sum.txt
 }
 
-
+prepare
 cp_rules
 sync_v2ray_binary
 do_build
 do_backup
+rm -rf ${DIR}/shadowsocks/
