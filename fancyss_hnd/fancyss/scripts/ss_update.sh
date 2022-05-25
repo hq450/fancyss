@@ -42,6 +42,7 @@ update_ss(){
 			echo_date "开启下载进程，从主服务器上下载更新包..."
 			echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
 			wget -4 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
+			mv ${PACKAGE}.tar.gz shadowsocks.tar.gz
 			md5sum_gz=$(md5sum /tmp/shadowsocks.tar.gz | sed 's/ /\n/g'| sed -n 1p)
 			if [ "${md5sum_gz}" != "${md5_web1}" ]; then
 				echo_date "更新包md5校验不一致！估计是下载的时候出了什么状况，请等待一会儿再试..."
