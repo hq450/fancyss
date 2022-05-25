@@ -567,9 +567,6 @@ function openssHint(itemNum) {
 		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~<br />"
 		_caption = "模式说明";
 		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
-	} else if (itemNum == 2) {
-		statusmenu = "此处填入你的ss/ssr/koolgame服务器的加密方式。<br /><font color='#F46'>建议</font>如果是自己搭建服务器，建议使用对路由器负担比较小的加密方式，例如chacha20,chacha20-ietf等。";
-		_caption = "服务器加密方式";
 	} else if (itemNum == 6) {
 		statusmenu = "此处选择你希望UDP的通道。<br />很多游戏都走udp的初衷就是加速udp连接。<br />如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
 		_caption = "游戏模式V2 UDP通道";
@@ -593,10 +590,10 @@ function openssHint(itemNum) {
 		width = "500px";
 		statusmenu = "此处显示你的SS插件当前的版本号，当前版本：<% dbus_get_def("ss_basic_version_local", "未知"); %>,如果需要回滚SS版本，请参考以下操作步骤：";
 		statusmenu += "<br /><br /><font color='#CC0066'>1&nbsp;&nbsp;</font>进入<a href='Tools_Shell.asp' target='_blank'><u><font color='#00F'>webshell</font></u></a>或者其他telnet,ssh等能输入命令的工具";
-		statusmenu += "<br /><font color='#CC0066'>2&nbsp;&nbsp;</font>请依次输入以下命令，等待上一条命令执行完后再运行下一条(这里以回滚1.5.7为例)：";
+		statusmenu += "<br /><font color='#CC0066'>2&nbsp;&nbsp;</font>请依次输入以下命令，等待上一条命令执行完后再运行下一条(这里以回滚2.0.0为例)：";
 		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;cd /tmp";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss_history_package/master/fancyss_hnd/shadowsocks_1.5.7.tar.gz";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;mv shadowsocks_1.5.7.tar.gz shadowsocks.tar.gz";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;wget --no-check-certificate https://raw.githubusercontent.com/hq450/fancyss_history_package/master/fancyss_hnd/shadowsocks_2.0.0.tar.gz";
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;mv shadowsocks_2.0.0.tar.gz shadowsocks.tar.gz";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;tar -zxvf /tmp/shadowsocks.tar.gz";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;chmod +x /tmp/shadowsocks/install.sh";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;sh /tmp/shadowsocks/install.sh";

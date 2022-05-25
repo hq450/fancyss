@@ -33,31 +33,31 @@ backup_tar(){
 	cp /koolshare/bin/isutf8 $TARGET_FOLDER/bin/
 	cp /koolshare/bin/ss-local $TARGET_FOLDER/bin/
 	cp /koolshare/bin/ss-redir $TARGET_FOLDER/bin/
-	cp /koolshare/bin/ss-tunnel $TARGET_FOLDER/bin/
 	cp /koolshare/bin/obfs-local $TARGET_FOLDER/bin/
 	cp /koolshare/bin/rss-local $TARGET_FOLDER/bin/
 	cp /koolshare/bin/rss-redir $TARGET_FOLDER/bin/
-	cp /koolshare/bin/koolgame $TARGET_FOLDER/bin/
-	cp /koolshare/bin/pdu $TARGET_FOLDER/bin/
 	cp /koolshare/bin/dns2socks $TARGET_FOLDER/bin/
-	cp /koolshare/bin/cdns $TARGET_FOLDER/bin/
-	cp /koolshare/bin/chinadns $TARGET_FOLDER/bin/
-	cp /koolshare/bin/chinadns1 $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns-ng $TARGET_FOLDER/bin/
-	cp /koolshare/bin/smartdns $TARGET_FOLDER/bin/
 	cp /koolshare/bin/resolveip $TARGET_FOLDER/bin/
-	cp /koolshare/bin/haproxy $TARGET_FOLDER/bin/
-	cp /koolshare/bin/kcptun $TARGET_FOLDER/bin/
-	cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
-	cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
-	cp /koolshare/bin/trojan $TARGET_FOLDER/bin/
 	cp /koolshare/bin/xray $TARGET_FOLDER/bin/
-	cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
-	cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
 	cp /koolshare/bin/httping $TARGET_FOLDER/bin/
-	cp /koolshare/bin/haveged $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/ss-tunnel $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/koolgame $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/pdu $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/cdns $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/chinadns $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/chinadns1 $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/smartdns $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/haproxy $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/kcptun $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/speeder* $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/udp2raw $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/trojan $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/v2ray $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/v2ray-plugin $TARGET_FOLDER/bin/
+	@cp /koolshare/bin/haveged $TARGET_FOLDER/bin/
 	#cp /koolshare/bin/dnsmasq $TARGET_FOLDER/bin/
 	#cp /koolshare/bin/v2ctl $TARGET_FOLDER/bin/
 	#cp /koolshare/bin/client_linux_arm7 $TARGET_FOLDER/bin/
@@ -79,7 +79,7 @@ backup_tar(){
 }
 
 remove_now(){
-	echo_date 开始清理shadowsocks配置...
+	echo_date 开始清理科学上网配置...
 	confs=$(dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign")
 	for conf in $confs
 	do
@@ -96,12 +96,12 @@ remove_now(){
 	# 1.9.15：国外dns解析设置为chinadns-ng，并默认丢掉AAAA记录
 	[ -z "$(dbus get ss_dns_foreign)" ] && dbus set ss_dns_foreign=10
 	[ -z "$(dbus get ss_disable_aaaa)" ] && dbus set ss_disable_aaaa=1
-	# 
+	# others
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
-	echo_date 尝试关闭shadowsocks...
+	echo_date 尝试关闭科学上网...
 	sh /koolshare/ss/ssconfig.sh stop
 }
 
@@ -119,7 +119,7 @@ remove_silent(){
 }
 
 restore_sh(){
-	echo_date 检测到ss备份文件...
+	echo_date 检测到科学上网备份文件...
 	echo_date 开始恢复配置...
 	chmod +x /tmp/upload/ssconf_backup.sh
 	sh /tmp/upload/ssconf_backup.sh
@@ -134,7 +134,7 @@ restore_json(){
 	cat /tmp/ssconf_backup.json | jq --tab . > /tmp/ssconf_backup_formated.json
 	if [ -z "$ss_format" ];then
 		# SS json
-		echo_date 检测到ss json配置文件...
+		echo_date 检测到shadowsocks json配置文件...
 		servers=$(cat /tmp/ssconf_backup_formated.json |grep -w server|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
 		ports=$(cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
 		passwords=$(cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)

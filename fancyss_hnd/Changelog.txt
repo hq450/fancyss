@@ -1,5 +1,33 @@
 fancyss_hnd Changelog
 ===========================================
+2.0.0
+   - fix	修复节点列表里，节点类型可能显示错误的问题
+   - update	全功能版本的离线安装包更名为：fancyss_hnd_full.tar.gz（原名：shadowsocks.tar.gz）
+   - add	新增精简功能瘦身后的lite版本：fancyss_hnd_lite.tar.gz，安装包大小仅6.8MB，具体如下：
+       		------------------------------------------------------------------------------------------------
+   - note	现在打包插件生成fancyss_hnd_full.tar.gz（完整包）的同时，会生成对应版本的fancyss_hnd_lite.tar.gz安装包
+       		fancyss_hnd_lite版本精简了很多功能和二进制文件，使得安装包体积大大降低，但是主要功能都得到了保留
+       		1. 移除了v2ray、trojan二进制文件，默认使用xray-core来运行v2ray和trojan协议
+       		2. 移除了shdowsocks的v2ray-plugin插件功能及其对应的二进制文件：v2ray-plugin
+       		3. 移除了KCP加速功能及其二进制文件：speederv1、speederv2、udp2raw
+       		4. 移除了UDP加速功能及其二进制文件：kcptun
+       		5. 移除了koolgame协议支持及其二进制文件：koolgame、pdu
+       		6. 移除了负载均衡支持及其页面和二进制文件：haproxy
+       		7. 移除了直连解析（非远端解析）的国外DNS方案及其二进制文件：cdns、chinadns、chinadns1、smartdns
+       		   直连解析本身国外cdn效果就较差，很多时候还无法解锁Netflix！不过保留下了一个直连解析方案：https_dns_proxy
+       		   https_dns_proxy因为有ECS的支持，还是具有一定的cdn效果的（针对直连机场，中转机场效果可能差）
+       		   个人建议直接使用chinadns-ng即可，既有很好的国外（远端解析）和国内cdn效果，又可以帮dnsmasq减轻规则负担。
+       		8. 移除了haveged，因为现在较新的固件系统自带了熵增软件
+       		9. 移除了shdowsocks-rust替换shadowsocks-libev功能，默认由shadowsocks-libev运行ss协议
+       		10. 移除了socks5页面及其脚本及其acl规则文件
+       		总结1：和全功能版本相比，Lite版本没有KCP加速、UDP加速、SS+v2ray-plugin、负载均衡、独立的socks5设定、koolgame协议，并且精简了一些直连解析的国外DNS解析方案
+       		总结2：所以现在lite版本是支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客户端的科学上网、游戏加速工具。
+       		如果是不折腾以上被精简功能的用户，完全可以使用体积更小的lite版本
+       		当然，RT-AX56U_V2这种jffs分区极小的机型，也建议直接使用lite版本
+       		要切换为lite版本，直接安装shadowsocks_lite.tar.gz即可，以后在线更新也维持为lite版本
+       		要切换为全功能版本，直接安装shadowsocks.tar.gz即可，以后在线更新也维持为全功能版本
+       		------------------------------------------------------------------------------------------------
+
 1.9.24
    - fix	修复添加Xray Json配置，WebUI就丢失的问题 #32818
    - add	现在可以用xray核心来跑trojan协议的节点了，功能位于【附加功能】

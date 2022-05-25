@@ -32,6 +32,12 @@ game_on=$(dbus list ss_acl_mode|cut -d "=" -f 2 | grep 3)
 [ -n "${game_on}" -o "${ss_basic_mode}" == "3" ] && mangle=1
 ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
 ss_basic_server_orig=${ss_basic_server}
+if [ ! -x "/koolshare/bin/v2ray" ];then
+	ss_basic_vcore=1
+fi
+if [ ! -x "/koolshare/bin/trojan" ];then
+	ss_basic_tcore=1
+fi
 
 __valid_ip() {
 	# 验证是否为ipv4或者ipv6地址，是则正确返回，不是返回空值

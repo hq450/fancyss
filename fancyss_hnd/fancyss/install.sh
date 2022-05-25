@@ -81,10 +81,18 @@ exit_install(){
 
 install_now(){
 	# default value
-	local TITLE="科学上网"
-	local DESCR="科学上网 for merlin hnd platform"
 	local PLVER=$(cat ${DIR}/ss/version)
 
+	# print message
+	if [ ! -x "/koolshare/bin/v2ray" -o ! -x "/koolshare/bin/trojan" ];then
+		local TITLE="科学上网 lite"
+		local DESCR="科学上网 lite for merlin hnd platform"
+		echo_date "安装版本：fancyss_hnd_lite_${PLVER}"
+	else
+		local TITLE="科学上网"
+		local DESCR="科学上网 for merlin hnd platform"
+		echo_date "安装版本：fancyss_hnd_full_${PLVER}"
+	fi
 	# stop first
 	local ENABLE=$(dbus get ss_basic_enable)
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
@@ -167,50 +175,6 @@ install_now(){
 		rm -rf /tmp/shadowsocks/bin/haveged
 	fi
 
-	# 对于jffs分区过小的插件，删除某些功能的二进制文件，比如RT-AX56U_V2的jffs只有15MB，所以移除一些功能
-	JFFS_TOTAL=$(df | grep -w "/jffs" | awk '{print $2}')
-	if [ "${JFFS_TOTAL}" -le "20000" ];then
-		echo_date "-------------------------------------------------------------"
-		echo_date "重要提示："
-		echo_date "检测到你的机型${MODEL} jffs分区大小为${JFFS_TOTAL}，小于20MB！"
-		echo_date "为了你的机型能顺利安装fancyss_hnd，部分功能的二进制文件将不会安装！"
-		echo_date "安装后以下功能将无法使用，即使界面上显示有该功能"
-		echo_date "1. v2ray 功能"
-		echo_date "2. koolgame 功能"
-		echo_date "3. kcptun 功能"
-		echo_date "4. shadowsocks-libev v2ray plugin 功能"
-		echo_date "5. shadowsocks-libev obfs plugin 功能"
-		echo_date "6. smartdns、chinadns1、chinadns2 功能"
-		echo_date "7. udp加速内的所有功能：udp2raw、speederv1、speederv2"
-		echo_date "8. 负载均衡功能"
-		echo_date "其它功能，如ss、ssr、dns、负载均衡等功能不受影响！"
-		echo_date "-------------------------------------------------------------"
-		rm -rf /tmp/shadowsocks/bin/v2ray
-		rm -rf /tmp/shadowsocks/bin/v2ctl
-		rm -rf /tmp/shadowsocks/bin/v2ray-plugin
-		rm -rf /tmp/shadowsocks/bin/kcptun
-		rm -rf /tmp/shadowsocks/bin/koolgame
-		rm -rf /tmp/shadowsocks/bin/pdu
-		rm -rf /tmp/shadowsocks/bin/speederv1
-		rm -rf /tmp/shadowsocks/bin/speederv2
-		rm -rf /tmp/shadowsocks/bin/udp2raw
-		rm -rf /tmp/shadowsocks/bin/haproxy
-		rm -rf /tmp/shadowsocks/bin/obfs-local
-		rm -rf /tmp/shadowsocks/bin/smartdns
-		rm -rf /tmp/shadowsocks/bin/chinadns1
-		rm -rf /tmp/shadowsocks/bin/smartdns
-		rm -rf /tmp/shadowsocks/scripts/ss_lb_config.sh
-		rm -rf /tmp/shadowsocks/webs/Module_shadowsocks_lb.asp
-		sed -i 's/\, \[\"13\"\, \"SmartDNS\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\, \[\"9\"\, \"SmartDNS\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\, \[\"5\"\, \"chinadns1\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\, \[\"2\"\, \"chinadns2\"\]//' /tmp/shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\, \"负载均衡设置\"//g' /tmp/shadowsocks/res/ss-menu.js
-		sed -i 's/\, \"Module_shadowsocks_lb\.asp\"//g' /tmp/shadowsocks/res/ss-menu.js
-		echo ".show-btn5, .show-btn6{display: none;}" >> /tmp/shadowsocks/res/shadowsocks.css
-	fi
-	sync
-
 	# 检测储存空间是否足够
 	echo_date "检测jffs分区剩余空间..."
 	SPACE_AVAL=$(df | grep -w "/jffs" | awk '{print $4}')
@@ -271,12 +235,27 @@ install_now(){
 	# 1.9.15：国内DNS默认使用运营商DNS
 	[ -z "$(dbus get ss_dns_china)" ] && dbus set ss_dns_china=1
 	# 1.9.15：国外dns解析设置为chinadns-ng，并默认丢掉AAAA记录
-	[ -z "$(dbus get ss_dns_foreign)" ] && dbus set ss_dns_foreign=10
+	[ -z "$(dbus get ss_foreign_dns)" ] && dbus set ss_foreign_dns=10
 	[ -z "$(dbus get ss_disable_aaaa)" ] && dbus set ss_disable_aaaa=1
-	# 
+	# others
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
+	# ----------------------fancyss_lite_1------------------------------------
+	# for shadowssocks_lite, should be removed when using shadowsocks_full version
+	ss_basic_lite=1
+	ss_basic_vcore=1
+	ss_basic_tcore=1
+	local SFD=$(dbus get ss_foreign_dns)
+	local SDC=$(dbus get ss_dns_china)
+	if [ "${SFD}" != "3" -o "${SFD}" != "6" -o "${SFD}" != "7" -o "${SFD}" != "8" -o "${SFD}" != "10" ];then
+		dbus set ss_foreign_dns=10
+		dbus set ss_disable_aaaa=1
+	fi
+	if [ "${SDC}" -gt "15" ];then
+		dbus set ss_dns_china=1
+	fi
+	# ----------------------fancyss_lite_2------------------------------------
 
 	# dbus value
 	echo_date "设置插件安装参数..."

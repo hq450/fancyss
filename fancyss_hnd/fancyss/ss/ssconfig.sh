@@ -823,7 +823,8 @@ start_dns() {
 	if [ "$ss_foreign_dns" == "10" ]; then
 		start_ss_local
 		echo_date 开启dns2socks，用于chinadns-ng的国外上游...
-		dns2socks 127.0.0.1:23456 "$ss_chinadns1_user" 127.0.0.1:1055 >/dev/null 2>&1 &
+		[ -z "$ss_chinadnsng_user" ] && ss_chinadnsng_user="8.8.8.8:53"
+		dns2socks 127.0.0.1:23456 "$ss_chinadnsng_user" 127.0.0.1:1055 >/dev/null 2>&1 &
 		[ "$DNS_PLAN" == "1" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
 		[ "$DNS_PLAN" == "2" ] && echo_date "开启chinadns-ng，用于【国内所有网站 + 国外所有网站】的DNS解析..."
 		cat /koolshare/ss/rules/gfwlist.conf|sed '/^server=/d'|sed 's/ipset=\/.//g'|sed 's/\/gfwlist//g' > /tmp/gfwlist.txt
