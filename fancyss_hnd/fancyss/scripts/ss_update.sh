@@ -18,7 +18,6 @@ else
 fi
 
 install_ss(){
-	mv ${PACKAGE}.tar.gz shadowsocks.tar.gz
 	echo_date "开始解压压缩包..."
 	tar -zxf shadowsocks.tar.gz
 	chmod a+x /tmp/shadowsocks/install.sh
