@@ -226,7 +226,8 @@ do_build_full() {
 	EOF
 	
 	# for old
-	ln -sf fancyss_hnd_full.tar.gz shadowsocks.tar.gz
+	rm -rf shadowsocks.tar.gz
+	cp -rf fancyss_hnd_full.tar.gz shadowsocks.tar.gz
 
 	cat > ./version <<-EOF
 	$VERSION

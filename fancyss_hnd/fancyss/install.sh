@@ -84,7 +84,7 @@ install_now(){
 	local PLVER=$(cat ${DIR}/ss/version)
 
 	# print message
-	if [ ! -x "/koolshare/bin/v2ray" -o ! -x "/koolshare/bin/trojan" ];then
+	if [ ! -x "/koolshare/bin/v2ray" ];then
 		local TITLE="科学上网 lite"
 		local DESCR="科学上网 lite for merlin hnd platform"
 		echo_date "安装版本：fancyss_hnd_lite_${PLVER}"
