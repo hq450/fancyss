@@ -6,7 +6,7 @@ source /koolshare/scripts/ss_base.sh
 mkdir -p /tmp/upload
 http_response "$1"
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
-main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/"
+main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/"
 backup_url=""
 
 # --------------------------------------

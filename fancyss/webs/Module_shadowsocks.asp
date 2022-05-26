@@ -3004,7 +3004,7 @@ function version_show() {
 	if(!db_ss["ss_basic_version_local"]) db_ss["ss_basic_version_local"] = "0.0.0"
 	$("#ss_version_show").html("<a class='hintstyle' href='javascript:void(12);' onclick='openssHint(12)'><i>当前版本：" + db_ss['ss_basic_version_local'] + "</i></a>");
 	$.ajax({
-		url: 'https://raw.githubusercontent.com/hq450/fancyss/3.0/version.json.js',
+		url: 'https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/version.json.js',
 		type: 'GET',
 		dataType: 'json',
 		success: function(res) {
