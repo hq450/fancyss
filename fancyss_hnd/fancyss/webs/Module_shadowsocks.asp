@@ -3924,7 +3924,11 @@ function save_failover() {
 								<tr>
 									<td bgcolor="#4D595D" colspan="3" valign="top">
 										<div>&nbsp;</div>
-										<div class="formfonttitle"><% nvram_get("productid"); %> 科学上网插件 - Full</div>
+										<div id="title_name" class="formfonttitle"></div>
+										<script type="text/javascript">
+											var MODEL = '<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>';
+											$("#title_name").html(MODEL + " 科学上网插件 - Full")
+										</script>										
 										<div style="float:right; width:15px; height:25px;margin-top:-20px">
 											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
 										</div>
@@ -4621,7 +4625,7 @@ function save_failover() {
 														_tmp[1] = _i + "点";
 														option_nodeh.push(_tmp);
 													}
-													var ph1 = "此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！&#10;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：&#10;-------------------------------------------------&#10;🚀魅影极速 ssr&#10;https://subserver.maying.io/xxx&#10;&#10;🛩️nextitally ss&#10;https://naixisubs.com/downloadConfig/xxx&#10;-------------------------------------------------";
+													var ph1 = "此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！&#10;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：&#10;-------------------------------------------------&#10;🚀xx机场 ssr&#10;https://abcd.airport.com/xxx&#10;&#10;🛩️yy机场 ss&#10;https://xyza.com/xxx&#10;-------------------------------------------------";
 													var ph2 = "多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷";
 													var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
 													$('#table_subscribe').forms([

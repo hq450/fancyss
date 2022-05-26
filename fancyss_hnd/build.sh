@@ -40,7 +40,7 @@ gen_folder_full(){
 	sed -i 's/[ \t]*\/\/fancyss-full//g' ./shadowsocks/res/ss-menu.js
 	sed -i 's/[ \t]*\/\/fancyss-koolgame//g' ./shadowsocks/webs/Module_shadowsocks.asp
 	sed -i 's/#@//g' ./shadowsocks/scripts/ss_proc_status.sh
-	sed -i 's/科学上网插件 - Full/科学上网插件/g' ./shadowsocks/webs/Module_shadowsocks.asp
+	sed -i 's/科学上网插件\s\-\sFull/科学上网插件/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	# remove all comment line
 	sed -i '/^[ \t]*\/\//d' ./shadowsocks/webs/Module_shadowsocks.asp
 	sed -i '/^[ \t]*\/\//d' ./shadowsocks/res/ss-menu.js

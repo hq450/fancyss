@@ -286,7 +286,7 @@ __resolve_ip() {
 restore_conf() {
 	echo_date 删除ss相关的名单配置文件.
 	local isconf=$(find /jffs/configs/dnsmasq.d/ -name "*.conf" 2>/dev/null)
-	if [ -n "${isconf}" -o -f "/jffs/configs/dnsmasq.conf.add" -o -f "/jffs/scripts/dnsmasq.postconf" ]
+	if [ -n "${isconf}" -o -f "/jffs/configs/dnsmasq.conf.add" -o -f "/jffs/scripts/dnsmasq.postconf" ];then
 		rm -rf /jffs/configs/dnsmasq.d/gfwlist.conf
 		rm -rf /jffs/configs/dnsmasq.d/cdn.conf
 		rm -rf /jffs/configs/dnsmasq.d/custom.conf
@@ -3630,7 +3630,7 @@ apply_ss() {
 	write_numbers
 	# post-start
 	ss_post_start
-	httping_check
+	#httping_check
 	#[ "$?" == "1" ] && return 1
 	check_status
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------

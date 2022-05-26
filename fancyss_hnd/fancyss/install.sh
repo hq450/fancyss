@@ -163,6 +163,16 @@ install_now(){
 	# optional files should keep
 	# rm -rf /koolshare/bin/sslocal >/dev/null 2>&1
 
+	# small jffs router should remove more
+	if [ "${MODEL}" == "RT-AX56U_V2" ];then
+		rm -rf /jffs/syslog.log
+		rm -rf /jffs/syslog.log-1
+		rm -rf /jffs/wglist
+		rm -rf /jffs/uu.tar.gz*
+		echo 1 > /proc/sys/vm/drop_caches
+		sync
+	fi
+
 	# 386固件全面使用openssl1.1.1，弃用了openssl1.0.0，所以判断使用openssl1.1.1的使用新版本的httping
 	if [ -f "/usr/lib/libcrypto.so.1.1" ];then
 		mv /tmp/shadowsocks/bin/httping_openssl_1.1.1 /tmp/shadowsocks/bin/httping
