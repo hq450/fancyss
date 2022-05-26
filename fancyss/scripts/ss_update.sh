@@ -68,7 +68,6 @@ update_ss(){
 	if [ "${ss_basic_version_local}" != "${fancyss_version_online}" ];then
 		echo_date "主服务器在线版本号：${fancyss_version_online} 和本地版本号：${ss_basic_version_local} 不同！"
 		cd /tmp
-		echo_date MD5NAME $MD5NAME
 		fancyss_md5_online=$(cat /tmp/version.json.js | jq -r .$MD5NAME)
 		echo_date "开启下载进程，从主服务器上下载更新包..."
 		echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
