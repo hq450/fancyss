@@ -1,0 +1,595 @@
+/*COMMON CSS*/
+.popup_bar_bg_ks{
+	position:fixed;	
+	margin: auto;
+	top: 0;
+	left: 0;
+	width:100%;
+	height:100%;
+	z-index:99;
+	/*background-color: #444F53;*/
+	filter:alpha(opacity=90);  /*IE5、IE5.5、IE6、IE7*/
+	background-repeat: repeat;
+	visibility:hidden;
+	overflow:hidden;
+	/*background:rgba(68, 79, 83, 0.9) none repeat scroll 0 0 !important;*/
+	background: url(/images/New_ui/login_bg.png);
+	background-position: 0 0;
+	background-size: cover;
+	opacity: .94;
+}
+.FormTitle {
+	table-layout:fixed;
+}
+
+.FormTitle i {
+    color: #FC0;
+    font-style: normal;
+}
+.FormTitle em {
+    color: #00ffe4;
+    font-style: normal;
+}
+.FormTitle b {
+    color: #1cfe16;
+    font-style: normal;
+	font-weight:normal;
+}
+.activate_client_icon {
+    background-image: url(/images/New_ui/activate.svg);
+    cursor: pointer;
+    width: 25px;
+    height: 25px;
+    margin: auto;
+    background-repeat: no-repeat;
+}
+.deactivate_client_icon {
+    background-image: url(/images/New_ui/deactivate.svg);
+    cursor: pointer;
+    width: 25px;
+    height: 25px;
+    margin: auto;
+    background-repeat: no-repeat;
+}
+.showDragHandle{
+	cursor: move;
+}
+input[type=button]:focus {
+	outline: none;
+}
+input[type=checkbox]{
+	vertical-align:middle;
+}
+#log_content3, #loading_block2 {line-height:1.5}
+.SimpleNote { padding:5px 10px;}
+.contentM_qis {
+	position: absolute;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+	z-index: 200;
+	/*background-color:#2B373B;*/
+	margin-left: 50px;
+	top: 320px;
+	width:650px;
+	return height:auto;
+	box-shadow: 3px 3px 10px #000;
+	display:none;
+}
+.content_status {
+	position: absolute;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius:10px;
+	z-index: 10;
+	/*background-color:#2B373B;*/
+	margin-left: -215px;
+	top: 240px;
+	width:980px;
+	return height:auto;
+	box-shadow: 3px 3px 10px #000;
+	background: rgba(0,0,0,0.85);
+	display:none;
+}
+.user_title{
+	text-align:center;
+	font-size:18px;
+	color:#99FF00;
+	padding:10px;
+	font-weight:bold;
+}
+.QISform_wireless {
+	width:600px;
+	font-size:12px;
+	color:#FFFFFF;
+	margin-top:10px;
+	*margin-left:10px;
+}
+.QISform_wireless thead {
+	font-size:15px;
+	line-height:20px;
+	color:#FFFFFF;
+}
+.QISform_wireless th {
+	padding-left:10px;
+	*padding-left:30px;
+	font-size:12px;
+	font-weight:bolder;
+	color: #FFFFFF;
+	text-align:left;
+}
+.list_table {
+	border: none;
+	border-collapse: collapse;
+	background-color:transparent;
+	text-align:center;
+	font-size:12px;
+	table-layout:fixed;
+}
+.list_table tr {
+	height:36px;
+}
+.list_table td {
+	border-left: none;
+	border-top: none;
+	border-right: none;
+	border-bottom: 1px solid #FFF;
+	border-collapse: collapse;
+	font-family: Lucida Console;
+	height:25px;
+	white-space: nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+}
+.nickname, .server{
+	white-space: nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+}
+.FormTable_table{
+	margin-top:10px;
+	font-size:12px;
+	font-family:Arial, Helvetica, sans-serif;
+	border: none;
+	border-collapse: collapse;
+}
+.input_option{
+	vertical-align:middle;
+	font-size:12px;
+}
+.input_option_2{
+	margin-left:2px;
+	padding-left:5px;
+	padding-right:5px;
+	height:21px;
+	width:152px;
+	line-height:23px \9;
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:none;
+	vertical-align:middle;
+	color:#FFFFFF;
+	outline: none;
+	text-align: center;
+	border:1px solid transparent;
+	background-color: transparent;
+}
+.sel_option{
+	height:25px;
+	color:#FFFFFF;
+	font-family: Lucida Console;
+	font-size:12px;
+	text-align: center;
+	text-align-last:center;
+	padding-left: 12px;
+	border:1px solid transparent;
+	background-color: transparent;
+}
+#log_content, #log_content_fov{
+	outline: 1px solid #222;
+	width:748px;
+}
+#ss_basic_lst_am{
+	text-align-last: center;
+	text-align: center;
+	display: block;
+	margin: 0 auto;
+	direction: ltr;
+	outline: none;
+	height:25px;
+	background-color:#2F3A3E;
+	border: 1px solid transparent;
+	color:#FFFFFF;
+	font-family: Lucida Console;
+	font-size:12px;
+}
+.remove_btn{
+	background: transparent url(/res/accountdelete.png) no-repeat scroll center top;
+}
+.edit_btn{
+  background: transparent url(/res/accountedit.png) no-repeat scroll center top;
+}
+.add_btn{
+	background: transparent url(/res/accountadd.png) no-repeat scroll center top;
+}
+.cloud_main_radius h2 { border-bottom:1px #AAA dashed;}
+.cloud_main_radius h3 { font-size:12px;color:#FFF;font-weight:normal;font-style: normal;}
+.cloud_main_radius h4 { font-size:12px;color:#FC0;font-weight:normal;font-style: normal;}
+.cloud_main_radius h5 { color:#FFF;font-weight:normal;font-style: normal;}
+/*ASUSWRT*/
+#app[skin=ASUSWRT] .myDragClass{
+	background-color:#396995;
+	box-shadow: 3px 3px 10px #000;
+}
+#app[skin=ASUSWRT] #ss_node_list_table tr:hover {
+	background-color:#396995;
+}
+#app[skin=ASUSWRT] .FormTable_table th{
+	font-family:Arial, Helvetica, sans-serif;
+	font-weight:normal;
+	text-align:center;
+	font-size:12px;
+	height:25px;
+	border-collapse: collapse;
+	border: 0px solid transparent;
+	background:#2F3A3E;
+}
+#app[skin=ASUSWRT] .shadow1, #app[skin=ASUSWRT] .shadow2{
+	height: 25px;
+	display: none;
+	border-radius: 3px;
+	background-color: #2F3A3E;
+}
+#app[skin=ASUSWRT] .show-btn0, #app[skin=ASUSWRT] .show-btn1, #app[skin=ASUSWRT] .show-btn2, #app[skin=ASUSWRT] .show-btn3, #app[skin=ASUSWRT] .show-btn4, #app[skin=ASUSWRT] .show-btn5, #app[skin=ASUSWRT] .show-btn6, #app[skin=ASUSWRT] .show-btn7, #app[skin=ASUSWRT] .show-btn8, #app[skin=ASUSWRT] .show-btn9, #app[skin=ASUSWRT] .show-btn10, #app[skin=ASUSWRT] .sub-node1, #app[skin=ASUSWRT] .sub-node2 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:8.42%;
+	border-left: 1px solid #67767d;
+	border-top: 1px solid #67767d;
+	border-right: 1px solid #67767d;
+	border-bottom: none;
+	background: #67767d;
+}
+#app[skin=ASUSWRT] .show-btn0:hover, #app[skin=ASUSWRT] .show-btn1:hover, #app[skin=ASUSWRT] .show-btn2:hover, #app[skin=ASUSWRT] .show-btn3:hover, #app[skin=ASUSWRT] .show-btn4:hover, #app[skin=ASUSWRT] .show-btn5:hover, #app[skin=ASUSWRT] .show-btn6:hover, #app[skin=ASUSWRT] .show-btn7:hover, #app[skin=ASUSWRT] .show-btn8:hover, #app[skin=ASUSWRT] .show-btn9:hover, #app[skin=ASUSWRT] .show-btn10:hover, #app[skin=ASUSWRT] .sub-node1:hover, #app[skin=ASUSWRT] .sub-node2:hover, #app[skin=ASUSWRT] .active {
+	border: 1px solid #2f3a3e;
+	background: #2f3a3e;
+}
+#app[skin=ASUSWRT] .sub-btn1, #app[skin=ASUSWRT] .sub-btn2, #app[skin=ASUSWRT] .sub-btn3 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:16%;
+	border-left: 1px solid #67767d;
+	border-top: 1px solid #67767d;
+	border-right: 1px solid #67767d;
+	border-bottom: none;
+	background: #67767d;
+}
+#app[skin=ASUSWRT] .sub-btn1:hover, #app[skin=ASUSWRT] .sub-btn2:hover, #app[skin=ASUSWRT] .sub-btn3:hover, #app[skin=ASUSWRT] .active2 {
+	border: 1px solid #2f3a3e;
+	background: #2f3a3e;
+}
+#app[skin=ASUSWRT] .smth{
+	background: #2F3A3E !important;
+}
+#app[skin=ASUSWRT] #tablet_0, #app[skin=ASUSWRT] #tablet_2, #app[skin=ASUSWRT] #tablet_3, #app[skin=ASUSWRT] #tablet_4, #app[skin=ASUSWRT] #tablet_5, #app[skin=ASUSWRT] #tablet_6, #app[skin=ASUSWRT] #tablet_7, #app[skin=ASUSWRT] #tablet_8, #app[skin=ASUSWRT] #tablet_9, #app[skin=ASUSWRT] #lb_setting, #app[skin=ASUSWRT] #local_table {
+	margin:-1px 0px 0px 0px;
+	border:none;
+}
+#app[skin=ASUSWRT] #sub_tablets{
+	border-bottom:none;
+}
+#app[skin=ASUSWRT] #log_content1, #app[skin=ASUSWRT] #log_content_f, #app[skin=ASUSWRT] #log_content_c{
+	width:97%;
+	padding-left:4px;
+	padding-right:37px;
+	font-family:'Lucida Console';
+	font-size:11px;
+	line-height:1.5;
+	color:#FFFFFF;
+	outline:none;
+	overflow-x:hidden;
+	border:0px solid #222;
+	background:#475A5F;
+}
+#app[skin=ASUSWRT] #ss_basic_v2ray_json, #app[skin=ASUSWRT] #ss_basic_xray_json, #app[skin=ASUSWRT] #ss_dnsmasq, #app[skin=ASUSWRT] #ss_wan_white_ip, #app[skin=ASUSWRT] #ss_wan_white_domain, #app[skin=ASUSWRT] #ss_wan_black_ip, #app[skin=ASUSWRT] #ss_wan_black_domain, #app[skin=ASUSWRT] #ss_online_links, #app[skin=ASUSWRT] #ss_base64_links, #app[skin=ASUSWRT] #ss_node_table_v2ray_json, #app[skin=ASUSWRT] #ss_node_table_xray_json, #app[skin=ASUSWRT] #ss_basic_kcp_parameter{
+	width:99%;
+	font-family:'Lucida Console';
+	font-size:12px;
+	color:#FFFFFF;
+	line-height:1.2;
+	border:1px solid #888;
+	background:#475A5F;
+}
+#app[skin=ASUSWRT] .input_ss_table{
+	margin-left:2px;
+	padding-left:5px;
+	padding-right:5px;
+	height:21px;
+	width:152px;
+	line-height:23px \9;	/*IE*/
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:none;
+	color:#FFFFFF;
+	vertical-align:middle;
+	border:1px solid gray;
+	background-color: #576d73;
+}
+#app[skin=ASUSWRT] .input_option_2:hover, #app[skin=ASUSWRT] .input_option_2:focus{
+	outline: none;
+	border: 1px solid grey;
+	background-color:#576D73;
+}
+#app[skin=ASUSWRT] .sel_option:hover, #app[skin=ASUSWRT] .sel_option:focus{
+	outline: none;
+	border: 1px solid grey;
+	background-color:#576D73;
+}
+#app[skin=ASUSWRT] .ss_btn {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #003333  0%, #000000 100%);
+}
+#app[skin=ASUSWRT] .ss_btn:hover, #app[skin=ASUSWRT] .active3 {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #27c9c9  0%, #279fd9 100%);
+}
+/*ROG*/
+#app[skin=ROG] .myDragClass{
+	background-color:#91071f;
+	box-shadow: 3px 3px 10px #000;
+}
+#app[skin=ROG] #ss_node_list_table tr:hover {
+	background-color:#91071f;
+}
+#app[skin=ROG] .FormTable_table th{
+	font-family:Arial, Helvetica, sans-serif;
+	font-weight:normal;
+	text-align:center;
+	font-size:12px;
+	height:25px;
+	border-collapse: collapse;
+	border: none;
+	background: #91071f;
+}
+#app[skin=ROG] .shadow1, #app[skin=ROG] .shadow2{
+	height: 25px;
+	display: none;
+	border-radius: 3px;
+	background-color: #91071f;
+}
+#app[skin=ROG] .show-btn0, #app[skin=ROG] .show-btn1, #app[skin=ROG] .show-btn2, #app[skin=ROG] .show-btn3, #app[skin=ROG] .show-btn4, #app[skin=ROG] .show-btn5, #app[skin=ROG] .show-btn6, #app[skin=ROG] .show-btn7, #app[skin=ROG] .show-btn8, #app[skin=ROG] .show-btn9, #app[skin=ROG] .show-btn10, #app[skin=ROG] .sub-node1, #app[skin=ROG] .sub-node2 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:8.42%;
+	border: 1px solid #91071f;
+	background: none;
+}
+#app[skin=ROG] .show-btn0:hover, #app[skin=ROG] .show-btn1:hover, #app[skin=ROG] .show-btn2:hover, #app[skin=ROG] .show-btn3:hover, #app[skin=ROG] .show-btn4:hover, #app[skin=ROG] .show-btn5:hover, #app[skin=ROG] .show-btn6:hover, #app[skin=ROG] .show-btn7:hover, #app[skin=ROG] .show-btn8:hover, #app[skin=ROG] .show-btn9:hover, #app[skin=ROG] .show-btn10:hover, #app[skin=ROG] .sub-node1:hover, #app[skin=ROG] .sub-node2:hover, #app[skin=ROG] .active {
+	border: 1px solid #91071f;
+	background: #91071f;
+}
+#app[skin=ROG] .sub-btn1, #app[skin=ROG] .sub-btn2, #app[skin=ROG] .sub-btn3 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:16%;
+	border: 1px solid #680516;
+	background: none;
+}
+#app[skin=ROG] .sub-btn1:hover, #app[skin=ROG] .sub-btn2:hover, #app[skin=ROG] .sub-btn3:hover, #app[skin=ROG] .active2 {
+	border: 1px solid #91071f;
+	background: #91071f;
+}
+#app[skin=ROG] .smth{
+ 	background: #91071f;
+}
+#app[skin=ROG] #tablet_0, #app[skin=ROG] #tablet_2, #app[skin=ROG] #tablet_3, #app[skin=ROG] #tablet_4, #app[skin=ROG] #tablet_5, #app[skin=ROG] #tablet_6, #app[skin=ROG] #tablet_7, #app[skin=ROG] #tablet_8, #app[skin=ROG] #tablet_9, #app[skin=ROG] #lb_setting, #app[skin=ROG] #local_table {
+	margin:-1px 0px 0px 0px;
+	border:1px solid #91071f;
+}
+#app[skin=ROG] #sub_tablets{
+	border-bottom:1px solid #91071f;
+}
+#app[skin=ROG] #log_content1, #app[skin=ROG] #log_content_f, #app[skin=ROG] #log_content_c{
+	width:97%;
+	padding-left:4px;
+	padding-right:37px;
+	font-family:'Lucida Console';
+	font-size:11px;
+	line-height:1.5;
+	color:#FFFFFF;
+	outline:none;
+	overflow-x:hidden;
+	border:0px solid #222;
+	background:transparent;
+}
+#app[skin=ROG] #ss_basic_v2ray_json, #app[skin=ROG] #ss_basic_xray_json, #app[skin=ROG] #ss_dnsmasq, #app[skin=ROG] #ss_wan_white_ip, #app[skin=ROG] #ss_wan_white_domain, #app[skin=ROG] #ss_wan_black_ip, #app[skin=ROG] #ss_wan_black_domain, #app[skin=ROG] #ss_online_links, #app[skin=ROG] #ss_base64_links, #app[skin=ROG] #ss_node_table_v2ray_json, #app[skin=ROG] #ss_node_table_xray_json, #app[skin=ROG] #ss_basic_kcp_parameter{
+	width:99%;
+	font-family:'Lucida Console';
+	font-size:12px;
+	color:#FFFFFF;
+	line-height:1.2;
+	border:1px solid #91071f;
+	background:transparent;
+}
+#app[skin=ROG] .input_ss_table{
+	margin-left:2px;
+	padding-left:5px;
+	padding-right:5px;
+	height:21px;
+	width:152px;
+	line-height:23px \9;	/*IE*/
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:none;
+	color:#FFFFFF;
+	vertical-align:middle;
+	border:1px solid #91071f;
+	background-color: #3e030d;
+}
+#app[skin=ROG] .input_option_2:hover, #app[skin=ROG] .input_option_2:focus{
+	border:1px solid #91071f;
+	background-color: #3e030d;
+}
+#app[skin=ROG] .sel_option:hover, #app[skin=ROG] .sel_option:focus{
+	border:1px solid #91071f;
+	background-color: #3e030d;
+}
+#app[skin=ROG] .ss_btn {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #91071f  0%, #700618 100%);
+}
+#app[skin=ROG] .ss_btn:hover, #app[skin=ROG] .active3 {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #cf0a2c  0%, #91071f 100%);
+}
+/*TUF*/
+#app[skin=TUF] .myDragClass{
+	background-color:#92650F;
+	box-shadow: 3px 3px 10px #000;
+}
+#app[skin=TUF] #ss_node_list_table tr:hover {
+	background-color:#92650F;
+}
+#app[skin=TUF] .FormTable_table th{
+	font-family:Arial, Helvetica, sans-serif;
+	font-weight:normal;
+	text-align:center;
+	font-size:12px;
+	height:25px;
+	border-collapse: collapse;
+	border: none;
+	background: #92650F;
+}
+#app[skin=TUF] .shadow1, #app[skin=TUF] .shadow2{
+	height: 25px;
+	display: none;
+	border-radius: 3px;
+	background-color: #92650F;
+}
+#app[skin=TUF] .show-btn0, #app[skin=TUF] .show-btn1, #app[skin=TUF] .show-btn2, #app[skin=TUF] .show-btn3, #app[skin=TUF] .show-btn4, #app[skin=TUF] .show-btn5, #app[skin=TUF] .show-btn6, #app[skin=TUF] .show-btn7, #app[skin=TUF] .show-btn8, #app[skin=TUF] .show-btn9, #app[skin=TUF] .show-btn10, #app[skin=TUF] .sub-node1, #app[skin=TUF] .sub-node2 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:8.42%;
+	border: 1px solid #92650F;
+	background: none;
+}
+#app[skin=TUF] .show-btn0:hover, #app[skin=TUF] .show-btn1:hover, #app[skin=TUF] .show-btn2:hover, #app[skin=TUF] .show-btn3:hover, #app[skin=TUF] .show-btn4:hover, #app[skin=TUF] .show-btn5:hover, #app[skin=TUF] .show-btn6:hover, #app[skin=TUF] .show-btn7:hover, #app[skin=TUF] .show-btn8:hover, #app[skin=TUF] .show-btn9:hover, #app[skin=TUF] .show-btn10:hover, #app[skin=TUF] .sub-node1:hover, #app[skin=TUF] .sub-node2:hover, #app[skin=TUF] .active {
+	border: 1px solid #92650F;
+	background: #92650F;
+}
+#app[skin=TUF] .sub-btn1, #app[skin=TUF] .sub-btn2, #app[skin=TUF] .sub-btn3 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:16%;
+	border: 1px solid #D0982C;
+	background: none;
+}
+#app[skin=TUF] .sub-btn1:hover, #app[skin=TUF] .sub-btn2:hover, #app[skin=TUF] .sub-btn3:hover, #app[skin=TUF] .active2 {
+	border: 1px solid #92650F;
+	background: #92650F;
+}
+#app[skin=TUF] .smth{
+ 	background: #92650F;
+}
+#app[skin=TUF] #tablet_0, #app[skin=TUF] #tablet_2, #app[skin=TUF] #tablet_3, #app[skin=TUF] #tablet_4, #app[skin=TUF] #tablet_5, #app[skin=TUF] #tablet_6, #app[skin=TUF] #tablet_7, #app[skin=TUF] #tablet_8, #app[skin=TUF] #tablet_9, #app[skin=TUF] #lb_setting, #app[skin=TUF] #local_table {
+	margin:-1px 0px 0px 0px;
+	border:1px solid #92650F;
+}
+#app[skin=TUF] #sub_tablets{
+	border-bottom:1px solid #92650F;
+}
+#app[skin=TUF] #log_content1, #app[skin=TUF] #log_content_f, #app[skin=TUF] #log_content_c{
+	width:97%;
+	padding-left:4px;
+	padding-right:37px;
+	font-family:'Lucida Console';
+	font-size:11px;
+	line-height:1.5;
+	color:#FFFFFF;
+	outline:none;
+	overflow-x:hidden;
+	border:0px solid #222;
+	background:transparent;
+}
+#app[skin=TUF] #ss_basic_v2ray_json, #app[skin=TUF] #ss_basic_xray_json, #app[skin=TUF] #ss_dnsmasq, #app[skin=TUF] #ss_wan_white_ip, #app[skin=TUF] #ss_wan_white_domain, #app[skin=TUF] #ss_wan_black_ip, #app[skin=TUF] #ss_wan_black_domain, #app[skin=TUF] #ss_online_links, #app[skin=TUF] #ss_base64_links, #app[skin=TUF] #ss_node_table_v2ray_json, #app[skin=TUF] #ss_node_table_xray_json, #app[skin=TUF] #ss_basic_kcp_parameter{
+	width:99%;
+	font-family:'Lucida Console';
+	font-size:12px;
+	color:#FFFFFF;
+	line-height:1.2;
+	border:1px solid #92650F;
+	background:transparent;
+}
+#app[skin=TUF] .input_ss_table{
+	margin-left:2px;
+	padding-left:5px;
+	padding-right:5px;
+	height:21px;
+	width:152px;
+	line-height:23px \9;	/*IE*/
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:none;
+	color:#FFFFFF;
+	vertical-align:middle;
+	border:1px solid #92650F;
+	background-color: #3e2902;
+}
+#app[skin=TUF] .input_option_2:hover, #app[skin=TUF] .input_option_2:focus{
+	border:1px solid #92650F;
+	background-color: #3e2902;
+}
+#app[skin=TUF] .sel_option:hover, #app[skin=TUF] .sel_option:focus{
+	border:1px solid #92650F;
+	background-color: #3e2902;
+}
+#app[skin=TUF] .ss_btn {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #92650F  0%, #74500b 100%);
+}
+#app[skin=TUF] .ss_btn:hover, #app[skin=TUF] .active3 {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #c58813  0%, #92650F 100%);
+}

@@ -1,0 +1,40 @@
+#!/bin/sh
+#sed -i "s/cache-size=1500/cache-size=15000/" /tmp/etc/dnsmasq.conf
+
+CONFIG=$1
+source /usr/sbin/helper.sh
+ss_dns_china=`dbus get ss_dns_china`
+ss_dns_china_user=`dbus get ss_dns_china_user`
+ss_dns_plan=`dbus get ss_dns_plan`
+
+ISP_DNS1=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 1p)
+ISP_DNS2=$(nvram get wan0_dns|sed 's/ /\n/g'|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p)
+if [ "$ss_dns_china" == "1" ];then
+	[ -n "$ISP_DNS1" ] && CDN1="$ISP_DNS1" || CDN1="114.114.114.114"
+	[ -n "$ISP_DNS2" ] && CDN2="$ISP_DNS2" || CDN2="114.114.115.115"
+fi
+[ "$ss_dns_china" == "2" ] && CDN="223.5.5.5"
+[ "$ss_dns_china" == "3" ] && CDN="223.6.6.6"
+[ "$ss_dns_china" == "4" ] && CDN="114.114.114.114"
+[ "$ss_dns_china" == "5" ] && CDN="114.114.115.115"
+[ "$ss_dns_china" == "6" ] && CDN="1.2.4.8"
+[ "$ss_dns_china" == "7" ] && CDN="210.2.4.8"
+[ "$ss_dns_china" == "8" ] && CDN="112.124.47.27"
+[ "$ss_dns_china" == "9" ] && CDN="114.215.126.16"
+[ "$ss_dns_china" == "10" ] && CDN="180.76.76.76"
+[ "$ss_dns_china" == "11" ] && CDN="119.29.29.29"
+[ "$ss_dns_china" == "12" ] && CDN="$ss_dns_china_user"
+
+pc_replace "cache-size=1500" "cache-size=9999" $CONFIG
+if [ "$ss_dns_plan" == "1" ] || [ -z "$ss_dns_china" ];then
+	if [ "$ss_dns_china" == "1" ];then
+		pc_insert "no-poll" "server=$CDN2#53" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "server=$CDN1#53" "/etc/dnsmasq.conf"
+		pc_insert "no-poll" "all-servers" "/etc/dnsmasq.conf"
+	else
+		pc_insert "no-poll" "server=$CDN#53" "/etc/dnsmasq.conf"
+	fi
+elif [ "$ss_dns_plan" == "2" ];then
+	pc_insert "no-poll" "server=127.0.0.1#7913" "/etc/dnsmasq.conf"
+fi
+pc_insert "no-poll" "no-resolv" "/etc/dnsmasq.conf"

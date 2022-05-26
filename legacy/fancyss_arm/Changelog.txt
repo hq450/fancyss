@@ -1,0 +1,1607 @@
+fancyss_arm Changelog
+===========================================
+4.2.2
+   - fix	修复v2ray_dns无法使用的问题。
+
+4.2.1
+   - 说明：	因v2ray v4.22.0不再兼容旧的v2ray json配置格式（如：inbound{},outbound{}格式），
+    		而4.2.0及其之前版本的插件只能生成旧的v2ray配置格式，
+    		导致4.2.0及其以下版本版本插件更新了v2ray v4.22.0后工作不正常，
+    		因此更新插件4.2.1，以保证和未来v2ray的兼容性。
+    		1. 如果你需要插件版本停留在4.2.0，那么请不要更新你的v2ray二进制到v4.22.0及以上；
+    		2. 如果你需要保持v2ray二进制为最新（v4.22.0及以上），你只能使用插件版本4.2.1及以上。
+    		此次更新日志如下：
+   - update	支持新的v2ray json配置格式，如：inbounds[],outbounds[]格式；
+   - update	更新内置v2ray二进制版本到v4.22.0；
+   - update	同步最新规则；
+
+4.2.0
+   - update	更新shadowsocks-libev到最新3.3.0 （2019年6月20日 编译）；
+
+4.1.9
+   - add	添加httping，并用httping检测国内外状态，原wget检测状态方式弃用，注意现在状态检测仍然是按需检测，即：
+    		只有在进入插件页面才会进行检测，退出页面后不会进行检测；
+   - add	现在状态检测不仅会显示√、×，还会显示请求检测网站header的延迟，注意此延迟不是ping！
+   - remove	移除【附加功能】中【状态更新间隔】设定功能，现在检测间隔在4000ms - 8000ms内随机取值，以避免可能的特征；
+   - update	更新内置v2ray到v4.18.0；
+   - update	同步最新规则；
+
+4.1.8
+   - add	新增v2ray-plugin支持（v2ray-plugin v1.1.0）；
+   - update	更新shadowsocks-libev到最新3.2.4 （2019年2月26日 编译）；
+   - update	同步最新规则；
+   - remove	移除simple-obfs支持；
+
+4.1.7
+   - update	更新shadowsocks-libev到最新3.2.1，simple-obfs更新到最新0.0.5 （2018年11月25日 编译）；
+   - update	更新shadowsocksrr-libev到最新，支持auth_akarin_rand和auth_akarin_spec_a协议 （2018年11月25日 编译）；
+   - update	更新kcptun到20181114
+   - update	更新v2ray制v4.6.4；
+   - update	同步最新规则；
+   - fix	修复自定义服务器解析DNS的一个问题；
+
+4.1.6
+   - add	【DNS设定】DNS劫持（原chromecast功能）添加是否启用的开关；
+   - add	【DNS设定】增加节点域名解析DNS服务器功能，现在服务器域名解析的DNS可以自己定义，而不是之前写死的114dns；
+   - fix	修复原chromecast规则在关闭插件后，iptables规则无法被正常清除的问题；
+   - update	更新oneDNS服务器地址；
+   - update	同步最新规则；
+
+4.1.5
+   - update	更新安装包内置v2ray二进制v4.3；
+   - update	同步最新规则；
+
+4.1.4
+   - fix	修复订阅对固件版本判断错误的问题；
+   - fix	修复订阅因服务商一些错误的空格，可能导致订阅后界面死掉的问题；
+   - remove	移除v2ray在arm机型上虚拟内存的需求（原因：https://www.v2ray.com/chapter_02/env.html#buffer-size），不过对于256M内存的机器，仍然建议使用虚拟内存，但是不强制。
+   - update	同步v2ray二进制v3.47；
+   - update	同步最新规则；
+
+
+4.1.2 - 4.1.3
+   - fix	修复使用v2ray gui配置提示json格式不对的问题。（fixed in 4.1.3）
+   - notes	建议大家将固件版本升级到X7.9.1，X7.9.1使用skipdv3作为插件的数据储存，可以大大避免插件出现一些莫名的问题 #62。
+   - update	优化web和订阅脚本；
+   - update	将内核参数overcommit_memory设置为1，以避免v2ray等golang程序因申请过大内存而无法运行等问题；
+   - update	降低v2ray启动要求：现在总内存大于250M，且可用内存大于150M，即符合启动条件！
+   - update	同步v2ray二进制v3.44；
+   - update	同步最新规则；
+
+4.1.1
+   - add	添加v2ray订阅ver1格式的支持，现在不会再出现因检测到旧的v2ray配置而订阅不到节点的情况；
+   - update	用usleep替换sleep，缩短订阅节点的时间；
+   - fix	修复负载均衡模式下，使用域名作为节点解析错误的问题；
+   - fix	修复切换不同类型节点可能导致dns无法解析的问题；
+
+4.1.0
+   - add	【更新管理】订阅功能添加v2ray支持；
+   - add	【更新管理】链接解析添加节点支持vmess://链接；
+   - fix	修复回国模式的黑白名单的一些问题(#63)；thx to huming2207；
+   - update	为了减少skipd的数据写量，现在只有更改过的参数才会提交到skipd；
+   - update	更新https_dns_proxy中的解析doh域名的dns；
+   - update	现在端口为23456的socks5代理会按需启动，而不是常开(#60)；
+   - update	同步安装包内置v2ray二进制版本v3.39；
+
+4.0.9
+   - add	【附加功能】内添加dnsmasq-fastlookup替换功能，可以将原来遍历查询的dnsmasq替换为hash查询的dnsmasq，极大的降低cpu消耗，加快dns查询速度。
+   		相关链接：https://www.v2ex.com/t/172010，http://koolshare.cn/thread-65484-1-1.html
+
+4.0.8
+   - fix	修复之前一个提交错误，导致4.0.7更新日志中第5、6项实际没得到更新的问题；
+   - add	arm机型添加https_dns_proxy国外解析，https_dns_proxy是DNS Over https（DOH）方案，dns请求走https，支持ECS，因此具有非常好的国外cdn效果！
+   		插件默认使用了cloudflare的服务（1.1.1.1和1.0.0.1），因为是直链cloudflare，如果到1.1.1.1和1.0.0.1丢包较多或者ping较高不建议使用。
+
+4.0.7
+   - fix	订阅：修复订阅链接有跳转情况下，有时候无法订阅的问题；
+   - fix	订阅：修复订阅节点的协议协议参数 (protocol_param)有更新时，订阅完后本地却没有更新的问题；
+   - update	v2ray：修复使用v2ray节点，重启路由，插件不能自启的问题（现在自启不检测虚拟内存）；
+   - update	v2ray：现在总内存在500Mb以上，且可用内存在200Mb以上的机器，不再强制要求虚拟内存；
+   - update	(updated in 4.0.8)为了避免因定义了错误的黑白名单，导致分流出现错误，更新了更加严格的域名格式检查；
+   - update	(updated in 4.0.8)更改jitterentropy-rngd程序为haveged，以提供足够的熵来快速生成高质量的随机数，保证ss-libev启动；
+   - update	更改了脚本中一些逗逼的日志；
+   - update	更新v2ray二进制到v3.38；
+
+4.0.6
+   - fix	修复一个因获取到错误的base64字符串长度而导致订阅节点信息错误，最终导致订阅完成后部分节点被删除的bug
+   - update	去掉chinadns1的-m参数，以兼容更多的使用环境。
+   - update	同步最新规则；
+   - update	优化一些脚本和界面；
+
+4.0.5
+   - fix	修复回国模式的一系列问题；
+   - fix	修复因机场给出错误的节点信息导致订阅后全部节点被删除的问题；
+   - upate	更新udpspeederv2最新二进制（2018年8月30日编译）；
+   - update	同步最新规则；
+
+4.0.4
+   - update	udp2raw二进制更新20180728.1，udpspeederv2二进制更新20180806.0，thx to Love4Taylor；
+   - update	udpspeederv2添加关闭数据包验证功能，thx to Love4Taylor；
+   - fix	修复订阅成功后节点可能又马上被删掉的问题；
+
+4.0.3
+   - update	本项目(https://github.com/hq450/fancyss)接手ks开发组的科学上网插件的维护，
+   		将对应的插件、规则、二进制更新链接更换为本仓库的链接，以保证更新服务正常。
+   - update	同步最新规则；
+   - update	更新v2ray二进制：v3.36
+
+===========================================
+以下为原ks开发组维护版本的更新日志:
+
+4.0.2
+   - fix	修复v2ray使用域名时因无法解析导致代理不通的问题；
+   - update	ks开发组停止维护此插件，4.0.2作为一个过度版本，更新后将会马上看到4.0.3的更新，
+   		更新4.0.3会将插件完全转到新的项目：https://github.com/hq450/fancyss，以后由此项目接手科学上网的维护。
+   		ks软件中心项目内科学上网相关内容将在48小时内彻底删除。请尽快更新到4.0.3，以确保插件以后可以得到在线更新等维护。
+
+4.0.1
+   - fix	修复在节点页面无法通过vmess://链接添加v2ray节点的bug；
+   - add	【附加功能】添加插件定时重启功能（实验）；
+   - add	【附加功能】添加插件触发重启功能（实验），可以在设定的时间间隔下解析服务器IP地址，如果IP发生改变，则重启插件或dnsmasq；
+
+4.0.0
+   - fix	修复某些机器开机启动后iptables规则被多次添加，影响如koolproxy等其它插件的启动；
+   - fix	修复【内部网络(lan)】-【DHCP服务器】-【DNS 及 WINS 服务器设置】内DNS Server 2无法清空的问题；
+   - fix	修复通过vmess://链接添加v2ray节点时无法添加tls信息的bug；
+   - add	添加域名黑白名单格式检查，错误格式的域名不会添加进对应名单并给予相应提示；
+   - update	同步最新规则：gfwlist.conf, chnroute.txt, cdn.txt；
+   - update	更新v2ray二进制版本为v3.35；
+   - update	更新kcptun二进制版本为20180810
+   - remove	移除多余无用的socks5开机启动文件；
+
+3.9.9
+   - update	添加jitterentropy-rngd，以提供足够的熵来快速生成高质量的随机数，保证ss-libev启动；
+   - fix	修复带订阅对某些机场不支持的情况；
+   - fix	修复订阅ssr节点协议带compatible时，订阅到的协议值为空的问题；
+
+3.9.7 - 3.9.8
+   - update	更新ssrr二进制为最新编译，版本2.5.3；
+   - update	更新haproxy到1.8.8；
+   - fix	修复访问控制配置出国模式后，实际走全局模式的bug；
+   - update	增加对路由模式的检测，当使用桥接等非路由模式的时候；
+   - update	增加对【智能网络卫士】-【DNSFilter】是否开启的检测；
+   - update	增加对固件版本号兼容检测，如果固件低于X7.2，插件不能使用；
+
+3.9.6
+   - update	增加对 Enable JFFS custom scripts and configs选项是否开启的检测；
+   		merlin固件软件中心诞生以来就是依赖这个 Enable JFFS custom scripts and configs这个选项的开启的，
+   		如果此处没有开启，会影响软件中心内所有插件的开机启动，还会影响【科学上网】插件的dnsmasq的配置，导致dns污染等问题。
+   - fix	修复部分机型安装提示平台不符合安装需求的问题。
+   - update	优化一些日志显示。
+   
+3.9.5
+   - fix	订阅：修复订阅部分机场时节点重复添加的问题；
+   - fix	订阅：修复订阅时选择走ss，但是却走常规网络下载的问题；
+   - add	v2ray：现在json配置栏里能使用vmess://xxx的链接来添加节点，添加后会自动解析为非json配置
+   - fix	v2ray：修复非json配置tcp + tls下无法工作的问题；
+   - fix	v2ray：修复非json配置ws + path不配置host时不工作的问题；
+   - fix	v2ray：修复服务器使用域名可能导致出现不工作的问题；
+   - fix	v2ray：修复插件重启速度可能变得极慢的问题；
+   - fix	修复插件更新后有时版本号未变化的问题；
+   - fix	修复插件开机启动nat加载可能过早的问题；
+
+3.9.4
+   - fix	修复v2ray非json配置在ws/h2协议下，不配置path和host不能工作的问题；
+
+3.9.3
+   - 说明	此次更新主要针对v2ray非json配置的调整，配置逻辑参照v2rayN windows客户端；
+   - update	为了避免混淆，将v2ray 传输协议 (network) 设置ws和ws_header选项合并；
+   - update	v2ray非json配置传输协议增加h2协议；
+   - update	为v2ray非json配置的所有配置选项写了说明，详情鼠标点击左侧黄色文字；
+
+3.9.2
+   - fix	修复v2ray使用非json配置ws_header时，配置文件不通过的问题；
+   - fix	修复v2ray json配置时使用vmess以外的传出协议时候，检测不到v2ray服务器ip地址；
+   - fix	修复v2ray在添加节点时候勾选多路复用 (Mux)，但是切换到帐号设置页面该节点并没有勾选的问题；
+   - fix	修复插件检查更新，如果没有更新会出现flock错误，并且窗口无法自动关闭的问题；
+   - fix	修复有时访问ss服务器本身服务器也走代理的问题；
+
+3.9.1
+   - fix	修复3.9.0 出现DNS污染的问题；
+
+3.9.0
+   - add	增加v2ray支持，需要配合虚拟内存；
+   - update	优化国内dns设定时的一些判断；
+   - fix	修复chinadns2提交可能失败的问题；
+
+3.8.9
+   - fix	修复负载均衡提交可能被卡住的问题。
+
+3.8.8
+   - update	更新shadowsocks-libev到最新3.1.3，simple-obfs更新到最新 （2018年04月15日 编译）；
+   - update	更新kcptun到20180316
+
+3.8.7
+   - fix	脚本：修复使用ss混淆节点，重启路由后不会启用混淆的问题。
+
+3.8.6
+   - fix	脚本：修复gfwlist模式下国内DNS解析的国内cdn问题。
+
+3.8.5
+   - add	加入ss_post_start功能，可以在SS服务运行完毕后触发用户自己的脚本；
+    		加入ss_pre_stop功能，可以在SS服务开始关闭前触发用户自己的脚本；
+     		* 例如在/koolshare/ss/postscripts/下放入两个脚本:P01V2ray.sh, P99Brook.sh
+     		* SS插件运行后会自动按照数字从小到大顺序运行 P01V2ray.sh start, P99Brook.sh start
+     		* SS插件关闭前会自动按照数字从大到小顺序运行 P99Brook.sh stop, P01V2ray.sh stop
+   - update	同步最新规则。
+   - readme	此版本其它功能和二进制无任何变化。
+
+3.8.4
+   - fix	脚本：修复chinans2有时候不启动的问题。
+   - fix	脚本：修复开机后重启nat可能不加载iptables的问题。
+
+3.8.2 - 3.8.3
+   - fix	修复kcptun重启失败
+   - fix	修复chinadns2某些情况下开启失败的问题。
+   - fix	修复cdns方案下一些国内域名解析到国外ip的问题。
+   - update	更新5个国外DNS方案的说明，增加推荐等级。
+
+3.8.1
+   - fix	修复以前使用国内优先的用户升级到3.7.8 - 3.8.0后，国外不工作的问题。
+
+3.8.0
+   - fix	修复dns劫持功能失效导致自定义过DNS的出现问题。
+   - fix	修复chinadns2有时候启动失败的问题。
+   - revert	恢复原chinadns方案，为了区分命名为chinadns1，其中国dns使用【国内DNS设置的值】，上游方案固定为dns2socks。
+   - update	为了保证成功率，默认国外方案更换为dns2socks。
+
+3.7.9
+   - 说明	是否加会原来的一些dns解析方案待观察。
+   - fix	修复详细状态显示的信息不正确。
+
+3.7.8
+   - 说明	此次精简优化插件，为了提升DNS解析能力，移除了一些旧dns解析方案，
+		增加了更加科学好用的DNS解析方案，且设置上对小白非常友好。
+   - add	新增cdns解析方案，支持EDNS，自带国内外cdn（默认）；
+   - add	新增chinadns2解析方案，支持EDNS，自带国内外cdn；
+   - remove	移除dnscrypt-proxy解析方案;
+   - remove	移除pdnsd解析方案;
+   - remove	移除旧的chinadns解析方案;
+   - remove	移除Pcap_DNSproxy解析方案;
+   - remove	移除DNS偏好选择，改为后台自动判断优化;
+   - remove	移除chromecast设置，为了更好防dns污染，现在默认开启;
+   - remove	移除ss节点解析设置，改为后台自动判断优化;
+   - remove	移除国内cdn加速设置，因为现在dns方案具有cdn加速了;
+   - remove	移除黑科技按钮，以后需要截图请自行打码;
+   - remove	移除插件开机启动延迟;
+   - update	优化启动脚本，提升插件提交应用速度;
+
+3.7.7
+   - update	Pcap_DNSpproxy更新到最新0.4.9.5
+   - update	dnscrypt-proxy更新到最新1.9.5
+   - update	haproxy更新到最新1.8.1
+   - update	kcptun二进制更新到最新20171201
+   - update	更新socks5功能的gfwlist.acl
+   - update	同步最新ss规则和Pcap_DNSpproxy规则
+   - fix	现在kcptun串联UDPspeeder或者UDP2raw在非游戏模式下也能使用了，注意如果游戏模式下kcptun串联UDPspeeder或者UDP2raw
+   		会导致udp blocked，因为在服务器端的串联链里有kcp，其不支持udp。要支持的话需要路由器端和服务器端双开UDPspeeder或者UDP2raw，
+   		这个功能虽然可以实现但是web会显得更复杂，所以暂时不做这个。
+   - fix	修复KCP在选择模式下，部分参数填写不全导致KCP进程无法启动的问题；
+   - fix	修复安装插件导致ssserver插件二进制丢失的问题；
+   - fix	修复部分帮助链接失效的问题；
+   - fix	修复节点面板错位的问题；
+
+3.7.6
+   - fix	修复某些情况下kcptun无法启动的问题；
+   - update	同步最新规则；
+
+3.7.5
+   - update	更新ss-libev到3.1.1
+   - fix	修复UDPspeeder其它参数设置无效的问题
+   - fix	修复UDP2raw某些时候进程启动失败的问题
+
+3.7.4
+   - update	更新UDPspeederv1、UDPspeederv2、UDP2raw二进制到最新
+   - fix	修复单开UDPspeeder(V1/V2)，udp加速无效的bug；
+   - fix	修复单开UDPspeeder(V1/V2)，MTU设置无效的bug；
+   - add	KCPTUN的绑定端口现在可以设置了，现在你可以像原来一样单独使用KCP加速，也能配置KCPTUN和UDPspeeder的串联、KCPTUN和UDP2raw的串联、
+   		KCPTUN先串联UDPspeeder，再串联UDP2raw、甚至UDP2raw串KCPTUN。我知道这很绕，不过只要知道下面的关系，相信如何配置，就难不倒你~
+   		tcp in udp：KCPTUN
+   		udp in udp：UDPspeeder
+   		udp in tcp：UDP2raw
+
+3.7.3
+
+   - 说明	1. UDP加速，包括UDPspeeder和UDP2raw，都只能支持ss和ssr的udp，不支持koolgame，koolgame已经自带了udp优化。
+     		2. UDP加速需要自己配置服务器端的UDPspeeder或者UDP2raw程序，从飞机场购买SS帐号的不能使用。
+   - add	增加UDP2raw的支持（感谢wangyu-的开源项目），支持单独使用UDP2raw，将ss-redir的UDP流量直接转成tcp流量，应对UDP屏蔽或QoS，或在UDP不稳定的环境下提升稳定性。，
+		也可以将UDPspeeder(V1/V2)与UDP2raw串联，将ss-redir的UDP经过UDPspeeder加速后，通过UDP2raw转成TCP流量。
+		UDPspeeder(V1/V2)与UDP2raw简要的使用说明：
+		正确开启的姿势：
+		 0. 服务器端：配置并UDPspeeder(V1/V2)/UDP2raw的服务器端程序
+		 1. 路由器下：当前正在使用游戏模式或者访问控制主机中有游戏模式主机；
+		 2. 路由器下：UDP加速的节点和正在使用的节点一致；
+		 3. 路由器下：正确配置并开启UDPspeeder(V1/V2)或UDP2raw，或者两者都开启（串联模式）。
+		使用情形：
+		 1. 单独使用UDPspeeder(V1或V2)：ss-redir(UDP) -- UDPspeeder(UDP) ------ UDPspeeder(UDP) -- ssserver(UDP)，即udp in udp模式
+		 2. 单独使用UDP2raw：ss-redir(UDP) -- UDP2raw(TCP) ------ UDP2raw(TCP) -- ssserver(UDP)，即udp in tcp模式
+		 3. UDPspeeder(V1或V2)和UDP2raw一起使用（串联）：ss-redir(UDP) -- UDPspeeder(UDP) -- UDP2raw(TCP) ------ UDP2raw(TCP) -- UDPspeeder(UDP) -- ssserver(UDP)，即udp in tcp模式
+		UDPspeeder(V1/V2)针对udp传输进行优化，能加速udp，降低udp的丢包，特别适合游戏。
+		UDP2raw可以将udp协议转为tcp，准确的说UDP2raw不是一个udp加速工具，而是应对UDP屏蔽或QoS，或在UDP不稳定的环境下提升稳定性的工具。
+		如果你的运营商屏蔽了UDP，或者UDP及其不稳定，可以使用UDP2raw配合UDPspeeder(V1/V2)串联使用来绕过屏蔽，并且实现udp加速。
+		其它：   		
+		KCPTUN的TCP加速是把ss-redir的TCP流量转为UDP流量，相当于tcp in udp，虽然此udp也能和UDPspeeder/UDP2raw串联，甚至三者一起串联使用，
+		但是为了不增加插件复杂度，同时考虑到merlin arm路由器着急的性能，目前暂时不支持KCP和UDPspeeder/UDP2raw的串联配置，未来会考虑开放该配置。
+		目前使用UDPspeeder/UDP2raw均需要在服务器上配置运行相应的程序，在路由器下运行UDPspeeder和UDP2raw的串联，同时需要服务端两者的串联配置，
+		简单的来讲，UDPspeeder的运行不需要特殊的更改就能用于单独使用和串联使用，而UDP2raw单独使用的时候其远程端口（-r）应该配置为服务器上ss程序的监听端口
+		而串联使用下，UDP2raw的远程端口（-r）应该配置为服务器上UDPspeeder程序的监听端口。
+		例如：服务器上配置了ssserver监听在0.0.0.0:8083
+		 1. 单独使用UDPspeeder的话，服务器UDPspeeder上配置 -l 0.0.0.0:8855 -r127.0.0.1:8083；路由器下UDPspeeder服务器填写 vpsip:8855
+		 2. 单独使用UDP2raw的话，服务器UDP2raw上配置 -l 0.0.0.0:8866 -r127.0.0.1:8083；路由器下UDP2raw服务器填写 vpsip:8866
+		 3. UDPspeeder和UDP2raw串联的话，服务器UDP2raw上配置 -l 0.0.0.0:8877 -r127.0.0.1:8855，服务器UDPspeeder配置不变；路由器下UDP2raw服务器填写 vpsip:8877，路由器UDPspeeder配置不变.
+		以上只说明了端口的配置情形，其它参数请参考UDPspeeder(V1/V2)与UDP2raw的官方文档。
+   - add	因为UDPspeeder(V1/V2)和UDP2raw对上游软件的MTU有要求，增加ss/ssr-redir MTU，以达到更好的UDP加速效果。不知道如何设定的请选择不设定，以免造成不必要的问题
+   - fix	修复开启koolproxy后，科学上网插件的白名单失效的问题。
+   - fix	修复udpspeeder某些值配置为空的情况下开启失败。
+   - add	udpspeederv2增加其他参数，方便填写一些没有列出来的高级参数。
+   - fix	修复界面的一些小问题。
+   - add	在一些必要的地方增加帮助链接，点击可以直接查看简要帮助信息。
+   - update	现在规则更新不开启自动更新或者不勾选更新项目也能在页面点击更新了。
+
+3.7.2
+   - fix	修复firefox下日志不能滚动的问题，负载均衡和socks5页面错位的问题
+   - fix	修复主模式不为游戏模式，访问控制中有游戏模式主机的时候udp不通的问题
+   - update	现在udp加速在访问控制里有游戏模式主机时也能工作（udp加速启动条件：勾选udp加速 + 加速节点和正在使用的节点一致 + 主模式或者访问控制启用游戏模式）
+   - update	kcptun二进制更新到20171113
+
+3.7.1
+   - fix	修复节点添加、编辑功能
+   - fix	修复kcp启动后实际未加速的问题
+   - fix	其它一些小问题
+
+3.7.0
+   - update	现在点击科学上网开关不再隐藏相关页面元素
+   - add	订阅链接支持注释如：（#https//ssr.com/xxx #订阅1）订阅1将不会订阅
+   - add	增加kcp参数输入方式，现在可以选填输入
+   - update	游戏模式现在也能使用kcp加速（tcp部分走kcp协议，udp部分走原ss协议）
+   - update	现在SS AEAD下也能使用游戏模式
+   - add	增加udp加速功能，能使用UDPspeederV1和UDPspeederV2对游戏模式udp进行加速
+   		目前不支持UDPspeeder和kcp串联使用（ss流量的tcp走kcp，kcp走UDPspeeder），
+   		但是可以并联使用（ss流量的tcp走kcp，udp走UDPspeeder）
+
+
+3.6.9
+   - fix	修复ssr下速度过慢；
+   - fix	修复订阅中自定义混淆参数无效的问题；
+   - fix	修复ss:// ssr:// 链接无法添加节点的问题；
+
+3.6.8
+   - update	经测试，使用mbedtls 2.6.0依赖，速度不如mbedtls 2.5.1，因此重新编译相关二进制文件。
+   		更新ss-libev, simple-obfs, ssrr-libev, mbedtls依赖更换为2.5.1版本，libsodium版为1.0.13版本。
+
+3.6.7
+   - fix	修复dnsmasq设置，黑白名单，订阅链接无法保存
+
+3.6.5 - 3.6.6
+   - 说明	从3.6.5开始，SS插件和之前版本的数据格式不完全兼容！升级到3.6.5将会尝试升级原先的数据！
+   		如果你安装此版本后仍然有问题（ssr节点可能变成ss节点），请尝试清空ss数据后重新录入！
+   		另外插件更名为【科学上网】，作为集成科学上网的工具的插件，本插件是支持SS、SSR、koolgame三种客户端的科学上网、游戏加速工具。
+   		未来可能会进一步增加brook和v2ray的支持到本插件。本次升级为了方便未来增加新的客户端而做了大量的更改。
+   - 须知	升级后需要强制刷新缓存：ctrl + F5,界面才能正常。
+   - update	优化后台对SS数据处理。一直以来修修补补导致很多问题，因此此部分更新较大，更新后老版本的ss数据可能和此版本出现兼容问题，
+   		虽然此版本在安装的时候会对ss数据进行升级转换，但是并不能完全保证不出任何问题，
+   		所以使用3.6.5插件的朋友，建议大家采取以下方式安装：
+   		1. 插件内更新，从3.6.4或者更低版本，版本更新到3.6.5或者更高，更新过程会对数据进行升级处理，但是不保证不出问题
+   		2. 插件内更新，通过插件内更新后，在【附加功能】内清空配置，然后重新手动配置节点，或者重新订阅节点，别用以前的备份文件进行恢复
+   		3. 【附加功能】内清空配置，卸载插件，然后通过离线安装或者SSH全新安装科学上网插件。
+   		4.成功升级3.6.5后建议重新生成备份文件。
+   - update	由于插件当初设计不合理，将【游戏模式v2】单作为了一个模式来使用，而该模式又需要单独的koolgame客户端和服务器端来配合使用，
+   		并不兼容SS和SSR, 而SS、SSR、koolgame都是作为代理的软件，而之前的设计中，经常有用户在SS和SSR下使用【游戏模式v2】，
+   		或者在koolgame下使用gfwlist模式，大陆白名单模式，这些做法在之前的版本中都是不科学的用法；
+   		现在为了插件更好的扩展性，将【游戏模式v2】更改为koolgame，作为并列于SS、SSR软件的一个代理软件，
+   		也方便未来增加brook甚至v2ray等代理软件，插件本身也同时更名为科学上网插件，不再是shadowsocks插件；
+   		现在使用koolgame下也能选择gfwlist模式，大陆白名单模式，游戏模式，全局模式，回国模式，并且支持SS、SSR使用的访问控制；
+   		可以将koolgame单纯作为一个翻墙软件，使用gfwlist，大陆白名单模式等，也可以使用游戏模式用于游戏加速
+   		（效果等同于之前版本选择游戏模式v2节点下使用游戏模式v2），现在koolgame下国外DNS还是暂时只支持koolgame内置的dns2ss，
+   		未来会进一步开放全部DNS支持；
+   - update	更新shadowsocks-libev和simple-obfs二进制到最新，此次的编译应该能解决ss-redir,ss-local进程无故死掉的问题
+   - update	更新shadowsocksrr-libev二进制到最新，支持chain_e, chain_f，但是请慎用这两种混淆，因为可能导致不稳定。
+   - update	添加xchacha20-ietf-poly1305加密方式支持(ss only)；
+   - update	以前为了美观，SSR协议参数为空的时候没有显示，现在不管是不是空的都会显示；
+   - remove	移除SS,SSR,V2软件切换选项，因为他们之间并不完全兼容。
+   - update	kcp加速开关移动到新的标签页,注意因为游戏模式和SS AEAD下不支持kcp，因此kcp标签页隐藏
+   - remove	【电报交流】和【一键脚本】移动到【插件帮助】按钮内，为增加更多标签页腾出空间。
+   - update	同步最新规则到11月11日；
+   - fix	修复订阅节点时报错arithmetic syntax error；
+   - fix	修复订阅节点无法修改节点信息；
+   - fix	修复节点订阅导致负载均衡节点的权重和模式丢失；
+   - fix	彻底修复黑白名单和dnsmasq设置等输入框产生乱码；
+   - add	现在插件首次安装后，在没有节点信息的情况下开启开关，会提示输入节点；
+   - fix	修复Firefox等浏览器下标签页间隔过大导致界面交错，修复页面顶部排版；
+   - fix	修复koolgame下黑名单不起作用的bug。
+   - fix	修复可能的gfwlist模式下国内域名被国外dns解析导致分流不正常。
+
+# ============================================================================
+   - 鉴于以前更新过于频繁，很多安装包也有不少问题，某些版本跨度之间的数据格式也不完全兼容
+   - 所以不再提供3.6.5以前的安装包
+# ============================================================================
+
+3.6.4
+   - add	帐号设置界面可以切换ssr功能回归，并可以切换v2节点；
+   - add 	添加分流检测按钮，点击后会显示访问ip111.cn的结果；
+   - fix	修复ping测试和web测试中清空结果会导致页面错误，看上去像清空了所有节点信息，曾经出现过该问题的，需要清空全部数据才能完全修复。
+   - fix	修复在恢复配置的时候可能将配置恢复成加密格式的问题。
+   - fix	修复在QOS开启的情况下，kp和ss冲突。
+   - fix	修复游戏V2模式下和koolproxy冲突的问题
+   - fix	修复游戏模式bug，现在QOS开启的情况下也能使用游戏模式了（X7.7固件测试通过，低版本固件未测试）
+   - fix	修复某些情况下其余主机不走ss时候，UDP仍然可能走游戏模式的bug
+   - update	现在所有的提交操作完成后都会刷新一次插件页面，以防出现一些乱码等小问题
+   - fix	修复开启koolproxy后可能出现iptables规则加载错误的问题
+
+3.6.3
+   - fix	修复第一次订阅成功后下次订阅可能会删除全部订阅节点的问题；
+   - fix 	修复黑白名单输入框等出现乱码，导致国外出现问题（更新后需要重新提交）；
+   - update	现在提交时会检测密码是否乱码并提示；
+   - update	混淆参数长度限制从100字符增加到300字符。
+
+3.6.2
+   - fix	界面：修复关闭SS后，节点页面出现的问题，修复订阅节点后节点列表消失，只有刷新才出现的问题
+   - fix 	功能：修复单端口多用户节点不能正常工作
+   - fix	订阅：修复某些运营商的订阅链接格式会导致第2个节点一致被覆盖写入
+   - fix	订阅：修复多个运营商订阅时，一个订阅失败导致另一个订阅成功后节点被删除
+   - fix	订阅：修复订阅时节点名有特殊符号保存出现问题
+   - fix	订阅：修复ss/ssr短链接添加节点无法添加混淆参数的问题；
+   - update	订阅：因订阅相关组件在低版本固件不能正常工作，因此限定订阅仅支持X7.7及以上固件才能使用
+
+3.6.1
+   - fix	修复离线安装插件时卡住没进度，需要先更新软件中心1.3.5；
+   - add 	新增SSR节点订阅支持，新增SS/SSR链接添加服务器，均在【更新管理】标签页下；
+   - add	规则管理:新增Pcap规则Routing.txt和WhiteList.txt更新（需要提交后刷新页面才能看到状态）；
+   - add	添加ss_pcak.sh脚本，方便有自己修改插件后打包插件分享给别人
+   - update	离线安装现在会校验安装平台，避免N66U和AC66U用户乱装;
+   - update	更新shadowsocks-libev到最新3.1.0，simple-obfs更新到最新 （2017年10月26日 编译）；
+   - update	ssr-libev更换为ssrr-libev，版本3.5.1，3.5.2的chain_e/f因不稳定暂不跟进（2017年9月25日 编译）；
+   - update	修复web测试有时候出现问题，ping测试增加twitter和facebook检测，google.com更改为google.com.hk；
+   - update	界面：将chromecast和ss服务器解析设定移动到【DNS设定】标签页下；
+   - fix	界面：修复KCP参数输入框只有保存刷新后高度才显示正常的问题，修复使用黑科技按钮后表格错位的问题；
+   - fix	修复开启ss后高亮侧边栏在X7.7固件下错误的问题，同时移除开启侧边栏功能；修复X7.7下负载均衡和socks5不显示
+   - fix	修复pdnsd不能写缓存文件的问题；
+   - remove	取消帐号设置内的切换ssr勾选框，此处为以前ssr兼容ss方便切换而设置，现在没什么必要了；
+   - update	规范一些参数，更新后可能导致ssr节点的混淆参数丢失；
+   - update	为了方便订阅和规则更新的下载，现在ss-local/ssr-local在插件启用时会保持23456端口的开启；
+   - update chromecast和koolproxy配合部分进行优化；
+   - update	优化开机启动生成ss配置文件；
+
+3.6.0
+   - fix	修复游戏模式下trpoxy加载问题
+   
+3.5.9
+   - update	ss启动脚本start.sh stop.sh nat-start.sh ssconfig.sh全部合并到ssconfig.sh一个脚本；
+   - fix	修复关闭ss可能会关闭socks5的bug；
+   - fix	修复一直以来存在的开机nat规则多次重复加载导致的开机性能问题；
+   说明：有人反馈3.5.8会导致进不去路由器界面，实际上是koolproxy插件的一个bug，请更新koolproxy插件到最新版本以修复此问题。
+
+3.5.8
+   - update	更新shadowsocks-libev到3.0.7；
+   - fix	修复当主模式为游戏模式，acl主机为其它模式时，acl主机udp仍然走ss的bug；
+   - update	更新内置规则gfwlist.conf，chnroute.txt，cdn.txt到最新，gfwlist将82个国家域名限制为google，避免gfwlist模式下访问到淘宝全球等问题；
+   - update 	路由器本身走ss域名增加entware.net，方便ss用户更快的安装entware；
+   - update 	ss详细状态增加SHADOWSOCKS_GFW_EXT链显示。
+
+3.5.7
+   - fix	修复节点面板字体超出边界的问题；
+   - fix 	修复nat-start在开机时候被触发多次造成nat规则重复；
+   - fix	修复开机启动后在nat PREROUTING内ss在kp之前，造成使用kp后国外过滤失效；
+
+3.5.6
+   - update	更新ss-libev ssr-libev到最新;
+   - update 	更新界面字体;
+   - add	nat表新增SHADOWSOCKS-EXT链，以支持koolproxy：现在更新最新koolproxy插件后可以过滤ss流量，例如youtube广告.
+
+3.5.5
+   - fix	修复SHADOWSOCKS_GAM链有时候不创建的问题。
+
+3.5.4
+   - fix	游戏模式V2回滚为和ss插件3.1.5版本一样的体验（iptables，后台脚本，访问控制等），现在游戏模式V2的流量在iptables中会少转发一次；
+   - fix	修复游戏模式V2局域网控制黑白名单为空时所有客户端都不走koolgame的bug；
+   - update 	同步最新gfwlist.conf chnroute.txt cdn.txt。
+
+3.5.3
+   - fix	fix layout of load Main_Ss_LoadBlance.asp and Main_SsLocal_Content.asp
+
+3.5.2
+   - fix	修复SS访问控制，默认模式有几率变为空值，导致显示双working但是不能翻墙的问题。
+   - fix 	修复可能的浏览器兼容问题，导致不显示节点列表的问题。
+
+3.5.1
+   - fix	修复在X7.5固件下自定义dnsmasq,IP/CIDR白名单,域名白名单,IP/CIDR黑名单,域名黑名单内容在IE浏览器下显示乱码的问题;
+   		该问题是由X7.5固件浏览器兼容性的更改造成的，导致用IE浏览器提交后，ss不正常工作。
+
+3.5.0
+   - update	update ss-rlibev to latest: fix UDP host & portl;
+   - update	update haproxy to 1.7.5.
+
+3.4.9
+   - fix	修复在DNS解析在国内优先下，自定义国内DNS不起作用的bug;
+   - fix	修复使用负载均衡时，详细状态检测出错的bug；修复详细状态内一些拼写错误；
+   - update	同步ssr-libev最新代码，commit:0f529efa4cc37713822a32b0a662a4735dd8962a.
+
+3.4.8
+   - update	ssr-libev刚修复了一个auth_chain_a协议下UDP相关的BUG，因此merlin ss插件同步更新；
+   - update	更新ss-libev到最新代码，同时更换为全静态编译；
+   - update	更新kcptun到20170525最新版本。
+
+3.4.7
+   - fix	恢复shadowsocksR的ss-tunnel DNS解析功能.
+   		3.4.6更新日志大雾：ssr-tunnel并不是没有做好，而是和ssr-local合并了，此次更新已经恢复。
+
+3.4.6
+   - update	更新shadowsocksR-libev最新版，支持none加密和auth_chain_a协议;
+   		注意：因为该版本ssr-tunnel官方并没有做好，所以选择none加密或者auth_chain_a协议时不能使用ss-tunnel作为DNS解析！
+
+3.4.5
+   - fix	去掉auth_chain_a选项，之前因为测试时加上了，推送时忘了去掉，实际上现在并不支持该协议。
+	
+3.4.4
+   - fix	修复https://github.com/koolshare/koolshare.github.io/issues/333
+		修复在低分辨率屏幕上，添加SS节点被浏览器边缘挡住;
+		修复添加SSR节点时，切换模式后参数展示错误;
+		
+3.4.3
+   - fix	修复在X7.5固件下，ss界面整体偏移的问题；
+   - fix	修复SS节点在不同浏览器(firefox, chrome56, chrome58)下或者不同固件版本下(X7.4, X7.5)错位的问题；
+   - update	优化SS节点界面布局，现在页面上可以显示更多节点（14个）；
+   - fix	修复在X7.5固件下下拉选择客户端报错的问题。
+   - fix	修复附加功能点击提交无法应用的问题（比如侧边栏开关）；
+
+3.4.2
+   - fix	修复ss主界面在380.66_X7.5固件中的错位问题。
+
+3.4.1
+   - fix	修复SSR json格式检测不准确问题；
+   - update	nslookup方式解析错误后会用resolveip尝试一次
+   		（ps：前几日腾讯DNS：119.29.29.29出现问题导致很多朋友出现问题，119.29.29.29现已恢复）；
+   - update	当输入服务器，端口，密码时，如果开头或者结束有空格，会自动清除之；
+   - update	去除快速应用DNS，快速应用黑白名单，快速应用附加设置；
+ 		因为重启部分服务或者进程有时候会出现问题，现在改为重启全部服务；
+ 		在这些设置提交时都会重启整个SS服务器，以保证SS相关的所有进程和配置工作正常。
+   - update	更新kcptun客户端到20170329版本；
+   - update	同步最新ss规则。
+
+3.4.0
+   - add	ss配置恢复支持SSR json格式节点；
+   - update	ss配置导出/恢复功能移动到附加功能；
+   - update	现在导入json格式节点默认为大陆白名单模式；
+   - fix	修复用json导入节点配置时导致已有的节点密码变成乱码的bug；
+   - 说明	ss配置恢复不仅可以恢复本插件保存的ss数据:ss_conf_backup.txt，如果已经有配置，导入此配置将覆盖已有配置
+   		还能导入ss/ssr服务商，PC端ss/ssr等提供的json格式的节点数据，如果已经有配置，导入此配置将新增json内的节点，而不会覆盖
+   		建议大家在用json导入节点后，用插件的【导出配置】功能备份一次插件数据。
+
+3.3.9
+   - update	update shadowsocks-libev to 3.0.6, now ss binary was compiled by new toolchian (https://github.com/koolshare/arm-fw867-linux-uclibcgnueabi) with gcc version 5.3.0.
+
+3.3.8
+   - add	添加回国模式:回国模式下建议使用dnscrypt-proxy和ChinaDNS(国外自定义例如8.8.8.8直连)两种方案。
+   - fix	修复某些情况下ss-tunnel的启动问题
+   - fix	修复socks5关闭后进程仍然存在的问题
+
+
+3.3.7
+   - fix	fix ssr-tunnel show working but have no pid
+   - fix	fix some element in web
+   - remove	remove useless binary in bin folder
+   - update	decrease the interval of get log, now the log should be more smooth.
+   - add	add link of one key install ss/ssr server script by clang.
+
+3.3.6
+   - fix	web：fix edit botton missing when edit ss node.
+
+3.3.5
+   - fix	脚本：修复一个小问题
+
+3.3.4
+   - update	程序：更新shadowsocks-libev 3.0.5；
+   - update	程序：更新simple-obfs 0.0.3；
+   - update	程序：更新kcptun 为20170322；
+   - add	web：添加shadowsocks-libev混淆支持(需要服务器端支持)
+   - add	web：节点名前添加帐号类型标志
+   - add	web：添加详细状态显示，目前显示的内容：1，版本信息；2,程序运行状态；3，iptables状态
+   		如果显示异常，请强制刷新一次（ctrl + f5）
+   - fix	脚本：修复pdnsd上游dns为dns2socks时，ss-local未开启的bug
+   - update	脚本：现在大陆白名单和游戏模式下，gfwlist只有在访问控制中存在gfwlist模式的主机时才会加载
+   - update	规则：同步最新gfwlist，chnroute和cdn名单。
+   
+3.3.3
+   - remove	移除koolshare logo和支持信息；
+   - add	添加电报群交流链接；
+
+3.3.2
+   - 说明	由于shadowsocks-libev最近变动过大，在推出之初我就想过merlin ss插件是否跟进，后来从插件3.2.7版本开始，我进行了跟进，
+		然而看到了诸多抱怨，因为很多购买账号的用户，或者是一键部署服务器端的用户很难能够升级最新的服务器端ss版本，
+   		加上ss-tunnel新老版本的兼容问题，最终导致我想要回滚shadowsocks-libev，所以考虑到多数用户，此次回滚shadowsocks-libev2.5.6版本，
+   		以后是否再做升级，再做观察。另外如果你的服务器端部署了新的ss-server，也建议做相应的回滚，不然可能还是有ss-tunnel兼容性问题。
+   - revert	程序：回滚shadowsocks-libev到2.5.6版本；
+   - remove	移除shadowsocks-libev的simple-obfs插件，去除web上的ss原版混淆功能（2.5.6不支持）；
+   - remove	鉴于最近OTA功能的争议，此次回滚并未打算重新加上OTA功能，请大家理解！
+   - update	socks5功能同样做相应的回滚。
+
+3.3.1
+   - update	binary: update shaodwsocks-libev to 3.0.1, this should sovle ss-tunnel and new encrypt method not working.
+
+3.2.9 - 3.3.0
+   - fix	web：修复chome56下，节点数量超过12个后，节点面板错乱的问题;
+   - fix	web：修复切换节点/应用节点，不能更换加密方式的问题
+   - fix	web：socks5页面增加ss 3.0.0的新加密方式
+   - update	程序：更新shadowsocksr-libev到最新代码(fix tls1.2_ticket_auth host name bug)
+   		注意,目前ss-libev和ssr-libev支持的加密方式略有不同，但是为了修复此次加密方式的显示bug，将他们都混合在了一块，请注意区分
+		
+  		SS支持的加密方式：
+		rc4-md5
+		aes-128-gcm
+		aes-192-gcm
+		aes-256-gcm
+		aes-128-cfb
+		aes-192-cfb
+		aes-256-cfb
+		aes-128-ctr
+		aes-192-ctr
+		aes-256-ctr
+		camellia-128-cfb
+		camellia-192-cfb
+		camellia-256-cfb
+		bf-cfb
+		chacha20-poly1305
+		chacha20-ietf-poly1305
+		salsa20
+		chacha20
+		chacha20-ietf
+		
+		SSR支持的加密方式：
+		rc4
+		rc4-md5
+		aes-128-cfb
+		aes-192-cfb
+		aes-256-cfb
+		aes-128-ctr
+		aes-192-ctr
+		aes-256-ctr
+		camellia-128-cfb
+		camellia-192-cfb
+		camellia-256-cfb
+		bf-cfb
+		cast5-cfb
+		idea-cfb
+		rc2-cfb
+		seed-cfb
+		salsa20
+		chacha20
+		chacha20-ietf
+		
+3.2.8
+   - fix	web：修复开启ss侧边栏显示后，高亮的是软件中心菜单!
+   		为了这个问题推送一个版本的SS，是为了避免明日380.65-X7.4内测的时候，
+   		内测人员的X7.4固件ss插件发生菜单高亮错误，tab消失的问题。
+
+3.2.7
+   - update	程序：更新shadowsocks-libev到3.0.0最新代码，移除OTA支持；
+   - update 	程序：更新simple-obfs为最新0.0.2版本；
+   - update	程序：更新shadowsocksr-libev到最新代码（2.5.6）；
+   - update	程序：更新kcptun为到最新20170114；
+   - update	web：配合ss-libev的更新，更改ss-libev的加密方式，ssr加密方式为原先的不变；
+   - update	web：边栏菜单兼容380.65-X7.4固件.
+   - update 	规则：更新ss-local acl规则为最新
+     note：	由于simple-obfs不支持udp，如果大家开了原版ss混淆的，请不要使用ss-tunnel和游戏模式
+3.2.6
+   - fix	web：修复chrome56下页面布局问题（仅SS），其它固件自带页面的修复，需要等到下次固件发布。
+   - fix	web：回滚更新日志按钮代码，因为可能还会有错位的情况（如更新后未生效，请按ctrl + F5）;
+   - fix	web：修复状态刷新时间不可更改的问题，并且移除将刷新时间储存在cookie中，现在储存在skipd中.
+
+3.2.4 & 3.2.5
+   - fix	修复首页按钮错位，更新后请ctrl+F5刷新页面
+   - fix	修复访问控制的一个bug：当选择某个主机或者其它主机不走ss，实际上还是走了gfwlist
+   - update	调整了下节点页面的按钮。
+
+3.2.3
+   - fix	修复密码表单被chrome等浏览器自动填充的问题；
+   - revert	根据破娃建议，重新加回了auth_sha1协议；
+   - fix	修复国内DNS不能自定义的问题。
+
+
+3.2.2
+   - update	修改访问控制页面内，主机ip地址的选填方式。
+   		1 下拉选择：主机ip地址的选择方式，现在点击右侧红色箭头可以看到主机名，选择主机后，会自动填写主机的IP地址和主机别名；
+   		2 手动填写：主机ip地址可以手动填写，诸如openvpn客户端ip地址可以通过如下方式填写；
+   - fix	修复当DNS解析偏好为国内，且国内DNS为运营商DNS，且使用光猫桥接路由器拨号的部分用户可能出现dnsmasq无法启动的bug；
+   - update	为了保持和3.1.6之前版本策略一致，现在chinadns和PcapDNSprxoy模式下不会加载cdn名单，即使设置了DNS偏好国外。
+
+3.2.1（建议更新）
+   - fix	修复SS插件和 /Adaptive Qos - 传统带宽管理/openvpn不能访问国内/国内pd/ 的冲突。
+   		但是游戏模式，游戏模式V2，或者主模式不是游戏模式，但是访问控制内有主机是游戏模式的，
+   		仍然和Adaptive Qos有冲突，如果使用了Adaptive Qos的同时启用以上，会有日志提醒，且SS不会应用。
+   		至此，炸论坛的国内pd，应该要消停下了！
+   - fix	修复了启用了访问控制时，在切换模式后，其余主机默认还走上一个模式的bug。
+
+
+3.2.0
+   - 说明：	最近论坛里和群里有很多人吐槽新版本，然而我并不想就此罢手，更新与否，大家随意，我先更了~
+		版本的更新还望希望大家理解，如果力求稳定的，可以多观察下论坛或者群内的反馈。
+		总的来说，插件从15年中到3.1.5，已经做了太多的加法，代码冗余，界面不合理各种我看不惯的地方！
+		这不要过年了，我也想着要打理一下，给SS后台做下减法，精简下代码，梳理下逻辑，顺便加点新东西~
+		而且3.1.6发布前我已经折腾了两三周了，觉得问题不大了，所以就放出来了！
+		结果还是一如既往的炸论坛，炸群，对此，我并没有什么想说的，修bug呗，希望这次的版本大家能满意，如果不满意，还有下个版本嘛！
+   - fix	修复SSR添加新节点时，协议参数不能保存的问题；
+   - fix	修复当在节点页面apply节点时，高亮标签页错误，并且提交按钮错误的bug；
+   - fix	修复在重启dnsmasq服务时，不会写入新的dnsmasq.conf的问题（这是一个大锅，我背）
+   		（这个问题导致了诸多问题，比如部分网址不能解析，黑白名单应用错误，重启dns后出现解析问题等等）；
+   - fix	修复脚本变量传递问题，出现应用黑白名单时导致wblist.conf内dns丢失而导致dnsmasq无法启动的问题；
+   - fix	修复应用黑白名单时chnroute被flush掉，从而让大陆白名单变成全局模式的bug；
+   - fix	fix game mode udp blocked
+   - update	精简了一些日志，下次还会继续精简；
+   - PS		上海电信的用户，如果希望定义IPTV，请修改/koolshare/ss/rules/dnsmasq.psotconf文件；
+		shadowsocks-libev 2.6.2本次暂时未跟进.
+
+
+3.1.9
+   - 说明：	本想在本人工作年终前给大家惊喜的，没想到3.1.6 - 3.1.8却炸了，在此表示十分抱歉！这里既有bug的坑，也有对dns策略的吐槽
+   		所以这次更新不仅是修复bug，还为了兼顾，继续给ss插件做了个加法，现在这个版本两种DNS解析偏好都可用！
+   - fix	修复chinadns不可用的bug
+   - update	恢复cdn名单，并且添加DNS解析偏好选项（红色栏），现在以下两种策略均可选择
+   		国外优先：默认cdn名单内的国内域名用国内dns解析，剩下的域名用国外dns解析。
+   		国内优先：默认gfwlist名单内的国外域名用国外dns解析，剩下的域名用国内dns解析。
+   		1 默认在主模式为gfwlist模式下,DNS解析偏好选项默认为国内优先
+   			此时如果在访问控制里有主机为大陆白名单模式，该机器的解析策略也是国内优先；
+   			此时如果在访问控制里有主机为全局模式，该机器将不能正确的解析国外域名（没办法，此处得妥协）；
+   			当然，你可以为gfwlist模式配置国外优先，此时如果在访问控制里有主机为全局模式，该机器正常。
+   		2 默认在主模式为大陆白名单，游戏模式（V2）下,DNS解析偏好选项默认为国外优先；
+   			此时如果在访问控制里有主机为gfwlist模式，该机器的解析策略也是国外优先
+   			此时如果在访问控制里有主机为全局模式，该机器正常；
+   		3 如果主模式为全局模式，此处设定将不起作用，默认使用国外优先
+   			访问控制里有主机为其它模式，均可正常使用
+   			全局模式将默认加载cdn名单（仅仅给访问控制里大陆白名单，游戏模式（V2）主机使用）
+   			全局模式将默认加载gfwlist名单（仅仅给访问控制里gfwlist模式主机使用）
+   - fix	修复如果开启了负载均衡，但是没有使用负载均衡节点时，访问控制页面主机显示udp不通的提示
+   - update 	修复QOS冲突（部分），因为“Adaptive Qos - 传统带宽管理”本身就和游戏模式有冲突
+   		所以现在如果没有启用游戏模式，或者访问控制页面内没有游戏模式节点的时候
+   		不会加载mangle表的PREROUTING链，因此部分解决了冲突；
+   		建议：经过ss的流量本身就不会有qos效果，如果启用ss，还是建议用Adaptive QoS网络监控家模式
+   - update shadowsoccksR-libev更新到最新版本，支持协议参数，更多信息：https://breakwa11.blogspot.jp/2017/01/shadowsocksr-mu.html
+   - update kcptun更新到20170117
+
+3.1.8
+   - update	由于cdn名单越来越巨大，在大陆白名单模式下给dnsmasq造成了很大的负担，开国内网站都会造成dnsmasq很高的cpu占用率
+   		因此此版本更改了域名解析策略，去掉了cdn名单，能大幅度降低cpu占用！
+   		原策略：默认cdn名单内的国内域名用国内dns解析，剩下的域名用国外dns解析。
+   		现策略：默认gfwlist名单内的国外域名用国外dns解析，剩下的域名用国内dns解析。
+   - fix	脚本：修复负载均衡不启用Haproxy故障检测心跳时，haproxy配置文件生成错误的问题，thanks to snachx；
+   - update 	规则：同步最新规则。
+
+3.1.7
+   - fix	由于3.1.6提交时笔误，导致黑白名单应用失效，此次更新主要修复这个
+   - update	为了以后更新SS插件方便，添加和以前一样，默认添加github.com走SS
+   - fix	修复ss-local启动失败导致dns2socks不可用
+
+
+3.1.6
+   - 说明	此次为大更新，因为固件原因，此版本SS将只适用于X7.2及以后的固件，X7.1及其以前的固件不再支持！
+   		此次升级里面的规则不保存,除了节点其他设定都得重新添加，请大家重新添加后重新保存一份ss配置，用于今后的恢复
+   - add	增加访问控制标签页，在访问控制页面内，你可以自由组合黑名单、白名单、端口、模式。
+		1  默认状态下，所有局域网的主机都会走当前节点的模式（主模式），相当于即不启用局域网访问控制。
+		2  当你添加了主机，可以设置缺省规则为不通过SS，则只有添加的主机才会走相应的模式。
+		3  当你添加了主机，可以设置缺省规则为当前节点的模式，除了添加的主机才会走相应的模式，未添加的主机会走缺省规则的模式。
+		4  如果使用了KCP协议，或者负载均衡，或者ss-libev混淆，因为它们不支持udp，所以不能控制单个主机走游戏模式，虽然此时走游戏模式的主机仍然可以FQ,但是udp已经阻断了。
+		使用情形：
+		1  主模式gfwlist模式，访问控制缺省规则gfwlist模式，此情形下不设定的主机默认会走gfwlist模式，所以设定主机不通过SS、大陆白名单模式、游戏模式更有意义。
+		2  主模式gfwlist模式，访问控制缺省规则不通过SS，此情形下默认所有主机都不会通过SS，所以设定主机gfwlist模式化、大陆白名单模式、游戏模式更有意义。
+		3  ...以此类推，不用我多说了。
+		设定好的主机，可以在表格中临时更改主机的模式和端口，需要注意的是在游戏模式和不通过SS两个情形下，端口必须是all。
+		主机名称支持中文输入，可以输入也可以不输入，不输入将自动给一个名称。
+		游戏模式V2不支持和其它模式混用，因此游戏模式V2是单独的访问控制界面。
+   - update	节点管理移动到新的标签页，不再使用铅笔图标；
+   - update 	DNS设定不再区分各个模式，不再为每个模式各保留一套设置，而是通用一套配置；
+   - update 	添加更多国内DNS服务器；
+   - add	现在游戏模式和游戏模式v2支持黑白名单设定了，全局模式支持白名单设定；
+   - update 	黑白名单设定也不再区分模式，通用一套设置；
+   - update 	规则管理从固件功能搬家到新标签页，方便更直观的管理；
+   - update 	日志功能也搬家到新标签页；
+   - update 	添加节点时，节点列表自动拉动到最后以显示最新添加的一个，退出添加面板后节点列表自动拉动到最前；
+   - update 	更新shadowsocks-libev为最新2.6.1版本。
+   		需要说明的是，在ss-libev 2.6.0版本中（ss 1.3.5）集成的混淆功能被移除了主程序，现在启用ss-libev的混淆，是通过simple-obfs插件(--plugin)的形式；
+   		在服务器端，需要自行编译simple-obfs，然后通过命令ss-server -c config.json --plugin obfs-server --plugin-opts "obfs=http"ss-server会自动启动obfs-server作为混淆服务器；
+   		在客户端，merlin的SS插件已经集成了simple-obfs，当你启用混淆的时候，会自动启用启动obfs-local程序，作为混淆客户端；
+   		和kcptun的类似：ss-server --- kcptun server ---------- kcptun client --- ss-redir/ss-local/；
+   		simple-obfs有：ss-server --- obfs-server ---------- obfs-local --- ss-redir/ss-local；
+   		启用kcptun的情况下，SS插件将不允许设置ss-libev混淆；担心数据经过多层后效率下降；
+   		启用ss-libev混淆的情况下，SS插件将不允许设置kcptun协议，担心数据经过多层后效率下降。
+
+3.1.5
+   - add	功能：现在ping测试和webtest测试支持对单个ss节点进行测试;
+   - add	功能：添加移除ping测试和webtest测试结果按钮;
+   - add	功能：ss-local（socks5）添加混淆支持;
+   - update	程序：更新shadowsocks-libev到2.6.0最新代码;
+   - update	界面：移除ss和socks5的显示密码勾选框，现在鼠点击即可显示;
+   - update 	规则：更新最新的gfwlist.acl和chnroute.acl名单；
+   - fix	界面：修复webtest测试不支持带混淆的ss-libev节点的问题;;
+   - fix	脚本：修复socks5修复错误加载acl命令;
+   - fix	界面：修复http_post不支持obfs_param的问题。
+
+3.1.4
+   - update	程序：更新shadowsocks-libev到2.6.0最新版本，支持混淆;
+   - update	程序：更新shadowsocksr-libev为最新版本;
+   - update	程序：更新haproxy为1.7.1正式版本;
+   - update	程序：更新kcptun程序最新20161222;
+   - update	功能：配合shadowsocks-libev 2.6.0，添加ss-libev功能的混淆功能（需要服务器端支持）;
+   - update	功能：socks5支持acl;
+   - update	规则：同步最新规则，包含gfwlist和chntoute和cdn列表;
+   - update	功能：根据破娃酱建议，ssr-libev去除auth_simple, auth_sha1两个协议插件;
+   - update	功能：去除ssr-libev不支持的random_head混淆协议，添加http_post混淆协议;
+
+3.1.3
+   - update	规则：更新gfwlist规则为最新，优化大量规则，清除一些不必要的规则;
+   - update	规则：更新chnroute规则为最新;
+   - update	功能：socks5页面增加OTA(一次性验证支持);
+   - fix	界面：微调日志进度界面，适应小屏幕;
+   - update	程序：更新shadowsocks-libev为2.5.6最新代码（mbedtls版）;
+   - update 	程序：更新kcptun程序为20161207版本.
+
+3.1.2
+   - fix	scripts：fix chnmode won't work because of a wrong merge from 3.1.1.
+
+3.1.1
+   - update	日志：日志时间打印为中文（来自泽泽酷儿脚本）.
+   - fix	脚本：修复can't fork错误（thanks to泽泽酷儿）.
+   - update	程序：更新Pcap_DNSProxy 到最新的 0.4.8.1,with LibSodium version 1.0.11, libpcap version 1.8.1, OpenSSL 1.0.2h.
+   - update	程序：更新kcptun程序最新20161202.
+   - update 	程序：更新haproxy程序为正式版1.7.0-e59fcdd, released 2016/11/25.
+   - update 	脚本：更新大陆白名单模式的iptables策略，为完全的客户端控制做准备.
+
+3.1.0
+   - fix	web: fix type error of the encrypt method aes-128-ctr aes-192-ctr aes-256-ctr
+   - fix	web: fix the web page width after shadowsocks submit finished.
+
+3.0.9
+   - update	binary: update kcptun client to 20161118;
+   - update	binary: update haproxy to 1.7-dev6-d5d890b, released 2016/11/09
+   - update	binaru: update shadowsocks-libev and shadowsocksr-libev to latest;
+   - update	binary: now shadowsocks-libev and shadowsocksr-libev using mbedtls crypto libary, not openssl;
+   - update	delete encrypt method cast5-cfb des-cfb idea-cfb rc2-cfb and seed-cfb for they are not supported in mbedtls
+		add support for aes-128-ctr aes-192-ctr aes-256-ctr encrypt method.
+
+3.0.8
+   - fix	脚本：修复dncrypt-proxy在gfwlist模式和全局模式中不工作;
+   - update	脚本：更新脚本，提前适配380.63_X7.2固件;
+   - update	程序：更新dnscrypt-proxy 为最新 1.7.0;
+   - update	程序：更新Pcap_DNSProxy 到最新的 0.4.7.8;
+   - update	程序：更新kcptun程序最新20161110;
+   - update 	程序：更新haproxy程序为最新1.7-dev5-608efa1, released 2016/10/25;
+
+3.0.7
+   - fix	界面：修复dnscrypt-proxy列表重复的bug;
+   - fix	界面：修复dnscrypt-proxy在pdnsd中显示节点列表名字和其它地方显示名字不一样的问题;
+   - fix	界面：修复在dns界面，ss节点列表界面关闭ss后，面板不会隐藏的问题;
+   - update	程序：更新kcptun程序最新20161105;
+   - update	界面：禁用密码输入框的表单自动填写;
+   - update 	界面：kcp协议参数输入框自动换行，关闭内容拼写检查;
+   - fix	脚本：修复恢复ss配置导致黑白名单数据乱码，修复json导入导致密码乱码;
+   - fix	脚本：修复负载均衡脚本可能导致生成错误的haproxy配置文件的bug;
+   - update 	界面：移除更新ss后界面自动重启，现在由更新脚本一并重启;
+   - fix	脚本：修复游戏模式下更改dns解析方案后，上游dns不更换的bug;
+   - fix	日志：修复gfwlist模式、游戏模式下pdnsd的日志错误问题;
+   - add	功能：大陆白名单模式的ChinaDNS解析现在可以自己定义国外上游dns了，可以自由选择使用ss-tunnel,
+			dnscrypt-proxy,dns2socks,或者是自己填写直连的国外dns服务器;
+			因为一些值的改变，如果在更新前正在使用chinadns，那么更新自动重启可能会导致chinadns启动失败
+   			需要重新设定ChinaDNS的参数。
+   - update 	功能：考虑到路由器性能，大陆白名单模式下原先全部dns解析方案都做了国内cdn加速，但是这样会对dnsmasq查询造成很大的压力,
+   			而ChinaDNS本身是具有cdn能力的，所以此次更新后，如果选择ChinaDNS作为国外dns，那么将不会使用国内dns去生成cdn列表.
+   
+
+3.0.6  
+   - add	为了彻底解决界面内textaera内值的换行,自定义dnsmasq的兼容性,以及ss密码不支持特殊字符，
+   		此次版本引入了base64加密和解密！
+   		此次更新时，会对ss数据进行一次升级：安装的时候会自动对以下textaera内的值进行base64加密处理：
+   		"ss_basic_password"		当前使用节点的ss密码
+   		"ssconf_basic_password_"	当前节点列表里的ss密码
+   		"ss_basic_black_lan"		局域网控制黑名单
+   		"ss_basic_white_lan"		局域网控制白名单名单
+   		"ss_ipset_black_domain_web" 	gfwlist模式域名黑名单
+   		"ss_ipset_white_domain_web" 	gfwlist模式域名白名单
+   		"ss_ipset_dnsmasq"		gfwlist自定义dnsmasq设置
+   		"ss_ipset_black_ip"		gfwlsit的ip/cidr黑名单
+   		"ss_redchn_isp_website_web" 	大陆白名单模式cdn加速名单
+   		"ss_redchn_dnsmasq"		大陆白名单模式自定义dnsmasq设置
+   		"ss_redchn_wan_white_ip" 	大陆白名单模式ip/cidr白名单
+   		"ss_redchn_wan_white_domain"	大陆白名单模式域名白名单
+   		"ss_redchn_wan_black_ip" 	大陆白名单模式ip/cidr黑名单
+   		"ss_redchn_wan_black_domain"	大陆白名单模式域名黑名单
+   		"ss_game_dnsmasq"		游戏模式自定义dnsmasq设置
+   		"ss_gameV2_dnsmasq"		游戏模式V2自定义dnsmasq设置
+   		以上值均可以通过dbus list key的命令来查看，例如：dbus list ssconf_basic_password_
+		如果以上值出现乱码，可以用dbus remove key命令来删除，例如：dbus remove ss_redchn_dnsmasq
+   		此版本安装完毕后，会同时在jffs分区根目录生成一份旧配置的备份文件。
+   		情况：
+   		1 升级：	从小于3.0.6的ss		升级到	大于或等于3.0.6的ss	将会升级新配置，备份老配置，正常！
+   		2 升级：	从大于或等3.0.6的ss		升级到	大于或等于3.0.6的ss	不会升级配置（因为已经升级过了），不会备份老配置，正常！
+   		3 降级：	从大于或等3.0.6的ss		降级到	小于3.0.6的ss		将会嗝屁~因为不会降级配置！
+   		4 导入：	将小于3.0.6的ss备份数据	导入到	大于或等于3.0.6的ss	将会升级新配置，不备份老配置（因为你已经备份了喵），正常！
+		5 导入：	将大于或等3.0.6的ss备份数据	导入到	小于于3.0.6的ss	将会嗝屁~因为密码被加密了，值变了!
+		我知道这很绕，但是还是有必要说清楚，总之一直往新的升级是不会出问题的~
+   - update	更新shadowsocks-libev程序为最新2.5.6 release;
+   - update	更新kcptun程序为最新20161102;
+   - add	游戏模式下增加对MSS: Maxitum Segment Size 最大分段大小的调整（效果待观察）;
+   - fix	修复一些可能会造成误解的文字上的错误.
+
+3.0.5	
+   - fix	修复全局模式dns选择udp转发方式时日志报错；
+   - fix	修复stop.sh中关闭ssr-local进程报错；
+   - fix	修复触发脚本错误；
+   - update	更新日志打印，分割行不再提行（强迫症伤不起）；
+   - update	完善附加游戏模式v2和全局模式日志中文显示；
+   - update	完善游戏模式/V2启动前对QOS模式的检测，并给出冲突警告（注意：如果启用了"传统带宽管理",游戏模式和游戏模式V2国内将不能正常工作）；
+   - update	隐藏提交时日志打印firefox显示滚动条的问题，暂时不能滚动，如果需要查看完整日志，请在提交完毕后进入日志查看；
+   - fix	修复选择dnscrypt-proxy的dns节点提交后，配置显示不正确的问题；
+   - update	更新最新的dnscrypt-resolvers.csv文件，更多新的dns节点选择（79个）；
+   - update	现在web中显示电脑上dnscrypt-resolvers.csv中的节点的full name，方便识别；（如果你更新前使用原先的节点，更新后需要重新选择一次！）
+   - update	chinadns的国内dns选择中增加百度，cnnic，dnspod dns，和国内dns保持一致；
+   - update	同步kcptun客户端client_linux_arm5到20161025版本，请更新对应服务器端版本。
+
+3.0.4
+   - fix	修复更新后页面不刷新问题；现在更新ss，更新规则，清除配置，恢复配置后都会刷新页面，提交ss，dns，黑白名单，附加功能不会刷新页面；
+   - fix	修复更新时当出现wget下载进度的时候，前面的日志被后面的日志覆盖的问题；
+   - update	添加移除配置，恢复配置的中文日志显示；
+   - update	添加负载均衡的中文日志显示；
+   - update	现在更新插件，更新规则，移除配置，恢复配置日志不再跳转到日志界面，而是直接打印在进度页面；
+   - fix	修复负载均衡模式开机不启动的问题；
+   - fix	修复规则更新后不会重启ss的bug；
+   - update	更改ss启动前触发脚本启动时机，现在触发发生在stop.sh后，start.sh前，更加合理；
+   - update	添加负载均衡节点的dns解析功能，另外如果解析不成功将由haproxy自己解析，同时haproxy也配置了dnspod dns和114dns来进行解析；
+   - update	更新shadowsocksr-libev最最新代码编译
+   - update	更新安装脚本，当准备开始安装的时候，会关闭ss，安装成功后自动开启；
+   - update	集成最新gfwlist和chnroute规则文件;
+
+3.0.3	 	
+   - fix	脚本：修复解析ip地址时对ipv6地址判断为域名的bug;
+   - fix	脚本：修复负载均衡模式下，关闭ss不会关闭haproxy进程的问题;
+   - update	负载均衡页面增加节点属性：负载均衡，主用节点，备用节点
+		如果你不希望负载均衡属性下数据包走所有的节点，而是希望每次只用一个节点，
+   		并且有一个或者多个服务器能作为故障转移节点的话，建议设置一个节点为主用节点，
+   		设置一个或者多个节点为备用节点，这样再主用节点出问题后，会自动无缝的切换到备用节点。
+   		情景：
+   		负载均衡节点和主用节点其实是等价的，只是为了对节点用途逻辑加以区分，给了不通命名，所以
+   		1 在主备模式下有：
+   		  "m个负载均衡+n个备用节点" 和 "m个主用节点+n个备用节点"，两者完全等效（m=1 ; n≥1），
+   		  说明：数据从单个节点（主用节点）进出，主用节点挂了后，会启动第一个备用节点，如果第一个备用节点也挂了且主用节点没有恢复，
+   		  则会依次启用第二个备用节点，备用节点启用后数据从单个节点（备用节点）进出
+   		2 在负载均衡模式下有：
+   		  "m个负载均衡" 和 "m个主用节点"，两者完全等效（m≥2 ; n≥2），
+   		  说明：典型的负载均衡，没有主用备用之分，数据会从全部节点进出，有木桶效应
+   		3 在负载均衡+备用节点模式下有：
+   		  "m个负载均衡+n个备用节点" 和 "m个主用节点+n个备用节点"，两者完全等效（m≥2 ; n≥1），
+   		  说明：数据会从全部节点进出，有木桶效应，此情景下只有'负载均衡/主用节点'全部挂了后,会启动第一个备用节点，
+   		  如果第一个备用节点也挂了且主用节点没有恢复，则会依次启用第二个备用节点，备用节点启用后数据从单个节点（备用节点）进出
+
+3.0.2	 	
+   - fix	界面：修复清空配置和恢复配置
+
+3.0.1
+   - fix	脚本：修复对域名和ip格式判断的错误，现在ip格式的服务器地址不会再走解析了;
+   - fix	脚本：修复haproxy启动权限问题
+   - update	界面：现在负载均衡控制台默认使用路由器登录帐号和密码
+
+3.0.0
+   - update	程序：更新shadowsocks-libev到2.5.5 release;
+   - update	程序：更新shadowsocksR-libev到最新:"free mem";
+   - update	界面：添加SSR支持auth_aes128_md5及auth_aes128_sha1协议;
+   - add	脚本：添加ss启动前触发脚本,用于选在负载均衡节点时，在ss启动前自动启动haproxy;
+   - add	功能：添加负载均衡设置页面：为了尽量不改变现有ss的逻辑，负载均衡功能采用外挂的形式添加进ss插件
+   		ss插件本身只添加了启动前触发脚本，而其它全部靠负载均衡页面本身；
+   		使用情境：
+   		1 我有多个节点，但是某些节点总是不稳定，我将这些节点配置成负载均衡节点，速度最快的给最大的权重，设置好故障心跳检测，这样即使其中某些节点挂了，照样能无缝使用；
+   		2 我有vps，ss开了多个端口，可以将这些端口的ss做负载均衡；
+   		3 我想叠加速度，这个本人测试下来貌似并不明显.
+   		使用逻辑（需要了解的请仔细研读）
+   		1 正在使用普通ss节点，此时配置负载均衡页面，会自动增加一个负载均衡节点（ss节点列表），生成haproxy的配置文件，启动haproxy，不影响正在运行的普通ss节点运行;
+   		2 正在使用负载均衡节点，此时配置负载均衡页面，会覆盖当前负载均衡节点（ss节点列表），重新生成haproxy的配置文件，启动haproxy，正在运行的负载均衡节点可能会pd后恢复;
+   		3 负载均衡页面开关关闭，在ss主界面提交普通节点，不会运行启动前触发脚本，和3.0.0版本前一样;
+   		4 负载均衡页面开关关闭，在ss主界面提交负载均衡节点，不会运行启动前触发脚本，haprxoy不会启动，所以必然PD;
+   		5 负载均衡页面开关开启，在ss主界面提交普通节点，会运行启动前触发脚本，该脚本判断没有启动负载均衡节点，跳过触发操作，接下来和3.0.0前一样;
+   		6 负载均衡页面开关开启，在ss主界面提交负载均衡节点，会运行启动前触发脚本，该脚本判断启动是负载均衡节点，进行触发操作：生成haproxy配置，启动haproxy，接下来和3.0.0前一样.
+   		总结：
+   		1 对于不使用负载均衡的朋友来讲，和以前是一模一样的;
+   		2 对于使用开启负载均衡的朋友来讲，多了个ss启动前触发脚本的判断，剩下的也和以前一模一样;
+		使用注意：
+		1 负载均衡下不支持udp转发：不能使用游戏模式，不能使用ss-tunnel作为国外dns方案;
+		2 负载均衡需要默认给每个节点50的权重，如果所有负载的节点使用一样的权重，ss速度会受木桶效应：取决于最慢的那个节点;
+		3 为了最小化路由的负载，目前只支持相同加密方式、密码(ss)/相同相同加密方式、密码、协议、混淆插件（SSR）的节点，这样路由器上只需要开一个ss-redir;
+		4 负载均衡设置可选故障检测心跳，但是这会每隔一段时间发送检测包，可能对ss服务器造成负担，也可能为gfw带来检测特征，不设置故障检测心跳一样能使用，不过在某个节点挂掉后，需要在连接时才能进行故障.
+   				
+
+2.9.9
+   - 说明	因为软件中心不断壮大，ss的参数也越来越多，导致最近提交dbus传递参数到skipd的过程中可能导致httpd进程死掉，
+   		为了解决这个问题，我们正在做两方面的努力，1:是修复skipd和httpd接口的bug，不过这个修复需要下次固件才能看到，
+   		2:是在ss中努力，尽量避免skipd的bug，虽然2.9.6中已经做了尝试，但是还远远不够！因此，此次更新很大的工作都是为了减少httpd无故死掉。
+   - update	界面+脚本：状态检测的值不再使用dbus，因为这会导致skipd数据库读取频繁，采用nvram值来进行储存
+   - update	现在ss的每个标签页提交只传递本标签页相关的值到skipd，大量减少了skipd的写入。
+   - update 	2.0以前为了保证ss加载成功，给了足够富余的时间，保证脚本运行完，进度条才结束，但是带来的问题就是给人的感觉ss加载很慢，
+   		但是有些性能较好的机器，早早的就运行完了脚本，却还得忍受读取进度条，实在是浪费性能；所以在2.0以后我们改小了时间，但是滞后了ss状态的更新，
+   		保证了即使脚本未运行完，进入主界面后也不会带来dns污染，但是带来的问题就是在脚本运行的时候，dbus数据写入的同时，进入主界面，web请求了大量的dbus值，
+   		这种边写边读的情况造成了httpd几率性死掉的问题！
+		所以此次版本，为了保证在脚本运行完后，再进入ss主界面，避免写入dbus值的时候同时又读取动作，此次更新重做了加载页面，将日志显示到加载页面中，
+		判断当脚本运行完毕后才给出返回到主界面的按钮。
+   - update 	因为现在日志可以再提交的时候显示了，故而对日志的显示进行了优化，全部改为中文显示！
+   - update 	界面：考虑到强迫症的感受，在主界面中去掉了ss服务器解析失败后的警告显示，移动到了附加功能，现在用户能自由选择如何对ss服务器进行解析。
+   		详细情况请阅读-附加功能-SS服务器地址解析-查看说明；同时将resolveip解析ss服务器域名解析超时时间2s→4s，保证解析成功率；
+   - fix	其它一些小变化记不清楚了！
+
+2.9.8
+   - add	界面：添加https支持，现在https模式下也能获取更新版本信息了；
+   - add	界面：现在如果服务器处填写域名，如果解析不正确将会有提示；
+   - update	脚本：更换ss服务器解析：因为nslookup方式可能导致卡脚本，现更换为resolveip方式；
+   - update	脚本：更换ss状态清空方式；
+   - update	脚本：删除一些iptables不必要的RETURN项目，添加100.64.0.0/10(常见于移动私网)。
+
+2.9.7
+   - update	程序：升级shadowsocks-libev到2.5.4 release；
+   - update	程序：升级kcptun程序到到20161009版本，请自行更新服务器端版本；
+   - update	脚本：为kcptun添加GOGC=40，以限制内存占用。
+
+2.9.6
+   - fix	界面：修复从2.0版本以来web提交导致httpd进程死掉，导致路由器管理页面不能访问的bug(finally!);
+   - fix	脚本：修复使用了kcp通道后，ss-tunnel，chinadns不能使用的问题（ss-tunnel数据仍然走ss通道，tcp数据走kcp通道）;
+   - fix	界面：修复ss更新后自动重启界面超时（此次更新后，下次更新才能体现出来）;
+   - fix	脚本：修复X7.1固件webtest失效的bug;
+   - update	界面：优化ss状态检测代码，ss开启状态下进入ss页面能更快显示出状态;
+
+2.9.5
+   - add	添加kcp协议支持，现在能用kcp协议作为通道，为ss/ssr加速了；
+   		服务器端搭建参考https://github.com/shadowsocks/shadowsocks-libev#shadowsocks-over-kcp
+   		服务端和客户端使用原版：https://github.com/xtaci/kcptun/releases
+   		2.9.5集成的是20160922版本的kcptun
+
+2.9.4
+   - fix	界面：修复当用户Enable JFFS custom scripts and configs未开启时开关关闭，没有信息提示;
+   - fix	界面：修复当初次使用时，在主界面输入节点（不是在节点页面输入节点）点击提交后，ss没有启动的bug;
+   - fix	脚本：修复ss规则自动更新定时脚本运行一个不存在的脚本的bug.
+
+2.9.3
+   - fix	fix ss rule update bug
+
+
+2.9.2
+   - update	因为X7.1固件瘦身计划，ss不再集成于固件内，固件内去除了相关的一些软件，而2.9.1及其以下的ss安装包内没有相关软件，导致了一些问题，
+   		因此将缺少的pdnsd，dnscrypt-proxy，chinadns打包进安装包。
+   		如果你使用X7.1固件，在2.9.1的基础上回滚了ss，那么也会面临到缺少以上软件的问题，如果还是需要回滚，那么我建议先升级到最新版本，再进行回滚。
+  
+
+2.9.1
+   - update	更改软件中心后台图标koolsocks为shadowsocks，为下次固件做准备。
+
+2.9.0
+   - update	remove auth_sha1_v3 option in web
+
+2.8.9
+   - update	update shadowsocks-libev binary to 2.5.3 release
+   - update	update shadowsocksR-libev binary to latest (support auth_sha1_v3 and auth_sha1_v4 protocol)
+   - update	add support for auth_sha1_v3 and auth_sha1_v4 protocol in web
+
+2.8.8
+   - fix	fix bug in pdnsd tcp only mode
+   - fix	completely remove obfs parameter tls1.0_session_auth, tls_simple and protocol verify_deflate from options
+
+2.8.7
+   - fix	修复黑白名单输入框不能分行显示的bug.
+
+2.8.6
+		This is a minor fix version, which is designed to put into the coming firmware
+		In the next firmware shadowsocks in merlin is default installed in software center,
+		you can access shadowsocks main page both in software center and sidebar.
+		softer center 1.1.3 is recommend.
+   - fix	fix displacement of the ss main page;
+   - fix	fix udp tunnel in gameV2 won't show some times;
+   - fix	fix version show undefined when dbus value not obtain;
+   - add	add back port to software center
+
+2.8.5
+     建议	建议从2.0以下版本的升级上来的朋友，都使用清空配置清除一次所有配置，然后全部重新手动配置，配置完后再保存一份新的用于以后的恢复。
+   - fix 	修复模式说明中标题错误；
+   - fix	修复关闭SS可能导致的skipd服务死掉的问题;
+   - add	增加侧边栏入口开关，此开关仅针对固件版本6.6.1（不包括6.6.1）以上的固件有效;
+   - add	重新添加清空配置按钮，优化清除配置按钮，现在清除配置不会和dbus ram冲突了;
+   - update	优化恢复配置功能:现在恢复配置不会恢复SS状态信息，版本信息，ping信息和webtest信息了；
+   - update	弃用大陆白名单模式ss-local+ss-reidr的流量转发方式，仅采用ss-redir，ss-local会和gfwlist模式一样，在dns2socks开启的时候开启；
+   		原先的使用redsocks2将ss-local的socks5端口转换为透明端口的方式，消耗了过多的系统资源，故而最终考虑去除此方案；
+   		以后可能推出单独基于redsocks2的智能模式（无需任何规则名单，自动判断是否被Q）。
+
+2.8.4
+   - remove	去除原先的说明文档和模式简介;
+   - add	添加新的说明文档。
+
+2.8.3
+   - fix	修复全局模式选择全局http(s),实际不走ss的bug；
+   - fix	修复点击提交是，数据被提交两次，导致dbus传输数据过多可能死掉的bug；
+   - fix	修复点击shadowsocks规则点击立即更新出现javascript错误的问题；
+   - fix	修复更新时可能卡在正在更新而不刷新日志的bug；
+   - fix	修复在主界面编辑游戏模式udp通道值不能被储存的问题。
+
+2.8.2
+   - fix	fix ss web won't restart after update success
+
+2.8.1
+    说明	此次更新全部为前端更新，不涉及后台脚本与逻辑.
+   - fix	修复点击黑科技按钮节点名变成undefined；
+   - fix	修复从日志返回后主设置界面按钮变成应用附加功能设置的bug；
+   - fix	修复ping测试和webtest测试完成后，节点列表仍然在刷新的问题；
+   - fix	节点添加窗口上移以适应小屏幕；
+   - update	现在添加节点超出窗口后会自动滚动到最后一个节点。
+
+2.8
+   - fix	修复更新完毕后，实际是重启的附加功能，而不是整个ss服务;
+   - fix	(回滚)使用dbus ram 写入状态数据，减少jffs写入量;
+   - fix	修复gfwlist模式下显示了cdn名单数量的bug;
+   - fix	修复新增加的节点，马上点击应用，不会选择则点的问题;
+   - fix	修复一个可能导致skipd死掉的问题;;
+   - fix	修复系统日志每隔5秒显示sync tick的问题;
+   - fix	修复当有自定义名单的时候，点击更新规则按钮，网页js代码错误，界面配置丢失的问题;
+   - fix	修复详细说明文字在Firefox中的错位未问题;
+   - update	同步shadowsocks-libev最新代码;
+   - update	优化节点为域名时的DNS解析（待观察，仍然建议使用IP地址）;
+   - update	更改chromecast支持功能为默认开启;
+   - update	规则更新采用中文日志;
+   - update	去掉版本号旁更新状态显示（因为现在有更好的日志显示了）.
+
+2.7 
+   - fix	修复可能导致skipd停止运行的bug，此bug可能导致页面无响应，web无妨访问（待观察）;
+   - fix	修复ss关闭状态下，显示简要说明的问题;
+   - fix	修复节点列表高度刷新问题;
+   - fix	修复点击apply按钮，实际不会填写的问题;
+   - fix	修复更新失败后，更新按钮消失的问题;
+   - update	修复日志显示有时不刷新的问题;
+   - update	更新时显示中文说明;
+   - update	更新功能检测在线版本超时更改为5秒.  
+
+2.6 
+   - fix	fix back science bottom changs layout of ping function aera
+   - fix	fix change ss node and apply won't work
+   - fix	fix dnscrypt-proxy options
+
+2.5 
+   - 说明	此版本更新全是web前端更改。
+   - fix	修复大陆白名单模式添加添加域名黑白名单后变成全局的bug；
+   - fix	修复更新后SS规则后不能自动重启的bug；
+   - fix	修复可能导致浏览器卡顿的bug；
+   - fix	修复编辑节点功能，模式显示不正确的bug；
+   - fix	修复删除节点功能不会删除掉ping和web test信息；
+   - fix	修复Firefox浏览器下，节点页面混乱的问题；
+   - fix	修复模式说明框不会跟随模式变化的问题；
+   - fix	修复，日志文本框，黑白名单输入框等输入内容后不能缩放大小的问题；
+   - fix	修复在非主界面点击更新时，界面错乱的问题；
+   - add	完善黑科技按钮；
+   - update	ping测试和web test测试改为写入数据到内存
+   - del	移除取消浮动功能；
+
+2.4
+   - fix	fix ss node page get really slow after adding sonme ss node;
+   - fix	fix the height of the ss node table when note add pannel in static position;
+   - fix	fix the ss node table banner showd on main page when ss disabled;
+   - fix	fix a wrong log print in game mode.
+
+2.3
+   软件中心内图标更新内容：
+   - update 单独更新ssconfig文件，给2.0-2.2版本的用户提前更新主服务器替换为github;
+
+   shadowsocks页面内更新按钮更新内容：
+   - fix	修复gfwlist模式自定义dnsmasq和黑白名单冲突的问题；
+   - fix	修复safari浏览器中,节点添加窗口中，ss模式重复显示的问题；
+   - update	更新shadowsocksR-libev为最新（修复auth_sha1_v2问题版本）；
+   - update	为了避免添加节点时界面覆盖，添加节点面本新增取消浮动勾选项；
+   - update	为了方便批量添加同端口，密码，加密方式的节点，新增连续添加勾选项；
+   - update	为了方便多节点用户管理页面，现在节点默认显示13个，其余节点需要滚动或者拖拽表格查看；
+   - update 现在正在使用的节点会显示在节点列表中;
+   - update 各个模式的启动时间加快25%（其实就是5秒变4秒）;
+   - update 内置更新主服务器替换为github;
+   - add	新增各个模式的简单说明窗口和详细说明展开按钮（内部文字还需进一步完善）;
+   - known issue pdnsd几率性的启动不起来，暂时无法解决。
+   
+2.2
+   - fix	Forget about the new png files in 2.1, let's go to 2.2 and fix it~
+
+2.1
+   - 说明	此版本重在更新节点增加，编辑，删除的交互，除了游戏模式的一个小bug有过一行后台脚本的改动，其余全部是前端改动。
+   - update	重写节点管理页面，移除节点页面的密码一栏，添加每个节点使用的模式，并显示相应logo；
+   - add	新增全新的节点添加弹出窗口，现在能单独添加SS,SSR，koolgame节点，互不影响；
+   - add	新增节点编辑功能；
+   - add	节点界面中新增Apply按钮，点击按钮能迅速将节点信息填入主面板，为了在节点面板中区分节点类型，特别用不同颜色标识了不同类型节点；
+   - update 	ping测试和web测试，移动到节点页面下方，功能不变；
+   - update 	去除清楚配置按钮（自己手贱不小心点到了一次，怀恨在心）,节点导出和恢复功能保持不变；
+   - fix	修复游戏模式自定义dnsmasq功能无效。
+
+2.0
+   - 说明	此为大版本更新，老版本只有先升级到1.5.7，才能升级到2.0及以上版本。
+   - update	UI全面更新，把原先每个模式对应的单独设置页面集中到一个页面，并用tab切换账号信息，DNS设置，黑白名单设置，附加设置；
+   - add	根据UI的交互逻辑，设计每个tab对应的功能可以单独重启，这样不需要重启整个服务，就能快速应用DNS更改，黑白名单更改等；
+   - update	全面优化大陆白名单模式，游戏模式，游戏模式V2切换或者启用的等待时间，原先需要25秒，现在仅需要5秒，是的，就是这么快；
+   - update	为了保证状态检测的准确性，现在在进入shadowsocks主页面后不会立即进行状态检测，而是会等待5秒才进行检测，休息一下；
+   - remove	因为现在kcptun已经在软件中心独立出来并单独进行维护，所以去掉了kcptun模式，未来可能会进一步将游戏模式V2独立出来；
+   - fix	原先的日志，经常不能自动刷新信息，现在移动到附加功能标签，并且修复了实时显示，方便大家查看，未来会进一步丰富日志信息；
+   - add	gfwlist模式增加IP/CIDR黑名单支持，可以方便的添加一些没有域名，但是ip或者ip段被墙的服务，比如telegram等软件；
+   - update 	修改大陆白名单IP白名单逻辑，用ipset+iptables对不需要走ss的ip或者cidr地址段进行流量操作；
+   - update	局域网黑白名单改用大输入框，方便添加更多的局域网IP地址；
+   - fix	修复了一个输入黑白名单后可能会导致网页崩溃，看起来像丢失了配置一样的bug，多年老bug;
+   - remove	为了让网页更小更好加载，去掉了各个模式的说明，各个DNS软件的说明，反正没人看，去掉就去掉了吧;
+   - update	chromecast功能更新，去除仅对lan网段53端口劫持的限制.
+
+1.5.7 
+   - 说明	为了ss下个大版本更新，也为了更加契合软件中心，ss在此版本首先增加软件中心入口，然后下次固件更新会提供侧边栏入口开关。
+   		以后的ss维护都将转入acelan_softcenter_ui分支，这样的好处一是便于维护人员维护，二是可以利用软件中心的国内中转，
+   		来进行ss的更新，避免各种问题
+		以后master分支将冻结，仅留下1.5.7版本（不出意外的话），作为过渡。
+		同时欢迎大家到telegram群讨论：https://telegram.me/joinchat/DCq55kC7pgWKX9J4cJ4dJw
+		
+   - add	新增软件中心入口，更新1.5.7版本会自动安装软件中心入口，不更新1.5.7需要在软件中心自行安装；
+   - update 	SS更换到acelan_softcenter_ui分支的软件中心进行维护，1.5.7版本将是过度版本，
+		如果不出意外，1.5.7将是本分支最后一个版本，也就是说：小于1.5.7的版本最高只能更新到1.5.7，
+		要更新到今后2.0以及以上版本，需要先升级1.5.7版本，才能升级更高版本。
+   - update	同时ss规则更新也迁移到acelan_softcenter_ui分支。
+
+1.5.6 
+   - update	update Shadowsocks-libev client to latest (2.4.8)
+   - update	update ShadowsocksR-libev client to latest (2.4.8)
+   - update	fix version show
+
+1.5.6 
+   - update	update Shadowsocks-libev client to latest (2.4.8)
+   - update	update ShadowsocksR-libev client to latest (2.4.8)
+   - update	fix version show
+
+1.5.5
+   - update	update ShadowsocksR-libev client to latest
+   - update	update kcp-tun client to 20160728 version
+   - update	using better server for version check and update download
+   - update	new way and new server for online version check
+
+1.5.4
+		This is a regular maintenance version
+   - update	kcptun fix
+1.5.3
+		This is a regular maintenance version
+   - update	update shadowsocks-libev binary to version 2.4.7
+   - update	update gfwlist.conf and chnroute.txt to latest
+   - fix	fix shadowsocks service won't restart after rule updated
+
+1.5.2
+		常规维护，因时间太少没时间做其它部分。
+   - fix	修复SS界面黑屏的bug，应该修好了吧；
+   - fix	修复ping test和web test在上个版本中不能使用的bug。
+
+1.5.1
+   - changed	更改版本号检测机制为前端检测
+   - add	新增kcptun模式
+
+1.5.0
+   - fix	修复当节点为空时，导入json文件只能导入一个节点的bug
+   - add	新增kcptun模式
+
+1.4.9
+   - change	更新游戏模式V2客户端koolgame为最新
+   - fix	修复节点ping测试和web连通性测试不能保存的bug
+   - add	节点恢复增加对json格式导入的支持
+   		现在用json文件导入，会在已有节点基础上增加，不会覆盖
+   		而用备份文件导入，会和以前一样进行覆盖写入
+   		支持的json必须包含"password", "method", "server_port", "server", "remarks"字段
+   		实际测试用了枫叶主机的json原文件，windows纸飞机客户端的json文件通过，
+   		其它运营商的json文件如果包括以上字段应该也不会有问题
+   		shadowsocks-R的json文件，仅支持导入节点信息，不支持导入混淆信息等
+   		基本格式如下：
+			{
+    			  "password": "xxxxx",
+    			  "method": "rc4-md5",
+    			  "server_port": "65533",
+    			  "remarks": "日本节点",
+    			  "server": "aaa.bbb.com"
+    			},
+    			 {
+    			  "password": "xxxxx",
+    			  "method": "rc4-md5",
+    			  "server_port": "65533",
+    			  "remarks": "美国节点",
+    			  "server": "aaa.bbb.com"
+    			},
+
+1.4.8
+   - change	shadowsocks-libev客户端回滚到2.4.5（1.4.4版本内置的版本）
+   		因为1.4.6， 1.4.7的锅太多，我已经伤心，决定回滚到1.4.5，吃掉1.4.6， 1.4.7
+   		再往下更新，这次1.4.8版本回滚shadowsocks-libev到2.4.5主要是因为很多游戏玩家反映的联机问题
+
+1.4.7
+   - fix	被吃掉了
+
+1.4.6
+   - fix	被吃掉了
+
+1.4.5
+   - change	更新shadowsocks-libev客户端到2.4.6
+   - change	更新shadowsocks-libev-ssr客户端为最新，支持tls1.2_ticket_auth自定义参数(不支持多个域名)
+   - fix	增加ssr中http_simple的自定义参数
+   - fix	增加socks5页面的chacha20-ietf加密方式
+
+1.4.5
+   - change	更新shadowsocks-libev客户端到2.4.6
+   - change	更新shadowsocks-libev-ssr客户端为最新，支持tls1.2_ticket_auth自定义参数(不支持多个域名)
+   - fix	增加ssr中http_simple的自定义参数
+   - fix	增加socks5页面的chacha20-ietf加密方式
+
+1.4.4
+   - fix	修复一些笔误
+
+1.4.3
+   - fix	修复gfwlist内，PcapDNSProxy可能不显示的bug
+   - add	更新ssr客户端为最新，支持tls1.2_ticket_auth
+
+1.4.2
+   - 说明	此次更新仅为ss功能个性更新，并不涉及到SS核心部分(ss二进制文件，规则文件，iptables规则)，基本亮点总结为:
+   		1	添加了新的DNS解析软件
+   		2	增加了ss节点的测试功能
+   		3	实用性上增加了未开启jffs分区的自定义脚本的提醒
+   			所以较之1.4.1，稳定性应该不会有区别。
+   - fix	修复pdnsd运行权限问题
+   - add	增加未开启Enable JFFS custom scripts and configs选项提醒
+   - add	增加节点google、youtube连通性测试
+   - add	增加节点ping测试和丢包测试
+   - add	增加游戏模式模式pdnsd解析软件选项
+   - add	增加大陆白名单模式pdnsd解析软件选项
+   - add	增加gfwlist模式pdnsd解析软件选项
+   - fix	修改版本号显示前缀，以区分ARM机型和mipsel机型
+
+1.4.1
+   - fix	修复初始化时gfwlist模式dnscrypt-proxy错误的默认节点
+   - fix	gfwlist模式中选择dnscrypt-proxy节点，实际无效的问题
+   - change	更新游戏模式v2中koolgame客户端为最新.
+
+1.4.0
+   - fix	修复全局模式下dnscrypt-proxy不能启动的问题
+   - fix	修复SS初始化时，错误的dnscrypt-proxy节点设置问题
+   -		
+		最近SS版本更新频繁，但是我还是建议大家选择最新版本的，这次的更新从1.3.8开始
+   		主要是更换了dnscrypt-proxy的解析节点，不过其中导致了一些问题，一直到1.4.0才修复完毕
+   		更新都不涉及到SS主要核心逻辑的修改，理论上讲不会导致稳定性的变化，硬要说变化，可能会影响
+   		使用dnscrypt-proxy作解析的朋友，需要手动重新选择下解析节点。
+
+1.3.9
+   - fix	修复全局模式下DNS解析问题导致的不能出墙
+   - change	更新redsocks2二进制文件到最新版本：release-0.65-55-g2a93e7e
+
+1.3.8
+   - add	为了更好的更新，增加'raw.githubusercontent.com'到output.conf
+   - change	更新dns2socks 2.0
+   - change 	更新dnscrypt-proxy解析文件(更多解析服务器可用)
+   - change 	在线版本检测增加备用服务器
+
+1.3.7
+   - fix	fix rule update botton won't work
+   - fix	fix inner ss rules version and md5sum
+
+1.3.6
+   - fix	去除大陆白名单模式br0网卡限制
+   - update	更新ss和ssr二进制文件为最新源码编译
+   - update	更新内置的gfwlist，chnroute，cnd规则文件为最新
+
+1.3.5
+   - fix	fix a type error!
+
+1.3.4
+   - fix	更新了gfwlist模式内/jffs/configs/dnsmasq.conf.add文件夹配置，
+   		现在固件版本小于6.5.1的,该配置由start.sh生成，大于或者等于6.5.1
+   		改配置由dnsmasq默认提供。
+   		更新此版本ss，能解决6.5.1最新测试固件除了gfwlist模式外其它模式不能使用的问题；
+   		需要注意的是，如果你使用的是6.5.1前几个版本的测试固件（beta1-3），gfwlist模式可能会出现问题，
+   		6.5及之前版本和6.5.1beta4及其以后版本正常。
+
+1.3.3 ( 25/03/2016 08:28:20 )
+   - fix	修复游戏模式V2可能出现的日志错误
+   - fix	修复游戏模式V2中，koolgame启动两次的错误
+   - add	为了保证提交后第一时间看到正确的SS状态，现在切换模式后，
+   		上一个SS状态会被清除，重新进入页面后，下一个状态会等到刷新时间后才更新。
+
+1.3.2 ( 22/03/2016 16:29:41 )
+   - fix	修复切换全局模式后显示游戏模式V2的问题
+
+1.3.1 ( 22/03/2016 11:16:38 )
+   - fix	修复全局模式下，高级设置页面显示游戏模式v2界面的问题
+
+1.3.0 ( 21/03/2016 15:32:09 )
+   - fix	now ss mode can be rememberd
+		我编不下去了，我还是用中文吧！
+		修复了一个ss模式不能存储的问题，现在切换节点，会自动切换到上次该节点使用的模式。
+		初次更新本版本，可能会导致模式选择一栏为空，不要惊慌，选择一个节点，点击提交就好了
+		以后就会记住这个模式
+   - fix	修复了脚本里的一些手写错误
+   - fix	修复了关闭ss不触发onssstart脚本问题（以更好兼容ADM）
+   - fix	修复textarea的水印文字说明的浏览器兼容问题
+   - fix	修复大陆白名单模式自定义dnsmasq页面错乱问题
+   - add	增加了游戏模式V2，游戏模式V2使用小宝开发的程序koolgame，需要配合同是小宝开发的game-server
+		服务器端 http://koolshare.cn/thread-37086-1-1.html
+   - change	所有模式里的address功能改为dnsmasq自定义	
+   - del	去除了ss自带的去广告功能，因为此功能可能会导致dnsmasq不能正常启动，而使路由器失去dns解析能力
+		
+1.2.9 ( 03/03/2016 23:00:09 )
+   - fix	revert shadowsocks-ssr binary to 1.2.5
+
+1.2.8 ( 03/03/2016 22:32:37 )
+   - fix	revert shadowsocks-ssr binary to previous version
+
+1.2.7 ( 03/03/2016 19:31:01 )
+   - update	update shadowsocks-ssr to latest;
+   - update	update PcapDNSproxy to latest
+   - add	add black domain control in CHN mode
+   - add	add white doamin control in CHN mode
+   - add	add dnsmasq conf customize in CHN mode
+   - changed	changed the tile of ip doamin (now black ip go through ss, 
+		white ip go directly)
+     		By update this version 1.2.7, your old balck ip and white ip setting will lost,
+		you can find it back by backup ss conf (in ss node definition page), the old walue 
+		is "ss_redchn_wan_blacklist" (now "ss_redchn_wan_white_ip") and "ss_redchn_wan_whitelist" 
+		(now "ss_redchn_wan_black_ip")
+
+1.2.6 ( 29/02/2016 16:03:25 )
+   - fix	fix typo in ss update module (no ss code change)
+
+1.2.5 ( 26/02/2016 16:01:44 )
+   - fix	delete softerware center component in ss update (no ss code change)
+
+1.2.4 ( 26/02/2016 15:00:06 )
+   - fix	fix a wrong variable in gfwlist mode
+   - update	update inner ss rule to newest
+
+1.2.3 ( 13/02/2016 17:28:41 )
+   - fix	fix lan comtrol won't work in gfwlist mode
+
+1.2.2 ( 09/02/2016 18:24:10 )
+   - add	add chacha20-ietf encryption method in ss node window.
+
+1.2.1 ( 06/02/2016 20:22:20 )
+   - add	add chacha20-ietf encryption method.
+
+1.2.0 ( 05/02/2016 09:23:15 )
+   - fix	fix ss overall mode woking only in router.
+
+1.1.9 ( 03/02/2016 17:57:18 )
+   - changed	update shadowsocks-libev binary to newest 2.4.5
+
+1.1.8 ( 01/02/2016 07:24:26 )
+   - add	now ss use at most 8192 connections
+
+1.1.7 ( 31/01/2016 13:39:50 )
+   - fix	fix lan black list don't work in gfw list mode, yes, again!
+
+1.1.6 ( 31/01/2016 10:51:31 )
+   - fix	fix lan black list don't work in gfw list mode
+
+1.1.5 ( 31/01/2016 04:25:06 )
+   - CHANGE	update inner ss rule list to newest.
+
+1.1.4 ( 30/01/2016 06:51:59 )
+   - fix	fix wrong process detect
+   - fix	fix ss CHN mode wan balck list and wan white list doesn't work.
+
+1.1.3 ( 30/01/2016 05:18:19 )
+   - fix	prevent ss version check run multiple times
+
+1.1.2 ( 30/01/2016 04:18:11 )
+   - fix	fix typo cause ss restart when enter ss main page
+
+1.1.1 ( 30/01/2016 04:00:27 )
+   - fix	update ss-libev binary to newest
+
+1.1.0 ( 30/01/2016 03:10:19 )
+   - fix	fix version check when entered ss main page
+
+1.0.9 ( 28/01/2016 11:58:28 )
+   - fix	fix ss_status don't update after version check
+
+1.0.8 ( 26/01/2016 10:19:55 )
+   - rss add protocol auth_sha1_v2!
+
+1.0.7 ( 26/01/2016 10:19:55 )
+   - fix:	fix some type error!
+
+1.0.6 ( 24/01/2016 10:36:09 )
+   - fix:	fix ss start up
+
+1.0.5 ( 24/01/2016 10:36:09 )
+   - fix:	fix ss-local/rss-local don't killed
+   - fix:	fix socks5 start error
+   - CHANGE:	ussing raw to update ss
+
+1.0.4 ( 24/01/2016 10:36:09 )
+   - fix:	try to fix md5
+
+1.0.3 ( 24/01/2016 10:36:09 )
+   - fix:	fix update bpttom
+
+1.0.2 ( 24/01/2016 10:36:09 )
+   - fix:	fix dns2socks in CHN mode
+
+1.0.1 ( 24/01/2016 09:56:35 )
+   - fix:	fix ss/socks5 start with system even ss not enabled
+
+1.0.0 ( 23/01/2016 22:03:48 )
+   - fix:	fix socks5 dot't auto start
+   - fix:	add backup update server
+   - fix:	fix ss start with system issue
+   - CHANGE:	change scripts location fir future working
+
+0.9.9 ( 21/01/2016 20:35:28 )
+   - fix:	fix update bottom not show when ss version check failed
+
+0.9.8 ( 21/01/2016 20:35:28 )
+   - FIX:	fix type error may cause ss apply failed after version check failed
+
+0.9.7 ( 21/01/2016 20:14:53 )
+   - CHANGE:	now update bottom will not show when ss not enabled
+
+0.9.6 ( 21/01/2016 10:52:18 )
+   - CHANGE:	change the way of pcapDNSProxy start.
+   - CHANGE:	update inner ss rule list to newest.
+
+0.9.5 ( 20/01/2016 18:39:40 )
+   - FIX:	change absolute path of ssocnfig for after ss rule update success.
+   - FIX:	fix ss stop.sh stop the socks5 in socks5 page.
+
+0.9.4 ( 220/01/2016 16:01:42 )
+   - CHANGE:	change the absolute path of Pcap_DNSProxy
+
+0.9.3 ( 220/01/2016 16:01:42 )
+   - CHANGE:	update Pcap_DNSProxy version to 0.4.5.1
+
+0.9.2 ( 20/01/2016 11:01:01 )
+   - CHANGE:	Using dns2socks as default foreign dns resolver
+   - FIX:	fix early page refresh after ss updated
+
+0.9.1 ( 20/01/2016 10:17:44 )
+   - FIX:	fix word lost when ss conf restore
+
+0.9.0 ( 20/01/2016 09:29:03 )
+   - CHANGE:	detect ss version web everytime ss applied
+
+0.8.9 ( 20/01/2016 09:29:03 )
+   - CHANGE:	update shadowsocks binary
+
+0.8.8 ( 20/01/2016 08:33:03 )
+   - fix:	fix ss state show for china and foreign
+
+0.8.7 ( 20/01/2016 00:49:53 )
+   - fix:	fix loading bar error
+   - fix:	fix ss list update
+
+0.8.6 ( 19/01/2016 21:38:04 )
+   - fix:	do not restore some values for better looking
+
+0.8.5 ( 19/01/2016 15:25:46 )
+   - fix:	fix wrong var
+
+0.8.4 ( 19/01/2016 15:25:46 )
+   - fix:	fix wrong ss state after update
+
+0.8.3 ( 19/01/2016 07:06:37 )
+   - ADD:	add ss conf remove/backup/restore
+   - FIX:	fix lan control don't work
+   - FIX:	using dbus ram to replace nvram for ss_status
+   - FIX:	now slide switch won't save unless apply bottom clicked
+
+0.8.2 ( 18/01/2016 07:06:37 )
+   - FIX:	fix asp format
+
+0.8.1 ( 17/01/2016 06:36:17 )
+   - FIX:	fix software center
+		(software center's update now temporarily rely on ss)
+
+0.8.0 ( 14/01/2016 06:36:17 )
+   - FIX:	fix local version show
+
+0.7.9 ( 14/01/2016 06:26:06 )
+   - ADD:	add some directions in the ost/black list aera
+   - FIX:	complete of move ss conf to dbus
+   - FIX:	fix Main_Ss_Content.asp page layout
+   - FIX:	fix Main_Ss_Content.asp page layout
+   - FIX:	fix add/del ss node
+   - FIX:	fix page crash when add host/black list in ss advanced page
+   - FIX:	fix game mode chinadns not working
+   - CHANGE:	now socks5 page is independent from ss
+
+0.7.8 ( 14/01/2016 06:07:34 )
+   - ADD:	move ss conf to dbus
+   - FIX:	fix ss switch
+
+0.7.7 ( 12/01/2016 13:44:35 )
+   - FIX:	fix ss page layout
+
+0.7.6 ( 12/01/2016 10:45:43)
+   - ADD:	add shadowsocks for Merlin Koolshare firmware Softerware center
