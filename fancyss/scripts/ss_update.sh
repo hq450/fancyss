@@ -68,13 +68,21 @@ update_ss(){
 	if [ "${ss_basic_version_local}" != "${fancyss_version_online}" ];then
 		echo_date "主服务器在线版本号：${fancyss_version_online} 和本地版本号：${ss_basic_version_local} 不同！"
 		cd /tmp
-		fancyss_md5_online=$(cat /tmp/version.json.js | jq -r '${MD5NAME}')
-
+		echo_date MD5NAME $MD5NAME
+		fancyss_md5_online=$(cat /tmp/version.json.js | jq -r .$MD5NAME)
 		echo_date "开启下载进程，从主服务器上下载更新包..."
 		echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
 		wget -4 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
+		if [ "$?" != "0" ];then
+			echo_date "下载失败！请检查你的网络！"
+		fi
+		echo_date "${PACKAGE}.tar.gz 下载成功！"
 		mv ${PACKAGE}.tar.gz shadowsocks.tar.gz
+		fancyss_size_download=$(ls -lh /tmp/shadowsocks.tar.gz |awk '{print $5}')
 		fancyss_md5_download=$(md5sum /tmp/shadowsocks.tar.gz | sed 's/ /\n/g'| sed -n 1p)
+		echo_date "安装包大小：${fancyss_size_download}"
+		echo_date "安装包md5校验值：${fancyss_md5_download}"
+		echo_date "安装包在线md5：${fancyss_md5_online}"
 		if [ "${fancyss_md5_download}" != "${fancyss_md5_online}" ]; then
 			echo_date "更新包md5校验不一致！估计是下载的时候出了什么状况，请等待一会儿再试..."
 			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
@@ -93,7 +101,7 @@ case $2 in
 update)
 	true > /tmp/upload/ss_log.txt
 	http_response "$1"
-	update_ss | tee -a /tmp/upload/ss_log.txt 2>&1
-	echo XU6J03M6 | tee -a /tmp/upload/ss_log.txt
+	update_ss >> /tmp/upload/ss_log.txt 2>&1
+	echo XU6J03M6 >> tee -a /tmp/upload/ss_log.txt
 	;;
 esac
