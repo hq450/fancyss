@@ -14,7 +14,9 @@ sed -i 's/\tdetect_package/\t# detect_package/g' /koolshare/scripts/ks_tar_insta
 
 **提示2：** 如果更新了梅林386改版固件，状态出现双:x:的，请使用离线装功能覆盖安装一次科学上网插件。
 
----
+## 插件特色
+
+
 
 ## 机型/固件支持（表格版）
 

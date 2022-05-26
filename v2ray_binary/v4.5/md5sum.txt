@@ -1,3 +1,0 @@
-d1b2bd69a73bd1b473e9895a88aebe55  v2ctl
-d682c85319f4e9c19eb7df0b95dc1238  v2ray
-3193edcfadeddf90d12f9a3e25878e37  v2ray_armv7

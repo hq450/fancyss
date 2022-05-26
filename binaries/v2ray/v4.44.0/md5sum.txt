@@ -1,0 +1,2 @@
+5d5eeca0750a656576dec7a25cbc9a72  v2ray_armv5
+8f49b131849d2fc7fb711a533a31f49e  v2ray_armv7

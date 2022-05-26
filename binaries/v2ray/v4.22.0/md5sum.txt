@@ -1,0 +1,2 @@
+6cbbedf66073f4af7d22a641452029f1  v2ray_armv5
+d6efced4dc5e0264e2f9ce4cd649dad1  v2ray_armv7
