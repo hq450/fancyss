@@ -285,20 +285,23 @@ __resolve_ip() {
 # ================================= ss stop ===============================
 restore_conf() {
 	echo_date 删除ss相关的名单配置文件.
-	rm -rf /jffs/configs/dnsmasq.d/gfwlist.conf
-	rm -rf /jffs/configs/dnsmasq.d/cdn.conf
-	rm -rf /jffs/configs/dnsmasq.d/custom.conf
-	rm -rf /jffs/configs/dnsmasq.d/wblist.conf
-	rm -rf /jffs/configs/dnsmasq.d/ss_host.conf
-	rm -rf /jffs/configs/dnsmasq.d/ss_server.conf
-	rm -rf /jffs/configs/dnsmasq.conf.add
-	rm -rf /jffs/scripts/dnsmasq.postconf
-	rm -rf /tmp/sscdn.conf
-	rm -rf /tmp/custom.conf
-	rm -rf /tmp/wblist.conf
-	rm -rf /tmp/ss_host.conf
-	rm -rf /tmp/smartdns.conf
-	rm -rf /tmp/gfwlist.txt
+	local isconf=$(find /jffs/configs/dnsmasq.d/ -name "*.conf" 2>/dev/null)
+	if [ -n "${isconf}" -o -f "/jffs/configs/dnsmasq.conf.add" -o -f "/jffs/scripts/dnsmasq.postconf" ]
+		rm -rf /jffs/configs/dnsmasq.d/gfwlist.conf
+		rm -rf /jffs/configs/dnsmasq.d/cdn.conf
+		rm -rf /jffs/configs/dnsmasq.d/custom.conf
+		rm -rf /jffs/configs/dnsmasq.d/wblist.conf
+		rm -rf /jffs/configs/dnsmasq.d/ss_host.conf
+		rm -rf /jffs/configs/dnsmasq.d/ss_server.conf
+		rm -rf /jffs/configs/dnsmasq.conf.add
+		rm -rf /jffs/scripts/dnsmasq.postconf
+		rm -rf /tmp/sscdn.conf
+		rm -rf /tmp/custom.conf
+		rm -rf /tmp/wblist.conf
+		rm -rf /tmp/ss_host.conf
+		rm -rf /tmp/smartdns.conf
+		rm -rf /tmp/gfwlist.txt
+	fi
 }
 
 kill_process() {
@@ -342,9 +345,9 @@ kill_process() {
 		echo_date 关闭ssr-local进程:23456端口...
 		kill $ssrlocal >/dev/null 2>&1
 	fi
-	ssrustlocal=$(ps | grep -w sslocal)
+	ssrustlocal=$(pidof sslocal)
 	if [ -n "$ssrustlocal" ]; then
-		echo_date 关闭sslocal进程:23456端口...
+		echo_date 关闭sslocal进程...
 		kill $ssrustlocal >/dev/null 2>&1
 	fi
 	sstunnel=$(pidof ss-tunnel)
@@ -2980,7 +2983,7 @@ load_tproxy() {
 }
 
 flush_nat() {
-	echo_date 清除iptables规则和ipset...
+	echo_date "清除iptables规则和ipset..."
 	# flush rules and set if any
 	nat_indexs=$(iptables -nvL PREROUTING -t nat | sed 1,2d | sed -n '/SHADOWSOCKS/=' | sort -r)
 	for nat_index in $nat_indexs; do
@@ -3398,8 +3401,6 @@ remove_ss_trigger_job() {
 	if [ -n "$(cru l | grep ss_tri_check)" ]; then
 		echo_date "删除插件触发重启定时任务..."
 		sed -i '/ss_tri_check/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
-	else
-		echo_date "插件触发重启定时任务已经删除..."
 	fi
 }
 
