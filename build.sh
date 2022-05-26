@@ -224,36 +224,13 @@ gen_folder(){
 build_pkg() {
 	local platform=$1
 	local pkgtype=$2
-	rm -f shadowsocks.tar.gz
-	rm -f fancyss_hnd_full.tar.gz
-	rm -f fancyss_qca_full.tar.gz
-	rm -f fancyss_arm_full.tar.gz
-	rm -f fancyss_hnd_lite.tar.gz
-	rm -f fancyss_qca_lite.tar.gz
-	rm -f fancyss_arm_lite.tar.gz
-	
 	# different platform
-	if [ "${platform}" == "hnd" ];then
-		tar -zcvf fancyss_hnd_full.tar.gz shadowsocks
-		md5value=$(md5sum fancyss_hnd_full.tar.gz|tr " " "\n"|sed -n 1p)
-		cat >> ${CURR_PATH}/version.json.js <<-EOF
-			"md5_hnd_${pkgtype}":"${md5value}",
-		EOF
-	fi
-	if [ "${platform}" == "qca" ];then
-		tar -zcvf fancyss_qca_full.tar.gz shadowsocks
-		md5value=$(md5sum fancyss_qca_full.tar.gz|tr " " "\n"|sed -n 1p)
-		cat >> ${CURR_PATH}/version.json.js <<-EOF
-			"md5_qca_${pkgtype}":"${md5value}",
-		EOF
-	fi
-	if [ "${platform}" == "arm" ];then
-		tar -zcvf fancyss_arm_full.tar.gz shadowsocks
-		md5value=$(md5sum fancyss_arm_full.tar.gz|tr " " "\n"|sed -n 1p)
-		cat >> ${CURR_PATH}/version.json.js <<-EOF
-			"md5_arm_${pkgtype}":"${md5value}",
-		EOF
-	fi
+	echo "打包：fancyss_${platform}_${pkgtype}.tar.gz"
+	tar -zcf ${CURR_PATH}/packages/fancyss_${platform}_${pkgtype}.tar.gz shadowsocks >/dev/null
+	md5value=$(md5sum ${CURR_PATH}/packages/fancyss_${platform}_${pkgtype}.tar.gz|tr " " "\n"|sed -n 1p)
+	cat >>${CURR_PATH}/packages/version_tmp.json.js <<-EOF
+		,"md5_${platform}_${pkgtype}":"${md5value}"
+	EOF
 }
 
 do_backup(){
@@ -269,16 +246,21 @@ do_backup(){
 }
 
 papare(){
-	cat > ${CURR_PATH}/version.json.js <<-EOF
-	{
-	"name":"fancyss",
-	"version":"${VERSION}"
-	}
-	EOF
-
+	rm -f ${CURR_PATH}/packages/*
 	cp_rules
 	sync_binary
+	cat >${CURR_PATH}/packages/version_tmp.json.js <<-EOF
+	{
+	"name":"fancyss"
+	,"version":"${VERSION}"
+	EOF
 }
+finish(){
+	echo "}" >>${CURR_PATH}/packages/version_tmp.json.js
+	cat ${CURR_PATH}/packages/version_tmp.json.js | jq . >${CURR_PATH}/packages/version.json.js
+	rm -rf ${CURR_PATH}/packages/version_tmp.json.js
+}
+
 
 pack(){
 	gen_folder $1 $2
@@ -295,6 +277,7 @@ make(){
 	pack qca lite
 	pack arm full
 	pack arm lite
+	finish
 }
 
 

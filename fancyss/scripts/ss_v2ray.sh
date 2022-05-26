@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+# fancyss script for asuswrt/merlin based router with software center
 
 source /koolshare/scripts/base.sh
 eval $(dbus export ss_basic_)

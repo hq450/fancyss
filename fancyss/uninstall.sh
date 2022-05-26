@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# shadowsocks script for HND/AXHND router with kernel 4.1.27/4.1.51 merlin firmware
+# fancyss script for asuswrt/merlin based router with software center
 
 sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
