@@ -1,5 +1,9 @@
 fancyss_hnd Changelog
 ===========================================
+2.0.1
+   - fix	修复全新安装时，安装full版本也显示为lite版本的问题；
+   - fix	修复插件更新的一个问题；
+	
 2.0.0
    - fix	修复节点列表里，节点类型可能显示错误的问题
    - update	全功能版本的离线安装包更名为：fancyss_hnd_full.tar.gz（原名：shadowsocks.tar.gz）

@@ -54,8 +54,8 @@ var ping_result = "";
 var save_flag = "";
 var STATUS_FLAG;
 var refreshRate;
-var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
-var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
+var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
+var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var option_modes = [["1", "gfwlist模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"]];
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305", "plain", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305" ];
 var option_protocals = [ "origin", "verify_simple", "verify_sha1", "auth_sha1", "auth_sha1_v2", "auth_sha1_v4", "auth_aes128_md5", "auth_aes128_sha1", "auth_chain_a", "auth_chain_b", "auth_chain_c", "auth_chain_d", "auth_chain_e", "auth_chain_f" ];
@@ -258,31 +258,36 @@ function refresh_options() {
 				value: field,
 				text: c.use_kcp == "1" ? "【SS+KCP】" + group_tag + c.name : "【SS】" + group_tag + c.name
 			}));
-		}else if(c.type == "1"){
+		}
+		else if(c.type == "1"){
 			//ssr
 			option.append($("<option>", {
 				value: field,
 				text: c.use_kcp == "1" ? "【SSR+KCP】" + group_tag + c.name : "【SSR】" + group_tag + c.name
 			}));
-		}else if(c.type == "2"){
-			//koolgame
-			option.append($("<option>", {
-				value: field,
-				text: c.use_kcp == "1" ? "【koolgame+KCP】" + group_tag + c.name : "【koolgame】" + group_tag + c.name
-			}));
-		}else if(c.type == "3"){
+		}
+		else if(c.type == "2"){																							//fancyss-koolgame
+			//koolgame																									//fancyss-koolgame
+			option.append($("<option>", {																				//fancyss-koolgame
+				value: field,																							//fancyss-koolgame
+				text: c.use_kcp == "1" ? "【koolgame+KCP】" + group_tag + c.name : "【koolgame】" + group_tag + c.name	//fancyss-koolgame
+			}));																										//fancyss-koolgame
+		}																												//fancyss-koolgame
+		else if(c.type == "3"){
 			//v2ray
 			option.append($("<option>", {
 				value: field,
 				text: c.use_kcp == "1" ? "【V2ray+KCP】" + group_tag + c.name : "【V2ray】" + group_tag + c.name
 			}));
-		}else if(c.type == "4"){
+		}
+		else if(c.type == "4"){
 			//xray
 			option.append($("<option>", {
 				value: field,
 				text: c.use_kcp == "1" ? "【Xray+KCP】" + group_tag + c.name : "【Xray】" + group_tag + c.name
 			}));
-		}else if(c.type == "5"){
+		}
+		else if(c.type == "5"){
 			//xray
 			option.append($("<option>", {
 				value: field,
@@ -305,8 +310,8 @@ function save() {
 	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 	// key define
-	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
-	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_disable_aaaa", "ss_basic_mcore"];
+	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadnsng_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
+	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_tcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_disable_aaaa", "ss_basic_mcore"];
 	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
 	var params_no_store = ["ss_base64_links"];
 	var params_base64_b = ["ss_basic_custom"];
@@ -349,7 +354,7 @@ function save() {
 	if (db_ss["ssconf_basic_type_" + node_sel] =="0" ){
 		var params_ssi_1 = ["mode", "server", "port", "method", "ss_obfs_host", "ss_v2ray_opts"];
 		var params_ssi_2 = ["ss_obfs", "ss_v2ray"];
-		var params_ssc_1 = ["use_kcp"];
+		var params_ssc_1 = ["use_kcp"]; //fancyss-full
 		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 		for (var i = 0; i < params_ssi_1.length; i++) {
 			dbus["ssconf_basic_" + params_ssi_1[i] + "_" + node_sel] = E("ss_basic_" + params_ssi_1[i]).value;
@@ -363,33 +368,32 @@ function save() {
 				}
 			}
 		}
-		for (var i = 0; i < params_ssc_1.length; i++) {
-			dbus["ssconf_basic_" + params_ssc_1[i] + "_" + node_sel] = E("ss_basic_" + params_ssc_1[i]).checked ? '1' : '';
-		}
+		for (var i = 0; i < params_ssc_1.length; i++) {																			 //fancyss-full
+			dbus["ssconf_basic_" + params_ssc_1[i] + "_" + node_sel] = E("ss_basic_" + params_ssc_1[i]).checked ? '1' : '';		 //fancyss-full
+		}																														 //fancyss-full
 	}
 	// ssr
 	if (db_ss["ssconf_basic_type_" + node_sel] =="1" ){
 		var params_sri_1 = ["mode", "server", "port", "method", "rss_obfs", "rss_protocol", "rss_obfs_param", "rss_protocol_param"];
-		var params_src_1 = ["use_kcp"];
+		var params_src_1 = ["use_kcp"];																							 //fancyss-full
 		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 		for (var i = 0; i < params_sri_1.length; i++) {
 			dbus["ssconf_basic_" + params_sri_1[i] + "_" + node_sel] = E("ss_basic_" + params_sri_1[i]).value;
 		}
-		for (var i = 0; i < params_src_1.length; i++) {
-			if (E("ss_basic_" + params_src_1[i]).checked ? '1' : '0' != "0"){
-				dbus["ssconf_basic_" + params_src_1[i] + "_" + node_sel] = E("ss_basic_" + params_src_1[i]).checked ? '1' : '';
-			}
-		}
+		for (var i = 0; i < params_src_1.length; i++) {																			 //fancyss-full
+			if (E("ss_basic_" + params_src_1[i]).checked ? '1' : '0' != "0"){													 //fancyss-full
+				dbus["ssconf_basic_" + params_src_1[i] + "_" + node_sel] = E("ss_basic_" + params_src_1[i]).checked ? '1' : '';	 //fancyss-full
+			}																													 //fancyss-full
+		}																														 //fancyss-full
 	}
-	
-	// koolgame
-	if (db_ss["ssconf_basic_type_" + node_sel] =="2" ){
-		var params_kgi_1 = ["mode", "server", "port", "method", "koolgame_udp"];
-		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
-		for (var i = 0; i < params_kgi_1.length; i++) {
-			dbus["ssconf_basic_" + params_kgi_1[i] + "_" + node_sel] = E("ss_basic_" + params_kgi_1[i]).value;
-		}
-	}
+	// koolgame																										//fancyss-koolgame
+	if (db_ss["ssconf_basic_type_" + node_sel] =="2" ){																//fancyss-koolgame
+		var params_kgi_1 = ["mode", "server", "port", "method", "koolgame_udp"];									//fancyss-koolgame
+		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);					//fancyss-koolgame
+		for (var i = 0; i < params_kgi_1.length; i++) {																//fancyss-koolgame
+			dbus["ssconf_basic_" + params_kgi_1[i] + "_" + node_sel] = E("ss_basic_" + params_kgi_1[i]).value;		//fancyss-koolgame
+		}																											//fancyss-koolgame
+	}																												//fancyss-koolgame
 	//v2ray
 	if (db_ss["ssconf_basic_type_" + node_sel] =="3" ){
 		// for v2ray json, we need to encode json format
@@ -598,7 +602,7 @@ function verifyFields(r) {
 	var node_sel = E("ssconf_basic_node").value;
 	var ss_on = false;
 	var ssr_on = false;
-	var koolgame_on = false;
+	var koolgame_on = false;									//fancyss-koolgame
 	var v2ray_on = false;
 	var xray_on = false;
 	var trojan_on = false;
@@ -606,47 +610,52 @@ function verifyFields(r) {
 		// ss
 		var ss_on = true;
 		var ssr_on = false;
-		var koolgame_on = false;
+		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = false;
-	} else if (db_ss["ssconf_basic_type_" + node_sel] == "1") {
+	}
+	else if (db_ss["ssconf_basic_type_" + node_sel] == "1") {
 		// ssr
 		var ss_on = false;
 		var ssr_on = true;
-		var koolgame_on = false;
+		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = false;
-	} else if (db_ss["ssconf_basic_type_" + node_sel]  == "2") {
-		// koolgame
-		var ss_on = false;
-		var ssr_on = false;
-		var koolgame_on = true;
-		var v2ray_on = false;
-		var xray_on = false;
-		var trojan_on = false;
-	} else if (db_ss["ssconf_basic_type_" + node_sel] == "3") {
+	}
+	else if (db_ss["ssconf_basic_type_" + node_sel]  == "2") {	//fancyss-koolgame
+		// koolgame												//fancyss-koolgame
+		var ss_on = false;										//fancyss-koolgame
+		var ssr_on = false;										//fancyss-koolgame
+		var koolgame_on = true;									//fancyss-koolgame
+		var v2ray_on = false;									//fancyss-koolgame
+		var xray_on = false;									//fancyss-koolgame
+		var trojan_on = false;									//fancyss-koolgame
+	}															//fancyss-koolgame
+	else if (db_ss["ssconf_basic_type_" + node_sel] == "3") {
 		// v2ray
 		var ss_on = false;
 		var ssr_on = false;
-		var koolgame_on = false;
+		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = true;
 		var xray_on = false;
 		var trojan_on = false;
-	} else if (db_ss["ssconf_basic_type_" + node_sel] == "4") {
+	}
+	else if (db_ss["ssconf_basic_type_" + node_sel] == "4") {
 		// xray
 		var ss_on = false;
 		var ssr_on = false;
-		var koolgame_on = false;
+		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = true;
 		var trojan_on = false;
-	} else if (db_ss["ssconf_basic_type_" + node_sel] == "5") {
+	}
+	else if (db_ss["ssconf_basic_type_" + node_sel] == "5") {
 		// xray
 		var ss_on = false;
 		var ssr_on = false;
-		var koolgame_on = false;
+		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = true;
@@ -664,18 +673,18 @@ function verifyFields(r) {
 	var x_path_on = E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2" || E("ss_basic_xray_network").value == "quic" || E("ss_basic_xray_network").value == "grpc" || x_http_on;
 	var x_tls_on = E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls";
 	var x_xtls_on = E("ss_basic_xray_network_security").value == "xtls";
-	//ss-libev
+	//ss
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
-	elem.display(elem.parentElem('ss_basic_ss_v2ray', 'tr'), ss_on);
-	elem.display(elem.parentElem('ss_basic_ss_v2ray_opts', 'tr'), (ss_on && E("ss_basic_ss_v2ray").value != "0"));
+	elem.display(elem.parentElem('ss_basic_ss_v2ray', 'tr'), ss_on);												//fancyss-full
+	elem.display(elem.parentElem('ss_basic_ss_v2ray_opts', 'tr'), (ss_on && E("ss_basic_ss_v2ray").value != "0"));	//fancyss-full
 	//ssr-libev
 	elem.display(elem.parentElem('ss_basic_rss_protocol_param', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_protocol', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_obfs', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_obfs_param', 'tr'), ssr_on);
-	//koolgame
-	elem.display(elem.parentElem('ss_basic_koolgame_udp', 'tr'), koolgame_on);
+	//koolgame																	//fancyss-koolgame
+	elem.display(elem.parentElem('ss_basic_koolgame_udp', 'tr'), koolgame_on);	//fancyss-koolgame
 	//basic
 	elem.display(elem.parentElem('ss_basic_server', 'tr'), ss_on || ssr_on || koolgame_on || v2ray_on && v_json_off || xray_on && x_json_off || trojan_on);
 	elem.display(elem.parentElem('ss_basic_port', 'tr'), ss_on || ssr_on || koolgame_on || v2ray_on && v_json_off || xray_on && x_json_off || trojan_on);
@@ -701,7 +710,7 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_v2ray_mux_enable', 'tr'), (v2ray_on && v_json_off));
 	elem.display(elem.parentElem('ss_basic_v2ray_mux_concurrency', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_mux_enable").checked));
 	elem.display(elem.parentElem('ss_basic_v2ray_json', 'tr'), (v2ray_on && v_json_on));
-	elem.display('v2ray_binary_update_tr', v2ray_on);
+	elem.display('v2ray_binary_update_tr', v2ray_on);		//fancyss-full
 	//xray
 	elem.display(elem.parentElem('ss_basic_xray_use_json', 'tr'), xray_on);
 	elem.display(elem.parentElem('ss_basic_xray_uuid', 'tr'), (xray_on && x_json_off));
@@ -726,15 +735,15 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_trojan_ai', 'tr'), (trojan_on));
 	elem.display(elem.parentElem('ss_basic_trojan_sni', 'tr'), (trojan_on));
 	elem.display(elem.parentElem('ss_basic_trojan_tfo', 'tr'), (trojan_on));
-	// dns pannel
-	showhide("dns_plan_foreign", !koolgame_on);
-	showhide("dns_plan_foreign_game2", koolgame_on);
+	// dns pannel										//fancyss-koolgame
+	showhide("dns_plan_foreign", !koolgame_on);			//fancyss-koolgame
+	showhide("dns_plan_foreign_game2", koolgame_on);	//fancyss-koolgame
 	//node add/edit pannel
 	if (save_flag == "shadowsocks") {
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
-		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));
-		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));
+		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));														//fancyss-full
+		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));	//fancyss-full
 	}
 	if (save_flag == "v2ray") {
 		if(E("ss_node_table_v2ray_use_json").checked){
@@ -859,6 +868,7 @@ function verifyFields(r) {
 			showhide("xray_flow_tr", x_xtls_on_2);
 		}
 	}
+	//fancyss_full_1
 	//kcp pannel
 	var kcp_trs = ["ss_basic_kcp_password_tr", "ss_basic_kcp_mode_tr", "ss_basic_kcp_encrypt_tr", "ss_basic_kcp_mtu_tr", "ss_basic_kcp_sndwnd_tr", "ss_basic_kcp_rcvwnd_tr", "ss_basic_kcp_conn_tr", "ss_basic_kcp_nocomp_tr", "ss_basic_kcp_extra_tr"]
 	if(E("ss_basic_kcp_method").value == "1"){
@@ -891,6 +901,7 @@ function verifyFields(r) {
 		$(".speederv1").hide();
 		$(".speederv2").hide();
 	}
+	//fancyss_full_2
 	// 插件重启功能
 	var Ti = E("ss_reboot_check").value;
 	var In = E("ss_basic_inter_pre").value;
@@ -949,7 +960,7 @@ function update_visibility() {
 	var a = E("ss_basic_rule_update").value == "1";
 	var b = E("ss_basic_node_update").value == "1";
 	var c = E("ssr_subscribe_obfspara").value == "2";
-	var d = E("ss_basic_udp_upstream_mtu").value == "1";
+	var d = E("ss_basic_udp_upstream_mtu").value == "1";									//fancyss-full
 	var e = E("ss_dns_china").value == "12";
 	var f = E("ss_foreign_dns").value;
 	var g = E("ss_basic_tri_reboot_time").value;
@@ -960,18 +971,19 @@ function update_visibility() {
 	showhide("ss_basic_node_update_day", b);
 	showhide("ss_basic_node_update_hr", b);
 	showhide("ssr_subscribe_obfspara_val", c);
-	showhide("ss_basic_udp_upstream_mtu_value", d);
+	showhide("ss_basic_udp_upstream_mtu_value", d);											//fancyss-full
 	showhide("ss_dns_china_user", e);
 	showhide("ss_basic_server_resolver_user", h);
-	showhide("ss_chinadns_user", (f == "2"));
+	showhide("ss_chinadns_user", (f == "2"));												//fancyss-full		
+	showhide("ss_chinadnsng_user", (f == "10"));
 	showhide("ss_dns2socks_user", (f == "3"));
 	showhide("ss_v2_note", (f == "7"));
 	showhide("ss_doh_note", (f == "6"));
 	showhide("ss_disable_aaaa", (f == "10"));
 	showhide("ss_disable_aaaa_note", (f == "10"));
-	showhide("ss_sstunnel_user", (f == "4"));
-	showhide("ss_sstunnel_user_note", (f == "4"));
-	showhide("ss_chinadns1_user", (f == "5"));
+	showhide("ss_sstunnel_user", (f == "4"));												//fancyss-full
+	showhide("ss_sstunnel_user_note", (f == "4"));											//fancyss-full
+	showhide("ss_chinadns1_user", (f == "5"));												//fancyss-full
 	showhide("ss_direct_user", (f == "8"));
 	showhide("ss_direct_user_note", (f == "8"));
 	showhide("ss_basic_tri_reboot_time_note", (g != "0"));
@@ -1004,13 +1016,13 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_mode").value = "1";
 	E("ss_node_table_ss_obfs").value = "0"
 	E("ss_node_table_ss_obfs_host").value = "";
-	E("ss_node_table_ss_v2ray").value = "0"
-	E("ss_node_table_ss_v2ray_opts").value = "";
+	E("ss_node_table_ss_v2ray").value = "0"				//fancyss-full
+	E("ss_node_table_ss_v2ray_opts").value = "";		//fancyss-full
 	E("ss_node_table_rss_protocol").value = "origin";
 	E("ss_node_table_rss_protocol_param").value = "";
 	E("ss_node_table_rss_obfs").value = "plain";
 	E("ss_node_table_rss_obfs_param").value = "";
-	E("ss_node_table_koolgame_udp").value = "0";
+	E("ss_node_table_koolgame_udp").value = "0";		//fancyss-koolgame
 	E("ss_node_table_v2ray_uuid").value = "";
 	E("ss_node_table_v2ray_alterid").value = "0";
 	E("ss_node_table_v2ray_json").value = "";
@@ -1023,7 +1035,7 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_trojan_tfo").checked = false;
 	E("ssTitle").style.display = "";
 	E("ssrTitle").style.display = "";
-	E("gamev2Title").style.display = "";
+	E("gamev2Title").style.display = "";				//fancyss-koolgame
 	E("v2rayTitle").style.display = "";
 	E("xrayTitle").style.display = "";
 	E("trojanTitle").style.display = "";
@@ -1047,7 +1059,7 @@ function cancel_add_rule() { //点击添加节点面板上的返回
 function tabclickhandler(_type) {
 	E('ssTitle').className = "vpnClientTitle_td_unclick";
 	E('ssrTitle').className = "vpnClientTitle_td_unclick";
-	E('gamev2Title').className = "vpnClientTitle_td_unclick";
+	E('gamev2Title').className = "vpnClientTitle_td_unclick";	//fancyss-koolgame
 	E('v2rayTitle').className = "vpnClientTitle_td_unclick";
 	E('xrayTitle').className = "vpnClientTitle_td_unclick";
 	E('trojanTitle').className = "vpnClientTitle_td_unclick";
@@ -1065,7 +1077,7 @@ function tabclickhandler(_type) {
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";
+		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1109,9 +1121,10 @@ function tabclickhandler(_type) {
 		E("ss_node_table_trojan_tfo").value = "none";
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
-		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));
-		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));
-	} else if (_type == 1) {
+		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));														//fancyss-full
+		showhide("ss_v2ray_opts_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_v2ray").val() != "0"));	//fancyss-full
+	}
+	else if (_type == 1) {
 		save_flag = "shadowsocksR";
 		E('ssrTitle').className = "vpnClientTitle_td_click";
 		E('v2ray_use_json_tr').style.display = "none";
@@ -1123,13 +1136,13 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
-		E('ss_v2ray_support').style.display = "none";
-		E('ss_v2ray_opts_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";		//fancyss-full
+		E('ss_v2ray_opts_support').style.display = "none";	//fancyss-full
 		E('ssr_protocol_tr').style.display = "";
 		E('ssr_protocol_param_tr').style.display = "";
 		E('ssr_obfs_tr').style.display = "";
 		E('ssr_obfs_param_tr').style.display = "";
-		E('gameV2_udp_tr').style.display = "none";
+		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1170,7 +1183,9 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
-	} else if (_type == 2) {
+	}
+	//fancyss_koolgame_1
+	else if (_type == 2) {
 		save_flag = "gameV2";
 		E('gamev2Title').className = "vpnClientTitle_td_click";
 		E('v2ray_use_json_tr').style.display = "none";
@@ -1182,13 +1197,13 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
-		E('ss_v2ray_support').style.display = "none";
-		E('ss_v2ray_opts_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";		//fancyss-full
+		E('ss_v2ray_opts_support').style.display = "none";	//fancyss-full
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "";
+		E('gameV2_udp_tr').style.display = "";				//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1229,7 +1244,9 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
-	} else if (_type == 3) {
+	}
+	//fancyss_koolgame_2
+	else if (_type == 3) {
 		save_flag = "v2ray";
 		E('v2rayTitle').className = "vpnClientTitle_td_click";
 		E('v2ray_use_json_tr').style.display = "";
@@ -1239,13 +1256,13 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "none";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
-		E('ss_v2ray_support').style.display = "none";
-		E('ss_v2ray_opts_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";		//fancyss-full
+		E('ss_v2ray_opts_support').style.display = "none";	//fancyss-full
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";
+		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "";
 		$(".v2ray_elem").show();
 		E('v2ray_alterid_tr').style.display = "";
@@ -1347,7 +1364,8 @@ function tabclickhandler(_type) {
 			showhide("v2ray_network_security_alpn_tr", v_tls_on_2);
 			showhide("v2ray_network_security_sni_tr", v_tls_on_2);
 		}
-	} else if (_type == 4) {
+	}
+	else if (_type == 4) {
 		save_flag = "xray";
 		E('xrayTitle').className = "vpnClientTitle_td_click";
 		E('v2ray_use_json_tr').style.display = "none";
@@ -1357,13 +1375,13 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "none";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
-		E('ss_v2ray_support').style.display = "none";
-		E('ss_v2ray_opts_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";		//fancyss-full
+		E('ss_v2ray_opts_support').style.display = "none";	//fancyss-full
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";
+		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1462,7 +1480,8 @@ function tabclickhandler(_type) {
 			showhide("xray_network_security_sni_tr", x_tls_on_2);
 			showhide("xray_flow_tr", x_xtls_on_2);
 		}
-	} else if (_type == 5) {
+	}
+	else if (_type == 5) {
 		save_flag = "trojan";
 		E('trojanTitle').className = "vpnClientTitle_td_click";
 		E('v2ray_use_json_tr').style.display = "none";
@@ -1474,13 +1493,13 @@ function tabclickhandler(_type) {
 		E('ss_method_support_tr').style.display = "none";
 		E('ss_obfs_support').style.display = "none";
 		E('ss_obfs_host_support').style.display = "none";
-		E('ss_v2ray_support').style.display = "none";
-		E('ss_v2ray_opts_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";		//fancyss-full
+		E('ss_v2ray_opts_support').style.display = "none";	//fancyss-full
 		E('ssr_protocol_tr').style.display = "none";
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";
+		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1647,13 +1666,13 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_mode").value = "1";
 				E("ss_node_table_ss_obfs").value = "0"
 				E("ss_node_table_ss_obfs_host").value = "";
-				E("ss_node_table_ss_v2ray").value = "0"
-				E("ss_node_table_ss_v2ray_opts").value = "";
+				E("ss_node_table_ss_v2ray").value = "0"			//fancyss-full
+				E("ss_node_table_ss_v2ray_opts").value = "";	//fancyss-full
 				E("ss_node_table_rss_protocol").value = "origin";
 				E("ss_node_table_rss_protocol_param").value = "";
 				E("ss_node_table_rss_obfs").value = "plain";
 				E("ss_node_table_rss_obfs_param").value = "";
-				E("ss_node_table_koolgame_udp").value = "0";
+				E("ss_node_table_koolgame_udp").value = "0";	//fancyss-koolgame
 				E("ss_node_table_v2ray_uuid").value = "";
 				E("ss_node_table_v2ray_alterid").value = "0";
 				E("ss_node_table_v2ray_json").value = "";
@@ -1682,7 +1701,7 @@ function remove_conf_table(o) {
 
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -1759,59 +1778,64 @@ function edit_conf_table(o) {
 	E("add_node").style.display = "none";
 	E("edit_node").style.display = "";
 	E("continue_add").style.display = "none";
-	if (c["type"] == "0") {
+	if (c["type"] == "0"){
 		E("ssTitle").style.display = "";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";
+		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "none";
 		$("#ssTitle").html("编辑ss节点");
 		tabclickhandler(0);		
-	} else if(c["type"] == "1"){
+	}
+	else if(c["type"] == "1"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "";
-		E("gamev2Title").style.display = "none";
+		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "none";
 		$("#ssrTitle").html("编辑SSR节点");
 		tabclickhandler(1);		
-	} else if(c["type"] == "2"){
+	}
+	else if(c["type"] == "2"){							//fancyss-koolgame
+		E("ssTitle").style.display = "none";			//fancyss-koolgame
+		E("ssrTitle").style.display = "none";			//fancyss-koolgame
+		E("gamev2Title").style.display = "";			//fancyss-koolgame
+		E("v2rayTitle").style.display = "none";			//fancyss-koolgame
+		E("xrayTitle").style.display = "none";			//fancyss-koolgame
+		E("trojanTitle").style.display = "none";		//fancyss-koolgame
+		$("#gamev2Title").html("编辑koolgame节点");		//fancyss-koolgame
+		tabclickhandler(2);								//fancyss-koolgame
+	}													//fancyss-koolgame
+	else if(c["type"] == "3"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "";
-		E("v2rayTitle").style.display = "none";
-		E("xrayTitle").style.display = "none";
-		E("trojanTitle").style.display = "none";
-		$("#gamev2Title").html("编辑koolgame节点");
-		tabclickhandler(2);	
-	} else if(c["type"] == "3"){
-		E("ssTitle").style.display = "none";
-		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";
+		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "none";
 		$("#v2rayTitle").html("编辑V2Ray账号");
 		tabclickhandler(3);
-	} else if(c["type"] == "4"){
+	}
+	else if(c["type"] == "4"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";
+		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "";
 		E("trojanTitle").style.display = "none";
 		$("#xrayTitle").html("编辑Xray账号");
 		tabclickhandler(4);
-	}else if(c["type"] == "5"){
+	}
+	else if(c["type"] == "5"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";
+		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "";
-		$("#xrayTitle").html("编辑Xray账号");
+		$("#trojanTitle").html("编辑trojan账号");
 		tabclickhandler(5);
 	}
 
@@ -1836,21 +1860,24 @@ function edit_ss_node_conf(flag) {
 		}
 		ns[p + "_password_" + edit_id] = Base64.encode($("#ss_node_table_password").val());
 		ns[p + "_type_" + edit_id] = "0";
-	} else if (flag == 'shadowsocksR') {
+	}
+	else if (flag == 'shadowsocksR') {
 		var params2 = ["name", "server", "mode", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"];
 		for (var i = 0; i < params2.length; i++) {
 			ns[p + "_" + params2[i] + "_" + edit_id] = $('#ss_node_table' + "_" + params2[i]).val();
 		}
 		ns[p + "_password_" + edit_id] = Base64.encode($("#ss_node_table_password").val());
 		ns[p + "_type_" + edit_id] = "1";
-	} else if (flag == 'gameV2') {
-		var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"]
-		for (var i = 0; i < params3.length; i++) {
-			ns[p + "_" + params3[i] + "_" + edit_id] = $('#ss_node_table' + "_" + params3[i]).val();
-		}
-		ns[p + "_password_" + edit_id] = Base64.encode($("#ss_node_table_password").val());
-		ns[p + "_type_" + edit_id] = "2";
-	} else if (flag == 'v2ray') {
+	}
+	else if (flag == 'gameV2') {																		//fancyss-koolgame
+		var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"];						//fancyss-koolgame
+		for (var i = 0; i < params3.length; i++) {														//fancyss-koolgame
+			ns[p + "_" + params3[i] + "_" + edit_id] = $('#ss_node_table' + "_" + params3[i]).val();	//fancyss-koolgame
+		}																								//fancyss-koolgame
+		ns[p + "_password_" + edit_id] = Base64.encode($("#ss_node_table_password").val());				//fancyss-koolgame
+		ns[p + "_type_" + edit_id] = "2";																//fancyss-koolgame
+	}																									//fancyss-koolgame
+	else if (flag == 'v2ray') {
 		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray non json
 		var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 		if (E("ss_node_table_v2ray_use_json").checked == true){
@@ -1882,7 +1909,8 @@ function edit_ss_node_conf(flag) {
 			}
 		}
 		ns[p + "_type_" + edit_id] = "3";
-	} else if (flag == 'xray') {
+	}
+	else if (flag == 'xray') {
 		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni"]; //for xray
 		var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
 		if (E("ss_node_table_xray_use_json").checked == true){
@@ -1914,7 +1942,8 @@ function edit_ss_node_conf(flag) {
 			}
 		}
 		ns[p + "_type_" + edit_id] = "4";
-	} else if (flag == 'trojan') {
+	}
+	else if (flag == 'trojan') {
 		var params6 = ["mode", "name", "server", "port", "trojan_uuid", "trojan_sni"]; //trojan
 		for (var i = 0; i < params6.length; i++) {
 			ns[p + "_" + params6[i] + "_" + edit_id] = $.trim($('#ss_node_table' + "_" + params6[i]).val());
@@ -1942,13 +1971,13 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_mode").value = "1";
 			E("ss_node_table_ss_obfs").value = "0"
 			E("ss_node_table_ss_obfs_host").value = "";
-			E("ss_node_table_ss_v2ray").value = "0"
-			E("ss_node_table_ss_v2ray_opts").value = "";
+			E("ss_node_table_ss_v2ray").value = "0"			//fancyss-full
+			E("ss_node_table_ss_v2ray_opts").value = "";	//fancyss-full
 			E("ss_node_table_rss_protocol").value = "origin";
 			E("ss_node_table_rss_protocol_param").value = "";
 			E("ss_node_table_rss_obfs").value = "plain";
 			E("ss_node_table_rss_obfs_param").value = "";
-			E("ss_node_table_koolgame_udp").value = "0";
+			E("ss_node_table_koolgame_udp").value = "0";	//fancyss-koolgame
 			E("ss_node_table_v2ray_uuid").value = "";
 			E("ss_node_table_v2ray_alterid").value = "0";
 			E("ss_node_table_v2ray_json").value = "";
@@ -2020,56 +2049,135 @@ function generate_node_info() {
 		if(db_ss[p + "_v2ray_use_json_" + idx] ==  "1"){
 			//对v2ray json节点的处理
 			var json = JSON.parse(Base64.decode(db_ss[p + "_v2ray_json_" + idx]));
-			var server_addr_1;
-			var server_addr_2;
-			server_addr_1 = json["outbound"];
-			server_addr_1 = (server_addr_1 != undefined) ? server_addr_1 : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.settings : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.vnext["0"] : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.address : ""
-			if(server_addr_1){
-				obj["server"] = server_addr_1;
-			}else{
-				obj["server"] = '';
+			var server_addr = '';
+			var server_prot = '';
+			if("outbound" in json){
+				if(isArray(json.outbound)){
+					//array
+					if(json.outbound[0].settings.servers){
+						if(isArray(json.outbound[0].settings.servers)){
+							server_add = json.outbound[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbound[0].settings.vnext){
+						if(isArray(json.outbound[0].settings.vnext)){
+							server_add = json.outbound[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound[0].protocol;
+				}else{
+					//object
+					if(json.outbound.settings.servers){
+						if(isArray(json.outbound.settings.servers)){
+							server_add = json.outbound.settings.servers[0].address;
+						}
+					}
+					if(json.outbound.settings.vnext){
+						if(isArray(json.outbound.settings.vnext)){
+							server_add = json.outbound.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound.protocol;
+				}
 			}
 
-			server_addr_2 = json["outbounds"][0];
-			server_addr_2 = (server_addr_2 != undefined) ? server_addr_2 : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.settings : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.vnext["0"] : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.address : ""
-			if(server_addr_2){
-				obj["server"] = server_addr_2;
-			}else{
-				obj["server"] = '';
+			if("outbounds" in json){
+				if(isArray(json.outbounds)){
+					//array
+					if(json.outbounds[0].settings.servers){
+						if(isArray(json.outbounds[0].settings.servers)){
+							server_add = json.outbounds[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbounds[0].settings.vnext){
+						if(isArray(json.outbounds[0].settings.vnext)){
+							server_add = json.outbounds[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds[0].protocol;
+				}else{
+					//object
+					if(json.outbounds.settings.servers){
+						if(isArray(json.outbounds.settings.servers)){
+							server_add = json.outbounds.settings.servers[0].address;
+						}
+					}
+					if(json.outbounds.settings.vnext){
+						if(isArray(json.outbounds.settings.vnext)){
+							server_add = json.outbounds.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds.protocol;
+				}
 			}
+			obj["server"] = server_add;
+			obj["protoc"] = server_prot;
 		}else if(db_ss[p + "_xray_use_json_" + idx] ==  "1"){
 			//对xray json节点的处理
 			var json = JSON.parse(Base64.decode(db_ss[p + "_xray_json_" + idx]));
-			var server_addr;
-			var server_addr_1;
-			var server_addr_2;
-			server_addr_1 = json["outbound"];
-			server_addr_1 = (server_addr_1 != undefined) ? server_addr_1 : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.settings : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.vnext["0"] : ""
-			server_addr_1 = (!!server_addr_1) ? server_addr_1.address : ""
-			if(server_addr_1){
-				obj["server"] = server_addr_1;
-			}else{
-				obj["server"] = '';
+			var server_addr = '';
+			var server_prot = '';
+			if("outbound" in json){
+				if(isArray(json.outbound)){
+					//array
+					if(json.outbound[0].settings.servers){
+						if(isArray(json.outbound[0].settings.servers)){
+							server_addr = json.outbound[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbound[0].settings.vnext){
+						if(isArray(json.outbound[0].settings.vnext)){
+							server_addr = json.outbound[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound[0].protocol;
+				}else{
+					//object
+					if(json.outbound.settings.servers){
+						if(isArray(json.outbound.settings.servers)){
+							server_addr = json.outbound.settings.servers[0].address;
+						}
+					}
+					if(json.outbound.settings.vnext){
+						if(isArray(json.outbound.settings.vnext)){
+							server_addr = json.outbound.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbound.protocol;
+				}
 			}
 
-			server_addr_2 = json["outbounds"][0];
-			server_addr_2 = (server_addr_2 != undefined) ? server_addr_2 : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.settings : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.vnext["0"] : ""
-			server_addr_2 = (!!server_addr_2) ? server_addr_2.address : ""
-			if(server_addr_2){
-				obj["server"] = server_addr_2;
-			}else{
-				obj["server"] = '';
+			if("outbounds" in json){
+				if(isArray(json.outbounds)){
+					//array
+					if(json.outbounds[0].settings.servers){
+						if(isArray(json.outbounds[0].settings.servers)){
+							server_addr = json.outbounds[0].settings.servers[0].address;
+						}
+					}
+					if(json.outbounds[0].settings.vnext){
+						if(isArray(json.outbounds[0].settings.vnext)){
+							server_addr = json.outbounds[0].settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds[0].protocol;
+				}else{
+					//object
+					if(json.outbounds.settings.servers){
+						if(isArray(json.outbounds.settings.servers)){
+							server_addr = json.outbounds.settings.servers[0].address;
+						}
+					}
+					if(json.outbounds.settings.vnext){
+						if(isArray(json.outbounds.settings.vnext)){
+							server_addr = json.outbounds.settings.vnext[0].address;
+						}
+					}
+					server_prot = json.outbounds.protocol;
+				}
 			}
+			obj["server"] = server_addr;
+			obj["protoc"] = server_prot;
 		}else{
 			if (typeof db_ss[p + "_server_" + idx] == "undefined") {
 				obj["server"] = '';
@@ -2142,9 +2250,9 @@ function refresh_html() {
 	
 	// define col width in different situation
 	if(node_nu && E("ss_basic_ping_node") != "off" && E("ss_basic_ping_node") != ""){
-		var width = ["", "5%", "30%", "30%", "8%", "12%", "10%", "5%", ];
+		var width = ["", "5%", "28%", "28%", "14%", "10%", "10%", "5%", ];
 	}else{
-		var width = ["", "6%", "32%", "32%", "10%", "10%", "10%" ];
+		var width = ["", "6%", "30%", "30%", "14%", "10%", "10%" ];
 	}
 	// make dynamic element
 	var html = '';
@@ -2194,26 +2302,58 @@ function refresh_html() {
 		html +='<td style="width:' + width[4] + ';">';
 		switch(c["type"]) {
 			case '0' :
-				if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
-					html +='ss+obfs';
-				}else{
-					html +='ss';
-				}
+				if(E("ss_basic_rust").checked){								//fancyss-full
+					if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){	//fancyss-full
+						html +='ss_rust-obfs';								//fancyss-full
+					}else if(c["ss_v2ray"] == "1"){							//fancyss-full
+						html +='ss_rust-v2ray';								//fancyss-full
+					}else{													//fancyss-full
+						html +='ss_rust';									//fancyss-full
+					}														//fancyss-full
+				}else{														//fancyss-full
+					if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
+						html +='ss_libev-obfs';
+					}else if(c["ss_v2ray"] == "1"){							//fancyss-full
+						html +='ss_libev-v2ray';							//fancyss-full
+					}else{
+						html +='ss_libev';
+					}
+				}															//fancyss-full
 				break;
 			case '1' :
 				html +='ssr';
 				break;
-			case '2' :
-				html +='koolgame';
-				break;
+			case '2' :														//fancyss-koolgame
+				html +='koolgame';											//fancyss-koolgame
+				break;														//fancyss-koolgame
 			case '3' :
-				html +='v2ray';
+				if(E("ss_basic_vcore").checked){							//fancyss-full
+					if(c["protoc"]){
+						html +='xray-' + c["protoc"];
+					}else{
+						html +='xray-vless';
+					}
+				}else{														//fancyss-full
+					if(c["protoc"]){										//fancyss-full
+						html +='v2ray-' + c["protoc"];						//fancyss-full
+					}else{													//fancyss-full
+						html +='v2ray-vmess';								//fancyss-full
+					}														//fancyss-full
+				}															//fancyss-full
 				break;
 			case '4' :
-				html +='xray';
+				if(c["protoc"]){
+					html +='xray-' + c["protoc"];
+				}else{
+					html +='xray-vless';
+				}
 				break;
 			case '5' :
-				html +='trojan';
+				if(E("ss_basic_tcore").checked){							//fancyss-full
+					html +='xray-trojan';
+				}else{														//fancyss-full
+					html +='trojan';										//fancyss-full
+				}															//fancyss-full
 				break;
 		}
 		html +='</td>';
@@ -2318,7 +2458,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "use_kcp", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -2487,14 +2627,17 @@ function makeQRcode(node){
 	id = ids[ids.length - 1];
 	var c = confs[id];
 	if(c["type"] == "0"){
-		if(c["ss_v2ray"] === "1"){
-			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=" + encodeURIComponent("v2ray-plugin;" +c["ss_v2ray_opts"]) + "#" + c["name"];
-		}else if(c["ss_obfs"] === "1"){
-			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=obfs-local%3Bobfs%3D" + c["ss_obfs"] + "%3Bobfs-host%3D" + c["ss_obfs_host"] + "#" + c["name"];
-		}else{
-			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"]) + "@" + c["server"] + ":" + c["port"] + "#" + c["name"]);
-		}
-	}else if(c["type"] == "1"){
+		if(c["ss_v2ray"] == "1"){																																																		//fancyss-full
+			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=" + encodeURIComponent("v2ray-plugin;" +c["ss_v2ray_opts"]) + "#" + c["name"];		//fancyss-full
+		}else{																																																							//fancyss-full
+			if(c["ss_obfs"] == "1"){
+				var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=obfs-local%3Bobfs%3D" + c["ss_obfs"] + "%3Bobfs-host%3D" + c["ss_obfs_host"] + "#" + c["name"];
+			}else{
+				var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"]) + "@" + c["server"] + ":" + c["port"] + "#" + c["name"]);
+			}
+		}																																																								//fancyss-full
+	}
+	else if(c["type"] == "1"){
     	var base64pass = c["password"].replace(/=+/,"");
     	var base64obfsparm = Base64.encode(c["rss_obfs_param"]).replace(/=+/,"");
     	var base64protoparam = Base64.encode(c["rss_protocol_param"]).replace(/=+/,"");
@@ -2502,9 +2645,8 @@ function makeQRcode(node){
     	var base64group = Base64.encode(c["group"]).replace(/=+/,"");
     	var config_ssr = c["server"] + ":" + c["port"] + ":" + c["rss_protocol"] + ":" + c["method"] + ":" + c["rss_obfs"] + ":" + base64pass + "/?obfsparam=" + base64obfsparm + "&protoparam=" + base64protoparam + "&remarks=" + base64remark + "&group=" + base64group;
     	var code = "ssr:\/\/" + Base64.encode(config_ssr).replace(/=+/,"").replace(/\+/,"-").replace(/\//,"_");
-	}else if(c["type"] == "2"){
-		var code = 0;
-	}else if(c["type"] == "3"){
+	}
+	else if(c["type"] == "3"){
 		if(c["v2ray_use_json"] == "1"){
 			var code = 1;
 		}else{
@@ -2528,10 +2670,18 @@ function makeQRcode(node){
 			}
 			code = "vmess:\/\/" + Base64.encode(JSON.stringify(code));
 		}
-	}else if(c["type"] == "4"){
+	}
+	else if(c["type"] == "2"){	//fancyss-koolgame
+		var code = 0;			//fancyss-koolgame
+	}							//fancyss-koolgame
+	else if(c["type"] == "4"){
 		var code = 2;
-	}else{
+	}
+	else if(c["type"] == "5"){
 		var code = 3;
+	}
+	else{
+		var code = 4;
 	}
 	$("#qrtitle").html(c["name"]);
 
@@ -2547,15 +2697,23 @@ function makeQRcode(node){
 }
 function showQRcode(data) {
 	$("#qrcode").html("");
-	if(data == 0){
-		$("#qrcode").html('<span style="font-size:16px;color:#000;">不支持koolgame配置的二维码生成！</span>')
-	}else if(data == 1){
+	if(data == 1){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持v2ray json配置的二维码生成！</span>')
-	}else if(data == 2){
+	}
+	else if(data == 2){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持xray节点的二维码生成！</span>')
-	}else if(data == 3){
+	}
+	else if(data == 3){
+		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持trojan节点的二维码生成！</span>')
+	}
+	else if(data == 0){																								//fancyss-koolgame
+		$("#qrcode").html('<span style="font-size:16px;color:#000;">不支持koolgame配置的二维码生成！</span>')		//fancyss-koolgame
+	}																												//fancyss-koolgame
+	else if(data == 4){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">错误！！节点类型位置！！<br />请检查你的节点！</span>')
-	}else{
+	}
+	else
+	{
 		require(['/res/qrcode.js'], function() {
 			var qrcode = new QRCode(E("qrcode"), {
 				text: data,
@@ -2923,6 +3081,7 @@ function toggle_func() {
 			autoTextarea(E("ss_wan_black_ip"), 0, 400);
 			autoTextarea(E("ss_wan_black_domain"), 0, 400);
 		});
+	//fancyss_full_1
 	$(".show-btn5").click(
 		function() {
 			tabSelect(5);
@@ -2938,6 +3097,7 @@ function toggle_func() {
 			verifyFields();
 			get_udp_status();
 		});
+	//fancyss_full_2
 	$(".show-btn7").click(
 		function() {
 			tabSelect(7);
@@ -3052,6 +3212,7 @@ function get_ss_status_back() {
 	});
 	setTimeout("get_ss_status_back();", 3000);
 }
+//fancyss_full_1
 function get_udp_status(){
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_udp_status.sh", "params":[], "fields": ""};
@@ -3070,6 +3231,7 @@ function get_udp_status(){
 		}
 	});
 }
+//fancyss_full_2
 function close_ssf_status() {
 	$("#ssf_status_div").fadeOut(200);
 	STATUS_FLAG = 0;
@@ -3632,24 +3794,24 @@ function save_online_nodes(action) {
 	}
 	push_data("ss_online_update.sh", action,  dbus_post);
 }
-function v2ray_binary_update(){
-	var dbus_post = {};
-	db_ss["ss_basic_action"] = "15";
-	require(['/res/layer/layer.js'], function(layer) {
-		layer.confirm('<li>为了避免不必要的问题，请保证路由器和服务器上的v2ray版本一致！</li><br /><li>你确定要更新v2ray二进制吗？</li>', {
-			shade: 0.8,
-		}, function(index) {
-			$("#log_content3").attr("rows", "20");
-			push_data("ss_v2ray.sh", 1, dbus_post);
-			layer.close(index);
-			return true;
-			//save_online_nodes(action);
-		}, function(index) {
-			layer.close(index);
-			return false;
-		});
-	});
-}
+function v2ray_binary_update(){																												//fancyss-full
+	var dbus_post = {};																														//fancyss-full
+	db_ss["ss_basic_action"] = "15";																										//fancyss-full
+	require(['/res/layer/layer.js'], function(layer) {																						//fancyss-full
+		layer.confirm('<li>为了避免不必要的问题，请保证路由器和服务器上的v2ray版本一致！</li><br /><li>你确定要更新v2ray二进制吗？</li>', {	//fancyss-full
+			shade: 0.8,																														//fancyss-full
+		}, function(index) {																												//fancyss-full
+			$("#log_content3").attr("rows", "20");																							//fancyss-full
+			push_data("ss_v2ray.sh", 1, dbus_post);																							//fancyss-full
+			layer.close(index);																												//fancyss-full
+			return true;																													//fancyss-full
+			//save_online_nodes(action);																									//fancyss-full
+		}, function(index) {																												//fancyss-full
+			layer.close(index);																												//fancyss-full
+			return false;																													//fancyss-full
+		});																																	//fancyss-full
+	});																																		//fancyss-full
+}																																			//fancyss-full
 function xray_binary_update(){
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "20";
@@ -3668,24 +3830,24 @@ function xray_binary_update(){
 		});
 	});
 }
-function ssrust_binary_update(){
-	var dbus_post = {};
-	db_ss["ss_basic_action"] = "20";
-	require(['/res/layer/layer.js'], function(layer) {
-		layer.confirm('<li>点击确定将开始shadowsocks-rust二进制下载，请确保你的路由器jffs空间容量足够！</li>', {
-			shade: 0.8,
-		}, function(index) {
-			$("#log_content3").attr("rows", "20");
-			push_data("ss_rust_update.sh", 1, dbus_post);
-			layer.close(index);
-			return true;
-			//save_online_nodes(action);
-		}, function(index) {
-			layer.close(index);
-			return false;
-		});
-	});
-}
+function ssrust_binary_update(){																					//fancyss-full
+	var dbus_post = {};																								//fancyss-full
+	db_ss["ss_basic_action"] = "20";																				//fancyss-full
+	require(['/res/layer/layer.js'], function(layer) {																//fancyss-full
+		layer.confirm('<li>点击确定将开始shadowsocks-rust二进制下载，请确保你的路由器jffs空间容量足够！</li>', {	//fancyss-full
+			shade: 0.8,																								//fancyss-full
+		}, function(index) {																						//fancyss-full
+			$("#log_content3").attr("rows", "20");																	//fancyss-full
+			push_data("ss_rust_update.sh", 1, dbus_post);															//fancyss-full
+			layer.close(index);																						//fancyss-full
+			return true;																							//fancyss-full
+			//save_online_nodes(action);																			//fancyss-full
+		}, function(index) {																						//fancyss-full
+			layer.close(index);																						//fancyss-full
+			return false;																							//fancyss-full
+		});																											//fancyss-full
+	});																												//fancyss-full
+}																													//fancyss-full
 function set_cron(action) {
 	var dbus_post = {};
 	if(action == 1){
@@ -3762,7 +3924,7 @@ function save_failover() {
 								<tr>
 									<td bgcolor="#4D595D" colspan="3" valign="top">
 										<div>&nbsp;</div>
-										<div class="formfonttitle"><% nvram_get("productid"); %> 科学上网插件</div>
+										<div class="formfonttitle"><% nvram_get("productid"); %> 科学上网插件 - Full</div>
 										<div style="float:right; width:15px; height:25px;margin-top:-20px">
 											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
 										</div>
@@ -3770,7 +3932,7 @@ function save_failover() {
 										<div class="SimpleNote" id="head_illustrate">
 											本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>、
 											<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>、
-											<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、
+											<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、 <!--fancyss-koolgame-->
 											<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2ray</u></em></a>、
 											<a href="https://github.com/XTLS/xray-core" target="_blank"><em><u>Xray</u></em></a>、
 											<a href="https://github.com/trojan-gfw/trojan" target="_blank"><em><u>Trojan</u></em></a>
@@ -3779,7 +3941,7 @@ function save_failover() {
 										<!-- this is the popup area for process status -->
 										<div id="detail_status"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;">
 											<div class="user_title">【科学上网】状态检测</div>
-											<div style="margin-left:15px"><i>&nbsp;&nbsp;目前本功能支持ss相关进程状态和iptables表状态检测。</i></div>
+											<div style="margin-left:15px"><i>&nbsp;&nbsp;详细状态检测可以让你了解插件相关二进制和iptables的运行状况，用以排除一些使用中的问题。</i></div>
 											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
 												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
@@ -3890,8 +4052,8 @@ function save_failover() {
 														<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="故障转移" />
 														<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="DNS设定" />
 														<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="黑白名单" />
-														<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="KCP加速" />
-														<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="UDP加速"/>
+														<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="KCP加速" />		<!--fancyss-full-->
+														<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="UDP加速"/>		<!--fancyss-full-->
 														<input id="show_btn7" class="show-btn7" style="cursor:pointer" type="button" value="更新管理" />
 														<input id="show_btn8" class="show-btn8" style="cursor:pointer" type="button" value="访问控制" />
 														<input id="show_btn9" class="show-btn9" style="cursor:pointer" type="button" value="附加功能" />
@@ -3908,7 +4070,7 @@ function save_failover() {
 															<tr>
 													  		<td width="16.67%" align="center" id="ssTitle" onclick="tabclickhandler(0);">添加SS节点</td>
 													  		<td width="16.67%" align="center" id="ssrTitle" onclick="tabclickhandler(1);">添加SSR节点</td>
-													  		<td width="16.67%" align="center" id="gamev2Title" onclick="tabclickhandler(2);">添加koolgame节点</td>
+													  		<td width="16.67%" align="center" id="gamev2Title" onclick="tabclickhandler(2);">添加koolgame节点</td>	<!--fancyss-koolgame-->
 													  		<td width="16.67%" align="center" id="v2rayTitle" onclick="tabclickhandler(3);">添加V2Ray节点</td>
 													  		<td width="16.67%" align="center" id="xrayTitle" onclick="tabclickhandler(4);">添加Xray节点</td>
 													  		<td width="16.67%" align="center" id="trojanTitle" onclick="tabclickhandler(5);">添加Trojan节点</td>
@@ -3934,15 +4096,15 @@ function save_failover() {
 																	// ss
 																	{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:350px', value: "0"},
 																	{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:338px', ph:'bing.com'},
-																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:350px', value: "0"},
-																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:338px', ph:'tls;host=example.com;path=/'},
+																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:350px', value: "0"},		//fancyss-full
+																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:338px', ph:'tls;host=example.com;path=/'},			//fancyss-full
 																	// ssr
 																	{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:350px', value: "0"},
 																	{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:338px', ph:'id:password'},
 																	{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:350px', value: "0"},
 																	{ title: '混淆参数 (obfs_param)', rid:'ssr_obfs_param_tr', id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:338px', ph:'bing.com'},
-																	// koolgame
-																	{ title: 'UDP通道', rid:'gameV2_udp_tr', id:'ss_node_table_koolgame_udp', type:'select', options:[["0", "udp in udp"], ["1", "udp in tcp"]], style:'width:350px', value: "0"},
+																	// koolgame																																												//fancyss-koolgame
+																	{ title: 'UDP通道', rid:'gameV2_udp_tr', id:'ss_node_table_koolgame_udp', type:'select', options:[["0", "udp in udp"], ["1", "udp in tcp"]], style:'width:350px', value: "0"},			//fancyss-koolgame
 																	// v2ray
 																	{ title: '<em>服务器配置</em>（以下配置使用vmess作为传出协议，其它传出协议请使用json配置）', class:'v2ray_elem', th:'2'},
 																	{ title: '用户id (id)', rid:'v2ray_uuid_tr', id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:338px'},
@@ -4024,15 +4186,15 @@ function save_failover() {
 														// ss
 														{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
 														{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', type:'text', maxlen:'100', ph:'bing.com'},
-														{ title: 'v2ray-plugin', id:'ss_basic_ss_v2ray', type:'select', hint: '7', func:'v', options:[["0", "关闭"], ["1", "打开"]], value: "0"},
-														{ title: 'v2ray-plugin参数', id:'ss_basic_ss_v2ray_opts', type:'text', maxlen:'300', ph:'tls;host=yourhost.com;path=/;'},
+														{ title: 'v2ray-plugin', id:'ss_basic_ss_v2ray', type:'select', hint: '7', func:'v', options:[["0", "关闭"], ["1", "打开"]], value: "0"},				//fancyss-full
+														{ title: 'v2ray-plugin参数', id:'ss_basic_ss_v2ray_opts', type:'text', maxlen:'300', ph:'tls;host=yourhost.com;path=/;'},								//fancyss-full
 														// ssr
 														{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', type:'select', func:'v', options:option_protocals},
 														{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
 														{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},
 														{ title: '混淆参数 (obfs_param)', id:'ss_basic_rss_obfs_param', type:'text', hint:'11', maxlen:'300', ph:'cloudflare.com;bing.com'},
-														// koolgame
-														{ title: 'UDP通道', id:'ss_basic_koolgame_udp', type:'select', func:'v', hint:'6', options:[["0", "udp in udp"], ["1", "udp in tcp"]], value: "0"},
+														// koolgame																																				//fancyss-koolgame
+														{ title: 'UDP通道', id:'ss_basic_koolgame_udp', type:'select', func:'v', hint:'6', options:[["0", "udp in udp"], ["1", "udp in tcp"]], value: "0"},		//fancyss-koolgame
 														// v2ray
 														{ title: '用户id (id)', id:'ss_basic_v2ray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
 														{ title: '额外ID (Alterld)', id:'ss_basic_v2ray_alterid', type:'text', hint:'48', maxlen:'50'},
@@ -4075,7 +4237,7 @@ function save_failover() {
 														]},
 														{ title: '* SNI', id:'ss_basic_xray_network_security_sni', type:'text'},
 														{ title: 'xray json', id:'ss_basic_xray_json', type:'textarea', rows:'36', ph:ph_xray},
-														{ title: '其它', rid:'v2ray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},
+														{ title: '其它', rid:'v2ray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},	//fancyss-full
 														{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
 														//trojan
 														{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
@@ -4175,21 +4337,22 @@ function save_failover() {
 														{ title: '选择外国DNS', hint:'26', rid:'dns_plan_foreign', multi: [
 															{ id: 'ss_foreign_dns', type:'select', func:'u', options:option_dnsf, style:'width:auto;'},
 															{ id: 'ss_dns2socks_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_chinadns1_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_chinadns_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
+															{ id: 'ss_chinadns1_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
+															{ id: 'ss_chinadns_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
+															{ id: 'ss_chinadnsng_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
+															{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
 															{ id: 'ss_direct_user', type: 'text', value:'8.8.8.8#53', ph:ph2 },
-															{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},
+															{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},	//fancyss-full
 															{ prefix: '<span id="ss_direct_user_note">&nbsp;&nbsp;请自行解决DNS污染问题</span>'},
 															{ prefix: '<span id="ss_disable_aaaa_note">&nbsp;&nbsp;丢弃AAAA记录（禁止解析到ipv6地址）</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
 															{ suffix: '<span id="ss_doh_note">&nbsp;&nbsp;DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~</span>' },
 															{ suffix: '<span id="ss_v2_note"></span>' },
 														]},
-														{ title: '选择外国DNS', rid:'dns_plan_foreign_game2', multi: [
-															{ id: 'ss_game2_dns_foreign', type:'select', func:'u', disabled:'1', options:[["1", "koolgame内置"]], style:'width:auto;'},
-															{ id: 'ss_game2_dns2ss_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
-															{ suffix: '<br/>&nbsp;<span id="dns_plan_foreign0">默认使用koolgame内置的DNS2SS域名解析</span>' },
-														]},														
+														{ title: '选择外国DNS', rid:'dns_plan_foreign_game2', multi: [																		//fancyss-koolgame
+															{ id: 'ss_game2_dns_foreign', type:'select', func:'u', disabled:'1', options:[["1", "koolgame内置"]], style:'width:auto;'},		//fancyss-koolgame
+															{ id: 'ss_game2_dns2ss_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },														//fancyss-koolgame
+															{ suffix: '<br/>&nbsp;<span id="dns_plan_foreign0">默认使用koolgame内置的DNS2SS域名解析</span>' },								//fancyss-koolgame
+														]},																																	//fancyss-koolgame
 														{ title: 'DNS劫持（原chromecast功能）', id:'ss_basic_dns_hijack', type:'checkbox', func:'v', hint:'106', value:true},
 														{ title: '节点域名解析DNS服务器', hint:'107', multi: [
 															{ id: 'ss_basic_server_resolver', type:'select', func:'u', options:option_dnsr, style:'width:auto;', value:'13'},
@@ -4216,6 +4379,7 @@ function save_failover() {
 												</script>
 											</table>
 										</div>
+										<!--fancyss_full_1-->
 										<div id="tablet_5" style="display: none;">
 											<table id="table_kcp" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
@@ -4384,6 +4548,7 @@ function save_failover() {
 												</script>
 											</table>
 										</div>
+										<!--fancyss_full_2-->
 										<div id="tablet_7" style="display: none;">
 											<table id="table_rules" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
 												<script type="text/javascript">
@@ -4438,9 +4603,9 @@ function save_failover() {
 															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(2)">立即更新</a>' },
 														]},
 														{ title: '二进制更新', multi: [
-															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},
+															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},//fancyss-full
 															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
-															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},
+															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},//fancyss-full
 														]},
 													]);
 												</script>
@@ -4557,7 +4722,7 @@ function save_failover() {
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;导出SS配置', hint:'24', multi: [
 															{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_SS_node(1);" value="导出配置">'},
 															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="remove_SS_node();" value="清空配置">'},
-															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_SS_node(2);" value="打包插件">'},
+															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_SS_node(2);" value="打包插件">'},//fancyss-full
 														]},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;恢复SS配置（支持ss/ssr的json节点）', hint:'24', multi: [
 															{ suffix:'<input style="color:#FFCC00;*color:#000;width: 200px;" id="ss_file" type="file" name="file"/>'},
@@ -4598,14 +4763,15 @@ function save_failover() {
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;设置节点列表为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev / v2ray / xray 开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss-libev 开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心替换V2ray', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行V2ray节点', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},//fancyss-full
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行trojan节点', id:'ss_basic_tcore', help:'119', type:'checkbox', value:false},//fancyss-full
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;Xray启用进程守护', id:'ss_basic_xguard', hint:'115', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [
-															{ id:'ss_basic_rust', type:'checkbox', value:false},
-															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">下载 shadowsocks-rust 二进制</a>'}
-														]},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [//fancyss-full
+															{ id:'ss_basic_rust', type:'checkbox', value:false},//fancyss-full
+															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">下载 shadowsocks-rust 二进制</a>'}//fancyss-full
+														]}, //fancyss-full
 													]);
 												</script> 
 											</table>

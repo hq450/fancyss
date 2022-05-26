@@ -44,8 +44,6 @@ gen_folder_full(){
 	# remove all comment line
 	sed -i '/^[ \t]*\/\//d' ./shadowsocks/webs/Module_shadowsocks.asp
 	sed -i '/^[ \t]*\/\//d' ./shadowsocks/res/ss-menu.js
-	sed -i '/fancyss_lite_1/,/fancyss_lite_2/d' ./shadowsocks/install.sh
-	sed -i '/fancyss_lite_1/,/fancyss_lite_2/d' ./shadowsocks/scripts/ss_base.sh
 }
 
 gen_folder_lite(){

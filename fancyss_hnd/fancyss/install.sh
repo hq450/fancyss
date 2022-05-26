@@ -84,7 +84,7 @@ install_now(){
 	local PLVER=$(cat ${DIR}/ss/version)
 
 	# print message
-	if [ ! -x "/koolshare/bin/v2ray" ];then
+	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
 		local TITLE="科学上网 lite"
 		local DESCR="科学上网 lite for merlin hnd platform"
 		echo_date "安装版本：fancyss_hnd_lite_${PLVER}"
@@ -241,21 +241,25 @@ install_now(){
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
-	# ----------------------fancyss_lite_1------------------------------------
-	# for shadowssocks_lite, should be removed when using shadowsocks_full version
-	ss_basic_lite=1
-	ss_basic_vcore=1
-	ss_basic_tcore=1
-	local SFD=$(dbus get ss_foreign_dns)
-	local SDC=$(dbus get ss_dns_china)
-	if [ "${SFD}" != "3" -o "${SFD}" != "6" -o "${SFD}" != "7" -o "${SFD}" != "8" -o "${SFD}" != "10" ];then
-		dbus set ss_foreign_dns=10
-		dbus set ss_disable_aaaa=1
+	# lite
+	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
+		ss_basic_vcore=1
 	fi
-	if [ "${SDC}" -gt "15" ];then
-		dbus set ss_dns_china=1
+	if [ ! -x "/tmp/shadowsocks/bin/trojan" ];then
+		ss_basic_tcore=1
 	fi
-	# ----------------------fancyss_lite_2------------------------------------
+	
+	if [ ! -x "/tmp/shadowsocks/bin/smartdns" ];then
+		local SFD=$(dbus get ss_foreign_dns)
+		local SDC=$(dbus get ss_dns_china)
+		if [ "${SFD}" != "3" -o "${SFD}" != "6" -o "${SFD}" != "7" -o "${SFD}" != "8" -o "${SFD}" != "10" ];then
+			dbus set ss_foreign_dns=10
+			dbus set ss_disable_aaaa=1
+		fi
+		if [ "${SDC}" -gt "15" ];then
+			dbus set ss_dns_china=1
+		fi
+	fi
 
 	# dbus value
 	echo_date "设置插件安装参数..."

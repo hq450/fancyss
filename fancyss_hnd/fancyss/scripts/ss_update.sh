@@ -9,7 +9,7 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 main_url="https://raw.githubusercontent.com/hq450/fancyss/master/fancyss_hnd"
 backup_url=""
 
-if [ ! -x "/koolshare/bin/v2ray" -o ! -x "/koolshare/bin/trojan" ];then
+if [ ! -x "/koolshare/bin/v2ray" ];then
 	VERSION=version_lite
 	PACKAGE=fancyss_hnd_lite
 else
