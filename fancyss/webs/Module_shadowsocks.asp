@@ -4010,9 +4010,7 @@ function save_failover() {
 															<a id="updateBtn" type="button" class="ss_btn" style="cursor:pointer" onclick="update_ss()">检查并更新</a>
 														</div>
 														<div id="ss_version_show" style="display:table-cell;float: left;position: absolute;margin-left:170px;padding: 5.5px 0px;">
-															<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(12)">
-																<i>当前版本：</i>
-															</a>
+															<a><i>当前版本：</i></a>
 														</div>
 														<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 5.5px 0px;">
 															<a type="button" class="ss_btn" target="_blank" href="https://github.com/hq450/fancyss/blob/3.0/Changelog.txt">更新日志</a>
