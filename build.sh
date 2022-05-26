@@ -32,7 +32,7 @@ gen_folder(){
 	cd ${CURR_PATH}
 	rm -rf shadowsocks
 	cp -rf fancyss shadowsocks
-	rm -rf README.md
+	rm -rf shadowsocks/README.md
 
 	# different platform
 	if [ "${platform}" == "hnd" ];then

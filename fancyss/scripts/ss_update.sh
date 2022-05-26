@@ -4,10 +4,8 @@
 
 source /koolshare/scripts/ss_base.sh
 mkdir -p /tmp/upload
-http_response "$1"
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
-main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/"
-backup_url=""
+main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages"
 
 # --------------------------------------
 # 6.x.4708			2.6.36.4		arm
@@ -37,7 +35,7 @@ MD5NAME=md5_${PLATFORM}_${PKGTYPE}
 PACKAGE=fancyss_${PLATFORM}_${PKGTYPE}
 VERSION=version.json.js
 
-install_ss(){
+install_fancyss(){
 	echo_date "开始解压压缩包..."
 	tar -zxf shadowsocks.tar.gz
 	chmod a+x /tmp/shadowsocks/install.sh
@@ -50,59 +48,51 @@ update_ss(){
 	echo_date "更新过程中请不要刷新本页面或者关闭路由等，不然可能导致问题！"
 	echo_date "检查科学上网插件更新，使用主服务器：github"
 	echo_date "检测主服务器在线版本号..."
-	ss_basic_version_web1=$(curl -4sk --connect-timeout 5 ${main_url}/${VERSION} | jq '.version')
-	if [ -n "${ss_basic_version_web1}" ];then
-		echo_date "检测到主服务器在线版本号：${ss_basic_version_web1}"
-		dbus set ss_basic_version_web="${ss_basic_version_web1}"
-		if [ "${ss_basic_version_local}" != "${ss_basic_version_web1}" ];then
-			echo_date "主服务器在线版本号：${ss_basic_version_web1} 和本地版本号：${ss_basic_version_local} 不同！"
-			cd /tmp
-			md5_web1=$(curl -4sk --connect-timeout 5 ${main_url}/${VERSION} | jq '${MD5NAME}')
+	echo_date "地址：${main_url}/${VERSION}"
+	curl -4sk --connect-timeout 10 ${main_url}/${VERSION} >/tmp/version.json.js
+	if [ "$?" != "0" ];then
+		echo_date "没有检测到主服务器在线版本号，访问github服务器可能有点问题！"
+		echo "XU6J03M6"
+		exit
+	fi
+	jq --tab . /tmp/version.json.js >/dev/null 2>&1
+	if [ "$?" != "0" ];then
+		echo_date "在线版本号获取错误！请检测你的网络！"
+		echo "XU6J03M6"
+		exit
+	fi
+	
+	fancyss_version_online=$(cat /tmp/version.json.js | jq -r '.version')
+	echo_date "检测到主服务器在线版本号：${fancyss_version_online}"
+	dbus set ss_basic_version_web="${fancyss_version_online}"
+	if [ "${ss_basic_version_local}" != "${fancyss_version_online}" ];then
+		echo_date "主服务器在线版本号：${fancyss_version_online} 和本地版本号：${ss_basic_version_local} 不同！"
+		cd /tmp
+		fancyss_md5_online=$(cat /tmp/version.json.js | jq -r '${MD5NAME}')
 
-			echo_date "开启下载进程，从主服务器上下载更新包..."
-			echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
-			wget -4 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
-			mv ${PACKAGE}.tar.gz shadowsocks.tar.gz
-			md5sum_gz=$(md5sum /tmp/shadowsocks.tar.gz | sed 's/ /\n/g'| sed -n 1p)
-			if [ "${md5sum_gz}" != "${md5_web1}" ]; then
-				echo_date "更新包md5校验不一致！估计是下载的时候出了什么状况，请等待一会儿再试..."
-				rm -rf /tmp/shadowsocks* >/dev/null 2>&1
-				sleep 1
-				echo_date "更换备用备用更新地址，请稍后..."
-				sleep 1
-				update_ss2
-			else
-				echo_date "更新包md5校验一致！ 开始安装！..."
-				install_ss
-			fi
+		echo_date "开启下载进程，从主服务器上下载更新包..."
+		echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
+		wget -4 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
+		mv ${PACKAGE}.tar.gz shadowsocks.tar.gz
+		fancyss_md5_download=$(md5sum /tmp/shadowsocks.tar.gz | sed 's/ /\n/g'| sed -n 1p)
+		if [ "${fancyss_md5_download}" != "${fancyss_md5_online}" ]; then
+			echo_date "更新包md5校验不一致！估计是下载的时候出了什么状况，请等待一会儿再试..."
+			rm -rf /tmp/shadowsocks* >/dev/null 2>&1
 		else
-			echo_date "主服务器在线版本号：${ss_basic_version_web1} 和本地版本号：${ss_basic_version_local} 相同！"
-			echo_date "退出插件更新!"
-			sleep 1
-			echo "XU6J03M6"
-			exit
+			echo_date "更新包md5校验一致！ 开始安装！..."
+			install_fancyss
 		fi
 	else
-		echo_date "没有检测到主服务器在线版本号,访问github服务器可能有点问题！"
-		sleep 1
-		echo_date "更换备用备用更新地址，请稍后..."
-		sleep 1
-		update_ss2
+		echo_date "主服务器在线版本号：${fancyss_version_online} 和本地版本号：${ss_basic_version_local} 相同！"
+		echo_date "退出插件更新!"
 	fi
 }
 
-update_ss2(){
-	echo_date "目前还没有任何备用服务器！请尝试使用离线安装功能！"
-	echo_date "历史版本下载地址：https://github.com/hq450/fancyss_history_package/tree/master"
-	echo_date "下载后请将下载包名字改为：shadowsocks.tar.gz，再使用软件中心离线安装功能进行安装！"
-	sleep 1
-	echo "XU6J03M6"
-	exit
-}
 
 case $2 in
 update)
 	true > /tmp/upload/ss_log.txt
+	http_response "$1"
 	update_ss | tee -a /tmp/upload/ss_log.txt 2>&1
 	echo XU6J03M6 | tee -a /tmp/upload/ss_log.txt
 	;;

@@ -8,6 +8,7 @@ MODEL=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
 module=${DIR##*/}
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
 get_model(){
 	local ODMPID=$(nvram get odmpid)
@@ -37,8 +38,7 @@ get_fw_type() {
 }
 
 platform_test(){
-	local LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-	if [ -d "/koolshare" -a -f "/usr/bin/skipd" -a "${LINUX_VER}" -ge "41" ];then
+	if [ -d "/koolshare" -a -f "/usr/bin/skipd" ];then
 		echo_date 机型："${MODEL} ${FW_TYPE_NAME} 符合安装要求，开始安装插件！"
 	else
 		exit_install 1
@@ -177,15 +177,12 @@ install_now(){
 	fi
 
 	# 386固件全面使用openssl1.1.1，弃用了openssl1.0.0，所以判断使用openssl1.1.1的使用新版本的httping
-	if [ -f "/usr/lib/libcrypto.so.1.1" ];then
-		mv /tmp/shadowsocks/bin/httping_openssl_1.1.1 /tmp/shadowsocks/bin/httping
-	else
-		rm -rf /tmp/shadowsocks/bin/httping_openssl_1.1.1
-	fi
-
-	# 梅林386.2 引入了jitterentropy-rngd用以提高系统熵，所以haveged不再需要安装了
-	if [ -n "$(which jitterentropy-rngd)" ];then
-		rm -rf /tmp/shadowsocks/bin/haveged
+	if [ -n "$(grep -Eo hnd /tmp/shadowsocks/.valid)" ];then
+		if [ -f "/usr/lib/libcrypto.so.1.1" ];then
+			mv /tmp/shadowsocks/bin/httping_openssl_1.1.1 /tmp/shadowsocks/bin/httping
+		else
+			rm -rf /tmp/shadowsocks/bin/httping_openssl_1.1.1
+		fi
 	fi
 
 	# 检测储存空间是否足够
@@ -193,10 +190,10 @@ install_now(){
 	SPACE_AVAL=$(df | grep -w "/jffs" | awk '{print $4}')
 	SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
 	if [ "$SPACE_AVAL" -gt "$SPACE_NEED" ];then
-		echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间满足，继续安装！
+		echo_date "当前jffs分区剩余${SPACE_AVAL}KB, 插件安装大概需要${SPACE_NEED}KB，空间满足，继续安装！"
 	else
-		echo_date 当前jffs分区剩余"$SPACE_AVAL" KB, 插件安装大概需要"$SPACE_NEED" KB，空间不足！
-		echo_date 退出安装！
+		echo_date "当前jffs分区剩余${SPACE_AVAL}KB, 插件安装大概需要${SPACE_NEED}KB，空间不足！"
+		echo_date "退出安装！"
 		exit 1
 	fi
 
