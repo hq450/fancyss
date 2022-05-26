@@ -3467,10 +3467,20 @@ ss_pre_stop() {
 }
 
 detect() {
-	local MODEL=$(nvram get productid)
-	# 检测jffs2脚本是否开启，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf）
-	#if [ "$MODEL" != "GT-AC5300" ];then
+	# 检测是否是路由模式
+	local ROUTER_MODE=$(nvram get sw_mode)
+	if [ "$(nvram get sw_mode)" != "1" ]; then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+          无法启用插件，因为当前路由器工作在非无线路由器模式下          +"
+		echo_date "+     科学上网插件工作方式为透明代理，需要在NAT下，即路由模式下才能工作    +"
+		echo_date "+            请前往【系统管理】- 【系统设置】去切换路由模式！           +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		close_in_five
+	fi
+	
+	# 检测jffs2脚本是否开启，如果没有开启，不然将会影响插件的自启和DNS部分（dnsmasq.postconf）
 	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，官改固件不需要开启
+	local MODEL=$(nvram get productid)
 	if [ -z "$(nvram get extendno | grep koolshare)" ]; then
 		if [ "$(nvram get jffs2_scripts)" != "1" ]; then
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -3479,23 +3489,6 @@ detect() {
 			echo_date "+     请前往【系统管理】- 【系统设置】去开启，并重启路由器后重试！！      +"
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			close_in_five
-		fi
-	fi
-
-	#检测v2ray/xray模式下是否启用虚拟内存
-	if [ "$ss_basic_type" == "3" -a -z "$WAN_ACTION" ]; then
-		if [ "$MODEL" == "RT-AC86U" -o "$MODEL" == "TUF-AX3000" ]; then
-			SWAPSTATUS=$(free | grep Swap | awk '{print $2}')
-			if [ "$SWAPSTATUS" != "0" ]; then
-				echo_date "你选择了${VCORE_NAME}节点，当前系统已经启用虚拟内存！！符合启动条件！"
-			else
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				echo_date "+          你选择了${VCORE_NAME}节点，而当前系统未启用虚拟内存！               +"
-				echo_date "+        ${VCORE_NAME}程序对路由器开销极大，请挂载虚拟内存后再开启！            +"
-				echo_date "+       如果使用 ws + tls + web 方案，建议1G虚拟内存，以保证稳定！     +"
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				close_in_five
-			fi
 		fi
 	fi
 
@@ -3533,7 +3526,7 @@ httping_check() {
 	echo "检查国内可用性..."
 	httping www.baidu.com -s -Z -r --ts -c 10 -i 0.5 -t 5 | tee /tmp/upload/china.txt
 	if [ "$?" != "0" ]; then
-		ehco 当前节点无法访问国内网络！
+		ehco "当前节点无法访问国内网络！"
 		#dbus set ssconf_basic_node=$
 	fi
 	echo "--------------------------------------------------------------------------------------"
@@ -3637,7 +3630,7 @@ apply_ss() {
 	write_numbers
 	# post-start
 	ss_post_start
-	#httping_check
+	httping_check
 	#[ "$?" == "1" ] && return 1
 	check_status
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
