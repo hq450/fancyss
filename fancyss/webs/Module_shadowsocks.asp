@@ -4760,16 +4760,16 @@ function save_failover() {
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;开启节点排序功能', id:'ss_basic_dragable', func:'v', type:'checkbox', value:true},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;设置节点列表为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},								//fancyss-hnd
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行V2ray节点', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},//fancyss-full
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行trojan节点', id:'ss_basic_tcore', help:'119', type:'checkbox', value:false},//fancyss-full
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行V2ray节点', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},									//fancyss-full
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行trojan节点', id:'ss_basic_tcore', help:'119', type:'checkbox', value:false},								//fancyss-full
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;Xray启用进程守护', id:'ss_basic_xguard', hint:'115', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [//fancyss-full
-															{ id:'ss_basic_rust', type:'checkbox', value:false},//fancyss-full
-															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">下载 shadowsocks-rust 二进制</a>'}//fancyss-full
-														]}, //fancyss-full
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [															//fancyss-full
+															{ id:'ss_basic_rust', type:'checkbox', value:false},																									//fancyss-full
+															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">下载 shadowsocks-rust 二进制</a>'}		//fancyss-full
+														]}, 																																						//fancyss-full
 													]);
 												</script> 
 											</table>

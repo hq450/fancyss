@@ -22,6 +22,7 @@ WAN_ACTION=$(ps | grep /jffs/scripts/wan-start | grep -v grep)
 NAT_ACTION=$(ps | grep /jffs/scripts/nat-start | grep -v grep)
 ARG_OBFS=""
 OUTBOUNDS="[]"
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
 #-----------------------------------------------
 
@@ -438,7 +439,9 @@ kill_process() {
 	fi
 
 	# close tcp_fastopen
-	echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+	if [ "${LINUX_VER}" != "26" ]; then
+		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+	fi
 }
 
 # ================================= ss prestart ===========================
@@ -575,7 +578,7 @@ creat_ss_json() {
 
 	if [ "$ss_basic_type" == "0" ]; then
 		if [ "${ss_basic_rust}" == "1" ];then
-			if [ "${ss_basic_tfo}" == "1" ]; then
+			if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
 				RUST_ARG_1="--fast-open"
 				echo_date ss-rust开启tcp fast open支持.
 				echo 3 >/proc/sys/net/ipv4/tcp_fastopen
@@ -1460,7 +1463,7 @@ start_ss_redir() {
 fire_redir() {
 	[ "$ss_basic_type" == "0" -a "$ss_basic_mcore" == "1" ] && local ARG_1="--reuse-port" || local ARG_1=""
 	local ARG_2=""
-	if [ "$ss_basic_type" == "0" -a "$ss_basic_tfo" == "1" ]; then
+	if [ "$ss_basic_type" == "0" -a "$ss_basic_tfo" == "1" -a "${LINUX_VER}" != "26" ]; then
 		local ARG_2="--fast-open"
 		echo_date $BIN开启tcp fast open支持.
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
@@ -2043,8 +2046,8 @@ creat_v2ray_json() {
 			echo_date ${VCORE_NAME}配置文件通过测试!!!
 		else
 			echo_date ${VCORE_NAME}配置文件没有通过测试，请检查设置!!!
-			#rm -rf "$V2RAY_CONFIG_TEMP"
-			#rm -rf "$V2RAY_CONFIG_FILE"
+			rm -rf "$V2RAY_CONFIG_TEMP"
+			rm -rf "$V2RAY_CONFIG_FILE"
 			close_in_five
 		fi
 	fi
@@ -2052,7 +2055,7 @@ creat_v2ray_json() {
 
 start_v2ray() {
 	# tfo start
-	if [ "$ss_basic_tfo" == "1" ]; then
+	if [ "$ss_basic_tfo" == "1" -a "${LINUX_VER}" != "26" ]; then
 		echo_date 开启tcp fast open支持.
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
@@ -2388,6 +2391,9 @@ creat_xray_json() {
 		EOF
 		echo_date "解析Xray配置文件..."
 		sed -i '/null/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		if [ "${LINUX_VER}" == "26" ]; then
+			sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		fi
 		jq --tab . $XRAY_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
@@ -2557,11 +2563,13 @@ creat_xray_json() {
 
 start_xray() {
 	# tfo start
-	if [ "$ss_basic_tfo" == "1" ]; then
-		echo_date 开启tcp fast open支持.
-		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	else
-		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+	if [ "${LINUX_VER}" != "26" ]; then
+		if [ "$ss_basic_tfo" == "1" ]; then
+			echo_date 开启tcp fast open支持.
+			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+		else
+			echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+		fi
 	fi
 	# xray start
 	if [ "${ss_basic_xguard}" == "1" ];then
@@ -2719,13 +2727,17 @@ creat_trojan_json(){
 						"tlsSettings": {
 							"serverName": $(get_value_null ${ss_basic_trojan_sni}),
 							"allowInsecure": $(get_function_switch ${ss_basic_trojan_ai})
-      					},"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
+      					}
+      					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
     				}
   				}
   			]
   			}
 		EOF
 		echo_date "解析xray的trojan配置文件..."
+		if [ "${LINUX_VER}" == "26" ]; then
+			sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		fi
 		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
@@ -2766,12 +2778,24 @@ creat_trojan_json(){
 				"tcp": {
 				"no_delay": true,
 				"keep_alive": true,
-				"reuse_port": $(get_function_switch ${ss_basic_mcore}),
-				"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+		EOF
+		if [ "${LINUX_VER}" != "26" ]; then
+			cat >> "${TROJAN_CONFIG_TEMP}" <<-EOF
+					"reuse_port": $(get_function_switch ${ss_basic_mcore}),
+					"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+			EOF
+		else
+			cat >> "${TROJAN_CONFIG_TEMP}" <<-EOF
+					"reuse_port": false,
+					"fast_open": false,
+			EOF
+		fi
+		cat >> "${TROJAN_CONFIG_TEMP}" <<-EOF
 				"fast_open_qlen": 20
 				}
 			}
 		EOF
+		
 		echo_date "解析trojan的nat配置文件..."
 		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
@@ -2827,7 +2851,17 @@ creat_trojan_json(){
 					"no_delay": true,
 					"keep_alive": true,
 					"reuse_port": false,
-					"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+			EOF
+			if [ "${LINUX_VER}" != "26" ]; then
+				cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+						"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+				EOF
+			else
+				cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+						"fast_open": false,
+				EOF			
+			fi
+			cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
 					"fast_open_qlen": 20
 					}
 				}
@@ -2861,13 +2895,14 @@ creat_trojan_json(){
 
 start_trojan(){
 	# tfo
-	if [ "${ss_basic_trojan_tfo}" == "1" ]; then
-		echo_date ${TCORE_NAME}开启tcp fast open支持.
-		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	else
-		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+	if [ "${LINUX_VER}" != "26" ]; then
+		if [ "${ss_basic_trojan_tfo}" == "1" ]; then
+			echo_date ${TCORE_NAME}开启tcp fast open支持.
+			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+		else
+			echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+		fi
 	fi
-
 	if [ "${ss_basic_tcore}" == "1" ];then
 		if [ "${ss_basic_xguard}" == "1" ];then
 			echo_date "开启Xray主进程 + Xray守护，用以运行trojan协议节点..."

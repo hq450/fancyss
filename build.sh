@@ -46,6 +46,9 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-hnd
 		mv shadowsocks/bin-qca ./shadowsocks/bin
 		echo arm386 > ./shadowsocks/.valid
+		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"ss_basic_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "arm" ];then
 		rm -rf ./shadowsocks/bin-hnd
