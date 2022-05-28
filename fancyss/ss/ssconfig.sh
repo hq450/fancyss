@@ -2736,7 +2736,7 @@ creat_trojan_json(){
 		EOF
 		echo_date "解析xray的trojan配置文件..."
 		if [ "${LINUX_VER}" == "26" ]; then
-			sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+			sed -i '/tcpFastOpen/d' ${TROJAN_CONFIG_TEMP} 2>/dev/null
 		fi
 		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
@@ -2854,12 +2854,12 @@ creat_trojan_json(){
 			EOF
 			if [ "${LINUX_VER}" != "26" ]; then
 				cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
-						"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
+					"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
 				EOF
 			else
 				cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
-						"fast_open": false,
-				EOF			
+					"fast_open": false,
+				EOF
 			fi
 			cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
 					"fast_open_qlen": 20
