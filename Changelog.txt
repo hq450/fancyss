@@ -9,8 +9,15 @@ fancyss Changelog
        		3. packages：离线安装包的最新版本，用于插件的在线更新
        		4. rules：插件的规则文件，如gfwlist.conf、chnroute.txt、cdn.txt
    - note2	如何升级到3.x.x版本
-       		1. 在线更新：通过在线更新2.9.9过度版本后，即可再次通过在线更新升级到3.x.x
+       		1. 在线更新：通过在线更新fancyss_arm_1.0.6/fancyss_hnd_2.0.3/fancyss_qca_2.2.2过度版本后，即可再次通过在线更新升级到3.x.x
        		1. 离线安装：下载并安装3.x.x，比如3.0.0的离线安装包，通过软件中心离线安装功能安装即可
    - add	增加dnsmasq重启按钮，方便在不重启整个插件的时候，通过重启dnsmasq来重建DNS缓存
    - update	规则（rules）更新和二进制（binary）更新地址均切换到3.0分支
    - update	fancyss_hnd更新trojan，版本号不变，体积减小
+   - update	离线安装包从shaowsocks.tar.gz更名为fancyss_xxx_yyy.tar.gz，包含以下：
+       		1.fancyss_arm_full.tar.gz
+       		2.fancyss_arm_lite.tar.gz
+       		3.fancyss_hnd_full.tar.gz
+       		4.fancyss_hnd_lite.tar.gz
+       		5.fancyss_qca_full.tar.gz
+       		6.fancyss_qca_lite.tar.gz
