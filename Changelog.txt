@@ -10,7 +10,12 @@ fancyss Changelog
        		4. rules：插件的规则文件，如gfwlist.conf、chnroute.txt、cdn.txt
    - note2	如何升级到3.x.x版本
        		1. 在线更新：通过在线更新fancyss_arm_1.0.6/fancyss_hnd_2.0.3/fancyss_qca_2.2.2过度版本后，即可再次通过在线更新升级到3.x.x
-       		1. 离线安装：下载并安装3.x.x，比如3.0.0的离线安装包，通过软件中心离线安装功能安装即可
+       		2. 离线安装：下载并安装3.x.x，比如3.0.0的离线安装包，通过软件中心离线安装功能安装即可
+   - note3	3.x.x包含1.x.x - 2.x.x所有的功能和更新，为方便查询，提供日志回溯链接：
+       		fancyss_hnd 1.0.0 - 2.0.3 更新日志: https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt
+       		fancyss_qca 2.0.0 - 2.2.2 更新日志: https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt
+       		fancyss_arm 1.0.0 - 1.0.6 更新日志: https://github.com/hq450/fancyss/blob/master/fancyss_hnd/Changelog.txt
+       		----------------------------------------------------------------------------------------------------------
    - add	增加dnsmasq重启按钮，方便在不重启整个插件的时候，通过重启dnsmasq来重建DNS缓存
    - update	规则（rules）更新和二进制（binary）更新地址均切换到3.0分支
    - update	fancyss_hnd更新trojan，版本号不变，体积减小
