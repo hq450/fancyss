@@ -1,5 +1,11 @@
 fancyss_qca Changelog
 ===========================================
+2.2.2
+   - update	此版本为过度版本，升级此版本后，可以继续升级到3.x.x版本，目前(2022年6月2日)最新为3.0.0
+   - note	升级到3.x.x版本后，插件更新，规则更新，二进制更新都将使用3.0分支
+       		为了避免对现有1.x.x - 2.x.x版本用户造成影响，master分支将不再维护，今后在3.0分支上维护
+       		fancyss 3.x.x更新日志：https://github.com/hq450/fancyss/blob/12fd5ac78bc7875154e42a394ae78153e01aebc8/Changelog.txt#L3-L16
+
 2.2.0 - 2.2.1
    - fix	修复某些机场的trojan订阅端口不正确的问题
    - fix	修复某些机场的trojan订阅SNI为空的问题

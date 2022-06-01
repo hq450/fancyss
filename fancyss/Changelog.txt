@@ -1,4 +1,0 @@
-fancyss_hnd Changelog
-===========================================
-3.0.0 (todo)
-   - update	将fancyss_hnd、fancyss_qca、fancyss_arm384共同纳入fancyss目录下进行维护
