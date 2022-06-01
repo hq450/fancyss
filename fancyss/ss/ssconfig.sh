@@ -3366,14 +3366,14 @@ load_module() {
 
 # write number into nvram with no commit
 write_numbers() {
-	nvram set update_ipset=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.gfwlist.date')
-	nvram set update_chnroute=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.chnroute.date')
-	nvram set update_cdn=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.cnd_china.date')
+	nvram set update_ipset="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.date')"
+	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.date')"
+	nvram set update_cdn="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.date')"
 	
-	nvram set ipset_numbers=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.gfwlist.count')
-	nvram set chnroute_numbers=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.chnroute.count')
-	nvram set chnroute_ips=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.chnroute.count_ip')
-	nvram set cdn_numbers=$(cat /koolshare/ss/rules/rules.json.js | jq -r '.cnd_china.count')
+	nvram set ipset_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.count')"
+	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.count')"
+	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.count_ip')"
+	nvram set cdn_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.count')"
 }
 
 set_sys() {

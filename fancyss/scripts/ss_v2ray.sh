@@ -7,7 +7,12 @@ eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/master/v2ray_binary"
-url_back=""
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+if [ "${LINUX_VER}" -ge "41" ];then
+	ARCH=armv7
+elif [ "${LINUX_VER}" -eq "26" ];then
+	ARCH=armv5
+fi
 
 get_latest_version(){
 	rm -rf /tmp/v2ray_latest_info.txt
@@ -73,7 +78,7 @@ update_now(){
 	fi
 	
 	echo_date "开始下载v2ray程序"
-	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/v2ray_armv7
+	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/v2ray_${ARCH}
 	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/$1/v2ray
 	if [ "$?" != "0" ];then
 		echo_date "v2ray下载失败！"
@@ -81,7 +86,7 @@ update_now(){
 	else
 		v2ray_ok=1
 		echo_date "v2ray程序下载成功..."
-		mv v2ray_armv7 v2ray
+		mv v2ray_${ARCH} v2ray
 	fi
 
 
@@ -100,7 +105,7 @@ check_md5sum(){
 	cd /tmp/v2ray
 	echo_date "校验下载的文件!"
 	V2RAY_LOCAL_MD5=$(md5sum v2ray|awk '{print $1}')
-	V2RAY_ONLINE_MD5=$(cat md5sum.txt|grep -w v2ray_armv7|awk '{print $1}')
+	V2RAY_ONLINE_MD5=$(cat md5sum.txt|grep -w v2ray_${ARCH}|awk '{print $1}')
 	if [ "${V2RAY_LOCAL_MD5}" == "${V2RAY_ONLINE_MD5}" ];then
 		echo_date "文件校验通过!"
 		install_binary
