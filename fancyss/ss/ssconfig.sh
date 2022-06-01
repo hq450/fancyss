@@ -234,6 +234,7 @@ __get_server_resolver() {
 	[ "$value_1" == "13" ] && res="8.8.8.8"
 	[ "$value_1" == "14" ] && res="8.8.4.4"
 	[ "$value_1" == "15" ] && res="9.9.9.9"
+	[ "$value_1" == "16" ] && res="1.1.1.1"
 	if [ "$value_1" == "12" ]; then
 		if [ -n "$value_2" ]; then
 			res=$(__valid_ip "$value_2")

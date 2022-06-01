@@ -491,6 +491,9 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 20) {
 		document.getElementById("loading_block3").innerHTML = "XRay 二进制文件更新 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，更新中 ...</font></li>");
+	} else if (action == 21) {
+		document.getElementById("loading_block3").innerHTML = "重启dnsmasq进程 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重启中 ...</font></li>");
 	}
 }
 function hideSSLoadingBar() {
@@ -543,14 +546,14 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;和真正的gfwlist模式相比较，路由器内的gfwlist模式还是有一定缺点，因为它没法做到像gfwlist PAC文件一样，对某些域名的二级域名有例外规则。<br />"
 		statusmenu += "<b><font color='#669900'>优点：</font></b>节省节点流量，可防止迅雷和PT流量。<br />"
 		statusmenu += "<b><font color='#669900'>缺点：</font></b>代理受限于名单内的4000多个被墙网站，需要维护黑名单。一些不走域名解析的应用，比如telegram，需要单独添加IP/CIDR黑名单。</span><br /><br />"
-		//redchn
+		//chnmode
 		statusmenu += "<span><b><font color='#CC0066'>【2】大陆白名单模式:</font></b><br />"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;该模式使用chnroute IP网段区分国内外流量，ss-redir将流量转发到Shadowsocks服务器，实现透明代理；<br />"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;由于采用了预先定义的ip地址块(chnroute)，所以DNS解析就非常重要，如果一个国内有的网站被解析到了国外地址，那么这个国内网站是会走ss的；<br />"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;因为使用了大量的cdn名单，能够保证常用的国内网站都获得国内的解析结果，但是即使如此还是不能完全保证国内的一些网站解析到国内地址，这个时候就推荐使用具备cdn解析能力的cdns或者chinadns2。<br />"
 		statusmenu += "<b><font color='#669900'>优点：</font></b>所有被墙国外网站均能通过代理访问，无需维护域名黑名单；主机玩家用此模式可以实现TCP代理UDP国内直连。<br />"
 		statusmenu += "<b><font color='#669900'>缺点：</font></b>消耗更多的Shadowsocks流量，迅雷下载和BT可能消耗代理流量。</span><br /><br />"
-		//game
+		//gamemode
 		statusmenu += "<span><b><font color='#CC0066'>【3】游戏模式:</font></b><br />"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;游戏模式较于其它模式最大的特点就是支持UDP代理，能让游戏的UDP链接走代理，主机玩家用此模式可以实现TCP+UDP走代理；<br />"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;由于采用了预先定义的ip地址块(chnroute)，所以DNS解析就非常重要，如果一个国内有的网站被解析到了国外地址，那么这个国内网站是会走ss的。<br />"
@@ -561,7 +564,7 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;除局域网和ss服务器等流量不走代理，其它都走代理(udp不走)，高级设置中提供了对代理协议的选择。<br />"
 		statusmenu += "<b><font color='#669900'>优点：</font></b>简单暴力，全部出国；可选仅web浏览走ss，还是全部tcp代理走ss，因为不需要区分国内外流量，因此性能最好。<br />"
 		statusmenu += "<b><font color='#669900'>缺点：</font></b>国内网站全部走ss，迅雷下载和BT全部走代理流量。</span><br /><br />"
-		//overall
+		//mainland
 		statusmenu += "<span><b><font color='#CC0066'>【5】回国模式:</font></b><br />"
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;提供给国外的朋友，通过在中间服务器翻回来，以享受一些视频、音乐等网络服务。<br />"
 		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~<br />"

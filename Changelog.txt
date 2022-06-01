@@ -1,4 +1,11 @@
 fancyss Changelog
 ===========================================
 3.0.0 (todo)
-   - update	将fancyss_hnd、fancyss_qca、fancyss_arm384共同纳入fancyss目录下进行维护
+   - note	将fancyss_hnd、fancyss_qca、fancyss_arm384共同纳入fancyss目录下进行维护，版本号3.0.0起步
+       		为了保持兼容性，以后3.x.x版本的维护在3.0分支下进行，master分支保留3.0.0以下版本的代码
+       		精简3.0分支目录结构，以方便后期维护
+       		1. fancyss：插件代码主目录，由build.sh打包成不同路由器的离线安装包
+       		2. binaries：一些在线更新的二进制程序，如v2ray、xray
+       		3. packages：离线安装包的最新版本，用于插件的在线更新
+       		4. rules：插件的规则文件，如gfwlist.conf、chnroute.txt、cdn.txt
+   - add	增加dnsmasq重启按钮，方便在不重启整个插件的时候重建DNS缓存

@@ -2990,6 +2990,21 @@ function remove_SS_node() {
 	db_ss["ss_basic_action"] = "10";
 	push_data("ss_conf.sh", "3",  "");
 }
+function restart_dnsmaq() {
+	db_ss["ss_basic_action"] = "21";
+	showSSLoadingBar();
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params": ["8"], "fields": ""};
+	$.ajax({
+		type: "POST",
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			get_realtime_log();
+		}
+	});
+}
 function updatelist(arg) {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "8";
@@ -4323,7 +4338,7 @@ function save_failover() {
 												<script type="text/javascript">
 													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "SmartDNS"], ["12", "自定义DNS"]];
 													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["10", "chinadns-ng"], ["6", "https_dns_proxy"], ["7", "v2ray/xray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
-													var option_dnsr = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "google DNS1【8.8.8.8】"], ["14", "google DNS2【8.8.4.4】"], ["15", "IBM DNS【9.9.9.9】"], ["12", "自定义DNS"]];
+													var option_dnsr = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "google DNS1【8.8.8.8】"], ["14", "google DNS2【8.8.4.4】"], ["15", "IBM DNS【9.9.9.9】"], ["15", "CloudFlare DNS【1.1.1.1】"], ["12", "自定义DNS"]];
 													var ph1 = "需端口号如：8.8.8.8:53"
 													var ph2 = "需端口号如：8.8.8.8#53"
 													var ph3 = "# 填入自定义的dnsmasq设置，一行一个&#10;# 例如hosts设置：&#10;address=/weibo.com/2.2.2.2&#10;# 防DNS劫持设置：&#10;bogus-nxdomain=220.250.64.18"
@@ -4352,6 +4367,9 @@ function save_failover() {
 															{ suffix: '<br/>&nbsp;<span id="dns_plan_foreign0">默认使用koolgame内置的DNS2SS域名解析</span>' },								//fancyss-koolgame
 														]},																																	//fancyss-koolgame
 														{ title: 'DNS劫持（原chromecast功能）', id:'ss_basic_dns_hijack', type:'checkbox', func:'v', hint:'106', value:true},
+														{ title: '重启dnsmasq', rid: 'ss_sub_save_only', multi: [
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
+														]},
 														{ title: '节点域名解析DNS服务器', hint:'107', multi: [
 															{ id: 'ss_basic_server_resolver', type:'select', func:'u', options:option_dnsr, style:'width:auto;', value:'13'},
 															{ id: 'ss_basic_server_resolver_user', type: 'text'},

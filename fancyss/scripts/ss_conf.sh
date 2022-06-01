@@ -289,6 +289,23 @@ download_ssc(){
 	fi
 }
 
+restart_dnsmasq(){
+	echo_date "重启dnsmasq..."
+	service restart_dnsmasq >/dev/null 2>&1
+
+	local DPID
+	local i=50
+	until [ -n "${DPID}" ]; do
+		i=$(($i - 1))
+		DPID=$(pidof dnsmasq)
+		if [ "$i" -lt 1 ]; then
+			echo_date "dnsmasq重启失败，请检查你的dnsmasq配置！"
+		fi
+		usleep 250000
+	done
+	echo_date "dnsmasq重启成功，dnsmasq进程pid:${DPID}"
+}
+
 case $2 in
 1)
 	true > /tmp/upload/ss_log.txt
@@ -328,5 +345,11 @@ case $2 in
 	true > /tmp/upload/ss_log.txt
 	download_ssc
 	http_response "$1"
+	;;
+8)
+	true > /tmp/upload/ss_log.txt
+	http_response "$1"
+	restart_dnsmasq >> /tmp/upload/ss_log.txt
+	echo XU6J03M6 >> /tmp/upload/ss_log.txt
 	;;
 esac
