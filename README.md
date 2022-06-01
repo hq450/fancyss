@@ -15,51 +15,51 @@
 
 ## 支持机型/固件
 
-> 以下为fancyss 3.x.x支持的机型/固件，点击机型可以前往相应固件下载地址
+> 以下为fancyss 3.0支持的机型/固件，点击机型可以前往相应固件下载地址
 
 | 机型/固件下载                                                | 类型 | 平台           | CPU       | 架构  | linux内核 | 插件皮肤    | fancyss版本 |
 | ------------------------------------------------------------ | ---- | -------------- | --------- | ----- | --------- | ----------- | --------------- |
 | [R6300V2](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/Netgear/R6300v2/) | 梅改 | 6.x.4708       | BCM4708   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
-| [RT-AC68U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AC68U/) | 梅改 | 6.x.4708       | BCM4708   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
-| [RT-AC88U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AC88U/) | 梅改 | 7.14.114.x     | BCM4709   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
-| [RT-AC3100](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AC3100/) | 梅改 | 7.14.114.x     | BCM4709   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
-| [RT-AC5300](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AC5300/) | 梅改 | 7.14.114.x     | BCM4709   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
-| [RT-AC86U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AC86U/) | 梅改 | hnd            | BCM4906   | armv8 | 4.1.27    | asuswrt     | fancyss_hnd     |
-| RT-AC86U                                                     | 官改 | hnd            | BCM4906   | armv8 | 4.1.27    | asuswrt[^1] | fancyss_hnd     |
+| [RT-AC68U](https://www.koolcenter.com/posts/38) | 梅改 | 6.x.4708       | BCM4708   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
+| [RT-AC88U](https://www.koolcenter.com/posts/39) | 梅改 | 7.14.114.x     | BCM4709   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
+| [RT-AC3100](https://www.koolcenter.com/posts/40) | 梅改 | 7.14.114.x     | BCM4709   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
+| [RT-AC5300](https://www.koolcenter.com/posts/41) | 梅改 | 7.14.114.x     | BCM4709   | armv7 | 2.6.36.4  | asuswrt     | fancyss_arm     |
+| [RT-AC86U](https://www.koolcenter.com/posts/36) | 梅改 | hnd            | BCM4906   | armv8 | 4.1.27    | asuswrt     | fancyss_hnd     |
+| [RT-AC86U](https://www.koolcenter.com/posts/139)             | 官改 | hnd            | BCM4906   | armv8 | 4.1.27    | asuswrt[^1] | fancyss_hnd     |
 | [GT-AC2900](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/GT-AC2900/) | 梅改 | hnd            | BCM4906   | armv8 | 4.1.27    | asuswrt     | fancyss_hnd     |
-| GT-AC2900                                                    | 官改 | hnd            | BCM4906   | armv8 | 4.1.27    | rog         | fancyss_hnd     |
-| GT-AC5300                                                    | 官改 | hnd            | BCM4908   | armv8 | 4.1.27    | rog         | fancyss_hnd     |
-| [RT-AX88U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AX88U/) | 梅改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
+| [GT-AC2900](https://www.koolcenter.com/posts/37) | 官改 | hnd            | BCM4906   | armv8 | 4.1.27    | rog         | fancyss_hnd     |
+| [GT-AC5300](https://www.koolcenter.com/posts/12)             | 官改 | hnd            | BCM4908   | armv8 | 4.1.27    | rog         | fancyss_hnd     |
+| [RT-AX88U](https://www.koolcenter.com/posts/34) | 梅改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
 | [RT-AX88U](https://www.koolcenter.com/posts/142)             | 官改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
-| [RAX80](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/Netgear/RAX80/) | 梅改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
-| GT-AX11000                                                   | 官改 | axhnd          | BCM4908   | armv8 | 4.1.51    | rog         | fancyss_hnd     |
-| [GT-AX11000](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/GT-AX11000/) | 梅改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
-| RT-AX92U                                                     | 官改 | axhnd          | BCM4906   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
-| TUF-AX3000                                                   | 官改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | tuf         | fancyss_hnd     |
-| [TUF-AX5400](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/TUF-AX5400/) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | tuf         | fancyss_hnd     |
-| TUF-AX5400                                                   | 官改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | tuf         | fancyss_hnd     |
-| [RT-AX58U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AX58U/) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [RAX50](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/Netgear/RAX50/) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| RT-AX82U                                                     | 官改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [RT-AX82U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AX82U/) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| ZenWiFi_XT8                                                  | 官改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [ZenWiFi_XT8](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/ZenWiFi_XT8/) | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| ZenWiFi_XD4                                                  | 官改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| RT-AX56U_V2                                                  | 官改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| RT-AX1800                                                    | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| RT-AX56U                                                     | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [RAX70](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/Netgear/RAX70/) | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| RT-AX68U                                                     | 官改 | p1axhnd.675x   | BCM4906   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [RT-AX68U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AX88U/) | 梅改 | p1axhnd.675x   | BCM4906   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| RT-AX86U                                                     | 官改 | p1axhnd.675x   | BCM4908   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [RT-AX86U](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/RT-AX86U/) | 梅改 | p1axhnd.675x   | BCM4908   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| [GT-AXE11000](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/GT-AXE11000/) | 梅改 | p1axhnd.675x   | BCM4908   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
-| GT-AX6000                                                    | 官改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | rog         | fancyss_hnd     |
-| [GT-AX6000](https://fw.koolcenter.com/KoolCenter_Merlin_New_Gen_386/GT-AX6000/) | 梅改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd     |
+| [RAX80](https://www.koolcenter.com/posts/43) | 梅改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
+| [GT-AX11000](https://www.koolcenter.com/posts/140)           | 官改 | axhnd          | BCM4908   | armv8 | 4.1.51    | rog         | fancyss_hnd     |
+| [GT-AX11000](https://www.koolcenter.com/posts/35) | 梅改 | axhnd          | BCM4908   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
+| [RT-AX92U](https://www.koolcenter.com/posts/20)              | 官改 | axhnd          | BCM4906   | armv8 | 4.1.51    | asuswrt     | fancyss_hnd     |
+| [TUF-AX3000](https://www.koolcenter.com/posts/11)            | 官改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | tuf         | fancyss_hnd     |
+| [TUF-AX5400](https://www.koolcenter.com/posts/130) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | tuf         | fancyss_hnd     |
+| [TUF-AX5400](https://www.koolcenter.com/posts/141)           | 官改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | tuf         | fancyss_hnd     |
+| [RT-AX58U](https://www.koolcenter.com/posts/130) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RAX50](https://www.koolcenter.com/posts/130) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX82U](https://www.koolcenter.com/posts/18)              | 官改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX82U](https://www.koolcenter.com/posts/130) | 梅改 | axhnd.675x     | BCM6750   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [ZenWiFi_XT8](https://www.koolcenter.com/posts/137)          | 官改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [ZenWiFi_XT8](https://www.koolcenter.com/posts/130) | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [ZenWiFi_XD4](https://www.koolcenter.com/posts/21)           | 官改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX56U_V2](https://www.koolcenter.com/posts/16)           | 官改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX1800](https://www.koolcenter.com/posts/16)             | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX56U](https://www.koolcenter.com/posts/130)             | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RAX70](https://www.koolcenter.com/posts/130) | 梅改 | axhnd.675x     | BCM6755   | armv7 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX68U](https://www.koolcenter.com/posts/136)             | 官改 | p1axhnd.675x   | BCM4906   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX68U](https://www.koolcenter.com/posts/33) | 梅改 | p1axhnd.675x   | BCM4906   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX86U](https://www.koolcenter.com/posts/135)             | 官改 | p1axhnd.675x   | BCM4908   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [RT-AX86U](https://www.koolcenter.com/posts/5) | 梅改 | p1axhnd.675x   | BCM4908   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [GT-AXE11000](https://www.koolcenter.com/posts/130) | 梅改 | p1axhnd.675x   | BCM4908   | armv8 | 4.1.52    | asuswrt     | fancyss_hnd     |
+| [GT-AX6000](https://www.koolcenter.com/posts/125)            | 官改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | rog         | fancyss_hnd     |
+| [GT-AX6000](https://www.koolcenter.com/posts/148) | 梅改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd     |
 | [ZenWiFi_Pro_XT12](https://www.koolcenter.com/posts/133)     | 官改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd     |
 | [ZenWiFi_Pro_XT12](https://www.koolcenter.com/posts/149)     | 梅改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd     |
 | [TUF-AX3000_V2](https://www.koolcenter.com/posts/161)        | 官改 | 5.04axhnd.675x | BCM6756   | armv7 | 4.19.183  | tuf         | fancyss_hnd     |
-| [RT-AX89X](https://koolshare.cn/thread-188090-1-1.html)      | 官改 | qca-ipq806x    | ipq8074/a | armv7 | 4.4.60    | asuswrt     | fancyss_qca     |
+| [RT-AX89X](https://www.koolcenter.com/posts/126) | 官改 | qca-ipq806x    | ipq8074/a | armv7 | 4.4.60    | asuswrt     | fancyss_qca     |
 
 ## 版本选择
 
@@ -89,22 +89,47 @@ lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客
 
 10. lite版本移除了socks5页面及其脚本及其acl规则文件
 
-## 相关链接
+如果是不折腾以上被精简功能的用户，完全可以使用体积更小的lite版本
 
-- **fancyss 3.x.x**更新日志：https://github.com/hq450/fancyss/blob/3.0/Changelog.txt
+RT-AX56U_V2这种jffs分区极小(15MB)的机型，建议直接使用lite版本
 
-* **fancyss_hnd**离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd)
-* **fancyss_qca**离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca)
-* **fancyss_arm**离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384)
-* 官改/梅改固件下载【网方网站】：[https://www.koolcenter.com](https://www.koolcenter.com/)
-* 官改/梅改固件下载【固件镜像】：[https://fw.koolcenter.com](https://fw.koolcenter.com)
+要切换为lite版本，直接安装lite版本的离线安装包即可，以后在线更新也会维持为lite版本
+
+要切换为full版本，直接安装full版本的离线安装包即可，以后在线更新也会维持为full版本
+
+## 插件下载
+
+插件下载有两种方式：
+
+1. 在`packages`目录下，点击tar.gz后缀文件，下载当前最新版本的离线安装包
+2. 在**[fancyss_history_package](https://github.com/hq450/fancyss_history_package)**项目中，包含**历史版本**和**最新版本**的离线安装包
+
+插件离线包下载导航：
+
+| 平台 | 最新full版本下载                                             | 最新lite版本下载                                             | 历史版本下载                                                 |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| hnd  | [fancyss_hnd_full](https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/fancyss_hnd_full.tar.gz) | [fancyss_hnd_lite](https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/fancyss_hnd_lite.tar.gz) | [fancyss_hnd](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd/version_3.x.x) |
+| qca  | [fancyss_qca_full](https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/fancyss_qca_full.tar.gz) | [fancyss_qca_lite](https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/fancyss_qca_lite.tar.gz) | [fancyss_qca](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca/version_3.x.x) |
+| farm | [fancyss_arm_full](https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/fancyss_arm_full.tar.gz) | [fancyss_arm_lite](https://raw.githubusercontent.com/hq450/fancyss/3.0/packages/fancyss_arm_lite.tar.gz) | [fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm/version_3.x.x) |
+
+## 插件安装
+
+1. 离线安装：下载并校验好离线安装包后，在软件中心内使用**离线安装**/**手动安装**功能，选择安装包后上传并安装即可。
+
+2. 命令安装：(以fancyss_hnd_lite.tar.gz为例，先下载好安装包，并将其上传到路由器的/tmp目录)
+
+   ```bash
+   mv /tmp/fancyss_hnd_lite.tar.gz /tmp/shadowsocks.tar.gz
+   tar -zxvf /tmp/shadowsocks.tar.gz
+   sh /tmp/shadowsocks/install.sh
+   ```
 
 ## 注意事项
 
 * 强烈建议使用chrome或者chrouium内核的浏览器！以保证最佳兼容性！
 * 强烈建议在`最新版本的固件`和`最新版本软件中心`上使用fancyss_hnd！
 * 插件会自动跟随当前固件的皮肤类型，支持assuwrt、rog、tuf三种皮肤。
-* 一些机型的联名版，只要刷了官改/梅林改版固件，均能安装本插件！
+* 一些机型的联名版，只要刷了官改/梅林改版固件的，均能安装本插件！
 
 ## 目录说明
 
@@ -113,9 +138,11 @@ lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客
 3. **packages**：不同平台的离线安装包的最新版本，用于插件的在线更新
 4. **rules**：插件的规则文件，如gfwlist.conf、chnroute.txt、cdn.txt
 
-## 如何编译
+## 打包插件
 
-> 为了保证在不同路由器/固件版本之间都能运行，目前项目提供的所有二进制都是预编译好的，尽量提供全静态编译版本。
+> 打包过程就是将fancyss目录下相关二进制和代码文件通过脚本生成不同平台，不同版本的离线安装包。
+>
+> 为保证在不同路由器/固件版本中都能运行，项目提供的所有二进制都是预编译好的，且尽量提供全静态编译版本。
 
 1. 克隆本项目：使用linux系统，比如Ubuntu 20.04
 
@@ -148,5 +175,12 @@ lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客
    fancyss_qca_full.tar.gz
    fancyss_qca_lite.tar.gz
    ```
+
+## 相关链接
+
+* **fancyss 3.0**更新日志：https://github.com/hq450/fancyss/blob/3.0/Changelog.txt
+
+* 官改/梅改固件下载【网方网站】（最新固件）：[https://www.koolcenter.com](https://www.koolcenter.com/)
+* 官改/梅改固件下载【固件镜像】（次新固件）：[https://fw.koolcenter.com](https://fw.koolcenter.com)
 
 [^1]: RT-AC86U从384_81918_koolshare固件版本开始，使用的是asuswrt风格ui，而不是rog风格。
