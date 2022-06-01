@@ -1,7 +1,7 @@
 # [fancyss - 科学上网](https://hq450.github.io/fancyss/)
 
 - Fancyss is a project providing tools to across the GFW on asuswrt/merlin based router with software center. 
-- 此项目提供用于asuswrt、asuswrt-merlin为基础的，带软件中心固件路由器的科学上网。
+- 此项目提供用于asuswrt、asuswrt-merlin为基础的，带软件中心固件（≥384）路由器的科学上网功能。
 
 ## 插件特色
 
@@ -61,15 +61,33 @@
 | [TUF-AX3000_V2](https://www.koolcenter.com/posts/161)        | 官改 | 5.04axhnd.675x | BCM6756   | armv7 | 4.19.183  | tuf         | fancyss_hnd     |
 | [RT-AX89X](https://koolshare.cn/thread-188090-1-1.html)      | 官改 | qca-ipq806x    | ipq8074/a | armv7 | 4.4.60    | asuswrt     | fancyss_qca     |
 
-## 注意事项
+## 版本选择
 
-* 相关机型的梅林改/官改固件下载请前往：[https://www.koolcenter.com/](https://www.koolcenter.com/)
-* 使用fancyss_hnd科学上网插件，强烈建议使用chrome或者chrouium内核的浏览器！以保证最佳兼容性！
-* 强烈建议在`最新版本的固件`和`最新版本软件中心`上使用fancyss_hnd！
-* GT-AC2900/GT-AC5300/GT-AX11000/GT-AX6000官改使用ROG皮肤，插件安装会自动识别机型并安装对应皮肤版本。
-* TUF-AX3000/TUF-AX5400官改固件使用的是TUF橙色皮肤，插件安装会自动识别机型并安装对应皮肤版本。
-* TUF-AX5400梅林改版固件使用的是TUF橙色皮肤，插件安装会自动识别机型并安装对应皮肤版本。
-* 一些机型的联名版如GT-AX11000使命召唤黑色行动版/海妖版，RT-AX86U高达版/鬼灭之刃版，RT-AX82U高达版，RT-AX88U高达版本，GT-AX6000 EVA版等各种联名版均是默认支持的。
+fancyss 3.0支持hnd、qca、arm三个平台，每个平台又有full版本和lite版本
+
+full版本为全功能版本，支持SS、 SSR、KoolGame、V2ray、 Xray、 Trojan 六种客户端，安装包体积较大
+
+lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客户端，安装包小巧，以下为lite版本精简内容：
+
+1. lite版本移除了v2ray、trojan二进制文件，默认使用xray-core来运行v2ray和trojan协议
+
+2. lite版本移除了shdowsocks的v2ray-plugin插件功能及其对应的二进制文件：v2ray-plugin
+
+3. lite版本移除了UDP加速功能及其二进制文件：speederv1、speederv2、udp2raw
+
+4. lite版本移除了KCP加速功能及其二进制文件：kcptun
+
+5. lite版本移除了koolgame协议支持及其二进制文件：koolgame、pdu
+
+6. lite版本移除了负载均衡支持及其页面和二进制文件：haproxy
+
+7. lite版本移除了直连解析的国外DNS方案及其二进制文件：cdns、chinadns、chinadns1、smartdns
+
+8. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
+
+9. lite版本移除了shdowsocks-rust替换shadowsocks-libev功能，默认由shadowsocks-libev运行ss协议
+
+10. lite版本移除了socks5页面及其脚本及其acl规则文件
 
 ## 相关链接
 
@@ -80,6 +98,13 @@
 * **fancyss_arm**离线包：[https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm](https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm384)
 * 官改/梅改固件下载【网方网站】：[https://www.koolcenter.com](https://www.koolcenter.com/)
 * 官改/梅改固件下载【固件镜像】：[https://fw.koolcenter.com](https://fw.koolcenter.com)
+
+## 注意事项
+
+* 强烈建议使用chrome或者chrouium内核的浏览器！以保证最佳兼容性！
+* 强烈建议在`最新版本的固件`和`最新版本软件中心`上使用fancyss_hnd！
+* 插件会自动跟随当前固件的皮肤类型，支持assuwrt、rog、tuf三种皮肤。
+* 一些机型的联名版，只要刷了官改/梅林改版固件，均能安装本插件！
 
 ## 目录说明
 
