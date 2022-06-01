@@ -47,7 +47,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
 		mv shadowsocks/bin-qca ./shadowsocks/bin
-		echo arm386 > ./shadowsocks/.valid
+		echo qca > ./shadowsocks/.valid
 		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_qca_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_qca_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
@@ -55,7 +55,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-qca
 		mv shadowsocks/bin-arm ./shadowsocks/bin
-		echo qca > ./shadowsocks/.valid
+		echo arm386 > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -242,15 +242,21 @@ build_pkg() {
 }
 
 do_backup(){
+	local platform=$1
+	local pkgtype=$2
 	cd ${CURR_PATH}
-	HISTORY_DIR="../../fancyss_history_package/fancyss_hnd"
+	HISTORY_DIR="${CURR_PATH}/../fancyss_history_package/fancyss_${platform}"
 	# backup latested package after pack
-	local backup_version=$(cat ${CURR_PATH}/version | sed -n 1p)
-	local backup_tar_md5=$(cat ${CURR_PATH}/version | sed -n 2p)
-	echo backup VERSION FULL: ${backup_version}
-	cp fancyss_hnd_full.tar.gz $HISTORY_DIR/fancyss_hnd_full_${backup_version}.tar.gz
-	sed -i "/fancyss_hnd_full_$backup_version/d" ${HISTORY_DIR}/md5sum.txt
-	echo ${backup_tar_md5} fancyss_hnd_full_${backup_version}.tar.gz >> "${HISTORY_DIR}"/md5sum.txt
+	local backup_version=${VERSION}
+	local backup_tar_md5=${md5value}
+	
+	echo "备份：fancyss_${platform}_${pkgtype}_${backup_version}.tar.gz"
+	cp ${CURR_PATH}/packages/fancyss_${platform}_${pkgtype}.tar.gz ${HISTORY_DIR}/fancyss_${platform}_${pkgtype}_${backup_version}.tar.gz
+	sed -i "/fancyss_${platform}_${pkgtype}_${backup_version}/d" ${HISTORY_DIR}/md5sum.txt
+	if [ ! -f ${HISTORY_DIR}/md5sum.txt ];then
+		touch ${HISTORY_DIR}/md5sum.txt
+	fi
+	echo ${backup_tar_md5} fancyss_${platform}_${pkgtype}_${backup_version}.tar.gz >> ${HISTORY_DIR}/md5sum.txt
 }
 
 papare(){
@@ -273,7 +279,7 @@ finish(){
 pack(){
 	gen_folder $1 $2
 	build_pkg $1 $2
-	#do_backup
+	do_backup  $1 $2
 	rm -rf ${CURR_PATH}/shadowsocks/
 }
 
