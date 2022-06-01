@@ -49,14 +49,16 @@ get_gfwlist(){
 	# 6. gen json
 	local count=$(cat ${CURR_PATH}/../gfwlist.conf|grep -E "^server="|wc -l)
 	json_init
+	json_add_string name "gfwlist.conf"
 	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
 	json_add_string md5 "${md5sum1}"
 	json_add_string count "${count}"
 	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"gfwlist"': $args}')
 
 	# remove tmp files
-	rm ${CURR_PATH}/gfwlist_merge.conf
-	rm ${CURR_PATH}/gfwlist_download.conf
+	rm -f ${CURR_PATH}/gfwlist_tmp.conf
+	rm -f ${CURR_PATH}/gfwlist_merge.conf
+	rm -f ${CURR_PATH}/gfwlist_download.conf
 }
 
 get_chnroute(){
@@ -87,11 +89,15 @@ get_chnroute(){
 
 	# 3. gen json
 	json_init
+	json_add_string name "chnroute.txt"
 	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
 	json_add_string md5 "${md5sum1}"
 	json_add_string count "${IPLINE}"
 	json_add_string count_ip "${IPCOUN}"
 	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"chnroute"': $args}')
+
+	# remove tmp files
+	rm -f ${CURR_PATH}/chnroute_tmp.txt
 }
 
 get_cdn(){
@@ -124,12 +130,16 @@ get_cdn(){
 
 	# 4. gen json
 	json_init
+	json_add_string name "cdn.txt"
 	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
 	json_add_string md5 "${md5sum1}"
 	json_add_string count "${count}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"cdn"': $args}')
+	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"cdn_china"': $args}')
 	
-	rm ${CURR_PATH}/cdn_tmp.txt ${CURR_PATH}/accelerated-domains.china.conf ${CURR_PATH}/cdn_download.txt
+	# remove tmp files
+	rm -f ${CURR_PATH}/cdn_tmp.txt
+	rm -f ${CURR_PATH}/accelerated-domains.china.conf
+	rm -f ${CURR_PATH}/cdn_download.txt
 }
 
 get_apple(){
@@ -150,12 +160,15 @@ get_apple(){
 
 	# 4. gen json
 	json_init
+	json_add_string name "apple_china.txt"
 	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
 	json_add_string md5 "${md5sum1}"
 	json_add_string count "${count}"
 	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"apple_china"': $args}')
-	
-	rm ${CURR_PATH}/apple.china.conf
+
+	# remove tmp files
+	rm -f ${CURR_PATH}/apple.china.conf
+	rm -f ${CURR_PATH}/apple_download.txt
 }
 
 get_google(){
@@ -176,13 +189,45 @@ get_google(){
 
 	# 4. gen json
 	json_init
+	json_add_string name "google_china.txt"
 	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
 	json_add_string md5 "${md5sum1}"
 	json_add_string count "${count}"
 	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"google_china"': $args}')
 	
-	rm ${CURR_PATH}/google.china.conf
+	# remove tmp files
+	rm -f ${CURR_PATH}/google.china.conf
+	rm -f ${CURR_PATH}/google_download.txt
 }
+
+get_cdntest(){
+	# 1. get domain
+	wget https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/cdn-testlist.txt -qO ${CURR_PATH}/cdn_test.txt
+
+	# compare
+	local md5sum1=$(md5sum ${CURR_PATH}/cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${CURR_PATH}/../cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		echo "cdn test list same md5!"
+	else
+		echo "update cdn test list!"
+		mv -f ${CURR_PATH}/cdn_test.txt ${CURR_PATH}/../cdn_test.txt
+	fi
+	local count=$(cat ${CURR_PATH}/../cdn_test.txt|wc -l)
+
+	# 4. gen json
+	json_init
+	json_add_string name "cdn_test.txt"
+	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
+	json_add_string md5 "${md5sum1}"
+	json_add_string count "${count}"
+	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"cdn_test"': $args}')
+	
+	# remove tmp files
+	rm -f ${CURR_PATH}/cdn_test.txt
+}
+
 
 finish(){
 	echo "---------------------------------"
@@ -195,6 +240,7 @@ get_rules(){
 	get_cdn
 	get_apple
 	get_google
+	get_cdntest
 	finish
 }
 
