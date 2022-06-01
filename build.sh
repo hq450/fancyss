@@ -11,7 +11,8 @@ cp_rules(){
 	cp -rf ${CURR_PATH}/rules/gfwlist.conf ${CURR_PATH}/fancyss/ss/rules/
 	cp -rf ${CURR_PATH}/rules/chnroute.txt ${CURR_PATH}/fancyss/ss/rules/
 	cp -rf ${CURR_PATH}/rules/cdn.txt ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/version1 ${CURR_PATH}/fancyss/ss/rules/version
+	cp -rf ${CURR_PATH}/rules/cdn_test.txt ${CURR_PATH}/fancyss/ss/rules/
+	cp -rf ${CURR_PATH}/rules/rules.json.js ${CURR_PATH}/fancyss/ss/rules/rules.json.js
 }
 
 sync_binary(){
@@ -40,12 +41,16 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-qca
 		mv shadowsocks/bin-hnd ./shadowsocks/bin
 		echo hnd > ./shadowsocks/.valid
+		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_hnd_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_hnd_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "qca" ];then
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
 		mv shadowsocks/bin-qca ./shadowsocks/bin
 		echo arm386 > ./shadowsocks/.valid
+		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_qca_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_qca_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "arm" ];then
 		rm -rf ./shadowsocks/bin-hnd
@@ -55,6 +60,8 @@ gen_folder(){
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_arm_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_arm_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	
 	if [ "${pkgtype}" == "full" ];then
@@ -200,7 +207,6 @@ gen_folder(){
 		sed -i 's/\, \"Module_shadowsocks_local\.asp\"//g' ./shadowsocks/res/ss-menu.js
 		# modify words
 		sed -i 's/ss\/ssr\/trojan/ss\/ssr/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/科学上网插件 - Full/科学上网插件 - Lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/六种客户端/五种客户端/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/16\.67/20/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/六种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js

@@ -231,7 +231,7 @@ get_cdntest(){
 
 finish(){
 	echo "---------------------------------"
-	echo ${OBJECT_1} | jq '.' > ../rule.json.js
+	echo ${OBJECT_1} | jq '.' > ../rules.json.js
 }
 
 get_rules(){

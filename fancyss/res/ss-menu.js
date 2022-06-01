@@ -192,7 +192,7 @@ function pop_help() {
 				<a target="_blank" href="https://github.com/XTLS/xray-core"><u>Xray</u></a>、\
 				<a target="_blank" href="https://github.com/trojan-gfw/trojan"><u>Trojan</u></a>\
 				六种客户端的科学上网、游戏加速工具。<br \>\
-				本插件仅支持Asuswrt/Merlin hnd platform 固件，请不要用于其它固件安装。<br \>\
+				本插件支持以Asuswrt、Asuswrt-Merlin为基础的，带软件中心的固件，目前固件均由<a style="color:#e7bd16" target="_blank" href="https://www.koolcenter.com/">https:\/\/www.koolcenter.com/</a>提供。<br \>\
 				使用本插件有任何问题，可以前往<a style="color:#e7bd16" target="_blank" href="https://github.com/hq450/fancyss/issues"><u>github的issue页面</u></a>反馈~<br \><br \>\
 				● SS/SSR一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/onekeyshell/kcptun_for_ss_ssr/tree/master"><u>一键安装KCPTUN for SS/SSR on Linux</u></a><br \>\
 				● koolgame一键脚本：<a style="color:#e7bd16" target="_blank" href="https://github.com/clangcn/game-server"><u>一键安装koolgame服务器端脚本，完美支持nat2</u></a><br \>\
