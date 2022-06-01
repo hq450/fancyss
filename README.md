@@ -102,7 +102,7 @@ RT-AX56U_V2这种jffs分区极小(15MB)的机型，建议直接使用lite版本
 插件下载有两种方式：
 
 1. 在`packages`目录下，点击tar.gz后缀文件，下载当前最新版本的离线安装包
-2. 在**[fancyss_history_package](https://github.com/hq450/fancyss_history_package)**项目中，包含**历史版本**和**最新版本**的离线安装包
+2. 在[fancyss_history_package](https://github.com/hq450/fancyss_history_package)项目中，包含**历史版本**和**最新版本**的离线安装包
 
 插件离线包下载导航：
 
