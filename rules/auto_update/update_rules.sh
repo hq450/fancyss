@@ -1,15 +1,15 @@
 #!/bin/bash
-# CurrentDate=$(date +%Y-%m-%d)
 CurrentDate=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 CURR_PATH="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
+RULE_PATH=${CURR_PATH%\/*}
+RULE_FILE=${RULE_PATH}/rules.json.js
 OBJECT_1='{}'
 
-json_init(){
-	OBJECT_2='{}'
-}
-
-json_add_string(){
-	OBJECT_2=$(echo ${OBJECT_2} | jq --arg var "$2" '. + {'$1': $var}')
+prepare(){
+	if ! type -p sponge &>/dev/null; then
+	    printf '%s\n' "error: sponge is not installed, exiting..."
+	    exit 1
+	fi
 }
 
 get_gfwlist(){
@@ -37,28 +37,24 @@ get_gfwlist(){
 
 	# 5. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/gfwlist_tmp.conf | awk '{print $1}')
-	local md5sum2=$(md5sum ${CURR_PATH}/../gfwlist.conf | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/gfwlist.conf | awk '{print $1}')
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "gfwlist same md5!"
-	else
-		echo "update gfwlist!"
-		mv -f ${CURR_PATH}/gfwlist_tmp.conf ${CURR_PATH}/../gfwlist.conf
+		return
 	fi
 
-	# 6. gen json
-	local count=$(cat ${CURR_PATH}/../gfwlist.conf|grep -E "^server="|wc -l)
-	json_init
-	json_add_string name "gfwlist.conf"
-	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
-	json_add_string md5 "${md5sum1}"
-	json_add_string count "${count}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"gfwlist"': $args}')
+	# 6. update file
+	echo "update gfwlist!"
+	mv -f ${CURR_PATH}/gfwlist_tmp.conf ${RULE_PATH}/gfwlist.conf
 
-	# remove tmp files
-	rm -f ${CURR_PATH}/gfwlist_tmp.conf
-	rm -f ${CURR_PATH}/gfwlist_merge.conf
-	rm -f ${CURR_PATH}/gfwlist_download.conf
+	# 7. write json
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${RULE_PATH}/gfwlist.conf|grep -E "^server="|wc -l)
+	jq --arg variable "${CURR_DATE}" '.gfwlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.gfwlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.gfwlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
 get_chnroute(){
@@ -76,28 +72,27 @@ get_chnroute(){
 
 	# 3. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_tmp.txt | awk '{print $1}')
-	local md5sum2=$(md5sum ${CURR_PATH}/../chnroute.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute.txt | awk '{print $1}')
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "chnroute same md5!"
-	else
-		echo "update chnroute, total ${IPLINE} subnets, ${IPCOUN} unique IPs !"
-		mv -f ${CURR_PATH}/chnroute_tmp.txt ${CURR_PATH}/../chnroute.txt
+		return
 	fi
-	IPLINE=$(cat ${CURR_PATH}/../chnroute.txt | wc -l)
-	IPCOUN=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/../chnroute.txt)
+	
+	# 4. update file
+	echo "update chnroute, total ${IPLINE} subnets, ${IPCOUN} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
 
-	# 3. gen json
-	json_init
-	json_add_string name "chnroute.txt"
-	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
-	json_add_string md5 "${md5sum1}"
-	json_add_string count "${IPLINE}"
-	json_add_string count_ip "${IPCOUN}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"chnroute"': $args}')
 
-	# remove tmp files
-	rm -f ${CURR_PATH}/chnroute_tmp.txt
+	# 5. write json
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${RULE_PATH}/chnroute.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${RULE_PATH}/chnroute.txt)
+	jq --arg variable "${CURR_DATE}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
 get_cdn(){
@@ -122,119 +117,119 @@ get_cdn(){
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "cdn list same md5!"
-	else
-		echo "update cdn!"
-		mv -f ${CURR_PATH}/cdn_tmp.txt ${CURR_PATH}/../cdn.txt
+		return
 	fi
-	local count=$(cat ${CURR_PATH}/../cdn.txt|wc -l)
-
-	# 4. gen json
-	json_init
-	json_add_string name "cdn.txt"
-	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
-	json_add_string md5 "${md5sum1}"
-	json_add_string count "${count}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"cdn_china"': $args}')
 	
-	# remove tmp files
-	rm -f ${CURR_PATH}/cdn_tmp.txt
-	rm -f ${CURR_PATH}/accelerated-domains.china.conf
-	rm -f ${CURR_PATH}/cdn_download.txt
+	# 4. update file
+	echo "update cdn!"
+	mv -f ${CURR_PATH}/cdn_tmp.txt ${RULE_PATH}/cdn.txt
+
+	# 5. write json
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${RULE_PATH}/cdn.txt | wc -l)
+	jq --arg variable "${CURR_DATE}" '.cdn_china.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.cdn_china.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.cdn_china.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
 get_apple(){
 	# 1. get domain
 	cat ${CURR_PATH}/apple.china.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sort -u >${CURR_PATH}/apple_download.txt
 
-	# compare
+	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/apple_download.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ${CURR_PATH}/../apple_china.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${RULE_PATH}/apple_china.txt | sed 's/ /\n/g' | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "apple china list same md5!"
-	else
-		echo "update apple china list!"
-		mv -f ${CURR_PATH}/apple_download.txt ${CURR_PATH}/../apple_china.txt
+		return
 	fi
-	local count=$(cat ${CURR_PATH}/../apple_china.txt|wc -l)
+	
+	# 3. update file
+	echo "update apple china list!"
+	mv -f ${CURR_PATH}/apple_download.txt ${RULE_PATH}/apple_china.txt
 
-	# 4. gen json
-	json_init
-	json_add_string name "apple_china.txt"
-	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
-	json_add_string md5 "${md5sum1}"
-	json_add_string count "${count}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"apple_china"': $args}')
-
-	# remove tmp files
-	rm -f ${CURR_PATH}/apple.china.conf
-	rm -f ${CURR_PATH}/apple_download.txt
+	# 4. write json
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${RULE_PATH}/apple_china.txt | wc -l)
+	jq --arg variable "${CURR_DATE}" '.apple_china.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.apple_china.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.apple_china.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}	
 }
 
 get_google(){
 	# 1. get domain
 	cat google.china.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sort -u >${CURR_PATH}/google_download.txt
 
-	# compare
+	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/google_download.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ${CURR_PATH}/../google_china.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${RULE_PATH}/google_china.txt | sed 's/ /\n/g' | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "google china list same md5!"
-	else
-		echo "update google china list!"
-		mv -f ${CURR_PATH}/google_download.txt ${CURR_PATH}/../google_china.txt
+		return
 	fi
-	local count=$(cat ${CURR_PATH}/../google_china.txt|wc -l)
-
-	# 4. gen json
-	json_init
-	json_add_string name "google_china.txt"
-	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
-	json_add_string md5 "${md5sum1}"
-	json_add_string count "${count}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"google_china"': $args}')
 	
-	# remove tmp files
-	rm -f ${CURR_PATH}/google.china.conf
-	rm -f ${CURR_PATH}/google_download.txt
+	# 3. update file
+	echo "update google china list!"
+	mv -f ${CURR_PATH}/google_download.txt ${RULE_PATH}/google_china.txt
+
+	# 4. write json
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${RULE_PATH}/google_china.txt | wc -l)
+	jq --arg variable "${CURR_DATE}" '.google_china.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.google_china.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.google_china.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
 get_cdntest(){
 	# 1. get domain
 	wget https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/cdn-testlist.txt -qO ${CURR_PATH}/cdn_test.txt
 
-	# compare
+	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ${CURR_PATH}/../cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${RULE_PATH}/cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "cdn test list same md5!"
-	else
-		echo "update cdn test list!"
-		mv -f ${CURR_PATH}/cdn_test.txt ${CURR_PATH}/../cdn_test.txt
+		return
 	fi
-	local count=$(cat ${CURR_PATH}/../cdn_test.txt|wc -l)
-
-	# 4. gen json
-	json_init
-	json_add_string name "cdn_test.txt"
-	json_add_string date "$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)"
-	json_add_string md5 "${md5sum1}"
-	json_add_string count "${count}"
-	OBJECT_1=$(echo ${OBJECT_1} | jq --argjson args "${OBJECT_2}" '. + {'"cdn_test"': $args}')
 	
-	# remove tmp files
-	rm -f ${CURR_PATH}/cdn_test.txt
+	# 3. update file
+	echo "update cdn test list!"
+	mv -f ${CURR_PATH}/cdn_test.txt ${RULE_PATH}/cdn_test.txt
+
+	# 4. write json
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${RULE_PATH}/cdn_test.txt | wc -l)
+	jq --arg variable "${CURR_DATE}" '.cdn_test.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.cdn_test.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.cdn_test.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
 
 finish(){
+	rm -f ${CURR_PATH}/gfwlist_tmp.conf
+	rm -f ${CURR_PATH}/gfwlist_merge.conf
+	rm -f ${CURR_PATH}/gfwlist_download.conf
+	rm -f ${CURR_PATH}/chnroute_tmp.txt
+	rm -f ${CURR_PATH}/cdn_tmp.txt
+	rm -f ${CURR_PATH}/accelerated-domains.china.conf
+	rm -f ${CURR_PATH}/cdn_download.txt
+	rm -f ${CURR_PATH}/apple.china.conf
+	rm -f ${CURR_PATH}/apple_download.txt
+	rm -f ${CURR_PATH}/google.china.conf
+	rm -f ${CURR_PATH}/google_download.txt
+	rm -f ${CURR_PATH}/cdn_test.txt
 	echo "---------------------------------"
-	echo ${OBJECT_1} | jq '.' > ../rules.json.js
 }
 
 get_rules(){
+	prepare
 	get_gfwlist
 	get_chnroute
 	get_cdn
