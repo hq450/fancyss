@@ -19,12 +19,12 @@ sync_binary(){
 	# hnd & qca (RT-AC86U, TUF-AX3000, RT-AX86U, GT-AX6000, RT-AX89X ...)
 	local v2ray_version=$(cat ${CURR_PATH}/binaries/v2ray/latest.txt)
 	local xray_version=$(cat ${CURR_PATH}/binaries/xray/latest.txt)
-	cp -u ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-hnd/v2ray
-	cp -u ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-qca/v2ray
-	cp -u ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv5 ${CURR_PATH}/fancyss/bin-arm/v2ray
-	cp -u ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
-	cp -u ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
-	cp -u ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
+	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-hnd/v2ray
+	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-qca/v2ray
+	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv5 ${CURR_PATH}/fancyss/bin-arm/v2ray
+	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
+	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
+	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
 }
 
 gen_folder(){

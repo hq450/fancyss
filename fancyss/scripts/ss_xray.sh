@@ -6,8 +6,13 @@ source /koolshare/scripts/base.sh
 eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
-url_main="https://raw.githubusercontent.com/hq450/fancyss/master/xray_binary"
-url_back=""
+url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/xray"
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+if [ "${LINUX_VER}" -ge "41" ];then
+	ARCH=armv7
+elif [ "${LINUX_VER}" -eq "26" ];then
+	ARCH=armv5
+fi
 
 get_latest_version(){
 	rm -rf /tmp/xray_latest_info.txt
@@ -71,7 +76,8 @@ update_now(){
 	fi
 	
 	echo_date "开始下载xray程序"
-	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/xray
+	echo_date "下载地址：${url_main}/$1/xray_${ARCH}"
+	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/xray_${ARCH}
 	#curl -L -H "Cache-Control: no-cache" -o /tmp/xray/xray $url_main/$1/xray
 	if [ "$?" != "0" ];then
 		echo_date "xray下载失败！"
@@ -79,6 +85,7 @@ update_now(){
 	else
 		echo_date "xray程序下载成功..."
 		xray_ok=1
+		mv xray_${ARCH} xray
 	fi
 
 
@@ -97,7 +104,7 @@ check_md5sum(){
 	cd /tmp/xray
 	echo_date "校验下载的文件!"
 	XRAY_LOCAL_MD5=$(md5sum xray|awk '{print $1}')
-	XRAY_ONLINE_MD5=$(cat md5sum.txt|grep -w xray|awk '{print $1}')
+	XRAY_ONLINE_MD5=$(cat md5sum.txt|grep -w xray_${ARCH}|awk '{print $1}')
 	if [ "${XRAY_LOCAL_MD5}" == "${XRAY_ONLINE_MD5}" ];then
 		echo_date "文件校验通过!"
 		install_binary
@@ -130,14 +137,14 @@ install_binary(){
 }
 
 move_binary(){
-	echo_date "开始替换xray二进制文件... "
+	echo_date "开始更新xray二进制文件... "
 	mv /tmp/xray/xray /koolshare/bin/xray
 	chmod +x /koolshare/bin/xray
 	XRAY_LOCAL_VER=$(/koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
 	XRAY_LOCAL_DATE=$(/koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f5)
 	[ -n "$XRAY_LOCAL_VER" ] && dbus set ss_basic_xray_version="$XRAY_LOCAL_VER"
 	[ -n "$XRAY_LOCAL_DATE" ] && dbus set ss_basic_xray_date="$XRAY_LOCAL_DATE"
-	echo_date "xray二进制文件替换成功... "
+	echo_date "xray二进制文件更新成功... "
 }
 
 start_xray() {

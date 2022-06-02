@@ -1767,9 +1767,9 @@ creat_v2ray_json() {
 		cat >"${V2RAY_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
-				"access": "/dev/null",
-				"error": "/tmp/${VCORE_NAME}_log.log",
-				"loglevel": "error"
+				"access": "none",
+				"error": "none",
+				"loglevel": "none"
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
@@ -1896,9 +1896,9 @@ creat_v2ray_json() {
 		if [ "$ss_foreign_dns" == "7" ]; then
 			local TEMPLATE="{
 								\"log\": {
-									\"access\": \"/dev/null\",
-									\"error\": \"/tmp/${VCORE_NAME}_log.log\",
-									\"loglevel\": \"error\"
+									\"access\": \"none\",
+									\"error\": \"none\",
+									\"loglevel\": \"none\"
 								},
 								\"inbounds\": [
 									{
@@ -1926,9 +1926,9 @@ creat_v2ray_json() {
 		else
 			local TEMPLATE="{
 								\"log\": {
-									\"access\": \"/dev/null\",
-									\"error\": \"/tmp/${VCORE_NAME}_log.log\",
-									\"loglevel\": \"error\"
+									\"access\": \"none\",
+									\"error\": \"none\",
+									\"loglevel\": \"none\"
 								},
 								\"inbounds\": [
 									{
@@ -2288,9 +2288,9 @@ creat_xray_json() {
 		cat >"${XRAY_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
-				"access": "/dev/null",
-				"error": "/tmp/xray_log.log",
-				"loglevel": "error"
+				"access": "none",
+				"error": "none",
+				"loglevel": "none"
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
@@ -2424,9 +2424,9 @@ creat_xray_json() {
 		if [ "$ss_foreign_dns" == "7" ]; then
 			local TEMPLATE="{
 								\"log\": {
-									\"access\": \"/dev/null\",
-									\"error\": \"/tmp/xray_log.log\",
-									\"loglevel\": \"error\"
+									\"access\": \"none\",
+									\"error\": \"none\",
+									\"loglevel\": \"none\"
 								},
 								\"inbounds\": [
 									{
@@ -2454,9 +2454,9 @@ creat_xray_json() {
 		else
 			local TEMPLATE="{
 								\"log\": {
-									\"access\": \"/dev/null\",
-									\"error\": \"/tmp/xray_log.log\",
-									\"loglevel\": \"error\"
+									\"access\": \"none\",
+									\"error\": \"none\",
+									\"loglevel\": \"none\"
 								},
 								\"inbounds\": [
 									{
@@ -2636,9 +2636,9 @@ creat_trojan_json(){
 		cat >"${TROJAN_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
-				"access": "/dev/null",
-				"error": "/tmp/${VCORE_NAME}_log.log",
-				"loglevel": "error"
+				"access": "none",
+				"error": "none",
+				"loglevel": "none"
 			},
 		EOF
 		if [ "${ss_foreign_dns}" == "7" ]; then
