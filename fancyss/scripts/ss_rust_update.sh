@@ -8,6 +8,7 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/ss_rust"
 url_back=""
 DNLD=""
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 if [ $(uname -m) = "aarch64" ]; then
   ARCH=arm64
 elif [ "${LINUX_VER}" -ge "41" ];then
