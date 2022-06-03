@@ -30,12 +30,12 @@ get_latest_version(){
 			echo_date "获取shadowsocks-rust最新版本信息失败！使用备用服务器检测！"
 			failed_warning
 		fi
-		RVERSION=$(cat /tmp/ssrust_latest_info.txt)
+		RVERSION=$(cat /tmp/ssrust_latest_info.txt | sed 's/v//g')
 		if [ -z "${RVERSION}" ];then
 			RVERSION="0"
 		fi
 		
-		echo_date "检测到shadowsocks-rust最新版本：${RVERSION}"
+		echo_date "检测到shadowsocks-rust最新版本：v${RVERSION}"
 		if [ ! -x "/koolshare/bin/sslocal" ];then
 			echo_date "shadowsocks-rust二进制文件sslocal不存在！开始下载！"
 			CUR_VER="0"
@@ -44,12 +44,12 @@ get_latest_version(){
 			if [ -z "${CUR_VER}" ];then
 				CUR_VER="0"
 			fi
-			echo_date "当前已安装shadowsocks-rust版本：${CUR_VER}"
+			echo_date "当前已安装shadowsocks-rust版本：v${CUR_VER}"
 		fi
-
-		if [ "${CUR_VER}" != "${RVERSION}" ];then
-			echo_date "检测到在线版本和本地版本不同，开始更新sslocal程序..."
-			update_now ${RVERSION}
+		COMP=$(versioncmp ${CUR_VER} ${RVERSION})
+		if [ "${COMP}" == "1" ];then
+			[ "${CUR_VER}" != "0" ] && echo_date "检测到在线版本和本地版本不同，开始更新sslocal程序..."
+			update_now v${RVERSION}
 		else
 			echo_date "检测到本地版本已经是最新，退出更新程序!"
 		fi
@@ -107,7 +107,7 @@ check_md5sum(){
 	cd /tmp/sslocal_bin
 	echo_date "校验下载的文件!"
 	LOCAL_MD5=$(md5sum sslocal|awk '{print $1}')
-	ONLINE_MD5=$(cat md5sum.txt|grep -w sslocal|awk '{print $1}')
+	ONLINE_MD5=$(cat md5sum.txt|grep -w sslocal_${ARCH}|awk '{print $1}')
 	if [ "${LOCAL_MD5}" == "${ONLINE_MD5}" ];then
 		echo_date "文件校验通过!"
 		install_binary
