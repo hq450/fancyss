@@ -8,7 +8,9 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/v2ray"
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-if [ "${LINUX_VER}" -ge "41" ];then
+if [ $(uname -m) = "aarch64" ]; then
+  ARCH=arm64
+elif [ "${LINUX_VER}" -ge "41" ];then
 	ARCH=armv7
 elif [ "${LINUX_VER}" -eq "26" ];then
 	ARCH=armv5

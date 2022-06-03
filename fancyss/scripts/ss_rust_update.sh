@@ -8,6 +8,13 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/ss_rust"
 url_back=""
 DNLD=""
+if [ $(uname -m) = "aarch64" ]; then
+  ARCH=arm64
+elif [ "${LINUX_VER}" -ge "41" ];then
+	ARCH=armv7
+elif [ "${LINUX_VER}" -eq "26" ];then
+	ARCH=armv5
+fi
 
 get_latest_version(){
 	flag=$1
@@ -75,13 +82,14 @@ update_now(){
 	fi
 	
 	echo_date "开始下载shadowsocks-rust sslocal程序"
-	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/sslocal
+	wget -4 --no-check-certificate --timeout=20 --tries=1 "${url_main}/$1/sslocal_$ARCH"
 	if [ "$?" != "0" ];then
 		echo_date "sslocal下载失败！"
 		sslocal_ok=0
 	else
+	  sslocal_ok=1
 		echo_date "sslocal程序下载成功..."
-		sslocal_ok=1
+		mv "sslocal_${ARCH}" sslocal
 	fi
 
 	if [ "${md5sum_ok}" == "1" -a "${sslocal_ok}" == "1" ];then
