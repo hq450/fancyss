@@ -5,6 +5,7 @@ fancyss Changelog
    - update	更新安装脚本，现在对应平台的路由器只能安装对应平台的离线安装包了
    - update	更新在线规则更新脚本
    - update	更新shadowsocks-rust更新脚本，确保不同平台更新到不同的二进制
+   - update	fancyss_arm版本的ss、kcptun二进制更新到最新版本（thx to piangere）
    - fix	修复arm平台shadowsocks-libev错误开启多线程（arm平台不支持）
    - add	添加实用二进制：sponge, sponge - soak up standard input and write to a file
 
