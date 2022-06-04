@@ -1,5 +1,13 @@
 fancyss Changelog
 ===========================================
+3.0.2
+   - update	更新arm|hnd|qca平台的httping，移除ssl支持以缩小体积（本插件不需要ssl功能）
+   - update	更新安装脚本，现在对应平台的路由器只能安装对应平台的离线安装包了
+   - update	更新在线规则更新脚本
+   - update	更新shadowsocks-rust更新脚本，确保不同平台更新到不同的二进制
+   - fix	修复arm平台shadowsocks-libev错误开启多线程（arm平台不支持）
+   - add	添加实用二进制：sponge, sponge - soak up standard input and write to a file
+
 3.0.1
    - fix	修复xray、v2ray二进制无法更新的问题
    - update	同步fancyss_arm_full的v2ray二进制版本到最新v4.45.0

@@ -6,8 +6,13 @@ source /koolshare/scripts/base.sh
 source /koolshare/scripts/ss_base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/ss_rust"
-url_back=""
 DNLD=""
+LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+if [ "${LINUX_VER}" -ge "41" ];then
+	ARCH=armv7
+elif [ "${LINUX_VER}" -eq "26" ];then
+	ARCH=armv5
+fi
 
 get_latest_version(){
 	flag=$1
@@ -75,12 +80,13 @@ update_now(){
 	fi
 	
 	echo_date "开始下载shadowsocks-rust sslocal程序"
-	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/sslocal
+	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/sslocal_${ARCH}
 	if [ "$?" != "0" ];then
 		echo_date "sslocal下载失败！"
 		sslocal_ok=0
 	else
 		echo_date "sslocal程序下载成功..."
+		mv sslocal_${ARCH} sslocal
 		sslocal_ok=1
 	fi
 
@@ -99,7 +105,7 @@ check_md5sum(){
 	cd /tmp/sslocal_bin
 	echo_date "校验下载的文件!"
 	LOCAL_MD5=$(md5sum sslocal|awk '{print $1}')
-	ONLINE_MD5=$(cat md5sum.txt|grep -w sslocal|awk '{print $1}')
+	ONLINE_MD5=$(cat md5sum.txt|grep -w sslocal_${ARCH}|awk '{print $1}')
 	if [ "${LOCAL_MD5}" == "${ONLINE_MD5}" ];then
 		echo_date "文件校验通过!"
 		install_binary

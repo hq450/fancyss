@@ -1462,8 +1462,11 @@ start_ss_redir() {
 }
 
 fire_redir() {
-	[ "$ss_basic_type" == "0" -a "$ss_basic_mcore" == "1" ] && local ARG_1="--reuse-port" || local ARG_1=""
+	local ARG_1=""
 	local ARG_2=""
+	if [ "$ss_basic_type" == "0" -a "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ];then
+		local ARG_1="--reuse-port"
+	fi
 	if [ "$ss_basic_type" == "0" -a "$ss_basic_tfo" == "1" -a "${LINUX_VER}" != "26" ]; then
 		local ARG_2="--fast-open"
 		echo_date $BIN开启tcp fast open支持.
@@ -1477,7 +1480,7 @@ fire_redir() {
 		local ARG_3=""
 	fi
 
-	if [ "$ss_basic_mcore" == "1" ]; then
+	if [ "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ]; then
 		echo_date $BIN开启$THREAD线程支持.
 		local i=1
 		while [ $i -le $THREAD ]; do
