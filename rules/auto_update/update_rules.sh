@@ -61,7 +61,23 @@ get_chnroute(){
 	# chnroute.txt
 
 	# 1. download
+	# source-1：ipip, 20220604: total 6182 subnets, 13240665434 unique IPs
 	wget https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset -qO ${CURR_PATH}/chnroute_tmp.txt
+
+	# source-2：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
+	# wget https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute_tmp.txt
+
+	# source-3: mayaxcn, 20220604: total 8625 subnets, 343364510 unique IPs
+	# wget https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt -qO ${CURR_PATH}/chnroute_tmp.txt
+
+	# source-4: clang, 20220604: total 8625 subnets, 343364510 unique IPs
+	# wget https://ispip.clang.cn/all_cn.txt -qO ${CURR_PATH}/chnroute_tmp.txt
+	
+	# source-5：apnic, 20220604: total 8625 subnets, 343364510 unique IPs
+	# wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest -qO ${CURR_PATH}/apnic.txt
+	# cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > ${CURR_PATH}/chnroute_tmp.txt
+	# rm -rf ${CURR_PATH}/apnic.txt
+	
 	if [ ! -f "chnroute_tmp.txt" ]; then
 		echo "chnroute download faild!"
 		exit 1
@@ -79,20 +95,19 @@ get_chnroute(){
 		return
 	fi
 	
-	# 4. update file
-	echo "update chnroute, total ${IPLINE} subnets, ${IPCOUN} unique IPs !"
-	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
-
-
-	# 5. write json
+	# 4. write json
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
-	local LINE_COUN=$(cat ${RULE_PATH}/chnroute.txt | wc -l)
-	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${RULE_PATH}/chnroute.txt)
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute_tmp.txt)
 	jq --arg variable "${CURR_DATE}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 	jq --arg variable "${MD5_VALUE}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 	jq --arg variable "${LINE_COUN}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${LINE_COUN}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 5. update file
+	echo "update chnroute, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
 }
 
 get_cdn(){
