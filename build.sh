@@ -19,19 +19,12 @@ sync_binary(){
 	# hnd & qca (RT-AC86U, TUF-AX3000, RT-AX86U, GT-AX6000, RT-AX89X ...)
 	local v2ray_version=$(cat ${CURR_PATH}/binaries/v2ray/latest.txt)
 	local xray_version=$(cat ${CURR_PATH}/binaries/xray/latest.txt)
-	local kcptun_version=$(cat ${CURR_PATH}/binaries/kcptun/latest.txt)
-	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-arm64/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-hnd/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-qca/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv5 ${CURR_PATH}/fancyss/bin-arm/v2ray
-	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-arm64/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_arm64 ${CURR_PATH}/fancyss/bin-arm64/kcptun
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv7 ${CURR_PATH}/fancyss/bin-hnd/kcptun
-  cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv7 ${CURR_PATH}/fancyss/bin-qca/kcptun
-  cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv5 ${CURR_PATH}/fancyss/bin-arm/kcptun
 }
 
 gen_folder(){
@@ -42,25 +35,9 @@ gen_folder(){
 	cp -rf fancyss shadowsocks
 
 	# different platform
-	if [ "${platform}" == "arm64" ];then
-		rm -rf ./shadowsocks/bin-arm
-		rm -rf ./shadowsocks/bin-qca
-		# use nhd bin as base
-		mv shadowsocks/bin-hnd ./shadowsocks/bin
-		# bin-arm64 has arm64 version of core binaries
-		mv shadowsocks/bin-arm64/* ./shadowsocks/bin
-		rm -rf ./shadowsocks/bin-arm64
-    # our build of shadowsocks-libev does not support tcp fast open
-    sed -i -e '/"$ss_basic_type" == "0" -a "$ss_basic_tfo" == "1"/,+4d' ./shadowsocks/ss/ssconfig.sh
-
-		echo arm64 > ./shadowsocks/.valid
-		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_arm64_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_arm64_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
-	fi
 	if [ "${platform}" == "hnd" ];then
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-qca
-		rm -rf ./shadowsocks/bin-arm64
 		mv shadowsocks/bin-hnd ./shadowsocks/bin
 		echo hnd > ./shadowsocks/.valid
 		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_hnd_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -69,7 +46,6 @@ gen_folder(){
 	if [ "${platform}" == "qca" ];then
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
-		rm -rf ./shadowsocks/bin-arm64
 		mv shadowsocks/bin-qca ./shadowsocks/bin
 		echo qca > ./shadowsocks/.valid
 		[ "${pkgtype}" == "full" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_qca_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -78,7 +54,6 @@ gen_folder(){
 	if [ "${platform}" == "arm" ];then
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-qca
-		rm -rf ./shadowsocks/bin-arm64
 		mv shadowsocks/bin-arm ./shadowsocks/bin
 		echo arm > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -316,8 +291,6 @@ make(){
 	pack qca lite
 	pack arm full
 	pack arm lite
-	pack arm64 full
-	pack arm64 lite
 	finish
 }
 
