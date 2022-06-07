@@ -1,0 +1,3 @@
+eb678a3bd2e1fce3a5a614f6841501bf  kcptun_arm64
+93e1e44b6150b5be53c361256cf908c6  kcptun_armv5
+739da0b6690eba941439629dd2c2fc8d  kcptun_armv7

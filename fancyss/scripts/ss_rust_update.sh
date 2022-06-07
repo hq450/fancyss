@@ -28,12 +28,12 @@ get_latest_version(){
 			echo_date "获取shadowsocks-rust最新版本信息失败！使用备用服务器检测！"
 			failed_warning
 		fi
-		RVERSION=$(cat /tmp/ssrust_latest_info.txt)
+		RVERSION=$(cat /tmp/ssrust_latest_info.txt | sed 's/v//g')
 		if [ -z "${RVERSION}" ];then
 			RVERSION="0"
 		fi
 		
-		echo_date "检测到shadowsocks-rust最新版本：${RVERSION}"
+		echo_date "检测到shadowsocks-rust最新版本：v${RVERSION}"
 		if [ ! -x "/koolshare/bin/sslocal" ];then
 			echo_date "shadowsocks-rust二进制文件sslocal不存在！开始下载！"
 			CUR_VER="0"
@@ -42,12 +42,12 @@ get_latest_version(){
 			if [ -z "${CUR_VER}" ];then
 				CUR_VER="0"
 			fi
-			echo_date "当前已安装shadowsocks-rust版本：${CUR_VER}"
+			echo_date "当前已安装shadowsocks-rust版本：v${CUR_VER}"
 		fi
-
-		if [ "${CUR_VER}" != "${RVERSION}" ];then
-			echo_date "检测到在线版本和本地版本不同，开始更新sslocal程序..."
-			update_now ${RVERSION}
+		COMP=$(versioncmp ${CUR_VER} ${RVERSION})
+		if [ "${COMP}" == "1" ];then
+			[ "${CUR_VER}" != "0" ] && echo_date "检测到在线版本和本地版本不同，开始更新sslocal程序..."
+			update_now v${RVERSION}
 		else
 			echo_date "检测到本地版本已经是最新，退出更新程序!"
 		fi
@@ -85,6 +85,7 @@ update_now(){
 		echo_date "sslocal下载失败！"
 		sslocal_ok=0
 	else
+	  sslocal_ok=1
 		echo_date "sslocal程序下载成功..."
 		mv sslocal_${ARCH} sslocal
 		sslocal_ok=1

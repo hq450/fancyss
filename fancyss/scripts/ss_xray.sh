@@ -8,7 +8,9 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/xray"
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-if [ "${LINUX_VER}" -ge "41" ];then
+if [ $(uname -m) = "aarch64" ]; then
+  ARCH=arm64
+elif [ "${LINUX_VER}" -ge "41" ];then
 	ARCH=armv7
 elif [ "${LINUX_VER}" -eq "26" ];then
 	ARCH=armv5
@@ -27,7 +29,7 @@ get_latest_version(){
 			echo_date "获取Xray最新版本信息失败！使用备用服务器检测！"
 			failed_warning_xray
 		fi
-		XVERSION=$(cat /tmp/xray_latest_info.txt)
+		XVERSION=$(cat /tmp/xray_latest_info.txt | sed 's/v//g')
 		[ -z "${XVERSION}" ] && XVERSION="0"
 		
 		echo_date "检测到Xray最新版本：${XVERSION}"
@@ -35,14 +37,14 @@ get_latest_version(){
 			echo_date "xray安装文件丢失！重新下载！"
 			CUR_VER="0"
 		else
-			CUR_VER=$(xray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
+			CUR_VER=$(xray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
 			[ -z "${CUR_VER}" ] && CUR_VER="0"
-			echo_date "当前已安装Xray版本：${CUR_VER}"
+			echo_date "当前已安装Xray版本：v${CUR_VER}"
 		fi
 		COMP=$(versioncmp ${CUR_VER} ${XVERSION})
 		if [ "${COMP}" == "1" ];then
 			[ "${CUR_VER}" != "0" ] && echo_date "Xray已安装版本号低于最新版本，开始更新程序..."
-			update_now ${XVERSION}
+			update_now v${XVERSION}
 		else
 			XRAY_LOCAL_VER=$(/koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
 			[ -n "${XRAY_LOCAL_VER}" ] && dbus set ss_basic_xray_version="${XRAY_LOCAL_VER}"
