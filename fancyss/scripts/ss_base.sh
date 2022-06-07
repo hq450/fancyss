@@ -13,15 +13,23 @@ source helper.sh
 eval $(dbus export ss)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 
-cur_node=$ssconf_basic_node
+# ss_basic_type
+# 0	ss
+# 1 ssr
+# 2 koolgame
+# 3 v2ray
+# 4 xray
+# 5 trojan
+
+cur_node=${ssconf_basic_node}
 base_1="type mode server port method password ss_obfs ss_obfs_host ss_v2ray ss_v2ray_opts koolgame_udp rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_json"
 base_2="use_kcp v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_tfo"
-for config in $base_1 $base_2
+for config in ${base_1} ${base_2}
 do
 	key_1=ssconf_basic_${config}_${cur_node}
 	key_2=ss_basic_${config}
 	tmp="export $key_2=\$$key_1"
-	eval $tmp
+	eval ${tmp}
 	unset key_1 key_2
 done
 
@@ -37,6 +45,11 @@ if [ ! -x "/koolshare/bin/v2ray" ];then
 fi
 if [ ! -x "/koolshare/bin/trojan" ];then
 	ss_basic_tcore=1
+fi
+
+if [ "${ss_basic_type}" == "5" -a "${ss_basic_tjai}" == "1" ];then
+	ss_basic_trojan_ai=1
+	#eval ss_basic_trojan_ai_${cur_node}=1
 fi
 
 __valid_ip() {

@@ -953,6 +953,9 @@ function openssHint(itemNum) {
 	} else if (itemNum == 119) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;Xray-core是支持trojan协议的，所以trojan节点不仅可以用trojan程序来运行，还能用Xray核心来运行";
 		_caption = "说明";
+	} else if (itemNum == 120) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些trojan机场节点需要允许不安全才能正常工作，但是其节点订阅却没有指定允许不安全，此时可以开启此处，开启后会强制所有trojan节点允许不安全";
+		_caption = "说明";
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 
