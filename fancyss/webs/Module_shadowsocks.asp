@@ -4260,7 +4260,7 @@ function save_failover() {
 														{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
 														{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai_tr', multi: [
 															{ suffix: '<input type="checkbox" id="ss_basic_trojan_ai">' },
-															{ suffix:'<lable id="ss_basic_trojan_ai_note">&nbsp;1232</lable>' },
+															{ suffix:'<lable id="ss_basic_trojan_ai_note"></lable>' },
 														]},
 														{ title: 'SNI', id:'ss_basic_trojan_sni', type:'text'},
 														{ title: 'tcp fast open', id:'ss_basic_trojan_tfo', type:'checkbox'},
