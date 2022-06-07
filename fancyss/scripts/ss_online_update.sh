@@ -1289,7 +1289,7 @@ get_vmess_node(){
 	
 	if [ "${action}" == "1" ];then
 		# group是从订阅链接来的，以下其它值是必须有的
-		if [ -n "${v2ray_group}" -a -n "${v2ray_ps}" -a -n "${v2ray_add}" -a -n "${v2ray_port}" -a -n "${v2ray_id}" -a -n "${v2ray_aid}" -a -n "${v2ray_net}" -a -n "${v2ray_type}" ];then
+		if [ -n "${v2ray_group}" -a -n "${v2ray_ps}" -a -n "${v2ray_add}" -a -n "${v2ray_port}" -a -n "${v2ray_id}" -a -n "${v2ray_aid}" -a -n "${v2ray_net}" ];then
 			server_base64=$(echo ${v2ray_add} | base64_encode | sed 's/ -//g')
 			group_base64=$(echo ${v2ray_group_hash} | base64_encode | sed 's/ -//g')
 			remark_base64=$(echo ${v2ray_ps} | base64_encode | sed 's/ -//g')
@@ -1300,7 +1300,7 @@ get_vmess_node(){
 	fi
 
 	if [ "${action}" == "2" ];then
-		if [ -n "${v2ray_ps}" -a -n "${v2ray_add}" -a -n "${v2ray_port}" -a -n "${v2ray_id}" -a -n "${v2ray_aid}" -a -n "${v2ray_net}" -a -n "${v2ray_type}" ];then
+		if [ -n "${v2ray_ps}" -a -n "${v2ray_add}" -a -n "${v2ray_port}" -a -n "${v2ray_id}" -a -n "${v2ray_aid}" -a -n "${v2ray_net}" ];then
 			# 保留有效节点
 			return 0
 		else
