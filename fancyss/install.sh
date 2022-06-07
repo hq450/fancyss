@@ -38,10 +38,111 @@ get_fw_type() {
 }
 
 platform_test(){
+	# 带koolshare文件夹，有httpdb和skipdb的固件位支持固件
 	if [ -d "/koolshare" -a -x "/koolshare/bin/httpdb" -a -x "/usr/bin/skipd" ];then
-		echo_date 机型："${MODEL} ${FW_TYPE_NAME} 符合安装要求，开始安装插件！"
+		echo_date "机型：${MODEL} ${FW_TYPE_NAME} 符合安装要求，开始安装插件！"
 	else
 		exit_install 1
+	fi
+
+	# 继续判断各个固件的内核和架构
+	local PKG_ARCH=$(cat ${DIR}/.valid)
+	local ROT_ARCH=$(uname -m)
+	local KEL_VERS=$(uname -r)
+	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
+		PKG_TYPE="lite"
+		PKG_NAME="fancyss_${PKG_ARCH}_lite"
+	else
+		PKG_TYPE="full"
+		PKG_NAME="fancyss_${PKG_ARCH}_full"
+	fi
+
+	# fancyss_arm
+	if [ "${PKG_ARCH}" == "arm" ];then
+		if [ "${LINUX_VER}" == "26" ];then
+			if [ "${ROT_ARCH}" == "armv7l" ];then
+				# ok
+				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_arm_${PKG_TYPE}！"
+			else
+				# maybe mipsel, RT-AC66U... 
+				echo_date "架构：${ROT_ARCH}，fancyss_arm_${PKG_TYPE}不适用于该架构！退出！"
+				exit_install 1
+			fi
+		elif [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
+			# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
+			exit_install 1
+		elif [ "${LINUX_VER}" == "44" ];then
+			# RT-AX89X
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_qca_full或者fancyss_qca_lite！"		
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca"
+			exit_install 1
+		else
+			# future model
+			echo_date "内核：${KEL_VERS}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
+			exit_install 1
+		fi
+	fi
+	
+	# fancyss_hnd
+	if [ "${PKG_ARCH}" == "hnd" ];then
+		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
+			if [ "${ROT_ARCH}" == "armv7l" ];then
+				# RT-AX56U, XT8, TUF-AX3000_V2
+				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_hnd_${PKG_TYPE}！"
+			elif  [ "${ROT_ARCH}" == "aarch64" ];then
+				# RT-AX86U, RT-AX88U
+				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_hnd_${PKG_TYPE}！"
+			else
+				# no such model, yet.
+				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该架构！退出！"
+				exit_install 1
+			fi
+		elif [ "${LINUX_VER}" == "26" ];then
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_arm_full或者fancyss_arm_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm"
+			exit_install 1
+			
+		elif [ "${LINUX_VER}" == "44" ];then
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_qca_full或者fancyss_qca_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca"
+			exit_install 1
+			
+		else
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该内核版本！"
+			exit_install 1
+		fi
+	fi
+	
+	# fancyss_qca
+	if [ "${PKG_ARCH}" == "qca" ];then
+		if [ "${LINUX_VER}" == "44" ];then
+			# RT-AX89X
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_qca_${PKG_TYPE}！"
+		elif [ "${LINUX_VER}" == "26" ];then
+			# RT-AC68U, RT-AC88U, RT-AC3100, RT-AC5300
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_arm_full或者fancyss_arm_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm"
+			exit_install 1
+			
+		elif [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
+			# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
+			exit_install 1
+			
+		else
+			# no such model, yet.
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			exit_install 1
+		fi
 	fi
 }
 
@@ -66,11 +167,10 @@ set_skin(){
 
 exit_install(){
 	local state=$1
+	local PKG_ARCH=$(cat ${DIR}/.valid)
 	case $state in
 		1)
-			echo_date "本插件适用于以Asuswrt、Asuswrt-Merlin为基础的，带软件中心的固件，固件大版本需要≥384！"
-			echo_date "你的固件平台不能安装！！!"
-			echo_date "本插件支持机型/平台：https://github.com/koolshare/rogsoft#rogsoft"
+			echo_date "fancyss项目地址：https://github.com/hq450/fancyss"
 			echo_date "退出安装！"
 			rm -rf /tmp/${module}* >/dev/null 2>&1
 			exit 1
@@ -87,15 +187,9 @@ install_now(){
 	local PLVER=$(cat ${DIR}/ss/version)
 
 	# print message
-	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
-		local TITLE="科学上网 lite"
-		local DESCR="科学上网 lite for merlin hnd platform"
-		echo_date "安装版本：fancyss_hnd_lite_${PLVER}"
-	else
-		local TITLE="科学上网"
-		local DESCR="科学上网 for merlin hnd platform"
-		echo_date "安装版本：fancyss_hnd_full_${PLVER}"
-	fi
+	local TITLE="科学上网 ${PKG_TYPE}"
+	local DESCR="科学上网 ${PKG_TYPE} for merlin hnd platform"
+	echo_date "安装版本：${PKG_NAME}_${PLVER}"
 	# stop first
 	local ENABLE=$(dbus get ss_basic_enable)
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
@@ -166,6 +260,10 @@ install_now(){
 	# optional files should keep
 	# rm -rf /koolshare/bin/sslocal >/dev/null 2>&1
 
+	# these file maybe used by others plugin
+	# rm -rf /koolshare/bin/sponge >/dev/null 2>&1
+	# rm -rf /koolshare/bin/jq >/dev/null 2>&1
+
 	# small jffs router should remove more
 	if [ "${MODEL}" == "RT-AX56U_V2" ];then
 		rm -rf /jffs/syslog.log
@@ -174,15 +272,6 @@ install_now(){
 		rm -rf /jffs/uu.tar.gz*
 		echo 1 > /proc/sys/vm/drop_caches
 		sync
-	fi
-
-	# 386固件全面使用openssl1.1.1，弃用了openssl1.0.0，所以判断使用openssl1.1.1的使用新版本的httping
-	if [ -n "$(grep -Eo hnd /tmp/shadowsocks/.valid)" ];then
-		if [ -f "/usr/lib/libcrypto.so.1.1" ];then
-			mv /tmp/shadowsocks/bin/httping_openssl_1.1.1 /tmp/shadowsocks/bin/httping
-		else
-			rm -rf /tmp/shadowsocks/bin/httping_openssl_1.1.1
-		fi
 	fi
 
 	# 检测储存空间是否足够

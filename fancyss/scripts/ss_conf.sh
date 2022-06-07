@@ -39,6 +39,7 @@ backup_tar(){
 	cp /koolshare/bin/dns2socks $TARGET_FOLDER/bin/
 	cp /koolshare/bin/chinadns-ng $TARGET_FOLDER/bin/
 	cp /koolshare/bin/resolveip $TARGET_FOLDER/bin/
+	cp /koolshare/bin/sponge $TARGET_FOLDER/bin/
 	cp /koolshare/bin/jq $TARGET_FOLDER/bin/
 	cp /koolshare/bin/xray $TARGET_FOLDER/bin/
 	cp /koolshare/bin/https_dns_proxy $TARGET_FOLDER/bin/
@@ -291,6 +292,13 @@ download_ssc(){
 
 restart_dnsmasq(){
 	echo_date "重启dnsmasq..."
+	local OLD_PID=$(pidof dnsmasq)
+	if [ -n "${OLD_PID}" ];then
+		echo_date "当前dnsmasq正常运行中，pid: ${OLD_PID}，准备重启！"
+	else
+		echo_date "当前dnsmasq未运行，尝试重启！"
+	fi
+	
 	service restart_dnsmasq >/dev/null 2>&1
 
 	local DPID
@@ -303,7 +311,7 @@ restart_dnsmasq(){
 		fi
 		usleep 250000
 	done
-	echo_date "dnsmasq重启成功，dnsmasq进程pid:${DPID}"
+	echo_date "dnsmasq重启成功，pid: ${DPID}"
 }
 
 case $2 in

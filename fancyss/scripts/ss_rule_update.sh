@@ -5,13 +5,14 @@
 source /koolshare/scripts/base.sh
 eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+RULE_FILE=/koolshare/ss/rules/rules.json.js
 
 start_update(){
 	url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/rules"
 	# version dectet
-	version_gfwlist1=$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
-	version_chnroute1=$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
-	version_cdn1=$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.date' | sed 's/[[:space:]]/_/g')
+	version_gfwlist1=$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
+	version_chnroute1=$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
+	version_cdn1=$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.cdn_china.date' | sed 's/[[:space:]]/_/g')
 	
 	echo ==================================================================================================
 	echo_date "开始更新shadowsocks规则，请等待..."
@@ -43,8 +44,8 @@ start_update(){
 			if [ "${md5sum_gfwlist1}" == "${md5sum_gfwlist2}" ];then
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始gfwlist文件"
 				mv /tmp/gfwlist.conf /koolshare/ss/rules/gfwlist.conf
-				/koolshare/bin/jq --arg variable "${version_gfwlist2}" '.gfwlist.date = $variable' /koolshare/ss/rules/rules.json.js >/tmp/INPUT.tmp && mv /tmp/INPUT.tmp /koolshare/ss/rules/rules.json.js
-				/koolshare/bin/jq --arg variable "${md5sum_gfwlist2}" '.gfwlist.md5 = $variable' /koolshare/ss/rules/rules.json.js >/tmp/INPUT.tmp && mv /tmp/INPUT.tmp /koolshare/ss/rules/rules.json.js
+				/koolshare/bin/jq --arg variable "${version_gfwlist2}" '.gfwlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				/koolshare/bin/jq --arg variable "${md5sum_gfwlist2}" '.gfwlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
 				echo_date "【更新成功】你的gfwlist已经更新到最新！"
 			else
@@ -69,8 +70,8 @@ start_update(){
 			if [ "${md5sum_chnroute1}" == "${md5sum_chnroute2}" ];then
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始chnroute文件"
 				mv /tmp/chnroute.txt /koolshare/ss/rules/chnroute.txt
-				/koolshare/bin/jq --arg variable "${version_chnroute2}" '.chnroute.date = $variable' /koolshare/ss/rules/rules.json.js >/tmp/INPUT.tmp && mv /tmp/INPUT.tmp /koolshare/ss/rules/rules.json.js
-				/koolshare/bin/jq --arg variable "${md5sum_chnroute2}" '.chnroute.md5 = $variable' /koolshare/ss/rules/rules.json.js >/tmp/INPUT.tmp && mv /tmp/INPUT.tmp /koolshare/ss/rules/rules.json.js
+				/koolshare/bin/jq --arg variable "${version_chnroute2}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				/koolshare/bin/jq --arg variable "${md5sum_chnroute2}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
 				echo_date "【更新成功】你的chnroute已经更新到最新！"
 			else
@@ -94,8 +95,8 @@ start_update(){
 			if [ "${md5sum_cdn1}" == "${md5sum_cdn2}" ];then
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始cdn名单文件"
 				mv /tmp/cdn.txt /koolshare/ss/rules/cdn.txt
-				/koolshare/bin/jq --arg variable "${version_cdn2}" '.cdn_china.date = $variable' /koolshare/ss/rules/rules.json.js >/tmp/INPUT.tmp && mv /tmp/INPUT.tmp /koolshare/ss/rules/rules.json.js
-				/koolshare/bin/jq --arg variable "${md5sum_cdn2}" '.cdn_china.md5 = $variable' /koolshare/ss/rules/rules.json.js >/tmp/INPUT.tmp && mv /tmp/INPUT.tmp /koolshare/ss/rules/rules.json.js
+				/koolshare/bin/jq --arg variable "${version_cdn2}" '.cdn_china.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				/koolshare/bin/jq --arg variable "${md5sum_cdn2}" '.cdn_china.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
 				echo_date "【更新成功】你的cdn名单已经更新到最新！"
 			else
@@ -115,14 +116,14 @@ start_update(){
 	
 	echo_date "规则更新进程运行完毕！"
 	# write number
-	nvram set update_ipset="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.date')"
-	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.date')"
-	nvram set update_cdn="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.date')"
+	nvram set update_ipset="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.gfwlist.date')"
+	nvram set update_chnroute="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.chnroute.date')"
+	nvram set update_cdn="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.cdn_china.date')"
 	
-	nvram set ipset_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.count')"
-	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.count')"
-	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.count_ip')"
-	nvram set cdn_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.count')"
+	nvram set ipset_numbers="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.gfwlist.count')"
+	nvram set chnroute_numbers="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.chnroute.count')"
+	nvram set chnroute_ips="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.chnroute.count_ip')"
+	nvram set cdn_numbers="$(cat ${RULE_FILE} | /koolshare/bin/jq -r '.cdn_china.count')"
 	#======================================================================
 	# reboot ss
 	if [ "$reboot" == "1" ];then

@@ -80,7 +80,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-arm64
 		mv shadowsocks/bin-arm ./shadowsocks/bin
-		echo arm386 > ./shadowsocks/.valid
+		echo arm > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp

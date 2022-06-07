@@ -366,14 +366,15 @@ get_ss_node(){
 	if [ "$?" != "0" ];then
 		echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
 	fi
-	server_raw_1=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	
+	server_raw_1=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
 	if [ -n "${server_raw_1}" ];then
 		server_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $1}')
 		server_port_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $2}')
 	fi
 	encrypt_info=$(echo "${urllink}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f1)
 	decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
-	server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
 	if [ -n "${server_raw_2}" ];then
 		server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
 		server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
@@ -1597,7 +1598,7 @@ get_vless_node(){
 	unset x_headerType x_headtype_tcp x_headtype_kcp x_headtype_quic x_grpc_modex_security_tmp x_security
 	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash x_kcp_seed
 
-	x_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).\+/\1/p')
+	x_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
 	x_server=$(echo "${x_server_raw}" | awk -F':' '{print $1}')
 	x_server_port=$(echo "${x_server_raw}" | awk -F':' '{print $2}')
 
