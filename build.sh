@@ -36,6 +36,7 @@ gen_folder(){
 
 	# different platform
 	if [ "${platform}" == "hnd" ];then
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-qca
 		mv shadowsocks/bin-hnd ./shadowsocks/bin
@@ -44,6 +45,7 @@ gen_folder(){
 		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_hnd_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "qca" ];then
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
 		mv shadowsocks/bin-qca ./shadowsocks/bin
@@ -52,6 +54,7 @@ gen_folder(){
 		[ "${pkgtype}" == "lite" ] && sed -i 's/ 科学上网插件/ 科学上网插件 - fancyss_qca_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "arm" ];then
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-qca
 		mv shadowsocks/bin-arm ./shadowsocks/bin
