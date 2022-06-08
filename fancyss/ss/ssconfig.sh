@@ -559,58 +559,52 @@ ss_arg() {
 }
 # create shadowsocks config file...
 creat_ss_json() {
+	if [ "$ss_basic_type" == "0" -a "${ss_basic_rust}" == "1" ]; then
+		echo_date "ℹ️使用shadowsocks-rust替换shadowsocks-libev..."
+		if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
+			RUST_ARG_1="--fast-open"
+			echo_date ss-rust开启tcp fast open支持.
+			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+		else
+			RUST_ARG_1=""
+		fi
+
+		if [ "${ss_basic_tnd}" == "1" ]; then
+			echo_date ss-rust开启TCP_NODELAY支持.
+			RUST_ARG_2="--no-delay"
+		else
+			RUST_ARG_2=""
+		fi
+
+		ARG_RUST_REDIR="--protocol redir -b 0.0.0.0:3333 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+		ARG_RUST_TUNNEL="--protocol tunnel -b 0.0.0.0:${DNSF_PORT} -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+		ARG_RUST_SOCKS="-b 127.0.0.1:23456 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+		ARG_RUST_REDIR_NS="--protocol redir -b 0.0.0.0:3333 -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
+		return 0
+	fi
+	
 	if [ -n "${WAN_ACTION}" ]; then
 		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 		return 0
-	elif [ -n "${NAT_ACTION}" ]; then
+	fi
+	if [ -n "${NAT_ACTION}" ]; then
 		echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 		return 0
 	fi
 	
-	if [ "$ss_basic_type" == "0" -a "${ss_basic_rust}" == "1" ]; then
-		echo_date "ℹ️使用shadowsocks-rust替换shadowsocks-libev..."
-		#if [ ! -x /koolshare/bin/sslocal ];then
-		#	echo_date "没有检测到shadowsocks-rust二进制文件:sslocal，准备下载..."
-		#	sh /koolshare/scripts/ss_rust_update.sh download
-		#fi
-	else
-		echo_date "创建$(__get_type_abbr_name)配置文件到${CONFIG_FILE}"
-	fi
-
+	echo_date "创建$(__get_type_abbr_name)配置文件到${CONFIG_FILE}"
 	if [ "$ss_basic_type" == "0" ]; then
-		if [ "${ss_basic_rust}" == "1" ];then
-			if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
-				RUST_ARG_1="--fast-open"
-				echo_date ss-rust开启tcp fast open支持.
-				echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-			else
-				RUST_ARG_1=""
-			fi
-
-			if [ "${ss_basic_tnd}" == "1" ]; then
-				echo_date ss-rust开启TCP_NODELAY支持.
-				RUST_ARG_2="--no-delay"
-			else
-				RUST_ARG_2=""
-			fi
-
-			ARG_RUST_REDIR="--protocol redir -b 0.0.0.0:3333 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-			ARG_RUST_TUNNEL="--protocol tunnel -b 0.0.0.0:${DNSF_PORT} -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-			ARG_RUST_SOCKS="-b 127.0.0.1:23456 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-			ARG_RUST_REDIR_NS="--protocol redir -b 0.0.0.0:3333 -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-		else
-			cat >$CONFIG_FILE <<-EOF
-				{
-				    "server":"$ss_basic_server",
-				    "server_port":$ss_basic_port,
-				    "local_address":"0.0.0.0",
-				    "local_port":3333,
-				    "password":"$ss_basic_password",
-				    "timeout":600,
-				    "method":"$ss_basic_method"
-				}
-			EOF
-		fi
+		cat >$CONFIG_FILE <<-EOF
+			{
+			    "server":"$ss_basic_server",
+			    "server_port":$ss_basic_port,
+			    "local_address":"0.0.0.0",
+			    "local_port":3333,
+			    "password":"$ss_basic_password",
+			    "timeout":600,
+			    "method":"$ss_basic_method"
+			}
+		EOF
 	elif [ "$ss_basic_type" == "1" ]; then
 		cat >$CONFIG_FILE <<-EOF
 			{
