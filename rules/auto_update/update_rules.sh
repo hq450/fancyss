@@ -58,25 +58,13 @@ get_gfwlist(){
 }
 
 get_chnroute(){
-	# chnroute.txt
+	# chnroute.txt from ipip
 
-	# 1. download
 	# source-1：ipip, 20220604: total 6182 subnets, 13240665434 unique IPs
-	wget https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset -qO ${CURR_PATH}/chnroute_tmp.txt
+	wget -4 https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset -qO ${CURR_PATH}/chnroute_tmp.txt
 
 	# source-2：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
-	# wget https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute_tmp.txt
-
-	# source-3: mayaxcn, 20220604: total 8625 subnets, 343364510 unique IPs
-	# wget https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt -qO ${CURR_PATH}/chnroute_tmp.txt
-
-	# source-4: clang, 20220604: total 8625 subnets, 343364510 unique IPs
-	# wget https://ispip.clang.cn/all_cn.txt -qO ${CURR_PATH}/chnroute_tmp.txt
-	
-	# source-5：apnic, 20220604: total 8625 subnets, 343364510 unique IPs
-	# wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest -qO ${CURR_PATH}/apnic.txt
-	# cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > ${CURR_PATH}/chnroute_tmp.txt
-	# rm -rf ${CURR_PATH}/apnic.txt
+	# wget -4 https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute_tmp.txt
 	
 	if [ ! -f "chnroute_tmp.txt" ]; then
 		echo "chnroute download faild!"
@@ -88,7 +76,7 @@ get_chnroute(){
 
 	# 3. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_tmp.txt | awk '{print $1}')
-	local md5sum2=$(md5sum ${RULE_PATH}/chnroute.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute.txt 2>/dev/null | awk '{print $1}')
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "chnroute same md5!"
@@ -96,10 +84,14 @@ get_chnroute(){
 	fi
 	
 	# 4. write json
+	local SOURCE="ipip"
+	local URL="https://github.com/firehol/blocklist-ipsets/blob/master/ipip_country/ipip_country_cn.netset"
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
 	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_tmp.txt | wc -l)
 	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 	jq --arg variable "${CURR_DATE}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 	jq --arg variable "${MD5_VALUE}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 	jq --arg variable "${LINE_COUN}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
@@ -110,13 +102,105 @@ get_chnroute(){
 	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
 }
 
+get_chnroute2(){
+	# chnroute2.txt from misakaio
+
+	# source-2：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
+	wget -4 https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute2_tmp.txt
+
+	if [ ! -f "chnroute2_tmp.txt" ]; then
+		echo "chnroute2 download faild!"
+		exit 1
+	fi
+
+	# 2. process
+	sed -i '/^#/d' chnroute2_tmp.txt
+
+	# 3. compare
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute2_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute2.txt 2>/dev/null | awk '{print $1}')
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		echo "chnroute2 same md5!"
+		return
+	fi
+	
+	# 4. write json
+	local SOURCE="misakaio"
+	local URL="https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute2_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute2_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute2.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute2.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute2.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute2.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute2.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute2.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 5. update file
+	echo "update chnroute2, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute2_tmp.txt ${RULE_PATH}/chnroute2.txt
+}
+
+get_chnroute3(){
+	# chnroute3.txt
+
+	# source-3: mayaxcn, 20220604: total 8625 subnets, 343364510 unique IPs
+	# wget -4 https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt -qO ${CURR_PATH}/chnroute3_tmp.txt
+
+	# source-4: clang, 20220604: total 8625 subnets, 343364510 unique IPs
+	wget -4 https://ispip.clang.cn/all_cn.txt -qO ${CURR_PATH}/chnroute3_tmp.txt
+	
+	# source-5：apnic, 20220604: total 8625 subnets, 343364510 unique IPs
+	# wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest -qO ${CURR_PATH}/apnic.txt
+	# cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > ${CURR_PATH}/chnroute3_tmp.txt
+	# rm -rf ${CURR_PATH}/apnic.txt
+
+	if [ ! -f "chnroute3_tmp.txt" ]; then
+		echo "chnroute3 download faild!"
+		exit 1
+	fi
+
+	# 2. process
+	sed -i '/^#/d' chnroute3_tmp.txt
+
+	# 3. compare
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute3_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute3.txt 2>/dev/null | awk '{print $1}')
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		echo "chnroute3 same md5!"
+		return
+	fi
+	
+	# 4. write json
+	local SOURCE="apnic"
+	local URL="http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest"
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute3_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute3_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute3.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute3.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute3.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute3.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute3.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute3.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 5. update file
+	echo "update chnroute3, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute3_tmp.txt ${RULE_PATH}/chnroute3.txt
+}
+
 get_cdn(){
 	# cdn.txt
 
 	# 1.download
-	wget https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf -qO ${CURR_PATH}/accelerated-domains.china.conf
-	wget https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf -qO ${CURR_PATH}/apple.china.conf
-	wget https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf -qO ${CURR_PATH}/google.china.conf
+	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf -qO ${CURR_PATH}/accelerated-domains.china.conf
+	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf -qO ${CURR_PATH}/apple.china.conf
+	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf -qO ${CURR_PATH}/google.china.conf
 	if [ ! -f "accelerated-domains.china.conf" -o ! -f "apple.china.conf" -o ! -f "google.china.conf" ]; then
 		echo "cdn download faild!"
 		exit 1
@@ -128,7 +212,7 @@ get_cdn(){
 
 	# 3. compare
 	local md5sum1=$(md5sum cdn_tmp.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ../cdn.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ../cdn.txt | sed 's/ /\n/g' 2>/dev/null | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "cdn list same md5!"
@@ -154,7 +238,7 @@ get_apple(){
 
 	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/apple_download.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ${RULE_PATH}/apple_china.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${RULE_PATH}/apple_china.txt 2>/dev/null | sed 's/ /\n/g' | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "apple china list same md5!"
@@ -180,7 +264,7 @@ get_google(){
 
 	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/google_download.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ${RULE_PATH}/google_china.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${RULE_PATH}/google_china.txt 2>/dev/null | sed 's/ /\n/g' | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "google china list same md5!"
@@ -202,11 +286,11 @@ get_google(){
 
 get_cdntest(){
 	# 1. get domain
-	wget https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/cdn-testlist.txt -qO ${CURR_PATH}/cdn_test.txt
+	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/cdn-testlist.txt -qO ${CURR_PATH}/cdn_test.txt
 
 	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
-	local md5sum2=$(md5sum ${RULE_PATH}/cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
+	local md5sum2=$(md5sum ${RULE_PATH}/cdn_test.txt 2>/dev/null | sed 's/ /\n/g' | sed -n 1p)
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
 		echo "cdn test list same md5!"
@@ -247,6 +331,8 @@ get_rules(){
 	prepare
 	get_gfwlist
 	get_chnroute
+	get_chnroute2
+	get_chnroute3
 	get_cdn
 	get_apple
 	get_google
