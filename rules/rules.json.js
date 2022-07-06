@@ -7,25 +7,25 @@
   },
   "chnroute": {
     "name": "chnroute.txt",
-    "date": "2022-07-06 22:46",
+    "date": "2022-07-06 23:11",
+    "md5": "0806982567b8cf39367ec9c280e5cb46",
+    "count": "3439",
+    "count_ip": "298347042",
+    "source": "misakaio",
+    "url": "https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
+  },
+  "chnroute2": {
+    "name": "chnroute2.txt",
+    "date": "2022-07-06 23:11",
     "md5": "f12a5a7fb6c9c37d52dbbea0666812ba",
     "count": "6182",
     "count_ip": "13240665434",
     "source": "ipip",
     "url": "https://github.com/firehol/blocklist-ipsets/blob/master/ipip_country/ipip_country_cn.netset"
   },
-  "chnroute2": {
-    "name": "chnroute2.txt",
-    "date": "2022-07-06 22:46",
-    "md5": "9f9b0fea27b85e4636e38148f2392be9",
-    "count": "3440",
-    "count_ip": "298351136",
-    "source": "misakaio",
-    "url": "https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
-  },
   "chnroute3": {
     "name": "chnroute3.txt",
-    "date": "2022-07-06 22:46",
+    "date": "2022-07-06 23:11",
     "md5": "24175dfe4d900ed3b61628d4f2cabcd5",
     "count": "8635",
     "count_ip": "343305866",

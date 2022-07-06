@@ -57,15 +57,13 @@ get_gfwlist(){
 	jq --arg variable "${LINE_COUN}" '.gfwlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
+
 get_chnroute(){
-	# chnroute.txt from ipip
+	# chnroute.txt from misakaio
 
-	# source-1：ipip, 20220604: total 6182 subnets, 13240665434 unique IPs
-	wget -4 https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset -qO ${CURR_PATH}/chnroute_tmp.txt
+	# source-1：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
+	wget -4 https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute_tmp.txt
 
-	# source-2：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
-	# wget -4 https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute_tmp.txt
-	
 	if [ ! -f "chnroute_tmp.txt" ]; then
 		echo "chnroute download faild!"
 		exit 1
@@ -84,8 +82,8 @@ get_chnroute(){
 	fi
 	
 	# 4. write json
-	local SOURCE="ipip"
-	local URL="https://github.com/firehol/blocklist-ipsets/blob/master/ipip_country/ipip_country_cn.netset"
+	local SOURCE="misakaio"
+	local URL="https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
 	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_tmp.txt | wc -l)
@@ -103,10 +101,10 @@ get_chnroute(){
 }
 
 get_chnroute2(){
-	# chnroute2.txt from misakaio
+	# chnroute2.txt from ipip
 
-	# source-2：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
-	wget -4 https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute2_tmp.txt
+	# source-2：ipip, 20220604: total 6182 subnets, 13240665434 unique IPs
+	wget -4 https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset -qO ${CURR_PATH}/chnroute2_tmp.txt
 
 	if [ ! -f "chnroute2_tmp.txt" ]; then
 		echo "chnroute2 download faild!"
@@ -126,8 +124,8 @@ get_chnroute2(){
 	fi
 	
 	# 4. write json
-	local SOURCE="misakaio"
-	local URL="https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
+	local SOURCE="ipip"
+	local URL="https://github.com/firehol/blocklist-ipsets/blob/master/ipip_country/ipip_country_cn.netset"
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
 	local LINE_COUN=$(cat ${CURR_PATH}/chnroute2_tmp.txt | wc -l)
