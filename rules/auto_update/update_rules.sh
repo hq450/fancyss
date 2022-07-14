@@ -10,6 +10,7 @@ prepare(){
 	    printf '%s\n' "error: sponge is not installed, exiting..."
 	    exit 1
 	fi
+	cd ${CURR_PATH}
 }
 
 get_gfwlist(){
