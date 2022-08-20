@@ -22,6 +22,7 @@ cdn4.apple-mapkit.com
 cds-cdn.v.aaplimg.com
 cds.apple.com
 cds.apple.com.akadns.net
+cdsassets.apple.com
 cl1-cdn.origin-apple.com.akadns.net
 cl1.apple.com
 cl2-cn.apple.com
@@ -68,6 +69,7 @@ init-p01st.push.apple.com
 init-s01st-lb.push-apple.com.akadns.net
 init-s01st.push.apple.com
 iosapps.itunes.g.aaplimg.com
+ipcdn.apple.com
 iphone-ld.apple.com
 is1-ssl.mzstatic.com
 is1.mzstatic.com
@@ -88,15 +90,19 @@ mesu.apple.com
 music.apple.com
 ocsp-lb.apple.com.akadns.net
 ocsp.apple.com
+ocsp2.apple.com
 oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
 pancake.apple.com
 pancake.cdn-apple.com.akadns.net
 phobos.apple.com
 prod-support.apple-support.akadns.net
+publicassets.cdn-apple.com
 reserve-prime.apple.com
 s.mzstatic.com
+smp-device-content.apple.com
 stocks-sparkline-lb.apple.com.akadns.net
+stocks-sparkline.apple.com
 store.apple.com
 store.apple.com.edgekey.net
 store.apple.com.edgekey.net.globalredir.akadns.net
