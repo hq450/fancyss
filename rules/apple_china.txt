@@ -110,6 +110,7 @@ store.storeimages.apple.com.akadns.net
 store.storeimages.cdn-apple.com
 support-china.apple-support.akadns.net
 support.apple.com
+swallow.apple.com
 swcatalog-cdn.apple.com.akadns.net
 swcatalog.apple.com
 swcdn.apple.com
