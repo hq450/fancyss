@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2022-09-19
+-e ## Last update: 2022-09-21
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -13834,6 +13834,7 @@
 .*\bchi2ko\.com
 .*\bchi588\.com
 .*\bchiang\.fun
+.*\bchianuos\.com
 .*\bchibaole\.com
 .*\bchichou\.me
 .*\bchichuang\.com
@@ -15706,6 +15707,7 @@
 .*\bcnlty\.com
 .*\bcnmanhua\.com
 .*\bcnmattson\.com
+.*\bcnmb\.win
 .*\bcnmcom\.com
 .*\bcnmdy\.com
 .*\bcnmeishu\.com
@@ -16259,7 +16261,6 @@
 .*\bcorpease\.net
 .*\bcorpize\.com
 .*\bcorpring\.com
-.*\bcorpus4u\.org
 .*\bcos-show\.com
 .*\bcosco\.com
 .*\bcoscon\.com
@@ -17186,7 +17187,6 @@
 .*\bd17\.cc
 .*\bd1cm\.com
 .*\bd1com\.com
-.*\bd1cy\.com
 .*\bd1ev\.com
 .*\bd1fm\.com
 .*\bd1lx\.com
@@ -22650,7 +22650,6 @@
 .*\bfujianrc\.com
 .*\bfujiansme\.com
 .*\bfujieace\.com
-.*\bfujincenter\.com
 .*\bfujinjiazheng\.com
 .*\bfuka\.cc
 .*\bfukeha\.com
@@ -27025,6 +27024,7 @@
 .*\bhnkljnxh\.com
 .*\bhnklnf\.com
 .*\bhnks\.com
+.*\bhnksgf\.com
 .*\bhnksln\.com
 .*\bhnktgame\.com
 .*\bhnkuaifawu\.com
@@ -29670,6 +29670,7 @@
 .*\bimaitu\.com
 .*\bimalljoy\.com
 .*\bimandarin\.net
+.*\bimangodoc\.com
 .*\bimanhuaw\.com
 .*\bimanhuaw\.net
 .*\bimaojiang\.com
@@ -32040,6 +32041,7 @@
 .*\bjixie100\.net
 .*\bjixie5\.com
 .*\bjixiewz\.com
+.*\bjixiexinxi5\.com
 .*\bjixuanw\.com
 .*\bjixunjsq\.com
 .*\bjixunlyq\.com
@@ -32851,6 +32853,7 @@
 .*\bjuneyao\.com
 .*\bjuneyaoair\.com
 .*\bjuneyaoairlines\.com
+.*\bjunezx\.com
 .*\bjungebb\.com
 .*\bjunhe\.com
 .*\bjunhuisoft\.com
@@ -40927,7 +40930,6 @@
 .*\bnsrfww\.com
 .*\bnsrjlb\.com
 .*\bnss\.im
-.*\bnssd\.org
 .*\bnsshare\.com
 .*\bnsstream\.com
 .*\bnstooll\.com
@@ -45309,6 +45311,7 @@
 .*\brepian\.com
 .*\brepianimg\.com
 .*\breplays\.net
+.*\breplicated\.cc
 .*\brerevod\.com
 .*\bresclassaction\.com
 .*\bresheji\.com
@@ -45440,7 +45443,6 @@
 .*\britarpower\.com
 .*\britering\.com
 .*\brivergame\.net
-.*\brixin\.cc
 .*\brixin\.info
 .*\briyuanma\.com
 .*\briyuexing\.org
@@ -47689,7 +47691,6 @@
 .*\bshuadanfu\.com
 .*\bshuai\.win
 .*\bshuaibo\.wang
-.*\bshuaigay6\.com
 .*\bshuaigeshe\.com
 .*\bshuaihuajun\.com
 .*\bshuaiming\.com
@@ -48293,6 +48294,7 @@
 .*\bsjfpro\.com
 .*\bsjfs\.xyz
 .*\bsjfzxm\.com
+.*\bsjgh94\.com
 .*\bsjgnskf\.com
 .*\bsjhcip\.com
 .*\bsjhfrj\.com
@@ -49111,6 +49113,7 @@
 .*\bspringtour\.com
 .*\bspringwater\.vip
 .*\bsprzny\.com
+.*\bspsb114\.com
 .*\bspswc\.com
 .*\bspsy\.org
 .*\bsptcc\.com
@@ -49912,7 +49915,6 @@
 .*\bsxsjgy\.com
 .*\bsxslnews\.com
 .*\bsxsoft\.com
-.*\bsxsruida\.com
 .*\bsxsslz\.net
 .*\bsxszw\.net
 .*\bsxthzs\.com
@@ -54644,7 +54646,6 @@
 .*\bwanzhouhr\.com
 .*\bwanzhoumo\.com
 .*\bwanzhuang\.com
-.*\bwanzhuanhulian\.com
 .*\bwanzhuanlea\.com
 .*\bwanzhuanmobile\.com
 .*\bwanzhucdn\.com
