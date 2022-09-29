@@ -97,7 +97,7 @@ get_chnroute(){
 	jq --arg variable "${IP_COUNT}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 
 	# 5. update file
-	echo "update chnroute, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
 	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
 }
 
@@ -139,7 +139,7 @@ get_chnroute2(){
 	jq --arg variable "${IP_COUNT}" '.chnroute2.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 
 	# 5. update file
-	echo "update chnroute2, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
 	mv -f ${CURR_PATH}/chnroute2_tmp.txt ${RULE_PATH}/chnroute2.txt
 }
 
@@ -189,7 +189,7 @@ get_chnroute3(){
 	jq --arg variable "${IP_COUNT}" '.chnroute3.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 
 	# 5. update file
-	echo "update chnroute3, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
 	mv -f ${CURR_PATH}/chnroute3_tmp.txt ${RULE_PATH}/chnroute3.txt
 }
 
@@ -315,6 +315,8 @@ finish(){
 	rm -f ${CURR_PATH}/gfwlist_merge.conf
 	rm -f ${CURR_PATH}/gfwlist_download.conf
 	rm -f ${CURR_PATH}/chnroute_tmp.txt
+	rm -f ${CURR_PATH}/chnroute2_tmp.txt
+	rm -f ${CURR_PATH}/chnroute3_tmp.txt
 	rm -f ${CURR_PATH}/cdn_tmp.txt
 	rm -f ${CURR_PATH}/accelerated-domains.china.conf
 	rm -f ${CURR_PATH}/cdn_download.txt
@@ -322,6 +324,7 @@ finish(){
 	rm -f ${CURR_PATH}/apple_download.txt
 	rm -f ${CURR_PATH}/google.china.conf
 	rm -f ${CURR_PATH}/google_download.txt
+	rm -f ${CURR_PATH}/cdn_test.txt
 	rm -f ${CURR_PATH}/cdn_test.txt
 	echo "---------------------------------"
 }
