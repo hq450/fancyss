@@ -3795,6 +3795,7 @@
 51chuli.com
 51cir.com
 51cjyy.com
+51cocoa.com
 51code.com
 51cok.com
 51.com
@@ -49992,6 +49993,7 @@ swiftmi.com
 swiftstar.net
 swijoy.com
 switchvip.com
+switchxiazai.com
 swjoy.com
 swkong.com
 swliuxue.com
@@ -52258,7 +52260,6 @@ transformer-cn.com
 transfu.com
 transfun.net
 translatego.net
-translate.googleapis.com
 translationchina.com
 translation-dictionary.net
 translation.googleapis.com
@@ -53867,6 +53868,7 @@ vckai.com
 vckbase.com
 vcloudgtm.com
 vclusters.com
+vcnews.com
 vcode.cc
 vcomic.com
 vcomputes.com
@@ -55186,6 +55188,7 @@ weijinsuo.com
 weijiu.org
 weijiuxin.com
 weijj.com
+weijq.com
 weijuju.com
 weiju.net
 weikaowu.com
