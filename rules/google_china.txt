@@ -1,5 +1,6 @@
 265.com
 2mdn-cn.net
+2mdn.net
 admob-cn.com
 app-measurement-cn.com
 app-measurement.com
@@ -8,6 +9,7 @@ beacons.gvt2.com
 beacons2.gvt2.com
 beacons3.gvt2.com
 c.admob.com
+checkin.gstatic.com
 clickserve.dartsearch.net
 clientservices.googleapis.com
 connectivitycheck.gstatic.com
@@ -16,6 +18,7 @@ doubleclick-cn.net
 doubleclick.net
 firebase-settings.crashlytics.com
 fonts.googleapis.com
+fonts.gstatic.com
 g1.gstatic.com
 g2.gstatic.com
 google-analytics-cn.com
@@ -31,7 +34,6 @@ googleoptimize.com
 googlesyndication-cn.com
 googlesyndication.com
 googletagmanager-cn.com
-googletagmanager.com
 googletagservices-cn.com
 googletagservices.com
 googletraveladservices-cn.com
