@@ -1192,7 +1192,7 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_port").value = "";
 	E("ss_node_table_password").value = "";
 	E("ss_node_table_method").value = "aes-256-cfb";
-	E("ss_node_table_mode").value = "1";
+	E("ss_node_table_mode").value = "2";
 	E("ss_node_table_ss_obfs").value = "0"
 	E("ss_node_table_ss_obfs_host").value = "";
 	E("ss_node_table_ss_v2ray").value = "0"				//fancyss-full
@@ -1866,7 +1866,7 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_port").value = "";
 				E("ss_node_table_password").value = "";
 				E("ss_node_table_method").value = "aes-256-cfb";
-				E("ss_node_table_mode").value = "1";
+				E("ss_node_table_mode").value = "2";
 				E("ss_node_table_ss_obfs").value = "0"
 				E("ss_node_table_ss_obfs_host").value = "";
 				E("ss_node_table_ss_v2ray").value = "0"			//fancyss-full
@@ -2177,7 +2177,7 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_server").value = "";
 			E("ss_node_table_password").value = "";
 			E("ss_node_table_method").value = "aes-256-cfb";
-			E("ss_node_table_mode").value = "1";
+			E("ss_node_table_mode").value = "2";
 			E("ss_node_table_ss_obfs").value = "0"
 			E("ss_node_table_ss_obfs_host").value = "";
 			E("ss_node_table_ss_v2ray").value = "0"			//fancyss-full
@@ -4722,7 +4722,7 @@ function reset_smartdns_conf(){
 															<script type="text/javascript">
 																$('#table_edit').forms([
 																	// common
-																	{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:412px', value: "1"},
+																	{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:412px', value: "2"},
 																	{ title: '使用json配置', rid:'v2ray_use_json_tr', id:'ss_node_table_v2ray_use_json', type:'checkbox', func:'v', help:'27', value:false},
 																	{ title: '使用json配置', rid:'xray_use_json_tr', id:'ss_node_table_xray_use_json', type:'checkbox', func:'v', help:'25', value:false},
 																	{ title: '节点别名', rid:'ss_name_support_tr', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:400px'},

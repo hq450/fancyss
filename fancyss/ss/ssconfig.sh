@@ -496,13 +496,6 @@ prepare_system() {
 		ss_basic_chng_trust_1_opt=2
 		dbus set ss_basic_chng_trust_1_opt=2
 	fi
-	
-	# 13. prepare some file
-	echo_date "创建/tmp/cdn.txt 和 /tmp/gfwlist.txt！"
-	rm -rf /tmp/cdn.txt
-	rm -rf /tmp/gfwlist.txt
-	cp -rf /koolshare/ss/rules/cdn.txt /tmp/cdn.txt
-	cat /koolshare/ss/rules/gfwlist.conf | sed '/^server=/d' | sed 's/ipset=\/.//g' | sed 's/\/gfwlist//g' >>/tmp/gfwlist.txt
 }
 
 donwload_binary(){
@@ -1083,7 +1076,6 @@ restore_conf() {
 	remove_file /jffs/configs/dnsmasq.d/gfwlist.conf 0
 	remove_file /jffs/configs/dnsmasq.d/cdn.conf $?
 	remove_file /jffs/configs/dnsmasq.d/gfwlist.conf $?
-	remove_file /jffs/configs/dnsmasq.d/cdn.conf $?
 	remove_file /jffs/configs/dnsmasq.d/custom.conf $?
 	remove_file /jffs/configs/dnsmasq.d/wblist.conf $?
 	remove_file /jffs/configs/dnsmasq.d
@@ -1092,9 +1084,6 @@ restore_conf() {
 	remove_file /jffs/configs/dnsmasq.d/ss_domain.conf
 	remove_file /jffs/configs/dnsmasq.conf.add $?
 	remove_file /jffs/scripts/dnsmasq.postconf $?
-	remove_file /tmp/cdn.conf $?
-	remove_file /tmp/cdn.txt $?
-	remove_file /tmp/sscdn.conf $?
 	remove_file /tmp/custom.conf $?
 	remove_file /tmp/wblist.conf $?
 	remove_file /tmp/ss_host.conf $?
@@ -1102,6 +1091,8 @@ restore_conf() {
 	remove_file /tmp/smartdns.log $?
 	remove_file /tmp/gfwlist.txt $?
 	remove_file /tmp/gfwlist.conf $?
+	remove_file /tmp/cdn.txt $?
+	remove_file /tmp/cdn.conf $?
 	remove_file /tmp/upload/smartdns_chng_direct.conf $?
 	remove_file /tmp/upload/smartdns_chng_proxy_5.conf $?
 	remove_file /tmp/upload/smartdns_chng_proxy_6.conf $?
@@ -2588,10 +2579,17 @@ start_dns_old() {
 	fi
 
 	# 回国模式下强制改国外DNS为直连方式
-	if [ "${ss_basic_mode}" == "6" -a "${ss_foreign_dns}" != "8" ]; then
-		echo_date "检测到当前为回国模式，dns解析方案强制更改为直连模式..."
-		ss_foreign_dns="8"
-		dbus set ss_foreign_dns="8"
+	if [ "${ss_basic_mode}" == "6" ]; then
+		if [ "${ss_basic_advdns}" == "1" ]; then
+			echo_date "回国模式自动使用基础DNS设定"
+			dbus set ss_basic_advdns="0"
+			dbus set ss_basic_olddns="1"
+		fi
+		if [ "${ss_foreign_dns}" != "8" ]; then
+			echo_date "检测到当前为回国模式，dns解析方案强制更改为直连模式..."
+			ss_foreign_dns="8"
+			dbus set ss_foreign_dns="8"
+		fi
 	fi
 
 	# 3. Start DNS2SOCKS (default)
@@ -2983,7 +2981,7 @@ get_dns_doh(){
 
 create_dnsmasq_conf() {
 	# 0. delete pre settings
-	rm -rf /tmp/sscdn.conf
+	rm -rf /tmp/cdn.conf
 	rm -rf /tmp/custom.conf
 	rm -rf /tmp/wblist.conf
 	rm -rf /tmp/gfwlist.conf
@@ -2994,12 +2992,24 @@ create_dnsmasq_conf() {
 	rm -rf /jffs/scripts/dnsmasq.postconf
 	rm -rf /tmp/smartdns.conf
 
-	# copy rules to tmp
+	# copy gfwlist.conf to tmp
 	if [ "${ss_basic_mode}" == "6" ];then
 		cat /koolshare/ss/rules/gfwlist.conf | sed "s/127.0.0.1#7913/${ss_direct_user}/g" >>/tmp/gfwlist.conf
 	else
-		cp -rf /koolshare/ss/rules/gfwlist.conf /tmp/gfwlist.conf
+		if [ "${ss_basic_advdns}" != "1" ]; then
+			cp -rf /koolshare/ss/rules/gfwlist.conf /tmp/gfwlist.conf
+		else
+			cp -rf /koolshare/ss/rules/gfwlist.conf /tmp/gfwlist.conf
+			sed -i '/^server=/d' /tmp/gfwlist.conf
+		fi
 	fi
+
+	# copy gfwlist.txt & cdn.txt to tmp
+	echo_date "创建/tmp/cdn.txt 和 /tmp/gfwlist.txt！"
+	rm -rf /tmp/cdn.txt
+	rm -rf /tmp/gfwlist.txt
+	cp -rf /koolshare/ss/rules/cdn.txt /tmp/cdn.txt
+	cat /koolshare/ss/rules/gfwlist.conf | sed '/^server=/d' | sed 's/ipset=\/.//g' | sed 's/\/gfwlist//g' >>/tmp/gfwlist.txt
 
 	# 1. define CDN value
 	if [ "${ss_basic_mode}" == "6" ];then
@@ -3220,9 +3230,9 @@ create_dnsmasq_conf() {
 			else
 				# 其它情况，均使用国外优先模式，以下区分是否加载cdn.conf
 				echo_date "自动判断dns解析使用国外优先模式..."
-				echo_date "生成cdn加速列表到/tmp/sscdn.conf，加速用的dns：${CDN}"
-				echo "#for china site CDN acclerate" >>/tmp/sscdn.conf
-				cat /tmp/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN#$DNSC_PORT/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/sscdn.conf
+				echo_date "生成cdn加速列表到/tmp/cdn.conf，加速用的dns：${CDN}"
+				echo "#for china site CDN acclerate" >>/tmp/cdn.conf
+				cat /tmp/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN#$DNSC_PORT/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/cdn.conf
 			fi
 		fi
 	fi
@@ -3237,32 +3247,30 @@ create_dnsmasq_conf() {
 		ln -sf /tmp/wblist.conf /jffs/configs/dnsmasq.d/wblist.conf
 	fi
 
-	if [ -f /tmp/sscdn.conf ]; then
+	if [ -f /tmp/cdn.conf ]; then
 		#echo_date 创建cdn加速列表软链接/jffs/configs/dnsmasq.d/cdn.conf
-		ln -sf /tmp/sscdn.conf /jffs/configs/dnsmasq.d/cdn.conf
+		ln -sf /tmp/cdn.conf /jffs/configs/dnsmasq.d/cdn.conf
 	fi
 
 	# 此处决定何时使用gfwlist.conf
-	if [ "${ss_basic_advdns}" != "1" ]; then
-		if [ "${ss_basic_mode}" == "1" ]; then
+	if [ "${ss_basic_mode}" == "1" ]; then
+		echo_date "创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
+		ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
+	elif [ "${ss_basic_mode}" == "2" -o "${ss_basic_mode}" == "3" ]; then
+		if [ -n "${gfw_on}" ]; then
 			echo_date "创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
 			ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
-		elif [ "${ss_basic_mode}" == "2" -o "${ss_basic_mode}" == "3" ]; then
-			if [ -n "${gfw_on}" ]; then
-				echo_date "创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
-				ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
-			fi
-		elif [ "${ss_basic_mode}" == "6" ]; then
-			# 回国模式下默认方案是国内优先，所以gfwlist里的网站不能由127.0.0.1#7913来解析了，应该是国外当地直连
-			if [ -n "$(echo ${ss_direct_user} | grep :)" ]; then
-				echo_date "国外直连dns设定格式错误，将自动更正为8.8.8.8#53."
-				ss_direct_user="8.8.8.8#53"
-				dbus set ss_direct_user="8.8.8.8#53"
-			fi
-			echo_date "创建回国模式专用gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
-			[ -z "${ss_direct_user}" ] && ss_direct_user="8.8.8.8#53"
-			ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 		fi
+	elif [ "${ss_basic_mode}" == "6" ]; then
+		# 回国模式下默认方案是国内优先，所以gfwlist里的网站不能由127.0.0.1#7913来解析了，应该是国外当地直连
+		if [ -n "$(echo ${ss_direct_user} | grep :)" ]; then
+			echo_date "国外直连dns设定格式错误，将自动更正为8.8.8.8#53."
+			ss_direct_user="8.8.8.8#53"
+			dbus set ss_direct_user="8.8.8.8#53"
+		fi
+		echo_date "创建回国模式专用gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
+		[ -z "${ss_direct_user}" ] && ss_direct_user="8.8.8.8#53"
+		ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
 	fi
 
 	#echo_date 创建dnsmasq.postconf软连接到/jffs/scripts/文件夹.
