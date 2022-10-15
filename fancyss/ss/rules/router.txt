@@ -1,0 +1,13 @@
+google.com.tw
+dns.google.com
+github.com
+github.io
+raw.githubusercontent.com
+adblockplus.org
+entware.net
+apnic.net
+ifconfig.me
+icanhazip.com
+ipinfo.io
+ipecho.net
+ip.sb

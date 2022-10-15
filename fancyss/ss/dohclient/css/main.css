@@ -1,0 +1,147 @@
+html,body {
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+}
+
+body > div {
+	margin: 8px;
+	position: relative;
+}
+
+table {
+	min-width: 600px;
+}
+
+table, th, td {
+	border: 1px solid #dfdfdf;
+	border-collapse: collapse;
+	border-spacing: 5px;
+}
+
+th, td {
+	padding: 8px 18px;
+	text-align: left;
+}
+
+thead th:last-child,
+thead td:last-child,
+tbody th:last-child,
+tbody td:last-child {
+	width: 80px;
+	text-align: center;
+}
+
+tfoot th, tfoot td {
+	text-align: right;
+}
+
+tr:nth-child(even) {
+	background-color: #efefef;
+}
+
+a {
+	text-decoration: none;
+	margin: 4px 4px;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a.disabled {
+	color:gray;
+}
+
+a.disabled:hover {
+	text-decoration: none;
+}
+
+input[type=text],
+select {
+	padding: 6px 8px;
+}
+
+#txDomain {
+	width: 308px;
+}
+
+#txDomain2 {
+	width: 200px;
+}
+
+#txIP {
+	width: 180px;
+}
+
+#txTTL {
+	width: 80px;
+}
+
+#txLoadFile {
+	width: 400px;
+}
+
+#txSaveFile {
+	width: 400px;
+}
+
+#txKeyword {
+	width: 400px;
+}
+
+select {
+	padding: 6px 8px;
+}
+
+button {
+	padding: 6px 14px;
+	margin: 4px 4px;
+}
+
+.errmsg {
+	color: red;
+}
+
+.offset-limit {
+	margin-right: 10px;
+}
+
+.refresh-img {
+	width: 24px;
+	height: 24px;
+	vertical-align: middle;
+}
+
+.loading {
+	position: absolute;
+	left:0px;
+	top: 0px;
+	width:100%;
+	height:100%;
+	margin: 0;
+	padding: 0;
+	background-image: none;
+	background-color: rgba(0,0,0,0.3);
+	text-align: center;
+	vertical-align: middle;
+	overflow: hidden;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	display: none;
+}
+
+.loading .loading-img {
+	width: 48px;
+	height: 48px;
+	vertical-align: middle;
+}
+
+.loading .loading-message {
+	padding: 6px 14px;
+	vertical-align: middle;
+	font-size: 24px;
+	color: white;
+}
+

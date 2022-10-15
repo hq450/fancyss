@@ -62,6 +62,19 @@ input[type=checkbox]{
 }
 #log_content3, #loading_block2 {line-height:1.5}
 .SimpleNote { padding:5px 10px;}
+.smartdns_textarea{
+	width:97%;
+	padding-left:10px;
+	padding-right:10px;
+	font-family:'Courier New', Courier, mono;
+	font-family: Lucida Console;
+	line-height: 1.5;
+	font-size:11px;
+	color:#FFFFFF;
+	outline: none;
+	background:#475A5F;
+	border:1px solid #222;
+}
 .contentM_qis {
 	position: absolute;
 	-webkit-border-radius: 5px;
@@ -69,9 +82,9 @@ input[type=checkbox]{
 	border-radius: 5px;
 	z-index: 200;
 	/*background-color:#2B373B;*/
-	margin-left: 50px;
+	margin-left: 25px;
 	top: 320px;
-	width:650px;
+	width:700px;
 	return height:auto;
 	box-shadow: 3px 3px 10px #000;
 	display:none;
@@ -99,7 +112,7 @@ input[type=checkbox]{
 	font-weight:bold;
 }
 .QISform_wireless {
-	width:600px;
+	width:680px;
 	font-size:12px;
 	color:#FFFFFF;
 	margin-top:10px;
@@ -216,6 +229,9 @@ input[type=checkbox]{
 .cloud_main_radius h3 { font-size:12px;color:#FFF;font-weight:normal;font-style: normal;}
 .cloud_main_radius h4 { font-size:12px;color:#FC0;font-weight:normal;font-style: normal;}
 .cloud_main_radius h5 { color:#FFF;font-weight:normal;font-style: normal;}
+.deactivate_icon:hover {
+	background-image: url('/images/New_ui/activate.svg');
+}
 /*ASUSWRT*/
 #app[skin=ASUSWRT] .myDragClass{
 	background-color:#396995;
@@ -593,3 +609,12 @@ input[type=checkbox]{
 	width:14%;
 	background: linear-gradient(to bottom, #c58813  0%, #92650F 100%);
 }
+/*------------------*/
+/*#table_dns th{
+	width: 30%;
+}*/
+/*#table_dns .input_option, #app #table_dns .input_ss_table{
+	font-size: 9px;
+	font-family: sans-serif;
+}
+*/

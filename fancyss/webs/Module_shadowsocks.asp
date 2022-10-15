@@ -18,20 +18,23 @@
 <link rel="stylesheet" type="text/css" href="/res/layer/theme/default/layer.css">
 <link rel="stylesheet" type="text/css" href="/res/softcenter.css">
 <link rel="stylesheet" type="text/css" href="/res/shadowsocks.css">
-<script type="text/javascript" src="/state.js"></script>
-<script type="text/javascript" src="/popup.js"></script>
-<script type="text/javascript" src="/help.js"></script>
-<script type="text/javascript" src="/js/jquery.js"></script>
-<script type="text/javascript" src="/general.js"></script>
-<script type="text/javascript" language="JavaScript" src="/js/table/table.js"></script>
-<script type="text/javascript" language="JavaScript" src="/client_function.js"></script>
-<script type="text/javascript" src="/res/ss-menu.js"></script>
-<script type="text/javascript" src="/res/softcenter.js"></script>
-<script type="text/javascript" src="/res/tablednd.js"></script>
+<script language="JavaScript" type="text/javascript" src="/state.js"></script>
+<script language="JavaScript" type="text/javascript" src="/help.js"></script>
+<script language="JavaScript" type="text/javascript" src="/general.js"></script>
+<script language="JavaScript" type="text/javascript" src="/popup.js"></script>
+<script language="JavaScript" type="text/javascript" src="/client_function.js"></script>
+<script language="JavaScript" type="text/javascript" src="/validator.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/table/table.js"></script>
+<script language="JavaScript" type="text/javascript" src="/res/ss-menu.js"></script>
+<script language="JavaScript" type="text/javascript" src="/res/softcenter.js"></script>
+<script language="JavaScript" type="text/javascript" src="/res/tablednd.js"></script>
 <script>
+var pkg_name="fancyss_platform_type"
 var db_ss = {};
 var dbus = {};
 var confs = {};
+var dns_log = {};
 var obj_node = {};
 var node_max = 0;
 var node_nu = 0;
@@ -48,11 +51,14 @@ var _responseLen;
 var noChange = 0;
 var noChange2 = 0;
 var noChange_status = 0;
+var noChange_dns = 0;
 var poped = 0;
+var submit_flag="0";
 var x = 5;
 var ping_result = "";
 var save_flag = "";
 var STATUS_FLAG;
+var SMARTDNS_FLAG;
 var refreshRate;
 var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
@@ -66,10 +72,14 @@ var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"
 var option_headquic = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"], ["utp", "伪装BT下载(uTP)"], ["wechat-video", "伪装微信视频通话"], ["dtls", "dtls"], ["wireguard", "wireguard"]];
 var option_grpcmode = ["gun", "multi"];
 var option_bol = [["0", "false"], ["1", "true"]];
-var option_xflow =["xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-splice", "xtls-rprx-splice-udp443"];
+var option_xflow = ["xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-splice", "xtls-rprx-splice-udp443"];
+var option_naive_prot = ["https", "quic"];
 var heart_count = 1;
 const pattern=/[`~!@#$^&*()=|{}':;'\\\[\]\.<>\/?~！@#￥……&*（）——|{}%【】'；：""'。，、？\s]/g;
-
+String.prototype.myReplace = function(f, e){
+	var reg = new RegExp(f, "g"); 
+	return this.replace(reg, e); 
+}
 function init() {
 	show_menu(menu_hook);
 	get_dbus_data();
@@ -145,7 +155,6 @@ function get_dbus_data() {
 				get_ss_status_front();
 			}
 			get_heart_beat();
-			//console.log(productid);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			console.log(XmlHttpRequest.responseText);
@@ -166,12 +175,20 @@ function conf2obj(obj, action) {
 			el.value = Base64.decode(obj[field]);
 			continue;
 		}
+		if (field == "ss_basic_naive_pass") {		//fancyss-full
+			el.value = Base64.decode(obj[field]);	//fancyss-full
+			continue;								//fancyss-full
+		}											//fancyss-full
 		// base64_decode then fill
 		if (field == "ss_basic_v2ray_json" || field == "ss_basic_xray_json") {
 			el.value = do_js_beautify(Base64.decode(obj[field]));
 			continue;
 		}
 		if (el != null && el.getAttribute("type") == "checkbox") {
+			el.checked = obj[field] == "1" ? true : false;
+			continue;
+		}
+		if (el != null && el.getAttribute("type") == "radio") {
 			el.checked = obj[field] == "1" ? true : false;
 			continue;
 		}
@@ -193,7 +210,7 @@ function ssconf_node2obj(node_sel) {
 	obj_node = {};
 	var p = "ssconf_basic";
 	var params_tt_0 = ["ss_obfs", "ss_v2ray", "use_kcp", "v2ray_use_json", "v2ray_network_security_ai", "v2ray_mux_enable", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
-	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
 
 	for (var i = 0; i < params_tt_0.length; i++) {
 		obj_node["ss_basic_" + params_tt_0[i]] = db_ss[p + "_" + params_tt_0[i] + "_" + node_sel] || "0";
@@ -223,8 +240,8 @@ function refresh_options() {
 	option2.find('option').remove().end();
 	option3.find('option').remove().end();
 	
-	option1.append('<option value="off">关闭ping功能</option>');
-	option1.append('<option value="0" selected>全部节点</option>');
+	option1.append('<option value="off" selected>关闭ping功能</option>');
+	option1.append('<option value="0">全部节点</option>');
 	for (var field in confs) {
 		var c = confs[field];
 		if(c["type"] == "3" && c.v2ray_use_json == "1"){
@@ -266,13 +283,6 @@ function refresh_options() {
 				text: c.use_kcp == "1" ? "【SSR+KCP】" + group_tag + c.name : "【SSR】" + group_tag + c.name
 			}));
 		}
-		else if(c.type == "2"){																							//fancyss-koolgame
-			//koolgame																									//fancyss-koolgame
-			option.append($("<option>", {																				//fancyss-koolgame
-				value: field,																							//fancyss-koolgame
-				text: c.use_kcp == "1" ? "【koolgame+KCP】" + group_tag + c.name : "【koolgame】" + group_tag + c.name	//fancyss-koolgame
-			}));																										//fancyss-koolgame
-		}																												//fancyss-koolgame
 		else if(c.type == "3"){
 			//v2ray
 			option.append($("<option>", {
@@ -291,17 +301,42 @@ function refresh_options() {
 			//xray
 			option.append($("<option>", {
 				value: field,
-				text: c.use_kcp == "1" ? "【Xray+KCP】" + group_tag + c.name : "【trojan】" + group_tag + c.name
+				text: c.use_kcp == "1" ? "【trojan+KCP】" + group_tag + c.name : "【trojan】" + group_tag + c.name
+			}));
+		}
+		else if(c.type == "6"){
+			//xray
+			option.append($("<option>", {
+				value: field,
+				text: c.use_kcp == "1" ? "【Naïve+KCP】" + group_tag + c.name : "【Naïve】" + group_tag + c.name
 			}));
 		}
 	}
 	option.val(db_ss["ssconf_basic_node"]||"1");
-	option1.val(db_ss["ss_basic_ping_node"]||"0");
+	option1.val(db_ss["ss_basic_ping_node"]||"off");
 	option2.val(db_ss["ss_basic_udp_node"]||"1");
 	option3.val((db_ss["ss_failover_s4_3"])||"1");
+	// refresh node dns resolv option
+	if (db_ss["ss_basic_s_resolver_tcp"] <= "0"){
+		var option_value = db_ss["ss_basic_lastrt"];
+		var option_text = $("#ss_basic_s_resolver_tcp").find('option[value=' + option_value + ']').text();
+		$('#ss_basic_s_resolver_tcp option[value=' + option_value + ']').text(option_text + '✅');
+	}else{
+		var option_text = $("#ss_basic_s_resolver_tcp").find('option[value=' + db_ss["ss_basic_s_resolver_tcp"] + ']').text();
+		$('#ss_basic_s_resolver_tcp option[value=' + db_ss["ss_basic_s_resolver_tcp"] + ']').text(option_text + '✅');
+	}
+	if (db_ss["ss_basic_s_resolver_udp"] <= "0"){
+		var option_value = db_ss["ss_basic_lastru"];
+		var option_text = $("#ss_basic_s_resolver_udp").find('option[value=' + option_value + ']').text();
+		$('#ss_basic_s_resolver_udp option[value=' + option_value + ']').text(option_text + '✅');
+	}else{
+		var option_text = $("#ss_basic_s_resolver_udp").find('option[value=' + db_ss["ss_basic_s_resolver_udp"] + ']').text();
+		$('#ss_basic_s_resolver_udp option[value=' + db_ss["ss_basic_s_resolver_udp"] + ']').text(option_text + '✅');
+	}
 }
 function save() {
 	var node_sel = E("ssconf_basic_node").value;
+	submit_flag="1";
 	//if(node_max == 0){
 	//	alert("你还没有任何节点，无法保存！请在节点管理处添加节点后重试！");
 	//	return false;
@@ -310,9 +345,9 @@ function save() {
 	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 	// key define
-	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_china", "ss_dns_china_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_chinadns_user", "ss_chinadnsng_user", "ss_chinadns1_user", "ss_sstunnel_user", "ss_direct_user", "ss_game2_dns_foreign", "ss_game2_dns2ss_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_server_resolver", "ss_basic_server_resolver_user"];
-	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_tcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_tjai", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_disable_aaaa", "ss_basic_mcore"];
-	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links"];
+	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_plan", "ss_basic_chng_china_1_prot", "ss_basic_chng_china_1_udp", "ss_basic_chng_china_1_udp_user", "ss_basic_chng_china_1_tcp", "ss_basic_chng_china_1_tcp_user", "ss_basic_chng_china_1_doh", "ss_basic_chng_china_2_prot", "ss_basic_chng_china_2_udp", "ss_basic_chng_china_2_udp_user", "ss_basic_chng_china_2_tcp", "ss_basic_chng_china_2_tcp_user", "ss_basic_chng_china_2_doh", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt_udp_val", "ss_basic_chng_trust_1_opt_udp_val_user", "ss_basic_chng_trust_1_opt_tcp_val", "ss_basic_chng_trust_1_opt_tcp_val_user", "ss_basic_chng_trust_1_opt_doh_val", "ss_basic_chng_trust_2_opt_doh", "ss_basic_chng_trust_2_opt", "ss_basic_chng_trust_2_opt_udp", "ss_basic_chng_trust_2_opt_tcp", "ss_basic_chng_repeat_times", "ss_china_dns", "ss_china_dns_user", "ss_basic_smrt", "ss_basic_dohc_sel_china", "ss_basic_dohc_udp_china", "ss_basic_dohc_udp_china_user", "ss_basic_dohc_tcp_china", "ss_basic_dohc_tcp_china_user", "ss_basic_dohc_doh_china", "ss_basic_dohc_sel_foreign", "ss_basic_dohc_tcp_foreign", "ss_basic_dohc_tcp_foreign_user", "ss_basic_dohc_doh_foreign", "ss_basic_dohc_cache_timeout", "ss_foreign_dns", "ss_dns2socks_user", "ss_sstunnel_user", "ss_direct_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ssr_subscribe_obfspara", "ssr_subscribe_obfspara_val", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_s_resolver", "ss_basic_s_resolver_udp", "ss_basic_s_resolver_udp_user", "ss_basic_s_resolver_tcp", "ss_basic_s_resolver_tcp_user", "ss_basic_s_resolver_doh" ];
+	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_tcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_tjai", "ss_basic_olddns", "ss_basic_advdns", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_basic_chng_no_ipv6", "ss_basic_mcore", "ss_basic_dohc_proxy", "ss_basic_dohc_ecs_china", "ss_basic_dohc_ecs_foreign", "ss_basic_dohc_cache_reuse", "ss_basic_chng_china_1_enable", "ss_basic_chng_china_2_enable", "ss_basic_chng_china_1_ecs", "ss_basic_chng_trust_1_enable", "ss_basic_chng_trust_2_enable", "ss_basic_chng_china_2_ecs", "ss_basic_chng_trust_1_ecs", "ss_basic_chng_trust_2_ecs" ];
+	var params_base64_a = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links" ];
 	var params_no_store = ["ss_base64_links"];
 	var params_base64_b = ["ss_basic_custom"];
 	//---------------------------------------------------------------
@@ -386,14 +421,6 @@ function save() {
 			}																													 //fancyss-full
 		}																														 //fancyss-full
 	}
-	// koolgame																										//fancyss-koolgame
-	if (db_ss["ssconf_basic_type_" + node_sel] =="2" ){																//fancyss-koolgame
-		var params_kgi_1 = ["mode", "server", "port", "method", "koolgame_udp"];									//fancyss-koolgame
-		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);					//fancyss-koolgame
-		for (var i = 0; i < params_kgi_1.length; i++) {																//fancyss-koolgame
-			dbus["ssconf_basic_" + params_kgi_1[i] + "_" + node_sel] = E("ss_basic_" + params_kgi_1[i]).value;		//fancyss-koolgame
-		}																											//fancyss-koolgame
-	}																												//fancyss-koolgame
 	//v2ray
 	if (db_ss["ssconf_basic_type_" + node_sel] =="3" ){
 		// for v2ray json, we need to encode json format
@@ -543,13 +570,21 @@ function save() {
 	}
 	// trojan
 	if (db_ss["ssconf_basic_type_" + node_sel] =="5" ){
-		var params_kgi_1 = ["mode", "server", "port", "trojan_uuid", "trojan_sni"];
+		var params_tj_1 = ["mode", "server", "port", "trojan_uuid", "trojan_sni"];
 		dbus["ssconf_basic_trojan_ai_" + node_sel] = E("ss_basic_trojan_ai").checked ? '1' : '';
 		dbus["ssconf_basic_trojan_tfo_" + node_sel] = E("ss_basic_trojan_tfo").checked ? '1' : '';
-		for (var i = 0; i < params_kgi_1.length; i++) {
-			dbus["ssconf_basic_" + params_kgi_1[i] + "_" + node_sel] = E("ss_basic_" + params_kgi_1[i]).value;
+		for (var i = 0; i < params_tj_1.length; i++) {
+			dbus["ssconf_basic_" + params_tj_1[i] + "_" + node_sel] = E("ss_basic_" + params_tj_1[i]).value;
 		}
 	}
+	// naive																										//fancyss-full
+	if (db_ss["ssconf_basic_type_" + node_sel] =="6" ){																//fancyss-full
+		dbus["ssconf_basic_naive_pass_" + node_sel] = Base64.encode(E("ss_basic_naive_pass").value);				//fancyss-full
+		var params_naive_1 = ["mode", "naive_prot", "naive_server", "naive_port", "naive_user"];					//fancyss-full
+		for (var i = 0; i < params_naive_1.length; i++) {															//fancyss-full
+			dbus["ssconf_basic_" + params_naive_1[i] + "_" + node_sel] = E("ss_basic_" + params_naive_1[i]).value;	//fancyss-full
+		}																											//fancyss-full
+	}																												//fancyss-full
 
 	// show different title when subscribe
 	if(E("ss_basic_enable").checked){
@@ -570,9 +605,12 @@ function save() {
 	}
 	//---------------------------------------------------------------
 	var post_dbus = compfilter(db_ss, dbus);
-	//console.log("db_ss", db_ss);
-	//console.log("post_dbus", post_dbus);
-	push_data("ss_config.sh", "start",  post_dbus);
+	if(dbus["ss_basic_enable"] == "1"){
+		//console.log("post_dbus", post_dbus);
+		push_data("ss_config.sh", "start",  post_dbus);
+	}else{
+		push_data("ss_config.sh", "stop",  post_dbus);
+	}
 }
 function push_data(script, arg, obj, flag){
 	if (!flag) showSSLoadingBar();
@@ -602,64 +640,66 @@ function verifyFields(r) {
 	var node_sel = E("ssconf_basic_node").value;
 	var ss_on = false;
 	var ssr_on = false;
-	var koolgame_on = false;									//fancyss-koolgame
 	var v2ray_on = false;
 	var xray_on = false;
 	var trojan_on = false;
+	var naive_on = false;	//fancyss-full
 	if (db_ss["ssconf_basic_type_" + node_sel] == "0") {
 		// ss
 		var ss_on = true;
 		var ssr_on = false;
-		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = false;
+		var naive_on = false;	//fancyss-full
 	}
 	else if (db_ss["ssconf_basic_type_" + node_sel] == "1") {
 		// ssr
 		var ss_on = false;
 		var ssr_on = true;
-		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = false;
+		var naive_on = false;	//fancyss-full
 	}
-	else if (db_ss["ssconf_basic_type_" + node_sel]  == "2") {	//fancyss-koolgame
-		// koolgame												//fancyss-koolgame
-		var ss_on = false;										//fancyss-koolgame
-		var ssr_on = false;										//fancyss-koolgame
-		var koolgame_on = true;									//fancyss-koolgame
-		var v2ray_on = false;									//fancyss-koolgame
-		var xray_on = false;									//fancyss-koolgame
-		var trojan_on = false;									//fancyss-koolgame
-	}															//fancyss-koolgame
 	else if (db_ss["ssconf_basic_type_" + node_sel] == "3") {
 		// v2ray
 		var ss_on = false;
 		var ssr_on = false;
-		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = true;
 		var xray_on = false;
 		var trojan_on = false;
+		var naive_on = false;	//fancyss-full
 	}
 	else if (db_ss["ssconf_basic_type_" + node_sel] == "4") {
 		// xray
 		var ss_on = false;
 		var ssr_on = false;
-		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = true;
 		var trojan_on = false;
+		var naive_on = false;	//fancyss-full
 	}
 	else if (db_ss["ssconf_basic_type_" + node_sel] == "5") {
 		// xray
 		var ss_on = false;
 		var ssr_on = false;
-		var koolgame_on = false;								//fancyss-koolgame
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = true;
+		var naive_on = false;	//fancyss-full
 	}
+	//fancyss_naive_1
+	else if (db_ss["ssconf_basic_type_" + node_sel] == "6") {
+		// naive
+		var ss_on = false;										
+		var ssr_on = false;
+		var v2ray_on = false;
+		var xray_on = false;
+		var trojan_on = false;
+		var naive_on = true;
+	}
+	//fancyss_naive_2
 	var v_json_on = E("ss_basic_v2ray_use_json").checked == true;
 	var v_json_off = E("ss_basic_v2ray_use_json").checked == false;
 	var v_http_on = E("ss_basic_v2ray_network").value == "tcp" && E("ss_basic_v2ray_headtype_tcp").value == "http";
@@ -683,13 +723,11 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_rss_protocol', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_obfs', 'tr'), ssr_on);
 	elem.display(elem.parentElem('ss_basic_rss_obfs_param', 'tr'), ssr_on);
-	//koolgame																	//fancyss-koolgame
-	elem.display(elem.parentElem('ss_basic_koolgame_udp', 'tr'), koolgame_on);	//fancyss-koolgame
 	//basic
-	elem.display(elem.parentElem('ss_basic_server', 'tr'), ss_on || ssr_on || koolgame_on || v2ray_on && v_json_off || xray_on && x_json_off || trojan_on);
-	elem.display(elem.parentElem('ss_basic_port', 'tr'), ss_on || ssr_on || koolgame_on || v2ray_on && v_json_off || xray_on && x_json_off || trojan_on);
-	elem.display(elem.parentElem('ss_basic_password', 'tr'), !v2ray_on && ! xray_on && ! trojan_on);
-	elem.display(elem.parentElem('ss_basic_method', 'tr'), !v2ray_on && ! xray_on && ! trojan_on);
+	elem.display(elem.parentElem('ss_basic_server', 'tr'), ss_on || ssr_on || v2ray_on && v_json_off || xray_on && x_json_off || trojan_on);
+	elem.display(elem.parentElem('ss_basic_port', 'tr'), ss_on || ssr_on || v2ray_on && v_json_off || xray_on && x_json_off || trojan_on);
+	elem.display(elem.parentElem('ss_basic_password', 'tr'), !v2ray_on && ! xray_on && ! trojan_on && ! naive_on);
+	elem.display(elem.parentElem('ss_basic_method', 'tr'), !v2ray_on && ! xray_on && ! trojan_on && ! naive_on);
 	//v2ray
 	elem.display(elem.parentElem('ss_basic_v2ray_use_json', 'tr'), v2ray_on);
 	elem.display(elem.parentElem('ss_basic_v2ray_uuid', 'tr'), (v2ray_on && v_json_off));
@@ -735,14 +773,16 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_trojan_ai', 'tr'), (trojan_on));
 	elem.display(elem.parentElem('ss_basic_trojan_sni', 'tr'), (trojan_on));
 	elem.display(elem.parentElem('ss_basic_trojan_tfo', 'tr'), (trojan_on));
+	//naive
+	elem.display(elem.parentElem('ss_basic_naive_prot', 'tr'), (naive_on));		//fancyss-full
+	elem.display(elem.parentElem('ss_basic_naive_server', 'tr'), (naive_on));	//fancyss-full
+	elem.display(elem.parentElem('ss_basic_naive_port', 'tr'), (naive_on));		//fancyss-full
+	elem.display(elem.parentElem('ss_basic_naive_user', 'tr'), (naive_on));		//fancyss-full
+	elem.display(elem.parentElem('ss_basic_naive_pass', 'tr'), (naive_on));		//fancyss-full
 	if (E("ss_basic_tjai").checked == true){
 		E("ss_basic_trojan_ai").disabled = true;
 		E("ss_basic_trojan_ai_note").innerHTML = "已全局跳过证书验证";
 	}
-	// dns pannel										//fancyss-koolgame
-	showhide("dns_plan_foreign", !koolgame_on);			//fancyss-koolgame
-	showhide("dns_plan_foreign_game2", koolgame_on);	//fancyss-koolgame
-	//node add/edit pannel
 	if (save_flag == "shadowsocks") {
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
@@ -964,50 +1004,185 @@ function update_visibility() {
 	var a = E("ss_basic_rule_update").value == "1";
 	var b = E("ss_basic_node_update").value == "1";
 	var c = E("ssr_subscribe_obfspara").value == "2";
-	var d = E("ss_basic_udp_upstream_mtu").value == "1";									//fancyss-full
-	var e = E("ss_dns_china").value == "12";
+	var d = E("ss_basic_udp_upstream_mtu").value == "1";			//fancyss-full
+	var e = E("ss_china_dns").value == "12";
 	var f = E("ss_foreign_dns").value;
 	var g = E("ss_basic_tri_reboot_time").value;
-	var h = E("ss_basic_server_resolver").value == "12";
+	var h = E("ss_basic_s_resolver").value;
+	var h_0 = E("ss_basic_s_resolver_udp").value;
+	var h_1 = E("ss_basic_s_resolver_tcp").value;
 	var i = E("ss_basic_ping_node").value != "off" && E("ss_basic_ping_node").value != "";
+	var j = E("ss_basic_chng_china_1_enable").checked;
+	var j0 = E("ss_basic_chng_china_1_prot").value;
+	var j1 = E("ss_basic_chng_china_1_udp").value == "96";
+	var j2 = E("ss_basic_chng_china_1_tcp").value == "97";
+	var j3 = E("ss_basic_chng_china_1_doh").value == "98";			//fancyss-full
+	var j4 = E("ss_basic_chng_china_1_udp").value == "99";
+	var j5 = E("ss_basic_chng_china_1_tcp").value == "99";
+	var j6 = E("ss_basic_chng_china_1_udp").value;
+	var k = E("ss_basic_chng_china_2_enable").checked;
+	var k0 = E("ss_basic_chng_china_2_prot").value;
+	var k1 = E("ss_basic_chng_china_2_udp").value == "96";
+	var k2 = E("ss_basic_chng_china_2_tcp").value == "97";
+	var k3 = E("ss_basic_chng_china_2_doh").value == "98";			//fancyss-full
+	var k4 = E("ss_basic_chng_china_2_udp").value == "99";
+	var k5 = E("ss_basic_chng_china_2_tcp").value == "99";
+	var l = E("ss_basic_chng_trust_1_enable").checked;
+	var l0 = E("ss_basic_chng_trust_1_opt").value;
+	var l1 = E("ss_basic_chng_trust_1_opt_udp_val").value;
+	var l2 = E("ss_basic_chng_trust_1_opt_tcp_val").value;
+	var m = E("ss_basic_chng_trust_2_enable").checked;
+	var m0 = E("ss_basic_chng_trust_2_opt").value;
+	var m3 = E("ss_basic_chng_trust_2_opt_doh").value;				//fancyss-full
+	var n = E("ss_basic_smrt").value;								//fancyss-full
+	var n1 = E("ss_basic_smrt").value == "1";						//fancyss-full
+	var n2 = E("ss_basic_smrt").value == "2";						//fancyss-full
+	var n3 = E("ss_basic_smrt").value == "3";						//fancyss-full
+	var o = E("ss_basic_dohc_sel_china").value;						//fancyss-full
+	var p1 = E("ss_basic_dohc_udp_china").value == "99";			//fancyss-full
+	var p2 = E("ss_basic_dohc_tcp_china").value == "99";			//fancyss-full
+	var q = E("ss_basic_dohc_sel_foreign").value;					//fancyss-full
+	var r = E("ss_basic_dohc_tcp_foreign").value == "99";			//fancyss-full
 	showhide("ss_basic_rule_update_time", a);
 	showhide("update_choose", a);
 	showhide("ss_basic_node_update_day", b);
 	showhide("ss_basic_node_update_hr", b);
 	showhide("ssr_subscribe_obfspara_val", c);
 	showhide("ss_basic_udp_upstream_mtu_value", d);											//fancyss-full
-	showhide("ss_dns_china_user", e);
-	showhide("ss_basic_server_resolver_user", h);
-	showhide("ss_chinadns_user", (f == "2"));												//fancyss-full		
-	showhide("ss_chinadnsng_user", (f == "10"));
+	showhide("ss_china_dns_user", e);
+	showhide("ss_basic_s_resolver_udp", (h == "0"));
+	showhide("ss_basic_s_resolver_tcp", (h == "1"));
+	showhide("ss_basic_s_resolver_doh", (h == "3"));										//fancyss-full
+	showhide("ss_basic_s_resolver_udp_user", (h == "0" && h_0 == "99"));
+	showhide("ss_basic_s_resolver_tcp_user", (h == "1" && h_1 == "99"));
 	showhide("ss_dns2socks_user", (f == "3"));
 	showhide("ss_v2_note", (f == "7"));
-	showhide("ss_doh_note", (f == "6"));
+	showhide("ss_doh_note", (f == "6"));													//fancyss-full
 	showhide("ss_disable_aaaa", (f == "10"));
 	showhide("ss_disable_aaaa_note", (f == "10"));
 	showhide("ss_sstunnel_user", (f == "4"));												//fancyss-full
 	showhide("ss_sstunnel_user_note", (f == "4"));											//fancyss-full
-	showhide("ss_chinadns1_user", (f == "5"));												//fancyss-full
 	showhide("ss_direct_user", (f == "8"));
-	showhide("ss_direct_user_note", (f == "8"));
 	showhide("ss_basic_tri_reboot_time_note", (g != "0"));
 	showhide("ss_basic_ping_method", i);
 	showhide("ss_basic_ping_btn", i);
-	var type = obj_node["ss_basic_type"];
-	if(type == "3"){
-		$("#ss_v2_note").html('&nbsp;&nbsp;v2ray_dns只有启用v2ray节点的时能使用</span>');
-		$('#ss_foreign_dns option:contains("v2ray/xray_dns")').text('v2ray_dns');
-		$('#ss_foreign_dns option:contains("xray_dns")').text('v2ray_dns');
-	}else if(type == "4"){
-		$("#ss_v2_note").html('&nbsp;&nbsp;xray_dns只有启用xray节点的时能使用</span>');
-		$('#ss_foreign_dns option:contains("v2ray/xray_dns")').text('xray_dns');
-		$('#ss_foreign_dns option:contains("v2ray_dns")').text('xray_dns');
-	}else{
-		$("#ss_v2_note").html('&nbsp;&nbsp;v2ray/xray_dns只有启用v2ray/xray节点的时能使用</span>');
-		$('#ss_foreign_dns option:contains("xray_dns")').text('v2ray/xray_dns');
-		$('#ss_foreign_dns option:contains("v2ray_dns")').text('v2ray/xray_dns');
+	showhide("ss_basic_chng_china_1_prot", j);
+	showhide("ss_basic_chng_china_1_ecs", j);
+	showhide("ss_basic_chng_china_1_ecs_note", j);
+	showhide("ss_basic_chng_china_1_udp", (j && j0 == "1"));
+	showhide("ss_basic_chng_china_1_udp_user", (j && j0 == "1" && j4));
+	showhide("ss_basic_chng_china_1_tcp", (j && j0 == "2"));
+	showhide("ss_basic_chng_china_1_tcp_user", (j && j0 == "2" && j5));
+	showhide("ss_basic_chng_china_1_doh", (j && j0 == "3"));								//fancyss-full
+	showhide("dohclient_cache_manage_chn1", (j && j0 == "3" && !j3));						//fancyss-full
+	showhide("edit_smartdns_conf_10", (j && j0 == "1" && j1));			//udp smartdns		//fancyss-full
+	showhide("edit_smartdns_conf_11", (j && j0 == "2" && j2));			//tcp smartdns		//fancyss-full
+	showhide("edit_smartdns_conf_12", (j && j0 == "3" && j3));			//doh smartdns		//fancyss-full
+	if (j == true){
+		if(j0 == "1" && j1){
+			$("#ss_basic_chng_china_1_ecs").hide();
+			$("#ss_basic_chng_china_1_ecs_note").hide();
+		}
+		if(j0 == "2" && j2){
+			$("#ss_basic_chng_china_1_ecs").hide();
+			$("#ss_basic_chng_china_1_ecs_note").hide();
+		}
+		if(j0 == "3" && j3){																//fancyss-full
+			$("#ss_basic_chng_china_1_ecs").hide();											//fancyss-full
+			$("#ss_basic_chng_china_1_ecs_note").hide();									//fancyss-full
+		}																					//fancyss-full
 	}
+	showhide("ss_basic_chng_china_2_prot", k);
+	showhide("ss_basic_chng_china_2_ecs", k);
+	showhide("ss_basic_chng_china_2_ecs_note", k);
+	showhide("ss_basic_chng_china_2_udp", (k && k0 == "1"));
+	showhide("ss_basic_chng_china_2_udp_user", (k && k0 == "1" && k4));
+	showhide("ss_basic_chng_china_2_tcp", (k && k0 == "2"));
+	showhide("ss_basic_chng_china_2_tcp_user", (k && k0 == "2" && k5));		
+	showhide("ss_basic_chng_china_2_doh", (k && k0 == "3"));								//fancyss-full
+	showhide("dohclient_cache_manage_chn2", (k && k0 == "3" && !k3));						//fancyss-full
+	showhide("edit_smartdns_conf_13", (k && k0 == "1" && k1));								//fancyss-full
+	showhide("edit_smartdns_conf_14", (k && k0 == "2" && k2));								//fancyss-full
+	showhide("edit_smartdns_conf_15", (k && k0 == "3" && k3));								//fancyss-full
+	if (k == true){
+		if(k0 == "1" && k1){
+			$("#ss_basic_chng_china_2_ecs").hide();
+			$("#ss_basic_chng_china_2_ecs_note").hide();
+		}
+		if(k0 == "2" && k2){
+			$("#ss_basic_chng_china_2_ecs").hide();
+			$("#ss_basic_chng_china_2_ecs_note").hide();
+		}
+		if(k0 == "3" && k3){																//fancyss-full
+			$("#ss_basic_chng_china_2_ecs").hide();											//fancyss-full
+			$("#ss_basic_chng_china_2_ecs_note").hide();									//fancyss-full
+		}																					//fancyss-full
+	}
+	showhide("ss_basic_chng_trust_1_opt", l);
+	showhide("ss_basic_chng_trust_1_ecs", l);
+	showhide("ss_basic_chng_trust_1_ecs_note", l);
+	showhide("ss_basic_chng_trust_1_opt_udp_val", (l && l0 == "1"));
+	showhide("ss_basic_chng_trust_1_opt_udp_val_user", (l && l0 == "1" && l1 == "99"));
+	showhide("ss_basic_chng_trust_1_opt_tcp_val", (l && l0 == "2"));
+	showhide("ss_basic_chng_trust_1_opt_tcp_val_user", (l && l0 == "2" && l2 == "99"));
+	showhide("ss_basic_chng_trust_1_opt_doh_val", (l && l0 == "3"));						//fancyss-full
+	showhide("dohclient_cache_manage_frn1", (l && l0 == "3"));								//fancyss-full
+	showhide("ss_basic_chng_trust_2_opt", m);
+	showhide("ss_basic_chng_trust_2_ecs", m);
+	showhide("ss_basic_chng_trust_2_ecs_note", m);
+	showhide("ss_basic_chng_trust_2_opt_udp", (m && m0 == "1"));
+	showhide("ss_basic_chng_trust_2_opt_tcp", (m && m0 == "2"));
+	showhide("ss_basic_chng_trust_2_opt_doh", (m && m0 == "3"));							//fancyss-full
+	showhide("edit_smartdns_conf_30", (m && m0 == "3" && m3 == "97"));						//fancyss-full
+	showhide("dohclient_cache_manage_frn2", (m && m0 == "3" && m3 != "97"));				//fancyss-full
+	//showhide("ss_basic_chng_direct_user_note", (m && (m0 == "3" || m0 == "4")));
+	if (m == true){
+		if( m0 == "3" && m3 == "97" ){
+			$("#ss_basic_chng_trust_2_ecs").hide();
+			$("#ss_basic_chng_trust_2_ecs_note").hide();
+		}
+	}
+	showhide("edit_smartdns_conf_40", (h == "2"));					//fancyss-full
+	showhide("edit_smartdns_conf_51", (n == "1"));					//fancyss-full
+	showhide("edit_smartdns_conf_52", (n == "2"));					//fancyss-full
+	showhide("edit_smartdns_conf_53", (n == "3"));					//fancyss-full
+	showhide("edit_smartdns_conf_54", (n == "4"));					//fancyss-full
+	showhide("edit_smartdns_conf_55", (n == "5"));					//fancyss-full
+	showhide("edit_smartdns_conf_56", (n == "6"));					//fancyss-full
+	showhide("edit_smartdns_conf_57", (n == "7"));					//fancyss-full
+	showhide("edit_smartdns_conf_58", (n == "8"));					//fancyss-full
+	showhide("edit_smartdns_conf_59", (n == "9"));					//fancyss-full
+	showhide("ss_basic_dohc_udp_china", (o == "1"));				//fancyss-full
+	showhide("ss_basic_dohc_tcp_china", (o == "2"));				//fancyss-full
+	showhide("ss_basic_dohc_doh_china", (o == "3"));				//fancyss-full
+	showhide("ss_basic_dohc_udp_china_user", (o == "1" && p1));		//fancyss-full
+	showhide("ss_basic_dohc_tcp_china_user", (o == "2" && p2));		//fancyss-full
+	showhide("ss_basic_dohc_tcp_foreign", (q == "2"));				//fancyss-full
+	showhide("ss_basic_dohc_doh_foreign", (q == "3"));				//fancyss-full
+	showhide("ss_basic_dohc_tcp_foreign_user", (q == "2" && r));	//fancyss-full
+	if (E("ss_basic_advdns").checked == true){
+		if (E("ss_dns_plan").value == "1"){							//fancyss-full
+			$(".chng").show();
+			$(".smrt").hide();										//fancyss-full							
+			$(".dohc").hide();										//fancyss-full
+		}else if(E("ss_dns_plan").value == "2"){					//fancyss-full
+			$(".chng").hide();										//fancyss-full
+			$(".smrt").show();										//fancyss-full
+			$(".dohc").hide();										//fancyss-full
+		}else if(E("ss_dns_plan").value == "3"){					//fancyss-full
+			$(".chng").hide();										//fancyss-full
+			$(".smrt").hide();										//fancyss-full
+			$(".dohc").show();										//fancyss-full
+		}															//fancyss-full
+		$(".new_dns_main").show();
+		$(".old_dns").hide();
+	}else{
+		$(".new_dns_main").hide();
+		$(".new_dns").hide();
+		$(".old_dns").show();
+	}	
 }
+
 function Add_profile() { //点击节点页面内添加节点动作
 	$('body').prepend(tableApi.genFullScreen());
 	$('.fullScreen').fadeIn(300);
@@ -1026,7 +1201,6 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_rss_protocol_param").value = "";
 	E("ss_node_table_rss_obfs").value = "plain";
 	E("ss_node_table_rss_obfs_param").value = "";
-	E("ss_node_table_koolgame_udp").value = "0";		//fancyss-koolgame
 	E("ss_node_table_v2ray_uuid").value = "";
 	E("ss_node_table_v2ray_alterid").value = "0";
 	E("ss_node_table_v2ray_json").value = "";
@@ -1039,7 +1213,6 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_trojan_tfo").checked = false;
 	E("ssTitle").style.display = "";
 	E("ssrTitle").style.display = "";
-	E("gamev2Title").style.display = "";				//fancyss-koolgame
 	E("v2rayTitle").style.display = "";
 	E("xrayTitle").style.display = "";
 	E("trojanTitle").style.display = "";
@@ -1063,10 +1236,10 @@ function cancel_add_rule() { //点击添加节点面板上的返回
 function tabclickhandler(_type) {
 	E('ssTitle').className = "vpnClientTitle_td_unclick";
 	E('ssrTitle').className = "vpnClientTitle_td_unclick";
-	E('gamev2Title').className = "vpnClientTitle_td_unclick";	//fancyss-koolgame
 	E('v2rayTitle').className = "vpnClientTitle_td_unclick";
 	E('xrayTitle').className = "vpnClientTitle_td_unclick";
 	E('trojanTitle').className = "vpnClientTitle_td_unclick";
+	E('naiveTitle').className = "vpnClientTitle_td_unclick";	//fancyss-full
 	if (_type == 0) {
 		save_flag = "shadowsocks";
 		E('ssTitle').className = "vpnClientTitle_td_click";
@@ -1081,7 +1254,6 @@ function tabclickhandler(_type) {
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1122,7 +1294,11 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
-		E("ss_node_table_trojan_tfo").value = "none";
+		E("naive_prot_tr").style.display = "none";		//fancyss-full
+		E("naive_server_tr").style.display = "none";	//fancyss-full
+		E("naive_port_tr").style.display = "none";		//fancyss-full
+		E("naive_user_tr").style.display = "none";		//fancyss-full
+		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
 		showhide("ss_v2ray_support", ($("#ss_node_table_mode").val() != "3"));														//fancyss-full
@@ -1146,7 +1322,6 @@ function tabclickhandler(_type) {
 		E('ssr_protocol_param_tr').style.display = "";
 		E('ssr_obfs_tr').style.display = "";
 		E('ssr_obfs_param_tr').style.display = "";
-		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1187,69 +1362,12 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
+		E("naive_prot_tr").style.display = "none";		//fancyss-full
+		E("naive_server_tr").style.display = "none";	//fancyss-full
+		E("naive_port_tr").style.display = "none";		//fancyss-full
+		E("naive_user_tr").style.display = "none";		//fancyss-full
+		E("naive_pass_tr").style.display = "none";		//fancyss-full
 	}
-	//fancyss_koolgame_1
-	else if (_type == 2) {
-		save_flag = "gameV2";
-		E('gamev2Title').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "";
-		E('ss_port_support_tr').style.display = "";
-		E('ss_passwd_support_tr').style.display = "";
-		E('ss_method_support_tr').style.display = "";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ss_v2ray_support').style.display = "none";		//fancyss-full
-		E('ss_v2ray_opts_support').style.display = "none";	//fancyss-full
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "";				//fancyss-full
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-	}
-	//fancyss_koolgame_2
 	else if (_type == 3) {
 		save_flag = "v2ray";
 		E('v2rayTitle').className = "vpnClientTitle_td_click";
@@ -1266,7 +1384,6 @@ function tabclickhandler(_type) {
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "";
 		$(".v2ray_elem").show();
 		E('v2ray_alterid_tr').style.display = "";
@@ -1307,6 +1424,11 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
+		E("naive_prot_tr").style.display = "none";		//fancyss-full
+		E("naive_server_tr").style.display = "none";	//fancyss-full
+		E("naive_port_tr").style.display = "none";		//fancyss-full
+		E("naive_user_tr").style.display = "none";		//fancyss-full
+		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		if(E("ss_node_table_v2ray_use_json").checked){
 			E('ss_server_support_tr').style.display = "none";
 			E('ss_port_support_tr').style.display = "none";
@@ -1385,7 +1507,6 @@ function tabclickhandler(_type) {
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1426,6 +1547,11 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
+		E("naive_prot_tr").style.display = "none"; 		//fancyss-full
+		E("naive_server_tr").style.display = "none";	//fancyss-full
+		E("naive_port_tr").style.display = "none";		//fancyss-full
+		E("naive_user_tr").style.display = "none";		//fancyss-full
+		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		if(E("ss_node_table_xray_use_json").checked){
 			E('ss_server_support_tr').style.display = "none";
 			E('ss_port_support_tr').style.display = "none";
@@ -1503,7 +1629,6 @@ function tabclickhandler(_type) {
 		E('ssr_protocol_param_tr').style.display = "none";
 		E('ssr_obfs_tr').style.display = "none";
 		E('ssr_obfs_param_tr').style.display = "none";
-		E('gameV2_udp_tr').style.display = "none";			//fancyss-full
 		E('v2ray_uuid_tr').style.display = "none";
 		$(".v2ray_elem").hide();
 		E('v2ray_alterid_tr').style.display = "none";
@@ -1544,7 +1669,78 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "";
 		E('trojan_sni_tr').style.display = "";
 		E('trojan_tfo_tr').style.display = "";
+		E("naive_prot_tr").style.display = "none";		//fancyss-full
+		E("naive_server_tr").style.display = "none";	//fancyss-full
+		E("naive_port_tr").style.display = "none";		//fancyss-full
+		E("naive_user_tr").style.display = "none";		//fancyss-full
+		E("naive_pass_tr").style.display = "none";		//fancyss-full
 	}
+	//fancyss_naive_1
+	else if (_type == 6) {
+		save_flag = "naive";
+		E('naiveTitle').className = "vpnClientTitle_td_click";
+		E('v2ray_use_json_tr').style.display = "none";
+		E('xray_use_json_tr').style.display = "none";
+		E('ss_name_support_tr').style.display = "";
+		E('ss_server_support_tr').style.display = "none";
+		E('ss_port_support_tr').style.display = "none";
+		E('ss_passwd_support_tr').style.display = "none";
+		E('ss_method_support_tr').style.display = "none";
+		E('ss_obfs_support').style.display = "none";
+		E('ss_obfs_host_support').style.display = "none";
+		E('ss_v2ray_support').style.display = "none";
+		E('ss_v2ray_opts_support').style.display = "none";
+		E('ssr_protocol_tr').style.display = "none";
+		E('ssr_protocol_param_tr').style.display = "none";
+		E('ssr_obfs_tr').style.display = "none";
+		E('ssr_obfs_param_tr').style.display = "none";
+		E('v2ray_uuid_tr').style.display = "none";
+		$(".v2ray_elem").hide();
+		E('v2ray_alterid_tr').style.display = "none";
+		E('v2ray_security_tr').style.display = "none";
+		E('v2ray_network_tr').style.display = "none";
+		E('v2ray_headtype_tcp_tr').style.display = "none";
+		E('v2ray_headtype_kcp_tr').style.display = "none";
+		E('v2ray_headtype_quic_tr').style.display = "none";
+		E('v2ray_grpc_mode_tr').style.display = "none";
+		E('v2ray_network_path_tr').style.display = "none";
+		E('v2ray_network_host_tr').style.display = "none";
+		E('v2ray_kcp_seed_tr').style.display = "none";
+		E('v2ray_network_security_tr').style.display = "none";
+		E('v2ray_network_security_ai_tr').style.display = "none";
+		E('v2ray_network_security_alpn_tr').style.display = "none";
+		E('v2ray_network_security_sni_tr').style.display = "none";
+		E('v2ray_mux_enable_tr').style.display = "none";
+		E('v2ray_mux_concurrency_tr').style.display = "none";
+		E('v2ray_json_tr').style.display = "none";
+		E('xray_uuid_tr').style.display = "none";
+		$(".xray_elem").hide();
+		E('xray_encryption_tr').style.display = "none";
+		E('xray_flow_tr').style.display = "none";
+		E('xray_network_tr').style.display = "none";
+		E('xray_headtype_tcp_tr').style.display = "none";
+		E('xray_headtype_kcp_tr').style.display = "none";
+		E('xray_headtype_quic_tr').style.display = "none";
+		E('xray_grpc_mode_tr').style.display = "none";
+		E('xray_network_path_tr').style.display = "none";
+		E('xray_network_host_tr').style.display = "none";
+		E('xray_kcp_seed_tr').style.display = "none";
+		E('xray_network_security_tr').style.display = "none";
+		E('xray_network_security_ai_tr').style.display = "none";
+		E('xray_network_security_alpn_tr').style.display = "none";
+		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_json_tr').style.display = "none";
+		E('trojan_ai_tr').style.display = "none";
+		E('trojan_uuid_tr').style.display = "none";
+		E('trojan_sni_tr').style.display = "none";
+		E('trojan_tfo_tr').style.display = "none";
+		E("naive_prot_tr").style.display = "";
+		E("naive_server_tr").style.display = "";
+		E("naive_port_tr").style.display = "";
+		E("naive_user_tr").style.display = "";
+		E("naive_pass_tr").style.display = "";
+	}
+	//fancyss_naive_2
 	return save_flag;
 }
 function add_ss_node_conf(flag) {
@@ -1570,13 +1766,6 @@ function add_ss_node_conf(flag) {
 		}
 		ns[p + "_password_" + node_max] = Base64.encode($.trim($("#ss_node_table_password").val()));
 		ns[p + "_type_" + node_max] = "1";
-	} else if (flag == 'gameV2') {
-		var params3 = ["mode", "name", "server", "port", "method", "koolgame_udp"]; //koolagme
-		for (var i = 0; i < params3.length; i++) {
-			ns[p + "_" + params3[i] + "_" + node_max] = $.trim($("#ss_node_table_" + params3[i]).val());
-		}
-		ns[p + "_password_" + node_max] = Base64.encode($.trim($("#ss_node_table_password").val()));
-		ns[p + "_type_" + node_max] = "2";
 	} else if (flag == 'v2ray') {
 		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
 		var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
@@ -1649,7 +1838,17 @@ function add_ss_node_conf(flag) {
 		ns[p + "_trojan_ai_" + node_max] = E("ss_node_table_trojan_ai").checked ? '1' : '';
 		ns[p + "_trojan_tfo_" + node_max] = E("ss_node_table_trojan_tfo").checked ? '1' : '';
 		ns[p + "_type_" + node_max] = "5";
+	}
+	//fancyss_naive_1
+	else if (flag == 'naive') {
+		var params7 = ["mode", "name", "naive_prot", "naive_server", "naive_port", "naive_user"]; //trojan
+		for (var i = 0; i < params7.length; i++) {
+			ns[p + "_" + params7[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params7[i]).val());
+		}
+		ns[p + "_naive_pass_" + node_max] = Base64.encode($.trim($("#ss_node_table_naive_pass").val()));
+		ns[p + "_type_" + node_max] = "6";
 	} 
+	//fancyss_naive_2
 	//push data to add new node
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
@@ -1676,7 +1875,6 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_rss_protocol_param").value = "";
 				E("ss_node_table_rss_obfs").value = "plain";
 				E("ss_node_table_rss_obfs_param").value = "";
-				E("ss_node_table_koolgame_udp").value = "0";	//fancyss-koolgame
 				E("ss_node_table_v2ray_uuid").value = "";
 				E("ss_node_table_v2ray_alterid").value = "0";
 				E("ss_node_table_v2ray_json").value = "";
@@ -1687,6 +1885,11 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_trojan_uuid").value = "";
 				E("ss_node_table_trojan_sni").value = "";
 				E("ss_node_table_trojan_tfo").checked = false;
+				E("ss_node_table_naive_prot").value = "https";	//fancyss-full
+				E("ss_node_table_naive_server").value = "";		//fancyss-full
+				E("ss_node_table_naive_port").value = "443";	//fancyss-full
+				E("ss_node_table_naive_user").value = "";		//fancyss-full
+				E("ss_node_table_naive_pass").value = "";		//fancyss-full
 				cancel_add_rule();
 			}
 		}
@@ -1702,10 +1905,9 @@ function remove_conf_table(o) {
 		return false;
 	}
 	//console.log("删除第", id, "个节点！！！")
-
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -1754,9 +1956,9 @@ function edit_conf_table(o) {
 		alert("提醒：这个节点正在运行！\n如果更改了其中的参数，需要重新点击【保存&应用】才能生效！")
 	}
 	var c = confs[id];
-	var params1_base64 = ["password"];
+	var params1_base64 = ["password", "naive_pass"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "trojan_ai"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "koolgame_udp", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -1785,64 +1987,65 @@ function edit_conf_table(o) {
 	if (c["type"] == "0"){
 		E("ssTitle").style.display = "";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "none";
+		E("naiveTitle").style.display = "none";		//fancyss-full
 		$("#ssTitle").html("编辑ss节点");
 		tabclickhandler(0);		
 	}
 	else if(c["type"] == "1"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "";
-		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "none";
+		E("naiveTitle").style.display = "none";		//fancyss-full
 		$("#ssrTitle").html("编辑SSR节点");
 		tabclickhandler(1);		
 	}
-	else if(c["type"] == "2"){							//fancyss-koolgame
-		E("ssTitle").style.display = "none";			//fancyss-koolgame
-		E("ssrTitle").style.display = "none";			//fancyss-koolgame
-		E("gamev2Title").style.display = "";			//fancyss-koolgame
-		E("v2rayTitle").style.display = "none";			//fancyss-koolgame
-		E("xrayTitle").style.display = "none";			//fancyss-koolgame
-		E("trojanTitle").style.display = "none";		//fancyss-koolgame
-		$("#gamev2Title").html("编辑koolgame节点");		//fancyss-koolgame
-		tabclickhandler(2);								//fancyss-koolgame
-	}													//fancyss-koolgame
 	else if(c["type"] == "3"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "none";
+		E("naiveTitle").style.display = "none";		//fancyss-full
 		$("#v2rayTitle").html("编辑V2Ray账号");
 		tabclickhandler(3);
 	}
 	else if(c["type"] == "4"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "";
 		E("trojanTitle").style.display = "none";
+		E("naiveTitle").style.display = "none";		//fancyss-full
 		$("#xrayTitle").html("编辑Xray账号");
 		tabclickhandler(4);
 	}
 	else if(c["type"] == "5"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
-		E("gamev2Title").style.display = "none";		//fancyss-koolgame
 		E("v2rayTitle").style.display = "none";
 		E("xrayTitle").style.display = "none";
 		E("trojanTitle").style.display = "";
+		E("naiveTitle").style.display = "none";		//fancyss-full
 		$("#trojanTitle").html("编辑trojan账号");
 		tabclickhandler(5);
 	}
-
+	//fancyss_naive_1
+	else if(c["type"] == "6"){
+		E("ssTitle").style.display = "none";
+		E("ssrTitle").style.display = "none";
+		E("v2rayTitle").style.display = "none";
+		E("xrayTitle").style.display = "none";
+		E("trojanTitle").style.display = "";
+		E("naiveTitle").style.display = "none";
+		$("#naiveTitle").html("编辑NaïveProxy账号");
+		tabclickhandler(6);
+	}
+	//fancyss_naive_2
 	if(E("ss_basic_row").value == "all"){
 		var pos = $("#node_" + id)[0].offsetTop - 200;
 		pos = pos < 0 ? 0 : pos;
@@ -1873,14 +2076,6 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_password_" + edit_id] = Base64.encode($("#ss_node_table_password").val());
 		ns[p + "_type_" + edit_id] = "1";
 	}
-	else if (flag == 'gameV2') {																		//fancyss-koolgame
-		var params3 = ["name", "server", "mode", "port", "method", "koolgame_udp"];						//fancyss-koolgame
-		for (var i = 0; i < params3.length; i++) {														//fancyss-koolgame
-			ns[p + "_" + params3[i] + "_" + edit_id] = $('#ss_node_table' + "_" + params3[i]).val();	//fancyss-koolgame
-		}																								//fancyss-koolgame
-		ns[p + "_password_" + edit_id] = Base64.encode($("#ss_node_table_password").val());				//fancyss-koolgame
-		ns[p + "_type_" + edit_id] = "2";																//fancyss-koolgame
-	}																									//fancyss-koolgame
 	else if (flag == 'v2ray') {
 		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray non json
 		var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
@@ -1957,6 +2152,16 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_password_" + edit_id] = Base64.encode($.trim($("#ss_node_table_password").val()));
 		ns[p + "_type_" + edit_id] = "5";
 	}
+	//fancyss_naive_1
+	else if (flag == 'naive') {
+		var params7 = ["mode", "name", "naive_prot", "naive_server", "naive_port", "naive_user"]; //naive
+		for (var i = 0; i < params7.length; i++) {
+			ns[p + "_" + params7[i] + "_" + edit_id] = $.trim($('#ss_node_table' + "_" + params7[i]).val());
+		}
+		ns[p + "_naive_pass_" + edit_id] = Base64.encode($.trim($("#ss_node_table_naive_pass").val()));
+		ns[p + "_type_" + edit_id] = "6";
+	}
+	//fancyss_naive_2
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
 	$.ajax({
@@ -1981,7 +2186,6 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_rss_protocol_param").value = "";
 			E("ss_node_table_rss_obfs").value = "plain";
 			E("ss_node_table_rss_obfs_param").value = "";
-			E("ss_node_table_koolgame_udp").value = "0";	//fancyss-koolgame
 			E("ss_node_table_v2ray_uuid").value = "";
 			E("ss_node_table_v2ray_alterid").value = "0";
 			E("ss_node_table_v2ray_json").value = "";
@@ -1992,6 +2196,11 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_trojan_uuid").value = "";
 			E("ss_node_table_trojan_sni").value = "";
 			E("ss_node_table_trojan_tfo").checked = false;
+			E("ss_node_table_naive_prot").value = "https";	//fancyss-full
+			E("ss_node_table_naive_server").value = "";		//fancyss-full
+			E("ss_node_table_naive_port").value = "443";	//fancyss-full
+			E("ss_node_table_naive_user").value = "";		//fancyss-full
+			E("ss_node_table_naive_pass").value = "";		//fancyss-full
 		}
 	});
 	$("#vpnc_settings").fadeOut(300);
@@ -2032,7 +2241,7 @@ function generate_node_info() {
 			obj["type"] = db_ss["ssconf_basic_type_" + idx];
 		}
 		//这些值统一处理
-		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "weight", "lbmode", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + idx;
 			if (typeof db_ss[ofield] == "undefined") {
@@ -2180,6 +2389,9 @@ function generate_node_info() {
 					server_prot = json.outbounds.protocol;
 				}
 			}
+			if(server_prot == "shadowsocks"){
+				server_prot = "ss";
+			}
 			obj["server"] = server_addr;
 			obj["protoc"] = server_prot;
 		}else{
@@ -2253,7 +2465,7 @@ function refresh_html() {
 	E("ss_basic_row").value = db_ss["ss_basic_row"]||nodeL;
 	
 	// define col width in different situation
-	if(node_nu && E("ss_basic_ping_node") != "off" && E("ss_basic_ping_node") != ""){
+	if(node_nu && E("ss_basic_ping_node").value != "off" && E("ss_basic_ping_node").value != ""){
 		var width = ["", "5%", "28%", "28%", "14%", "10%", "10%", "5%", ];
 	}else{
 		var width = ["", "6%", "30%", "30%", "14%", "10%", "10%" ];
@@ -2267,7 +2479,7 @@ function refresh_html() {
 	html += '<th style="width:' + width[2] + ';cursor:pointer" onclick="hide_name();" title="点我隐藏节点名称信息!" >节点名称</th>'
 	html += '<th style="width:' + width[3] + ';cursor:pointer" onclick="hide_server();" title="点我隐藏服务器信息!" >服务器地址</th>'
 	html += '<th style="width:' + width[4] + ';">类型</th>'
-	if(node_nu && db_ss["ss_basic_ping_node"] != "off" && E("ss_basic_ping_node") != ""){
+	if(node_nu && E("ss_basic_ping_node").value != "off" && E("ss_basic_ping_node").value != ""){
 		html += '<th style="width:' + width[5] + ';" id="ping_th">ping/丢包</th>'
 	}
 	html += '<th style="width:' + width[6] + ';">编辑</th>'
@@ -2294,14 +2506,22 @@ function refresh_html() {
 		html += '<div class="nickname">' + c["name"] + '</div>';
 		html += '</td>';
 		//server
-		if(E("ss_basic_qrcode").checked){
-			html += '<td style="width:' + width[3] + ';cursor:pointer" class="node_server" id="server_' + c["node"] + '" title="' + c["server"] + '" onclick="makeQRcode(this)">';
-		}else{
-			html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';
-		}
-		html += '<div style="display: none;" class="shadow2"></div>';
-		html += '<div class="server">' + c["server"] + '</div>';
-		html += '</td>';
+		if(c["type"] == 6){																						//fancyss-full
+			html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';	//fancyss-full
+			html += '<div style="display: none;" class="shadow2"></div>';										//fancyss-full
+			html += '<div class="server">' + c["naive_server"] + '</div>';										//fancyss-full
+			html += '</td>';																					//fancyss-full
+		}else{ 																									//fancyss-full
+			if(E("ss_basic_qrcode").checked){
+				html += '<td style="width:' + width[3] + ';cursor:pointer" class="node_server" id="server_' + c["node"] + '" title="' + c["server"] + '" onclick="makeQRcode(this)">';
+			}else{
+				html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';
+			}
+			html += '<div style="display: none;" class="shadow2"></div>';
+			html += '<div class="server">' + c["server"] + '</div>';
+			html += '</td>';
+		}																										//fancyss-full
+
 		//节点类型
 		html +='<td style="width:' + width[4] + ';">';
 		switch(c["type"]) {
@@ -2327,15 +2547,12 @@ function refresh_html() {
 			case '1' :
 				html +='ssr';
 				break;
-			case '2' :														//fancyss-koolgame
-				html +='koolgame';											//fancyss-koolgame
-				break;														//fancyss-koolgame
 			case '3' :
 				if(E("ss_basic_vcore").checked){							//fancyss-full
 					if(c["protoc"]){
 						html +='xray-' + c["protoc"];
 					}else{
-						html +='xray-vless';
+						html +='xray-vmess';
 					}
 				}else{														//fancyss-full
 					if(c["protoc"]){										//fancyss-full
@@ -2359,10 +2576,13 @@ function refresh_html() {
 					html +='trojan';										//fancyss-full
 				}															//fancyss-full
 				break;
+			case '6' :
+				html +='Naïve';
+				break;
 		}
 		html +='</td>';
 		//ping/丢包
-		if(node_nu && db_ss["ss_basic_ping_node"] != "off" && E("ss_basic_ping_node") != ""){
+		if(node_nu && E("ss_basic_ping_node").value != "off" && E("ss_basic_ping_node").value != ""){
 			if(c["type"] == "3" && c["v2ray_use_json"] == "1"){
 				html += '<td style="width:' + width[5] + ';"></td>';
 			}else if(c["type"] == "4" && c["xray_use_json"] == "1"){
@@ -2462,7 +2682,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "koolgame_udp", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -2675,9 +2895,6 @@ function makeQRcode(node){
 			code = "vmess:\/\/" + Base64.encode(JSON.stringify(code));
 		}
 	}
-	else if(c["type"] == "2"){	//fancyss-koolgame
-		var code = 0;			//fancyss-koolgame
-	}							//fancyss-koolgame
 	else if(c["type"] == "4"){
 		var code = 2;
 	}
@@ -2710,9 +2927,6 @@ function showQRcode(data) {
 	else if(data == 3){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持trojan节点的二维码生成！</span>')
 	}
-	else if(data == 0){																								//fancyss-koolgame
-		$("#qrcode").html('<span style="font-size:16px;color:#000;">不支持koolgame配置的二维码生成！</span>')		//fancyss-koolgame
-	}																												//fancyss-koolgame
 	else if(data == 4){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">错误！！节点类型位置！！<br />请检查你的节点！</span>')
 	}
@@ -2893,14 +3107,18 @@ function save_row(action) {
 		}
 	});
 }
-function download_SS_node(arg) {
+function download_route_file(arg) {
+	var dbus_tmp={};
 	if(arg == 2){
 		db_ss["ss_basic_action"] = "11";
 		showSSLoadingBar();
 		setTimeout("get_realtime_log();", 600);
 	}
+	if(arg == 10){
+		var dbus_tmp = dns_log;
+	}
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_conf.sh", "params":[arg], "fields": "" };
+	var postData = {"id": id, "method": "ss_conf.sh", "params":[arg], "fields": dbus_tmp };
 	$.ajax({
 		type: "POST",
 		url: "/_api/",
@@ -2917,24 +3135,43 @@ function download_SS_node(arg) {
 					document.body.appendChild(a);
 					a.click();
 					document.body.removeChild(a);
-				}else if(arg == 2){
+				}
+				else if(arg == 2){
 					var b = document.createElement('A')
-					b.href = "_root/files/shadowsocks.tar.gz"
-					b.download = 'shadowsocks_' + productid + '.tar.gz'
+					b.href = "_root/files/" + pkg_name + "_" + db_ss["ss_basic_version_local"] + ".tar.gz"
+					b.download = pkg_name + "_" + db_ss["ss_basic_version_local"] + ".tar.gz"
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
-				}else if(arg == 6){
+				}
+				else if(arg == 6){
 					var b = document.createElement('A')
 					b.href = "_root/files/ssf_status.txt"
 					b.download = 'ssf_status.txt'
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
-				}else if(arg == 7){
+				}
+				else if(arg == 7){
 					var b = document.createElement('A')
 					b.href = "_root/files/ssc_status.txt"
 					b.download = 'ssc_status.txt'
+					document.body.appendChild(b);
+					b.click();
+					document.body.removeChild(b);
+				}
+				else if(arg == 10){
+					var b = document.createElement('A')
+					b.href = "_root/files/"+ dns_log["ss_basic_logname"] +".txt"
+					b.download = dns_log["ss_basic_logname"] + '.txt'
+					document.body.appendChild(b);
+					b.click();
+					document.body.removeChild(b);
+				}
+				else if(arg == 11){
+					var b = document.createElement('A')
+					b.href = "_root/files/dns_dig_result.txt"
+					b.download = 'dns_dig_result.txt'
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
@@ -3009,6 +3246,21 @@ function restart_dnsmaq() {
 		}
 	});
 }
+function remove_doh_cache() {
+	db_ss["ss_basic_action"] = "24";
+	showSSLoadingBar();
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params": ["9"], "fields": ""};
+	$.ajax({
+		type: "POST",
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			get_realtime_log();
+		}
+	});
+}
 function updatelist(arg) {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "8";
@@ -3047,7 +3299,7 @@ function tabSelect(w) {
 		$('#tablet_' + i).hide();
 	}
 	$('.show-btn' + w).addClass('active');
-	$('#tablet_' + w).show();
+	$('#tablet_' + w).show();	
 }
 
 function toggle_func() {
@@ -3070,6 +3322,7 @@ function toggle_func() {
 			$('#apply_button').show();
 			ss_node_sel();
 			showhide("table_basic", (node_max != 0));
+			change_select_width('#ssconf_basic_node');
 		});
 	$(".show-btn1").click(
 		function() {
@@ -3088,6 +3341,32 @@ function toggle_func() {
 		function() {
 			tabSelect(3);
 			$('#apply_button').show();
+			change_select_width('#ss_china_dns', '0');
+			change_select_width('#ss_foreign_dns', '0');
+			change_select_width('#ss_basic_chng_china_1_udp', '1');
+			change_select_width('#ss_basic_chng_china_1_tcp', '1');
+			change_select_width('#ss_basic_chng_china_1_doh', '1');				//fancyss-full
+			change_select_width('#ss_basic_chng_china_2_udp', '1');
+			change_select_width('#ss_basic_chng_china_2_tcp', '1');
+			change_select_width('#ss_basic_chng_china_2_doh', '1');				//fancyss-full
+			//change_select_width('#ss_basic_chng_trust_1_opt');
+			change_select_width('#ss_basic_chng_trust_1_opt_udp_val', '1');
+			change_select_width('#ss_basic_chng_trust_1_opt_tcp_val', '1');
+			change_select_width('#ss_basic_chng_trust_1_opt_doh_val', '1');		//fancyss-full
+			//change_select_width('#ss_basic_chng_trust_2_opt');
+			change_select_width('#ss_basic_chng_trust_2_opt_doh', '1');			//fancyss-full
+			change_select_width('#ss_basic_smrt');								//fancyss-full
+			change_select_width('#ss_basic_dohc_udp_china', '1');				//fancyss-full
+			change_select_width('#ss_basic_dohc_tcp_china', '1');				//fancyss-full
+			change_select_width('#ss_basic_dohc_doh_china', '1');				//fancyss-full
+			change_select_width('#ss_basic_dohc_tcp_foreign', '1');				//fancyss-full
+			change_select_width('#ss_basic_dohc_doh_foreign', '1');				//fancyss-full
+			change_select_width('#ss_basic_dohc_cache_timeout', '0');			//fancyss-full
+			change_select_width('#ss_basic_s_resolver');
+			change_select_width('#ss_basic_s_resolver_udp');
+			change_select_width('#ss_basic_s_resolver_tcp');
+			change_select_width('#ss_basic_s_resolver_doh');					//fancyss-full
+			change_select_width('#ss_basic_dig_opt');
 			update_visibility();
 			autoTextarea(E("ss_dnsmasq"), 0, 500);
 		});
@@ -3165,12 +3444,38 @@ function toggle_func() {
 		$(".show-btn" + default_tab).trigger("click");
 	}
 }
+
+function change_select_width(o, p) {
+	$(o).click(function(){
+		var text = $(this).find('option:selected').text();
+		var className = $(o).attr('class');
+		var $aux = $('<select class="' + className + '">').append($('<option/>').text(text));
+		$(this).after($aux);
+		var aux_width=$aux.width();
+		if(aux_width < 135 && p == "1"){
+			aux_width = 135;
+		}
+		if(aux_width < 118 && p == "0"){
+			aux_width = 118;
+		}
+		$(this).width(aux_width);
+		$aux.remove();
+	}).click();
+}
+
 function get_ss_status_front() {
 	if (db_ss['ss_basic_enable'] != "1") {
 		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
 		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 		return false;
 	}
+	if (submit_flag == "1") {
+		console.log("wait for 5s to get next status...")
+		setTimeout("get_ss_status_front();", 5000);
+		return false;
+	}
+
+	submit_flag
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
 	$.ajax({
@@ -3198,8 +3503,8 @@ function get_ss_status_front() {
 }
 function get_ss_status_back() {
 	if (db_ss['ss_basic_enable'] != "1") {
-		E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-		E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+		E("ss_state2").innerHTML = "国外连接 - " + "Waiting.....";
+		E("ss_state3").innerHTML = "国内连接 - " + "Waiting.....";
 		return false;
 	}
 	$.ajax({
@@ -3221,8 +3526,8 @@ function get_ss_status_back() {
 			}
 		},
 		error: function(xhr) {
-			E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-			E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+			E("ss_state2").innerHTML = "国外连接 - " + "Waiting....";
+			E("ss_state3").innerHTML = "国内连接 - " + "Waiting....";
 		}
 	});
 	setTimeout("get_ss_status_back();", 3000);
@@ -3247,6 +3552,144 @@ function get_udp_status(){
 	});
 }
 //fancyss_full_2
+function close_dns_status() {
+	$("#dns_status_div").fadeOut(200);
+	STATUS_FLAG = 0;
+}
+function dns_test(s) {
+	//STATUS_FLAG = 1;
+	var dbus_commit={};
+	if(s == 1){
+		//cdn
+		$("#log_dig").show();
+		$("#log_resv").hide();
+		dns_log["ss_basic_logname"] = "dns_cdn";
+		var note1 = '1. 以下DNS解析测试的域名来自：<a href="https://github.com/felixonmars/dnsmasq-china-list" target="_blank"><em><u>https://github.com/felixonmars/dnsmasq-china-list</u></em></a> 的cdn-testlist.txt，并经过fancyss项目整理。';
+		var note2 = '2. 解析结果和速度可能受节点、DNS方案、上游DNS缓存等因素影响，本测试也无法判断解析结果正确性！所以测试结果仅供参考！';
+	}
+	else if(s == 2){
+		//apple china
+		$("#log_dig").show();
+		$("#log_resv").hide();
+		dns_log["ss_basic_logname"] = "dns_cdn_apple";
+		var note1 = '1. Apple China的域名清单来自：<a href="https://github.com/felixonmars/dnsmasq-china-list" target="_blank"><em><u>https://github.com/felixonmars/dnsmasq-china-list</u></em></a> 的apple.china.conf，并经过fancyss项目整理。';
+		var note2 = '2. 理想情况下，Apple China域名清单应该尽可能多的解析到大陆IP地址！';
+		var note3 = '3. 解析结果和速度可能受节点、DNS方案、上游DNS缓存等因素影响，本测试也无法判断解析结果正确性！所以测试结果仅供参考！';
+	}
+	else if(s == 3){
+		//google china
+		$("#log_dig").show();
+		$("#log_resv").hide();
+		dns_log["ss_basic_logname"] = "dns_cdn_google";
+		var note1 = '1. Google China的域名清单来自：<a href="https://github.com/felixonmars/dnsmasq-china-list" target="_blank"><em><u>https://github.com/felixonmars/dnsmasq-china-list</u></em></a> 的google.china.conf，并经过fancyss项目整理。';
+		var note2 = '2. 理想情况下，Google China域名清单应该尽可能多的解析到大陆IP地址！';
+		var note3 = '3. 解析结果和速度可能受节点、DNS方案、上游DNS缓存等因素影响，本测试也无法判断解析结果正确性！所以测试结果仅供参考！';
+	}
+	else if(s == 4){
+		//gfwlist
+		$("#log_dig").show();
+		$("#log_resv").hide();
+		dns_log["ss_basic_logname"] = "dns_gfwlist";
+		var note1 = '1. gfwlist的域名清单来自：<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf" target="_blank"><em><u>https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf</u></em></a>，收录了常见的被gfw屏蔽的域名。';
+		var note2 = '2. 由于gfwlist清单较长，将每次随机选取100个域名进行测试！理想情况下，解析结果应该全部是海外IP地址，没有大陆IP地址！';
+		var note3 = '3. 解析结果和速度可能受节点、DNS方案、上游DNS缓存等因素影响，本测试也无法判断解析结果正确性！所以测试结果仅供参考！';
+	}
+	else if(s == 5){
+		$("#log_dig").show();
+		$("#log_resv").hide();
+		dns_log["ss_basic_logname"] = "dns_cdn_china";
+		var note1 = '1. cdn china的域名清单来自：<a href="https://github.com/felixonmars/dnsmasq-china-list" target="_blank"><em><u>https://github.com/felixonmars/dnsmasq-china-list</u></em></a> 的accelerated-domains.china.conf，并经过fancyss项目整理。';
+		var note2 = '2. 由于cdn china清单较长，将每次随机选取100个域名进行测试！由于cdn china收录的域名条件位解析结果或者NS服务器在国内，所以很多域名解析到国外是正常的！';
+	}
+	else if(s == 6){
+		$("#log_dig").hide();
+		$("#log_resv").show();
+		var note1 = '1. 本测试需要用到dig程序，因程序体积较大，fancyss默认不包含此程序，点击测试的时候会自动尝试下载该程序。';
+		var note2 = '1. 本测试仅针对DNS解析最终端，即本机dnsmasq 53端口的DNS服务器测试，每次测试前会自动清空dnsmasq缓存，以避免缓存影响。';
+		var note3 = '2. 用dig进行测试可以方便的知道在本插件选定的DNS方案下，域名解析的ipv4结果，解析结果是否带ECS等';
+		dbus_commit["ss_basic_dig_opt"] = E("ss_basic_dig_opt").value
+	}
+	if(note1){
+		$("#dns_test_note_1").html('<i>&nbsp;&nbsp;' + note1 + '</i>');
+	}
+	if(note2){
+		$("#dns_test_note_2").html('<i>&nbsp;&nbsp;' + note2 + '</i>');
+	}
+	if(note3){
+		$("#dns_test_note_3").html('<i>&nbsp;&nbsp;' + note3 + '</i>');
+	}
+	$("#dns_status_div").fadeIn(500);
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_dns_test.sh", "params":[s], "fields": dbus_commit};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response){
+			get_dns_log(s);
+		},
+		error: function(){
+			setTimeout("dns_test();", 2000);
+		}
+	});
+}
+function get_dns_log(s) {
+	//if(STATUS_FLAG == 0) return;
+	var retArea = E("log_content_dns");
+	if(s == 1){
+		var file = '/_temp/dns_cdn.txt';
+	}
+	else if(s == 2){
+		var file = '/_temp/dns_cdn_apple.txt';
+	}
+	else if(s == 3){
+		var file = '/_temp/dns_cdn_google.txt';
+	}
+	else if(s == 4){
+		var file = '/_temp/dns_gfwlist.txt';
+	}
+	else if(s == 5){
+		var file = '/_temp/dns_cdn_china.txt';
+	}
+	else if(s == 6){
+		var file = '/_temp/dns_dig_result.txt';
+	}
+	$.ajax({
+		url: file,
+		type: 'GET',
+		dataType: 'html',
+		async: true,
+		cache: false,
+		success: function(response) {
+			if(E("tablet_3").style.display == "none"){
+				return false;
+			}
+			if (response.search("XU6J03M6") != -1) {
+				retArea.value = response.myReplace("XU6J03M6", " ");
+				retArea.scrollTop = retArea.scrollHeight;
+				return true;
+			}
+			if (_responseLen == response.length) {
+				noChange_dns++;
+			} else {
+				noChange_dns = 0;
+			}
+			if (noChange_dns > 20) {
+				return false;
+			} else {
+				setTimeout('get_dns_log("' + s + '");', 500);
+			}
+			retArea.value = response.myReplace("XU6J03M6", " ");
+			retArea.scrollTop = retArea.scrollHeight;
+			_responseLen = response.length;
+		},
+		error: function(xhr) {
+			retArea.value = "暂无任何日志，获取日志失败！";
+		}
+	});
+}
 function close_ssf_status() {
 	$("#ssf_status_div").fadeOut(200);
 	STATUS_FLAG = 0;
@@ -3316,7 +3759,7 @@ function get_log() {
 		success: function(response) {
 			var retArea = E("log_content1");
 			if (response.search("XU6J03M6") != -1) {
-				retArea.value = response.replace("XU6J03M6", " ");
+				retArea.value = response.myReplace("XU6J03M6", " ");
 				var pageH = parseInt(E("FormTitle").style.height.split("px")[0]); 
 				if(pageH){
 					autoTextarea(E("log_content1"), 0, (pageH - 308));
@@ -3356,10 +3799,11 @@ function get_realtime_log() {
 		success: function(response) {
 			var retArea = E("log_content3");
 			if (response.search("XU6J03M6") != -1) {
-				retArea.value = response.replace("XU6J03M6", " ");
+				retArea.value = response.myReplace("XU6J03M6", " ");
 				E("ok_button").style.display = "";
 				retArea.scrollTop = retArea.scrollHeight;
 				count_down_close();
+				submit_flag="0";
 				return true;
 			}
 			if (_responseLen == response.length) {
@@ -3368,11 +3812,12 @@ function get_realtime_log() {
 				noChange = 0;
 			}
 			if (noChange > 1000) {
+				console.log("log time out!!")
 				return false;
 			} else {
-				setTimeout("get_realtime_log();", 100);
+				setTimeout("get_realtime_log();", 300);
 			}
-			retArea.value = response.replace("XU6J03M6", " ");
+			retArea.value = response.myReplace("XU6J03M6", " ");
 			retArea.scrollTop = retArea.scrollHeight;
 			_responseLen = response.length;
 		},
@@ -3901,6 +4346,150 @@ function save_failover() {
 	}
 	push_data("ss_status_reset.sh", "", dbus_post);
 }
+function get_smartdns_conf(o) {
+	console.log("o: ", o);
+	var s = String(o);
+	var p = s.split("")[0];
+	var q = Number(s.split("")[1]);
+	var r = q + 5;
+	if(o == "10"){
+		arg = "edit_smartdns_conf_china_udp";
+		var name = 'smartdns_chng_china_udp';
+		SMARTDNS_FLAG = '10';
+	}
+	if(o == "11"){
+		arg = "edit_smartdns_conf_china_tcp";
+		var name = 'smartdns_chng_china_tcp';
+		SMARTDNS_FLAG = '11';
+	}
+	if(o == "12"){
+		arg = "edit_smartdns_conf_china_doh";
+		var name = 'smartdns_chng_china_doh';
+		SMARTDNS_FLAG = '12';
+	}
+	if(p == "2"){
+		arg = "edit_smartdns_conf_proxy_" + r;
+		var name = 'smartdns_chng_proxy_' + r;
+		SMARTDNS_FLAG = s;
+	}
+	if(o == "30"){
+		arg = "edit_smartdns_conf_direct";
+		var name = 'smartdns_chng_direct';
+		SMARTDNS_FLAG = '30';
+	}
+	if(o == "40"){
+		arg = "edit_smartdns_resolver_doh";
+		var name = 'smartdns_resolver_doh';
+		SMARTDNS_FLAG = '40';
+	}
+	if(p == "5"){
+		arg = "edit_smartdns_smrt_" + q;
+		var name = 'smartdns_smrt_' + q;
+		SMARTDNS_FLAG = s;
+	}
+	console.log(p);
+	console.log(arg);
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params":[arg], "fields": dbus };
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			$.ajax({
+				url: '/_temp/' + name + '.conf',
+				type: 'GET',
+				cache:false,
+				dataType: 'text',
+				success: function(res) {
+					console.log(res);
+					$('#smartdns_chnd_conf').val(res);
+					if (response.result == '11111111'){
+						E("smartdns_conf_note").innerHTML = "<i>当前为自定义smartdns配置，配置文件：</i><em>/koolshare/ss/rules/" + name + "_user.conf</em>";
+						E("smartdns_conf_area").innerHTML = "SmartDns配置文件（当前为自定义配置）"
+					}
+					if (response.result == '22222222'){
+						E("smartdns_conf_note").innerHTML = "<i>当前为默认smartdns配置，配置文件：</i><em>/koolshare/ss/rules/" + name + ".conf</em>";
+						E("smartdns_conf_area").innerHTML = "SmartDns配置文件（当前为默认配置）"
+					}
+				}
+			});
+		}
+	});
+}
+function edit_smartdns_conf(o){
+	console.log("222: ", o);
+	get_smartdns_conf(o);
+	$("#smartdns_settings").fadeIn(200);
+}
+function close_smartdns_conf(){
+	$("#smartdns_settings").fadeOut(200);
+}
+function save_smartdns_conf(){
+	db_ss["ss_basic_action"] = "22";
+	var s = String(SMARTDNS_FLAG);
+	var p = s.split("")[0];
+	var q = Number(s.split("")[1]);
+	var r = q + 5;
+	if(SMARTDNS_FLAG == '10'){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_conf_china_udp",  dbus);
+	}
+	if(SMARTDNS_FLAG == '11'){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_conf_china_tcp",  dbus);
+	}
+	if(SMARTDNS_FLAG == '12'){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_conf_china_doh",  dbus);
+	}
+	if(p == "1"){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_conf_proxy_" + r,  dbus);
+	}
+	if(SMARTDNS_FLAG == '30'){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_conf_direct",  dbus);
+	}
+	if(SMARTDNS_FLAG == '40'){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_resolver_doh",  dbus);
+	}
+	if(p == "5"){
+		dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+		push_data("ss_conf.sh", "save_smartdns_smrt_" + q,  dbus);
+	}
+}
+function reset_smartdns_conf(){
+	db_ss["ss_basic_action"] = "23";
+	var s = String(SMARTDNS_FLAG);
+	var p = s.split("")[0];
+	var q = Number(s.split("")[1]);
+	var r = q + 5;
+	if(SMARTDNS_FLAG == '10'){
+		push_data("ss_conf.sh", "reset_smartdns_conf_china_udp",  dbus);
+	}
+	if(SMARTDNS_FLAG == '11'){
+		push_data("ss_conf.sh", "reset_smartdns_conf_china_tcp",  dbus);
+	}
+	if(SMARTDNS_FLAG == '12'){
+		push_data("ss_conf.sh", "reset_smartdns_conf_china_doh",  dbus);
+	}
+	if(p == "2"){
+		push_data("ss_conf.sh", "reset_smartdns_conf_proxy_" + r,  dbus);
+	}
+	if(SMARTDNS_FLAG == '30'){
+		push_data("ss_conf.sh", "reset_smartdns_conf_direct",  dbus);
+	}
+	if(SMARTDNS_FLAG == '40'){
+		push_data("ss_conf.sh", "reset_smartdns_resolver_doh",  dbus);
+	}
+	if(p == "5"){
+		push_data("ss_conf.sh", "reset_smartdns_smrt_" + q,  dbus);
+	}
+}
 </script>
 </head>
 <body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">
@@ -3913,7 +4502,7 @@ function save_failover() {
 		<div id="loading_block3" style="margin:10px auto;margin-left:10px;width:85%; font-size:12pt;"></div>
 		<div id="loading_block2" style="margin:10px auto;width:95%;"></div>
 		<div id="log_content2" style="margin-left:15px;margin-right:15px;margin-top:10px;overflow:hidden">
-			<textarea cols="50" rows="36" wrap="off" readonly="readonly" id="log_content3" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="border:1px solid #000;width:99%; font-family:'Lucida Console'; font-size:11px;background:transparent;color:#FFFFFF;outline: none;padding-left:3px;padding-right:22px;overflow-x:hidden"></textarea>
+			<textarea cols="50" rows="30" wrap="on" readonly="readonly" id="log_content3" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="border:1px solid #000;width:99%; font-family:'Lucida Console'; font-size:11px;background:transparent;color:#FFFFFF;outline: none;padding-left:3px;padding-right:22px;overflow-x:hidden"></textarea>
 		</div>
 		<div id="ok_button" class="apply_gen" style="background: #000;display: none;">
 			<input id="ok_button1" class="button_gen" type="button" onclick="hideSSLoadingBar()" value="确定">
@@ -3931,7 +4520,7 @@ function save_failover() {
 		</td>
 		<td valign="top">
 			<div id="tabMenu" class="submenuBlock"></div>
-			<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0" style="display: block;">
+			<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0">
 				<tr>
 					<td align="left" valign="top">
 						<div>
@@ -3942,56 +4531,73 @@ function save_failover() {
 										<div id="title_name" class="formfonttitle"></div>
 										<script type="text/javascript">
 											var MODEL = '<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>';
-											$("#title_name").html(MODEL + " 科学上网插件")
+											var FANCYSS_TITLE=" - " + pkg_name;
+											$("#title_name").html(MODEL + " 科学上网插件" + FANCYSS_TITLE)
 										</script>										
 										<div style="float:right; width:15px; height:25px;margin-top:-20px">
 											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
 										</div>
 										<div style="margin:10px 0 10px 5px;" class="splitLine"></div>
 										<div class="SimpleNote" id="head_illustrate">
-											本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>、
-											<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>、
-											<a href="http://firmware.koolshare.cn/binary/koolgame/" target="_blank"><em><u>KoolGame</u></em></a>、 <!--fancyss-koolgame-->
-											<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2ray</u></em></a>、
-											<a href="https://github.com/XTLS/xray-core" target="_blank"><em><u>Xray</u></em></a>、
-											<a href="https://github.com/trojan-gfw/trojan" target="_blank"><em><u>Trojan</u></em></a>
+											本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>
+											、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>
+											、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2ray</u></em></a>
+											、<a href="https://github.com/XTLS/xray-core" target="_blank"><em><u>Xray</u></em></a>
+											、<a href="https://github.com/trojan-gfw/trojan" target="_blank"><em><u>Trojan</u></em></a>
+											、<a href="https://github.com/klzgrad/naiveproxy" target="_blank"><em><u>NaïveProxy</u></em></a>
 											六种客户端的科学上网、游戏加速工具。
 										</div>
 										<!-- this is the popup area for process status -->
-										<div id="detail_status"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;">
+										<div id="detail_status" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;">
 											<div class="user_title">【科学上网】状态检测</div>
 											<div style="margin-left:15px"><i>&nbsp;&nbsp;详细状态检测可以让你了解插件相关二进制和iptables的运行状况，用以排除一些使用中的问题。</i></div>
 											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
-												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="line-height:1.45;width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
 											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
 												<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">
 											</div>
 										</div>
 										<!-- this is the popup area for foreign status -->
-										<div id="ssf_status_div"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
+										<div id="ssf_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
 											<div class="user_title">国外历史状态 - www.google.com.tw</div>
 											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
 											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
-												<textarea cols="63" rows="36" wrap="off" id="log_content_f" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												<textarea cols="63" rows="36" wrap="off" id="log_content_f" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:10px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
 											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="download_SS_node(6);" value="下载日志">
+												<input class="button_gen" type="button" onclick="download_route_file(6);" value="下载日志">
 												<input class="button_gen" type="button" onclick="close_ssf_status();" value="返回主界面">
 												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
 												<lable>&nbsp;暂停日志刷新</lable>
 											</div>
 										</div>
 										<!-- this is the popup area for china status -->
-										<div id="ssc_status_div"  class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
+										<div id="ssc_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
 											<div class="user_title">国内历史状态 - www.baidu.com</div>
 											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
 											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
-												<textarea cols="63" rows="36" wrap="off" id="log_content_c" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												<textarea cols="63" rows="36" wrap="off" id="log_content_c" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:10px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 											</div>
 											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="download_SS_node(7);" value="下载日志">
+												<input class="button_gen" type="button" onclick="download_route_file(7);" value="下载日志">
 												<input class="button_gen" type="button" onclick="close_ssc_status();" value="返回主界面">
+												<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
+											</div>
+										</div>
+										<!-- this is the popup area for china status -->
+										<div id="dns_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -140px;display: none;margin-left:0px;width:748px;">
+											<div class="user_title">DNS解析测试</div>
+											<div style="margin-left:15px" id="dns_test_note_1"></div>
+											<div style="margin-left:15px" id="dns_test_note_2"></div>
+											<div style="margin-left:15px" id="dns_test_note_3"></div>
+											<div style="margin: 10px 10px 10px 10px;width:98%;outline: 1px solid #727272;text-align:center;overflow:hidden;">
+												<textarea cols="63" rows="40" wrap="off" id="log_content_dns" style="line-height: 140%;width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+												<input id="log_dig" class="button_gen" style="display:none;" type="button" onclick="download_route_file(10);" value="下载日志">
+												<input id="log_resv" class="button_gen" style="display:none;" type="button" onclick="download_route_file(11);" value="下载日志">
+												<input class="button_gen" type="button" onclick="close_dns_status();" value="返回主界面">
 												<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
 											</div>
 										</div>
@@ -4004,6 +4610,20 @@ function save_failover() {
 												<input class="button_gen" type="button" onclick="cleanCode();" value="返回">
 											</div>
 										</div>
+										<!-- this is the popup area for smartdns rules -->
+										<div id="smartdns_settings" class="smartdns_pop" style="box-shadow: 3px 3px 10px #000;margin-top: -65px;position: absolute;-webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius:10px;z-index: 10;background-color:#2B373B;margin-left: -215px;top: 240px;width:980px;return height:auto;box-shadow: 3px 3px 10px #000;background: rgba(0,0,0,0.85);display:none;">
+											<div class="user_title" id="smartdns_conf_area">SmartDns配置文件</div>
+											<div style="margin-left:15px" id="smartdns_conf_note"></div>
+											<div id="user_tr" style="margin: 10px 10px 10px 10px;width:98%;text-align:center;">
+												<textarea class="smartdns_textarea" cols="63" rows="30" wrap="off" id="smartdns_chnd_conf" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											</div>
+											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+												<input id="edit_node_1" class="button_gen" type="button" onclick="save_smartdns_conf();" value="保存配置">	
+												<input id="edit_node_2" class="button_gen" type="button" onclick="reset_smartdns_conf();" value="恢复默认配置">	
+												<input id="edit_node_3" class="button_gen" type="button" onclick="close_smartdns_conf();" value="返回主界面">
+											</div>
+										</div>
+										<!-- end of the popouparea -->
 										<div id="ss_switch_show" style="margin:-1px 0px 0px 0px;">
 											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="ss_switch_table">
 												<thead>
@@ -4050,8 +4670,8 @@ function save_failover() {
 															</a>
 														</div>
 														<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 10.5px 0px;">
-															<a type="button" class="ss_btn" style="cursor:pointer" onclick="pop_111(3)" href="javascript:void(0);">分流检测</a>
-															<!--<a type="button" class="ss_btn" target="https://ip.skk.moe/" href="https://ip.skk.moe/">分流检测</a>-->
+															<!--<a type="button" class="ss_btn" style="cursor:pointer" onclick="pop_111(3)" href="javascript:void(0);">分流检测</a>-->
+															<a type="button" class="ss_btn" target="https://ip.skk.moe/" href="https://ip.skk.moe/">分流检测</a>
 														</div>
 														<div style="display:table-cell;float: left;margin-left:350px;position: absolute;padding: 10.5px 0px;">
 															<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_proc_status()" href="javascript:void(0);">详细状态</a>
@@ -4087,10 +4707,10 @@ function save_failover() {
 															<tr>
 													  		<td width="16.67%" align="center" id="ssTitle" onclick="tabclickhandler(0);">添加SS节点</td>
 													  		<td width="16.67%" align="center" id="ssrTitle" onclick="tabclickhandler(1);">添加SSR节点</td>
-													  		<td width="16.67%" align="center" id="gamev2Title" onclick="tabclickhandler(2);">添加koolgame节点</td>	<!--fancyss-koolgame-->
 													  		<td width="16.67%" align="center" id="v2rayTitle" onclick="tabclickhandler(3);">添加V2Ray节点</td>
 													  		<td width="16.67%" align="center" id="xrayTitle" onclick="tabclickhandler(4);">添加Xray节点</td>
 													  		<td width="16.67%" align="center" id="trojanTitle" onclick="tabclickhandler(5);">添加Trojan节点</td>
+													  		<td width="16.67%" align="center" id="naiveTitle" onclick="tabclickhandler(6);">添加Naïve节点</td>	<!--fancyss-full-->
 															</tr>
 														</table>
 													</td>
@@ -4102,41 +4722,39 @@ function save_failover() {
 															<script type="text/javascript">
 																$('#table_edit').forms([
 																	// common
-																	{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:350px', value: "1"},
+																	{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:412px', value: "1"},
 																	{ title: '使用json配置', rid:'v2ray_use_json_tr', id:'ss_node_table_v2ray_use_json', type:'checkbox', func:'v', help:'27', value:false},
 																	{ title: '使用json配置', rid:'xray_use_json_tr', id:'ss_node_table_xray_use_json', type:'checkbox', func:'v', help:'25', value:false},
-																	{ title: '节点别名', rid:'ss_name_support_tr', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:338px'},
-																	{ title: '服务器地址', rid:'ss_server_support_tr', id:'ss_node_table_server', type:'text', maxlen:'64', style:'width:338px'},
-																	{ title: '服务器端口', rid:'ss_port_support_tr', id:'ss_node_table_port', type:'text', maxlen:'64', style:'width:338px'},
-																	{ title: '密码', rid:'ss_passwd_support_tr', id:'ss_node_table_password', type:'text', maxlen:'64', style:'width:338px'},
-																	{ title: '加密方式', rid:'ss_method_support_tr', id:'ss_node_table_method', type:'select', options:option_method, style:'width:350px', value: "aes-256-cfb"},
+																	{ title: '节点别名', rid:'ss_name_support_tr', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:400px'},
+																	{ title: '服务器地址', rid:'ss_server_support_tr', id:'ss_node_table_server', type:'text', maxlen:'64', style:'width:400px'},
+																	{ title: '服务器端口', rid:'ss_port_support_tr', id:'ss_node_table_port', type:'text', maxlen:'64', style:'width:400px'},
+																	{ title: '密码', rid:'ss_passwd_support_tr', id:'ss_node_table_password', type:'text', maxlen:'64', style:'width:400px'},
+																	{ title: '加密方式', rid:'ss_method_support_tr', id:'ss_node_table_method', type:'select', options:option_method, style:'width:412px', value: "aes-256-cfb"},
 																	// ss
-																	{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:350px', value: "0"},
-																	{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:338px', ph:'bing.com'},
-																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:350px', value: "0"},		//fancyss-full
-																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:338px', ph:'tls;host=example.com;path=/'},			//fancyss-full
+																	{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:412px', value: "0"},
+																	{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
+																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:412px', value: "0"},		//fancyss-full
+																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:400px', ph:'tls;host=example.com;path=/'},			//fancyss-full
 																	// ssr
-																	{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:350px', value: "0"},
-																	{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:338px', ph:'id:password'},
-																	{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:350px', value: "0"},
-																	{ title: '混淆参数 (obfs_param)', rid:'ssr_obfs_param_tr', id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:338px', ph:'bing.com'},
-																	// koolgame																																												//fancyss-koolgame
-																	{ title: 'UDP通道', rid:'gameV2_udp_tr', id:'ss_node_table_koolgame_udp', type:'select', options:[["0", "udp in udp"], ["1", "udp in tcp"]], style:'width:350px', value: "0"},			//fancyss-koolgame
+																	{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:412px', value: "0"},
+																	{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:400px', ph:'id:password'},
+																	{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:412px', value: "0"},
+																	{ title: '混淆参数 (obfs_param)', rid:'ssr_obfs_param_tr', id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
 																	// v2ray
 																	{ title: '<em>服务器配置</em>（以下配置使用vmess作为传出协议，其它传出协议请使用json配置）', class:'v2ray_elem', th:'2'},
-																	{ title: '用户id (id)', rid:'v2ray_uuid_tr', id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:338px'},
-																	{ title: '额外ID (Alterld)', rid:'v2ray_alterid_tr', id:'ss_node_table_v2ray_alterid', type:'text', maxlen:'300', style:'width:338px', value: "0"},
-																	{ title: '加密方式 (security)', rid:'v2ray_security_tr', id:'ss_node_table_v2ray_security', type:'select', options:option_v2enc, style:'width:350px', value: "auto"},
+																	{ title: '用户id (id)', rid:'v2ray_uuid_tr', id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:400px'},
+																	{ title: '额外ID (Alterld)', rid:'v2ray_alterid_tr', id:'ss_node_table_v2ray_alterid', type:'text', maxlen:'300', style:'width:400px', value: "0"},
+																	{ title: '加密方式 (security)', rid:'v2ray_security_tr', id:'ss_node_table_v2ray_security', type:'select', options:option_v2enc, style:'width:412px', value: "auto"},
 																	{ title: '<em>底层传输方式</em>', class:'v2ray_elem', th:'2'},
-																	{ title: '传输协议 (network)', rid:'v2ray_network_tr', id:'ss_node_table_v2ray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:350px', value: "tcp"},
-																	{ title: '* tcp伪装类型 (type)', rid:'v2ray_headtype_tcp_tr', id:'ss_node_table_v2ray_headtype_tcp', type:'select', func:'v', options:option_headtcp, style:'width:350px', value: "none"},
-																	{ title: '* kcp伪装类型 (type)', rid:'v2ray_headtype_kcp_tr', id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:350px', value: "none"},
+																	{ title: '传输协议 (network)', rid:'v2ray_network_tr', id:'ss_node_table_v2ray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
+																	{ title: '* tcp伪装类型 (type)', rid:'v2ray_headtype_tcp_tr', id:'ss_node_table_v2ray_headtype_tcp', type:'select', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
+																	{ title: '* kcp伪装类型 (type)', rid:'v2ray_headtype_kcp_tr', id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
 																	{ title: '* quic伪装类型 (type)', rid:'v2ray_headtype_quic_tr', id:'ss_node_table_v2ray_headtype_quic', type:'select', options:option_headquic, value: "none"},
 																	{ title: '* grpc模式', rid:'v2ray_grpc_mode_tr', id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
-																	{ title: '* 伪装域名 (host)', rid:'v2ray_network_host_tr', id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:338px'},
-																	{ title: '* 路径 (path)', rid:'v2ray_network_path_tr', id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
-																	{ title: '* kcp seed', rid:'v2ray_kcp_seed_tr', id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
-																	{ title: '底层传输安全', rid:'v2ray_network_security_tr', id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:350px', value: "none"},
+																	{ title: '* 伪装域名 (host)', rid:'v2ray_network_host_tr', id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:400px'},
+																	{ title: '* 路径 (path)', rid:'v2ray_network_path_tr', id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																	{ title: '* kcp seed', rid:'v2ray_kcp_seed_tr', id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																	{ title: '底层传输安全', rid:'v2ray_network_security_tr', id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:412px', value: "none"},
 																	{ title: '* 跳过证书验证 (AllowInsecure)', rid:'v2ray_network_security_ai_tr', id:'ss_node_table_v2ray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
 																	{ title: '* alpn', rid:'v2ray_network_security_alpn_tr', multi: [
 																		{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_h2">h2' },
@@ -4144,35 +4762,41 @@ function save_failover() {
 																	]},
 																	{ title: 'SNI', rid:'v2ray_network_security_sni_tr', id:'ss_node_table_v2ray_network_security_sni', type:'text'},
 																	{ title: '多路复用 (Mux)', rid:'v2ray_mux_enable_tr', id:'ss_node_table_v2ray_mux_enable', type:'checkbox', func:'v', value: false},
-																	{ title: '* Mux并发连接数', rid:'v2ray_mux_concurrency_tr', id:'ss_node_table_v2ray_mux_concurrency', type:'text', maxlen:'300', style:'width:338px'},
-																	{ title: 'v2ray json', rid:'v2ray_json_tr', id:'ss_node_table_v2ray_json', type:'textarea', rows:'32', ph:ph_v2ray, style:'width:344px'},
+																	{ title: '* Mux并发连接数', rid:'v2ray_mux_concurrency_tr', id:'ss_node_table_v2ray_mux_concurrency', type:'text', maxlen:'300', style:'width:400px'},
+																	{ title: 'v2ray json', rid:'v2ray_json_tr', id:'ss_node_table_v2ray_json', type:'textarea', rows:'32', ph:ph_v2ray, style:'width:400px'},
 																	// xray
 																	{ title: '<em>服务器配置</em>（以下配置使用vless作为传出协议，其它传出协议请使用json配置）', class:'xray_elem', th:'2'},
-																	{ title: '用户id (id)', rid:'xray_uuid_tr', id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:338px'},
-																	{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:338px', value: "none"},
-																	{ title: 'flow (流控模式，用于选择 XTLS 的算法)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', hint:'56', options:option_xflow, style:'width:350px', value: "xtls-rprx-origin"},
+																	{ title: '用户id (id)', rid:'xray_uuid_tr', id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:400px'},
+																	{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
+																	{ title: 'flow (流控模式，用于选择 XTLS 的算法)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', hint:'56', options:option_xflow, style:'width:412px', value: "xtls-rprx-origin"},
 																	{ title: '<em>底层传输方式</em>', class:'xray_elem', th:'2'},
-																	{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:350px', value: "tcp"},
-																	{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:350px', value: "none"},
-																	{ title: '* 伪装类型 (type)', rid:'xray_headtype_kcp_tr', id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:350px', value: "none"},
+																	{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
+																	{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
+																	{ title: '* 伪装类型 (type)', rid:'xray_headtype_kcp_tr', id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
 																	{ title: '* quic伪装类型 (type)', rid:'xray_headtype_quic_tr', id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
 																	{ title: '* grpc模式', rid:'xray_grpc_mode_tr', id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
-																	{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:338px'},
-																	{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
-																	{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:338px', ph:'没有请留空'},
-																	{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"]], style:'width:350px', value: "none"},
+																	{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
+																	{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																	{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																	{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"]], style:'width:412px', value: "none"},
 																	{ title: '* 跳过证书验证 (AllowInsecure)', rid:'xray_network_security_ai_tr', id:'ss_node_table_xray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
 																	{ title: '* alpn', rid:'xray_network_security_alpn_tr', multi: [
 																		{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_h2">h2' },
 																		{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_http">http/1.1' },
 																	]},
 																	{ title: '* SNI', rid:'xray_network_security_sni_tr', id:'ss_node_table_xray_network_security_sni', type:'text'},
-																	{ title: 'xray json', rid:'xray_json_tr', id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:344px'},
+																	{ title: 'xray json', rid:'xray_json_tr', id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:400px'},
 																	// trojan
-																	{ title: 'trojan 密码', rid:'trojan_uuid_tr', id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:338px'},
+																	{ title: 'trojan 密码', rid:'trojan_uuid_tr', id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
 																	{ title: '跳过证书验证 (AllowInsecure)', rid:'trojan_ai_tr', id:'ss_node_table_trojan_ai', type:'checkbox', value: "false"},
 																	{ title: 'SNI', rid:'trojan_sni_tr', id:'ss_node_table_trojan_sni', type:'text'},
 																	{ title: 'tcp fast open', rid:'trojan_tfo_tr', id:'ss_node_table_trojan_tfo', type:'checkbox', value: "false"},
+																	// naive
+																	{ title: 'NaïveProxy 协议', rid:'naive_prot_tr', id:'ss_node_table_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', style:'width:412px', value: "https"},		//fancyss-full
+																	{ title: 'NaïveProxy 服务器', rid:'naive_server_tr', id:'ss_node_table_naive_server', type:'text', maxlen:'300', style:'width:400px'},														//fancyss-full
+																	{ title: 'NaïveProxy 端口', rid:'naive_port_tr', id:'ss_node_table_naive_port', type:'text', maxlen:'300', style:'width:400px', value: "443"},												//fancyss-full
+																	{ title: 'NaïveProxy 账户', rid:'naive_user_tr', id:'ss_node_table_naive_user', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
+																	{ title: 'NaïveProxy 密码', rid:'naive_pass_tr', id:'ss_node_table_naive_pass', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
 																]);
 															</script>
 															</table>
@@ -4192,7 +4816,7 @@ function save_failover() {
 												<script type="text/javascript">
 													$('#table_basic').forms([
 														// commom
-														{ title: '节点选择', id:'ssconf_basic_node', type:'select', func:'onchange="ss_node_sel();"', style:'width:auto;min-width:164;max-width:450px;', options:[], value: "1"},
+														{ title: '节点选择', id:'ssconf_basic_node', type:'select', func:'onchange="ss_node_sel();"', style:'width:auto;min-width:164px;max-width:450px;', options:[], value: "1"},
 														{ title: '模式', id:'ss_basic_mode', type:'select', func:'v', hint:'1', options:option_modes, value: "1"},
 														{ title: '使用json配置', id:'ss_basic_v2ray_use_json', type:'checkbox', func:'v', hint:'27'},
 														{ title: '使用json配置', id:'ss_basic_xray_use_json', type:'checkbox', func:'v', hint:'27'},
@@ -4210,8 +4834,6 @@ function save_failover() {
 														{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
 														{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},
 														{ title: '混淆参数 (obfs_param)', id:'ss_basic_rss_obfs_param', type:'text', hint:'11', maxlen:'300', ph:'cloudflare.com;bing.com'},
-														// koolgame																																				//fancyss-koolgame
-														{ title: 'UDP通道', id:'ss_basic_koolgame_udp', type:'select', func:'v', hint:'6', options:[["0", "udp in udp"], ["1", "udp in tcp"]], value: "0"},		//fancyss-koolgame
 														// v2ray
 														{ title: '用户id (id)', id:'ss_basic_v2ray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
 														{ title: '额外ID (Alterld)', id:'ss_basic_v2ray_alterid', type:'text', hint:'48', maxlen:'50'},
@@ -4264,6 +4886,12 @@ function save_failover() {
 														]},
 														{ title: 'SNI', id:'ss_basic_trojan_sni', type:'text'},
 														{ title: 'tcp fast open', id:'ss_basic_trojan_tfo', type:'checkbox'},
+														// naive
+														{ title: 'NaïveProxy 协议', id:'ss_basic_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', value: "https"},								//fancyss-full
+														{ title: 'NaïveProxy 服务器', id:'ss_basic_naive_server', type:'text', maxlen:'300'},																					//fancyss-full
+														{ title: 'NaïveProxy 端口', id:'ss_basic_naive_port', type:'text', maxlen:'300', value: "443"},																			//fancyss-full
+														{ title: 'NaïveProxy 账户', id:'ss_basic_naive_user', type:'text', maxlen:'300'},																						//fancyss-full
+														{ title: 'NaïveProxy 密码', id:'ss_basic_naive_pass', type:'text', maxlen:'300'},																						//fancyss-full
 													]);
 												</script>
 											</table>
@@ -4343,46 +4971,612 @@ function save_failover() {
 										<div id="tablet_3" style="display: none;">
 											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 												<script type="text/javascript">
-													var option_dnsc = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "SmartDNS"], ["12", "自定义DNS"]];
-													var option_dnsf = [["3", "dns2socks"], ["4", "ss-tunnel"], ["1", "cdns"], ["5", "chinadns1"], ["2", "chinadns2"], ["10", "chinadns-ng"], ["6", "https_dns_proxy"], ["7", "v2ray/xray_dns"], ["9", "SmartDNS"], ["8", "直连"]];
-													var option_dnsr = [["1", "运营商DNS【自动获取】"], ["2", "阿里DNS1【223.5.5.5】"], ["3", "阿里DNS2【223.6.6.6】"], ["4", "114DNS1【114.114.114.114】"], ["5", "114DNS2【114.114.115.115】"], ["6", "cnnic DNS1【1.2.4.8】"], ["7", "cnnic DNS2【210.2.4.8】"], ["8", "oneDNS1【117.50.11.11】"], ["9", "oneDNS2【117.50.11.22】"], ["10", "百度DNS【180.76.76.76】"], ["11", "DNSpod DNS【119.29.29.29】"], ["13", "google DNS1【8.8.8.8】"], ["14", "google DNS2【8.8.4.4】"], ["15", "IBM DNS【9.9.9.9】"], ["16", "CloudFlare DNS【1.1.1.1】"], ["12", "自定义DNS"]];
+													var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
+													var isp_dns_1=isp_dns_raw.split(" ")[0];
+													var isp_dns_2=isp_dns_raw.split(" ")[1];
+													validator.ipv4_addr(isp_dns_1)
+													var option_dnsp = [
+																	   ["1", "chinadns-ng"]
+																	  ,["2", "smartdns"]			//fancyss-full
+																	  ,["3", "dohclient"]			//fancyss-full
+																	  ];
+
+													// 进阶DNS方案1 chinadns-ng国内:协议选择
+													option_dnsngc_prot = [
+																		  ["1", "udp"]
+																		 ,["2", "tcp"]
+																		 ,["3", "DoH"]				//fancyss-full
+																		];
+													// 进阶DNS方案1 chinadns-ng国内dns:udp 
+													var option_dnsngc_udp = [];
+													if(isp_dns_1 && isp_dns_2){
+														option_dnsngc_udp.push(["group", "运营商DNS"]);
+														option_dnsngc_udp.push(["1", "⚪" + isp_dns_1]);
+														option_dnsngc_udp.push(["2", "⚪" + isp_dns_2]);
+													}else if(isp_dns_1 && !isp_dns_2){
+														option_dnsngc_udp.push(["group", "运营商DNS"]);
+														option_dnsngc_udp.push(["1", isp_dns_1]);
+													}
+													option_dnsngc_udp.push(["group", "阿里公共DNS"]);
+													option_dnsngc_udp.push(["3", "🟠223.5.5.5"]);
+													option_dnsngc_udp.push(["4", "🟠223.6.6.6"]);
+													option_dnsngc_udp.push(["group", "DNSPod DNS"]);
+													option_dnsngc_udp.push(["5", "🟠119.29.29.29"]);
+													option_dnsngc_udp.push(["6", "🟠119.28.28.28"]);
+													option_dnsngc_udp.push(["group", "114 DNS"]);
+													option_dnsngc_udp.push(["7", "⚫114.114.114.114"]);
+													option_dnsngc_udp.push(["8", "⚫114.114.115.115"]);
+													option_dnsngc_udp.push(["group", "OneDNS"]);
+													option_dnsngc_udp.push(["9", "🟠117.50.11.11（拦截版）"]);
+													option_dnsngc_udp.push(["10", "🟠52.80.66.66（拦截版）"]);
+													option_dnsngc_udp.push(["11", "🟠117.50.10.10（纯净版）"]);
+													option_dnsngc_udp.push(["12", "🟠52.80.52.52（纯净版）"]);
+													option_dnsngc_udp.push(["13", "🟠117.50.60.30（家庭版）"]);
+													option_dnsngc_udp.push(["14", "🟠52.80.60.30（家庭版）"]);
+													option_dnsngc_udp.push(["group", "360安全DNS"]);
+													option_dnsngc_udp.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);
+													option_dnsngc_udp.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);
+													option_dnsngc_udp.push(["17", "🟠123.125.81.6（联通）"]);
+													option_dnsngc_udp.push(["18", "🟠140.207.198.6（联通）"]);
+													option_dnsngc_udp.push(["group", "cnnic DNS"]);
+													option_dnsngc_udp.push(["19", "⚫1.2.4.8"]);
+													option_dnsngc_udp.push(["20", "⚫210.2.4.8"]);
+													option_dnsngc_udp.push(["group", "百度DNS"]);
+													option_dnsngc_udp.push(["21", "🟠180.76.76.76"]);
+													option_dnsngc_udp.push(["group", "教育网DNS"]);
+													option_dnsngc_udp.push(["22", "🟠101.6.6.6:5353（清华大学）"]);
+													option_dnsngc_udp.push(["23", "⚫58.132.8.1（北京）"]);
+													option_dnsngc_udp.push(["24", "⚫101.7.8.9（北京）"]);
+													option_dnsngc_udp.push(["group", "SmartDNS"]);				//fancyss-full
+													option_dnsngc_udp.push(["96", "⚫SmartDNS (UDP)"]);		//fancyss-full
+													option_dnsngc_udp.push(["group", "自定义DNS"]);
+													option_dnsngc_udp.push(["99", "⚪自定义DNS (UDP)"]);
+													// 进阶DNS方案1 chinadns-ng国内tcp | 进阶DNS方案3 dohclient 国内 tcp
+													option_dnsngc_tcp = [
+																		 ["group", "阿里公共DNS"],
+																		 ["3", "🟠223.5.5.5"],
+																		 ["4", "🟠223.6.6.6"],
+																		 ["group", "DNSPod DNS"],
+																		 ["5", "🟠119.29.29.29"],
+																		 ["6", "🟠119.28.28.28"],
+																		 ["group", "114 DNS"],
+																		 ["7", "⚫114.114.114.114"],
+																		 ["8", "⚫114.114.115.115"],
+																		 ["group", "OneDNS"],
+																		 ["10", "🟠52.80.66.66（拦截版）"],
+																		 ["12", "🟠52.80.52.52（纯净版）"],
+																		 ["group", "360安全DNS"],
+																		 ["16", "🟠218.30.118.6（电信/铁通/移动）"],
+																		 ["17", "🟠123.125.81.6（联通）"],
+																		 ["18", "🟠140.207.198.6（联通）"],
+																		 ["group", "教育网DNS"],
+																		 ["22", "🟠101.6.6.6:5353（清华大学）"],
+																		 ["group", "SmartDNS"],				//fancyss-full
+																		 ["97", "⚫SmartDNS (tcp)"],		//fancyss-full
+																		 ["group", "自定义DNS"],
+																		 ["99", "⚪自定义DNS (tcp)"]
+																		 ];
+													option_dnsngc_doh = [									//fancyss-full
+																		 ["group", "dohclient"],			//fancyss-full
+																		 ["1", "🟠阿里公共DNS"],			//fancyss-full
+																		 ["2", "🟠DNSPod公共DNS"],			//fancyss-full
+																		 ["3", "🟠360安全DNS"],				//fancyss-full
+																		 ["group", "SmartDNS"],				//fancyss-full
+																		 ["98", "⚫多上游DoH服务器"]		//fancyss-full
+																		 ];									//fancyss-full
+													var option_dnsngf_1_opt = [
+																			   ["1", "udp"]
+																		 	  ,["2", "tcp"]
+																			  ,["3", "DoH"]					//fancyss-full
+																		 ];
+													var option_dnsngf_1_val_udp = [
+																		 		   ["group", "Google DNS"],
+																				   ["1", "🟠8.8.8.8"],
+																				   ["2", "🟠8.8.4.4"],
+																		 		   ["group", "Cloudflare DNS"],
+																				   ["3", "⚫1.1.1.1"],
+																				   ["4", "⚫1.0.0.1"],
+																		 		   ["group", "Quad9"],
+																				   ["5", "🟠9.9.9.11"],
+																				   ["6", "🟠149.112.112.11"],
+																		 		   ["group", "OpenDNS"],
+																				   ["7", "⚫208.67.222.222"],
+																				   ["8", "⚫208.67.220.220"],
+																		 		   ["group", "DNS.SB"],
+																				   ["9", "⚫185.222.222.222"],
+																				   ["10", "⚫45.11.45.11"],
+																		 		   ["group", "AdGuard"],
+																				   ["11", "🟡94.140.14.14"],
+																				   ["12", "🟡94.140.15.15"],
+																		 		   ["group", "quad101"],
+																				   ["13", "🟠101.101.101.101"],
+																				   ["14", "🟠101.102.103.104"],
+																		 		   ["group", "自定义DNS"],
+																				   ["99", "⚪自定义DNS（udp）"]
+																			  	  ];
+													var option_dnsngf_1_val_tcp = [
+																		 		   ["group", "Google DNS"],
+																				   ["1", "🟠8.8.8.8"],
+																				   ["2", "🟠8.8.4.4"],
+																		 		   ["group", "Cloudflare DNS"],
+																				   ["3", "⚫1.1.1.1"],
+																				   ["4", "⚫1.0.0.1"],
+																		 		   ["group", "Quad9"],
+																				   ["5", "🟠9.9.9.11"],
+																				   ["6", "🟠149.112.112.11"],
+																		 		   ["group", "OpenDNS"],
+																				   ["7", "⚫208.67.222.222"],
+																				   ["8", "⚫208.67.220.220"],
+																		 		   ["group", "DNS.SB"],
+																				   ["9", "⚫185.222.222.222"],
+																				   ["10", "⚫45.11.45.11"],
+																		 		   ["group", "AdGuard"],
+																				   ["11", "🟡94.140.14.14"],
+																				   ["12", "🟡94.140.15.15"],
+																		 		   ["group", "quad101"],
+																				   ["13", "🟠101.101.101.101"],
+																				   ["14", "🟠101.102.103.104"],
+																		 		   ["group", "自定义DNS"],
+																				   ["99", "⚪自定义DNS（tcp）"]
+																			  	  ];
+													var option_dnsngf_1_val_doh = [										//fancyss-full
+																	   			   ["11", "⚫Cloudflare"],				//fancyss-full
+																	   			   ["12", "🟠Google"],					//fancyss-full
+																	   			   ["13", "🟠quad9"],					//fancyss-full
+																	   			   ["14", "🟡AdGuard"],					//fancyss-full
+																	   			   ["15", "🟠Quad 101"],				//fancyss-full
+																	   			   ["16", "⚫OpenDNS"],					//fancyss-full
+																	   			   ["17", "⚫DNS.SB"],					//fancyss-full
+																	   			   ["18", "⚫cleanbrowsing"],			//fancyss-full
+																	  		       ["23", "⚫nextdns"],					//fancyss-full
+																				  ];									//fancyss-full
+													var option_dnsngf_2_val = [											//fancyss-full
+																		 	   ["group", "国外直连组 (dohclient)"],		//fancyss-full
+																	  		   ["11", "⚫Cloudflare"],					//fancyss-full
+																	  		   ["16", "⚫OpenDNS"],						//fancyss-full
+																	  		   ["17", "⚫DNS.SB"],						//fancyss-full
+																	   		   ["18", "⚫cleanbrowsing"],				//fancyss-full
+																	  		   ["19", "⚫he.net"],						//fancyss-full
+																	  		   ["20", "⚫PureDNS"],						//fancyss-full
+																	  		   ["21", "⚫dnslow"],						//fancyss-full
+																	  		   ["22", "🟠dnswarden"],					//fancyss-full
+																	  		   ["24", "⚫bebasid"],						//fancyss-full
+																	  		   ["25", "🟠AT&T "],						//fancyss-full
+																		 	   ["group", "国内直连组 (dohclient)"],		//fancyss-full
+																	  		   ["1", "🟠阿里公共DNS"],					//fancyss-full
+																	  		   ["2", "🟠DNSPod公共DNS"],				//fancyss-full
+																	  		   ["3", "🟠360安全DNS"],					//fancyss-full
+																		 	   ["group", "其它 (SmartDNS)"],			//fancyss-full
+																	  		   ["97", "⚫SmartDNS"],					//fancyss-full
+																	  		  ];										//fancyss-full
+													// 进阶DNS方案1 chinadns-ng国外dns-2
+													var option_dnsngf_2_opt = [
+																		  	   ["1", "udp"]
+																		  	  ,["2", "tcp"]
+																		  	  ,["3", "DoH"]								//fancyss-full
+																			  ];
+													// 进阶DNS方案2 smartdns
+													var option_smrt = [													//fancyss-full
+																	   ["1", "1：国内：运营商DNS；国外：代理"],			//fancyss-full
+																	   ["2", "2：国内：运营商DNS，国外：直连"],			//fancyss-full
+																	   ["3", "3：国内：运营商DNS，国外：代理 + 直连"],	//fancyss-full
+																	   ["4", "4：国内：多上游DNS，国外：代理"],			//fancyss-full
+																	   ["5", "5：国内：多上游DNS，国外：直连"],			//fancyss-full
+																	   ["6", "6：国内：多上游DNS，国外：代理 + 直连"],	//fancyss-full
+																	   ["7", "7：自定义配置1"],							//fancyss-full
+																	   ["8", "8：自定义配置2"],							//fancyss-full
+																	   ["9", "9：自定义配置3"]							//fancyss-full
+																	  ];												//fancyss-full
+													// 进阶DNS方案3 dohclient 国内 doh/udp
+													option_protc_sel_chn = [											//fancyss-full
+																		  ["1", "udp"],									//fancyss-full
+																		  ["2", "tcp"],									//fancyss-full
+																		  ["3", "DoH"]									//fancyss-full
+																		 ];												//fancyss-full
+													option_protc_sel_frn = [											//fancyss-full
+																		  ["2", "tcp"],									//fancyss-full
+																		  ["3", "DoH"]									//fancyss-full
+																		 ];												//fancyss-full
+													// 进阶DNS方案3 dohclient 国内udp
+													var option_dohc_udp_china = [];										//fancyss-full
+													if(isp_dns_1 && isp_dns_2){											//fancyss-full
+														option_dohc_udp_china.push(["group", "运营商DNS"]);				//fancyss-full
+														option_dohc_udp_china.push(["1", "⚪" + isp_dns_1]);			//fancyss-full
+														option_dohc_udp_china.push(["2", "⚪" + isp_dns_2]);			//fancyss-full
+													}else if(isp_dns_1 && !isp_dns_2){									//fancyss-full
+														option_dohc_udp_china.push(["group", "运营商DNS"]);				//fancyss-full
+														option_dohc_udp_china.push(["1", "⚪" + isp_dns_1]);			//fancyss-full
+													}																	//fancyss-full
+													option_dohc_udp_china.push(["group", "阿里公共DNS"]);				//fancyss-full
+													option_dohc_udp_china.push(["3", "🟠223.5.5.5"]);					//fancyss-full
+													option_dohc_udp_china.push(["4", "🟠223.6.6.6"]);					//fancyss-full
+													option_dohc_udp_china.push(["group", "DNSPod DNS"]);				//fancyss-full
+													option_dohc_udp_china.push(["5", "🟠119.29.29.29"]);				//fancyss-full
+													option_dohc_udp_china.push(["6", "🟠119.28.28.28"]);				//fancyss-full
+													option_dohc_udp_china.push(["group", "114 DNS"]);					//fancyss-full
+													option_dohc_udp_china.push(["7", "⚫114.114.114.114"]);				//fancyss-full
+													option_dohc_udp_china.push(["8", "⚫114.114.115.115"]);				//fancyss-full
+													option_dohc_udp_china.push(["group", "OneDNS"]);					//fancyss-full
+													option_dohc_udp_china.push(["9", "🟠117.50.11.11（拦截版）"]);			//fancyss-full
+													option_dohc_udp_china.push(["10", "🟠52.80.66.66（拦截版）"]);			//fancyss-full
+													option_dohc_udp_china.push(["11", "🟠117.50.10.10（纯净版）"]);			//fancyss-full
+													option_dohc_udp_china.push(["12", "🟠52.80.52.52（纯净版）"]);			//fancyss-full
+													option_dohc_udp_china.push(["13", "🟠117.50.60.30（家庭版）"]);			//fancyss-full
+													option_dohc_udp_china.push(["14", "🟠52.80.60.30（家庭版）"]);			//fancyss-full
+													option_dohc_udp_china.push(["group", "360安全DNS"]);					//fancyss-full
+													option_dohc_udp_china.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);	//fancyss-full
+													option_dohc_udp_china.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);	//fancyss-full
+													option_dohc_udp_china.push(["17", "🟠123.125.81.6（联通）"]);			//fancyss-full
+													option_dohc_udp_china.push(["18", "🟠140.207.198.6（联通）"]);			//fancyss-full
+													option_dohc_udp_china.push(["group", "cnnic DNS"]);						//fancyss-full
+													option_dohc_udp_china.push(["19", "⚫1.2.4.8"]);						//fancyss-full
+													option_dohc_udp_china.push(["20", "⚫210.2.4.8"]);						//fancyss-full
+													option_dohc_udp_china.push(["group", "百度DNS"]);						//fancyss-full
+													option_dohc_udp_china.push(["21", "🟠180.76.76.76"]);					//fancyss-full
+													option_dohc_udp_china.push(["group", "教育网DNS"]);						//fancyss-full
+													option_dohc_udp_china.push(["22", "🟠101.6.6.6:5353（清华大学）"]);		//fancyss-full
+													option_dohc_udp_china.push(["23", "⚫58.132.8.1（北京）"]);				//fancyss-full
+													option_dohc_udp_china.push(["24", "⚫101.7.8.9（北京）"]);				//fancyss-full
+													option_dohc_udp_china.push(["group", "自定义DNS"]);						//fancyss-full
+													option_dohc_udp_china.push(["99", "⚪自定义DNS (udp)"]);				//fancyss-full
+													option_dohc_tcp_china = [												//fancyss-full
+																			 ["group", "阿里公共DNS"],						//fancyss-full
+																			 ["3", "🟠223.5.5.5"],							//fancyss-full
+																			 ["4", "🟠223.6.6.6"],							//fancyss-full
+																			 ["group", "DNSPod DNS"],						//fancyss-full
+																			 ["5", "🟠119.29.29.29"],						//fancyss-full
+																			 ["6", "🟠119.28.28.28"],						//fancyss-full
+																			 ["group", "114 DNS"],							//fancyss-full
+																			 ["7", "⚫114.114.114.114"],					//fancyss-full
+																			 ["8", "⚫114.114.115.115"],					//fancyss-full
+																			 ["group", "OneDNS"],							//fancyss-full
+																			 ["10", "🟠52.80.66.66（拦截版）"],				//fancyss-full
+																			 ["12", "🟠52.80.52.52（纯净版）"],				//fancyss-full
+																			 ["group", "360安全DNS"],						//fancyss-full
+																			 ["16", "🟠218.30.118.6（电信/铁通/移动）"],	//fancyss-full
+																			 ["17", "🟠123.125.81.6（联通）"],				//fancyss-full
+																			 ["18", "🟠140.207.198.6（联通）"],				//fancyss-full
+																			 ["group", "教育网DNS"],						//fancyss-full
+																			 ["22", "🟠101.6.6.6:5353（清华大学）"],		//fancyss-full
+																			 ["group", "自定义DNS"],						//fancyss-full
+																			 ["99", "⚪自定义DNS (tcp)"]					//fancyss-full
+																			];												//fancyss-full
+													// 进阶DNS方案3 dohclient 国内 doh
+													option_dohc_doh_china = [												//fancyss-full
+																			 ["1", "🟠阿里公共DNS"],						//fancyss-full
+																			 ["2", "🟠DNSPod公共DNS"],						//fancyss-full
+																			 ["3", "🟠360安全DNS"]							//fancyss-full
+																			];												//fancyss-full
+													// 进阶DNS方案3 dohclient 国外 tcp
+													var option_dohc_tcp_foreign = [											//fancyss-full
+																	   ["1", "Cloudflare [1.1.1.1]"],						//fancyss-full
+																	   ["2", "Cloudflare [1.0.0.1]"],						//fancyss-full
+																	   ["3", "Google [8.8.8.8]"],							//fancyss-full
+																	   ["4", "Google [8.8.4.4]"],							//fancyss-full
+																	   ["5", "quad9 [9.9.9.9]"],							//fancyss-full
+																	   ["6", "OpenDNS [208.67.222.222]"],					//fancyss-full
+																	   ["7", "OpenDNS [208.67.220.220]"],					//fancyss-full
+																	   ["8", "DNS.SB [185.222.222.222]"],					//fancyss-full
+																	   ["9", "DNS.SB [45.11.45.11]"],						//fancyss-full
+																	   ["10", "quad101 [101.101.101.101]"],					//fancyss-full
+																	   ["11", "quad101 [101.102.103.104]"],					//fancyss-full
+																	   ["12", "AdGuard [94.140.14.14]"],					//fancyss-full
+																	   ["13", "AdGuard [94.140.15.15]"],					//fancyss-full
+																	   ["99", "自定义DNS(tcp)"]								//fancyss-full
+																	  ];													//fancyss-full
+													// 进阶DNS方案3 dohclient 国外 doh
+													var option_dohcf = [													//fancyss-full
+																	   ["11", "⚫Cloudflare"],								//fancyss-full
+																	   ["12", "🟠Google"],									//fancyss-full
+																	   ["13", "🟠quad9"],									//fancyss-full
+																	   ["14", "🟡AdGuard"],									//fancyss-full
+																	   ["15", "🟠Quad 101"],								//fancyss-full
+																	   ["16", "⚫OpenDNS"],									//fancyss-full
+																	   ["17", "⚫DNS.SB"]									//fancyss-full
+																	  ];													//fancyss-full
+													var option_cache_timeout = [["0", "从不过期"], ["1", "根据ttl"], ["1800", "半小时"], ["3600", "一小时"], ["7200", "两小时"], ["43200", "12小时"], ["86400", "24小时"]];  //fancyss-full
+													// 基础DNS方案：中国dns
+													var option_chndns = [];
+													if(isp_dns_1 && isp_dns_2){
+														option_chndns.push(["group", "运营商DNS"]);
+														option_chndns.push(["1", isp_dns_1]);
+														option_chndns.push(["2", isp_dns_2]);
+													}else if(isp_dns_1 && !isp_dns_2){
+														option_chndns.push(["group", "运营商DNS"]);
+														option_chndns.push(["1", isp_dns_1]);
+													}
+													option_chndns.push(["group", "阿里公共DNS"]);
+													option_chndns.push(["3", "223.5.5.5"]);
+													option_chndns.push(["4", "223.6.6.6"]);
+													option_chndns.push(["group", "DNSPod DNS"]);
+													option_chndns.push(["5", "119.29.29.29"]);
+													option_chndns.push(["6", "119.28.28.28"]);
+													option_chndns.push(["group", "114 DNS"]);
+													option_chndns.push(["7", "114.114.114.114"]);
+													option_chndns.push(["8", "114.114.115.115"]);
+													option_chndns.push(["group", "OneDNS"]);
+													option_chndns.push(["9", "117.50.11.11（拦截版）"]);
+													option_chndns.push(["10", "52.80.66.66（拦截版）"]);
+													option_chndns.push(["11", "117.50.10.10（纯净版）"]);
+													option_chndns.push(["12", "52.80.52.52（纯净版）"]);
+													option_chndns.push(["13", "117.50.60.30（家庭版）"]);
+													option_chndns.push(["14", "52.80.60.30（家庭版）"]);
+													option_chndns.push(["group", "360安全DNS"]);
+													option_chndns.push(["15", "101.226.4.6（电信/铁通/移动）"]);
+													option_chndns.push(["16", "218.30.118.6（电信/铁通/移动）"]);
+													option_chndns.push(["17", "123.125.81.6（联通）"]);
+													option_chndns.push(["18", "140.207.198.6（联通）"]);
+													option_chndns.push(["group", "cnnic DNS"]);
+													option_chndns.push(["19", "1.2.4.8"]);
+													option_chndns.push(["20", "210.2.4.8"]);
+													option_chndns.push(["group", "百度DNS"]);
+													option_chndns.push(["21", "180.76.76.76"]);
+													option_chndns.push(["group", "教育网DNS"]);
+													option_chndns.push(["22", "101.6.6.6:5353（清华大学）"]);
+													option_chndns.push(["23", "58.132.8.1（北京）"]);
+													option_chndns.push(["24", "101.7.8.9（北京）"]);
+													option_chndns.push(["group", "SmartDNS"]);										//fancyss-full
+													option_chndns.push(["98", "SmartDNS (UDP)"]);									//fancyss-full
+													option_chndns.push(["group", "自定义DNS"]);
+													option_chndns.push(["99", "自定义DNS (UDP)"]);
+													// 基础DNS方案：外国dns
+													var option_dnsf = [["3", "🚀 dns2socks"],
+																	   ["4", "🚀 ss-tunnel"],										//fancyss-full
+																	   ["7", "🚀 v2ray/xray_dns"],
+																	   ["9", "🌏 smartdns"],										//fancyss-full
+																	   ["8", "🌏 直连（udp）"]
+																	  ];
+													// 节点域名解析DNS方案
+													var option_dnsresolv = [["0", "udp查询"],
+																			["1", "tcp查询"],
+																			["2", "smartdns（DoH+DoT）"],							//fancyss-full
+																			["3", "dohclient（DoH）"],								//fancyss-full
+																		   ];
+													// 节点域名解析DNS方案： udp选项
+													var option_udp_resv = [
+																		   ["group", "自动选取"],
+																		   ["0", "自动选取模式（国内 + 国外）"],
+																		   ["-1", "自动选取模式（仅国内）"],
+																		   ["-2", "自动选取模式（仅国外）"],
+																		   ["group", "国内DNS"],
+																		   ["1", "阿里DNS【223.5.5.5】"],
+																		   ["2", "DNSPod DNS【119.29.29.29】"],
+																		   ["3", "114DNS【114.114.114.114】"],
+																		   ["4", "OneDNS【52.80.66.66】"],
+																		   ["5", "360安全DNS 电信/铁通/移动【123.125.81.6】"],
+																		   ["6", "360安全DNS 联通【140.207.198.6】"],
+																		   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
+																		   ["8", "百度DNS【180.76.76.76】"],
+																		   ["group", "国外DNS"],
+																		   ["11", "Google DNS【8.8.8.8】"],
+																		   ["12", "CloudFlare DNS【1.1.1.1】"],
+																		   ["13", "Quad9 Secured【9.9.9.11】"],
+																		   ["14", "OpenDNS【208.67.222.222】"],
+																		   ["15", "DNS.SB【185.222.222.222】"],
+																		   ["16", "AdGuard【94.140.14.14】"],
+																		   ["17", "Quad101【101.101.101.101】"],
+																		   ["18", "CleanBrowsing【185.228.168.9】"],
+																		   ["group", "自定义DNS"],
+																		   ["99", "自定义DNS (udp)"],
+																		  ];
+													// 节点域名解析DNS方案： tcp选项
+													var option_tcp_resv = [
+																		   ["group", "自动选取"],
+																		   ["0", "自动选取模式（国内 + 国外）"],
+																		   ["-1", "自动选取模式（仅国内）"],
+																		   ["-2", "自动选取模式（仅国外）"],
+																		   ["group", "国内DNS"],
+																		   ["1", "阿里DNS【223.5.5.5】"],
+																		   ["2", "DNSPod DNS【119.29.29.29】"],
+																		   ["3", "114DNS【114.114.114.114】"],
+																		   ["4", "OneDNS【52.80.66.66】"],
+																		   ["5", "360安全DNS 电信/铁通/移动【123.125.81.6】"],
+																		   ["6", "360安全DNS 联通【140.207.198.6】"],
+																		   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
+																		   ["group", "国外DNS"],
+																		   ["11", "Google DNS【8.8.8.8】"],
+																		   ["12", "CloudFlare DNS【1.1.1.1】"],
+																		   ["13", "Quad9 Secured【9.9.9.11】"],
+																		   ["14", "OpenDNS【208.67.222.222】"],
+																		   ["15", "DNS.SB【185.222.222.222】"],
+																		   ["16", "AdGuard【94.140.14.14】"],
+																		   ["17", "Quad101【101.101.101.101】"],
+																		   ["group", "自定义DNS"],
+																		   ["99", "自定义DNS (tcp)"],
+																		  ];
+													// 节点域名解析DNS方案： dohclient选项
+													option_dohc_doh_resv = [							//fancyss-full
+																			["group", "国外DoH DNS"],	//fancyss-full
+																			["1", "Cloudflare"],		//fancyss-full
+																			["2", "OpenDNS"],			//fancyss-full
+																			["3", "DNS.SB"],			//fancyss-full
+																			["4", "cleanbrowsing"]		//fancyss-full
+																			["group", "国内DoH DNS"],	//fancyss-full
+																			["14", "阿里公共DNS"],		//fancyss-full
+																			["15", "DNSPod公共DNS"],	//fancyss-full
+																			["16", "360安全DNS"],		//fancyss-full
+																		   ]; 							//fancyss-full
+													var option_dig = [
+																	  ["group", "国内域名"],
+																	  ["www.baidu.com", "www.baidu.com"],
+																	  ["www.sina.com.cn", "www.sina.com.cn"],
+																	  ["www.sohu.com", "www.sohu.com"],
+																	  ["www.163.com", "www.163.com"],
+																	  ["www.qq.com", "www.qq.com"],
+																	  ["www.taobao.com", "www.taobao.com"],
+																	  ["www.jd.com", "www.jd.com"],
+																	  ["www.bilibili.com", "www.bilibili.com"],
+																	  ["www.bing.com", "www.bing.com"],
+																	  ["group", "国外域名"],
+																	  ["www.google.com", "www.google.com"],
+																	  ["www.google.com.hk", "www.google.com.hk"],
+																	  ["www.youtube.com", "www.youtube.com"],
+																	  ["www.facebook.com", "www.facebook.com"],
+																	  ["www.twitter.com", "www.twitter.com"],
+																	  ["www.wikipedia.org", "www.wikipedia.org"],
+																	  ["www.instagram.com", "www.instagram.com"],
+																	  ["www.netflix.com", "www.netflix.com"],
+																	  ["www.reddit.com", "www.reddit.com"],
+																	  ["www.github.com", "www.github.com"],
+																	 ];
 													var ph1 = "需端口号如：8.8.8.8:53"
 													var ph2 = "需端口号如：8.8.8.8#53"
 													var ph3 = "# 填入自定义的dnsmasq设置，一行一个&#10;# 例如hosts设置：&#10;address=/weibo.com/2.2.2.2&#10;# 防DNS劫持设置：&#10;bogus-nxdomain=220.250.64.18"
 													$('#table_dns').forms([
-														{ title: '选择中国DNS', multi: [
-															{ id: 'ss_dns_china', type:'select', func:'u', options:option_dnsc, style:'width:auto;', value:'11'},
-															{ id: 'ss_dns_china_user', type: 'text', ph:'114.114.114.114' }
+														{ title: '<em>DNS方案设置</em>', thtd:1 , multi: [
+															{ id:'ss_basic_olddns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(136)"><font color="#ffcc00">基础</font></a>', value: 0},
+															{ id:'ss_basic_advdns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(137)"><font color="#ffcc00">进阶</font></a>', value: 1},
 														]},
-														{ title: '选择外国DNS', hint:'26', rid:'dns_plan_foreign', multi: [
+														{ title: '选择DNS主方案', class:'new_dns_main', multi: [
+															{ id: 'ss_dns_plan', type:'select', func:'u', options:option_dnsp, style:'width:209px;', value:'1'},
+														]},
+														// new_dns: chinadns-ng
+														{ title: '&nbsp;&nbsp;*选择中国DNS-1 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
+															{ id: 'ss_basic_chng_china_1_enable', type:'checkbox', func:'u', value:true},
+															{ id: 'ss_basic_chng_china_1_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'1'},
+															{ id: 'ss_basic_chng_china_1_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:auto;', value:'1'},
+															{ id: 'ss_basic_chng_china_1_udp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+															{ id: 'ss_basic_chng_china_1_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'1'},
+															{ id: 'ss_basic_chng_china_1_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+															{ id: 'ss_basic_chng_china_1_doh', type:'select', func:'u', options:option_dnsngc_doh, style:'width:200px;', value:'1'},																					//fancyss-full
+															{ suffix:'&nbsp;&nbsp;'},
+															{ suffix:'<a type="button" id="edit_smartdns_conf_10" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(10)">编辑smartdns配置</a>'},														//fancyss-full
+															{ suffix:'<a type="button" id="edit_smartdns_conf_11" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(11)">编辑smartdns配置</a>'},														//fancyss-full
+															{ suffix:'<a type="button" id="edit_smartdns_conf_12" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(12)">编辑smartdns配置</a>'},														//fancyss-full
+															{ prefix: '<a id="ss_basic_chng_china_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_1_ecs', type: 'checkbox', value:true },
+															{ suffix: '<a type="button" id="dohclient_cache_manage_chn1" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2051">缓存管理</a>' },				//fancyss-full
+														]},
+														{ title: '&nbsp;&nbsp;*选择中国DNS-2 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
+															{ id: 'ss_basic_chng_china_2_enable', type:'checkbox', func:'u', value:true},
+															{ id: 'ss_basic_chng_china_2_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'2'},
+															{ id: 'ss_basic_chng_china_2_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:200px;', value:'5'},
+															{ id: 'ss_basic_chng_china_2_udp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+															{ id: 'ss_basic_chng_china_2_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'5'},
+															{ id: 'ss_basic_chng_china_2_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+															{ id: 'ss_basic_chng_china_2_doh', type:'select', func:'u', options:option_dnsngc_doh, style:'width:200px;', value:'1'},																					//fancyss-full
+															{ suffix:'&nbsp;&nbsp;'},
+															{ suffix:'<a type="button" id="edit_smartdns_conf_13" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(10)">编辑smartdns配置</a>'},														//fancyss-full
+															{ suffix:'<a type="button" id="edit_smartdns_conf_14" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(11)">编辑smartdns配置</a>'},														//fancyss-full
+															{ suffix:'<a type="button" id="edit_smartdns_conf_15" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(12)">编辑smartdns配置</a>'},														//fancyss-full
+															{ prefix: '<a id="ss_basic_chng_china_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_2_ecs', type: 'checkbox', value:true },
+															{ suffix: '<a type="button" id="dohclient_cache_manage_chn2" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2052">缓存管理</a>' },				//fancyss-full
+														]},
+														{ title: '&nbsp;&nbsp;*选择可信DNS-1 <font color="#FF0066">(代理) 🚀</font>', hint:'134', class:'new_dns chng', rid:'dns_plan_foreign_1', multi: [
+															{ id: 'ss_basic_chng_trust_1_enable', type:'checkbox', func:'u', value:true},
+															{ id: 'ss_basic_chng_trust_1_opt', type:'select', func:'u', options:option_dnsngf_1_opt, style:'width:50px;', value:'2'},
+															{ id: 'ss_basic_chng_trust_1_opt_udp_val', type:'select', func:'u', options:option_dnsngf_1_val_udp, style:'width:auto;', value:'1'},
+															{ id: 'ss_basic_chng_trust_1_opt_udp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+															{ id: 'ss_basic_chng_trust_1_opt_tcp_val', type:'select', func:'u', options:option_dnsngf_1_val_tcp, style:'width:auto;', value:'1'},
+															{ id: 'ss_basic_chng_trust_1_opt_tcp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+															{ id: 'ss_basic_chng_trust_1_opt_doh_val', type:'select', func:'u', options:option_dnsngf_1_val_doh, style:'width:auto;', value:'12'},																		//fancyss-full
+															{ suffix: '&nbsp;&nbsp;'},
+															{ prefix: '<a id="ss_basic_chng_trust_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(131)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_1_ecs', type: 'checkbox', value:true },
+															{ suffix: '<a type="button" id="dohclient_cache_manage_frn1" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2055">缓存管理</a>' },				//fancyss-full
+														]},
+														{ title: '&nbsp;&nbsp;*选择可信DNS-2 <em>(直连) 🌏</em>', class:'new_dns chng', hint:'135', rid:'dns_plan_foreign_2', multi: [
+															{ id: 'ss_basic_chng_trust_2_enable', type:'checkbox', func:'u', value:false},
+															{ id: 'ss_basic_chng_trust_2_opt', type:'select', func:'u', options:option_dnsngf_2_opt, style:'width:50px;', value:'0'},
+															{ id: 'ss_basic_chng_trust_2_opt_udp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
+															{ id: 'ss_basic_chng_trust_2_opt_tcp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
+															{ id: 'ss_basic_chng_trust_2_opt_doh', type:'select', func:'u', options:option_dnsngf_2_val, style:'width:auto;', value:'2'},																				//fancyss-full
+															{ suffix: '&nbsp;&nbsp;'},
+															{ suffix: '<a type="button" id="edit_smartdns_conf_30" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(30)">编辑smartdns配置</a>'},														//fancyss-full
+															{ prefix: '<a id="ss_basic_chng_trust_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(132)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_2_ecs', type: 'checkbox', value:true },
+															{ suffix: '<a type="button" id="dohclient_cache_manage_frn2" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2056">缓存管理</a>' },				//fancyss-full
+															//{ suffix: '<span id="ss_basic_chng_direct_user_note"><br />⚠️直连情况下可能存在DNS污染，请自行解决！</span>'},
+														]},	
+														{ title: '&nbsp;&nbsp;*丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', id:'ss_basic_chng_no_ipv6', type:'checkbox', value:true},
+														{ title: '&nbsp;&nbsp;*发送重复DNS查询包（--repeat-times）', class:'new_dns chng', id:'ss_basic_chng_repeat_times', type:'text', value: '2'},
+														// new_dns: smartdns
+														{ title: '&nbsp;&nbsp;*选择smartdns配置', class:'new_dns smrt', multi: [																						//fancyss-full
+															{ id: 'ss_basic_smrt', type:'select', func:'u', options:option_smrt, style:'width:260px;', value:'1'},														//fancyss-full
+															{ suffix: '&nbsp;&nbsp;'},																																	//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_51" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(51)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_52" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(52)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_53" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(53)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_54" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(54)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_55" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(55)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_56" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(56)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_57" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(57)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_58" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(58)">编辑smartdns配置</a>'},		//fancyss-full
+															{ suffix: '<a type="button" id="edit_smartdns_conf_59" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(59)">编辑smartdns配置</a>'},		//fancyss-full
+														]},																																								//fancyss-full
+														// new_dns: dohclient
+														{ title: '&nbsp;&nbsp;*选择国内DNS', class:'new_dns dohc', hint:'122', multi: [																																					//fancyss-full
+															{ id: 'ss_basic_dohc_sel_china', type:'select', func:'u', options:option_protc_sel_chn, style:'width:50px;', value:'3'},																									//fancyss-full
+															{ id: 'ss_basic_dohc_udp_china', type:'select', func:'u', options:option_dnsngc_udp, style:'width:190px;', value:'3'},																										//fancyss-full
+															{ id: 'ss_basic_dohc_udp_china_user', type: 'text', style:'width:110px;', ph:'114.114.114.114' },																															//fancyss-full
+															{ id: 'ss_basic_dohc_tcp_china', type:'select', func:'u', options:option_dohc_tcp_china, style:'width:190px;', value:'1'},																									//fancyss-full
+															{ id: 'ss_basic_dohc_tcp_china_user', type: 'text', style:'width:110px;', ph:'114.114.114.114' },																															//fancyss-full
+															{ id: 'ss_basic_dohc_doh_china', type:'select', func:'u', options:option_dohc_doh_china, style:'width:190px;', value:'1'},																									//fancyss-full
+															{ prefix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(123)"><font color="#ffcc00"><u>ECS</u></font></a>', id: 'ss_basic_dohc_ecs_china', type: 'checkbox', value:true },						//fancyss-full
+														]},																																																								//fancyss-full
+														{ title: '&nbsp;&nbsp;*选择国外DNS', class:'new_dns dohc', hint:'124', multi: [																																					//fancyss-full
+															{ id: 'ss_basic_dohc_sel_foreign', type:'select', func:'u', options:option_protc_sel_frn, style:'width:50px;', value:'3'},																									//fancyss-full
+															{ id: 'ss_basic_dohc_tcp_foreign', type:'select', func:'u', options:option_dohc_tcp_foreign, style:'width:190px;', value:'3'},																								//fancyss-full
+															{ id: 'ss_basic_dohc_tcp_foreign_user', type: 'text', style:'width:110px;', ph:'8.8.8.8' },																																	//fancyss-full
+															{ id: 'ss_basic_dohc_doh_foreign', type:'select', func:'u', options:option_dohcf, style:'width:190px;', value:'12'},																											//fancyss-full
+															{ prefix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(125)"><font color="#ffcc00"><u>ECS</u></font></a>', id: 'ss_basic_dohc_ecs_foreign', type: 'checkbox', value:true },					//fancyss-full
+															{ prefix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(126)"><font color="#ffcc00"><u>Proxy</u></font></a>', id: 'ss_basic_dohc_proxy', type: 'checkbox', value:true },						//fancyss-full
+														]},																																																								//fancyss-full
+														{ title: '&nbsp;&nbsp;*缓存管理', class:'new_dns dohc', multi: [																																								//fancyss-full
+															{ prefix: '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(127)"><font color="#ffcc00"><u>缓存时长</u>：</font></a>' },																		//fancyss-full
+															{ id: 'ss_basic_dohc_cache_timeout', type:'select', func:'u', options:option_cache_timeout, style:'width:100px;', value:'1'},																								//fancyss-full
+															{ suffix: '&nbsp;&nbsp;<a type="button" id="dohclient_cache_manage_dohc" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':7913">缓存管理</a>' },					//fancyss-full
+															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="remove_doh_cache(1)">清空缓存</a>&nbsp;&nbsp;'},																						//fancyss-full
+															{ prefix: '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(128)"><font color="#ffcc00"><u>缓存持久化</u></font></a>', id: 'ss_basic_dohc_cache_reuse', type: 'checkbox', value:false },		//fancyss-full
+														]},																																																								//fancyss-full
+														// old_dns	
+														{ title: '选择中国DNS', class:'old_dns', multi: [
+															{ id: 'ss_china_dns', type:'select', func:'u', options:option_chndns, style:'width:auto;', value:'3'},
+															{ id: 'ss_china_dns_user', type: 'text', ph:'114.114.114.114' }
+														]},
+														{ title: '选择外国DNS（🌏直连 | 🚀代理） ', class:'old_dns', hint:'26', rid:'dns_plan_foreign', multi: [
 															{ id: 'ss_foreign_dns', type:'select', func:'u', options:option_dnsf, style:'width:auto;'},
-															{ id: 'ss_dns2socks_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_chinadns1_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
-															{ id: 'ss_chinadns_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
-															{ id: 'ss_chinadnsng_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },
+															{ id: 'ss_dns2socks_user', type: 'text', style: 'width:auto;', value:'8.8.8.8:53', ph:ph1 },
 															{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
 															{ id: 'ss_direct_user', type: 'text', value:'8.8.8.8#53', ph:ph2 },
 															{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},	//fancyss-full
-															{ prefix: '<span id="ss_direct_user_note">&nbsp;&nbsp;请自行解决DNS污染问题</span>'},
-															{ prefix: '<span id="ss_disable_aaaa_note">&nbsp;&nbsp;丢弃AAAA记录（禁止解析到ipv6地址）</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
-															{ suffix: '<span id="ss_doh_note">&nbsp;&nbsp;DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~</span>' },
+															{ suffix: '<span id="ss_disable_aaaa_note">丢弃AAAA记录</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
+															{ suffix: '<span id="ss_doh_note">&nbsp;&nbsp;DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~</span>' },  //fancyss-full
 															{ suffix: '<span id="ss_v2_note"></span>' },
 														]},
-														{ title: '选择外国DNS', rid:'dns_plan_foreign_game2', multi: [																		//fancyss-koolgame
-															{ id: 'ss_game2_dns_foreign', type:'select', func:'u', disabled:'1', options:[["1", "koolgame内置"]], style:'width:auto;'},		//fancyss-koolgame
-															{ id: 'ss_game2_dns2ss_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },														//fancyss-koolgame
-															{ suffix: '<br/>&nbsp;<span id="dns_plan_foreign0">默认使用koolgame内置的DNS2SS域名解析</span>' },								//fancyss-koolgame
-														]},																																	//fancyss-koolgame
-														{ title: 'DNS劫持（原chromecast功能）', id:'ss_basic_dns_hijack', type:'checkbox', func:'v', hint:'106', value:true},
-														{ title: '重启dnsmasq', rid: 'ss_sub_save_only', multi: [
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
+														{ title: '<em>其它DNS相关设置</em>', th:'2'},
+														{ title: 'DNS重定向', id:'ss_basic_dns_hijack', type:'checkbox', hint:'106', value:true},
+														{ title: 'DNS解析测试', rid: 'ss_dns_test', multi: [
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(1)">测试cdn</a>&nbsp;&nbsp;'},
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(2)">测试apple china</a>&nbsp;&nbsp;'},
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(3)">测试google china</a>&nbsp;&nbsp;'},
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(4)">测试gfwlist</a>&nbsp;&nbsp;'},
+															//{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(5)">测试cdn-china</a>&nbsp;&nbsp;'},
 														]},
-														{ title: '节点域名解析DNS服务器', hint:'107', multi: [
-															{ id: 'ss_basic_server_resolver', type:'select', func:'u', options:option_dnsr, style:'width:auto;', value:'13'},
-															{ id: 'ss_basic_server_resolver_user', type: 'text'},
+														{ title: 'DNS解析测试(dig)', rid: 'ss_dig_test', multi: [
+															{ id: 'ss_basic_dig_opt', type:'select', func:'u', options:option_dig, style:'width:240px;', value:'1'},
+															{ suffix: '&nbsp;&nbsp;' },
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(6)">dig</a>&nbsp;&nbsp;'},
+														]},
+														{ title: '重启dnsmasq', rid: 'ss_dnsmasq_restart', multi: [	
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
 														]},	
+														// server dns resolver
+														{ title: '节点域名解析DNS方案', hint:'107', multi: [
+															{ id: 'ss_basic_s_resolver', type:'select', func:'u', options:option_dnsresolv, style:'width:140px;', value:'0'},
+															{ id: 'ss_basic_s_resolver_udp', type:'select', func:'u', options:option_udp_resv, style:'width:160px;', value:'0'},
+															{ id: 'ss_basic_s_resolver_udp_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
+															{ id: 'ss_basic_s_resolver_tcp', type:'select', func:'u', options:option_tcp_resv, style:'width:160px;', value:'0'},
+															{ id: 'ss_basic_s_resolver_tcp_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
+															{ id: 'ss_basic_s_resolver_doh', type:'select', func:'u', options:option_dohc_doh_resv, style:'width:160px;', value:'3'},								//fancyss-full
+															{ suffix: '&nbsp;&nbsp;' },
+															{ suffix: '<a type="button" id="edit_smartdns_conf_40" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(40)">编辑smartdns配置</a>'},	//fancyss-full
+														]},
 														{ title: '自定义dnsmasq', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
 													]);
+													var curr_host = window.location.hostname;												//fancyss-full
+													$("#dohclient_cache_manage_chn1").attr("href", "http://" + curr_host + ":2051");		//fancyss-full
+													$("#dohclient_cache_manage_chn2").attr("href", "http://" + curr_host + ":2052");		//fancyss-full
+													$("#dohclient_cache_manage_frn1").attr("href", "http://" + curr_host + ":2055");		//fancyss-full
+													$("#dohclient_cache_manage_frn2").attr("href", "http://" + curr_host + ":2056");		//fancyss-full
+													$("#dohclient_cache_manage_dohc").attr("href", "http://" + curr_host + ":7913");		//fancyss-full
 												</script>
 											</table>
 										</div>
@@ -4619,16 +5813,18 @@ function save_failover() {
 															{ id:'ss_basic_rule_update', type:'select', func:'u', style:'width:auto', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
 															{ id:'ss_basic_rule_update_time', type:'select', style:'width:auto', options:option_ruleu, value:'4'},
 															{ suffix: '<a id="update_choose">' },
-															{ suffix: '<input type="checkbox" id="ss_basic_gfwlist_update" title="选择此项应用gfwlist自动更新">gfwlist' },
-															{ suffix: '<input type="checkbox" id="ss_basic_chnroute_update">chnroute' },
-															{ suffix: '<input type="checkbox" id="ss_basic_cdn_update">CDN</a>' },
+															{ suffix: '<input type="checkbox" id="ss_basic_gfwlist_update" title="选择此项应用gfwlist.conf自动更新">gfwlist' },
+															{ suffix: '<input type="checkbox" id="ss_basic_chnroute_update" title="选择此项应用chnroute.txt自动更新">chnroute' },
+															{ suffix: '<input type="checkbox" id="ss_basic_cdn_update" title="选择此项应用cdn.txt自动更新">cdn</a>' },
 															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(1)">保存设置</a>' },
-															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(2)">立即更新</a>' },
+														]},
+														{ title: '规则手动更新', multi: [
+															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(2)">立即更新规则</a>'},
 														]},
 														{ title: '二进制更新', multi: [
-															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},//fancyss-full
-															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
-															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},//fancyss-full
+															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>&nbsp;'},//fancyss-full
+															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>&nbsp;'},
+															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},//fancyss-full
 														]},
 													]);
 												</script>
@@ -4644,12 +5840,12 @@ function save_failover() {
 														_tmp[1] = _i + "点";
 														option_nodeh.push(_tmp);
 													}
-													var ph1 = "此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！&#10;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：&#10;-------------------------------------------------&#10;🚀xx机场 ssr&#10;https://abcd.airport.com/xxx&#10;&#10;🛩️yy机场 ss&#10;https://xyza.com/xxx&#10;-------------------------------------------------";
+													var ph1 = "此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！&#10;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：&#10;-------------------------------------------------&#10;🚀xx机场 ssr&#10;https://abcd.airport.com/xxx&#10;&#10;🛩️yy机场 ss&#10;https://xyza.com/xxx&#10;-------------------------------------------------&#10;填写完成后点击下面的【保存并订阅】按钮开始订阅！";
 													var ph2 = "多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷";
 													var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
 													$('#table_subscribe').forms([
-														{ title: '订阅设置', thead:'1'},
-														{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray</font>', id:'ss_online_links', type:'textarea', hint:'116', rows:'11', ph:ph1},
+														{ title: '节点订阅设置', thead:'1'},
+														{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray/Trojan</font>', id:'ss_online_links', type:'textarea', hint:'116', rows:'12', ph:ph1},
 														
 														{ title: '订阅节点模式设定', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
 														{ title: '订阅节点混淆参数设定（ssr）', multi: [
@@ -4743,9 +5939,9 @@ function save_failover() {
 													$('#table_addons').forms([
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;导出SS配置', hint:'24', multi: [
-															{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_SS_node(1);" value="导出配置">'},
+															{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(1);" value="导出配置">'},
 															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="remove_SS_node();" value="清空配置">'},
-															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_SS_node(2);" value="打包插件">'},//fancyss-full
+															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(2);" value="打包插件">'},
 														]},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;恢复SS配置（支持ss/ssr的json节点）', hint:'24', multi: [
 															{ suffix:'<input style="color:#FFCC00;*color:#000;width: 200px;" id="ss_file" type="file" name="file"/>'},
@@ -4797,6 +5993,7 @@ function save_failover() {
 														]}, 																																						//fancyss-full
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;所有trojan节点强制允许不安全', id:'ss_basic_tjai', help:'120', type:'checkbox', value:false},
+														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;使用旧版本DNS方案', id:'ss_basic_olddns', type:'checkbox', value:false},
 													]);
 												</script> 
 											</table>

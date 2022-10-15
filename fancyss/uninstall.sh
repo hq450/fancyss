@@ -4,7 +4,6 @@
 
 sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
-sleep 1
 
 rm -rf /koolshare/scripts/ss_*
 rm -rf /koolshare/webs/Module_shadowsocks*
@@ -15,15 +14,9 @@ rm -rf /koolshare/bin/rss-redir
 rm -rf /koolshare/bin/rss-tunnel
 rm -rf /koolshare/bin/rss-local
 rm -rf /koolshare/bin/obfs-local
-rm -rf /koolshare/bin/koolgame
-rm -rf /koolshare/bin/pdu
 rm -rf /koolshare/bin/haproxy
-rm -rf /koolshare/bin/dnscrypt-proxy
 rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/kcptun
-rm -rf /koolshare/bin/cdns
-rm -rf /koolshare/bin/chinadns
-rm -rf /koolshare/bin/chinadns1
 rm -rf /koolshare/bin/chinadns-ng
 rm -rf /koolshare/bin/smartdns
 rm -rf /koolshare/bin/resolveip
@@ -34,10 +27,16 @@ rm -rf /koolshare/bin/trojan
 rm -rf /koolshare/bin/xray
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ray-plugin
-rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/httping
 rm -rf /koolshare/bin/haveged
-rm -rf /koolshare/bin/isutf8
+rm -rf /koolshare/bin/naive
+rm -rf /koolshare/bin/ipt2socks
+rm -rf /koolshare/bin/dnsclient
+rm -rf /koolshare/bin/dohclient
+rm -rf /koolshare/bin/dohclient-cache
+rm -rf /koolshare/bin/dns2tcp
+rm -rf /koolshare/bin/dns-ecs-forcer
+rm -rf /koolshare/bin/uredir
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/qrcode.js
@@ -51,11 +50,27 @@ rm -rf /koolshare/ss
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
-# legacy
+# optional file maybe exist should be removed
+rm -rf /koolshare/bin/sslocal
+rm -rf /koolshare/bin/dig
+
+# legacy file should  be removed for sure
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
 rm -rf /koolshare/bin/client_linux_arm*
+rm -rf /koolshare/bin/koolgame
+rm -rf /koolshare/bin/pdu
+rm -rf /koolshare/bin/dnscrypt-proxy
+rm -rf /koolshare/bin/https_dns_proxy
+rm -rf /koolshare/bin/cdns
+rm -rf /koolshare/bin/chinadns
+rm -rf /koolshare/bin/chinadns1
+
+# maybe used by other plugin, do not remove
+# rm -rf /koolshare/bin/sponge >/dev/null 2>&1
+# rm -rf /koolshare/bin/jq >/dev/null 2>&1
+# rm -rf /koolshare/bin/isutf8 >/dev/null 2>&1
 
 dbus remove softcenter_module_shadowsocks_home_url
 dbus remove softcenter_module_shadowsocks_install

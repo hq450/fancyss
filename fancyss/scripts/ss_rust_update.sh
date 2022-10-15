@@ -60,8 +60,7 @@ get_latest_version(){
 failed_warning(){
 	echo_date "获取shadowsocks-rust最新版本信息失败！请检查到你的网络！"
 	echo_date "==================================================================="
-	echo XU6J03M6
-	exit 1
+	return 1
 }
 
 update_now(){
@@ -96,8 +95,7 @@ update_now(){
 		echo_date "使用备用服务器下载..."
 		echo_date "下载失败，请检查你的网络！"
 		echo_date "==================================================================="
-		echo XU6J03M6
-		exit 1
+		return
 	fi
 }
 
@@ -112,8 +110,7 @@ check_md5sum(){
 	else
 		echo_date "校验未通过，可能是下载过程出现了什么问题，请检查你的网络！"
 		echo_date "==================================================================="
-		echo XU6J03M6
-		exit 1
+		return
 	fi
 }
 

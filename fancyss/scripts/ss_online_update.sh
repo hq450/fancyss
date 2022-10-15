@@ -79,6 +79,11 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_trojan_uuid_
 				ssconf_basic_trojan_sni_
 				ssconf_basic_trojan_tfo_
+				ssconf_basic_naive_prot_
+				ssconf_basic_naive_server_
+				ssconf_basic_naive_port_
+				ssconf_basic_naive_user_
+				ssconf_basic_naive_pass_
 				ssconf_basic_type_"
 
 set_lock(){
@@ -2866,7 +2871,7 @@ start_online_update(){
 		echo_date "重新开始订阅！"
 	fi
 
-	remove_node_info
+	#remove_node_info
 
 	# 4. 下载/解析订阅节点
 	local sub_count=0

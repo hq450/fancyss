@@ -1,0 +1,85 @@
+<html>
+	<head>
+		<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=" />
+		<title>Cache Manager - dohclient</title>
+		<link rel="stylesheet" href="css/main.css" />
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+		<script src="js/dohclient.js"></script>
+		<script src="js/main.js"></script>
+	</head>
+	<body>
+		<div>
+			<h2>Cache Manager</h2>
+		</div>
+		<div>
+			<select id="txType">
+				<option value="A" selected>A</option>
+				<option value="AAAA">AAAA</option>
+			</select>
+			<select id="txClass">
+				<option value="IN" selected>IN</option>
+				<option value="CS">CS</option>
+				<option value="CH">CH</option>
+				<option value="HS">HS</option>
+			</select>
+			<input id="txDomain" type="text" placeholder="Domain Name" value="" />
+			<button id="btnGet" type="button">FIND</button>
+		</div>
+		<div>
+			<input id="txDomain2" type="text" placeholder="Domain Name" value="" />
+			<select id="txType2">
+				<option value="A" selected>A</option>
+				<option value="AAAA">AAAA</option>
+			</select>
+			<input id="txIP" name="txIP" type="text" placeholder="IPv4 or IPv6" value="" />
+			<input id="txTTL" name="txTTL" type="text" placeholder="TTL" value="" />
+			<button id="btnPut" type="button">ADD/EDIT</button>
+		</div>
+		<div>
+			<input id="txLoadFile" type="text" placeholder="File Full Path" value="" />
+			<input id="chkOverride" type="checkbox" value="1" />
+			<label for="chkOverride">Override</label>
+			<button id="btnLoadFrom" type="button">LOAD FROM</button>
+		</div>
+		<div>
+			<input id="txSaveFile" type="text" placeholder="File Full Path" value="" />
+			<button id="btnSaveTo" type="button">SAVE TO</button>
+		</div>
+		<div>
+			<input id="txKeyword" type="text" placeholder="Keyword" value="" />
+			<button id="btnListAll" type="button">SEARCH</button>
+		</div>
+		<div>
+			<table id="tbList">
+				<thead>
+					<tr>
+						<th></th>
+						<th>Key</th>
+						<th>Answers</th>
+						<th><a data-action="refresh" class="refresh-page" title="Refresh" href="javascript: void(0);"><img class="refresh-img" src="img/refresh.svg" /></a></th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td colspan="4">No Data</td>
+					</tr>
+				</tbody>
+				<tfoot>
+					<tr>
+						<td colspan="4">
+							<span class="offset-limit"></span>
+							<a data-action="prev-page" class="prev-page" title="Previous Page" href="javascript: void(0);">&lt;&lt;</a>
+							<a data-action="next-page" class="next-page" title="Next Page" href="javascript: void(0);">&gt;&gt;</a>
+						</td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+		<div id="loading" class="loading">
+			<div>
+				<img class="loading-img" src="img/loading.svg" />
+				<span id="loading-message" class="loading-message">message...</span>
+			</div>
+		</div>
+	</body>
+</html>

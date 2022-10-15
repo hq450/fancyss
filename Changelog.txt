@@ -1,5 +1,73 @@
 fancyss Changelog
 ===========================================
+3.0.4
+   - note	更新简要：本次更新主要针对DNS部分，同时添加了NaïveProxy，移除了koolgame支持，也有主脚本的一些优化，能记起来的更新都写在下面：
+       		对DNS部分进行更新的一个重要原因就是现有的很多方案，比如chinadns2、https_dns_proxy已经无法运作
+       		cdns、chinadns-1的解析效果又非常一般。 目前能用的最好的DNS分流方案就是chinadns-ng了
+       		因此将chinadns-ng的功能进行了丰富，再加上smartdns和新增的dohclient，一起作为进阶DNS方案。
+       		第二个原因就是一个在高校的朋友使用fancyss插件，国内总是出现×，经排查是因为校园网对udp的限制直接导致国内DNS出现了问题
+       		然后将国内DNS请求添加了tcp和DoH协议支持，解决了这个问题。
+       		第三个原因就是一个朋友给我一个自己搭建的xray节点测试，结果这个服务器不知道什么原因不支持udp，且封了包括53在内的很多端口
+       		这直接导致了udp全部端口和tcp 53端口的查询都不行，除非用tcp非53端口。这个情况下还想用经过代理节点进行查询，最后通过引入dohclient，经sock5代理进行DoH协议查询，解决了此问题。
+       		后来在前面的基础上就不断就行修改完善，比如添加ECS支持等，在三个月期间断断续续进行了修改后，形成了现在的样子。
+   - note	插件新增功能多数地方都写了较为详细的说明，请点击相应文字标题即可看到
+       		----------------------------------------------------------------------------------------------------------
+   - add	[插件开启前检测]: 检测网络连通性		（没有网络的情况下自然是不允许开启科学上网插件的）
+   - add	[插件开启前检测]: 检测路由时间是否正确	（因为部分代理协议要求本地时间和服务器时间一致才能工作）
+   - add	[插件开启前检测]: 检测公网出口IPV4地址	（检测是否经过多重代理）
+   - add	[插件开启前检测]: 检测WAN口IPV4地址		（对比公网出口IPV4地址，可得知是路由否为公网IP）
+   - add	[插件开启后检测]: 检测国内DNS可用性		（依次用主流国内网站：百度，淘宝，新浪，京东，腾讯去做检测）
+   - add	[插件开启后检测]: 检测国外DNS可用性		（会检测国外直连DNS可用性和代理DNS可用性）
+   - add	[插件开启后检测]: 检测代理出口IPV4地址	（用于EDNS，特别对于直连解析，加上EDNS后能得到更好的解析效果）
+   - note	以上检测结果经过一些对比，还能得知是否经过多重代理，代理是否为国内中转机场等...
+   - note	科学上网的前提是畅通的本地网络和可用的代理节点，所以在插件开启前后进行一些检测，能及时对插件的运行方式进行调整
+       		以避免因插件开启后，但是代理不通/DNS失效等原因，对本地非代理网络也造成影响！
+       		比如如果检测到经代理的DNS不通，代理出口IPV4地址也无法检测，基本可以判定节点不通！此时应该关闭插件相关的dns，iptables设定，以免影响本地网络。
+       		----------------------------------------------------------------------------------------------------------
+   - update	大陆IPV4地址段chnroute.txt源从ipip更换为misakaio：https://github.com/misakaio/chnroutes2
+   - update	更新dns2socks到V2.1，新增EDNS SUB CLIENT(ECS)支持
+   - update	更新v2ray二进制到v1.6.0
+   - update	更新smartdns二进制（commit 9fdf53b）到最新，现在smartdns为自己编译，以减小体积
+   - add	添加二进制dnsclient，用于替换nslookup进行节点域名解析和判断DNS工作状态。（https://github.com/atsheehan/dnsclient）
+   - add	添加二进制dohclient，类似于ChinaDNS，不过使用 DoH 作为上游服务器。（https://github.com/GangZhuo/dohclient）
+   - add	添加二进制dohclient-cache，用于管理dohclient的DNS缓存记录。（https://github.com/GangZhuo/dohclient）
+   - add	添加二进制dns2tcp，用于将 DNS 查询从 UDP 模式转换为 TCP 模式。（https://github.com/zfl9/dns2tcp）
+   - add	添加二进制dns-ecs-forcer，用于将 DNS 请求附加上ECS信息。（https://github.com/rampageX/DEF）
+   - add	添加二进制uredir，针对没有自带socat的机型，用于方便的对udp协议包进行端口转发。（https://github.com/troglobit/uredir）
+   - add	节点域名解析新增smartdns和dohclient	（针对近期出现较多的机场节点域名污染问题）
+       		1. smartdns能通过多个直连的dot和doh上游，解析代理服务器域名
+       		2. dohclient能通过直连doh上游，解析代理服务器域名
+       		----------------------------------------------------------------------------------------------------------
+   - add	新增进阶DNS方案，默认开启。如需使用以前的DNS方案，请在【附加功能】处切换
+       		进阶DNS方案不再使用dnsmasq来加载gfwlit和国内域名cdn.txt，而是使用dnsmasq上游软件进行分流
+       		进阶DNS方案提供了更加丰富的选项，对于smartdns还能自由编辑其配置文件，dohclient可以方便的编辑其DNS缓存
+       		进阶DNS方案1：chinadns-ng，可定义2个国内上游和2个国外上游，默认国外上游为dns2socks[经代理]
+       		进阶DNS方案2：smartdns，可定义多个国内和国外上游，默认国外上游为dot + doh[直连]
+       		进阶dns方案3：dohclient，支持chnroute分流，支持ECS，支持DOH dns服务器[直连]
+       		进阶DNS方案提供了插件预设值的方案，你也可以根据自己的需求来更改配置，达到自己的目的
+       		比如：禁止国外ipv6解析，但允许国内ipv6解析。可以使用chinands-ng方案，配置国外上游为smartdns，再编辑smartdns配置文件使其丢弃国外AAAA记录。
+   - add	新增进阶DNS解析测试，可以直观的了解到当前DNS方案的大致解析效果
+   - add	新增进阶DNS解析测试(dig)，可以方便的知道在本插件选定的DNS方案下，域名解析的ipv4结果，解析结果是否带ECS等
+       		----------------------------------------------------------------------------------------------------------
+   - del	移除一些已经失效，或者不是特别好的DNS解析方案，具体如下：
+   - del	移除cdns方案及其二进制程序
+   - del	移除chinadns-1方案及其二进制程序
+   - del	移除chinadns-2方案及其二进制程序
+   - del	移除https_dns_proxy方案及其二进制程序
+       		----------------------------------------------------------------------------------------------------------
+   - add	添加二进制naive并添加NaïveProxy支持。注意1：NaïveProxy不支持udp；注意2：lite包暂未提供NaïveProxy支持
+   - add	添加二进制ipt2socks，用于NaïveProxy的socks5代理和透明代理的转换
+       		----------------------------------------------------------------------------------------------------------
+   - update	现在插件如果后台主进程ssconfig.sh卡死，可以通过关闭插件解除了
+   - update	如果ssconfig.sh正在运行，再次点击【保存&应用】，日志会切换到正在运行的日志
+   - update	现在xray json模式下可以支持shadowsocks节点的运行，包括shadowsocks-2022加密方式。
+   - update	现在节点ping功能默认关闭，如有需要请自行开启。
+   - update	现在点击分流检测按钮会打开https://ip.skk.moe/新标签页
+   - update	重新优化编译了hnd包的ss和ssr相关二进制，进一步降低二进制大小，现在hnd_lite版本安装包只有6.21MB！
+   - update	更新了详细状态显示的信息，现在可以显示更多信息
+   - fix	在线订阅：修复了长期开自动订阅后发现订阅节点全部消失的问题
+   - fix	修复了很多脚本也页面上的一次错误
+       			
 3.0.3
    - fix	Shadowsocks-rust在重启或IP地址更换后无法正常工作 #32846
    - fix	修复节点域名解析服务器cloudflare dns错误的问题

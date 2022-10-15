@@ -5,12 +5,14 @@
 
 ## 插件特色
 
-- 多客户端支持：Shadowsocks、ShadowsocksR、KoolGame、V2ray、Xray、Trojan
+- 多客户端支持：Shadowsocks、ShadowsocksR、V2ray、Xray、Trojan、NaïveProxy
 - shadowsocks支持SIP003插件：simple-obfs和v2ray-plugin；V2ray和Xray支持多种协议配置
 - 多种模式支持：gfwlist模式、大陆白名单、游戏模式、全局模式、回国模式
+- 提供多种现成的DNS方案，并且可以自由方便的进行DNS方案自定义配置
 - 支持SS/SSR/V2ray/Xray/Trojan节点的在线订阅，支持节点生成二维码用以分享
 - 故障转移、主备切换、负载均衡、定时重启、定时订阅、规则更新、二进制更新
 - 支持kcptun、udpspeeder、udp2raw，可以实现代理加速，游戏加速，应对丢包等
+- 同时提供full版本和lite版本，hnd_lite版本安装后占用不到8MB的空间，适合小jffs机型
 - armv8机型支持tcp fast open和ss/ssr/trojan多核心运行
 
 ## 支持机型/固件
@@ -59,39 +61,31 @@
 | [ZenWiFi_Pro_XT12](https://www.koolcenter.com/posts/133)     | 官改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd     |
 | [ZenWiFi_Pro_XT12](https://www.koolcenter.com/posts/149)     | 梅改 | 5.04axhnd.675x | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd     |
 | [TUF-AX3000_V2](https://www.koolcenter.com/posts/161)        | 官改 | 5.04axhnd.675x | BCM6756   | armv7 | 4.19.183  | tuf         | fancyss_hnd     |
+| RT-AX86U PRO | 官改 | 5.04axhnd.675x | BCM4912 | armv8 | 4.19.183 | asuswrt | fancyss_hnd |
 | [RT-AX89X](https://www.koolcenter.com/posts/126) | 官改 | qca-ipq806x    | ipq8074/a | armv7 | 4.4.60    | asuswrt     | fancyss_qca     |
 
 ## 版本选择
 
 fancyss 3.0支持hnd、qca、arm三个平台，每个平台又有full版本和lite版本
 
-full版本为全功能版本，支持SS、 SSR、KoolGame、V2ray、 Xray、 Trojan 六种客户端，安装包体积较大
+full版本为全功能版本，支持SS、 SSR、V2ray、 Xray、Trojan、NaïveProxy 六种客户端，安装包体积较大
 
 lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客户端，安装包小巧，以下为lite版本精简内容：
 
 1. lite版本移除了v2ray、trojan二进制文件，默认使用xray-core来运行v2ray和trojan协议
-
-2. lite版本移除了shdowsocks的v2ray-plugin插件功能及其对应的二进制文件：v2ray-plugin
-
-3. lite版本移除了UDP加速功能及其二进制文件：speederv1、speederv2、udp2raw
-
-4. lite版本移除了KCP加速功能及其二进制文件：kcptun
-
-5. lite版本移除了koolgame协议支持及其二进制文件：koolgame、pdu
-
+2. lite版本移除了NaïveProxy支持及其相关二进制文件：naive、ipt2socks
+3. lite版本移除了shdowsocks的v2ray-plugin插件功能及其对应的二进制文件：v2ray-plugin
+4. lite版本移除了UDP加速功能及其二进制文件：speederv1、speederv2、udp2raw
+5. lite版本移除了KCP加速功能及其二进制文件：kcptun
 6. lite版本移除了负载均衡支持及其页面和二进制文件：haproxy
-
-7. lite版本移除了直连解析的国外DNS方案及其二进制文件：cdns、chinadns、chinadns1、smartdns
-
+7. lite版本移除了直连解析的DNS方案及其二进制：cdns、chinadns、chinadns1、smartdns、https_dns_proxyy
 8. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
-
 9. lite版本移除了shdowsocks-rust替换shadowsocks-libev功能，默认由shadowsocks-libev运行ss协议
-
 10. lite版本移除了socks5页面及其脚本及其acl规则文件
 
 如果是不折腾以上被精简功能的用户，完全可以使用体积更小的lite版本
 
-RT-AX56U_V2这种jffs分区极小(15MB)的机型，建议直接使用lite版本
+RT-AX56U_V2这种jffs分区极小(15MB)的机型，直接使用lite版本即可
 
 要切换为lite版本，直接安装lite版本的离线安装包即可，以后在线更新也会维持为lite版本
 
@@ -157,7 +151,7 @@ RT-AX56U_V2这种jffs分区极小(15MB)的机型，建议直接使用lite版本
    git checkout 3.0
    ```
 
-3. 修改代码：修改代码主目录fancyss目录下的相关文件，如`./fancyss/ss/ssconfig.sh`
+3. 修改代码：根据自己需要修改代码主目录fancyss目录下的相关文件，如`./fancyss/ss/ssconfig.sh`
 
 4. 打包插件，运行打包命令后会自动同步rules下最新的规则和binaries下最新的二进制
 

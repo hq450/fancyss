@@ -49,6 +49,10 @@ platform_test(){
 	local PKG_ARCH=$(cat ${DIR}/.valid)
 	local ROT_ARCH=$(uname -m)
 	local KEL_VERS=$(uname -r)
+	#local PKG_NAME=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+")
+	#local PKG_ARCH=$(echo ${pkg_name} | awk -F"_" '{print $2}')
+	#local PKG_TYPE=$(echo ${pkg_name} | awk -F"_" '{print $3}')
+	
 	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
 		PKG_TYPE="lite"
 		PKG_NAME="fancyss_${PKG_ARCH}_lite"
@@ -188,7 +192,7 @@ install_now(){
 
 	# print message
 	local TITLE="科学上网 ${PKG_TYPE}"
-	local DESCR="科学上网 ${PKG_TYPE} for merlin hnd platform"
+	local DESCR="科学上网 ${PKG_TYPE} for AsusWRT/Merlin platform"
 	echo_date "安装版本：${PKG_NAME}_${PLVER}"
 	# stop first
 	local ENABLE=$(dbus get ss_basic_enable)
@@ -216,15 +220,10 @@ install_now(){
 	rm -rf /koolshare/bin/rss-tunnel
 	rm -rf /koolshare/bin/rss-local
 	rm -rf /koolshare/bin/obfs-local
-	rm -rf /koolshare/bin/koolgame
-	rm -rf /koolshare/bin/pdu
 	rm -rf /koolshare/bin/haproxy
 	rm -rf /koolshare/bin/dnscrypt-proxy
 	rm -rf /koolshare/bin/dns2socks
 	rm -rf /koolshare/bin/kcptun
-	rm -rf /koolshare/bin/cdns
-	rm -rf /koolshare/bin/chinadns
-	rm -rf /koolshare/bin/chinadns1
 	rm -rf /koolshare/bin/chinadns-ng
 	rm -rf /koolshare/bin/smartdns
 	rm -rf /koolshare/bin/resolveip
@@ -235,10 +234,16 @@ install_now(){
 	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
 	rm -rf /koolshare/bin/v2ray-plugin
-	rm -rf /koolshare/bin/https_dns_proxy
 	rm -rf /koolshare/bin/httping
-	rm -rf /koolshare/bin/isutf8
 	rm -rf /koolshare/bin/haveged
+	rm -rf /koolshare/bin/ipt2socks
+	rm -rf /koolshare/bin/naive
+	rm -rf /koolshare/bin/dnsclient
+	rm -rf /koolshare/bin/dohclient
+	rm -rf /koolshare/bin/dohclient-cache
+	rm -rf /koolshare/bin/dns2tcp
+	rm -rf /koolshare/bin/dns-ecs-forcer
+	rm -rf /koolshare/bin/uredir
 	rm -rf /koolshare/res/icon-shadowsocks.png
 	rm -rf /koolshare/res/ss-menu.js
 	rm -rf /koolshare/res/qrcode.js
@@ -256,15 +261,23 @@ install_now(){
 	rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
 	rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
 	rm -rf /koolshare/bin/client_linux_arm*
+	rm -rf /koolshare/bin/cdns
+	rm -rf /koolshare/bin/chinadns
+	rm -rf /koolshare/bin/chinadns1
+	rm -rf /koolshare/bin/https_dns_proxy
+	rm -rf /koolshare/bin/pdu
+	rm -rf /koolshare/bin/koolgame
 
 	# optional files should keep
 	# rm -rf /koolshare/bin/sslocal >/dev/null 2>&1
+	# rm -rf /koolshare/bin/dig >/dev/null 2>&1
 
-	# these file maybe used by others plugin
+	# these file maybe used by others plugin, do not remove
 	# rm -rf /koolshare/bin/sponge >/dev/null 2>&1
 	# rm -rf /koolshare/bin/jq >/dev/null 2>&1
+	# rm -rf /koolshare/bin/isutf8
 
-	# small jffs router should remove more
+	# small jffs router should remove more existing files
 	if [ "${MODEL}" == "RT-AX56U_V2" ];then
 		rm -rf /jffs/syslog.log
 		rm -rf /jffs/syslog.log-1
@@ -272,6 +285,20 @@ install_now(){
 		rm -rf /jffs/uu.tar.gz*
 		echo 1 > /proc/sys/vm/drop_caches
 		sync
+	fi
+
+	# some file do not need to install
+	if [ -n "$(which socat)" ];then
+		rm -rf /tmp/shadowsocks/bin/uredir
+	fi
+	if [ -x "/koolshare/bin/jq" ];then
+		rm -rf /tmp/shadowsocks/bin/jq
+	fi
+	if [ -x "/koolshare/bin/sponge" ];then
+		rm -rf /tmp/shadowsocks/bin/sponge
+	fi
+	if [ -x "/koolshare/bin/isutf8" ];then
+		rm -rf /tmp/shadowsocks/bin/isutf8
 	fi
 
 	# 检测储存空间是否足够
@@ -330,16 +357,64 @@ install_now(){
 	[ ! -L "/koolshare/init.d/S99socks5.sh" ] && ln -sf /koolshare/scripts/ss_socks5.sh /koolshare/init.d/S99socks5.sh
 
 	# default values
+	eval $(dbus export ss)
 	echo_date "设置一些默认值..."
-	# 1.9.15：国内DNS默认使用运营商DNS
-	[ -z "$(dbus get ss_dns_china)" ] && dbus set ss_dns_china=1
-	# 1.9.15：国外dns解析设置为chinadns-ng，并默认丢掉AAAA记录
-	[ -z "$(dbus get ss_foreign_dns)" ] && dbus set ss_foreign_dns=10
-	[ -z "$(dbus get ss_disable_aaaa)" ] && dbus set ss_disable_aaaa=1
+	# 3.0.4：国内DNS默认使用运营商DNS
+	[ -z "${ss_china_dns}" ] && dbus set ss_china_dns="1"
+	# 3.0.4 从老版本升级到3.0.4，原部分方案需要切换到进阶方案，因为这些方案已经不存在
+	if [ -z "${ss_basic_advdns}" -a -z "${ss_basic_olddns}" ];then
+		# 全新安装的 3.0.4+，或者从3.0.3及其以下版本升级而来
+		if [ -z "${ss_foreign_dns}" ];then
+			# 全新安装的 3.0.4
+			dbus set ss_basic_advdns="1"
+			dbus set ss_basic_olddns="0"
+		else
+			# 从3.0.3及其以下版本升级而来
+			# 因为一些dns选项已经不存在，所以更改一下
+			if [ "${ss_foreign_dns}" == "2" -o "${ss_foreign_dns}" == "5" -o "${ss_foreign_dns}" == "10" -o "${ss_foreign_dns}" == "1" -o "${ss_foreign_dns}" == "6" ];then
+				# 原chinands2、chinadns1、chinadns-ng、cdns、https_dns_proxy已经不存在, 更改为进阶DNS设定：chinadns-ng
+				dbus set ss_basic_advdns="1"
+				dbus set ss_basic_olddns="0"
+			elif [ "${ss_foreign_dns}" == "4" -o "${ss_foreign_dns}" == "9" ];then
+				if [ "${PKG_TYPE}" == "lite" ];then
+					# ss-tunnel、SmartDNS方案在lite版本中不存在
+					dbus set ss_basic_advdns="1"
+					dbus set ss_basic_olddns="0"
+				else
+					# ss-tunnel、SmartDNS方案在full版本中存在
+					dbus set ss_basic_advdns="0"
+					dbus set ss_basic_olddns="1"
+				fi
+			else
+				# dns2socks, v2ray/xray_dns, 直连这些在full和lite版中都在
+				dbus set ss_basic_advdns="0"
+				dbus set ss_basic_olddns="1"
+			fi
+		fi
+	elif [ -z "${ss_basic_advdns}" -a -n "${ss_basic_olddns}" ];then
+		# 不正确，ss_basic_advdns和ss_basic_olddns必须值相反
+		[ "${ss_basic_olddns}" == "0" ] && dbus set ss_basic_advdns="1"
+		[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
+	elif [ -n "${ss_basic_advdns}" -a -z "${ss_basic_olddns}" ];then
+		# 不正确，ss_basic_advdns和ss_basic_olddns必须值相反
+		[ "${ss_basic_advdns}" == "0" ] && dbus set ss_basic_olddns="1"
+		[ "${ss_basic_advdns}" == "1" ] && dbus set ss_basic_olddns="0"
+	elif [ -n "${ss_basic_advdns}" -a -n "${ss_basic_olddns}" ];then
+		if [ "${ss_basic_advdns}" == "${ss_basic_olddns}" ];then
+			[ "${ss_basic_olddns}" == "0" ] && dbus set ss_basic_advdns="1"
+			[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
+		fi
+	fi
+
+	if [ "${ss_disable_aaaa}" != "1" ];then
+		dbus set ss_basic_chng_no_ipv6=0
+	fi
+	
 	# others
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
+	
 	# lite
 	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
 		ss_basic_vcore=1
@@ -347,19 +422,10 @@ install_now(){
 	if [ ! -x "/tmp/shadowsocks/bin/trojan" ];then
 		ss_basic_tcore=1
 	fi
-	
-	if [ ! -x "/tmp/shadowsocks/bin/smartdns" ];then
-		local SFD=$(dbus get ss_foreign_dns)
-		local SDC=$(dbus get ss_dns_china)
-		if [ "${SFD}" != "3" -o "${SFD}" != "6" -o "${SFD}" != "7" -o "${SFD}" != "8" -o "${SFD}" != "10" ];then
-			dbus set ss_foreign_dns=10
-			dbus set ss_disable_aaaa=1
-		fi
-		if [ "${SDC}" -gt "15" ];then
-			dbus set ss_dns_china=1
-		fi
+	if [ ! -x "/tmp/shadowsocks/bin/sslocal" ];then
+		ss_basic_rust=0
 	fi
-
+	
 	# dbus value
 	echo_date "设置插件安装参数..."
 	dbus set ss_basic_version_local="${PLVER}"
