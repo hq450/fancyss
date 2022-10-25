@@ -1417,7 +1417,7 @@ resolv_server_ip() {
 			case $? in
 			0)
 				echo_date "$(__get_type_abbr_name)服务器【${ss_basic_server}】的ip地址解析成功：${SERVER_IP}"
-				ss_basic_server="$SERVER_IP"
+				# ss_basic_server="$SERVER_IP"
 				ss_basic_server_ip="$SERVER_IP"
 				dbus set ss_basic_server_ip="$SERVER_IP"
 				;;
