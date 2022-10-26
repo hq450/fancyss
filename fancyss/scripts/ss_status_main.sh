@@ -87,15 +87,15 @@ failover_action(){
 			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
 			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
 			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			if [ "$MAXT_NODE" == "1" ];then
-				LOGM "$LOGTIME1 fancyss：检测到你只有一个节点！无法切换到下一个节点！只好关闭插件了！"
-				dbus set ss_basic_enable="0"
-				start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
+			if [ "$NEXT_NODE" -gt "$MAXT_NODE" ]; then
+				LOGM "$LOGTIME1 所有节点都已经失效！自动重新订阅 并从订阅的第一个节点开始"
+       				NEXT_NODE="1"
+      				/koolshare/ss/ssconfig.sh stop
+      				/koolshare/scripts/ss_online_update.sh fancyss 3
 			fi
-			[ "$NEXT_NODE" -gt "$MAXT_NODE" ] && NEXT_NODE="1"
-			# 切换
+                        # 切换
 			dbus set ssconf_basic_node=$NEXT_NODE
-			# 重启
+                        # 重启 
 			dbus set ss_heart_beat="1"
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 		fi
