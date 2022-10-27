@@ -90,7 +90,7 @@ failover_action(){
 			if [ "$NEXT_NODE" -gt "$MAXT_NODE" ]; then
 				LOGM "$LOGTIME1 所有节点都已经失效！自动重新订阅 并从订阅的第一个节点开始"
        				NEXT_NODE="1"
-      				/koolshare/ss/ssconfig.sh stop
+      				/koolshare/ss/ssconfig.sh flush_nat
       				/koolshare/scripts/ss_online_update.sh fancyss 3
 			fi
                         # 切换
