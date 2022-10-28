@@ -89,9 +89,8 @@ failover_action(){
 			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
 			if [ "$NEXT_NODE" -gt "$MAXT_NODE" ]; then
 				LOGM "$LOGTIME1 所有节点都已经失效！自动重新订阅 并从订阅的第一个节点开始"
-       				NEXT_NODE="1"
-      				/koolshare/ss/ssconfig.sh flush_nat
-      				/koolshare/scripts/ss_online_update.sh fancyss 3
+       				start-stop-daemon -S -q -b -x resubscribe_restart.sh
+				exit
 			fi
                         # 切换
 			dbus set ssconf_basic_node=$NEXT_NODE
