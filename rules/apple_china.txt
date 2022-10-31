@@ -99,7 +99,6 @@ oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
 pancake.apple.com
 pancake.cdn-apple.com.akadns.net
-phobos.apple.com
 prod-support.apple-support.akadns.net
 publicassets.cdn-apple.com
 reserve-prime.apple.com
