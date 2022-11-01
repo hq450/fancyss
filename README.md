@@ -64,7 +64,7 @@
 | RT-AX86U PRO                                                 | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
 | GT-AX11000 PRO                                               | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | rog         | fancyss_hnd |
 | GT-AX11000 PRO                                               | 梅改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
-| [RT-AX89X](https://www.koolcenter.com/posts/126)             | 官改 | qca-ipq806x     | ipq8074/a | armv7 | 4.4.60    | asuswrt     | fancyss_qca |
+| [RT-AX89X](https://www.koolcenter.com/posts/126)             | 官改 | qca-ipq806x     | ipq8074/a | armv7[^2] | 4.4.60    | asuswrt     | fancyss_qca |
 
 ## 版本选择
 
@@ -180,3 +180,4 @@ RT-AX56U_V2这种jffs分区极小(15MB)的机型，直接使用lite版本即可
 * 官改/梅改固件下载【固件镜像】（次新固件）：[https://fw.koolcenter.com](https://fw.koolcenter.com)
 
 [^1]: RT-AC86U从384_81918_koolshare固件版本开始，使用的是asuswrt风格ui，而不是rog风格。
+[^2]: RT-AX89X采用的SoC为ipq8074/ipq8074A，支持64位系统，但是其固件是32位系统。
