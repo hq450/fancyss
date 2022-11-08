@@ -61,9 +61,10 @@
 | [ZenWiFi_Pro_XT12](https://www.koolcenter.com/posts/133)     | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
 | [ZenWiFi_Pro_XT12](https://www.koolcenter.com/posts/149)     | 梅改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
 | [TUF-AX3000_V2](https://www.koolcenter.com/posts/161)        | 官改 | 5.04axhnd.675x  | BCM6756   | armv7 | 4.19.183  | tuf         | fancyss_hnd |
-| RT-AX86U PRO                                                 | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
+| [RT-AX86U PRO](https://www.koolcenter.com/posts/228)         | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
+| RT-AX86U PRO                                                 | 梅改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
 | GT-AX11000 PRO                                               | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | rog         | fancyss_hnd |
-| GT-AX11000 PRO                                               | 梅改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt     | fancyss_hnd |
+| GT-AX11000 PRO                                               | 梅改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | asuswrt/rog     | fancyss_hnd |
 | [RT-AX89X](https://www.koolcenter.com/posts/126)             | 官改 | qca-ipq806x     | ipq8074/a | armv7[^2] | 4.4.60    | asuswrt     | fancyss_qca |
 
 ## 版本选择
