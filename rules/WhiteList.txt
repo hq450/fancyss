@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2022-11-12
+-e ## Last update: 2022-11-14
 
 .*\b0-100\.com
 .*\b0-6\.com
@@ -3469,7 +3469,6 @@
 .*\b4699a\.com
 .*\b46design\.com
 .*\b46mlsv\.com
-.*\b46z5j5\.xyz
 .*\b47365\.com
 .*\b4738\.com
 .*\b4743\.uk
@@ -7021,7 +7020,6 @@
 .*\b9g\.com
 .*\b9g8g\.com
 .*\b9gty\.net
-.*\b9hcom\.com
 .*\b9he\.com
 .*\b9host\.org
 .*\b9hou\.com
@@ -9424,6 +9422,7 @@
 .*\bazoyacdn\.com
 .*\bazoyagroup\.com
 .*\baztsg\.com
+.*\bazuretouch\.net
 .*\bazurew\.com
 .*\bazureyun\.com
 .*\bazycjd\.com
@@ -10039,6 +10038,7 @@
 .*\bbazhuayu\.cc
 .*\bbazhuayu\.com
 .*\bbazi\.cloud
+.*\bbazi\.xin
 .*\bbazi5\.com
 .*\bbazp\.net
 .*\bbb-edu\.com
@@ -10132,7 +10132,6 @@
 .*\bbcelive\.com
 .*\bbcevod\.com
 .*\bbcitb\.com
-.*\bbcjy123\.com
 .*\bbclsw\.com
 .*\bbcmcdn\.com
 .*\bbcmeng\.com
@@ -11092,7 +11091,6 @@
 .*\bbjkhzx\.com
 .*\bbjkqj\.com
 .*\bbjkrtwl\.com
-.*\bbjksd120\.com
 .*\bbjl777\.com
 .*\bbjlanqiao\.com
 .*\bbjlcs-tech\.com
@@ -12875,6 +12873,7 @@
 .*\bcdjnrc\.com
 .*\bcdjsjx\.com
 .*\bcdjxjy\.com
+.*\bcdjzso\.com
 .*\bcdjzw\.com
 .*\bcdjzwykj\.com
 .*\bcdjzx120\.com
@@ -13886,6 +13885,7 @@
 .*\bchina724\.com
 .*\bchina777\.org
 .*\bchina95\.net
+.*\bchina95\.xyz
 .*\bchina9s\.com
 .*\bchina9y\.com
 .*\bchinaacc\.com
@@ -19556,7 +19556,6 @@
 .*\bdyfc\.net
 .*\bdyg-hec\.com
 .*\bdygang\.com
-.*\bdygang\.net
 .*\bdygangs\.com
 .*\bdygf\.com
 .*\bdygod\.org
@@ -22327,6 +22326,7 @@
 .*\bfree789\.com
 .*\bfreebsdchina\.org
 .*\bfreebuf\.com
+.*\bfreecat\.work
 .*\bfreecplus\.net
 .*\bfreedgo\.com
 .*\bfreefrp\.net
@@ -26950,7 +26950,6 @@
 .*\bhnzhouyi\.com
 .*\bhnzhy\.com
 .*\bhnzjdc\.com
-.*\bhnzjfcw\.com
 .*\bhnzjgfw\.com
 .*\bhnzjip\.com
 .*\bhnzjzx\.org
@@ -32930,7 +32929,6 @@
 .*\bjxsrfdc\.com
 .*\bjxsxdp\.com
 .*\bjxtech\.net
-.*\bjxtobo\.com
 .*\bjxtvbbs\.com
 .*\bjxtvshop\.com
 .*\bjxtyzx\.org
@@ -33604,7 +33602,6 @@
 .*\bkeyuhome\.com
 .*\bkeyunidc\.com
 .*\bkeyunsoft\.com
-.*\bkeyyou\.net
 .*\bkezhaozhao\.com
 .*\bkezool\.com
 .*\bkf\.ai
@@ -35236,7 +35233,6 @@
 .*\blempstack\.com
 .*\blengcat\.com
 .*\blenget\.com
-.*\blenggirl\.com
 .*\blengqing\.org
 .*\blengxiaohua\.com
 .*\blengziyuan\.com
@@ -35870,7 +35866,6 @@
 .*\blinovel\.net
 .*\blinovelib\.com
 .*\blinpx\.com
-.*\blinqu\.tv
 .*\blinquan\.info
 .*\blinquan\.name
 .*\blinqujob\.com
@@ -37488,7 +37483,6 @@
 .*\bmanhua365\.com
 .*\bmanhua456\.com
 .*\bmanhuacheng\.com
-.*\bmanhuadao\.com
 .*\bmanhuadaohang\.com
 .*\bmanhuadb\.com
 .*\bmanhuafen\.com
@@ -38900,6 +38894,7 @@
 .*\bmobvoi\.com
 .*\bmocache\.com
 .*\bmocartoon\.com
+.*\bmochouu\.com
 .*\bmockingbot\.com
 .*\bmockplus\.com
 .*\bmockuai\.com
@@ -46270,6 +46265,7 @@
 .*\bsdicpower\.com
 .*\bsdicvc\.com
 .*\bsdifenzhou\.com
+.*\bsdiitu\.com
 .*\bsdiread\.com
 .*\bsditol\.com
 .*\bsdj-tech\.com
@@ -51027,7 +51023,6 @@
 .*\bthinksrc\.com
 .*\bthinvent\.com
 .*\bthishealthsummit\.com
-.*\bthisim\.net
 .*\bthisisdongdongqiang\.com
 .*\bthiztech\.com
 .*\bthjunshi\.com
@@ -52181,7 +52176,6 @@
 .*\bttymq\.com
 .*\bttyongche\.com
 .*\bttyqm\.com
-.*\bttys5\.com
 .*\bttysq\.com
 .*\bttyyuuoo\.com
 .*\bttz\.com
@@ -55767,7 +55761,6 @@
 .*\bwisdri\.com
 .*\bwise-iot\.com
 .*\bwiseah\.com
-.*\bwiseboke\.com
 .*\bwisecotech\.com
 .*\bwisedoo\.com
 .*\bwisedsp\.net
@@ -56064,6 +56057,7 @@
 .*\bwolongyoule\.com
 .*\bwolongzywcdn\.com
 .*\bwolongzywcdn2\.com
+.*\bwolongzywcdn3\.com
 .*\bwolwo\.ltd
 .*\bwolwobiotech\.com
 .*\bwomai\.com
@@ -59585,7 +59579,6 @@
 .*\byantubao\.com
 .*\byantuchina\.com
 .*\byanue\.net
-.*\byanunon\.com
 .*\byanwenzi\.com
 .*\byanxian\.org
 .*\byanxintong\.com
@@ -61052,6 +61045,7 @@
 .*\byoukua\.net
 .*\byoukudou\.com
 .*\byoukudown\.com
+.*\byoukuphoto\.com
 .*\byoulanw\.com
 .*\byoule55\.com
 .*\byouleliwu\.com
@@ -63495,7 +63489,6 @@
 .*\bzhonglun\.com
 .*\bzhongman\.com
 .*\bzhongmian\.com
-.*\bzhongmingmao\.me
 .*\bzhongniu\.com
 .*\bzhongpaiwang\.com
 .*\bzhongqixin360\.com
@@ -64163,7 +64156,6 @@
 .*\bzkcx\.com
 .*\bzkdt\.net
 .*\bzkecopro\.com
-.*\bzkeli\.com
 .*\bzkeys\.com
 .*\bzkh\.com
 .*\bzkh360\.com
