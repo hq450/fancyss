@@ -97,6 +97,7 @@ ocsp.apple.com
 ocsp2.apple.com
 oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
+osxapps.itunes.g.aaplimg.com
 pancake.apple.com
 pancake.cdn-apple.com.akadns.net
 prod-support.apple-support.akadns.net
@@ -113,6 +114,7 @@ store.storeimages.apple.com.akadns.net
 store.storeimages.cdn-apple.com
 support-china.apple-support.akadns.net
 support.apple.com
+swallow-apple-com.v.aaplimg.com
 swallow.apple.com
 swcatalog-cdn.apple.com.akadns.net
 swcatalog.apple.com
