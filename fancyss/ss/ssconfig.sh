@@ -5676,7 +5676,7 @@ finish_start(){
 
 		local FDNS_OK_FLAG_2=0
 		if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
-			if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+			if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_chng_trust_2_opt_doh}" != "97" ];then
 				local TPORT=2056
 			else
 				local TPORT=1056
