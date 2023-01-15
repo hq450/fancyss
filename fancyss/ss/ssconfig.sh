@@ -1408,7 +1408,7 @@ resolv_server_ip() {
 		tmp=$(__valid_ip "${ss_basic_server}")
 		if [ $? == 0 ]; then
 			# server is ip address format, not need to resolve.
-			echo_date "检测到你的$(__get_type_abbr_name)服务器已经是IP格式：${ss_basic_server},跳过解析... "
+			echo_date "检测到你的$(__get_type_abbr_name)服务器已经是IP格式：${ss_basic_server}，跳过解析... "
 			ss_basic_server_ip="${ss_basic_server}"
 			dbus set ss_basic_server_ip=${ss_basic_server}
 		else
@@ -4074,7 +4074,7 @@ creat_v2ray_json() {
 			local v2ray_server_tmp=$(__valid_ip ${v2ray_server})
 			if [ -n "${v2ray_server_tmp}" ]; then
 				# ip format
-				echo_date "检测到你的json配置的${VCORE_NAME}服务器是：${v2ray_server}"
+				echo_date "检测到你的json配置的${VCORE_NAME}服务器已经是IP格式：${v2ray_server}，跳过解析... "
 				ss_basic_server_ip="${v2ray_server}"
 			else
 				echo_date "检测到你的json配置的${VCORE_NAME}服务器：【${v2ray_server}】不是ip格式！"
@@ -4562,9 +4562,9 @@ creat_xray_json() {
 		if [ -n "${xray_server}" -a "${xray_server}" != "null" ]; then
 			# 服务器地址强制由用户选择的DNS解析，以免插件还未开始工作而导致解析失败
 			# 判断服务器域名格式
-			local xray_server_tmp=$(__valid_ip ${v2ray_server})
+			local xray_server_tmp=$(__valid_ip ${xray_server})
 			if [ -n "${xray_server_tmp}" ]; then
-				echo_date "检测到你的json配置的Xray服务器是：${xray_server}"
+				echo_date "检测到你的json配置的Xray服务器是已经是IP格式：${xray_server}，跳过解析... "
 				ss_basic_server_ip="${xray_server}"
 			else
 				echo_date "检测到你的json配置的Xray服务器：【${xray_server}】不是ip格式！"
