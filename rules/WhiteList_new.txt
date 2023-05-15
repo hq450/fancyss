@@ -1,7 +1,7 @@
 -e [Local Hosts]
 ## China mainland domains
 ## Source: https://github.com/felixonmars/dnsmasq-china-list
-## Last update: 2023-05-13
+## Last update: 2023-05-15
 -e 
 
 Server=/0-100.com/
