@@ -99,7 +99,7 @@ platform_test(){
 	
 	# fancyss_hnd
 	if [ "${PKG_ARCH}" == "hnd" ];then
-		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" -o "${LINUX_VER}" == "54" ];then
+		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
 				# RT-AX56U, XT8, TUF-AX3000_V2
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_hnd_${PKG_TYPE}！"
