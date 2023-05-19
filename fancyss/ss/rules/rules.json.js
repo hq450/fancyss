@@ -1,16 +1,16 @@
 {
   "gfwlist": {
     "name": "gfwlist.conf",
-    "date": "2022-09-30 09:09",
-    "md5": "3e60b057846be5da57d597128a769b43",
-    "count": "5598"
+    "date": "2022-11-14 21:58",
+    "md5": "2774233469e9a912b5d7fbb63a564fe0",
+    "count": "5591"
   },
   "chnroute": {
     "name": "chnroute.txt",
-    "date": "2022-09-30 09:09",
-    "md5": "fa2ef59b43e32a3757710e991b7705ec",
-    "count": "4237",
-    "count_ip": "265619430",
+    "date": "2022-11-14 21:58",
+    "md5": "0b81c3a1469b2b50898b7e4c5a044b43",
+    "count": "3277",
+    "count_ip": "273545574",
     "source": "misakaio",
     "url": "https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
   },
@@ -25,35 +25,35 @@
   },
   "chnroute3": {
     "name": "chnroute3.txt",
-    "date": "2022-09-30 09:09",
-    "md5": "a232ee21aa534c4daebf5d8497f19cfa",
-    "count": "8625",
-    "count_ip": "343230366",
+    "date": "2022-11-14 21:58",
+    "md5": "2b32a67a3a5c9155b8fcc4cb579f3f0d",
+    "count": "8619",
+    "count_ip": "343219626",
     "source": "apnic",
     "url": "http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest"
   },
   "cdn_china": {
     "name": "cdn.txt",
-    "date": "2022-09-30 09:09",
-    "md5": "56fdcbd8018002644fd973190772c501",
-    "count": "65395"
+    "date": "2022-11-14 21:58",
+    "md5": "69ad0a95b860b6a6345c055c96c1403a",
+    "count": "65325"
   },
   "apple_china": {
     "name": "apple_china.txt",
-    "date": "2022-09-29 14:59",
-    "md5": "2a5f92d2a47cc281190d11db4a28427c",
-    "count": "135"
+    "date": "2022-10-31 23:23",
+    "md5": "dfaf9b2ad0ecb84fd0441ea2d01fe3dc",
+    "count": "134"
   },
   "google_china": {
     "name": "google_china.txt",
-    "date": "2022-09-30 09:09",
-    "md5": "c4fe00d362d0aeb3cf6598707b821fd9",
-    "count": "70"
+    "date": "2022-10-31 23:23",
+    "md5": "ae3f7eb662884d9d0752589de48c25f2",
+    "count": "161"
   },
   "cdn_test": {
     "name": "cdn_test.txt",
-    "date": "2022-09-29 14:59",
-    "md5": "0a62118fad3d440a031f318c4cf45953",
-    "count": "73"
+    "date": "2022-10-31 23:23",
+    "md5": "576a8d266539be4d7885e665f9a3f7cf",
+    "count": "81"
   }
 }

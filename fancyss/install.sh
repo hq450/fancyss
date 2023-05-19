@@ -84,6 +84,12 @@ platform_test(){
 			echo_date "建议使用fancyss_qca_full或者fancyss_qca_lite！"		
 			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca"
 			exit_install 1
+		elif [ "${LINUX_VER}" == "54" ];then
+			# mediatek TX-AX6000
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
+			exit_install 1
 		else
 			# future model
 			echo_date "内核：${KEL_VERS}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
@@ -93,7 +99,7 @@ platform_test(){
 	
 	# fancyss_hnd
 	if [ "${PKG_ARCH}" == "hnd" ];then
-		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
+		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" -o "${LINUX_VER}" == "54" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
 				# RT-AX56U, XT8, TUF-AX3000_V2
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_hnd_${PKG_TYPE}！"
@@ -110,13 +116,17 @@ platform_test(){
 			echo_date "建议使用fancyss_arm_full或者fancyss_arm_lite！"
 			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm"
 			exit_install 1
-			
 		elif [ "${LINUX_VER}" == "44" ];then
 			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该内核版本！"
 			echo_date "建议使用fancyss_qca_full或者fancyss_qca_lite！"
 			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca"
 			exit_install 1
-			
+		elif [ "${LINUX_VER}" == "54" ];then
+			# mediatek TX-AX6000
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
+			exit_install 1
 		else
 			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该内核版本！"
 			exit_install 1
@@ -141,7 +151,42 @@ platform_test(){
 			echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
 			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
 			exit_install 1
+		elif [ "${LINUX_VER}" == "54" ];then
+			# mediatek TX-AX6000
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_arm_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
+			exit_install 1
+		else
+			# no such model, yet.
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			exit_install 1
+		fi
+	fi
+
+	# fancyss_qca
+	if [ "${PKG_ARCH}" == "mtk" ];then
+		if [ "${LINUX_VER}" == "54" ];then
+			# RT-AX89X
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_qca_${PKG_TYPE}！"
+		elif [ "${LINUX_VER}" == "26" ];then
+			# RT-AC68U, RT-AC88U, RT-AC3100, RT-AC5300
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_arm_full或者fancyss_arm_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm"
+			exit_install 1
 			
+		elif [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
+			# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
+			exit_install 1
+		elif [ "${LINUX_VER}" == "44" ];then
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_hnd_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "建议使用fancyss_qca_full或者fancyss_qca_lite！"
+			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_qca"
+			exit_install 1
 		else
 			# no such model, yet.
 			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"

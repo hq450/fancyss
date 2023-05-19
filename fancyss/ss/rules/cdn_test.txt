@@ -17,6 +17,9 @@ doubleclick-cn.net
 dsany.sgnic.sg
 edge.yunjiasu.com
 fotadown.mayitek.com.wsdvs.com
+gcpnode.com
+gonglchuangl.net
+gongyichuangyi.net
 google-analytics-cn.com
 googleadservices.com
 googleadservices-cn.com
@@ -25,12 +28,15 @@ googleapps-cn.com
 googleflights-cn.net
 googleoptimize.com
 googleoptimize-cn.com
+googleplex.com
 googlesyndication-cn.com
 googletagmanager.com
 googletagmanager-cn.com
 googletagservices-cn.com
+googletraveladservices.com
 googletraveladservices-cn.com
 googlevads-cn.com
+gstatic-cn.com
 gvt1-cn.com
 gvt2-cn.com
 insta360.com
@@ -70,4 +76,6 @@ www.sunrtb.com
 www.yangfd.com
 www.youngfunding.co.uk
 www.cz88.net
+xn--9kr7l.com
+xn--flw351e.com
 zoom.us

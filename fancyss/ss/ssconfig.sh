@@ -25,7 +25,15 @@ LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
 cmd() {
 	echo_date "$*" 2>&1
-	"$@" 2>/dev/null
+	env -i PATH=${PATH} "$@" 2>/dev/null
+}
+
+run(){
+	env -i PATH=${PATH} "$@"
+}
+
+run_bg(){
+	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
 set_lock() {
@@ -422,7 +430,7 @@ prepare_system() {
 	if [ -z "$(pidof jitterentropy-rngd)" -a -z "$(pidof haveged)" -a -f "/koolshare/bin/haveged" ];then
 		# run haveged form fancyss when there are not entropy software running
 		echo_date "启动haveged，为系统提供更多的可用熵！"
-		/koolshare/bin/haveged -w 1024 >/dev/null 2>&1
+		run /koolshare/bin/haveged -w 1024 >/dev/null 2>&1
 	fi
 
 	# 9. 用户自定义的dns不需要
@@ -503,7 +511,7 @@ donwload_binary(){
 	if [ "${ss_basic_type}" == "0" -a "${ss_basic_rust}" == "1" -a "${ACTION}" == "restart" ]; then
 		if [ ! -x "/koolshare/bin/sslocal" ];then
 			echo_date "没有检测到shadowsocks-rust二进制文件:sslocal，准备下载..."
-			sh /koolshare/scripts/ss_rust_update.sh download
+			run sh /koolshare/scripts/ss_rust_update.sh download
 		fi
 	fi
 }
@@ -562,7 +570,7 @@ close_in_five() {
 		if [ "$ss_failover_enable" == "1" ]; then
 			echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
 			echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
-			start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+			run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
 		fi
 		echo_date "科学上网插件已关闭！！"
 	fi
@@ -890,7 +898,7 @@ __resolve_server_domain() {
 			# 只解析一轮
 			until [ ${count} -eq 17 ]; do
 				echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current} tcp):$(__get_server_resolver_port ${current} tcp)"
-				dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${current} tcp)#$(__get_server_resolver_port ${current} tcp)" >/dev/null 2>&1 &
+				run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${current} tcp)#$(__get_server_resolver_port ${current} tcp)"
 				detect_running_status2 dns2tcp 1054 slient
 				SERVER_IP=$(dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 				SERVER_IP=$(__valid_ip ${SERVER_IP})
@@ -935,7 +943,7 @@ __resolve_server_domain() {
 		elif [ "${ss_basic_s_resolver_tcp}" == "99" ];then
 			# 自定义tcp解析服务器
 			echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp):$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
-			dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)" >/dev/null 2>&1 &
+			run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
 			detect_running_status2 dns2tcp 1054 slient
 			SERVER_IP=$(dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
@@ -958,7 +966,7 @@ __resolve_server_domain() {
 				ss_basic_s_resolver_tcp=3
 			fi
 			echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_s_resolver_tcp}：$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp):$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
-			dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)" >/dev/null 2>&1 &
+			run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
 			detect_running_status2 dns2tcp 1054 slient
 			SERVER_IP=$(dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
@@ -975,10 +983,10 @@ __resolve_server_domain() {
 			echo_date "开启smartdns，用于节点服务器的域名解析..."
 			if [ -f "/koolshare/ss/rules/smartdns_resolver_doh_user.conf" ];then
 				cp -rf /koolshare/ss/rules/smartdns_resolver_doh_user.conf /tmp/upload/smartdns_resolver_doh.conf
-				smartdns -S -c /koolshare/ss/rules/smartdns_resolver_doh_user.conf -p /var/run/smartdns_sr.pid >/dev/null 2>&1 &
+				run_bg smartdns -S -c /koolshare/ss/rules/smartdns_resolver_doh_user.conf -p /var/run/smartdns_sr.pid
 			else
 				cp -rf /koolshare/ss/rules/smartdns_resolver_doh.conf /tmp/upload/smartdns_resolver_doh.conf
-				smartdns -S -c /koolshare/ss/rules/smartdns_resolver_doh.conf -p /var/run/smartdns_sr.pid >/dev/null 2>&1 &
+				run_bg smartdns -S -c /koolshare/ss/rules/smartdns_resolver_doh.conf -p /var/run/smartdns_sr.pid
 			fi	
 			detect_running_status smartdns "/var/run/smartdns_sr.pid"
 
@@ -1043,7 +1051,6 @@ __resolve_server_domain() {
 
 	elif [ "${ss_basic_s_resolver}" == "4" ];then
 			echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用DNS方案为自定义DNS，如果无法解析，请更换DNS！"
-
 	fi
 
 	# resolve failed
@@ -1587,16 +1594,16 @@ start_ss_local() {
 	
 	if [ "${ss_basic_type}" == "1" ]; then
 		echo_date "开启ssr-local，提供socks5代理端口：23456"
-		rss-local -l 23456 -c ${CONFIG_FILE} -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+		run rss-local -l 23456 -c ${CONFIG_FILE} -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 		detect_running_status rss-local "/var/run/sslocal1.pid"
 	elif [ "${ss_basic_type}" == "0" ]; then
 		if [ "${ss_basic_rust}" == "1" -a -x "/koolshare/bin/sslocal" ];then
 			echo_date "开启sslocal (shadowsocks-rust)，提供socks5代理端口：23456"
-			sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d >/dev/null 2>&1
+			run sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d >/dev/null 2>&1
 			detect_running_status sslocal
 		else
 			echo_date "开启ss-local(shadowsocks-libev)，提供socks5代理端口：23456"
-			ss-local -l 23456 -c $CONFIG_FILE $ARG_OBFS -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+			run ss-local -l 23456 -c ${CONFIG_FILE} ${ARG_OBFS} -u -f /var/run/sslocal1.pid >/dev/null 2>&1
 			detect_running_status ss-local "/var/run/sslocal1.pid"
 		fi
 	fi
@@ -1611,18 +1618,18 @@ start_dns2socks(){
 	
 	if [ "${edns}" == "1" ];then
 		if [ -n "${ss_real_server_ip}" ];then
-			dns2socks /ef:${ss_real_server_ip}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port} >/dev/null 2>&1 &
+			run_bg dns2socks /ef:${ss_real_server_ip}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
 		fi
 
 		if [ -n "${REMOTE_IP_FRN}" ];then
-			dns2socks /ef:${REMOTE_IP_FRN}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port} >/dev/null 2>&1 &
+			run_bg dns2socks /ef:${REMOTE_IP_FRN}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
 		fi
 
 		if [ -z "${ss_real_server_ip}" -a -z "${REMOTE_IP_FRN}" ];then
-			dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port} >/dev/null 2>&1 &
+			run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
 		fi
 	else
-		dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port} >/dev/null 2>&1 &
+		run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
 	fi
 	detect_running_status2 dns2socks ${port}
 }
@@ -1968,10 +1975,10 @@ start_smartdns(){
 	rm -rf /tmp/smartdns*
 	if [ -f ${save_path}/${conf_name}_user.conf ];then
 		cp -rf ${save_path}/${conf_name}_user.conf ${show_path}/${conf_name}.conf
-		smartdns -S -c ${save_path}/${conf_name}_user.conf -p ${_pid_file}>/dev/null 2>&1 &
+		run_bg smartdns -S -c ${save_path}/${conf_name}_user.conf -p ${_pid_file}
 	else
 		cp -rf ${save_path}/${conf_name}.conf ${show_path}/${conf_name}.conf
-		smartdns -S -c ${save_path}/${conf_name}.conf -p ${_pid_file} >/dev/null 2>&1 &
+		run_bg smartdns -S -c ${save_path}/${conf_name}.conf -p ${_pid_file}
 	fi	
 	detect_running_status smartdns ${_pid_file}
 }
@@ -2112,7 +2119,7 @@ start_dns_new(){
 					if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
 						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
 						local CDNS_1="127.0.0.1#2051"
-						dns-ecs-forcer -p 2051 -s ${CHINA_DNS_1}:${CHINA_POR_1} -e "${REMOTE_IP_OUT%.*}.0" >/dev/null 2>&1 &
+						run_bg dns-ecs-forcer -p 2051 -s ${CHINA_DNS_1}:${CHINA_POR_1} -e "${REMOTE_IP_OUT%.*}.0"
 						detect_running_status2 dns-ecs-forcer 2051 slient
 					else
 						echo_date "使用${CHINA_DNS_1}:${CHINA_POR_1}，udp协议，作为chinadns-ng的国内上游DNS"
@@ -2133,16 +2140,16 @@ start_dns_new(){
 						# 将1051端口的UDP DNS请求，通过TCP转发到上游服务器
 						local CDNS_1="127.0.0.1#2051"
 						echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
-						dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}" >/dev/null 2>&1 &
+						run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
 						detect_running_status2 dns2tcp 1051 slient
 						# 把来自2051的dns请求加上ecs标签，转发给1051端口
 						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-						dns-ecs-forcer -p 2051 -s 127.0.0.1:1051 -e "${REMOTE_IP_OUT%.*}.0" >/dev/null 2>&1 &
+						run_bg dns-ecs-forcer -p 2051 -s 127.0.0.1:1051 -e "${REMOTE_IP_OUT%.*}.0"
 						detect_running_status2 dns-ecs-forcer 2051 slient
 					else
 						echo_date "开启dns2tcp，将中国DNS-1的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
 						local CDNS_1="127.0.0.1#1051"
-						dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}" >/dev/null 2>&1 &
+						run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
 						detect_running_status2 dns2tcp 1051 slient
 					fi
 				fi
@@ -2183,7 +2190,7 @@ start_dns_new(){
 					if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
 						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
 						local CDNS_2="127.0.0.1#2052"
-						dns-ecs-forcer -p 2052 -s ${CHINA_DNS_2}:${CHINA_POR_2} -e "${REMOTE_IP_OUT%.*}.0" >/dev/null 2>&1 &
+						run_bg dns-ecs-forcer -p 2052 -s ${CHINA_DNS_2}:${CHINA_POR_2} -e "${REMOTE_IP_OUT%.*}.0"
 						detect_running_status2 dns-ecs-forcer 2052 slient
 					else
 						echo_date "使用${CHINA_DNS_2}:${CHINA_POR_2}，udp协议，作为chinadns-ng的国内上游DNS"
@@ -2211,16 +2218,16 @@ start_dns_new(){
 						local CDNS_2="127.0.0.1#2052"
 						# 将1052端口的UDP DNS请求，通过TCP转发到上游服务器
 						echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
-						dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}" >/dev/null 2>&1 &
+						run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
 						detect_running_status2 dns2tcp 1052
 						# 把来自2052的dns请求加上ecs标签，转发给1052端口
 						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-						dns-ecs-forcer -p 2052 -s 127.0.0.1:1052 -e "${REMOTE_IP_OUT%.*}.0" >/dev/null 2>&1 &
+						run_bg dns-ecs-forcer -p 2052 -s 127.0.0.1:1052 -e "${REMOTE_IP_OUT%.*}.0"
 						detect_running_status2 dns-ecs-forcer 2052
 					else
 						echo_date "开启dns2tcp，将中国DNS-2的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
 						local CDNS_2="127.0.0.1#1052"
-						dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}" >/dev/null 2>&1 &
+						run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
 						detect_running_status2 dns2tcp 1052
 					fi
 				fi
@@ -2266,7 +2273,7 @@ start_dns_new(){
 						local FDNS1="127.0.0.1#2055"
 						if [ -n "${ss_real_server_ip}" ];then
 							echo_date "开启ss-tunnel + ecs，作为chinadns-ng的上游DNS..."
-							dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0" >/dev/null 2>&1 &
+							run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"
 							detect_running_status2 dns-ecs-forcer 2055
 							start_ss_tunnel 1055
 						else
@@ -2278,7 +2285,7 @@ start_dns_new(){
 								detect_running_status2 uredir 2055
 							else
 								echo_date "开启socat，用于端口转发：1055 → 2055"
-								socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055 >/dev/null 2>&1 &
+								run_bg socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055
 								detect_running_status2 socat 2055
 							fi
 							start_ss_tunnel 1055
@@ -2295,7 +2302,7 @@ start_dns_new(){
 						local FDNS1="127.0.0.1#2055"
 						if [ -n "${ss_real_server_ip}" ];then
 							echo_date "开启dns-ecs-forcer..."
-							dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"  >/dev/null 2>&1 &
+							run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"
 							detect_running_status2 dns-ecs-forcer 2055
 						else
 							# 可能是中转服务器，没有确切的国外出口IP，此时先不开启ecs，等检测到国外出口IP后，再开启def
@@ -2306,7 +2313,7 @@ start_dns_new(){
 								detect_running_status2 uredir 2055
 							else
 								echo_date "开启socat，用于端口转发：1055 → 2055"
-								socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055 >/dev/null 2>&1 &
+								run_bg socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055
 								detect_running_status2 socat 2055
 							fi
 						fi
@@ -2322,7 +2329,7 @@ start_dns_new(){
 							echo_date "使用${TCORE_NAME}_dns作为chinadns-ng的上游DNS，并开启ECS..."
 							local FDNS1="127.0.0.1#2055"
 							if [ -n "${ss_real_server_ip}" ];then
-								dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"  >/dev/null 2>&1 &
+								run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"
 								detect_running_status2 dns-ecs-forcer 2055
 							else
 								# 可能是中转服务器，没有确切的国外出口IP，此时先不开启ecs，等检测到国外出口IP后，再开启def
@@ -2333,7 +2340,7 @@ start_dns_new(){
 									detect_running_status2 uredir 2055
 								else
 									echo_date "开启socat，用于端口转发：1055 → 2055"
-									socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055 >/dev/null 2>&1 &
+									run_bg socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055
 									detect_running_status2 socat 2055
 								fi
 							fi
@@ -2407,7 +2414,7 @@ start_dns_new(){
 					if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
 						if [ -n "${ss_real_server_ip}" ];then
 							# dns request: udp → dnsmasq:53 → chinadns-ng:7913 → def(ecs):2056 → DNS server:${TARGET_PT}
-							dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${ss_real_server_ip%.*}.0" >/dev/null 2>&1 &
+							run_bg dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${ss_real_server_ip%.*}.0"
 							detect_running_status2 dns-ecs-forcer 2056 slient
 							local FDNS2="127.0.0.1#2056"
 						else
@@ -2417,7 +2424,7 @@ start_dns_new(){
 								uredir :2056 ${UDP_TARGET}
 								detect_running_status2 uredir 2055
 							else
-								socat -T5 UDP4-LISTEN:2056,fork,reuseaddr UDP4:${UDP_TARGET} >/dev/null 2>&1 &
+								run_bg socat -T5 UDP4-LISTEN:2056,fork,reuseaddr UDP4:${UDP_TARGET}
 								detect_running_status2 socat 2055
 							fi
 							local FDNS2="127.0.0.1#2056"
@@ -2448,7 +2455,7 @@ start_dns_new(){
 					if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
 						if [ -n "${ss_real_server_ip}" ];then
 							# dns request: udp → dnsmasq:53 → chinadns-ng:7913 → def(ecs):2056 → dns2tcp:1056 → DNS server:${TARGET_PT}
-							dns-ecs-forcer -p 2056 -s 127.0.0.1:1056 -e "${ss_real_server_ip%.*}.0" >/dev/null 2>&1 &
+							run_bg dns-ecs-forcer -p 2056 -s 127.0.0.1:1056 -e "${ss_real_server_ip%.*}.0"
 							detect_running_status2 dns-ecs-forcer 2056 slient
 						else
 							# 可能是中转服务器，没有确切的国外出口IP，此时先使用socat将2056端口转发到DNS服务器，等待获取到国外出口IP后再用dns-ecs-forcer替代socat
@@ -2459,16 +2466,16 @@ start_dns_new(){
 								detect_running_status2 uredir 2056
 							else
 								echo_date "开启socat，用于端口转发：1056 → 2056"
-								socat -T5 UDP4-LISTEN:2056,fork,reuseaddr UDP4:127.0.0.1:1056 >/dev/null 2>&1 &
+								run_bg socat -T5 UDP4-LISTEN:2056,fork,reuseaddr UDP4:127.0.0.1:1056
 								detect_running_status2 socat 2056
 							fi
 						fi
-						dns2tcp -L"127.0.0.1#1056" -R"${TARGET_IP}#${TARGET_PT}" >/dev/null 2>&1 &
+						run_bg dns2tcp -L"127.0.0.1#1056" -R"${TARGET_IP}#${TARGET_PT}"
 						detect_running_status2 dns2tcp 1056 slient
 						
 						local FDNS2="127.0.0.1#2056"
 					else
-						dns2tcp -L"127.0.0.1#1056" -R"${TARGET_IP}#${TARGET_PT}" >/dev/null 2>&1 &
+						run_bg dns2tcp -L"127.0.0.1#1056" -R"${TARGET_IP}#${TARGET_PT}"
 						detect_running_status2 dns2tcp 1056 slient
 						local FDNS2="127.0.0.1#1056"
 					fi
@@ -2511,7 +2518,7 @@ start_dns_new(){
 		if [ "${ss_basic_chng_no_ipv6}" == "1" ];then
 			local EXT="${EXT} -N"
 		fi
-		chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M >/dev/null 2>&1 &
+		run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M
 		detect_running_status chinadns-ng
 	elif [ "${ss_dns_plan}" == "2" ];then
 		# default smartdns conf
@@ -2519,6 +2526,10 @@ start_dns_new(){
 			ss_basic_smrt="1"
 			dbus set ss_basic_smrt="1"
 		fi
+
+		echo_date "生成smartdns dns分流文件: /tmp/smart_cdn.txt，/tmp/smart_gfw.txt"
+		cat /tmp/cdn.txt | sed 's/^/nameserver \//' | sed 's/$/\/chn/' >/tmp/smart_cdn.conf
+		cat /tmp/gfwlist.txt | sed 's/^/nameserver \//' | sed 's/$/\/gfw/' >/tmp/smart_gfw.conf
 	
 		rm -rf /tmp/smartdns*
 		rm -rf /var/run/smartdns*
@@ -2533,10 +2544,10 @@ start_dns_new(){
 		
 		if [ -f "/koolshare/ss/rules/smartdns_smrt_${ss_basic_smrt}_user.conf" ];then
 			cp -rf /koolshare/ss/rules/smartdns_smrt_${ss_basic_smrt}_user.conf /tmp/upload/smartdns_smrt_${ss_basic_smrt}.conf
-			smartdns -S -c /tmp/upload/smartdns_smrt_${ss_basic_smrt}.conf -p /var/run/smartdns_${ss_basic_smrt}.pid >/dev/null 2>&1 &
+			run_bg smartdns -S -c /tmp/upload/smartdns_smrt_${ss_basic_smrt}.conf -p /var/run/smartdns_${ss_basic_smrt}.pid
 		else
 			cp -rf /koolshare/ss/rules/smartdns_smrt_${ss_basic_smrt}.conf /tmp/upload/smartdns_smrt_${ss_basic_smrt}.conf
-			smartdns -S -c /tmp/upload/smartdns_smrt_${ss_basic_smrt}.conf -p /var/run/smartdns_${ss_basic_smrt}.pid >/dev/null 2>&1 &
+			run_bg smartdns -S -c /tmp/upload/smartdns_smrt_${ss_basic_smrt}.conf -p /var/run/smartdns_${ss_basic_smrt}.pid
 		fi
 		
 		# write isp dns to smartdns conf file
@@ -2649,20 +2660,20 @@ start_dns_old() {
 		[ "${DNS_PLAN}" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外gfwlist站点】的DNS解析..."
 		[ "${DNS_PLAN}" == "2" ] && echo_date "开启SmartDNS，用于【国内所有网站 + 国外所有网站】的DNS解析..."
 		sed '/^#/d /^$/d' /koolshare/ss/rules/smartdns.conf > /tmp/smartdns.conf
-		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
+		run_bg smartdns -c /tmp/smartdns.conf
 	
 	elif [ "${ss_china_dns}" == "98" -a "${ss_foreign_dns}" != "9" ]; then
 		# 国内启用SmartDNS，国外不启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则是根据国外DNS的选择而决定是否使用cdn.conf）
 		[ "${DNS_PLAN}" == "1" ] && echo_date "开启SmartDNS，用于【国内所有网站】的DNS解析..."
 		[ "${DNS_PLAN}" == "2" ] && echo_date "开启SmartDNS，用于【国内cdn网站】的DNS解析..."
 		sed '/^#/d /^$/d /foreign/d' /koolshare/ss/rules/smartdns.conf > /tmp/smartdns.conf
-		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
+		run_bg smartdns -c /tmp/smartdns.conf
 	elif [ "${ss_china_dns}" != "98" -a "${ss_foreign_dns}" == "9" ]; then
 		# 国内不启用SmartDNS，国外启用SmartDNS （此情况下，如果是gfwlist模式则不用cdn.conf；如果是大陆白名单模式则需要使用cdn.conf）
 		[ "${DNS_PLAN}" == "1" ] && echo_date "开启SmartDNS，用于【国外gfwlist站点】的DNS解析..."
 		[ "${DNS_PLAN}" == "2" ] && echo_date "开启SmartDNS，用于【国外所有网站】的DNS解析..."
 		sed '/^#/d /^$/d /china/d' /koolshare/ss/rules/smartdns.conf > /tmp/smartdns.conf
-		smartdns -c /tmp/smartdns.conf >/dev/null 2>&1 &
+		run_bg smartdns -c /tmp/smartdns.conf
 	fi
 
 	# 8. direct
@@ -3153,9 +3164,9 @@ create_dnsmasq_conf() {
 	#    1. 依靠dnsmasq分流的方案下，直接使用server=去指定域名需要的解析DNS即可
 	# 回国模式
 	#    走代理的除了gfw列表里其其它域名，加入有个国外用户想直连访问国内的新浪微博，那么应该用国外DNS去解析，得到和不开插件一样的解析效果
-	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+	#local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 	local wanwhitedomains=$(echo ${ss_wan_white_domain} | base64_decode | sed '/^#/d')
-	local ALL_WHITE_DOMAINS=$(echo ${wanwhitedomains} ${ALL_NODE_DOMAINS} | sed 's/[[:space:]]/\n/g' | sort -u)
+	local ALL_WHITE_DOMAINS=$(echo ${wanwhitedomains} | sed 's/[[:space:]]/\n/g' | sort -u)
 	if [ -n "${ALL_WHITE_DOMAINS}" ]; then
 		echo_date "生成域名白名单！"
 		echo "# -------- for white_domain --------" >>/tmp/wblist.conf
@@ -3343,12 +3354,12 @@ start_speeder() {
 
 				if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
 					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
-					speederv1 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key1 $ss_basic_udpv1_password \
-						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu >/dev/null 2>&1 &
+					run_bg speederv1 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key1 $ss_basic_udpv1_password \
+						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu
 					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
 				else
-					speederv1 -c -l 0.0.0.0:1092 -r $ss_basic_udpv1_rserver:$ss_basic_udpv1_rport $key1 \
-						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu >/dev/null 2>&1 &
+					run_bg speederv1 -c -l 0.0.0.0:1092 -r $ss_basic_udpv1_rserver:$ss_basic_udpv1_rport $key1 \
+						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu
 				fi
 			elif [ "$ss_basic_udp_software" == "2" ]; then
 				echo_date 开启UDPspeederV2进程.
@@ -3367,12 +3378,12 @@ start_speeder() {
 
 				if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
 					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
-					speederv2 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key2 \
-						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
+					run_bg speederv2 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key2 \
+						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file
 					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
 				else
-					speederv2 -c -l 0.0.0.0:1092 -r $ss_basic_udpv2_rserver:$ss_basic_udpv2_rport $key2 \
-						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file >/dev/null 2>&1 &
+					run_bg speederv2 -c -l 0.0.0.0:1092 -r $ss_basic_udpv2_rserver:$ss_basic_udpv2_rport $key2 \
+						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file
 				fi
 			fi
 		fi
@@ -3385,9 +3396,9 @@ start_speeder() {
 			[ -n "$ss_basic_udp2raw_lowerlevel" ] && UD2RAW_LOW="--lower-level $ss_basic_udp2raw_lowerlevel" || UD2RAW_LOW=""
 			[ -n "$ss_basic_udp2raw_password" ] && key3="-k $ss_basic_udp2raw_password" || key3=""
 
-			udp2raw -c -l 0.0.0.0:1093 -r $ss_basic_udp2raw_rserver:$ss_basic_udp2raw_rport $key3 $UD2RAW_EX1 $UD2RAW_EX2 \
+			run_bg udp2raw -c -l 0.0.0.0:1093 -r $ss_basic_udp2raw_rserver:$ss_basic_udp2raw_rport $key3 $UD2RAW_EX1 $UD2RAW_EX2 \
 				--raw-mode $ss_basic_udp2raw_rawmode --cipher-mode $ss_basic_udp2raw_ciphermode --auth-mode $ss_basic_udp2raw_authmode \
-				$UD2RAW_LOW $ss_basic_udp2raw_other >/dev/null 2>&1 &
+				$UD2RAW_LOW $ss_basic_udp2raw_other
 		fi
 	fi
 }
@@ -3440,12 +3451,12 @@ start_ss_redir() {
 					echo_date ${BIN}的 tcp 走kcptun.
 				fi
 				if [ "${ss_basic_type}" == "1" ]; then
-					rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+						run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
 					else
-						ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						run ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
 				fi
 				# udp go udpspeeder
@@ -3454,12 +3465,12 @@ start_ss_redir() {
 				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date ${BIN}的 udp 走udpspeeder.
 				[ "$ss_basic_udp2raw_boost_enable" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date ${BIN}的 udp 走${BIN}.
 				if [ "${ss_basic_type}" == "1" ]; then
-					rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal -s "127.0.0.1:${SPEED_PORT}" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
+						run sslocal -s "127.0.0.1:${SPEED_PORT}" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
 					else
-						ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						run ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
 				fi
 			else
@@ -3473,15 +3484,15 @@ start_ss_redir() {
 				fi
 				
 				if [ "${ss_basic_type}" == "1" ]; then
-					rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
-					rss-redir -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run rss-redir -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-						sslocal ${ARG_RUST_REDIR} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
+						run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+						run sslocal ${ARG_RUST_REDIR} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
 					else
-						ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
-						ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						run ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						run ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
 				fi
 			fi
@@ -3496,12 +3507,12 @@ start_ss_redir() {
 			fi
 			echo_date ${BIN}的 udp 未开启.
 			if [ "${ss_basic_type}" == "1" ]; then
-				rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+				run rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 			else
 				if [ "${ss_basic_rust}" == "1" ];then
-					sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+					run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
 				else
-					ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run ss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				fi
 			fi
 		fi
@@ -3511,12 +3522,12 @@ start_ss_redir() {
 				# tcp go ss
 				echo_date ${BIN}的 tcp 走${BIN}.
 				if [ "${ss_basic_type}" == "1" ]; then
-					rss-redir -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run rss-redir -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+						run sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
 					else
-						ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						run ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
 				fi
 				# udp go udpspeeder
@@ -3526,12 +3537,12 @@ start_ss_redir() {
 				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date ${BIN}的 udp 走${BIN}.
 
 				if [ "${ss_basic_type}" == "1" ]; then
-					rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+					run rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
+						run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
 					else
-						ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
+						run ss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} ${ARG_OBFS} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
 					fi
 				fi
 			else
@@ -3542,7 +3553,7 @@ start_ss_redir() {
 					fire_redir "rss-redir -c ${CONFIG_FILE} -u"
 				else
 					if [ "${ss_basic_rust}" == "1" ];then
-						sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" --udp-redir "tproxy" ${ARG_OBFS} -U -d >/dev/null 2>&1
+						run sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" --udp-redir "tproxy" ${ARG_OBFS} -U -d >/dev/null 2>&1
 					else
 						fire_redir "ss-redir -c ${CONFIG_FILE} ${ARG_OBFS} -u"
 					fi
@@ -3556,7 +3567,7 @@ start_ss_redir() {
 				fire_redir "rss-redir -c ${CONFIG_FILE}"
 			else
 				if [ "${ss_basic_rust}" == "1" ];then
-					sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
+					run sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
 				else
 					fire_redir "ss-redir -c ${CONFIG_FILE} ${ARG_OBFS}"
 				fi
@@ -3576,19 +3587,19 @@ fire_redir() {
 	fi
 	if [ "${ss_basic_type}" == "0" -a "$ss_basic_tfo" == "1" -a "${LINUX_VER}" != "26" ]; then
 		local ARG_2="--fast-open"
-		echo_date $BIN开启tcp fast open支持.
+		echo_date "$BIN开启tcp fast open支持."
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
 
 	if [ "${ss_basic_type}" == "0" -a "$ss_basic_tnd" == "1" ]; then
-		echo_date $BIN开启TCP_NODELAY支持.
+		echo_date "$BIN开启TCP_NODELAY支持."
 		local ARG_3="--no-delay"
 	else
 		local ARG_3=""
 	fi
 
 	if [ "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ]; then
-		echo_date $BIN开启$THREAD线程支持.
+		echo_date "$BIN开启$THREAD线程支持."
 		local i=1
 		while [ $i -le $THREAD ]; do
 			cmd $1 $ARG_1 $ARG_2 $ARG_3 -f /var/run/ss_$i.pid
@@ -4162,14 +4173,14 @@ start_v2ray() {
 		else
 			echo_date "开启Xray主进程..."
 			cd /koolshare/bin
-			xray run -c ${V2RAY_CONFIG_FILE} >/dev/null 2>&1 &
+			run_bg xray run -c ${V2RAY_CONFIG_FILE}
 		fi
 		detect_running_status xray
 	else
 		# v2ray start
 		echo_date "开启V2ray主进程..."
 		cd /koolshare/bin
-		v2ray --config=${V2RAY_CONFIG_FILE} >/dev/null 2>&1 &
+		run_bg v2ray --config=${V2RAY_CONFIG_FILE}
 		detect_running_status2 v2ray ${V2RAY_CONFIG_FILE}
 	fi
 }
@@ -4637,7 +4648,7 @@ start_xray() {
 	else
 		echo_date "开启Xray主进程..."
 		cd /koolshare/bin
-		xray run -c $XRAY_CONFIG_FILE >/dev/null 2>&1 &
+		run_bg xray run -c $XRAY_CONFIG_FILE
 	fi
 	detect_running_status xray
 }
@@ -4976,7 +4987,7 @@ start_trojan(){
 		else
 			echo_date "开启Xray主进程，用以运行trojan协议节点..."
 			cd /koolshare/bin
-			xray run -c $XRAY_CONFIG_FILE >/dev/null 2>&1 &
+			run_bg xray run -c $XRAY_CONFIG_FILE
 		fi
 		detect_running_status xray
 	else
@@ -4985,26 +4996,30 @@ start_trojan(){
 			echo_date trojan开启$THREAD线程支持.
 			local i=1
 			while [ $i -le $THREAD ]; do
-				trojan >/dev/null 2>&1 &
+				run_bg trojan
 				let i++
 			done
 		else
-			trojan >/dev/null 2>&1 &
+			run_bg trojan
 		fi
 
 		if [ "${trojan_socks}" == "1" -a -f "${TROJAN_CONFIG_FILE_SOCKS}" ];then
-			trojan -c ${TROJAN_CONFIG_FILE_SOCKS} >/dev/null 2>&1 &
+			run_bg trojan -c ${TROJAN_CONFIG_FILE_SOCKS}
 		fi
 	fi
 }
 
 start_naive(){
 	echo_date "开启ipt2socks进程..."
-	ipt2socks -p 23456 -l 3333 -4 -R >/dev/null 2>&1 &
+	run_bg ipt2socks -p 23456 -l 3333 -4 -R
 	detect_running_status2 ipt2socks 23456
 	
 	echo_date "开启NaïveProxy主进程..."
-	naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server_orig}:${ss_basic_naive_port} >/dev/null 2>&1 &
+	if [ -n "${ss_basic_server_ip}" ];then
+		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server_orig}:${ss_basic_naive_port} --host-resolver-rules="MAP ${ss_basic_server_orig} ${ss_basic_server_ip}"
+	else
+		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server_orig}:${ss_basic_naive_port}
+	fi
 	detect_running_status2 naive 23456
 }
 
@@ -5804,7 +5819,7 @@ finish_start(){
 					kill -9 ${DEF_PID}
 				fi
 				echo_date "开启dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-				dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0" >/dev/null 2>&1 &
+				dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0"
 				detect_running_status2 dns-ecs-forcer 2055
 			fi
 		fi
@@ -5837,7 +5852,7 @@ finish_start(){
 			if [ -n "${TMP_PID}" ];then
 				kill -9 ${TMP_PID}
 			fi		
-			dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${REMOTE_IP_FRN%.*}.0" >/dev/null 2>&1 &
+			run_bg dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
 			detect_running_status2 dns-ecs-forcer 2056 slient
 		fi
 	fi
@@ -5850,7 +5865,7 @@ finish_start(){
 			if [ -n "${TMP_PID}" ];then
 				kill -9 ${TMP_PID}
 			fi		
-			dns-ecs-forcer -p 2056 -s ${TCP_TARGET} -e "${REMOTE_IP_FRN%.*}.0" >/dev/null 2>&1 &
+			run_bg dns-ecs-forcer -p 2056 -s ${TCP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
 			detect_running_status2 dns-ecs-forcer 2056 slient
 		fi
 	fi
@@ -5875,7 +5890,7 @@ check_status() {
 	if [ "$ss_failover_enable" == "1" ]; then
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
-		start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+		run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
 	fi
 }
 

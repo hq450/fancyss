@@ -21,10 +21,13 @@ sync_binary(){
 	# v2ray
 	local v2ray_version=$(cat ${CURR_PATH}/binaries/v2ray/latest.txt)
 	local xray_version=$(cat ${CURR_PATH}/binaries/xray/latest.txt)
+
+	#cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-mtk/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-hnd/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-qca/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv5 ${CURR_PATH}/fancyss/bin-arm/v2ray
 	# xray
+	#cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-mtk/v2ray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
@@ -43,6 +46,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-qca
+		rm -rf ./shadowsocks/bin-mtk
 		mv shadowsocks/bin-hnd ./shadowsocks/bin
 		echo hnd > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
@@ -56,6 +60,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
+		rm -rf ./shadowsocks/bin-mtk
 		mv shadowsocks/bin-qca ./shadowsocks/bin
 		echo qca > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
@@ -69,6 +74,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-qca
+		rm -rf ./shadowsocks/bin-mtk
 		mv shadowsocks/bin-arm ./shadowsocks/bin
 		echo arm > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -79,6 +85,21 @@ gen_folder(){
 		else
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_arm_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
 			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_arm_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp		
+		fi
+	fi
+	if [ "${platform}" == "mtk" ];then
+		rm -rf ./shadowsocks/bin-hnd_v8
+		rm -rf ./shadowsocks/bin-arm
+		rm -rf ./shadowsocks/bin-qca
+		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
+		mv -f ./shadowsocks/bin-mtk/* ./shadowsocks/bin/
+		rm -rf ./shadowsocks/bin-mtk
+		echo mtk > ./shadowsocks/.valid
+		if [ "${release_type}" == "debug" ];then
+			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		else
+			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
+			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		fi
 	fi
 	
@@ -288,6 +309,7 @@ do_backup(){
 	if [ ${release_type} == "release" ];then
 		cd ${CURR_PATH}
 		HISTORY_DIR="${CURR_PATH}/../fancyss_history_package/fancyss_${platform}"
+		mkdir -p ${HISTORY_DIR}
 		# backup latested package after pack
 		local backup_version=${VERSION}
 		local backup_tar_md5=${md5value}
@@ -336,6 +358,8 @@ make(){
 	pack qca lite release
 	pack arm full release
 	pack arm lite release
+	pack mtk full release
+	pack mtk lite release
 	# --- for debug ---
 	if [ "${flag}" == "debug" ];then
 		pack hnd full debug

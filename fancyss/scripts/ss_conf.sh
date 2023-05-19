@@ -44,7 +44,6 @@ backup_tar(){
 	cp /koolshare/bin/rss-redir ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/dns2socks ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/chinadns-ng ${TARGET_FOLDER}/bin/
-	cp /koolshare/bin/resolveip ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/sponge ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/jq ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/xray ${TARGET_FOLDER}/bin/

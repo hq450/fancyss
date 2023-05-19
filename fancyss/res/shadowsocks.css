@@ -580,8 +580,8 @@ input[type=checkbox]{
 	background-image:none;
 	color:#FFFFFF;
 	vertical-align:middle;
-	border:1px solid #92650F;
-	background-color: #3e2902;
+	border:1px solid #4c4c4c;
+	background-color: #373737;
 }
 #app[skin=TUF] .input_option_2:hover, #app[skin=TUF] .input_option_2:focus{
 	border:1px solid #92650F;

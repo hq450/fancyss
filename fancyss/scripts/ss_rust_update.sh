@@ -12,6 +12,8 @@ if [ "${LINUX_VER}" -ge "41" ];then
 	ARCH=armv7
 elif [ "${LINUX_VER}" -eq "26" ];then
 	ARCH=armv5
+elif [ "${LINUX_VER}" -eq "54" ];then
+	ARCH=aarch64
 fi
 
 get_latest_version(){
