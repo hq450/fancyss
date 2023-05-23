@@ -33,6 +33,22 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
+
+	# ss-rust
+	local ssrust_version=$(cat ${CURR_PATH}/binaries/ss_rust/latest.txt)
+	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_arm64 ${CURR_PATH}/fancyss/bin-mtk/sslocal
+	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/sslocal
+	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_armv7 ${CURR_PATH}/fancyss/bin-hnd/sslocal
+	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_armv7 ${CURR_PATH}/fancyss/bin-qca/sslocal
+	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_armv5 ${CURR_PATH}/fancyss/bin-arm/sslocal
+	
+	# kcptun
+	local kcptun_version=$(cat ${CURR_PATH}/binaries/kcptun/latest.txt)
+	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_arm64 ${CURR_PATH}/fancyss/bin-mtk/kcptun
+	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/kcptun
+	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv7 ${CURR_PATH}/fancyss/bin-hnd/kcptun
+	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv7 ${CURR_PATH}/fancyss/bin-qca/kcptun
+	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv5 ${CURR_PATH}/fancyss/bin-arm/kcptun
 }
 
 gen_folder(){

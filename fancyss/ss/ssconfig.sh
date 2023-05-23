@@ -5028,10 +5028,10 @@ start_naive(){
 write_cron_job() {
 	sed -i '/ssupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	if [ "1" == "$ss_basic_rule_update" ]; then
-		echo_date 添加fancyss规则定时更新任务，每天"$ss_basic_rule_update_time"自动检测更新规则.
+		echo_date "添加fancyss规则定时更新任务，每天$ss_basic_rule_update_time自动检测更新规则."
 		cru a ssupdate "0 $ss_basic_rule_update_time * * * /bin/sh /koolshare/scripts/ss_rule_update.sh"
 	else
-		echo_date fancyss规则定时更新任务未启用！
+		echo_date "fancyss规则定时更新任务未启用！"
 	fi
 	sed -i '/ssnodeupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	if [ "$ss_basic_node_update" = "1" ]; then
@@ -5447,7 +5447,6 @@ write_numbers() {
 	nvram set update_ipset="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.date')"
 	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.date')"
 	nvram set update_cdn="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.cdn_china.date')"
-	
 	nvram set ipset_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.count')"
 	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count')"
 	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count_ip')"
