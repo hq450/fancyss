@@ -111,6 +111,7 @@ gen_folder(){
 		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
 		mv -f ./shadowsocks/bin-mtk/* ./shadowsocks/bin/
 		rm -rf ./shadowsocks/bin-mtk
+		rm -rf ./shadowsocks/bin/README.md
 		echo mtk > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
