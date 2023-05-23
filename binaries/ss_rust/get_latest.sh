@@ -19,7 +19,7 @@ make(){
   update arm-unknown-linux-musleabi armv5
   # Currently no official stable release for armv7-unknown-linux-musleabihf,
   # should use armv7-unknown-linux-musleabihf for armv7 once there is one.
-  update arm-unknown-linux-musleabihf armv7
+  update armv7-unknown-linux-musleabihf armv7
   update aarch64-unknown-linux-musl arm64
   md5_binaries
   echo -n "v$LATEST_VERSION" > latest.txt

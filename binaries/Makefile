@@ -9,7 +9,7 @@ update_ss_rust:
 	ss_rust/get_latest.sh
 
 update_v2ray:
-	v2ray/get_latest.sh
+	v2ray/make_latest.sh
 
 update_xray:
 	xray/get_latest.sh
