@@ -12,29 +12,29 @@ dns2socks:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), stati
 dns2tcp:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
 dnsclient:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-musl-aarch64.so.1, stripped
 dns-ecs-forcer:  ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-dohclient:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-dohclient-cache: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-haproxy:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
+dohclient:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+dohclient-cache: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+haproxy:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
 haveged:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
 httping:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
 ipt2socks:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
 isutf8:          ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-musl-aarch64.so.1, stripped
 jq:              ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-kcptun:          ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-naive:           ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-obfs-local:      ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-rss-local:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-rss-redir:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-smartdns:        ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-speederv1:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-speederv2:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
+kcptun:          ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+naive:           ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+obfs-local:      ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+rss-local:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+rss-redir:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+smartdns:        ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+speederv1:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+speederv2:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
 sponge:          ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-sslocal:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-ss-local:        ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-ss-redir:        ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
-ss-tunnel:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
+sslocal:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+ss-local:        ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+ss-redir:        ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
+ss-tunnel:       ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
 trojan:          ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
-udp2raw:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
+udp2raw:         ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
 uredir:          ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped
 v2ray:           ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
 v2ray-plugin:    ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, corrupted section header size
