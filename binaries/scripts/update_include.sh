@@ -46,7 +46,7 @@ update(){
   extract_archive "$FILE_NAME" "$bin_name_in_archive"
 
   rm "$FILE_NAME"
-  upx --lzma --ultra-brute "$bin_name_in_archive"
+  upx-4.0.2 --lzma --ultra-brute "$bin_name_in_archive"
   mv "$bin_name_in_archive" "$dir/${bin_file_name}"
 }
 
