@@ -19,15 +19,17 @@ cp_rules(){
 
 sync_binary(){
 	# v2ray
-	local v2ray_version=$(cat ${CURR_PATH}/binaries/v2ray/latest.txt)
-	local xray_version=$(cat ${CURR_PATH}/binaries/xray/latest.txt)
-
-	#cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-mtk/v2ray
+	local v2ray_version=$(cat ${CURR_PATH}/binaries/v2ray/latest_v5.txt)
+	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-mtk/v2ray
+	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-hnd/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-qca/v2ray
 	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv5 ${CURR_PATH}/fancyss/bin-arm/v2ray
+	
 	# xray
-	#cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-mtk/v2ray
+	local xray_version=$(cat ${CURR_PATH}/binaries/xray/latest.txt)
+	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-mtk/xray
+	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
 	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
@@ -47,7 +49,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-mtk
-		mv shadowsocks/bin-hnd ./shadowsocks/bin
+		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
 		echo hnd > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -56,12 +58,27 @@ gen_folder(){
 			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		fi
 	fi
+	if [ "${platform}" == "hnd_v8" ];then
+		rm -rf ./shadowsocks/bin-arm
+		rm -rf ./shadowsocks/bin-qca
+		rm -rf ./shadowsocks/bin-mtk
+		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
+		mv -f ./shadowsocks/bin-hnd_v8/* ./shadowsocks/bin/
+		rm -rf ./shadowsocks/bin-mtk
+		echo hnd_v8 > ./shadowsocks/.valid
+		if [ "${release_type}" == "debug" ];then
+			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		else
+			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
+			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		fi
+	fi
 	if [ "${platform}" == "qca" ];then
 		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-mtk
-		mv shadowsocks/bin-qca ./shadowsocks/bin
+		mv ./shadowsocks/bin-qca ./shadowsocks/bin
 		echo qca > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_qca_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -75,7 +92,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-mtk
-		mv shadowsocks/bin-arm ./shadowsocks/bin
+		mv ./shadowsocks/bin-arm ./shadowsocks/bin
 		echo arm > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -357,6 +374,9 @@ make(){
 	# --- for release ---
 	pack hnd full release
 	pack hnd lite release
+	pack hnd_v8 full release
+	pack hnd_v8 lite release
+	pack hnd lite release
 	pack qca full release
 	pack qca lite release
 	pack arm full release
@@ -374,7 +394,4 @@ make(){
 	finish
 }
 
-#set -x
 make $1
-
-#set +x

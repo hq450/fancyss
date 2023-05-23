@@ -252,9 +252,9 @@ prepare_system() {
 	local RET=$(curl -4sk --connect-timeout 2 --max-time 2 "http://worldtimeapi.org/api/timezone/Asia/Shanghai")
 	if [ -n "${RET}" ];then
 		REMOTE_IP_OUT_SRC="worldtimeapi.org"
-		REMOTE_IP_OUT=$(echo ${RET}|jq -r '.client_ip')
+		REMOTE_IP_OUT=$(echo ${RET}|run jq -r '.client_ip')
 		local TIMESTAMP_SOURCE="worldtimeapi.org"
-		local SERVER_TIMESTAMP=$(echo ${RET}|jq -r '.unixtime')
+		local SERVER_TIMESTAMP=$(echo ${RET}|run jq -r '.unixtime')
 		if [ "${SERVER_TIMESTAMP}" == "null" ];then
 			local SERVER_TIMESTAMP=""
 		fi
@@ -313,7 +313,7 @@ prepare_system() {
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(curl -4s --connect-timeout 2 http://pv.sohu.com/cityjson?ie=utf-8 2>&1 | grep -v "Terminated" | awk -F"=" '{print $2}'|sed 's/^[[:space:]]//g'|sed 's/;$//g'|jq -r '.cip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+		REMOTE_IP_OUT=$(curl -4s --connect-timeout 2 http://pv.sohu.com/cityjson?ie=utf-8 2>&1 | grep -v "Terminated" | awk -F"=" '{print $2}'|sed 's/^[[:space:]]//g'|sed 's/;$//g'|run jq -r '.cip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 		REMOTE_IP_OUT_SRC="pv.sohu.co"
 	fi
 
@@ -328,7 +328,7 @@ prepare_system() {
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(curl -4sk --connect-timeout 2 https://api.myip.com 2>&1 | grep -v "Terminated" |jq -r '.ip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+		REMOTE_IP_OUT=$(curl -4sk --connect-timeout 2 https://api.myip.com 2>&1 | grep -v "Terminated" |run jq -r '.ip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 		REMOTE_IP_OUT_SRC="api.myip.com"
 	fi
 
@@ -1304,8 +1304,8 @@ kill_process() {
 			# 保存缓存
 			local ret=$(dohclient-cache -s 127.0.0.1:7913 save /tmp/doh_main_backup.db 2>/dev/null)
 			if [ $? == 0 -a -n "${ret}" ];then
-				local error=$(echo ${ret} | jq '.error')
-				local data=$(echo ${ret} | jq '.data')
+				local error=$(echo ${ret} | run jq '.error')
+				local data=$(echo ${ret} | run jq '.data')
 				if [ "${error}" == "0" -a -n "${data}" ];then
 					echo_date "DNS缓存写入成功：总计写入了${data}条DNS缓存到：/tmp/doh_main_backup.db！"
 				else
@@ -1556,7 +1556,7 @@ creat_ss_json() {
 	if [ "$ss_basic_udp2raw_boost_enable" == "1" -o "$ss_basic_udp_boost_enable" == "1" ]; then
 		if [ "$ss_basic_udp_upstream_mtu" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
 			echo_date "设定MTU为 $ss_basic_udp_upstream_mtu_value"
-			cat /koolshare/ss/ss.json | jq --argjson MTU $ss_basic_udp_upstream_mtu_value '. + {MTU: $MTU}' >/koolshare/ss/ss_tmp.json
+			cat /koolshare/ss/ss.json | run jq --argjson MTU $ss_basic_udp_upstream_mtu_value '. + {MTU: $MTU}' >/koolshare/ss/ss_tmp.json
 			mv /koolshare/ss/ss_tmp.json /koolshare/ss/ss.json
 		fi
 	fi
@@ -1952,8 +1952,8 @@ start_dohclient_main(){
 	if [ "${ss_basic_dohc_cache_reuse}" == "1" ];then
 		local ret=$(dohclient-cache -s 127.0.0.1:7913 load /tmp/doh_main_backup.db 2>/dev/null)
 		if [ $? == 0 -a -n "${ret}" ];then
-			local error=$(echo ${ret} | jq '.error')
-			local data=$(echo ${ret} | jq '.data')
+			local error=$(echo ${ret} | run jq '.error')
+			local data=$(echo ${ret} | run jq '.data')
 			if [ "${error}" == "0" -a -n "${data}" ];then
 				echo_date "DNS缓存加载成功：总计加载了${data}条DNS缓存！"
 			else
@@ -3959,7 +3959,7 @@ creat_v2ray_json() {
 		EOF
 		echo_date 解析${VCORE_NAME}配置文件...
 		sed -i '/null/d' ${V2RAY_CONFIG_TEMP} 2>/dev/null
-		jq --tab . ${V2RAY_CONFIG_TEMP} >/tmp/jq_para_tmp.txt 2>&1
+		run jq --tab . ${V2RAY_CONFIG_TEMP} >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -3967,22 +3967,22 @@ creat_v2ray_json() {
 			rm -rf /tmp/jq_para_tmp.txt
 			close_in_five flag
 		fi
-		jq --tab . $V2RAY_CONFIG_TEMP >"$V2RAY_CONFIG_FILE"
+		run jq --tab . $V2RAY_CONFIG_TEMP >"$V2RAY_CONFIG_FILE"
 		echo_date ${VCORE_NAME}配置文件写入成功到"$V2RAY_CONFIG_FILE"
 	else
 		echo_date "使用自定义的${VCORE_NAME} json配置文件..."
 		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_TEMP"
-		local OB=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbound)
-		local OBS=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbounds)
+		local OB=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbound)
+		local OBS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbounds)
 
 		# 兼容旧格式：outbound
 		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbound)
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbound)
 		fi
 		
 		# 新格式：outbound[]
 		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | jq .outbounds[0])
+			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
 		if [ "${ss_basic_dns_flag}" == "1" ]; then
 			local TEMPLATE="{
@@ -4047,12 +4047,12 @@ creat_v2ray_json() {
 							}"
 		fi
 		echo_date "解析${VCORE_NAME}配置文件..."
-		echo ${TEMPLATE} | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
+		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date "${VCORE_NAME}配置文件写入成功到$V2RAY_CONFIG_FILE"
 
 		# 检查v2ray json是否配置了xtls，如果是，则自动切换为xray
 		if [ -f "/koolshare/ss/v2ray.json" ];then
-			local IS_XTLS=$(cat /koolshare/ss/v2ray.json | jq -r .outbounds[0].streamSettings.security 2>/dev/null)
+			local IS_XTLS=$(cat /koolshare/ss/v2ray.json | run jq -r .outbounds[0].streamSettings.security 2>/dev/null)
 			if [ "${IS_XTLS}" == "xtls" -a "${ss_basic_vcore}" != "1" ];then
 				echo_date "ℹ️检测到你配置了支持xtls节点，而V2ray不支持xtls，自动切换为Xray核心！"
 				ss_basic_vcore=1
@@ -4063,16 +4063,16 @@ creat_v2ray_json() {
 		fi
 
 		# 检测用户json的服务器ip地址
-		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].protocol)
+		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
 		vmess|vless)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.vnext[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		shadowsocks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | jq -r .outbounds[0].settings.servers[0].address)
+			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			v2ray_server=""
@@ -4131,7 +4131,8 @@ creat_v2ray_json() {
 	else
 		echo_date 测试${VCORE_NAME}配置文件....
 		cd /koolshare/bin
-		result=$(v2ray -test -config="$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
+		#result=$(v2ray -test -config="$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
+		result=$(run v2ray test -c "$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
 		if [ -n "$result" ]; then
 			echo_date $result
 			echo_date ${VCORE_NAME}配置文件通过测试!!!
@@ -4180,7 +4181,8 @@ start_v2ray() {
 		# v2ray start
 		echo_date "开启V2ray主进程..."
 		cd /koolshare/bin
-		run_bg v2ray --config=${V2RAY_CONFIG_FILE}
+		#run_bg v2ray --config=${V2RAY_CONFIG_FILE}
+		run_bg v2ray run -c ${V2RAY_CONFIG_FILE}
 		detect_running_status2 v2ray ${V2RAY_CONFIG_FILE}
 	fi
 }
@@ -4465,7 +4467,7 @@ creat_xray_json() {
 		if [ "${LINUX_VER}" == "26" ]; then
 			sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
 		fi
-		jq --tab . $XRAY_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
+		run jq --tab . $XRAY_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -4473,22 +4475,22 @@ creat_xray_json() {
 			rm -rf /tmp/jq_para_tmp.txt
 			close_in_five flag
 		fi
-		jq --tab . ${XRAY_CONFIG_TEMP} >${XRAY_CONFIG_FILE}
+		run jq --tab . ${XRAY_CONFIG_TEMP} >${XRAY_CONFIG_FILE}
 		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
 	else
 		echo_date "使用自定义的Xray json配置文件..."
 		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_TEMP"
-		local OB=$(cat "$XRAY_CONFIG_TEMP" | jq .outbound)
-		local OBS=$(cat "$XRAY_CONFIG_TEMP" | jq .outbounds)
+		local OB=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbound)
+		local OBS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbounds)
 
 		# 兼容旧格式：outbound
 		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | jq .outbound)
+			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbound)
 		fi
 		
 		# 新格式：outbound[]
 		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | jq .outbounds[0])
+			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
 		if [ "${ss_basic_dns_flag}" == "1" ]; then
 			local TEMPLATE="{
@@ -4553,17 +4555,17 @@ creat_xray_json() {
 							}"
 		fi
 		echo_date "解析Xray配置文件..."
-		echo ${TEMPLATE} | jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${XRAY_CONFIG_FILE}"
+		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${XRAY_CONFIG_FILE}"
 		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
 
 		# 检测用户json的服务器ip地址
-		xray_protocal=$(cat "${XRAY_CONFIG_FILE}" | jq -r .outbounds[0].protocol)
+		xray_protocal=$(cat "${XRAY_CONFIG_FILE}" | run jq -r .outbounds[0].protocol)
 		case ${xray_protocal} in
 		vmess|vless)
-			xray_server=$(cat "${XRAY_CONFIG_FILE}" | jq -r .outbounds[0].settings.vnext[0].address)
+			xray_server=$(cat "${XRAY_CONFIG_FILE}" | run jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks|shadowsocks|trojan)
-			xray_server=$(cat "${XRAY_CONFIG_FILE}" | jq -r .outbounds[0].settings.servers[0].address)
+			xray_server=$(cat "${XRAY_CONFIG_FILE}" | run jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			xray_server=""
@@ -4800,7 +4802,7 @@ creat_trojan_json(){
 		if [ "${LINUX_VER}" == "26" ]; then
 			sed -i '/tcpFastOpen/d' ${TROJAN_CONFIG_TEMP} 2>/dev/null
 		fi
-		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
+		run jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/trojan_para_tmp.txt) 
@@ -4808,7 +4810,7 @@ creat_trojan_json(){
 			rm -rf /tmp/trojan_para_tmp.txt
 			close_in_five flag
 		fi
-		jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
+		run jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
 		echo_date "解析成功！xray的trojan配置文件成功写入到${TROJAN_CONFIG_FILE}"
 	else
 		rm -rf "${TROJAN_CONFIG_TEMP}"
@@ -4859,7 +4861,7 @@ creat_trojan_json(){
 		EOF
 		
 		echo_date "解析trojan的nat配置文件..."
-		jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
+		run jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/trojan_para_tmp.txt) 
@@ -4867,11 +4869,11 @@ creat_trojan_json(){
 			rm -rf /tmp/trojan_para_tmp.txt
 			close_in_five flag
 		fi
-		jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
+		run jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
 		echo_date "解析成功！trojan的nat配置文件成功写入到${TROJAN_CONFIG_FILE}"
 
 		echo_date 测试trojan的nat配置文件....
-		result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE} 2>&1 | grep "The config file looks good.")
+		result=$(run /koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE} 2>&1 | grep "The config file looks good.")
 		if [ -n "${result}" ]; then
 			echo_date 测试结果：${result}
 			echo_date trojan的nat配置文件通过测试!!!
@@ -4929,7 +4931,7 @@ creat_trojan_json(){
 				}
 			EOF
 			echo_date 解析trojan的client配置文件...
-			jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
+			run jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
 			if [ "$?" != "0" ];then
 				echo_date "json配置解析错误，错误信息如下："
 				echo_date $(cat /tmp/trojan_para_tmp.txt) 
@@ -4937,11 +4939,11 @@ creat_trojan_json(){
 				rm -rf /tmp/trojan_para_tmp.txt
 				close_in_five flag
 			fi
-			jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
+			run jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
 			echo_date "解析成功！trojan的client配置文件成功写入到${TROJAN_CONFIG_FILE_SOCKS}"
 
 			echo_date 测试trojan的client配置文件....
-			result=$(/koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
+			result=$(run /koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
 			if [ -n "${result}" ]; then
 				echo_date 测试结果：${result}
 				echo_date trojan的client配置文件通过测试!!!
@@ -5442,14 +5444,14 @@ load_module() {
 
 # write number into nvram with no commit
 write_numbers() {
-	nvram set update_ipset="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.date')"
-	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.date')"
-	nvram set update_cdn="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.date')"
+	nvram set update_ipset="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.date')"
+	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.date')"
+	nvram set update_cdn="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.cdn_china.date')"
 	
-	nvram set ipset_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.gfwlist.count')"
-	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.count')"
-	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.chnroute.count_ip')"
-	nvram set cdn_numbers="$(cat /koolshare/ss/rules/rules.json.js | /koolshare/bin/jq -r '.cdn_china.count')"
+	nvram set ipset_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.count')"
+	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count')"
+	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count_ip')"
+	nvram set cdn_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.cdn_china.count')"
 }
 
 remove_ss_reboot_job() {
