@@ -1661,6 +1661,7 @@ start_dohclient_chng(){
 	local ECS=$4
 	# ENABLE PROXY
 	local PXY=$5
+	get_dns_doh ${VAL}
 
 	if [ "${ACT}" == "start" ];then
 		if [ "${FLG}" == "chn1" ];then
@@ -1707,8 +1708,6 @@ start_dohclient_chng(){
 			fi
 		fi
 	fi
-
-	get_dns_doh ${VAL}
 
 	local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=0"
 
@@ -1773,6 +1772,10 @@ start_dohclient_chng(){
 		    option channel doh
 		    option channel_args '${CARGS}'
 	EOF
+
+	if [ "${FLG}" == "frn2" ];then
+		sed -i '/option proxy/d' /tmp/doh_${FLG}.conf
+	fi
 
 	# use perp to start dohclient
 	mkdir -p /koolshare/perp/doh_${FLG}

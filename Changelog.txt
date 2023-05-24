@@ -7,6 +7,7 @@ fancyss Changelog
        		其余均为新编译的64位二进制，计划在release前全部更新位64位二进制文件。
    - fix	修复dns2tcp在部分hnd机型上崩溃的问题；
    - fix	修复进阶DNS方案中，smartdns实际不可用的问题；
+   - fix	修复进阶chinadns-ng方案中，可信DNS-2 (直连)选择dohclient，dohclient进程无法运行的问题；
    - del	删除已经没有在使用的resolveip二进制；
    - del	删除附加选项中，使用旧DNS方案的功能（要用旧方案的话，在DNS方案中使用基础即可）；
    - update	现在启动插件时，不再将所有节点域名添加到白名单，因为如果节点过多会有性能问题，导致启动插件耗时过久；

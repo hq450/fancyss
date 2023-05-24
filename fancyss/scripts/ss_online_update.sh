@@ -16,6 +16,10 @@ NODES_SEQ=$(dbus list ssconf_basic_ | grep _name_ | cut -d "=" -f1 | cut -d "_" 
 NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.*[[:space:]]//')
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
 
+run(){
+	env -i PATH=${PATH} "$@"
+}
+
 # 一个节点里可能有的所有信息
 readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_server_
@@ -1064,14 +1068,14 @@ get_vmess_node(){
 	unset v2ray_ps_tmp v2ray_remark_tmp v2ray_ps v2ray_add v2ray_port v2ray_id v2ray_aid v2ray_scy v2ray_net v2ray_type_tmp v2ray_type
 	unset v2ray_headerType_tmp v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_tls_tmp v2ray_tls v2ray_kcp_seed
 	unset v2ray_ai_tmp v2ray_ai v2ray_alpn v2ray_alpn_h2_tmp v2ray_alpn_http_tmp v2ray_alpn_h2 v2ray_alpn_http v2ray_sni v2ray_v v2ray_host v2ray_path v2ray_group v2ray_group_hash
-	local decrypt_info=$(decode_url_link ${urllink} flag | jq -c .)
+	local decrypt_info=$(decode_url_link ${urllink} flag | run jq -c .)
 	
 	# node name, could be ps/remark in sub json，必须项
-	v2ray_ps_tmp=$(echo "${decrypt_info}" | jq -r .ps | sed 's/[[:space:]]//g')
+	v2ray_ps_tmp=$(echo "${decrypt_info}" | run jq -r .ps | sed 's/[[:space:]]//g')
 	if [ "${v2ray_ps_tmp}" == "null" -o -z "${v2ray_ps_tmp}" ];then
 		v2ray_ps_tmp=""
 	fi
-	v2ray_remark_tmp=$(echo "${decrypt_info}" | jq -r .remark | sed 's/[[:space:]]//g')
+	v2ray_remark_tmp=$(echo "${decrypt_info}" | run jq -r .remark | sed 's/[[:space:]]//g')
 	if [ "${v2ray_remark_tmp}" == "null" -o -z "${v2ray_remark_tmp}" ];then
 		v2ray_remark_tmp=""
 	fi
@@ -1086,47 +1090,47 @@ get_vmess_node(){
 	fi
 	
 	# node server addr，必须项
-	v2ray_add=$(echo "${decrypt_info}" | jq -r .add | sed 's/[[:space:]]//g')
+	v2ray_add=$(echo "${decrypt_info}" | run jq -r .add | sed 's/[[:space:]]//g')
 	if [ "${v2ray_add}" == "null" -o -z "${v2ray_add}" ];then
 		v2ray_add=""
 	fi
 	
 	# node server port，必须项
-	v2ray_port=$(echo "${decrypt_info}" | jq -r .port | sed 's/[[:space:]]//g')
+	v2ray_port=$(echo "${decrypt_info}" | run jq -r .port | sed 's/[[:space:]]//g')
 	if [ "${v2ray_port}" == "null" -o -z "${v2ray_port}" ];then
 		v2ray_port=""
 	fi
 	
 	# node uuid，必须项
-	v2ray_id=$(echo "${decrypt_info}" | jq -r .id | sed 's/[[:space:]]//g')
+	v2ray_id=$(echo "${decrypt_info}" | run jq -r .id | sed 's/[[:space:]]//g')
 	if [ "${v2ray_id}" == "null" -o -z "${v2ray_id}" ];then
 		v2ray_id=""
 	fi
 	
 	# alterid，必须项，如果为空则填0好了
-	v2ray_aid=$(echo "${decrypt_info}" | jq -r .aid | sed 's/[[:space:]]//g')
+	v2ray_aid=$(echo "${decrypt_info}" | run jq -r .aid | sed 's/[[:space:]]//g')
 	if [ "${v2ray_aid}" == "null" -o -z "${v2ray_aid}" ];then
 		v2ray_aid="0"
 	fi
 
 	# 加密方式 (security)，v2ray必须字段，订阅中机场很多不提供该值，设为auto就好了
-	v2ray_scy=$(echo "${decrypt_info}" | jq -r .scy)
+	v2ray_scy=$(echo "${decrypt_info}" | run jq -r .scy)
 	if [ "${v2ray_scy}" == "null" -o -z "${v2ray_scy}" ];then
 		v2ray_scy="auto"
 	fi
 
 	# 传输协议: tcp kcp ws h2 quic grpc
-	v2ray_net=$(echo "${decrypt_info}" | jq -r .net)
+	v2ray_net=$(echo "${decrypt_info}" | run jq -r .net)
 	if [ "${v2ray_net}" == "null" -o -z "${v2ray_net}" ];then
 		v2ray_net=""
 	fi
 	
 	# 伪装类型，在tcp kcp quic中使用，grpc mode借用此字段，ws和h2中不使用
-	v2ray_type_tmp=$(echo "${decrypt_info}" | jq -r .type)
+	v2ray_type_tmp=$(echo "${decrypt_info}" | run jq -r .type)
 	if [ "${v2ray_type_tmp}" == "null" -o -z "${v2ray_type_tmp}" ];then
 		v2ray_type_tmp=""
 	fi
-	v2ray_headerType_tmp=$(echo "${decrypt_info}" | jq -r .headerType)
+	v2ray_headerType_tmp=$(echo "${decrypt_info}" | run jq -r .headerType)
 	if [ "${v2ray_headerType_tmp}" == "null" -o -z "${v2ray_headerType_tmp}" ];then
 		v2ray_headerType_tmp=""
 	fi
@@ -1190,12 +1194,12 @@ get_vmess_node(){
 	esac
 
 	# 底层传输安全：none, tls
-	v2ray_tls_tmp=$(echo "${decrypt_info}" | jq -r .tls)
+	v2ray_tls_tmp=$(echo "${decrypt_info}" | run jq -r .tls)
 	if [ "${v2ray_tls_tmp}" == "tls" ];then
 		v2ray_tls="tls"
 
 		# 跳过证书验证 (AllowInsecure)，此处在底层传输安全（network_security）为tls时使用
-		v2ray_ai_tmp=$(echo "${decrypt_info}" | jq -r .verify_cert)
+		v2ray_ai_tmp=$(echo "${decrypt_info}" | run jq -r .verify_cert)
 		if [ "${v2ray_ai_tmp}" == "true" ];then
 			v2ray_ai=""
 		else
@@ -1203,7 +1207,7 @@ get_vmess_node(){
 		fi
 
 		# alpn: h2; http/1.1; h2,http/1.1，此处在底层传输安全（network_security）为tls时使用
-		v2ray_alpn=$(echo "${decrypt_info}" | jq -r .alpn)
+		v2ray_alpn=$(echo "${decrypt_info}" | run jq -r .alpn)
 		v2ray_alpn_h2_tmp=$(echo "${v2ray_alpn}" | grep "h2")
 		v2ray_alpn_http_tmp=$(echo "${v2ray_alpn}" | grep "http/1.1")
 		if [ -n "${v2ray_alpn_h2_tmp}" ];then
@@ -1218,7 +1222,7 @@ get_vmess_node(){
 		fi
 
 		# SNI, 如果空则用host替代，如果host空则空，此处在底层传输安全（network_security）为tls时使用
-		v2ray_sni=$(echo "${decrypt_info}" | jq -r .sni)
+		v2ray_sni=$(echo "${decrypt_info}" | run jq -r .sni)
 		if [ "${v2ray_sni}" == "null" -o -z "${v2ray_sni}" ];then
 			v2ray_sni=""
 		fi
@@ -1231,14 +1235,14 @@ get_vmess_node(){
 	fi
 
 	# sub version, 1 or 2
-	v2ray_v=$(echo "${decrypt_info}" | jq -r .v)
+	v2ray_v=$(echo "${decrypt_info}" | run jq -r .v)
 	if [ "${v2ray_v}" == "null" -o -z "${v2ray_v}" ];then
 		v2ray_v=""
 	fi
 
 	# v2ray host & path
-	v2ray_host=$(echo "${decrypt_info}" | jq -r .host)
-	v2ray_path=$(echo "${decrypt_info}" | jq -r .path)
+	v2ray_host=$(echo "${decrypt_info}" | run jq -r .host)
+	v2ray_path=$(echo "${decrypt_info}" | run jq -r .path)
 	if [ "${v2ray_host}" == "null" -o -z "${v2ray_host}" ];then 
 		v2ray_host=""
 	fi

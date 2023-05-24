@@ -403,8 +403,10 @@ make(){
 	# --- for debug ---
 	if [ "${flag}" == "debug" ];then
 		pack hnd full debug
+		pack hnd_v8 full debug
 		pack qca full debug
 		pack arm full debug
+		pack mtk full debug
 	else
 		rm -rf ${CURR_PATH}/packages/fancyss_*_debug.tar.gz
 	fi

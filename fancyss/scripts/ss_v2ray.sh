@@ -7,19 +7,30 @@ eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/v2ray"
-LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-if [ $(uname -m) = "aarch64" ]; then
-  ARCH=arm64
-elif [ "${LINUX_VER}" -ge "41" ];then
-	ARCH=armv7
-elif [ "${LINUX_VER}" -eq "26" ];then
+
+pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+" | awk -F"_" '{print $2}')
+case $pkg_arch in
+arm)
 	ARCH=armv5
-fi
+	;;
+hnd)
+	ARCH=armv7
+	;;
+hnd_v8)
+	ARCH=arm64
+	;;
+qca)
+	ARCH=armv7
+	;;
+mtk)
+	ARCH=arm64
+	;;
+esac
 
 get_latest_version(){
 	rm -rf /tmp/v2ray_latest_info.txt
 	echo_date "检测V2Ray最新版本..."
-	curl --connect-timeout 8 -s $url_main/latest.txt > /tmp/v2ray_latest_info.txt
+	curl --connect-timeout 8 -s $url_main/latest_v5.txt > /tmp/v2ray_latest_info.txt
 	if [ "$?" == "0" ];then
 		if [ -z "$(cat /tmp/v2ray_latest_info.txt)" ];then
 			echo_date "获取V2Ray最新版本信息失败！使用备用服务器检测！"
@@ -32,22 +43,22 @@ get_latest_version(){
 		V2VERSION=$(cat /tmp/v2ray_latest_info.txt | sed 's/v//g')
 		[ -z "${V2VERSION}" ] && V2VERSION="0"
 		
-		echo_date "检测到V2Ray最新版本：v${V2VERSION}"
+		echo_date "检测到V2Ray最新版本：${V2VERSION}"
 		if [ ! -f "/koolshare/bin/v2ray" ];then
 			echo_date "v2ray安装文件丢失！重新下载！"
 			CUR_VER="0"
 		else
-			CUR_VER=$(v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
+			CUR_VER=$(v2ray version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
 			[ -z "${CUR_VER}" ] && CUR_VER="0"
-			echo_date "当前已安装V2Ray版本：v${CUR_VER}"
+			echo_date "当前已安装V2Ray版本：${CUR_VER}"
 		fi
 		COMP=$(versioncmp ${CUR_VER} ${V2VERSION})
 		if [ "${COMP}" == "1" ];then
 			[ "${CUR_VER}" != "0" ] && echo_date "V2Ray已安装版本号低于最新版本，开始更新程序..."
-			update_now v${V2VERSION}
+			update_now ${V2VERSION}
 		else
-			V2RAY_LOCAL_VER=$(/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
-			V2RAY_LOCAL_DATE=$(/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f4)
+			V2RAY_LOCAL_VER=$(/koolshare/bin/v2ray version 2>/dev/null | head -n 1 | cut -d " " -f2)
+			V2RAY_LOCAL_DATE=$(/koolshare/bin/v2ray version 2>/dev/null | head -n 1 | cut -d " " -f4)
 			[ -n "$V2RAY_LOCAL_VER" ] && dbus set ss_basic_v2ray_version="$V2RAY_LOCAL_VER"
 			[ -n "$V2RAY_LOCAL_DATE" ] && dbus set ss_basic_v2ray_date="$V2RAY_LOCAL_DATE"
 			echo_date "V2Ray已安装版本已经是最新，退出更新程序!"
@@ -70,7 +81,7 @@ update_now(){
 	mkdir -p /tmp/v2ray && cd /tmp/v2ray
 
 	echo_date "开始下载校验文件：md5sum.txt"
-	wget -4 --no-check-certificate --timeout=20 -qO - ${url_main}/$1/md5sum.txt > /tmp/v2ray/md5sum.txt
+	wget -4 --no-check-certificate --timeout=20 -qO - ${url_main}/v$1/md5sum.txt > /tmp/v2ray/md5sum.txt
 	if [ "$?" != "0" ];then
 		echo_date "md5sum.txt下载失败！"
 		md5sum_ok=0
@@ -80,9 +91,9 @@ update_now(){
 	fi
 	
 	echo_date "开始下载v2ray程序"
-	echo_date "下载地址：${url_main}/$1/v2ray_${ARCH}"
-	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/v2ray_${ARCH}
-	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/$1/v2ray
+	echo_date "下载地址：${url_main}/v$1/v2ray_${ARCH}"
+	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/v$1/v2ray_${ARCH}
+	#curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray $url_main/v$1/v2ray
 	if [ "$?" != "0" ];then
 		echo_date "v2ray下载失败！"
 		v2ray_ok=0
@@ -91,7 +102,6 @@ update_now(){
 		echo_date "v2ray程序下载成功..."
 		mv v2ray_${ARCH} v2ray
 	fi
-
 
 	if [ "${md5sum_ok}" == "1" -a "${v2ray_ok}" == "1" ];then
 		check_md5sum
@@ -136,8 +146,8 @@ move_binary(){
 	echo_date "开始替换v2ray二进制文件... "
 	mv /tmp/v2ray/v2ray /koolshare/bin/v2ray
 	chmod +x /koolshare/bin/v2*
-	V2RAY_LOCAL_VER=$(/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
-	V2RAY_LOCAL_DATE=$(/koolshare/bin/v2ray -version 2>/dev/null | head -n 1 | cut -d " " -f5)
+	V2RAY_LOCAL_VER=$(/koolshare/bin/v2ray version 2>/dev/null | head -n 1 | cut -d " " -f2)
+	V2RAY_LOCAL_DATE=$(/koolshare/bin/v2ray version 2>/dev/null | head -n 1 | cut -d " " -f5)
 	[ -n "$V2RAY_LOCAL_VER" ] && dbus set ss_basic_v2ray_version="$V2RAY_LOCAL_VER"
 	[ -n "$V2RAY_LOCAL_DATE" ] && dbus set ss_basic_v2ray_date="$V2RAY_LOCAL_DATE"
 	echo_date "v2ray二进制文件替换成功... "

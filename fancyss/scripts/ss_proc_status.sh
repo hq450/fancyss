@@ -4,6 +4,10 @@
 
 source /koolshare/scripts/ss_base.sh
 
+run(){
+	env -i PATH=${PATH} "$@"
+}
+
 GET_MODE_NAME() {
 	case "${ss_basic_mode}" in
 	1)
@@ -878,39 +882,40 @@ ECHO_VERSION(){
 			echo "sslocal			${SSRUST_VER}		https://github.com/shadowsocks/shadowsocks-rust"
 		fi
 	fi
-	echo "ss-redir		$(ss-redir -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
+	echo "ss-redir		$(run ss-redir -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
 	if [ -x "/koolshare/bin/ss-tunnel" ];then
-		echo "ss-tunnel		$(ss-tunnel -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
+		echo "ss-tunnel		$(run ss-tunnel -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
 	fi
-	echo "ss-local		$(ss-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
-	echo "obfs-local		$(obfs-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/simple-obfs"
-	echo "ssr-redir		$(rss-redir -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
-	echo "ssr-local		$(rss-local -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
+	echo "ss-local		$(run ss-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
+	echo "obfs-local		$(run obfs-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/simple-obfs"
+	echo "ssr-redir		$(run rss-redir -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
+	echo "ssr-local		$(run rss-local -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
 	if [ -x "/koolshare/bin/haproxy" ];then
 		echo "haproxy			2.1.2			http://www.haproxy.org/"
 	fi
-	echo "dns2socks		$(dns2socks /?|sed '/^$/d'|head -n1|awk '{print $2}')			https://sourceforge.net/projects/dns2socks/"
-	echo "chinadns-ng		$(chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
-	echo "httping			$(httping -V 2>&1 | head -n1 | awk '{print $2}'|sed 's/,//g')			https://www.vanheusden.com/httping/"
+	echo "dns2socks		$(run dns2socks /?|sed '/^$/d'|head -n1|awk '{print $2}')			https://sourceforge.net/projects/dns2socks/"
+	echo "chinadns-ng		$(run chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
+	echo "httping			$(run httping -V 2>&1 | head -n1 | awk '{print $2}'|sed 's/,//g')			https://www.vanheusden.com/httping/"
 	if [ -x "/koolshare/bin/ss-tunnel" ];then
-		echo "trojan			$(trojan -v 2>&1 | head -n1 | awk '{print $NF}')			https://github.com/trojan-gfw/trojan"
+		echo "trojan			$(run trojan -v 2>&1 | head -n1 | awk '{print $NF}')			https://github.com/trojan-gfw/trojan"
 	fi
 	if [ -x "/koolshare/bin/v2ray" ];then
-		local v2_info_all=$(v2ray -version|head -n1)
+		#local v2_info_all=$(run v2ray -version|head -n1)
+		local v2_info_all=$(run v2ray version|head -n1)
 		echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			https://github.com/v2fly/v2ray-core"
 	fi
-	echo "xray			$(xray -version|head -n1|awk '{print $2}')			https://github.com/XTLS/Xray-core"
+	echo "xray			$(run xray -version|head -n1|awk '{print $2}')			https://github.com/XTLS/Xray-core"
 	if [ -x "/koolshare/bin/v2ray-plugin" ];then
-		echo "v2ray-plugin		$(v2ray-plugin -version|head -n1|awk '{print $2}')			https://github.com/teddysun/v2ray-plugin"
+		echo "v2ray-plugin		$(run v2ray-plugin -version|head -n1|awk '{print $2}')			https://github.com/teddysun/v2ray-plugin"
 	fi
 	if [ -x "/koolshare/bin/smartdns" ];then
-		echo "smartdns		$(smartdns -v|awk '{print $2}')		https://github.com/pymumu/smartdns"
+		echo "smartdns		$(run smartdns -v|awk '{print $2}')	https://github.com/pymumu/smartdns"
 	fi
 	if [ -x "/koolshare/bin/dohclient" ];then
-		echo "dohclient		$(dohclient -V|awk '{print $2}')		https://github.com/GangZhuo/dohclient"
+		echo "dohclient		$(run dohclient -V|awk '{print $2}')		https://github.com/GangZhuo/dohclient"
 	fi
 	if [ -x "/koolshare/bin/kcptun" ];then
-		echo "kcptun			$(kcptun -v | awk '{print $NF}')		https://github.com/xtaci/kcptun"
+		echo "kcptun			$(run kcptun -v | awk '{print $NF}')		https://github.com/xtaci/kcptun"
 	fi
 
 	echo --------------------------------------------------------------------------------------------------------
@@ -982,9 +987,9 @@ check_status() {
 	local CURR_WHTI=$(echo ${ss_wan_white_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | grep -E "^http|^https" | wc -l)
 	local CURR_NODE=$(dbus list ssconf | grep "_name_" | wc -l)
-	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|jq -r '.gfwlist.date')
-	local CHNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|jq -r '.chnroute.date')
-	local CDNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|jq -r '.cdn_china.date')
+	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.gfwlist.date')
+	local CHNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnroute.date')
+	local CDNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.cdn_china.date')
 
 	echo "🟠 路由型号：$(GET_MODEL)"
 	echo "🟠 固件类型：$(GET_FW_TYPE)"

@@ -38,8 +38,7 @@ get_foreign_status(){
 		log1='国外链接 【'${LOGTIME}'】 <font color='#FF0000'>X</font>'
 	fi
 }
-
-PIDC="$(ps|grep httping|grep ${CHINA_TEST_SITE}|grep -v grep)"
+PIDC="$(ps|grep httping|grep ${CHN_TEST_SITE}|grep -v grep)"
 PIDF="$(ps|grep httping|grep ${FRN_TEST_SITE}|grep -v grep)"
 [ -n "${PIDC}" ] && echo ${LOGTIME1} httping China timeout >> ${LOGFILE_C} && kill -9 ${PIDC}
 [ -n "${PIDF}" ] && echo ${LOGTIME1} httping foreign timeout "✈️ $(dbus get ssconf_basic_name_$CURRENT)" >> ${LOGFILE_F} && kill -9 ${PIDF}

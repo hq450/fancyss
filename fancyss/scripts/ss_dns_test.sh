@@ -3,7 +3,7 @@
 source /koolshare/scripts/base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 rm -rf /tmp/upload/dns*.txt
-LOCK_FILE=/var/lock/koolss.lock
+LOCK_FILE=/var/lock/koolss_dns.lock
 
 set_lock() {
 	exec 1000>"$LOCK_FILE"
@@ -79,7 +79,6 @@ _valid_ip() {
 }
 
 test(){
-	rm -rf ${RESULT_FILE}
 	START=$(date +%s)
 	for line in ${LISTS_FILE}; do
 		IP=$(dnsclient -p 53 -t 3 -i 1 @127.0.0.1 "${line}" 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')

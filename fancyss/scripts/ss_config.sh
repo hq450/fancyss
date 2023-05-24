@@ -69,7 +69,6 @@ pre_start(){
 
 	# 移除ssconfig.sh的文件锁
 	if [ -f "/var/lock/koolss.lock" ];then
-		echo 233
 		rm -rf /var/lock/koolss.lock
 		let flag_count+=1
 	fi
