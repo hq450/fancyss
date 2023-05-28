@@ -7,14 +7,25 @@ eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/xray"
-LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-if [ $(uname -m) = "aarch64" ]; then
-  ARCH=arm64
-elif [ "${LINUX_VER}" -ge "41" ];then
-	ARCH=armv7
-elif [ "${LINUX_VER}" -eq "26" ];then
+
+pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+" | awk -F"_" '{print $2}')
+case $pkg_arch in
+arm)
 	ARCH=armv5
-fi
+	;;
+hnd)
+	ARCH=armv7
+	;;
+hnd_v8)
+	ARCH=arm64
+	;;
+qca)
+	ARCH=armv7
+	;;
+mtk)
+	ARCH=arm64
+	;;
+esac
 
 get_latest_version(){
 	rm -rf /tmp/xray_latest_info.txt
@@ -25,7 +36,7 @@ get_latest_version(){
 			echo_date "获取Xray最新版本信息失败！使用备用服务器检测！"
 			failed_warning_xray
 		fi
-		if [ -n "$(cat /tmp/xray_latest_info.txt|grep "404")" ];then
+		if [ -n "$(cat /tmp/xray_latest_info.txt|grep 404)" ];then
 			echo_date "获取Xray最新版本信息失败！使用备用服务器检测！"
 			failed_warning_xray
 		fi
@@ -39,7 +50,7 @@ get_latest_version(){
 		else
 			CUR_VER=$(xray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
 			[ -z "${CUR_VER}" ] && CUR_VER="0"
-			echo_date "当前已安装Xray版本：v${CUR_VER}"
+			echo_date "当前已安装Xray版本：${CUR_VER}"
 		fi
 		COMP=$(versioncmp ${CUR_VER} ${XVERSION})
 		if [ "${COMP}" == "1" ];then
@@ -85,11 +96,10 @@ update_now(){
 		echo_date "xray下载失败！"
 		xray_ok=0
 	else
-		echo_date "xray程序下载成功..."
 		xray_ok=1
+		echo_date "xray程序下载成功..."
 		mv xray_${ARCH} xray
 	fi
-
 
 	if [ "${md5sum_ok}" == "1" -a "${xray_ok}" == "1" ];then
 		check_md5sum

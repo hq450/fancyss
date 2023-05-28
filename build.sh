@@ -18,37 +18,29 @@ cp_rules(){
 }
 
 sync_binary(){
-	# v2ray
-	local v2ray_version=$(cat ${CURR_PATH}/binaries/v2ray/latest_v5.txt)
-	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-mtk/v2ray
-	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/v2ray
-	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-hnd/v2ray
-	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv7 ${CURR_PATH}/fancyss/bin-qca/v2ray
-	cp -rf ${CURR_PATH}/binaries/v2ray/${v2ray_version}/v2ray_armv5 ${CURR_PATH}/fancyss/bin-arm/v2ray
-	
-	# xray
-	local xray_version=$(cat ${CURR_PATH}/binaries/xray/latest.txt)
-	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-mtk/xray
-	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/xray
-	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-hnd/xray
-	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv7 ${CURR_PATH}/fancyss/bin-qca/xray
-	cp -rf ${CURR_PATH}/binaries/xray/${xray_version}/xray_armv5 ${CURR_PATH}/fancyss/bin-arm/xray
+	BINS="v2ray v2ray-plugin xray ss_rust kcptun"
+	for BIN in $BINS;
+	do
+		if [ "${BIN}" == "v2ray" ];then
+			local VERSION_FLAG="latest_v5.txt"
+		else
+			local VERSION_FLAG="latest.txt"
+		fi
 
-	# ss-rust
-	local ssrust_version=$(cat ${CURR_PATH}/binaries/ss_rust/latest.txt)
-	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_arm64 ${CURR_PATH}/fancyss/bin-mtk/sslocal
-	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/sslocal
-	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_armv7 ${CURR_PATH}/fancyss/bin-hnd/sslocal
-	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_armv7 ${CURR_PATH}/fancyss/bin-qca/sslocal
-	cp -rf ${CURR_PATH}/binaries/ss_rust/${ssrust_version}/sslocal_armv5 ${CURR_PATH}/fancyss/bin-arm/sslocal
+		if [ "${BIN}" == "ss_rust" ];then
+			local REAL_BIN="sslocal"
+		else
+			local REAL_BIN="${BIN}"
+		fi
 	
-	# kcptun
-	local kcptun_version=$(cat ${CURR_PATH}/binaries/kcptun/latest.txt)
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_arm64 ${CURR_PATH}/fancyss/bin-mtk/kcptun
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/kcptun
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv7 ${CURR_PATH}/fancyss/bin-hnd/kcptun
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv7 ${CURR_PATH}/fancyss/bin-qca/kcptun
-	cp -rf ${CURR_PATH}/binaries/kcptun/${kcptun_version}/kcptun_armv5 ${CURR_PATH}/fancyss/bin-arm/kcptun
+		local version=$(cat ${CURR_PATH}/binaries/${BIN}/${VERSION_FLAG})
+		echo ">>> start to copy latest ${BIN}, version: ${version}"
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_arm64 ${CURR_PATH}/fancyss/bin-mtk/${REAL_BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/${REAL_BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv7 ${CURR_PATH}/fancyss/bin-hnd/${REAL_BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv7 ${CURR_PATH}/fancyss/bin-qca/${REAL_BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv5 ${CURR_PATH}/fancyss/bin-arm/${REAL_BIN}
+	done
 }
 
 gen_folder(){

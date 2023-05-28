@@ -7,14 +7,25 @@ source /koolshare/scripts/ss_base.sh
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/ss_rust"
 DNLD=""
-LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-if [ "${LINUX_VER}" -ge "41" ];then
-	ARCH=armv7
-elif [ "${LINUX_VER}" -eq "26" ];then
+
+pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+" | awk -F"_" '{print $2}')
+case $pkg_arch in
+arm)
 	ARCH=armv5
-elif [ "${LINUX_VER}" -eq "54" ];then
-	ARCH=aarch64
-fi
+	;;
+hnd)
+	ARCH=armv7
+	;;
+hnd_v8)
+	ARCH=arm64
+	;;
+qca)
+	ARCH=armv7
+	;;
+mtk)
+	ARCH=arm64
+	;;
+esac
 
 get_latest_version(){
 	flag=$1
@@ -30,7 +41,7 @@ get_latest_version(){
 			echo_date "获取shadowsocks-rust最新版本信息失败！使用备用服务器检测！"
 			failed_warning
 		fi
-		RVERSION=$(cat /tmp/ssrust_latest_info.txt)
+		RVERSION=$(cat /tmp/ssrust_latest_info.txt | sed 's/v//g' )
 		if [ -z "${RVERSION}" ];then
 			RVERSION="0"
 		fi
@@ -38,20 +49,22 @@ get_latest_version(){
 		echo_date "检测到shadowsocks-rust最新版本：${RVERSION}"
 		if [ ! -x "/koolshare/bin/sslocal" ];then
 			echo_date "shadowsocks-rust二进制文件sslocal不存在！开始下载！"
-			CUR_VER="0"
+			update_now v${RVERSION}
 		else
-			CUR_VER=$(/koolshare/bin/sslocal --version 2>/dev/null | awk '{print $NF}')
+			CUR_VER_ORIG=$(env -i /koolshare/bin/sslocal --version 2>/dev/null | awk '{print $NF}')
+			CUR_VER=$(echo "${CUR_VER_ORIG}" | sed 's/-alpha//g')
 			if [ -z "${CUR_VER}" ];then
 				CUR_VER="0"
 			fi
-			echo_date "当前已安装shadowsocks-rust版本：${CUR_VER}"
-		fi
+			echo_date "当前已安装shadowsocks-rust版本：${CUR_VER_ORIG}"
 
-		if [ "${CUR_VER}" != "${RVERSION}" ];then
-			echo_date "检测到在线版本和本地版本不同，开始更新sslocal程序..."
-			update_now ${RVERSION}
-		else
-			echo_date "检测到本地版本已经是最新，退出更新程序!"
+			COMP=$(versioncmp ${CUR_VER} ${RVERSION})
+			if [ "${COMP}" == "1" ];then
+				[ "${CUR_VER}" != "0" ] && echo_date "sslocal已安装版本号低于最新版本，开始更新程序..."
+				update_now v${RVERSION}
+			else
+				echo_date "检测到本地版本已经是最新，退出更新程序!"
+			fi
 		fi
 	else
 		echo_date "获取shadowsocks-rust最新版本信息失败！使用备用服务器检测！"
@@ -81,6 +94,7 @@ update_now(){
 	fi
 	
 	echo_date "开始下载shadowsocks-rust sslocal程序"
+	echo_date "下载地址：${url_main}/$1/sslocal_${ARCH}"
 	wget -4 --no-check-certificate --timeout=20 --tries=1 ${url_main}/$1/sslocal_${ARCH}
 	if [ "$?" != "0" ];then
 		echo_date "sslocal下载失败！"
@@ -127,7 +141,7 @@ install_binary(){
 		if [ -n "$sslocal_process" ]; then
 			echo_date 关闭sslocal进程...
 			killall sslocal >/dev/null 2>&1
-			kill -9 "$sslocal_process" >/dev/null 2>&1
+			kill -9 $sslocal_process >/dev/null 2>&1
 		fi
 		move_binary
 		if [ -z "${DNLD}" ];then

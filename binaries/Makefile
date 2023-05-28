@@ -13,3 +13,6 @@ update_v2ray:
 
 update_xray:
 	xray/get_latest.sh
+
+update_vray-plugin:
+	vray-plugin/make_latest.sh

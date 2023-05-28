@@ -877,7 +877,7 @@ ECHO_VERSION(){
 	echo "--------------------------------------------------------------------------------------------------------"
 	echo "程序			版本			备注"
 	if [ -x "/koolshare/bin/sslocal" ];then
-		local SSRUST_VER=$(/koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
+		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
 		if [ -n "${SSRUST_VER}" ];then
 			echo "sslocal			${SSRUST_VER}		https://github.com/shadowsocks/shadowsocks-rust"
 		fi
