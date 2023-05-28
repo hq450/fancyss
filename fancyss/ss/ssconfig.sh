@@ -5090,40 +5090,29 @@ load_tproxy() {
 }
 
 flush_nat() {
-	# if [ "${ss_basic_status}" == "0" ];then
-	# 	return
-	# fi
-	
 	echo_date "清除iptables规则和ipset..."
 	# flush rules and set if any
 	nat_indexs=$(iptables -nvL PREROUTING -t nat | sed 1,2d | sed -n '/SHADOWSOCKS/=' | sort -r)
 	for nat_index in $nat_indexs; do
 		iptables -t nat -D PREROUTING $nat_index >/dev/null 2>&1
 	done
-	#iptables -t nat -D PREROUTING -p tcp -j SHADOWSOCKS >/dev/null 2>&1
-
 	iptables -t nat -F SHADOWSOCKS >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS >/dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_EXT >/dev/null 2>&1
+	iptables -t nat -F SHADOWSOCKS_DNS >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_DNS >/dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_GFW >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GFW >/dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_CHN >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_CHN >/dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_GAM >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GAM >/dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_GLO >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_GLO >/dev/null 2>&1
 	iptables -t nat -F SHADOWSOCKS_HOM >/dev/null 2>&1 && iptables -t nat -X SHADOWSOCKS_HOM >/dev/null 2>&1
-
 	mangle_indexs=$(iptables -nvL PREROUTING -t mangle | sed 1,2d | sed -n '/SHADOWSOCKS/=' | sort -r)
 	for mangle_index in $mangle_indexs; do
 		iptables -t mangle -D PREROUTING $mangle_index >/dev/null 2>&1
 	done
-	#iptables -t mangle -D PREROUTING -p udp -j SHADOWSOCKS >/dev/null 2>&1
-
 	iptables -t mangle -F SHADOWSOCKS >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS >/dev/null 2>&1
 	iptables -t mangle -F SHADOWSOCKS_GAM >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GAM >/dev/null 2>&1
 	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 >/dev/null 2>&1
 	iptables -t nat -F OUTPUT >/dev/null 2>&1
 	iptables -t nat -X SHADOWSOCKS_EXT >/dev/null 2>&1
-	#iptables -t nat -D PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
-	chromecast_nu=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep "dpt:53" | awk '{print $1}')
-	[ -n "$chromecast_nu" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1
 	iptables -t mangle -D QOSO0 -m mark --mark "$ip_prefix_hex" -j RETURN >/dev/null 2>&1
 	
 	# flush ipset
@@ -5304,11 +5293,34 @@ lan_acess_control() {
 	dbus remove ss_acl_port
 }
 
+dns_hijack_control() {
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+		if [ -n "$acl_nu" ]; then
+			for acl in $acl_nu; do
+				ipaddr=$(eval echo \$ss_acl_ip_$acl)
+				ipaddr_hex=$(echo $ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("%02x\n", $4)}')
+				ports=$(eval echo \$ss_acl_port_$acl)
+				proxy_mode=$(eval echo \$ss_acl_mode_$acl)
+				if [ "$proxy_mode" == "0" ]; then
+					iptables -t nat -A SHADOWSOCKS_DNS -p udp -s ${ipaddr} -j RETURN
+				fi
+			done
+		fi
+		iptables -t nat -A SHADOWSOCKS_DNS -p udp -j DNAT --to ${lan_ipaddr}:53
+	fi
+}
+
 apply_nat_rules() {
 	#----------------------BASIC RULES---------------------
 	echo_date 写入iptables规则到nat表中...
 	# 创建SHADOWSOCKS nat rule
 	iptables -t nat -N SHADOWSOCKS
+
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		iptables -t nat -N SHADOWSOCKS_DNS
+	fi
+	
 	# 扩展
 	iptables -t nat -N SHADOWSOCKS_EXT
 	# IP/cidr/白域名 白名单控制（不走ss）
@@ -5364,6 +5376,8 @@ apply_nat_rules() {
 	#-------------------------------------------------------
 	# 局域网黑名单（不走ss）/局域网黑名单（走ss）
 	lan_acess_control
+	# DNS 劫持
+	dns_hijack_control
 	#-----------------------FOR ROUTER---------------------
 	# router itself
 	[ "$ss_basic_mode" != "6" ] && iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
@@ -5384,6 +5398,15 @@ apply_nat_rules() {
 	INSET_NU=$(expr "$KP_NU" + 1)
 	iptables -t nat -I PREROUTING "$INSET_NU" -p tcp -j SHADOWSOCKS
 	[ "$mangle" == "1" ] && iptables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS
+
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		echo_date "开启DNS劫持功能功能，防止DNS污染..."
+		INSET_NU_DNS=$(expr "$INSET_NU" + 1)
+		iptables -t nat -I PREROUTING "$INSET_NU_DNS" -p udp ! -s ${lan_ipaddr} --dport 53 -j SHADOWSOCKS_DNS
+	else
+		echo_date" DNS劫持功能未开启，建议开启！"
+	fi
+	
 	# QOS开启的情况下
 	QOSO=$(iptables -t mangle -S | grep -o QOSO | wc -l)
 	RRULE=$(iptables -t mangle -S | grep "A QOSO" | head -n1 | grep RETURN)
@@ -5392,22 +5415,6 @@ apply_nat_rules() {
 	fi
 }
 
-chromecast() {
-	chromecast_nu=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep "dpt:53" | awk '{print $1}')
-	if [ "$ss_basic_dns_hijack" == "1" ]; then
-		if [ -z "$chromecast_nu" ]; then
-			iptables -t nat -A PREROUTING -p udp -s $(get_lan_cidr) --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
-			#iptables -t nat -A PREROUTING -p udp -d 8.8.8.8/32 --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
-			# iptables -t nat -I PREROUTING 8 -p udp -d 8.8.8.8/32 --dport 53 -j REDIRECT --to-ports 3322
-			# iptables -t nat -I PREROUTING 8 -p udp -d 8.8.8.8/32 --dport 53 -j REDIRECT --to-ports 3322
-			echo_date "开启DNS劫持功能功能，防止DNS污染..."
-		else
-			echo_date "DNS劫持规则已经添加，跳过~"
-		fi
-	else
-		echo_date" DNS劫持功能未开启，建议开启！"
-	fi
-}
 # -----------------------------------nat part end--------------------------------------------------------
 
 restart_dnsmasq() {
@@ -5530,7 +5537,6 @@ load_nat() {
 	#creat_ipset
 	add_white_black_ip
 	apply_nat_rules
-	chromecast
 }
 
 ss_post_start() {
