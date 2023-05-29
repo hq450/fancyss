@@ -75,6 +75,7 @@ init-s01st.push.apple.com
 iosapps.itunes.g.aaplimg.com
 ipcdn.apple.com
 iphone-ld.apple.com
+iphone-ld.origin-apple.com.akadns.net
 is1-ssl.mzstatic.com
 is1.mzstatic.com
 is2-ssl.mzstatic.com
@@ -131,6 +132,8 @@ valid.apple.com
 valid.origin-apple.com.akadns.net
 weather-data.apple.com
 weather-data.apple.com.akadns.net
+weather-map.apple.com
+weather-map2.apple.com
 www.apple.com
 www.apple.com.edgekey.net
 www.apple.com.edgekey.net.globalredir.akadns.net
