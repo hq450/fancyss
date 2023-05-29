@@ -792,7 +792,7 @@ __resolve_server_domain() {
 			# 只解析一轮
 			until [ ${count} -eq 18 ]; do
 				echo_date "尝试udp解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current} udp):$(__get_server_resolver_port ${current} udp)"
-				SERVER_IP=$(dnsclient -p $(__get_server_resolver_port ${current} udp) -t 2 -i 1 @$(__get_server_resolver ${current} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+				SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${current} udp) -t 2 -i 1 @$(__get_server_resolver ${current} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 				SERVER_IP=$(__valid_ip ${SERVER_IP})
 				if [ -n "${SERVER_IP}" ]; then
 					dbus set ss_basic_lastru=${current}
@@ -832,7 +832,7 @@ __resolve_server_domain() {
 		elif [ "${ss_basic_s_resolver_udp}" == "99" ];then
 			# 自定义udp解析服务器
 			echo_date "尝试udp解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_s_resolver_udp} udp):$(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp)"
-			SERVER_IP=$(dnsclient -p $(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_s_resolver_udp} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_s_resolver_udp} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 			if [ -z "${SERVER_IP}" ]; then
 				echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
@@ -851,7 +851,7 @@ __resolve_server_domain() {
 				ss_basic_s_resolver_udp=3
 			fi
 			echo_date "尝试udp解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_s_resolver_udp}：$(__get_server_resolver ${ss_basic_s_resolver_udp} udp):$(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp)"
-			SERVER_IP=$(dnsclient -p $(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_s_resolver_udp} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_s_resolver_udp} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 			if [ -z "${SERVER_IP}" ]; then
 				echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
@@ -900,7 +900,7 @@ __resolve_server_domain() {
 				echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current} tcp):$(__get_server_resolver_port ${current} tcp)"
 				run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${current} tcp)#$(__get_server_resolver_port ${current} tcp)"
 				detect_running_status2 dns2tcp 1054 slient
-				SERVER_IP=$(dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+				SERVER_IP=$(run dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 				SERVER_IP=$(__valid_ip ${SERVER_IP})
 				if [ -n "${SERVER_IP}" ]; then
 					dbus set ss_basic_lastrt=${current}
@@ -945,7 +945,7 @@ __resolve_server_domain() {
 			echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp):$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
 			run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
 			detect_running_status2 dns2tcp 1054 slient
-			SERVER_IP=$(dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 			local DNS2TCP_PID=$(ps | grep dns2tcp | grep -v grep | grep 1054 | awk '{print $1}')
 			kill -9 ${DNS2TCP_PID}
@@ -968,7 +968,7 @@ __resolve_server_domain() {
 			echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_s_resolver_tcp}：$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp):$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
 			run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
 			detect_running_status2 dns2tcp 1054 slient
-			SERVER_IP=$(dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 			local DNS2TCP_PID=$(ps | grep dns2tcp | grep -v grep | grep 1054 | awk '{print $1}')
 			kill -9 ${DNS2TCP_PID}
@@ -990,7 +990,7 @@ __resolve_server_domain() {
 			fi	
 			detect_running_status smartdns "/var/run/smartdns_sr.pid"
 
-			SERVER_IP=$(dnsclient -p 5885 -t 3 -i 1 @127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -p 5885 -t 3 -i 1 @127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 			
 			if [ -z "${SERVER_IP}" ]; then
@@ -1042,7 +1042,7 @@ __resolve_server_domain() {
 				detect_running_status2 dohclient doh_resv
 			fi
 			
-			SERVER_IP=$(dnsclient -p 5885 -t 5 -i 1 @127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -p 5885 -t 5 -i 1 @127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 
 			if [ -z "${SERVER_IP}" ]; then
@@ -5628,27 +5628,27 @@ finish_start(){
 		# 1. 检测5个国内域名的DNS解析
 		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 			local CHN_RESOLV_DOMAIN="www.baidu.com"
-			local CHN_RESOLV_IPADDR=$(dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 		fi
 
 		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 			local CHN_RESOLV_DOMAIN="www.taobao.com"
-			local CHN_RESOLV_IPADDR=$(dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 		fi
 
 		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 			local CHN_RESOLV_DOMAIN="www.sina.com"
-			local CHN_RESOLV_IPADDR=$(dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 		fi
 
 		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 			local CHN_RESOLV_DOMAIN="www.jd.com"
-			local CHN_RESOLV_IPADDR=$(dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 		fi
 
 		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 			local CHN_RESOLV_DOMAIN="www.qq.com"
-			local CHN_RESOLV_IPADDR=$(dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 		fi
 	
 		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
@@ -5681,7 +5681,7 @@ finish_start(){
 			fi
 			echo_date "检测进阶chinadns-ng方案可信DNS-1（端口：${TPORT}）是否正常工作..."
 			# 国外dns检测，超时时间设置久一点
-			local DETECT_SERVER_IP_1=$(dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local DETECT_SERVER_IP_1=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			local DETECT_SERVER_IP_1=$(__valid_ip ${DETECT_SERVER_IP_1})
 			if [ -n "${DETECT_SERVER_IP_1}" ]; then
 				echo_date "可信DNS-1 ${TPORT}端口DNS服务工作正常！"
@@ -5709,7 +5709,7 @@ finish_start(){
 		
 			echo_date "检测进阶chinadns-ng方案可信DNS-2（端口：${TPORT}）是否正常工作..."
 			# 国外dns检测，超时时间设置久一点
-			local DETECT_SERVER_IP_2=$(dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			local DETECT_SERVER_IP_2=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 			local DETECT_SERVER_IP_2=$(__valid_ip ${DETECT_SERVER_IP_2})
 			if [ -n "${DETECT_SERVER_IP_2}" ]; then
 				echo_date "可信DNS-2 ${TPORT}端口DNS服务工作正常！"

@@ -131,11 +131,13 @@ gen_folder(){
 	
 	if [ "${pkgtype}" == "full" ];then
 		# remove marked comment
+		# rm -rf ./shadowsocks/bin/sslocal
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_proc_status.sh
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_conf.sh
 		echo ".show-btn5, .show-btn6{display: inline; !important}" >> ./shadowsocks/res/shadowsocks.css
 	elif [ "${pkgtype}" == "lite" ];then
 		# remove binaries
+		rm -rf ./shadowsocks/bin/sslocal
 		rm -rf ./shadowsocks/bin/v2ray
 		rm -rf ./shadowsocks/bin/v2ray-plugin
 		rm -rf ./shadowsocks/bin/kcptun
@@ -173,10 +175,15 @@ gen_folder(){
 		sed -i '/fancyss-dns/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/naiveproxy/d' ./shadowsocks/res/ss-menu.js
 		sed -i '/naiveproxy/d' ./shadowsocks/webs/Module_shadowsocks.asp
+		# remove options from shadowsocks-rust: shadowsocks2022 encryption method
+		sed -i 's/\,\s\"2022-blake3-aes-128-gcm\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"2022-blake3-aes-256-gcm\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"2022-blake3-chacha20-poly1305\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		# remove lines bewteen matchs
 		sed -i '/fancyss_full_1/,/fancyss_full_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_naive_1/,/fancyss_naive_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		# remove strings from page
+		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_server\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_port\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
