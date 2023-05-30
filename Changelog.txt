@@ -3,8 +3,7 @@ fancyss Changelog
 3.0.6 (尚未推送)
    - add	添加华硕TX-AX6000（天选路由器）的支持，天选AX6000采用联发科Filogic 830平台，SoC型号MT7986A，
        		四核心A53 2.0GHz，固件linux内核版本5.4.171，为64位固件（内核 + 用户空间均为64位）
-       		为区分其它平台，天选路由器fancyss包名定为：fancyss_mtk，目前fancyss_mtk除了部分二进制用了hnd平台的32位二进制
-       		其余均为新编译的64位二进制，计划在release前全部更新位64位二进制文件。
+       		为区分其它平台，天选路由器fancyss包名定为：fancyss_mtk，目前fancyss_mtk全部二进制文件均为64位
    - fix	修复dns2tcp在部分hnd机型上崩溃的问题；
    - fix	修复进阶DNS方案中，smartdns实际不可用的问题；
    - fix	修复进阶chinadns-ng方案中，可信DNS-2 (直连)选择dohclient，dohclient进程无法运行的问题；
@@ -21,6 +20,8 @@ fancyss Changelog
    - update	v2ray更新到5.4.1，此版本启动命令有所变化，因此旧版本插件无法通过二进制升级更新到此版本，只能通过升级插件或者此版本v2ray更新
    - update	chinadns-ng升级到最新版本（2023.05.08），现在使用chinadns-ng方案，不会导致下级华硕路由器无法解析DNS了
    - update	kcptun更新到最新（20230214）
+   - update	smartdns更新到最新（1.2023.05.07-1641）
+   - update	naive更新到最新（113.0.5672.62）
    - update	gfwlist、cdn、chnroute等规则更新到最新（20230530）
 
 3.0.5

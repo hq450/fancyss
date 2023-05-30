@@ -985,8 +985,6 @@ ECHO_IPTABLES(){
 check_status() {
 	local LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 	local CURR_NAME=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+")
-	local CURR_ARCH=$(echo ${CURR_NAME} | awk -F"_" '{print $2}')
-	local CURR_TYPE=$(echo ${CURR_NAME} | awk -F"_" '{print $3}')
 	local CURR_VERS=$(cat /koolshare/ss/version)
 	local CURR_BAKD=$(echo ${ss_wan_black_domain} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_BAKI=$(echo ${ss_wan_black_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
@@ -1002,7 +1000,7 @@ check_status() {
 	echo "🟠 固件类型：$(GET_FW_TYPE)"
 	echo "🟠 固件版本：$(GET_FW_VER)"
 	echo "🟠 路由时间：$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")"
-	echo "🟠 插件版本：fancyss_${CURR_ARCH}_${CURR_TYPE} ${CURR_VERS}"
+	echo "🟠 插件版本：${CURR_NAME} ${CURR_VERS}"
 	echo "🟠 代理模式：$(GET_MODE_NAME)"
 	echo "🟠 当前节点：$(GET_CURRENT_NODE_NAME)"
 	echo "🟠 节点类型：$(GET_CURRENT_NODE_TYPE)"

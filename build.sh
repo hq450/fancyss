@@ -53,11 +53,12 @@ gen_folder(){
 
 	# different platform
 	if [ "${platform}" == "hnd" ];then
-		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-mtk
 		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
+		rm -rf ./shadowsocks/bin/uredir
 		echo hnd > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -68,11 +69,11 @@ gen_folder(){
 	fi
 	if [ "${platform}" == "hnd_v8" ];then
 		rm -rf ./shadowsocks/bin-arm
+		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-mtk
-		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
-		mv -f ./shadowsocks/bin-hnd_v8/* ./shadowsocks/bin/
-		rm -rf ./shadowsocks/bin-mtk
+		mv ./shadowsocks/bin-hnd_v8 ./shadowsocks/bin
+		rm -rf ./shadowsocks/bin/uredir
 		echo hnd_v8 > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -82,11 +83,12 @@ gen_folder(){
 		fi
 	fi
 	if [ "${platform}" == "qca" ];then
-		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-mtk
 		mv ./shadowsocks/bin-qca ./shadowsocks/bin
+		rm -rf ./shadowsocks/bin/uredir
 		echo qca > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
 			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_qca_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -96,8 +98,8 @@ gen_folder(){
 		fi
 	fi
 	if [ "${platform}" == "arm" ];then
-		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-hnd
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-mtk
 		mv ./shadowsocks/bin-arm ./shadowsocks/bin
@@ -113,12 +115,12 @@ gen_folder(){
 		fi
 	fi
 	if [ "${platform}" == "mtk" ];then
-		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-arm
+		rm -rf ./shadowsocks/bin-hnd
+		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-qca
-		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
-		mv -f ./shadowsocks/bin-mtk/* ./shadowsocks/bin/
-		rm -rf ./shadowsocks/bin-mtk
+		mv ./shadowsocks/bin-mtk ./shadowsocks/bin
+		rm -rf ./shadowsocks/bin/uredir
 		rm -rf ./shadowsocks/bin/README.md
 		echo mtk > ./shadowsocks/.valid
 		if [ "${release_type}" == "debug" ];then
