@@ -10,21 +10,17 @@ main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages"
 # --------------------------------------
 # 6.x.4708			2.6.36.4		arm
 # 7.14.114.x		2.6.36.4		arm
-# hnd				4.1.27			hnd
-# axhnd 			4.1.51			hnd
-# axhnd.675x 		4.1.52			hnd
-# p1axhnd.675x		4.1.27			hnd
-# 5.04axhnd.675x	4.19.183		hnd
+# hnd				4.1.27			hnd hnd_v8
+# axhnd 			4.1.51			hnd hnd_v8
+# axhnd.675x 		4.1.52			hnd hnd_v8
+# p1axhnd.675x		4.1.27			hnd hnd_v8
+# 5.04axhnd.675x	4.19.183		hnd hnd_v8
 # qca (RT-AX89X)	4.4.60			qca
+# mtk (TX-AX6000)	5.4.182			mtk
 # --------------------------------------
-LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-if [ "${LINUX_VER}" -eq "41" -o "${LINUX_VER}" -eq "419" ];then
-	PLATFORM=hnd
-elif [ "${LINUX_VER}" -eq "44" ];then
-	PLATFORM=qca
-elif [ "${LINUX_VER}" -eq "26" ];then
-	PLATFORM=arm
-fi
+
+# arm hnd hnd_v8 qca mtk
+PLATFORM=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+"|sed 's/_debug//g'|sed 's/fancyss_//g'|sed 's/_[a-z]\+$//g')
 
 if [ ! -x "/koolshare/bin/v2ray" ];then
 	PKGTYPE=lite

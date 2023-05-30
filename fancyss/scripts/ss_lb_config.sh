@@ -236,7 +236,7 @@ start_haproxy(){
 		echo_date ┣如果此处等待过久，可能服务器域名解析失败造成的！可以刷新页面后关闭一次SS!
 		echo_date ┣然后进入附加设置-SS服务器地址解析，更改解析dns或者更换解析方式！
 		echo_date ┗启动haproxy主进程...
-		haproxy -f /koolshare/configs/haproxy.cfg
+		env -i PATH=${PATH} haproxy -f /koolshare/configs/haproxy.cfg
 	fi
 }
 

@@ -8,7 +8,12 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/ss_rust"
 DNLD=""
 
-pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+" | awk -F"_" '{print $2}')
+run(){
+	env -i PATH=${PATH} "$@"
+}
+
+# arm hnd hnd_v8 qca mtk
+pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+"|sed 's/_debug//g'|sed 's/fancyss_//g'|sed 's/_[a-z]\+$//g')
 case $pkg_arch in
 arm)
 	ARCH=armv5
@@ -167,7 +172,7 @@ start_ss_rust() {
 	if [ "${ss_basic_enable}" == "1" -a "${ss_basic_type}" == "0" -a "${ss_basic_rust}" == "1" ]; then
 		echo_date "重启插件！ "
 		cd /koolshare/ss
-		sh ssconfig.sh restart
+		run sh ssconfig.sh restart
 	fi
 }
 
