@@ -116,8 +116,6 @@ qualysguard.qpdp1.net
 recaptcha.net
 redirector.bdn.dev
 redirector.c.chat.google.com
-redirector.c.docs.google.com
-redirector.c.drive.google.com
 redirector.c.mail.google.com
 redirector.c.pack.google.com
 redirector.c.play.google.com

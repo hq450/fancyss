@@ -75,6 +75,7 @@ init-s01st.push.apple.com
 iosapps.itunes.g.aaplimg.com
 ipcdn.apple.com
 iphone-ld.apple.com
+iphone-ld.origin-apple.com.akadns.net
 is1.mzstatic.com
 is1-ssl.mzstatic.com
 is2.mzstatic.com
@@ -97,6 +98,7 @@ ocsp.apple.com
 ocsp-lb.apple.com.akadns.net
 oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
+osxapps.itunes.g.aaplimg.com
 pancake.apple.com
 pancake.cdn-apple.com.akadns.net
 prod-support.apple-support.akadns.net
@@ -114,6 +116,7 @@ store.storeimages.cdn-apple.com
 support.apple.com
 support-china.apple-support.akadns.net
 swallow.apple.com
+swallow-apple-com.v.aaplimg.com
 swcatalog.apple.com
 swcatalog-cdn.apple.com.akadns.net
 swcdn.apple.com
@@ -128,6 +131,9 @@ updates-http.cdn-apple.com.akadns.net
 valid.apple.com
 valid.origin-apple.com.akadns.net
 weather-data.apple.com
+weather-data.apple.com.akadns.net
+weather-map2.apple.com
+weather-map.apple.com
 www.apple.com
 www.apple.com.edgekey.net
 www.apple.com.edgekey.net.globalredir.akadns.net
