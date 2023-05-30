@@ -21,12 +21,7 @@ main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages"
 
 # arm hnd hnd_v8 qca mtk
 PLATFORM=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+"|sed 's/_debug//g'|sed 's/fancyss_//g'|sed 's/_[a-z]\+$//g')
-
-if [ ! -x "/koolshare/bin/v2ray" ];then
-	PKGTYPE=lite
-else
-	PKGTYPE=full
-fi
+PKGTYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+"|sed 's/_debug//g'|awk -F"_" '{print $NF}')
 MD5NAME=md5_${PLATFORM}_${PKGTYPE}
 PACKAGE=fancyss_${PLATFORM}_${PKGTYPE}
 VERSION=version.json.js
