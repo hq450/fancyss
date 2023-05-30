@@ -11,6 +11,17 @@ fancyss Changelog
    - del	删除已经没有在使用的resolveip二进制；
    - del	删除附加选项中，使用旧DNS方案的功能（要用旧方案的话，在DNS方案中使用基础即可）；
    - update	现在启动插件时，不再将所有节点域名添加到白名单，因为如果节点过多会有性能问题，导致启动插件耗时过久；
+   - add	新增hnd_v8安装包，hnd_v8版本集成的二进制文件全部是64位的，而hnd包里的二进制文件全是32位的
+       		博通armv8 Soc机型既可以使用hnd_v8包（64位），也可以使用hnd包（32位），如RT-AX86U、GT-AX6000、GT-AX11000等
+       		hnd_v8包不能用于32位内核的armv7机型，如RT-AX82U、TUF-AX3000等
+       		理论上armv8的机型使用hnd_v8版本的fancyss可以获得更好的性能（未测试）
+       		如果你的armv8机型正在使用hnd版本，只需要覆盖安装一次hnd_v8版本即可切换到v8版本。
+   - update	v2ray-plugin更新到最新（5.5.0）
+   - update	xray更新到1.7.5，关于reality支持，等xray 1.8.x正式版发布后再做跟进
+   - update	v2ray更新到5.4.1，此版本启动命令有所变化，因此旧版本插件无法通过二进制升级更新到此版本，只能通过升级插件或者此版本v2ray更新
+   - update	chinadns-ng升级到最新版本（2023.05.08），现在使用chinadns-ng方案，不会导致下级华硕路由器无法解析DNS了
+   - update	kcptun更新到最新（20230214）
+   - update	gfwlist、cdn、chnroute等规则更新到最新（20230530）
 
 3.0.5
    - fix	修复3.0.4下，gfwlist模式使用进阶DNS设定时无法访问被墙网站的问题

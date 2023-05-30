@@ -879,7 +879,7 @@ ECHO_VERSION(){
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
 		if [ -n "${SSRUST_VER}" ];then
-			echo "sslocal			${SSRUST_VER}		https://github.com/shadowsocks/shadowsocks-rust"
+			echo "sslocal			${SSRUST_VER}			https://github.com/shadowsocks/shadowsocks-rust"
 		fi
 	fi
 	echo "ss-redir		$(run ss-redir -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/shadowsocks-libev"
@@ -917,7 +917,9 @@ ECHO_VERSION(){
 	if [ -x "/koolshare/bin/kcptun" ];then
 		echo "kcptun			$(run kcptun -v | awk '{print $NF}')		https://github.com/xtaci/kcptun"
 	fi
-
+	if [ -x "/koolshare/bin/naive" ];then
+		echo "naive			$(run naive --version|awk '{print $NF}')		https://github.com/klzgrad/naiveproxy"
+	fi
 	echo --------------------------------------------------------------------------------------------------------
 }
 
@@ -936,6 +938,11 @@ ECHO_IPTABLES(){
 	echo "----------------------------------------------------- nat表 SHADOWSOCKS_EXT 链 --------------------------------------------------"
 	iptables -nvL SHADOWSOCKS_EXT -t nat
 	echo
+	if [ "${ss_basic_dns_hijack}" == "1" ];then
+		echo "----------------------------------------------------- nat表 SHADOWSOCKS_DNS 链 --------------------------------------------------"
+		iptables -nvL SHADOWSOCKS_DNS -t nat
+		echo
+	fi
 	if [ "${ss_basic_mode}" == "1" -o -n "${gfw_on}" ];then
 		echo "----------------------------------------------------- nat表 SHADOWSOCKS_GFW 链 --------------------------------------------------"
 		iptables -nvL SHADOWSOCKS_GFW -t nat
