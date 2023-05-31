@@ -19,6 +19,10 @@ main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages"
 # mtk (TX-AX6000)	5.4.182			mtk
 # --------------------------------------
 
+run(){
+	env -i PATH=${PATH} "$@"
+}
+
 # arm hnd hnd_v8 qca mtk
 PLATFORM=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+"|sed 's/_debug//g'|sed 's/fancyss_//g'|sed 's/_[a-z]\+$//g')
 PKGTYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+"|sed 's/_debug//g'|awk -F"_" '{print $NF}')
@@ -46,20 +50,20 @@ update_ss(){
 		echo "XU6J03M6"
 		exit
 	fi
-	jq --tab . /tmp/version.json.js >/dev/null 2>&1
+	run jq --tab . /tmp/version.json.js >/dev/null 2>&1
 	if [ "$?" != "0" ];then
 		echo_date "在线版本号获取错误！请检测你的网络！"
 		echo "XU6J03M6"
 		exit
 	fi
 	
-	fancyss_version_online=$(cat /tmp/version.json.js | jq -r '.version')
+	fancyss_version_online=$(cat /tmp/version.json.js | run jq -r '.version')
 	echo_date "检测到主服务器在线版本号：${fancyss_version_online}"
 	dbus set ss_basic_version_web="${fancyss_version_online}"
 	if [ "${ss_basic_version_local}" != "${fancyss_version_online}" ];then
 		echo_date "主服务器在线版本号：${fancyss_version_online} 和本地版本号：${ss_basic_version_local} 不同！"
 		cd /tmp
-		fancyss_md5_online=$(cat /tmp/version.json.js | jq -r .$MD5NAME)
+		fancyss_md5_online=$(cat /tmp/version.json.js | run jq -r .$MD5NAME)
 		echo_date "开启下载进程，从主服务器上下载更新包..."
 		echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
 		wget -4 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
