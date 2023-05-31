@@ -303,11 +303,26 @@ gen_folder(){
 
 	if [ "${release_type}" == "release" ];then
 		# 移除注释
+		# remove match words: //fancyss-full //fancyss-full_1 //fancyss-full_2
 		sed -i 's/[ \t]*\/\/fancyss-full//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/[ \t]*\/\/fancyss-full//g' ./shadowsocks/res/ss-menu.js
-		sed -i 's/[ \t]*\/\/\<\!--fancyss-full--\>//g' ./shadowsocks/res/ss-menu.js
+
+		# remove match words: <!--fancyss-full-->
+		sed -i 's/[ \t]*<!--fancyss-full-->//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/[ \t]*<!--fancyss-full-->//g' ./shadowsocks/res/ss-menu.js
+
+		# remove line contain: <!--fancyss_full_1--> <!--fancyss_full_1-->
+		sed -i 's/[ \t]*<!--fancyss_full_[1-2]-->//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		
+		# remove line start of: //
 		sed -i '/^[ \t]*\/\//d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/^[ \t]*\/\//d' ./shadowsocks/res/ss-menu.js
+
+		# remove line <!-- ?? -->
+		sed -i 's/<!--.*-->//g' ./shadowsocks/webs/Module_shadowsocks.asp
+
+		# remove empty line
+		sed -i '/^[[:space:]]*$/d' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 
 	# when develop in other branch
