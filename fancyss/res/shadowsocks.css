@@ -54,7 +54,7 @@
 .showDragHandle{
 	cursor: move;
 }
-input[type=button]:focus {
+input[type=button]:focus, textarea:focus {
 	outline: none;
 }
 input[type=checkbox]{
@@ -72,8 +72,6 @@ input[type=checkbox]{
 	font-size:11px;
 	color:#FFFFFF;
 	outline: none;
-	background:#475A5F;
-	border:1px solid #222;
 }
 .contentM_qis {
 	position: absolute;
@@ -291,9 +289,10 @@ input[type=checkbox]{
 #app[skin=ASUSWRT] .smth{
 	background: #2F3A3E !important;
 }
-#app[skin=ASUSWRT] #tablet_0, #app[skin=ASUSWRT] #tablet_2, #app[skin=ASUSWRT] #tablet_3, #app[skin=ASUSWRT] #tablet_4, #app[skin=ASUSWRT] #tablet_5, #app[skin=ASUSWRT] #tablet_6, #app[skin=ASUSWRT] #tablet_7, #app[skin=ASUSWRT] #tablet_8, #app[skin=ASUSWRT] #tablet_9, #app[skin=ASUSWRT] #lb_setting, #app[skin=ASUSWRT] #local_table {
-	margin:-1px 0px 0px 0px;
-	border:none;
+#app[skin=ASUSWRT] #tablet_0, #app[skin=ASUSWRT] #tablet_2, #app[skin=ASUSWRT] #tablet_3, #app[skin=ASUSWRT] #tablet_4, #app[skin=ASUSWRT] #tablet_5, #app[skin=ASUSWRT] #tablet_6, #app[skin=ASUSWRT] #tablet_7, #app[skin=ASUSWRT] #tablet_8, #app[skin=ASUSWRT] #tablet_9, #app[skin=ASUSWRT] #tablet_10, #app[skin=ASUSWRT] #lb_setting, #app[skin=ASUSWRT] #local_table {
+    outline: none;
+    margin-left: 1px;
+    margin-right: 1px;
 }
 #app[skin=ASUSWRT] #sub_tablets{
 	border-bottom:none;
@@ -312,7 +311,7 @@ input[type=checkbox]{
 	background:#475A5F;
 }
 #app[skin=ASUSWRT] #ss_basic_v2ray_json, #app[skin=ASUSWRT] #ss_basic_xray_json, #app[skin=ASUSWRT] #ss_dnsmasq, #app[skin=ASUSWRT] #ss_wan_white_ip, #app[skin=ASUSWRT] #ss_wan_white_domain, #app[skin=ASUSWRT] #ss_wan_black_ip, #app[skin=ASUSWRT] #ss_wan_black_domain, #app[skin=ASUSWRT] #ss_online_links, #app[skin=ASUSWRT] #ss_base64_links, #app[skin=ASUSWRT] #ss_node_table_v2ray_json, #app[skin=ASUSWRT] #ss_node_table_xray_json, #app[skin=ASUSWRT] #ss_basic_kcp_parameter{
-	width:99%;
+	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;
 	color:#FFFFFF;
@@ -362,6 +361,16 @@ input[type=checkbox]{
 	border-radius: 5px 5px 5px 5px;
 	width:14%;
 	background: linear-gradient(to bottom, #27c9c9  0%, #279fd9 100%);
+}
+#app[skin=ASUSWRT] .smartdns_textarea {
+	background: #475A5F;
+    border: 1px solid #222;
+}
+#app[skin=ASUSWRT] .loadingBarBlock {
+    border: none;
+}
+#app[skin=ASUSWRT] .content_status {
+    border: none;
 }
 /*ROG*/
 #app[skin=ROG] .myDragClass{
@@ -416,9 +425,10 @@ input[type=checkbox]{
 #app[skin=ROG] .smth{
  	background: #91071f;
 }
-#app[skin=ROG] #tablet_0, #app[skin=ROG] #tablet_2, #app[skin=ROG] #tablet_3, #app[skin=ROG] #tablet_4, #app[skin=ROG] #tablet_5, #app[skin=ROG] #tablet_6, #app[skin=ROG] #tablet_7, #app[skin=ROG] #tablet_8, #app[skin=ROG] #tablet_9, #app[skin=ROG] #lb_setting, #app[skin=ROG] #local_table {
-	margin:-1px 0px 0px 0px;
-	border:1px solid #91071f;
+#app[skin=ROG] #tablet_0, #app[skin=ROG] #tablet_2, #app[skin=ROG] #tablet_3, #app[skin=ROG] #tablet_4, #app[skin=ROG] #tablet_5, #app[skin=ROG] #tablet_6, #app[skin=ROG] #tablet_7, #app[skin=ROG] #tablet_8, #app[skin=ROG] #tablet_9, #app[skin=ROG] #tablet_10, #app[skin=ROG] #lb_setting, #app[skin=ROG] #local_table {
+    outline: 1px solid #91071f;
+    margin-left: 1px;
+    margin-right: 1px;
 }
 #app[skin=ROG] #sub_tablets{
 	border-bottom:1px solid #91071f;
@@ -437,7 +447,7 @@ input[type=checkbox]{
 	background:transparent;
 }
 #app[skin=ROG] #ss_basic_v2ray_json, #app[skin=ROG] #ss_basic_xray_json, #app[skin=ROG] #ss_dnsmasq, #app[skin=ROG] #ss_wan_white_ip, #app[skin=ROG] #ss_wan_white_domain, #app[skin=ROG] #ss_wan_black_ip, #app[skin=ROG] #ss_wan_black_domain, #app[skin=ROG] #ss_online_links, #app[skin=ROG] #ss_base64_links, #app[skin=ROG] #ss_node_table_v2ray_json, #app[skin=ROG] #ss_node_table_xray_json, #app[skin=ROG] #ss_basic_kcp_parameter{
-	width:99%;
+	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;
 	color:#FFFFFF;
@@ -485,6 +495,16 @@ input[type=checkbox]{
 	border-radius: 5px 5px 5px 5px;
 	width:14%;
 	background: linear-gradient(to bottom, #cf0a2c  0%, #91071f 100%);
+}
+#app[skin=ROG] .smartdns_textarea {
+    background: transparent;
+    border: 1px solid #222;
+}
+#app[skin=ROG] .loadingBarBlock {
+    border: 1px solid #91071f;
+}
+#app[skin=ROG] .content_status {
+    border: 1px solid #91071f;
 }
 /*TUF*/
 #app[skin=TUF] .myDragClass{
@@ -539,9 +559,10 @@ input[type=checkbox]{
 #app[skin=TUF] .smth{
  	background: #92650F;
 }
-#app[skin=TUF] #tablet_0, #app[skin=TUF] #tablet_2, #app[skin=TUF] #tablet_3, #app[skin=TUF] #tablet_4, #app[skin=TUF] #tablet_5, #app[skin=TUF] #tablet_6, #app[skin=TUF] #tablet_7, #app[skin=TUF] #tablet_8, #app[skin=TUF] #tablet_9, #app[skin=TUF] #lb_setting, #app[skin=TUF] #local_table {
-	margin:-1px 0px 0px 0px;
-	border:1px solid #92650F;
+#app[skin=TUF] #tablet_0, #app[skin=TUF] #tablet_2, #app[skin=TUF] #tablet_3, #app[skin=TUF] #tablet_4, #app[skin=TUF] #tablet_5, #app[skin=TUF] #tablet_6, #app[skin=TUF] #tablet_7, #app[skin=TUF] #tablet_8, #app[skin=TUF] #tablet_9, #app[skin=TUF] #tablet_10, #app[skin=TUF] #lb_setting, #app[skin=TUF] #local_table {
+    outline: 1px solid #92650F;
+    margin-left: 1px;
+    margin-right: 1px;
 }
 #app[skin=TUF] #sub_tablets{
 	border-bottom:1px solid #92650F;
@@ -560,7 +581,7 @@ input[type=checkbox]{
 	background:transparent;
 }
 #app[skin=TUF] #ss_basic_v2ray_json, #app[skin=TUF] #ss_basic_xray_json, #app[skin=TUF] #ss_dnsmasq, #app[skin=TUF] #ss_wan_white_ip, #app[skin=TUF] #ss_wan_white_domain, #app[skin=TUF] #ss_wan_black_ip, #app[skin=TUF] #ss_wan_black_domain, #app[skin=TUF] #ss_online_links, #app[skin=TUF] #ss_base64_links, #app[skin=TUF] #ss_node_table_v2ray_json, #app[skin=TUF] #ss_node_table_xray_json, #app[skin=TUF] #ss_basic_kcp_parameter{
-	width:99%;
+	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;
 	color:#FFFFFF;
@@ -609,12 +630,148 @@ input[type=checkbox]{
 	width:14%;
 	background: linear-gradient(to bottom, #c58813  0%, #92650F 100%);
 }
-/*------------------*/
-/*#table_dns th{
-	width: 30%;
-}*/
-/*#table_dns .input_option, #app #table_dns .input_ss_table{
-	font-size: 9px;
-	font-family: sans-serif;
+#app[skin=TUF] .smartdns_textarea {
+    background: transparent;
+    border: 1px solid #222;
 }
-*/
+#app[skin=TUF] .loadingBarBlock {
+    border: 1px solid #92650F;
+}
+#app[skin=TUF] .content_status {
+    border: 1px solid #92650F;
+}
+/*TS*/
+#app[skin=TS] .myDragClass{
+	background-color:#2ed9c3;
+	box-shadow: 3px 3px 10px #000;
+}
+#app[skin=TS] #ss_node_list_table tr:hover {
+	background-color:#2ed9c3;
+}
+#app[skin=TS] .FormTable_table th{
+	font-family:Arial, Helvetica, sans-serif;
+	font-weight:normal;
+	text-align:center;
+	font-size:12px;
+	height:25px;
+	border-collapse: collapse;
+	border: none;
+	background: #2ed9c3;
+}
+#app[skin=TS] .shadow1, #app[skin=TS] .shadow2{
+	height: 25px;
+	display: none;
+	border-radius: 3px;
+	background-color: #2ed9c3;
+}
+#app[skin=TS] .show-btn0, #app[skin=TS] .show-btn1, #app[skin=TS] .show-btn2, #app[skin=TS] .show-btn3, #app[skin=TS] .show-btn4, #app[skin=TS] .show-btn5, #app[skin=TS] .show-btn6, #app[skin=TS] .show-btn7, #app[skin=TS] .show-btn8, #app[skin=TS] .show-btn9, #app[skin=TS] .show-btn10, #app[skin=TS] .sub-node1, #app[skin=TS] .sub-node2 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:8.42%;
+	border: 1px solid #2ed9c3;
+	background: none;
+}
+#app[skin=TS] .show-btn0:hover, #app[skin=TS] .show-btn1:hover, #app[skin=TS] .show-btn2:hover, #app[skin=TS] .show-btn3:hover, #app[skin=TS] .show-btn4:hover, #app[skin=TS] .show-btn5:hover, #app[skin=TS] .show-btn6:hover, #app[skin=TS] .show-btn7:hover, #app[skin=TS] .show-btn8:hover, #app[skin=TS] .show-btn9:hover, #app[skin=TS] .show-btn10:hover, #app[skin=TS] .sub-node1:hover, #app[skin=TS] .sub-node2:hover, #app[skin=TS] .active {
+	border: 1px solid #2ed9c3;
+	background: #2ed9c3;
+}
+#app[skin=TS] .sub-btn1, #app[skin=TS] .sub-btn2, #app[skin=TS] .sub-btn3 {
+	font-size:10pt;
+	color: #fff;
+	padding: 10px 3.75px;
+	border-radius: 5px 5px 0px 0px;
+	width:16%;
+	border: 1px solid #2ed9c3;
+	background: none;
+}
+#app[skin=TS] .sub-btn1:hover, #app[skin=TS] .sub-btn2:hover, #app[skin=TS] .sub-btn3:hover, #app[skin=TS] .active2 {
+	border: 1px solid #2ed9c3;
+	background: #2ed9c3;
+}
+#app[skin=TS] .smth{
+ 	background: #2ed9c3;
+}
+#app[skin=TS] #tablet_0, #app[skin=TS] #tablet_2, #app[skin=TS] #tablet_3, #app[skin=TS] #tablet_4, #app[skin=TS] #tablet_5, #app[skin=TS] #tablet_6, #app[skin=TS] #tablet_7, #app[skin=TS] #tablet_8, #app[skin=TS] #tablet_9, #app[skin=TS] #tablet_10, #app[skin=TS] #lb_setting, #app[skin=TS] #local_table {
+    outline: 1px solid #2ed9c3;
+    margin-left: 1px;
+    margin-right: 1px;
+}
+#app[skin=TS] #sub_tablets{
+	border-bottom:1px solid #2ed9c3;
+}
+#app[skin=TS] #log_content1, #app[skin=TS] #log_content_f, #app[skin=TS] #log_content_c{
+	width:97%;
+	padding-left:4px;
+	padding-right:37px;
+	font-family:'Lucida Console';
+	font-size:11px;
+	line-height:1.5;
+	color:#FFFFFF;
+	outline:none;
+	overflow-x:hidden;
+	border:0px solid #222;
+	background:transparent;
+}
+#app[skin=TS] #ss_basic_v2ray_json, #app[skin=TS] #ss_basic_xray_json, #app[skin=TS] #ss_dnsmasq, #app[skin=TS] #ss_wan_white_ip, #app[skin=TS] #ss_wan_white_domain, #app[skin=TS] #ss_wan_black_ip, #app[skin=TS] #ss_wan_black_domain, #app[skin=TS] #ss_online_links, #app[skin=TS] #ss_base64_links, #app[skin=TS] #ss_node_table_v2ray_json, #app[skin=TS] #ss_node_table_xray_json, #app[skin=TS] #ss_basic_kcp_parameter{
+	width:98%;
+	font-family:'Lucida Console';
+	font-size:12px;
+	color:#FFFFFF;
+	line-height:1.2;
+	border:1px solid #2ed9c3;
+	background:transparent;
+}
+#app[skin=TS] .input_ss_table{
+	margin-left:2px;
+	padding-left:5px;
+	padding-right:5px;
+	height:21px;
+	width:152px;
+	line-height:23px \9;	/*IE*/
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:none;
+	color:#FFFFFF;
+	vertical-align:middle;
+	border:1px solid #4c4c4c;
+	background-color: #373737;
+}
+#app[skin=TS] .input_option_2:hover, #app[skin=TS] .input_option_2:focus{
+	border:1px solid #2ed9c3;
+	background-color: #3e2902;
+}
+#app[skin=TS] .sel_option:hover, #app[skin=TS] .sel_option:focus{
+	border:1px solid #2ed9c3;
+	background-color: #3e2902;
+}
+#app[skin=TS] .ss_btn {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #2ed9c3  0%, #0a7264 100%);
+}
+#app[skin=TS] .ss_btn:hover, #app[skin=TS] .active3 {
+	border: 1px solid #222;
+	font-size:10pt;
+	color: #fff;
+	padding: 5px 5px 5px 5px;
+	border-radius: 5px 5px 5px 5px;
+	width:14%;
+	background: linear-gradient(to bottom, #2ed9c3  0%, #22c0bf 100%);
+}
+#app[skin=TS] .smartdns_textarea {
+    background: transparent;
+    border: 1px solid #222;
+}
+#app[skin=TS] .loadingBarBlock {
+    border: 1px solid #2ed9c3;
+}
+#app[skin=TS] .content_status {
+    border: 1px solid #2ed9c3;
+}
+.show-btn5, .show-btn6{display: inline; !important}

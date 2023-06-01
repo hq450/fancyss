@@ -147,7 +147,7 @@ function createFormFields(data, settings) {
 			if (f.suffix && (f.type != 'checkbox' && f.type != 'radio')) output += f.suffix;
 		});
 		if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.hint + ')">' + v.title + '</a></th><td>' + output;
-		else if (v.thtd) form += '<th>' + v.title + '</th><td style="background-color:#2F3A3E">' + output;
+		else if (v.thtd) form += '<th>' + v.title + '</th><td>' + output;
 		else form += '<th>' + v.title + '</th><td>' + output;
 		form += '</td></tr>';
 	});

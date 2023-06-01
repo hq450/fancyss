@@ -8,7 +8,7 @@
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
 <link rel="shortcut icon" href="images/favicon.png">
 <link rel="icon" href="images/favicon.png">
-<title>【科学上网】</title>
+<title id="ss_title">【科学上网】</title>
 <link rel="stylesheet" type="text/css" href="index_style.css">
 <link rel="stylesheet" type="text/css" href="form_style.css">
 <link rel="stylesheet" type="text/css" href="usp_style.css">
@@ -2468,7 +2468,7 @@ function refresh_html() {
 	if(node_nu && E("ss_basic_ping_node").value != "off" && E("ss_basic_ping_node").value != ""){
 		var width = ["", "5%", "28%", "28%", "14%", "10%", "10%", "5%", ];
 	}else{
-		var width = ["", "6%", "30%", "30%", "14%", "10%", "10%" ];
+		var width = ["", "6%", "30%", "30%", "14%", "0%", "10%", "10%" ];
 	}
 	// make dynamic element
 	var html = '';
@@ -3320,6 +3320,7 @@ function toggle_func() {
 		function() {
 			tabSelect(0);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			ss_node_sel();
 			showhide("table_basic", (node_max != 0));
 			change_select_width('#ssconf_basic_node');
@@ -3334,13 +3335,15 @@ function toggle_func() {
 	$(".show-btn2").click(
 		function() {
 			tabSelect(2);
-			$('#apply_button').hide();
+			$('#apply_button').show();
+			$('#ss_failover_save').show();
 			verifyFields();
 		});
 	$(".show-btn3").click(
 		function() {
 			tabSelect(3);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			change_select_width('#ss_china_dns', '0');
 			change_select_width('#ss_foreign_dns', '0');
 			change_select_width('#ss_basic_chng_china_1_udp', '1');
@@ -3374,6 +3377,7 @@ function toggle_func() {
 		function() {
 			tabSelect(4);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			autoTextarea(E("ss_wan_white_ip"), 0, 400);
 			autoTextarea(E("ss_wan_white_domain"), 0, 400);
 			autoTextarea(E("ss_wan_black_ip"), 0, 400);
@@ -3384,6 +3388,7 @@ function toggle_func() {
 		function() {
 			tabSelect(5);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			verifyFields();
 			autoTextarea(E("ss_basic_kcp_parameter"), 0, 100);
 		});
@@ -3391,6 +3396,7 @@ function toggle_func() {
 		function() {
 			tabSelect(6);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			update_visibility();
 			verifyFields();
 			get_udp_status();
@@ -3400,12 +3406,14 @@ function toggle_func() {
 		function() {
 			tabSelect(7);
 			$('#apply_button').hide();
+			$('#ss_failover_save').hide();
 			update_visibility();
 		});
 	$(".show-btn8").click(
 		function() {
 			tabSelect(8);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			refresh_acl_table();
 			//update_visibility();
 		});
@@ -3413,12 +3421,14 @@ function toggle_func() {
 		function() {
 			tabSelect(9);
 			$('#apply_button').show();
+			$('#ss_failover_save').hide();
 			update_visibility();
 		});
 	$(".show-btn10").click(
 		function() {
 			tabSelect(10);
 			$('#apply_button').hide();
+			$('#ss_failover_save').hide();
 			get_log();
 		});
 	$("#log_content2").click(
@@ -4532,7 +4542,8 @@ function reset_smartdns_conf(){
 										<script type="text/javascript">
 											var MODEL = '<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>';
 											var FANCYSS_TITLE=" - " + pkg_name;
-											$("#title_name").html(MODEL + " 科学上网插件" + FANCYSS_TITLE)
+											$("#title_name").html(MODEL + " 科学上网插件" + FANCYSS_TITLE);
+											$("#ss_title").html(MODEL + " - fancyss");
 										</script>										
 										<div style="float:right; width:15px; height:25px;margin-top:-20px">
 											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
@@ -4900,7 +4911,7 @@ function reset_smartdns_conf(){
 											<div id="ss_list_table"></div>
 										</div>
 										<div id="tablet_2" style="display: none;">
-											<table id="table_failover" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
+											<table id="table_failover" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
 												<script type="text/javascript">
 													var fa1 = ["2", "3", "4", "5"];
 													var fa2_1 = ["10", "15", "20"];
@@ -4962,11 +4973,6 @@ function reset_smartdns_conf(){
 													]);
 												</script>
 											</table>
-											<div align="center" style="margin-top: 10px;">
-												<input class="button_gen" type="button" onclick="save()" value="保存&amp;应用">
-												<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
-											</div>
-											
 										</div>
 										<div id="tablet_3" style="display: none;">
 											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
@@ -5999,7 +6005,7 @@ function reset_smartdns_conf(){
 											</table>
 										</div>
 										<div id="tablet_10" style="display: none;">
-												<div id="log_content" style="margin-top:-1px;overflow:hidden;">
+												<div id="log_content" style="overflow:hidden;">
 													<textarea cols="63" rows="36" wrap="on" readonly="readonly" id="log_content1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 												</div>
 										</div>
@@ -6008,6 +6014,7 @@ function reset_smartdns_conf(){
 										</div>
 										<div id="apply_button" class="apply_gen">
 											<input class="button_gen" type="button" onclick="save()" value="保存&应用">
+											<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
 										</div>
 									</td>
 								</tr>

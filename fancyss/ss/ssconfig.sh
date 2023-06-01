@@ -3760,6 +3760,19 @@ creat_v2ray_json() {
 			fi
 		fi
 
+		# 如果sni空，host空，用server domain代替
+		if [ -z "${ss_basic_v2ray_network_security_sni}" -a -z "${ss_basic_v2ray_network_host}" ];then
+			# 判断是否域名，是就填入
+			tmp=$(__valid_ip "${ss_basic_server_orig}")
+			if [ $? == 0 ]; then
+				# server is ip address format
+				local ss_basic_v2ray_network_security_sni=""
+			else
+				# likely to be domain
+				local ss_basic_v2ray_network_security_sni="${ss_basic_server_orig}"
+			fi
+		fi
+
 		if [ "${ss_basic_v2ray_network_security}" == "tls" ];then
 			local tls="{
 					\"allowInsecure\": $(get_function_switch $ss_basic_v2ray_network_security_ai)
@@ -3929,7 +3942,7 @@ creat_v2ray_json() {
 					"settings": {
 						"vnext": [
 							{
-								"address": "${ss_basic_server_orig}",
+								"address": "${ss_basic_server}",
 								"port": $ss_basic_port,
 								"users": [
 									{
@@ -4246,9 +4259,22 @@ creat_xray_json() {
 		# 如果sni空，host不空，用host代替
 		if [ -z "${ss_basic_xray_network_security_sni}" ];then
 			if [ -n "${ss_basic_xray_network_host}" ];then
-				local ss_basic_xray_network_security_sni="${ss_basicxray_network_host}"
+				local ss_basic_xray_network_security_sni="${ss_basic_xray_network_host}"
 			else
 				local ss_basic_xray_network_security_sni=""
+			fi
+		fi
+
+		# 如果sni空，host空，用server domain代替
+		if [ -z "${ss_basic_xray_network_security_sni}" -a -z "${ss_basic_xray_network_host}" ];then
+			# 判断是否域名，是就填入
+			tmp=$(__valid_ip "${ss_basic_server_orig}")
+			if [ $? == 0 ]; then
+				# server is ip address format
+				local ss_basic_xray_network_security_sni=""
+			else
+				# likely to be domain
+				local ss_basic_xray_network_security_sni="${ss_basic_server_orig}"
 			fi
 		fi
 
@@ -4430,7 +4456,7 @@ creat_xray_json() {
 					"settings": {
 						"vnext": [
 							{
-								"address": "${ss_basic_server_orig}",
+								"address": "${ss_basic_server}",
 								"port": $ss_basic_port,
 								"users": [
 									{
