@@ -1,8 +1,12 @@
 fancyss Changelog
 ===========================================
 3.0.9 (20230609)
-   - fix	修复xray json下，服务器配置ip地址识别成域名的问题；
-   - fix	修复hnd_v8包，使用trojan运行trojan节点，4.1.xx内核机型，如AC86U、AX86U等机型traojan二进制无法运行的问题；
+   - fix	修复xray json模式下，服务器配置ip地址识别成域名的问题；
+   - fix	修复hnd_v8包，使用trojan运行trojan节点，4.1.xx内核机型，如AC86U、AX86U等机型traojan配置文件检查不过的问题；
+   - fix	修复hnd_v8和mtk包，勾选ecs后国内/国外dns不通的问题；
+   - fix	修复mtk包ss-tunnel/ssr-tunnel无法运行的问题；
+   - fix	修复fancyss_lite包丢失ss-tunnel，导致在ss节点的chinadns-ng DNS模式下，可信DNS-1无法使用udp的问题；
+   - fix	修复故障转移总是转移到第一个节点的问题
    - add	xray非json配置新增fingerprint选项，默认为chrome；
    - update	xray节点订阅支持fingerprint，如为空默认使用chrome；
    - update	修复通过链接添加vless + grpc节点时，部分信息没有添加的问题；

@@ -3,6 +3,7 @@
 # fancyss script for asuswrt/merlin based router with software center
 
 source /koolshare/scripts/base.sh
+source /koolshare/scripts/ss_base.sh
 
 LOGFILE_F=/tmp/upload/ssf_status.txt
 LOGFILE_C=/tmp/upload/ssc_status.txt
@@ -77,12 +78,12 @@ failover_action(){
 			# 切换
 			dbus set ssconf_basic_node=$ss_failover_s4_3
 			# 降级
-			dbus set ss_failover_s4_3=$ssconf_basic_node
+			dbus set ss_failover_s4_3=$CURRENT
 			# 重启
 			dbus set ss_heart_beat="1"
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 		elif [ "$ss_failover_s4_2" == "2" ];then
-			NEXT_NODE=$(($ssconf_basic_node + 1))
+			NEXT_NODE=$(($CURRENT + 1))
 			MAXT_NODE=$(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)
 			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
 			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"

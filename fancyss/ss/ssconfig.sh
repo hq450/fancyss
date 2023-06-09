@@ -1641,14 +1641,14 @@ start_dns2socks(){
 start_ss_tunnel() {
 	local port=$1
 	if [ "${ss_basic_type}" == "1" ]; then
-		echo_date "开启ssr-tunnel，作为chinadns-ng的上游DNS..."
-		rss-tunnel -c ${CONFIG_FILE} -l ${port} -L $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+		echo_date "开启ssr-tunnel，端口：$port，作为chinadns-ng的上游DNS..."
+		run_bg rss-tunnel -c ${CONFIG_FILE} -l ${port} -L $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) -u -f /var/run/sstunnel.pid
 	elif [ "${ss_basic_type}" == "0" ]; then
-		echo_date "开启ss-tunnel，作为chinadns-ng的上游DNS..."
+		echo_date "开启ss-tunnel，端口：$port，作为chinadns-ng的上游DNS..."
 		if [ "${ss_basic_rust}" == "1" ];then
-			sslocal ${ARG_RUST_TUNNEL} -f $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) ${ARG_OBFS} -u -d >/dev/null 2>&1
+			run_bg sslocal ${ARG_RUST_TUNNEL} -f $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) ${ARG_OBFS} -u -d
 		else
-			ss-tunnel -c ${CONFIG_FILE} -l ${port} -L $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) ${ARG_OBFS} -u -f /var/run/sstunnel.pid >/dev/null 2>&1
+			run_bg ss-tunnel -c ${CONFIG_FILE} -l ${port} -L $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) ${ARG_OBFS} -u -f /var/run/sstunnel.pid
 		fi
 	fi
 }
@@ -5873,7 +5873,7 @@ finish_start(){
 					kill -9 ${DEF_PID}
 				fi
 				echo_date "开启dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-				dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0"
+				run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0"
 				detect_running_status2 dns-ecs-forcer 2055
 			fi
 		fi

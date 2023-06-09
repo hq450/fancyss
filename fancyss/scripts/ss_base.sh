@@ -126,6 +126,16 @@ if [ "${ss_basic_advdns}" != "1" -a "${ss_foreign_dns}" == "4" ]; then
 	fi
 fi
 
+#---------------------------
+# 20230609，119.29.29.29的tcp解析有问题，如果用户选这个，强制更换到119.28.28.28
+if [ "${ss_basic_chng_china_1_tcp}" == "5" ];then
+	ss_basic_chng_china_1_tcp="6"
+fi
+if [ "${ss_basic_chng_china_2_tcp}" == "5" ];then
+	ss_basic_chng_china_2_tcp="6"
+fi
+
+#----------------------------
 number_test(){
 	case $1 in
 		''|*[!0-9]*)
