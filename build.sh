@@ -397,7 +397,7 @@ finish(){
 pack(){
 	gen_folder $1 $2 $3
 	build_pkg $1 $2 $3
-	if [ "${flag}" == "release" ];then
+	if [ "$3" == "release" ];then
 		do_backup  $1 $2 $3
 	fi
 	rm -rf ${CURR_PATH}/shadowsocks/

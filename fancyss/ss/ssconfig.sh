@@ -5750,6 +5750,10 @@ finish_start(){
 			else
 				local TPORT=1056
 			fi
+
+			if [ "${ss_basic_chng_trust_2_ecs}" == "97" ];then
+				local TPORT=1056
+			fi
 		
 			echo_date "检测进阶chinadns-ng方案可信DNS-2（端口：${TPORT}）是否正常工作..."
 			# 国外dns检测，超时时间设置久一点
