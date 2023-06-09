@@ -89,13 +89,17 @@ compress_binary(){
 
 	cd ${base_dir}/${VERSIONTAG}/
 	md5sum * >md5sum.txt
+	
 	cd ${base_dir}
 	rm -rf ../${VERSIONTAG}
 	mv -f ${VERSIONTAG} ..
+
+	echo -n "$VERSIONTAG" > latest_v5.txt
 }
 
 build_v2 armv5
 build_v2 armv7
 build_v2 arm64
 compress_binary
+
 

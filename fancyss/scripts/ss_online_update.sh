@@ -78,6 +78,7 @@ readonly PREFIX="ssconf_basic_name_
 				ssconf_basic_xray_network_security_alpn_h2_
 				ssconf_basic_xray_network_security_alpn_http_
 				ssconf_basic_xray_network_security_sni_
+				ssconf_basic_xray_fingerprint_
 				ssconf_basic_xray_json_
 				ssconf_basic_trojan_ai_
 				ssconf_basic_trojan_uuid_
@@ -1630,6 +1631,9 @@ get_vless_node(){
 		x_type="tcp"
 	fi
 	x_headerType=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "headerType" | awk -F"=" '{print $2}')
+	x_mode=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "mode" | awk -F"=" '{print $2}')
+	x_serviceName=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "serviceName" | awk -F"=" '{print $2}')
+	x_fp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "fp=" | awk -F"=" '{print $2}')
 	case ${x_type} in
 	tcp)
 		# tcp协议设置【tcp伪装类型 (type)】
@@ -1674,8 +1678,16 @@ get_vless_node(){
 		x_headtype_kcp=""
 		x_headtype_quic=""
 		x_grpc_mode=${x_headerType}
+		x_grpc_mode_ext=${x_mode}
 		if [ -z "${x_grpc_mode}" ];then
-			x_grpc_mode="gun"
+			if [ -n "${x_grpc_mode_ext}" ];then
+				x_grpc_mode="${x_grpc_mode_ext}"
+			else
+				x_grpc_mode="gun"
+			fi
+		fi
+		if [ -n "${x_serviceName}" ];then
+			x_path="${x_serviceName}"
 		fi
 		;;
 	esac
@@ -1712,12 +1724,18 @@ get_vless_node(){
 		# SNI, 如果空则用host替代，如果host空则空，此处在底层传输安全（network_security）为tls时使用
 		x_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
 		x_flow=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "flow" | awk -F"=" '{print $2}')
+
+		# fingerprint
+		if [ -z "${x_fp}" ];then
+			x_fp="chrome"
+		fi
 	else
 		x_security="none"
 		x_alpn_h2=""
 		x_alpn_http=""
 		x_sni=""
 		x_flow=""
+		x_fp=""
 	fi
 	
 	[ -z "${x_encryption}" ] && x_encryption="none"
@@ -1745,6 +1763,7 @@ get_vless_node(){
 	# echo security: ${x_security}
 	# echo host: ${x_host}
 	# echo sni: ${x_sni}
+	# echo fingerprint: ${x_fp}
 	# echo path: ${x_path}
 	# echo headerType: ${x_headerType}
 	# echo x_headtype_tcp: ${x_headtype_tcp}
@@ -1806,6 +1825,7 @@ add_vless_node(){
 	dbus_eset ssconf_basic_xray_network_security_alpn_h2_${NODE_INDEX} "${x_alpn_h2}"
 	dbus_eset ssconf_basic_xray_network_security_alpn_http_${NODE_INDEX} "${x_alpn_http}"
 	dbus_eset ssconf_basic_xray_network_security_sni_${NODE_INDEX} "${x_sni}"
+	dbus_eset ssconf_basic_xray_fingerprint_${NODE_INDEX} "${x_fp}"
 	dbus_eset ssconf_basic_xray_flow_${NODE_INDEX} "${x_flow}"
 	dbus_eset ssconf_basic_group_${NODE_INDEX} "${x_group_hash}"
 	let addnum+=1

@@ -144,7 +144,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/v2ray-plugin
 		rm -rf ./shadowsocks/bin/kcptun
 		rm -rf ./shadowsocks/bin/trojan
-		rm -rf ./shadowsocks/bin/ss-tunnel
+		#rm -rf ./shadowsocks/bin/ss-tunnel
 		rm -rf ./shadowsocks/bin/trojan
 		rm -rf ./shadowsocks/bin/speederv1
 		rm -rf ./shadowsocks/bin/speederv2
@@ -397,7 +397,9 @@ finish(){
 pack(){
 	gen_folder $1 $2 $3
 	build_pkg $1 $2 $3
-	do_backup  $1 $2 $3
+	if [ "${flag}" == "release" ];then
+		do_backup  $1 $2 $3
+	fi
 	rm -rf ${CURR_PATH}/shadowsocks/
 }
 

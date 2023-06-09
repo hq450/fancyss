@@ -4282,21 +4282,35 @@ creat_xray_json() {
 			fi
 		fi
 
+
+		# fingerprint: https://github.com/XTLS/Xray-core/releases/tag/v1.7.5
 		if [ "${ss_basic_xray_network_security}" == "tls" ];then
+			if [ -z "${ss_basic_xray_fingerprint}" ];then
+				echo_date "fingerprint为空，默认使用chrome作为指纹"
+				ss_basic_xray_fingerprint="chrome"
+				dbus set ssconf_basic_xray_fingerprint_${cur_node}="chrome"
+			fi
 			local tls="{
 					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
 					,\"alpn\": ${apln}
 					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					,\"fingerprint\": $(get_value_empty $ss_basic_xray_fingerprint)
 					}"
 		else
 			local tls="null"
 		fi
 
 		if [ "${ss_basic_xray_network_security}" == "xtls" ];then
+			if [ -z "${ss_basic_xray_fingerprint}" ];then
+				echo_date "fingerprint为空，默认使用chrome作为指纹"
+				ss_basic_xray_fingerprint="chrome"
+				dbus set ssconf_basic_xray_fingerprint_${cur_node}="chrome"
+			fi
 			local xtls="{
 					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
 					,\"alpn\": ${apln}
 					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					,\"fingerprint\": $(get_value_empty $ss_basic_xray_fingerprint)
 					}"
 		else
 			local xtls="null"
@@ -4608,7 +4622,7 @@ creat_xray_json() {
 		if [ -n "${xray_server}" -a "${xray_server}" != "null" ]; then
 			# 服务器地址强制由用户选择的DNS解析，以免插件还未开始工作而导致解析失败
 			# 判断服务器域名格式
-			local xray_server_tmp=$(__valid_ip ${v2ray_server})
+			local xray_server_tmp=$(__valid_ip ${xray_server})
 			if [ -n "${xray_server_tmp}" ]; then
 				echo_date "检测到你的json配置的Xray服务器是：${xray_server}"
 				ss_basic_server_ip="${xray_server}"
