@@ -167,6 +167,29 @@ compare_time(){
 	fi
 }
 
+test_xray_conf(){
+	#uset _test_ret
+	local conf=$1
+	echo_date "测试xray配置文件..."
+	local test_ret=$(run xray run -test -c=$conf 2>&1)
+	local ret_1=$(echo "$test_ret" | grep "Configuration OK.")
+	local ret_2=$(echo "$test_ret" | grep "does not support fingerprint")
+	#local ret_2=$(echo $test_ret | grep "Old version of XTLS does not support fingerprint")
+	if [ -n "${ret_1}" ]; then
+		# test OK
+		_test_ret=${ret_1}
+		return 0
+	elif [ -n "${ret_2}" ];then
+		# fingerprint should be deleted
+		_test_ret=${ret_2}
+		return 2
+	else
+		# test faild
+		_test_ret=${test_ret}
+		return 2
+	fi
+}
+
 prepare_system() {
 	# prepare system
 	
@@ -3193,7 +3216,7 @@ create_dnsmasq_conf() {
 						# 应该从gfwlist中删除对应域名
 						local DOMAIN_EXIST_2=$(cat /tmp/gfwlist.txt | /bin/grep -Ew "^${wan_white_domain}")
 						if [ -n ${DOMAIN_EXIST_2} ];then
-							cat /tmp/gfwlist.txt | /bin/grep -Evw "^${wan_white_domain}" | sponge /tmp/gfwlist.txt
+							cat /tmp/gfwlist.txt | /bin/grep -Evw "^${wan_white_domain}" | run sponge /tmp/gfwlist.txt
 						fi	
 					fi
 				else
@@ -3205,7 +3228,7 @@ create_dnsmasq_conf() {
 							local DOMAIN_EXIST_3=$(cat /tmp/gfwlist.conf | /bin/grep -Ew "/.${wan_white_domain}")
 							if [ -n "${DOMAIN_EXIST_3}" ];then
 								echo_date "域名白名单：从/tmp/gfwlist.conf移除域名：${wan_white_domain}"
-								cat /tmp/gfwlist.conf | /bin/grep -Evw "/.${wan_white_domain}" | sponge /tmp/gfwlist.conf
+								cat /tmp/gfwlist.conf | /bin/grep -Evw "/.${wan_white_domain}" | run sponge /tmp/gfwlist.conf
 							fi
 							# 方案2，用国外DNS，如果站点只有DNS投毒，没有tcp阻断，可能导致国内能直接访问
 							# echo "${wan_white_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
@@ -4147,17 +4170,51 @@ creat_v2ray_json() {
 	fi
 
 	if [ "${ss_basic_vcore}" == "1" ];then
-		echo_date 当前核心为${VCORE_NAME}，不进行配置文件测试....
+		# test v2ray Configuration generated from user json then run by xray
+		echo_date "测试${VCORE_NAME}配置文件...."
+		test_xray_conf $V2RAY_CONFIG_FILE
+		case $? in
+		0)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "${VCORE_NAME}配置文件通过测试!!!"
+			;;
+		2)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "${VCORE_NAME}配置文件没有通过测试，尝试删除fingerprint配置后重试！"
+			run jq 'del(.. | .fingerprint?)' $V2RAY_CONFIG_FILE | run sponge $V2RAY_CONFIG_FILE
+			test_xray_conf $V2RAY_CONFIG_FILE
+			case $? in
+			0)
+				echo_date "测试结果：${_test_ret}"
+				echo_date "${VCORE_NAME}配置文件通过测试!!!"
+				;;
+			*)
+				echo_date "测试结果：${_test_ret}"
+				echo_date "${VCORE_NAME}配置文件没有通过测试，请检查设置!!!"
+				rm -rf "$V2RAY_CONFIG_TEMP"
+				rm -rf "$V2RAY_CONFIG_FILE"
+				close_in_five flag
+				;;
+			esac
+			;;
+		*)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "${VCORE_NAME}配置文件没有通过测试，请检查设置!!!"
+			rm -rf "$V2RAY_CONFIG_TEMP"
+			rm -rf "$V2RAY_CONFIG_FILE"
+			close_in_five flag
+			;;
+		esac
 	else
-		echo_date 测试${VCORE_NAME}配置文件....
+		echo_date "测试${VCORE_NAME}配置文件...."
 		cd /koolshare/bin
 		#result=$(v2ray -test -config="$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
 		result=$(run v2ray test -c "$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
 		if [ -n "$result" ]; then
 			echo_date $result
-			echo_date ${VCORE_NAME}配置文件通过测试!!!
+			echo_date "${VCORE_NAME}配置文件通过测试!!!"
 		else
-			echo_date ${VCORE_NAME}配置文件没有通过测试，请检查设置!!!
+			echo_date "${VCORE_NAME}配置文件没有通过测试，请检查设置!!!"
 			rm -rf "$V2RAY_CONFIG_TEMP"
 			rm -rf "$V2RAY_CONFIG_FILE"
 			close_in_five flag
@@ -4168,7 +4225,7 @@ creat_v2ray_json() {
 start_v2ray() {
 	# tfo start
 	if [ "$ss_basic_tfo" == "1" -a "${LINUX_VER}" != "26" ]; then
-		echo_date 开启tcp fast open支持.
+		echo_date "开启tcp fast open支持."
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
 	if [ "${ss_basic_vcore}" == "1" ];then
@@ -4524,6 +4581,7 @@ creat_xray_json() {
 		fi
 		run jq --tab . ${XRAY_CONFIG_TEMP} >${XRAY_CONFIG_FILE}
 		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
+
 	else
 		echo_date "使用自定义的Xray json配置文件..."
 		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_TEMP"
@@ -4663,6 +4721,41 @@ creat_xray_json() {
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		fi
 	fi
+	
+	# test xray Configuration run by xray
+	test_xray_conf $XRAY_CONFIG_FILE
+	case $? in
+	0)
+		echo_date "测试结果：${_test_ret}"
+		echo_date "Xray配置文件通过测试!!!"
+		;;
+	2)
+		echo_date "测试结果：${_test_ret}"
+		echo_date "Xray配置文件没有通过测试，尝试删除fingerprint配置后重试！"
+		run jq 'del(.. | .fingerprint?)' $XRAY_CONFIG_FILE | run sponge $XRAY_CONFIG_FILE
+		test_xray_conf $XRAY_CONFIG_FILE
+		case $? in
+		0)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "Xray配置文件通过测试!!!"
+			;;
+		*)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "Xray配置文件没有通过测试，请检查设置!!!"
+			rm -rf "$XRAY_CONFIG_TEMP"
+			rm -rf "$XRAY_CONFIG_FILE"
+			close_in_five flag
+			;;
+		esac
+		;;
+	*)
+		echo_date "测试结果：${_test_ret}"
+		echo_date "Xray配置文件没有通过测试，请检查设置!!!"
+		rm -rf "$XRAY_CONFIG_TEMP"
+		rm -rf "$XRAY_CONFIG_FILE"
+		close_in_five flag
+		;;
+	esac
 }
 
 start_xray() {

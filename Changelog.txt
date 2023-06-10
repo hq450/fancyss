@@ -1,5 +1,11 @@
 fancyss Changelog
 ===========================================
+3.1.0 (20230610)
+   - fix	修复一些xray节点因添加fingerprint导致xray启动失败的问题；
+   - fix	修复可能存在的黑白名单失效的问题；
+   - add	新增xray节点的配置检查功能；
+   - add	xray非json配置中，xtls flow新增xtls-rprx-vision选项；
+   
 3.0.9 (20230609)
    - fix	修复xray json模式下，服务器配置ip地址识别成域名的问题；
    - fix	修复hnd_v8包，使用trojan运行trojan节点，4.1.xx内核机型，如AC86U、AX86U等机型traojan配置文件检查不过的问题；
