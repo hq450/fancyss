@@ -1,14 +1,14 @@
 {
   "name": "fancyss",
   "version": "3.1.0",
-  "md5_hnd_full": "5848df33b19be1fb399cab7d6fd785be",
-  "md5_hnd_lite": "06e5b3dedfd59a24b1da4e615b112f55",
-  "md5_hnd_v8_full": "dd7a6759e98523222a2108671126f2ea",
-  "md5_hnd_v8_lite": "1f8c733c7307a5c420032fab2554ce75",
-  "md5_qca_full": "9e35cfe634db8c184499779cdde16c0c",
-  "md5_qca_lite": "4a29a73f2e5a800bfd9a4c73c65dd9da",
-  "md5_arm_full": "f09546ba745b2e27e290454d16f75cc9",
-  "md5_arm_lite": "d4cf095b75541817da3ae718640ade92",
-  "md5_mtk_full": "05add60e00be839b2a6d08a3d820d71e",
-  "md5_mtk_lite": "72cbd80d432aa2acfe62b5d1c2466482"
+  "md5_hnd_full": "2e3b54a34180a0eef49c22bc517bb3c3",
+  "md5_hnd_lite": "9806628f22b29163ad38f172a86fd316",
+  "md5_hnd_v8_full": "7c923c9240d0f58e9fc298b424ba0422",
+  "md5_hnd_v8_lite": "8847706dede6e6a31bbcb55135fc3fab",
+  "md5_qca_full": "be96ea3e4da0e18483ba62756653f176",
+  "md5_qca_lite": "35b68d4e7993a217e1ed49d19468a35d",
+  "md5_arm_full": "5f4b495e8fff12ab8c720760853fc252",
+  "md5_arm_lite": "65c994753e800efca436ef57e9d020ab",
+  "md5_mtk_full": "12f0ba5dbcb99a8fc29925fd087cd52c",
+  "md5_mtk_lite": "9850d373bc6ec46190b876516b999821"
 }
