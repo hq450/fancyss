@@ -72,7 +72,8 @@ var option_headkcp = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"
 var option_headquic = [["none", "不伪装"], ["srtp", "伪装视频通话(srtp)"], ["utp", "伪装BT下载(uTP)"], ["wechat-video", "伪装微信视频通话"], ["dtls", "dtls"], ["wireguard", "wireguard"]];
 var option_grpcmode = ["gun", "multi"];
 var option_bol = [["0", "false"], ["1", "true"]];
-var option_xflow = ["xtls-rprx-vision", "xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-splice", "xtls-rprx-splice-udp443"];
+var option_xflow = [["", "none"], ["xtls-rprx-vision", "xtls-rprx-vision"], ["xtls-rprx-origin", "xtls-rprx-origin"], ["xtls-rprx-origin-udp443", "xtls-rprx-origin-udp443"], ["xtls-rprx-direct", "xtls-rprx-direct"], ["xtls-rprx-direct-udp443", "xtls-rprx-direct-udp443"], ["xtls-rprx-splice", "xtls-rprx-splice"], ["xtls-rprx-splice-udp443", "xtls-rprx-splice-udp443"]];
+//var option_xflow = ["", "xtls-rprx-vision", "xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-splice", "xtls-rprx-splice-udp443"];
 var option_fingerprint = ["chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized", ""];
 var option_naive_prot = ["https", "quic"];
 var heart_count = 1;
@@ -548,15 +549,12 @@ function save() {
 				dbus["ssconf_basic_xray_network_path_" + node_sel] = E("ss_basic_xray_network_path").value;
 			}
 			dbus["ssconf_basic_xray_network_security_" + node_sel] = E("ss_basic_xray_network_security").value;
-			if(E("ss_basic_xray_network_security").value == "tls"){
-				dbus["ssconf_basic_xray_flow_" + node_sel] = "";
-				dbus["ssconf_basic_xray_network_security_ai_" + node_sel] = E("ss_basic_xray_network_security_ai").checked ? '1' : '';
-				dbus["ssconf_basic_xray_network_security_alpn_h2_" + node_sel] = E("ss_basic_xray_network_security_alpn_h2").checked ? '1' : '';
-				dbus["ssconf_basic_xray_network_security_alpn_http_" + node_sel] = E("ss_basic_xray_network_security_alpn_http").checked ? '1' : '';
-				dbus["ssconf_basic_xray_network_security_sni_" + node_sel] = E("ss_basic_xray_network_security_sni").value;
-				dbus["ssconf_basic_xray_fingerprint_" + node_sel] = E("ss_basic_xray_fingerprint").value;
-			}else if(E("ss_basic_xray_network_security").value == "xtls"){
-				dbus["ssconf_basic_xray_flow_" + node_sel] = E("ss_basic_xray_flow").value;
+			if(E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls"){
+				if(E("ss_basic_xray_network").value == "tcp"){
+					dbus["ssconf_basic_xray_flow_" + node_sel] = E("ss_basic_xray_flow").value;
+				}else{
+					dbus["ssconf_basic_xray_flow_" + node_sel] = "";
+				}
 				dbus["ssconf_basic_xray_network_security_ai_" + node_sel] = E("ss_basic_xray_network_security_ai").checked ? '1' : '';
 				dbus["ssconf_basic_xray_network_security_alpn_h2_" + node_sel] = E("ss_basic_xray_network_security_alpn_h2").checked ? '1' : '';
 				dbus["ssconf_basic_xray_network_security_alpn_http_" + node_sel] = E("ss_basic_xray_network_security_alpn_http").checked ? '1' : '';
@@ -709,6 +707,7 @@ function verifyFields(r) {
 	var v_host_on = E("ss_basic_v2ray_network").value == "ws" || E("ss_basic_v2ray_network").value == "h2" || E("ss_basic_v2ray_network").value == "quic" || v_http_on;
 	var v_path_on = E("ss_basic_v2ray_network").value == "ws" || E("ss_basic_v2ray_network").value == "h2" || E("ss_basic_v2ray_network").value == "quic" || E("ss_basic_v2ray_network").value == "grpc" || v_http_on;
 	var v_tls_on = E("ss_basic_v2ray_network_security").value == "tls";
+	var v_grpc_on = E("ss_basic_v2ray_network").value == "grpc";
 	var x_json_on = E("ss_basic_xray_use_json").checked == true;
 	var x_json_off = E("ss_basic_xray_use_json").checked == false;
 	var x_http_on = E("ss_basic_xray_network").value == "tcp" && E("ss_basic_xray_headtype_tcp").value == "http";
@@ -716,6 +715,8 @@ function verifyFields(r) {
 	var x_path_on = E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2" || E("ss_basic_xray_network").value == "quic" || E("ss_basic_xray_network").value == "grpc" || x_http_on;
 	var x_tls_on = E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls";
 	var x_xtls_on = E("ss_basic_xray_network_security").value == "xtls";
+	var x_tcp_on = E("ss_basic_xray_network").value == "tcp";
+	var x_grpc_on = E("ss_basic_xray_network").value == "grpc";
 	//ss
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
@@ -752,17 +753,22 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_v2ray_mux_concurrency', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_mux_enable").checked));
 	elem.display(elem.parentElem('ss_basic_v2ray_json', 'tr'), (v2ray_on && v_json_on));
 	elem.display('v2ray_binary_update_tr', v2ray_on);		//fancyss-full
+	if(v_grpc_on){
+		$('#ss_basic_v2ray_network_path_tr > th > a').html('* serviceName');
+	}else{
+		$('#ss_basic_v2ray_network_path_tr > th > a').html('* 路径 (path)');
+	}
 	//xray
 	elem.display(elem.parentElem('ss_basic_xray_use_json', 'tr'), xray_on);
 	elem.display(elem.parentElem('ss_basic_xray_uuid', 'tr'), (xray_on && x_json_off));
 	elem.display(elem.parentElem('ss_basic_xray_encryption', 'tr'), (xray_on && x_json_off));
-	elem.display(elem.parentElem('ss_basic_xray_flow', 'tr'), (xray_on && x_json_off && x_xtls_on));
+	elem.display(elem.parentElem('ss_basic_xray_flow', 'tr'), (xray_on && x_json_off && x_tls_on && x_tcp_on));
 	elem.display(elem.parentElem('ss_basic_xray_network', 'tr'), (xray_on && x_json_off));
 	elem.display(elem.parentElem('ss_basic_xray_headtype_tcp', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "tcp"));
 	elem.display(elem.parentElem('ss_basic_xray_headtype_kcp', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "kcp"));
 	elem.display(elem.parentElem('ss_basic_xray_kcp_seed', 'tr'), (xray_on && v_json_off && E("ss_basic_xray_network").value == "kcp"));
 	elem.display(elem.parentElem('ss_basic_xray_headtype_quic', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "quic"));
-	elem.display(elem.parentElem('ss_basic_xray_grpc_mode', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "grpc"));
+	elem.display(elem.parentElem('ss_basic_xray_grpc_mode', 'tr'), (xray_on && x_json_off && x_grpc_on));
 	elem.display(elem.parentElem('ss_basic_xray_network_host', 'tr'), (xray_on && x_json_off && x_host_on));
 	elem.display(elem.parentElem('ss_basic_xray_network_path', 'tr'), (xray_on && x_json_off && x_path_on));
 	elem.display(elem.parentElem('ss_basic_xray_network_security', 'tr'), (xray_on && x_json_off));
@@ -772,6 +778,11 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_xray_fingerprint', 'tr'), (xray_on && x_json_off && x_tls_on));
 	elem.display(elem.parentElem('ss_basic_xray_json', 'tr'), (xray_on && x_json_on));
 	elem.display('xray_binary_update_tr', xray_on);
+	if(x_grpc_on){
+		$('#ss_basic_xray_network_path_tr > th > a').html('* serviceName');
+	}else{
+		$('#ss_basic_xray_network_path_tr > th > a').html('* 路径 (path)');
+	}
 	//trojan
 	elem.display(elem.parentElem('ss_basic_trojan_uuid', 'tr'), (trojan_on));
 	elem.display(elem.parentElem('ss_basic_trojan_ai', 'tr'), (trojan_on));
@@ -904,11 +915,14 @@ function verifyFields(r) {
 			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "grpc" || x_http_on_2;
 			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls" || E("ss_node_table_xray_network_security").value == "xtls";
 			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
-			showhide("xray_headtype_tcp_tr", (E("ss_node_table_xray_network").value == "tcp"));
+			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
+			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp"
+			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc"
+			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
 			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
-			showhide("xray_grpc_mode_tr", (E("ss_node_table_xray_network").value == "grpc"));
+			showhide("xray_grpc_mode_tr", x_grpc_on_2);
 			showhide("xray_network_host_tr", x_host_on_2);
 			showhide("xray_network_path_tr", x_path_on_2);
 			showhide("xray_json_tr", (E("ss_node_table_xray_use_json").checked));
@@ -916,7 +930,12 @@ function verifyFields(r) {
 			showhide("xray_network_security_alpn_tr", x_tls_on_2);
 			showhide("xray_network_security_sni_tr", x_tls_on_2);
 			showhide("xray_fingerprint_tr", x_tls_on_2);
-			showhide("xray_flow_tr", x_xtls_on_2);
+			showhide("xray_flow_tr", x_tls_on_2 && x_tcp_on_2);
+			if(x_grpc_on_2){
+				$('#xray_network_path_tr > th').html('* serviceName');
+			}else{
+				$('#xray_network_path_tr > th').html('* 路径 (path)');
+			}
 		}
 	}
 	//fancyss_full_1
@@ -1487,11 +1506,12 @@ function tabclickhandler(_type) {
 			var v_host_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || v_http_on_2;
 			var v_path_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2";
 			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls";
-			showhide("v2ray_headtype_tcp_tr", (E("ss_node_table_v2ray_network").value == "tcp"));
+			var v_grpc_on_2 = E("ss_node_table_v2ray_network").value == "grpc"
+			showhide("v2ray_headtype_tcp_tr", v_http_on_2);
 			showhide("v2ray_headtype_kcp_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
 			showhide("v2ray_kcp_seed_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
 			showhide("v2ray_headtype_quic_tr", (E("ss_node_table_v2ray_network").value == "quic"));
-			showhide("v2ray_grpc_mode_tr", (E("ss_node_table_v2ray_network").value == "grpc"));
+			showhide("v2ray_grpc_mode_tr", v_grpc_on_2);
 			showhide("v2ray_network_host_tr", v_host_on_2);
 			showhide("v2ray_network_path_tr", v_path_on_2);
 			showhide("v2ray_mux_concurrency_tr", (E("ss_node_table_v2ray_mux_enable").checked));
@@ -1499,6 +1519,11 @@ function tabclickhandler(_type) {
 			showhide("v2ray_network_security_ai_tr", v_tls_on_2);
 			showhide("v2ray_network_security_alpn_tr", v_tls_on_2);
 			showhide("v2ray_network_security_sni_tr", v_tls_on_2);
+			if(v_grpc_on_2){
+				$('#v2ray_network_path_tr > th').html('* serviceName');
+			}else{
+				$('#v2ray_network_path_tr > th').html('* 路径 (path)');
+			}
 		}
 	}
 	else if (_type == 4) {
@@ -1609,11 +1634,13 @@ function tabclickhandler(_type) {
 			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2";
 			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls" || E("ss_node_table_xray_network_security").value == "xtls";
 			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
-			showhide("xray_headtype_tcp_tr", (E("ss_node_table_xray_network").value == "tcp"));
+			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp";
+			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc";
+			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
 			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
-			showhide("xray_grpc_mode_tr", (E("ss_node_table_xray_network").value == "grpc"));
+			showhide("xray_grpc_mode_tr", x_grpc_on_2);
 			showhide("xray_network_host_tr", x_host_on_2);
 			showhide("xray_network_path_tr", x_path_on_2);
 			showhide("xray_json_tr", (E("ss_node_table_xray_use_json").checked));
@@ -1621,7 +1648,12 @@ function tabclickhandler(_type) {
 			showhide("xray_network_security_alpn_tr", x_tls_on_2);
 			showhide("xray_network_security_sni_tr", x_tls_on_2);
 			showhide("xray_fingerprint_tr", x_tls_on_2);
-			showhide("xray_flow_tr", x_xtls_on_2);
+			showhide("xray_flow_tr", x_xtls_on_2 && x_tcp_on_2);
+			if(x_grpc_on_2){
+				$('#xray_network_path_tr > th').html('* serviceName');
+			}else{
+				$('#xray_network_path_tr > th').html('* 路径 (path)');
+			}
 		}
 	}
 	else if (_type == 5) {
@@ -4794,7 +4826,7 @@ function reset_smartdns_conf(){
 																	{ title: '<em>服务器配置</em>（以下配置使用vless作为传出协议，其它传出协议请使用json配置）', class:'xray_elem', th:'2'},
 																	{ title: '用户id (id)', rid:'xray_uuid_tr', id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:400px'},
 																	{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
-																	{ title: 'flow (流控模式，用于选择 XTLS 的算法)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', hint:'56', options:option_xflow, style:'width:412px', value: "xtls-rprx-origin"},
+																	{ title: 'flow (流控模式，没有请留空)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', options:option_xflow, style:'width:412px', value: ""},
 																	{ title: '<em>底层传输方式</em>', class:'xray_elem', th:'2'},
 																	{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
 																	{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
@@ -4871,7 +4903,7 @@ function reset_smartdns_conf(){
 														{ title: '* quic伪装类型 (type)', id:'ss_basic_v2ray_headtype_quic', type:'select', options:option_headquic},
 														{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', type:'select', options:option_grpcmode},
 														{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
-														{ title: '* 路径 (path)', id:'ss_basic_v2ray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+														{ title: '* 路径 (path)', rid:'ss_basic_v2ray_network_path_tr', id:'ss_basic_v2ray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
 														{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
 														{ title: '底层传输安全', id:'ss_basic_v2ray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"]]},
 														{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_v2ray_network_security_ai', type:'checkbox', hint:'56'},
@@ -4886,14 +4918,14 @@ function reset_smartdns_conf(){
 														// xray
 														{ title: '用户id (id)', id:'ss_basic_xray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
 														{ title: '加密 (encryption)', id:'ss_basic_xray_encryption', type:'text', hint:'55', maxlen:'50'},
-														{ title: 'flow (流控模式，用于选择 XTLS 的算法)', id:'ss_basic_xray_flow', type:'select', hint:'56', options:option_xflow},
+														{ title: 'flow (流控模式，没有请留空)', id:'ss_basic_xray_flow', type:'select', options:option_xflow},
 														{ title: '传输协议 (network)', id:'ss_basic_xray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"]},
 														{ title: '* tcp伪装类型 (type)', id:'ss_basic_xray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
 														{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
 														{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', type:'select', options:option_headquic},
 														{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', type:'select', options:option_grpcmode},
 														{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
-														{ title: '* 路径 (path)', id:'ss_basic_xray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+														{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
 														{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
 														{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"]]},
 														{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', hint:'56'},

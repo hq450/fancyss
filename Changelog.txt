@@ -1,5 +1,8 @@
 fancyss Changelog
 ===========================================
+3.1.1 (todo)
+   - fix	修复xray节点在tls下无法使用flow的问题；
+
 3.1.0 (20230610)
    - fix	修复一些xray节点因添加fingerprint导致xray启动失败的问题；
    - fix	修复可能存在的黑白名单失效的问题；

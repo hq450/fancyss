@@ -4301,9 +4301,9 @@ creat_xray_json() {
 			ss_basic_xray_network_security_sni=""
 		fi
 
-		if [ "${ss_basic_xray_network_security}" == "tls" ];then
-			ss_basic_xray_flow=""
-		fi
+		#if [ "${ss_basic_xray_network_security}" == "tls" ];then
+		#	ss_basic_xray_flow=""
+		#fi
 
 		local alpn_h2=${ss_basic_xray_network_security_alpn_h2}
 		local alpn_ht=${ss_basic_xray_network_security_alpn_http}
