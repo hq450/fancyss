@@ -180,6 +180,7 @@ __valid_port() {
 }
 
 detect_running_status(){
+	[ "${ss_basic_noruncheck}" == "1" ] && return
 	local BINNAME=$1
 	local PIDFILE=$2
 	local PID1
@@ -214,6 +215,7 @@ detect_running_status(){
 }
 
 detect_running_status2(){
+	[ "${ss_basic_noruncheck}" == "1" ] && return
 	# detect process by binary name and key word
 	local BINNAME=$1
 	local KEY=$2

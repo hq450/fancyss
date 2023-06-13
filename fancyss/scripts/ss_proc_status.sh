@@ -463,7 +463,7 @@ GET_PROG_STAT(){
 							echo "smartdns	未运行🔴		中国1:UDP查询"
 						fi
 					else
-						if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
+						if [ "${ss_basic_chng_china_1_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
 							local DEF1=$(ps | grep "dns-ecs-forcer" | grep "051 " | awk '{print $1}')
 							if [ -n "${DEF1}" ];then
 								echo "dns-ecs-forcer	运行中🟢		中国1:ECS	${DEF1}"
@@ -480,7 +480,7 @@ GET_PROG_STAT(){
 					else
 						echo "dns2tcp		未运行🔴		中国1:TCP查询"
 					fi
-					if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
+					if [ "${ss_basic_chng_china_1_ecs}" == "1"  -a "${ss_basic_nochnipcheck}" != "1" ];then
 						local DEF1=$(ps | grep "dns-ecs-forcer" | grep "051 " | awk '{print $1}')
 						if [ -n "${DEF1}" ];then
 							echo "dns-ecs-forcer	运行中🟢		中国1:ECS	${DEF1}"
@@ -502,7 +502,7 @@ GET_PROG_STAT(){
 			# 中国DNS-2
 			if [ "${ss_basic_chng_china_2_enable}" == "1" ];then
 				if [ "${ss_basic_chng_china_2_prot}" == "1" ];then
-					if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
+					if [ "${ss_basic_chng_china_2_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
 						local DEF2=$(ps | grep "dns-ecs-forcer" | grep "052 " | awk '{print $1}')
 						if [ -n "${DEF2}" ];then
 							echo "dns-ecs-forcer	运行中🟢		中国2:ECS	${DEF2}"
@@ -517,7 +517,7 @@ GET_PROG_STAT(){
 					else
 						echo "dns2tcp		未运行🔴		中国2:TCP查询"
 					fi
-					if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
+					if [ "${ss_basic_chng_china_2_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
 						local DEF2=$(ps | grep "dns-ecs-forcer" | grep "052 " | awk '{print $1}')
 						if [ -n "${DEF2}" ];then
 							echo "dns-ecs-forcer	运行中🟢		中国2:ECS	${DEF2}"
@@ -566,7 +566,7 @@ GET_PROG_STAT(){
 						fi
 					fi
 
-					if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
+					if [ "${ss_basic_chng_trust_1_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
 						local DEF3=$(ps | grep "dns-ecs-forcer" | grep "055 " | awk '{print $1}')
 						if [ -n "${DEF3}" ];then
 							echo "dns-ecs-forcer	运行中🟢		可信1:ECS	${DEF3}"
@@ -722,7 +722,7 @@ GET_PROG_STAT(){
 			# 可信DNS-2
 			if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
 				if [ "${ss_basic_chng_trust_2_opt}" == "1" ];then
-					if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+					if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
 						local DEF4=$(ps | grep "dns-ecs-forcer" | grep "056 " | awk '{print $1}')
 						if [ -n "${DEF4}" ];then
 							echo "dns-ecs-forcer	运行中🟢		可信2:ECS	${DEF4}"
@@ -737,7 +737,7 @@ GET_PROG_STAT(){
 					else
 						echo "dns2tcp		未运行🔴		可信2:TCP查询"
 					fi
-					if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+					if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
 						local DEF4=$(ps | grep "dns-ecs-forcer" | grep "056 " | awk '{print $1}')
 						if [ -n "${DEF4}" ];then
 							echo "dns-ecs-forcer	运行中🟢		可信2:ECS	${DEF4}"

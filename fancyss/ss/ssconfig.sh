@@ -190,82 +190,11 @@ test_xray_conf(){
 	fi
 }
 
-prepare_system() {
-	# prepare system
-	
-	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
-	set_skin
-	
-	# 1. 检测是否是路由模式，科学上网插件工作方式为透明代理 + NAT（iptables），而非路由模式是没有NAT的，所以无法工作！
-	local ROUTER_MODE=$(nvram get sw_mode)
-	if [ "$(nvram get sw_mode)" != "1" ]; then
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "+          无法启用插件，因为当前路由器工作在非无线路由器模式下          +"
-		echo_date "+     科学上网插件工作方式为透明代理，需要在NAT下，即路由模式下才能工作    +"
-		echo_date "+            请前往【系统管理】- 【系统设置】去切换路由模式！           +"
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		close_in_five
-	fi
-	
-	# 2. 检测jffs2_script是否开启，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf）
-	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，官改固件不需要开启
-	if [ -z "$(nvram get extendno | grep koolshare)" ]; then
-	#	# official mod
-	#	if [ "$(nvram get jffs2_scripts)" != "1" ]; then
-	#		nvram set jffs2_scripts == "1"
-	#		nvram commit
-	#	fi
-	#else
-		# merlin
-		if [ "$(nvram get jffs2_scripts)" != "1" ]; then
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date "+     发现你未开启Enable JFFS custom scripts and configs选项！     +"
-			echo_date "+    【软件中心】和【科学上网】插件都需要此项开启才能正常使用！！         +"
-			echo_date "+     请前往【系统管理】- 【系统设置】去开启，并重启路由器后重试！！      +"
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			close_in_five
-		fi
-	fi
-
-	# 3. internet detect
-	#    开启插件之前必须检查网络，如果网络不通，则插件不予开启
-	#    考虑到本插件可能的国外环境用户，最后添加8.8.8.8的检测
-	echo_date "科学上网插件开启前，需要进行网络连通性检查，请稍后..."
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="223.5.5.5"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
-	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="114.114.114.114"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
-	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="119.29.29.29"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
-	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="1.2.4.8"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
-	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="8.8.8.8"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
-	fi
-	if [ -n "${PING_RET}" ];then
-		echo_date "检查到路由器可以正常访问公网，检测源：${PING_SRC}，延迟：${PING_RET}s，继续！"
-	else
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "+                 检查到路由器无法正常访问公网！                     +"
-		echo_date "+                 请配置好你的路由器网络后重试！                     +"
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		close_in_five flag
-	fi
-
-	# 4. 检测路由器时间是否正确
-	#    因为部分代理协议要求本地时间和服务器时间一致才能工作，所以检测下路由器时间是否设置正确
-	#    时间检测优先从worldtimeapi.org获取，如果获取成功，能同时得到公网出口ipv4地址
-	#    如果所有检测方式用光了还无法获取时间，说明可能是DNS无法获取到解析通造成的
-	echo_date "检查路由器本地时间是否正确..."
+check_time(){
+	# 因为部分代理协议要求本地时间和服务器时间一致才能工作，所以检测下路由器时间是否设置正确
+	# 时间检测优先从worldtimeapi.org获取，如果获取成功，能同时得到公网出口ipv4地址
+	# 如果所有检测方式用光了还无法获取时间，说明可能是DNS无法获取到解析通造成的
+	echo_date "检测路由器本地时间是否正确..."
 
 	# debug use
 	# get_time "www.weibo.com" debug
@@ -278,8 +207,10 @@ prepare_system() {
 	
 	local RET=$(curl -4sk --connect-timeout 2 --max-time 2 "http://worldtimeapi.org/api/timezone/Asia/Shanghai")
 	if [ -n "${RET}" ];then
-		REMOTE_IP_OUT_SRC="worldtimeapi.org"
-		REMOTE_IP_OUT=$(echo ${RET}|run jq -r '.client_ip')
+		if [ "${ss_basic_nochnipcheck}" != "1" ];then
+			REMOTE_IP_OUT_SRC="worldtimeapi.org"
+			REMOTE_IP_OUT=$(echo ${RET}|run jq -r '.client_ip')
+		fi
 		local TIMESTAMP_SOURCE="worldtimeapi.org"
 		local SERVER_TIMESTAMP=$(echo ${RET}|run jq -r '.unixtime')
 		if [ "${SERVER_TIMESTAMP}" == "null" ];then
@@ -332,7 +263,44 @@ prepare_system() {
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		close_in_five flag
 	fi
+}
 
+check_internet(){
+	# 开启插件之前必须检查网络，如果网络不通，则插件不予开启
+	# 考虑到本插件可能的国外环境用户，最后添加8.8.8.8的检测
+	echo_date "科学上网插件开启前，需要进行网络连通性检测，请稍后..."
+	if [ -z "${PING_RET}" ];then
+		local PING_SRC="223.5.5.5"
+		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING_RET}" ];then
+		local PING_SRC="114.114.114.114"
+		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING_RET}" ];then
+		local PING_SRC="119.29.29.29"
+		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING_RET}" ];then
+		local PING_SRC="1.2.4.8"
+		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING_RET}" ];then
+		local PING_SRC="8.8.8.8"
+		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC}|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -n "${PING_RET}" ];then
+		echo_date "检测到路由器可以正常访问公网，检测源：${PING_SRC}，延迟：${PING_RET}s，继续！"
+	else
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+                 检测到路由器无法正常访问公网！                     +"
+		echo_date "+                 请配置好你的路由器网络后重试！                     +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		close_in_five flag
+	fi
+}
+
+check_chn_public_ip(){
 	# 5.1 检测路由器公网出口IPV4地址
 	if [ -z "${REMOTE_IP_OUT}" -o "${REMOTE_IP_OUT}" == "null" ];then
 		REMOTE_IP_OUT=$(nvram get wan0_realip_ip)
@@ -340,13 +308,13 @@ prepare_system() {
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(curl -4s --connect-timeout 2 http://pv.sohu.com/cityjson?ie=utf-8 2>&1 | grep -v "Terminated" | awk -F"=" '{print $2}'|sed 's/^[[:space:]]//g'|sed 's/;$//g'|run jq -r '.cip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
-		REMOTE_IP_OUT_SRC="pv.sohu.co"
+		REMOTE_IP_OUT=$(detect_ip ip.clang.cn 5)
+		REMOTE_IP_OUT_SRC="ip.ddnsto.com"
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
 		REMOTE_IP_OUT=$(detect_ip ip.clang.cn 5)
-		REMOTE_IP_OUT_SRC="ip.clang.cn"
+		REMOTE_IP_OUT=$(curl -4sk --connect-timeout 2 https://ip.clang.cn 2>&1 | grep -v "Terminated" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
@@ -440,7 +408,58 @@ prepare_system() {
 			fi
 		fi
 	fi
+}
 
+prepare_system() {
+	# prepare system
+	
+	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
+	set_skin
+	
+	# 1. 检测是否是路由模式，科学上网插件工作方式为透明代理 + NAT（iptables），而非路由模式是没有NAT的，所以无法工作！
+	local ROUTER_MODE=$(nvram get sw_mode)
+	if [ "$(nvram get sw_mode)" != "1" ]; then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+          无法启用插件，因为当前路由器工作在非无线路由器模式下          +"
+		echo_date "+     科学上网插件工作方式为透明代理，需要在NAT下，即路由模式下才能工作    +"
+		echo_date "+            请前往【系统管理】- 【系统设置】去切换路由模式！           +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		close_in_five
+	fi
+	
+	# 2. 检测jffs2_script是否开启，如果没有开启，将会影响插件的自启和DNS部分（dnsmasq.postconf）
+	# 判断为非官改固件的，即merlin固件，需要开启jffs2_scripts，官改固件不需要开启
+	if [ -z "$(nvram get extendno | grep koolshare)" ]; then
+		if [ "$(nvram get jffs2_scripts)" != "1" ]; then
+			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+			echo_date "+     发现你未开启Enable JFFS custom scripts and configs选项！     +"
+			echo_date "+    【软件中心】和【科学上网】插件都需要此项开启才能正常使用！！         +"
+			echo_date "+     请前往【系统管理】- 【系统设置】去开启，并重启路由器后重试！！      +"
+			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+			close_in_five
+		fi
+	fi
+
+	# 3. internet detect
+	if [ "${ss_basic_nonetcheck}" != "1" ];then
+		check_internet
+	else
+		echo_date "跳过路由器网络连通性检测..."
+	fi
+
+	# 4. 检测路由器时间是否正确
+	if [ "${ss_basic_notimecheck}" != "1" ];then
+		check_time
+	else
+		echo_date "跳过路由器本地时间检测..."
+	fi
+
+	# 检测路由器公网出口IPV4地址
+	if [ "${ss_basic_nochnipcheck}" != "1" ];then
+		check_chn_public_ip
+	else
+		echo_date "跳过国内公网出口ip检测..."
+	fi
 	# 6. set_ulimit
 	ulimit -n 16384
 
@@ -1094,7 +1113,7 @@ remove_file(){
 	local rfile=$1
 	local count=$2
 	if [ -f ${rfile} -o -L ${rfile} ];then
-		echo_date "移除：${rfile}"
+		#echo_date "移除：${rfile}"
 		rm -rf $1
 		count=$((${count} + 1))
 	fi
@@ -1148,7 +1167,7 @@ restore_conf() {
 	remove_file /tmp/doh_frn1.conf $?
 	remove_file /tmp/doh_frn2.conf $?
 	if [ "$?" != "0" ];then
-		echo_date "删除ss相关的名单配置文件."
+		echo_date "删除fancyss相关的名单配置文件..."
 	fi
 }
 
@@ -1354,13 +1373,13 @@ kill_process() {
 		echo_date "删除dohclient的DNS缓存文件/tmp/doh_main.db"
 		rm -f /tmp/doh_main.db
 		sync
-	fi	
+	fi
 		
 	# only close haveged form fancyss, not haveged from system
 	local haveged_pid=$(ps |grep "/koolshare/bin/haveged"|grep -v grep|awk '{print $1}')
 	if [ -n "${haveged_pid}" ]; then
 		echo_date "关闭haveged进程..."
-		killall haveged >/dev/null 2>&1
+		killall -9 ${haveged_pid} >/dev/null 2>&1
 	fi
 		
 	# dns2tcp
@@ -1642,17 +1661,21 @@ start_dns2socks(){
 	local edns=$3
 	
 	killall dns2socks >/dev/null 2>&1
-	
-	if [ "${edns}" == "1" ];then
-		if [ -n "${ss_real_server_ip}" ];then
-			run_bg dns2socks /ef:${ss_real_server_ip}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
-		fi
 
-		if [ -n "${REMOTE_IP_FRN}" ];then
-			run_bg dns2socks /ef:${REMOTE_IP_FRN}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
-		fi
+	if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+		if [ "${edns}" == "1" ];then
+			if [ -n "${ss_real_server_ip}" ];then
+				run_bg dns2socks /ef:${ss_real_server_ip}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
+			fi
 
-		if [ -z "${ss_real_server_ip}" -a -z "${REMOTE_IP_FRN}" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				run_bg dns2socks /ef:${REMOTE_IP_FRN}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
+			fi
+
+			if [ -z "${ss_real_server_ip}" -a -z "${REMOTE_IP_FRN}" ];then
+				run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
+			fi
+		else
 			run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
 		fi
 	else
@@ -1740,17 +1763,30 @@ start_dohclient_chng(){
 
 	if [ "${FLG%%[0-9]}" == "chn" ];then
 		if [ "${ECS}" == "1" ];then
-			if [ -n "${REMOTE_IP_OUT}" ];then
-				local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=1&china-ip4=${REMOTE_IP_OUT%.*}.0/24"
+			if [ "${ss_basic_nochnipcheck}" == "1" ];then
+				echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-${FLG:3:1}的ecs功能，继续！"
+			else
+				if [ -n "${REMOTE_IP_OUT}" ];then
+					local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=1&china-ip4=${REMOTE_IP_OUT%.*}.0/24"
+				else
+					echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-${FLG:3:1}的ecs功能，继续！"
+				fi
 			fi
 		fi
 	elif [ "${FLG%%[0-9]}" == "frn" ];then
 		if [ "${ECS}" == "1" ];then
-			if [ -n "${ss_real_server_ip}" ];then
-				local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=1&foreign-ip4=${ss_real_server_ip%.*}.0/24"
-			fi
-			if [ -n "${REMOTE_IP_FRN}" ];then
-				local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=1&foreign-ip4=${REMOTE_IP_FRN%.*}.0/24"
+			if [ "${ss_basic_nofrnipcheck}" == "1" ];then
+				echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-${FLG:3:1}的ecs功能，继续！"
+			else
+				if [ -n "${ss_real_server_ip}" ];then
+					local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=1&foreign-ip4=${ss_real_server_ip%.*}.0/24"
+				fi
+				if [ -n "${REMOTE_IP_FRN}" ];then
+					local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=${PXY}&ecs=1&foreign-ip4=${REMOTE_IP_FRN%.*}.0/24"
+				fi
+				if [ -z "${ss_real_server_ip}" -a -z "${REMOTE_IP_FRN}" ];then
+					echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-${FLG:3:1}的ecs功能，继续！"
+				fi
 			fi
 		fi
 	fi
@@ -1870,19 +1906,32 @@ start_dohclient_main(){
 	local FRNECS="0"
 	local ECSFLAG="0"
 	if [ "${ss_basic_dohc_ecs_china}" == "1" ];then
-		if [ -n "${REMOTE_IP_OUT}" ];then
-			local CHNECS="1"
-			local CHNNET="${REMOTE_IP_OUT}/24"
+		if [ "${ss_basic_nochnipcheck}" == "1" ];then
+			echo_date "因插件关闭了国内出口ip检测，故无法开启dohclient的国内DNS的ecs功能，继续！"
+		else
+			if [ -n "${REMOTE_IP_OUT}" ];then
+				local CHNECS="1"
+				local CHNNET="${REMOTE_IP_OUT}/24"
+			else
+				echo_date "因未获取到国内出口ip，故无法开启dohclient的国内DNS的ecs功能，继续！"
+			fi
 		fi
 	fi
 	if [ "${ss_basic_dohc_ecs_foreign}" == "1" ];then
-		if [ -n "${ss_real_server_ip}" ];then
-			local FRNECS="1"
-			local FRNNET="${ss_real_server_ip}/24"
-		fi
-		if [ -n "${REMOTE_IP_FRN}" ];then
-			local FRNECS="1"
-			local FRNNET="${REMOTE_IP_FRN}/24"
+		if [ "${ss_basic_nofrnipcheck}" == "1" ];then
+			echo_date "因插件关闭了代理出口ip检测，故无法开启dohclient的国外DNS的ecs功能，继续！"
+		else
+			if [ -n "${ss_real_server_ip}" ];then
+				local FRNECS="1"
+				local FRNNET="${ss_real_server_ip}/24"
+			fi
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				local FRNECS="1"
+				local FRNNET="${REMOTE_IP_FRN}/24"
+			fi
+			if [ -z "${ss_real_server_ip}" -a -z "${REMOTE_IP_FRN}" ];then
+				echo_date "因未获取到代理出口ip，故无法开启dohclient的国外DNS的ecs功能，继续！"
+			fi
 		fi
 	fi
 
@@ -2147,10 +2196,19 @@ start_dns_new(){
 					start_smartdns smartdns_chng_china_udp
 				else
 					if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
-						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-						local CDNS_1="127.0.0.1#2051"
-						run_bg dns-ecs-forcer -p 2051 -s ${CHINA_DNS_1}:${CHINA_POR_1} -e "${REMOTE_IP_OUT%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2051 slient
+						if [ -n "${REMOTE_IP_OUT}" ];then
+							echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
+							local CDNS_1="127.0.0.1#2051"
+							run_bg dns-ecs-forcer -p 2051 -s ${CHINA_DNS_1}:${CHINA_POR_1} -e "${REMOTE_IP_OUT%.*}.0"
+							detect_running_status2 dns-ecs-forcer 2051 slient
+						else
+							if [ "${ss_basic_nochnipcheck}" == "1" ];then
+								echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
+							else
+								echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
+							fi
+							local CDNS_1="${CHINA_DNS_1}#${CHINA_POR_1}"
+						fi
 					else
 						echo_date "使用${CHINA_DNS_1}:${CHINA_POR_1}，udp协议，作为chinadns-ng的国内上游DNS"
 						local CDNS_1="${CHINA_DNS_1}#${CHINA_POR_1}"
@@ -2167,15 +2225,27 @@ start_dns_new(){
 					start_smartdns smartdns_chng_china_tcp
 				else
 					if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
-						# 将1051端口的UDP DNS请求，通过TCP转发到上游服务器
-						local CDNS_1="127.0.0.1#2051"
-						echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
-						run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
-						detect_running_status2 dns2tcp 1051 slient
-						# 把来自2051的dns请求加上ecs标签，转发给1051端口
-						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-						run_bg dns-ecs-forcer -p 2051 -s 127.0.0.1:1051 -e "${REMOTE_IP_OUT%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2051 slient
+						if [ -n "${REMOTE_IP_OUT}" ];then
+							# 将1051端口的UDP DNS请求，通过TCP转发到上游服务器
+							local CDNS_1="127.0.0.1#2051"
+							echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
+							run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
+							detect_running_status2 dns2tcp 1051 slient
+							# 把来自2051的dns请求加上ecs标签，转发给1051端口
+							echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
+							run_bg dns-ecs-forcer -p 2051 -s 127.0.0.1:1051 -e "${REMOTE_IP_OUT%.*}.0"
+							detect_running_status2 dns-ecs-forcer 2051 slient
+						else
+							if [ "${ss_basic_nochnipcheck}" == "1" ];then
+								echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
+							else
+								echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
+							fi
+							echo_date "开启dns2tcp，将中国DNS-1的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
+							local CDNS_1="127.0.0.1#1051"
+							run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
+							detect_running_status2 dns2tcp 1051 slient
+						fi
 					else
 						echo_date "开启dns2tcp，将中国DNS-1的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
 						local CDNS_1="127.0.0.1#1051"
@@ -2218,10 +2288,19 @@ start_dns_new(){
 					start_smartdns smartdns_chng_china_udp
 				else
 					if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
-						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-						local CDNS_2="127.0.0.1#2052"
-						run_bg dns-ecs-forcer -p 2052 -s ${CHINA_DNS_2}:${CHINA_POR_2} -e "${REMOTE_IP_OUT%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2052 slient
+						if [ -n "${REMOTE_IP_OUT}" ];then
+							echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
+							local CDNS_2="127.0.0.1#2052"
+							run_bg dns-ecs-forcer -p 2052 -s ${CHINA_DNS_2}:${CHINA_POR_2} -e "${REMOTE_IP_OUT%.*}.0"
+							detect_running_status2 dns-ecs-forcer 2052 slient
+						else
+							if [ "${ss_basic_nochnipcheck}" == "1" ];then
+								echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
+							else
+								echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
+							fi
+							local CDNS_2="${CHINA_DNS_2}#${CHINA_POR_2}"
+						fi
 					else
 						echo_date "使用${CHINA_DNS_2}:${CHINA_POR_2}，udp协议，作为chinadns-ng的国内上游DNS"
 						local CDNS_2="${CHINA_DNS_2}#${CHINA_POR_2}"
@@ -2245,15 +2324,27 @@ start_dns_new(){
 					start_smartdns smartdns_chng_china_tcp
 				else
 					if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
-						local CDNS_2="127.0.0.1#2052"
-						# 将1052端口的UDP DNS请求，通过TCP转发到上游服务器
-						echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
-						run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
-						detect_running_status2 dns2tcp 1052
-						# 把来自2052的dns请求加上ecs标签，转发给1052端口
-						echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-						run_bg dns-ecs-forcer -p 2052 -s 127.0.0.1:1052 -e "${REMOTE_IP_OUT%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2052
+						if [ -n "${REMOTE_IP_OUT}" ];then
+							local CDNS_2="127.0.0.1#2052"
+							# 将1052端口的UDP DNS请求，通过TCP转发到上游服务器
+							echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
+							run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
+							detect_running_status2 dns2tcp 1052
+							# 把来自2052的dns请求加上ecs标签，转发给1052端口
+							echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
+							run_bg dns-ecs-forcer -p 2052 -s 127.0.0.1:1052 -e "${REMOTE_IP_OUT%.*}.0"
+							detect_running_status2 dns-ecs-forcer 2052
+						else
+							if [ "${ss_basic_nochnipcheck}" == "1" ];then
+								echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
+							else
+								echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
+							fi
+							echo_date "开启dns2tcp，将中国DNS-2的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
+							local CDNS_2="127.0.0.1#1052"
+							run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
+							detect_running_status2 dns2tcp 1052
+						fi
 					else
 						echo_date "开启dns2tcp，将中国DNS-2的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
 						local CDNS_2="127.0.0.1#1052"
@@ -5660,16 +5751,16 @@ set_ss_trigger_job() {
 }
 
 load_nat() {
-	nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
-	i=120
+	local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
+	i=300
 	until [ -n "$nat_ready" ]; do
 		i=$(($i - 1))
 		if [ "$i" -lt 1 ]; then
 			echo_date "错误：不能正确加载nat规则!"
 			close_in_five
 		fi
-		sleep 1
-		nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
+		usleep 100000
+		local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
 	done
 	#creat_ipset
 	add_white_black_ip
@@ -5752,123 +5843,109 @@ detect_ip(){
 	fi
 }
 
-finish_start(){
-	# something else need to do
-
-	# 1. 检测国内域名解析是否正常
-	echo_date "---------------------------------------------------------"
-	echo_date "所有服务和规则加载完毕，运行一些检测..."
-	if [ "${ss_basic_advdns}" == "1" ];then
-		#echo_date "检测进阶chinadns-ng方案中的中国DNS是否正常工作..."
-		echo_date "检测中国域名是否正常解析..."
-		
-		# 1. 检测5个国内域名的DNS解析
-		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-			local CHN_RESOLV_DOMAIN="www.baidu.com"
-			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+check_chng_fdns(){
+	local FDNS_OK_FLAG_1=0
+	if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
+		if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
+			local TPORT=2055
+		else
+			local TPORT=1055
 		fi
-
-		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-			local CHN_RESOLV_DOMAIN="www.taobao.com"
-			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		fi
-
-		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-			local CHN_RESOLV_DOMAIN="www.sina.com"
-			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		fi
-
-		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-			local CHN_RESOLV_DOMAIN="www.jd.com"
-			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		fi
-
-		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-			local CHN_RESOLV_DOMAIN="www.qq.com"
-			local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		fi
-	
-		if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date "国内DNS工作异常，无法正常解析国内域名！请检查你的国内DNS设置..."
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			###close_in_five flag
-		fi
-	
-		if [ -n "${CHN_RESOLV_IPADDR}" ]; then
-			echo_date "中国DNS工作正常！检测源：${CHN_RESOLV_DOMAIN}，解析结果：${CHN_RESOLV_IPADDR}"
+		echo_date "检测进阶chinadns-ng方案可信DNS-1（端口：${TPORT}）是否正常工作..."
+		# 国外dns检测，超时时间设置久一点
+		local DETECT_SERVER_IP_1=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local DETECT_SERVER_IP_1=$(__valid_ip ${DETECT_SERVER_IP_1})
+		if [ -n "${DETECT_SERVER_IP_1}" ]; then
+			echo_date "可信DNS-1 ${TPORT}端口DNS服务工作正常！"
+			local FDNS_OK_FLAG_1=1
+		else
+			echo_date "可信DNS-1 ${TPORT}端口DNS服务工作异常，无法解析域名！可能是以下原因："
+			echo_date "---------------------------------------------------------"
+			echo_date "1. [大概率原因]：节点代理已经失效，请尝试更新订阅、更换可用节点"
+			echo_date "2. [中概率原因]：国外DNS解析出现问题，请尝试更换其它的DNS方案"
+			echo_date "3. [小概率原因]：节点延迟/丢包较高，请尝试更换低延迟/高质量节点"
+			echo_date "---------------------------------------------------------"
+			echo_date "如果插件启动完毕后国外不通，请检查可信DNS-1的配置！继续！"
+			#echo_date "为了避免因代理失效对本地非代理网络也造成影响！将会关闭代理相关进程..."
+			#close_in_five flag
 		fi
 	fi
-	# 3. 检测经过代理的dns是否畅通
 
+	local FDNS_OK_FLAG_2=0
+	if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
+		if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+			local TPORT=2056
+		else
+			local TPORT=1056
+		fi
+
+		if [ "${ss_basic_chng_trust_2_ecs}" == "97" ];then
+			local TPORT=1056
+		fi
 	
-	# 4. 检测直连的国外dns是否畅通
-
-
-	# 5. 检测节点的出口IP地址
-
-	# 1. 如果dns经过代理，那么检测dns服务是否畅通
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" ];then
-		local FDNS_OK_FLAG_1=0
-		if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
-			if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-				local TPORT=2055
-			else
-				local TPORT=1055
-			fi
-			echo_date "检测进阶chinadns-ng方案可信DNS-1（端口：${TPORT}）是否正常工作..."
-			# 国外dns检测，超时时间设置久一点
-			local DETECT_SERVER_IP_1=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			local DETECT_SERVER_IP_1=$(__valid_ip ${DETECT_SERVER_IP_1})
-			if [ -n "${DETECT_SERVER_IP_1}" ]; then
-				echo_date "可信DNS-1 ${TPORT}端口DNS服务工作正常！"
-				local FDNS_OK_FLAG_1=1
-			else
-				echo_date "可信DNS-1 ${TPORT}端口DNS服务工作异常，无法解析域名！可能是以下原因："
-				echo_date "---------------------------------------------------------"
-				echo_date "1. [大概率原因]：节点代理已经失效，请尝试更新订阅、更换可用节点"
-				echo_date "2. [中概率原因]：国外DNS解析出现问题，请尝试更换其它的DNS方案"
-				echo_date "3. [小概率原因]：节点延迟/丢包较高，请尝试更换低延迟/高质量节点"
-				echo_date "---------------------------------------------------------"
-				echo_date "如果插件启动完毕后国外不通，请检查可信DNS-1的配置！继续！"
-				#echo_date "为了避免因代理失效对本地非代理网络也造成影响！将会关闭代理相关进程..."
-				#close_in_five flag
-			fi
+		echo_date "检测进阶chinadns-ng方案可信DNS-2（端口：${TPORT}）是否正常工作..."
+		# 国外dns检测，超时时间设置久一点
+		local DETECT_SERVER_IP_2=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local DETECT_SERVER_IP_2=$(__valid_ip ${DETECT_SERVER_IP_2})
+		if [ -n "${DETECT_SERVER_IP_2}" ]; then
+			echo_date "可信DNS-2 ${TPORT}端口DNS服务工作正常！"
+			local FDNS_OK_FLAG_2=1
+		else
+			echo_date "可信DNS-2 ${TPORT}端口DNS服务工作异常，无法解析域名！"
+			echo_date "如果插件启动完毕后国外不通，请检查可信DNS-2的配置！继续！"
 		fi
+	fi
 
-		local FDNS_OK_FLAG_2=0
-		if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
-			if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-				local TPORT=2056
-			else
-				local TPORT=1056
-			fi
+	# if [ "${FDNS_OK_FLAG_1}" == "0" -a "${FDNS_OK_FLAG_2}" == "0" ];then
+	# 	# 国外DNS不通，则
+	# 	close_in_five flag
+	# fi
+}
 
-			if [ "${ss_basic_chng_trust_2_ecs}" == "97" ];then
-				local TPORT=1056
-			fi
-		
-			echo_date "检测进阶chinadns-ng方案可信DNS-2（端口：${TPORT}）是否正常工作..."
-			# 国外dns检测，超时时间设置久一点
-			local DETECT_SERVER_IP_2=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			local DETECT_SERVER_IP_2=$(__valid_ip ${DETECT_SERVER_IP_2})
-			if [ -n "${DETECT_SERVER_IP_2}" ]; then
-				echo_date "可信DNS-2 ${TPORT}端口DNS服务工作正常！"
-				local FDNS_OK_FLAG_2=1
-			else
-				echo_date "可信DNS-2 ${TPORT}端口DNS服务工作异常，无法解析域名！"
-				echo_date "如果插件启动完毕后国外不通，请检查可信DNS-2的配置！继续！"
-			fi
-		fi
+check_chn_dns(){
+	#echo_date "检测进阶chinadns-ng方案中的中国DNS是否正常工作..."
+	echo_date "检测中国域名是否正常解析..."
+	
+	# 1. 检测5个国内域名的DNS解析
+	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
+		local CHN_RESOLV_DOMAIN="www.baidu.com"
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+	fi
 
-		# if [ "${FDNS_OK_FLAG_1}" == "0" -a "${FDNS_OK_FLAG_2}" == "0" ];then
-		# 	# 国外DNS不通，则
-		# 	close_in_five flag
-		# fi
+	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
+		local CHN_RESOLV_DOMAIN="www.taobao.com"
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+	fi
+
+	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
+		local CHN_RESOLV_DOMAIN="www.sina.com"
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+	fi
+
+	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
+		local CHN_RESOLV_DOMAIN="www.jd.com"
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+	fi
+
+	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
+		local CHN_RESOLV_DOMAIN="www.qq.com"
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 	fi
 	
-	# get foreign ip
-	echo_date "检测代理服务器出口地址..."
+	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "国内DNS工作异常，无法正常解析国内域名！请检查你的国内DNS设置..."
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		###close_in_five flag
+	fi
+	
+	if [ -n "${CHN_RESOLV_IPADDR}" ]; then
+		echo_date "中国DNS工作正常！检测源：${CHN_RESOLV_DOMAIN}，解析结果：${CHN_RESOLV_IPADDR}"
+	fi
+}
+
+check_frn_public_ip(){
+	echo_date "开始代理出口ip检测..."
 	if [ -z "${REMOTE_IP_FRN}" ];then
 		local REMOTE_IP_FRN=$(detect_ip icanhazip.com 5)
 		local REMOTE_IP_FRN_SRC="icanhazip.com"
@@ -5909,6 +5986,7 @@ finish_start(){
 	
 	# 检测节点解析结果
 	if [ -n "${ss_basic_server_ip}" ];then
+		[ -z "${ss_basic_server_orig}" ] && 
 		ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
 		if [ "$?" != "0" ]; then
 			# 国外ip
@@ -5920,114 +5998,163 @@ finish_start(){
 		fi
 	fi
 
-	# 代理服务器地址：	S (Server)
-	# 代理出口地址：	p (Proxy)
-	# ------------------ 情况：1 （直连海外代理） ------------------
-	# S (海外)
-	# p (海外)
-	# S == P	ok
-	# S != P	给出警告：检测到服务器地址和出口地址均为海外地址，但是地址不通，可能经过了多层代理，请检查是否有上游路由器开启了代理
-	# --------------------------------------------------------------
-	# ------------------ 情况：2 （中转海外代理） ------------------
-	# S (大陆)
-	# p (海外)
-	# 应该是国内中转节点
-	# --------------------------------------------------------------
-	# ------------------ 情况：3 （直连回国代理） ------------------
-	# S (大陆)
-	# p (大陆)
-	# 应该是直连回国节点
-	# --------------------------------------------------------------
-	# ------------------ 情况：4 （中转回国代理） ------------------
-	# S (海外)
-	# p (大陆)
-	# 应该是中转回国节点
-	# --------------------------------------------------------------
-
-	#if [ "${REMOTE_IP_FRN}" != "${ss_basic_server_ip}" ];then
-	#	echo_date "节点出口IP和节点服务器IP地址不一致！可能是以下原因："
-	#	ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
-	#	if [ "$?" != "0" ]; then
-	#		echo_date "节点出口IP和节点服务器IP地址不一致！可能是以下原因："
-
-	#	fi
-	#	
-	#fi
-	
 	echo_date "-------------------------------------------"
+}
+
+finish_start(){
+	# something else need to do
+
+	if [ "${ss_basic_nocdnscheck}" != "1" -o "${ss_basic_nofdnscheck}" != "1" -o "${ss_basic_nofrnipcheck}" != "1" ];then
+		echo_date "---------------------------------------------------------"
+		echo_date "所有服务和规则加载完毕，运行一些检测..."
+	fi
+
+	# 1. 检测国内域名解析是否正常
+	if [ "${ss_basic_advdns}" == "1" ];then
+		if [ "${ss_basic_nocdnscheck}" != "1" ];then
+			check_chn_dns
+		else
+			echo_date "跳过国内DNS可用性检测..."
+		fi
+	fi
+	
+	# 2. 如果dns经过代理，那么检测dns服务是否畅通
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" ];then
+		if [ "${ss_basic_nofdnscheck}" != "1" ];then
+			check_chng_fdns
+		else
+			echo_date "跳过chinadns-ng可信DNS的可用性检测..."
+		fi
+	fi
+	
+	# 3. get foreign ip
+	if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+		check_frn_public_ip
+	else
+		echo_date "跳过代理出口ip检测..."
+	fi
+
 	# ECS开启：
 	# new dns plan: chinadns-ng, trust-1，udp + ecs
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "1" -a "${ss_basic_chng_trust_1_ecs}" == "1" -a -n "${REMOTE_IP_FRN}" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
-			ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
-			if [ "$?" != "0" ]; then
-				local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2055 | awk '{print $1}')
-				if [ -n "${TMP_PID}" ];then
-					kill -9 ${TMP_PID}
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "1" -a "${ss_basic_chng_trust_1_ecs}" == "1" ];then
+		if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
+					ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
+					if [ "$?" != "0" ]; then
+						local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2055 | awk '{print $1}')
+						if [ -n "${TMP_PID}" ];then
+							kill -9 ${TMP_PID}
+						fi
+						local DEF_PID=$(ps | grep dns-ecs-forcer | grep 2055 | awk '{print $1}')
+						if [ -n "${DEF_PID}" ];then
+							kill -9 ${DEF_PID}
+						fi
+						echo_date "开启dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
+						run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0"
+						detect_running_status2 dns-ecs-forcer 2055
+					fi
 				fi
-				local DEF_PID=$(ps | grep dns-ecs-forcer | grep 2055 | awk '{print $1}')
-				if [ -n "${DEF_PID}" ];then
-					kill -9 ${DEF_PID}
-				fi
-				echo_date "开启dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-				run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0"
-				detect_running_status2 dns-ecs-forcer 2055
+			else
+				echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-1的ecs功能，继续！"
 			fi
+		else
+			echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-1的ecs功能，继续！"
 		fi
-	fi	
+	fi
 
 	# new dns plan: chinadns-ng, trust-1，tcp + ecs
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "2" -a "${ss_basic_chng_trust_1_ecs}" == "1" -a -n "${REMOTE_IP_FRN}" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
-			ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
-			if [ "$?" != "0" ]; then
-				# 最新版本dns2socks 本身就支持ecs，无需dns-ecs-forcer
-				echo_date "重启dns2socks，开启EDNS支持，使用CLIENT-SUBNET: ${REMOTE_IP_FRN}/32"
-				start_dns2socks $(get_dns_foreign ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}) 2055 1
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "2" -a "${ss_basic_chng_trust_1_ecs}" == "1" ];then
+		if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
+					ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
+					if [ "$?" != "0" ]; then
+						# 最新版本dns2socks 本身就支持ecs，无需dns-ecs-forcer
+						echo_date "重启dns2socks，开启EDNS支持，使用CLIENT-SUBNET: ${REMOTE_IP_FRN}/32"
+						start_dns2socks $(get_dns_foreign ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}) 2055 1
+					fi
+				fi
+			else
+				echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-1的ecs功能，继续！"
 			fi
+		else
+			echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-1的ecs功能，继续！"
 		fi
 	fi
 
 	#  new dns plan: chinadns-ng, trust-1，doh + ecs
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "3" -a "${ss_basic_chng_trust_1_ecs}" == "1" -a -n "${REMOTE_IP_FRN}" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
-			start_dohclient_chng restart frn1 ${ss_basic_chng_trust_1_opt_doh_val} ${ss_basic_chng_trust_1_ecs} 1
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "3" -a "${ss_basic_chng_trust_1_ecs}" == "1" ];then
+		if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
+					start_dohclient_chng restart frn1 ${ss_basic_chng_trust_1_opt_doh_val} ${ss_basic_chng_trust_1_ecs} 1
+				fi
+			else
+				echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-1的ecs功能，继续！"
+			fi
+		else
+			echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-1的ecs功能，继续！"
 		fi
 	fi
-
+	
 	# new dns plan: chinadns-ng, trust-2，原生udp + ecs
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "1" -a "${ss_basic_chng_trust_2_ecs}" == "1" -a -n "${REMOTE_IP_FRN}" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" -a -n "${UDP_TARGET}" ];then
-			echo_date "启动dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-			local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2056 | awk '{print $1}')
-			if [ -n "${TMP_PID}" ];then
-				kill -9 ${TMP_PID}
-			fi		
-			run_bg dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
-			detect_running_status2 dns-ecs-forcer 2056 slient
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "1" -a "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+		if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" -a -n "${UDP_TARGET}" ];then
+					echo_date "启动dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
+					local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2056 | awk '{print $1}')
+					if [ -n "${TMP_PID}" ];then
+						kill -9 ${TMP_PID}
+					fi		
+					run_bg dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
+					detect_running_status2 dns-ecs-forcer 2056 slient
+				fi
+			else
+				echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-2的ecs功能，继续！"
+			fi
+		else
+			echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-2的ecs功能，继续！"
 		fi
 	fi
-
+	
 	# new dns plan: chinadns-ng, trust-2，原生tcp + ecs
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "2" -a "${ss_basic_chng_trust_2_ecs}" == "1" -a -n "${REMOTE_IP_FRN}" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" -a -n "${TCP_TARGET}" ];then
-			echo_date "启动dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-			local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2056 | awk '{print $1}')
-			if [ -n "${TMP_PID}" ];then
-				kill -9 ${TMP_PID}
-			fi		
-			run_bg dns-ecs-forcer -p 2056 -s ${TCP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
-			detect_running_status2 dns-ecs-forcer 2056 slient
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "2" -a "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+		if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" -a -n "${TCP_TARGET}" ];then
+					echo_date "启动dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
+					local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2056 | awk '{print $1}')
+					if [ -n "${TMP_PID}" ];then
+						kill -9 ${TMP_PID}
+					fi		
+					run_bg dns-ecs-forcer -p 2056 -s ${TCP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
+					detect_running_status2 dns-ecs-forcer 2056 slient
+				fi
+			else
+				echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-2的ecs功能，继续！"
+			fi
+		else
+			echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-2的ecs功能，继续！"
 		fi
 	fi
-
+	
 	# new dns plan: chinadns-ng, trust-2，dohclient + ecs
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "3" -a "${ss_basic_chng_trust_2_ecs}" == "1" -a -n "${REMOTE_IP_FRN}" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
-			start_dohclient_chng restart frn2 ${ss_basic_chng_trust_2_opt_doh} ${ss_basic_chng_trust_2_ecs} 0
+	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "3" -a "${ss_basic_chng_trust_2_ecs}" == "1" ];then
+		if [ "${ss_basic_nofrnipcheck}" != "1" ];then
+			if [ -n "${REMOTE_IP_FRN}" ];then
+				if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
+					start_dohclient_chng restart frn2 ${ss_basic_chng_trust_2_opt_doh} ${ss_basic_chng_trust_2_ecs} 0
+				fi
+			else
+				echo_date "因未获取到代理出口ip，故无法开启chinadns-ng的可信DNS-2的ecs功能，继续！"
+			fi
+		else
+			echo_date "因插件关闭了代理出口ip检测，故无法开启chinadns-ng的可信DNS-2的ecs功能，继续！"
 		fi
 	fi
-		
+	
 	# new dns plan-3: dohclient + ecs
 	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "3" ];then
 		if [ -n "${REMOTE_IP_OUT}" -o -n "${REMOTE_IP_FRN}"  ];then

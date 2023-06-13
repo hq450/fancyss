@@ -19,7 +19,6 @@ rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/kcptun
 rm -rf /koolshare/bin/chinadns-ng
 rm -rf /koolshare/bin/smartdns
-rm -rf /koolshare/bin/resolveip
 rm -rf /koolshare/bin/speederv1
 rm -rf /koolshare/bin/speederv2
 rm -rf /koolshare/bin/udp2raw
@@ -38,15 +37,16 @@ rm -rf /koolshare/bin/dns2tcp
 rm -rf /koolshare/bin/dns-ecs-forcer
 rm -rf /koolshare/bin/uredir
 rm -rf /koolshare/res/icon-shadowsocks.png
+rm -rf /koolshare/res/arrow-down.gif
+rm -rf /koolshare/res/arrow-up.gif
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/qrcode.js
 rm -rf /koolshare/res/tablednd.js
-rm -rf /koolshare/res/all.png
-rm -rf /koolshare/res/gfw.png
-rm -rf /koolshare/res/chn.png
-rm -rf /koolshare/res/game.png
-rm -rf /koolshare/res/shadowsocks.css
+
+# folder renmove
 rm -rf /koolshare/ss
+
+rm -rf /koolshare/res/shadowsocks.css
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
@@ -56,16 +56,21 @@ rm -rf /koolshare/bin/dig
 
 # legacy file should  be removed for sure
 rm -rf /koolshare/bin/v2ctl
-rm -rf /koolshare/bin/dnsmasq >/dev/null 2>&1
-rm -rf /koolshare/bin/Pcap_DNSProxy >/dev/null 2>&1
+rm -rf /koolshare/bin/dnsmasq
+rm -rf /koolshare/bin/Pcap_DNSProxy
 rm -rf /koolshare/bin/client_linux_arm*
-rm -rf /koolshare/bin/koolgame
-rm -rf /koolshare/bin/pdu
-rm -rf /koolshare/bin/dnscrypt-proxy
-rm -rf /koolshare/bin/https_dns_proxy
 rm -rf /koolshare/bin/cdns
 rm -rf /koolshare/bin/chinadns
 rm -rf /koolshare/bin/chinadns1
+rm -rf /koolshare/bin/https_dns_proxy
+rm -rf /koolshare/bin/pdu
+rm -rf /koolshare/bin/koolgame
+rm -rf /koolshare/bin/dnscrypt-proxy
+rm -rf /koolshare/bin/resolveip
+rm -rf /koolshare/res/all.png
+rm -rf /koolshare/res/gfw.png
+rm -rf /koolshare/res/chn.png
+rm -rf /koolshare/res/game.png
 
 # maybe used by other plugin, do not remove
 # rm -rf /koolshare/bin/sponge >/dev/null 2>&1

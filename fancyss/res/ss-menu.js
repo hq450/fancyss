@@ -1239,6 +1239,53 @@ function openssHint(itemNum) {
 		statusmenu += "</div>";
 		_caption = "进阶DNS方案说明：";
 		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 138) {
+		width = "450px";
+		statusmenu = "fancyss运行需要网络畅通，如果本地网络不通，fancyss将无法正常运行<br /><br />";
+		statusmenu += "如果能保证你的路由器本地网络稳定性，那么在插件开启时跳过网络可用性检测！";
+		_caption = "跳过网络可用性检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 139) {
+		width = "450px";
+		statusmenu = "因部分代理协议要求本地时间和服务器时间一致才能正常工作，比如vmess协议等<br /><br />";
+		statusmenu = "如果插件检测到你本地时间和实际时间相差大于60秒，插件会帮忙自动校正时间<br /><br />";
+		statusmenu = "此功能可能会导致系统提示时间未同步，如遇到此情况也建议勾选本选项<br /><br />";
+		statusmenu += "如果能保证你的路由器本地时间准确，或者你使用的协议对时间没有要求，那么在插件开启时跳过时间一致性检测！";
+		_caption = "跳过时间一致性检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 140) {
+		width = "450px";
+		statusmenu = "fancyss运行需要国内DNS畅通，如果不通，fancyss将无法正常运行<br /><br />";
+		statusmenu += "如果能保证你的国内DNS稳定畅通，那么在可以插件开启时跳过国内DNS可用性检测！";
+		_caption = "跳过国内DNS可用性检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 141) {
+		width = "450px";
+		statusmenu = "此可信DNS检测仅仅针对使用进阶DNS设定中的chinadns-ng<br /><br />";
+		statusmenu += "如果可信DNS不通，那么将会无法访问代理网站；当然，如果节点本身由问题，也可能导致可信DNS不通";
+		statusmenu += "勾选后将不会对可信DNS的可用性进行检测！";
+		_caption = "跳过可信DNS可用性检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 142) {
+		width = "450px";
+		statusmenu = "在插件开启初期（尚未开启代理程序和应用任何分流规则的时候），插件会对路由器网络的国内出口ip进行检测<br /><br />";
+		statusmenu += "此检测结果将会被用于国内DNS ECS功能的开启，如果你的国内DNS不不使用ECS，那么完全可以关闭此检测！";
+		statusmenu += "如果你的国内DNS使用了ECS功能，勾选此功能后会强制关掉国内DNS的ECS功能！";
+		_caption = "跳过国内出口ip检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 143) {
+		width = "450px";
+		statusmenu = "在插件开启后期（代理程序和分流规则等都已经应用完毕），插件会对路由器网络的代理出口ip进行检测<br /><br />";
+		statusmenu += "此检测结果将会被用于国外DNS ECS功能的开启，如果你的国外DNS不使用ECS，那么完全可以关闭此检测！";
+		statusmenu += "如果你的可信DNS使用了ECS功能，勾选此功能后会强制关掉可信DNS的ECS功能！";
+		_caption = "跳过代理出口ip检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 144) {
+		width = "450px";
+		statusmenu = "fancyss在开启的时候会运行代理程序、dns程序等相关程序，每个程序启动后会马上进行检测，以得知该程序是否已经在后台运行了.<br /><br />";
+		statusmenu += "如果勾选此选项，那么程序启动后将不会进行相应的检测，这可以节约一些fancyss的启动时间。";
+		_caption = "跳过程序启动检测";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

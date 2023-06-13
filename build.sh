@@ -404,7 +404,6 @@ pack(){
 }
 
 make(){
-	local flag=$1
 	papare
 	# --- for release ---
 	pack hnd full release
@@ -419,16 +418,12 @@ make(){
 	pack mtk full release
 	pack mtk lite release
 	# --- for debug ---
-	if [ "${flag}" == "debug" ];then
-		pack hnd full debug
-		pack hnd_v8 full debug
-		pack qca full debug
-		pack arm full debug
-		pack mtk full debug
-	else
-		rm -rf ${CURR_PATH}/packages/fancyss_*_debug.tar.gz
-	fi
+	pack hnd full debug
+	pack hnd_v8 full debug
+	pack qca full debug
+	pack arm full debug
+	pack mtk full debug
 	finish
 }
 
-make $1
+make

@@ -51,13 +51,13 @@ backup_tar(){
 	cp /koolshare/bin/dnsclient ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/dns2tcp ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/dns-ecs-forcer ${TARGET_FOLDER}/bin/
+	cp /koolshare/bin/ss-tunnel ${TARGET_FOLDER}/bin/
 	if [ -x "/koolshare/bin/uredir" ];then
 		cp /koolshare/bin/uredir ${TARGET_FOLDER}/bin/
 	fi
 	if [ "${pkg_type}" != "lite" ];then
 		cp /koolshare/bin/dohclient ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/dohclient-cache ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/ss-tunnel ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/smartdns ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/haproxy ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/kcptun ${TARGET_FOLDER}/bin/
@@ -72,6 +72,8 @@ backup_tar(){
 	fi
 	cp /koolshare/webs/Module_shadowsocks*.asp ${TARGET_FOLDER}/webs/
 	# others
+	cp /koolshare/res/arrow-down.gif ${TARGET_FOLDER}/res/
+	cp /koolshare/res/arrow-up.gif ${TARGET_FOLDER}/res/
 	cp /koolshare/res/accountadd.png ${TARGET_FOLDER}/res/
 	cp /koolshare/res/accountdelete.png ${TARGET_FOLDER}/res/
 	cp /koolshare/res/accountedit.png ${TARGET_FOLDER}/res/
