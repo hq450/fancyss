@@ -15,12 +15,12 @@ extract_archive() {
 . ../scripts/update_include.sh
 
 make(){
-  set_latest_release_version
+  set_latest_prerelease_version
   update arm32-v5 armv5
   update arm32-v7a armv7
   update arm64-v8a arm64
   md5_binaries
-  echo -n "v$LATEST_VERSION" > latest.txt
+  echo -n "v$LATEST_VERSION" > latest_2.txt
 }
 
 make

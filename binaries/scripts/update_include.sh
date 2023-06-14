@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 
 set_latest_release_version() {
-  local LATEST_URL="https://github.com/$PROJECT/releases/latest"
+  local LATEST_URL="https://github.com/$PROJECT/releases/$RELEASE_TYPE"
   local LATEST_RELEASE=$(curl -L -s -H 'Accept: application/json' ${LATEST_URL})
   LATEST_VERSION=$(echo $LATEST_RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/; s/v//g; s/ //g')
+}
+
+set_latest_prerelease_version() {
+  local LATEST_URL="https://api.github.com/repos/$PROJECT/releases"
+  local LATEST_RELEASE=$(curl -L -s -H 'Accept: application/json' ${LATEST_URL})
+  LATEST_VERSION=$(echo $LATEST_RELEASE | jq -r '.[0].tag_name' | sed 's/^v//g;')
 }
 
 set_latest_release_version_download_url() {
