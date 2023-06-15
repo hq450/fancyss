@@ -230,6 +230,11 @@ input[type=checkbox]{
 .deactivate_icon:hover {
 	background-image: url('/images/New_ui/activate.svg');
 }
+body .layui-layer-lan .layui-layer-btn {text-align:center}
+body .layui-layer-lan .layui-layer-btn0 {border-color:#22ab39; background-color:#22ab39;color:#fff; background:#22ab39}
+body .layui-layer-lan .layui-layer-btn .layui-layer-btn1 {border-color:#1678ff; background-color:#1678ff;color:#fff;}
+body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:#FF6600;color:#fff;}
+
 /*ASUSWRT*/
 #app[skin=ASUSWRT] .myDragClass{
 	background-color:#396995;

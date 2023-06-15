@@ -74,7 +74,7 @@ platform_test(){
 			fi
 		elif [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
-				# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
+				# RT-AX56U RT-AX56U_V2 TUF-AX3000 TUF-AX3000_V2 TUF-AX5400 TUF-AX5400_V2 XT8
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 				echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
 				echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
@@ -112,7 +112,7 @@ platform_test(){
 	if [ "${PKG_ARCH}" == "hnd" ];then
 		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
-				# RT-AX56U, XT8, TUF-AX3000_V2
+				# RT-AX56U RT-AX56U_V2 TUF-AX3000 TUF-AX3000_V2 TUF-AX5400 TUF-AX5400_V2 XT8
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_${PKG_ARCH}_${PKG_TYPE}！"
 			elif  [ "${ROT_ARCH}" == "aarch64" ];then
 				# RT-AX86U, RT-AX88U
@@ -156,7 +156,7 @@ platform_test(){
 	if [ "${PKG_ARCH}" == "hnd_v8" ];then
 		if [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
-				# RT-AX56U, XT8, TUF-AX3000_V2
+				# RT-AX56U RT-AX56U_V2 TUF-AX3000 TUF-AX3000_V2 TUF-AX5400 TUF-AX5400_V2 XT8
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该架构！"
 				echo_date "原因：无法在32位的路由器上使用64位程序的fancyss_${PKG_ARCH}_${PKG_TYPE}！"
 				echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
@@ -207,12 +207,13 @@ platform_test(){
 			
 		elif [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
-				# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
+				# RT-AX56U RT-AX56U_V2 TUF-AX3000 TUF-AX3000_V2 TUF-AX5400 TUF-AX5400_V2 XT8
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 				echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
 				echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
 				exit_install 1
 			elif  [ "${ROT_ARCH}" == "aarch64" ];then
+				# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 				echo_date "建议使用fancyss_hnd_v8_full或者fancyss_hnd_v8_lite！"
 				echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
@@ -235,26 +236,27 @@ platform_test(){
 		fi
 	fi
 
-	# fancyss_qca
+	# fancyss_mtk
 	if [ "${PKG_ARCH}" == "mtk" ];then
 		if [ "${LINUX_VER}" == "54" ];then
-			# RT-AX89X
-			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_qca_${PKG_TYPE}！"
+			# MTK,tx-ax6000 tuf-ax4200
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_${PKG_ARCH}_${PKG_TYPE}！"
 		elif [ "${LINUX_VER}" == "26" ];then
 			# RT-AC68U, RT-AC88U, RT-AC3100, RT-AC5300
-			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 			echo_date "建议使用fancyss_arm_full或者fancyss_arm_lite！"
 			echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_arm"
 			exit_install 1
 			
 		elif [ "${LINUX_VER}" == "41" -o "${LINUX_VER}" == "419" ];then
 			if [ "${ROT_ARCH}" == "armv7l" ];then
-				# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
-				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+				# RT-AX56U RT-AX56U_V2 TUF-AX3000 TUF-AX3000_V2 TUF-AX5400 TUF-AX5400_V2 XT8
+				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 				echo_date "建议使用fancyss_hnd_full或者fancyss_hnd_lite！"
 				echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
 				exit_install 1
 			elif  [ "${ROT_ARCH}" == "aarch64" ];then
+				# RT-AC86U, RT-AX86U, RT-AX56U, GT-AX6000, XT12...
 				echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 				echo_date "建议使用fancyss_hnd_v8_full或者fancyss_hnd_v8_lite！"
 				echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_hnd"
@@ -271,7 +273,7 @@ platform_test(){
 			exit_install 1
 		else
 			# no such model, yet.
-			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_qca_${PKG_TYPE}不适用于该内核版本！"
+			echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，fancyss_${PKG_ARCH}_${PKG_TYPE}不适用于该内核版本！"
 			exit_install 1
 		fi
 	fi

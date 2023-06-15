@@ -186,7 +186,7 @@ test_xray_conf(){
 	else
 		# test faild
 		_test_ret=${test_ret}
-		return 2
+		return 1
 	fi
 }
 
@@ -4430,8 +4430,6 @@ creat_xray_json() {
 			fi
 		fi
 
-
-		# fingerprint: https://github.com/XTLS/Xray-core/releases/tag/v1.7.5
 		if [ "${ss_basic_xray_network_security}" == "tls" ];then
 			if [ -z "${ss_basic_xray_fingerprint}" ];then
 				echo_date "fingerprint为空，默认使用chrome作为指纹"
@@ -4463,7 +4461,19 @@ creat_xray_json() {
 		else
 			local xtls="null"
 		fi
-		
+
+		if [ "${ss_basic_xray_network_security}" == "reality" ];then
+			local reali="{
+					\"show\": $(get_function_switch $ss_basic_xray_show)
+					,\"fingerprint\": $(get_value_empty $ss_basic_xray_fingerprint)
+					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
+					,\"publicKey\": $(get_value_null $ss_basic_xray_publickey)
+					,\"shortId\": $(get_value_empty $ss_basic_xray_shortid)
+					,\"spiderX\": $(get_value_empty $ss_basic_xray_spiderx)
+					}"
+		else
+			local xtls="null"		
+		fi
 		# incase multi-domain input
 		if [ "$(echo $ss_basic_xray_network_host | grep ",")" ]; then
 			ss_basic_xray_network_host=$(echo ${ss_basic_xray_network_host} | sed 's/,/", "/g')
@@ -4640,6 +4650,7 @@ creat_xray_json() {
 						,"security": "$ss_basic_xray_network_security"
 						,"tlsSettings": $tls
 						,"xtlsSettings": $xtls
+						,"realitySettings": $reali
 						,"tcpSettings": $tcp
 						,"kcpSettings": $kcp
 						,"wsSettings": $ws
@@ -4647,7 +4658,6 @@ creat_xray_json() {
 						,"quicSettings": $qc
 						,"grpcSettings": $gr
 						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
-						
 					},
 					"mux": {
 						"enabled": false,
@@ -5947,18 +5957,18 @@ check_chn_dns(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		local REMOTE_IP_FRN=$(detect_ip icanhazip.com 5)
-		local REMOTE_IP_FRN_SRC="icanhazip.com"
+		REMOTE_IP_FRN=$(detect_ip icanhazip.com 5)
+		REMOTE_IP_FRN_SRC="icanhazip.com"
 	fi
 	
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		local REMOTE_IP_FRN=$(detect_ip ipecho.net/plain 5)
-		local REMOTE_IP_FRN_SRC="ipecho.net/plain"
+		REMOTE_IP_FRN=$(detect_ip ipecho.net/plain 5)
+		REMOTE_IP_FRN_SRC="ipecho.net/plain"
 	fi
 
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		local REMOTE_IP_FRN=$(detect_ip ip.sb 5)
-		local REMOTE_IP_FRN_SRC="ip.sb"
+		REMOTE_IP_FRN=$(detect_ip ip.sb 5)
+		REMOTE_IP_FRN_SRC="ip.sb"
 	fi
 
 	if [ -n "${REMOTE_IP_FRN}" ];then
@@ -5997,8 +6007,6 @@ check_frn_public_ip(){
 			echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：大陆，来源：${ss_basic_server_orig}"
 		fi
 	fi
-
-	echo_date "-------------------------------------------"
 }
 
 finish_start(){

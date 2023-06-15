@@ -1,6 +1,21 @@
 fancyss Changelog
 ===========================================
-3.1.1 (todo)
+3.1.2 (20230615)
+   - update	Xray二进制更新到1.8.1；
+   - add	节点支持添加Xray REALITY支持；
+   - add	添加切换xray二进制版本功能，在[账号设置]中使用Xray节点，或者在[更新管理]中都能看到此功能按钮；
+       		注意：
+       		Xray 1.8.x的security支持TLS和REALITY，不支持XTLS
+       		Xray 1.7.5的ecurity支持TLS和XTLS，不支持REALITY
+       		请根据以上情况选择Xray二进制版本，二进制的切换建议在fancyss正常工作的时候进行，以免下载速度过慢
+   - add	订阅：添加切换xray REALITY节点订阅支持；
+   - add	ss/ssr/vmess/vless链接添加节点功能：添加切换xray REALITY节点支持；
+   - fix	修复虽然获取到了代理出口ip，但是仍然无法应用可信DNS的ECS功能的问题
+   - fix	修复xray配置文件检测的一个bug
+   - fix	修复点击编辑节点按钮时，节点信息显示错误的问题
+   - update	naive二进制更新到最新v114.0.5735.91-3
+
+3.1.1 (20230613)
    - fix	修复xray节点在tls下无法使用flow的问题；
    - fix	修复插件关闭时可能关闭系统自带的熵增进程的问题；
    - add	新增：插件开启时 - 跳过网络可用性检测
@@ -15,12 +30,6 @@ fancyss Changelog
        		注意：部分功能的关闭会影响到DNS的ECS功能的开启，但是如果你对ECS没有硬性的需求，也可以进行关闭。
        		如果在开启ECS功能的情况下进行关闭，插件DNS的ECS功能将不会启动。
    - update	提升插件日志刷新流畅度；
-   - note	目前插件尚未对Xray REALITY协议的支持，主要原因是因为REALITY协议需要使用1.8.0及其以上版本的Xray，而这些新版本的Xray并不支持xtls
-       		这会导致更新插件后使得XTLS协议的节点失去支持！当然XTLS基于自身的可能存在特征的缺陷，被淘汰甚至被REALITY取代也是理所当然的！
-       		所以fancyss项目大概率会在Xray 1.8.x正式版发布后一段时间进行跟进，届时会直接跟进最新release版本，并不会为了兼容XTLS而留下老的二进制版本
-       		这也会让本项目的离线安装包体积得到一定的控制。
-       		如果你想使用fancyss插件提前使用REALITY协议，那么可以自行更新Xray二进制后，使用json配置Xray-REALITY节点。
-       		
 
 3.1.0 (20230610)
    - fix	修复一些xray节点因添加fingerprint导致xray启动失败的问题；

@@ -29,9 +29,10 @@ mtk)
 esac
 
 get_latest_version(){
+	local VERSION_FILE=$1
 	rm -rf /tmp/xray_latest_info.txt
 	echo_date "检测Xray最新版本..."
-	curl --connect-timeout 8 -s $url_main/latest.txt > /tmp/xray_latest_info.txt
+	curl --connect-timeout 8 -s ${url_main}/${VERSION_FILE}.txt > /tmp/xray_latest_info.txt
 	if [ "$?" == "0" ];then
 		if [ -z "$(cat /tmp/xray_latest_info.txt)" ];then
 			echo_date "获取Xray最新版本信息失败！使用备用服务器检测！"
@@ -55,12 +56,15 @@ get_latest_version(){
 		fi
 		COMP=$(versioncmp ${CUR_VER} ${XVERSION})
 		if [ "${COMP}" == "1" ];then
-			[ "${CUR_VER}" != "0" ] && echo_date "Xray已安装版本号低于最新版本，开始更新程序..."
+			[ "${CUR_VER}" != "0" ] && echo_date "Xray已安装版本号低于更新版本，开始更新程序..."
+			update_now v${XVERSION}
+		elif [ "${COMP}" == "-1" ];then
+			[ "${CUR_VER}" != "0" ] && echo_date "Xray已安装版本号高于更新版本，开始降级程序..."
 			update_now v${XVERSION}
 		else
 			XRAY_LOCAL_VER=$(/koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
 			[ -n "${XRAY_LOCAL_VER}" ] && dbus set ss_basic_xray_version="${XRAY_LOCAL_VER}"
-			echo_date "Xray已安装版本已经是最新，退出更新程序!"
+			echo_date "Xray已安装版本号等于更新版本，退出更新程序!"
 		fi
 	else
 		echo_date "获取Xray最新版本信息失败！使用备用服务器检测！"
@@ -70,8 +74,6 @@ get_latest_version(){
 
 failed_warning_xray(){
 	echo_date "获取Xray最新版本信息失败！请检查到你的网络！"
-	echo_date "==================================================================="
-	echo XU6J03M6
 	exit 1
 }
 
@@ -107,8 +109,6 @@ update_now(){
 	else
 		echo_date "使用备用服务器下载..."
 		echo_date "下载失败，请检查你的网络！"
-		echo_date "==================================================================="
-		echo XU6J03M6
 		exit 1
 	fi
 }
@@ -123,8 +123,6 @@ check_md5sum(){
 		install_binary
 	else
 		echo_date "校验未通过，可能是下载过程出现了什么问题，请检查你的网络！"
-		echo_date "==================================================================="
-		echo XU6J03M6
 		exit 1
 	fi
 }
@@ -209,7 +207,17 @@ case $2 in
 	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
 	echo_date "                xray程序更新(Shell by sadog)" | tee -a /tmp/upload/ss_log.txt
 	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
-	get_latest_version | tee -a /tmp/upload/ss_log.txt 2>&1
+	get_latest_version latest | tee -a /tmp/upload/ss_log.txt 2>&1
+	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
+	echo XU6J03M6 | tee -a /tmp/upload/ss_log.txt
+	;;
+2)
+	true > /tmp/upload/ss_log.txt
+	http_response "$1"
+	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
+	echo_date "                xray程序更新(Shell by sadog)" | tee -a /tmp/upload/ss_log.txt
+	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
+	get_latest_version latest_2 | tee -a /tmp/upload/ss_log.txt 2>&1
 	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
 	echo XU6J03M6 | tee -a /tmp/upload/ss_log.txt
 	;;

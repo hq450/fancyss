@@ -1,6 +1,6 @@
-.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray
+.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy
 
-all: update_kcptun update_ss_rust update_v2ray update_xray
+all: update_kcptun update_ss_rust update_v2ray update_xray update_naive
 
 update_kcptun:
 	kcptun/get_latest.sh
@@ -16,3 +16,6 @@ update_xray:
 
 update_vray-plugin:
 	vray-plugin/make_latest.sh
+
+update_naive:
+	naive/get_latest.sh

@@ -7,9 +7,11 @@ PROJECT="shadowsocks/shadowsocks-rust"
 BIN_NAME="sslocal"
 BIN_NAME_IN_ARCHIVE_PATTERN="$BIN_NAME"
 FILE_NAME_PATTERN="shadowsocks-v{version}.{file_arch}.tar.xz"
+FOLDER_NAME="shadowsocks-v{version}.{file_arch}"
 
 extract_archive() {
-  tar -xvf "$1" "$2"
+  tar -xvf "$1" --wildcards "*/$2"
+  mv $FOLDER_NAME
 }
 
 . ../scripts/update_include.sh
