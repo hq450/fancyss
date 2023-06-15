@@ -21,16 +21,13 @@ sync_binary(){
 	BINS="v2ray v2ray-plugin xray ss_rust kcptun naive"
 	for BIN in $BINS;
 	do
+		local VERSION_FLAG="latest.txt"
 		if [ "${BIN}" == "v2ray" ];then
 			local VERSION_FLAG="latest_v5.txt"
-		else
-			local VERSION_FLAG="latest.txt"
 		fi
 
 		if [ "${BIN}" == "xray" ];then
 			local VERSION_FLAG="latest_2.txt"
-		else
-			local VERSION_FLAG="latest.txt"
 		fi
 
 		if [ "${BIN}" == "ss_rust" ];then
