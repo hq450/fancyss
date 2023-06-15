@@ -1,6 +1,6 @@
 fancyss Changelog
 ===========================================
-3.1.2 (20230615)
+3.1.2 - 3.1.3 (20230615)
    - update	Xray二进制更新到1.8.1；
    - add	节点支持添加Xray REALITY支持；
    - add	添加切换xray二进制版本功能，在[账号设置]中使用Xray节点，或者在[更新管理]中都能看到此功能按钮；
@@ -14,6 +14,7 @@ fancyss Changelog
    - fix	修复xray配置文件检测的一个bug
    - fix	修复点击编辑节点按钮时，节点信息显示错误的问题
    - update	naive二进制更新到最新v114.0.5735.91-3
+   - fix	fancyss 3.1.3：修复Xray非reality节点在非json配置下运行错误的问题
 
 3.1.1 (20230613)
    - fix	修复xray节点在tls下无法使用flow的问题；

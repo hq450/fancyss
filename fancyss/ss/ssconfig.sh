@@ -4379,6 +4379,7 @@ creat_xray_json() {
 		local gr="null"
 		local tls="null"
 		local xtls="null"
+		local reali="null"
 
 		if [ -z "$ss_basic_xray_network_security" ];then
 			local ss_basic_xray_network_security="none"
@@ -4472,7 +4473,7 @@ creat_xray_json() {
 					,\"spiderX\": $(get_value_empty $ss_basic_xray_spiderx)
 					}"
 		else
-			local xtls="null"		
+			local reali="null"		
 		fi
 		# incase multi-domain input
 		if [ "$(echo $ss_basic_xray_network_host | grep ",")" ]; then
@@ -4831,7 +4832,7 @@ creat_xray_json() {
 		echo_date "Xray配置文件通过测试!!!"
 		;;
 	2)
-		echo_date "测试结果：${_test_ret}"
+		#echo_date "测试结果：${_test_ret}"
 		echo_date "Xray配置文件没有通过测试，尝试删除fingerprint配置后重试！"
 		run jq 'del(.. | .fingerprint?)' $XRAY_CONFIG_FILE | run sponge $XRAY_CONFIG_FILE
 		test_xray_conf $XRAY_CONFIG_FILE
