@@ -2,6 +2,8 @@ fancyss Changelog
 ===========================================
 3.1.4 (20230616)
    - fix	修复部分机型trojan配置文件检查不过的问题；
+   - note	鉴于原版trojan已经几年没更新，而且xray完全兼容原版trojan协议，
+       		未来可能会删除trojan二进制文件，使用xray核心来运行trojan节点，以减小离线包体积。
    - fix	修复Xray REALITY通过链接添加节点时，shortId丢失的问题；
    - fix	修复部分ss节点无法通过通过链接添加的问题；
 
