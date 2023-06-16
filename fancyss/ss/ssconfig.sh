@@ -1640,16 +1640,16 @@ start_ss_local() {
 	
 	if [ "${ss_basic_type}" == "1" ]; then
 		echo_date "开启ssr-local，提供socks5代理端口：23456"
-		run rss-local -l 23456 -c ${CONFIG_FILE} -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+		run rss-local -l 23456 -c ${CONFIG_FILE} -u -f /var/run/sslocal1.pid
 		detect_running_status rss-local "/var/run/sslocal1.pid"
 	elif [ "${ss_basic_type}" == "0" ]; then
 		if [ "${ss_basic_rust}" == "1" -a -x "/koolshare/bin/sslocal" ];then
 			echo_date "开启sslocal (shadowsocks-rust)，提供socks5代理端口：23456"
-			run sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d >/dev/null 2>&1
+			run sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d
 			detect_running_status sslocal
 		else
 			echo_date "开启ss-local(shadowsocks-libev)，提供socks5代理端口：23456"
-			run ss-local -l 23456 -c ${CONFIG_FILE} ${ARG_OBFS} -u -f /var/run/sslocal1.pid >/dev/null 2>&1
+			run ss-local -l 23456 -c ${CONFIG_FILE} ${ARG_OBFS} -u -f /var/run/sslocal1.pid
 			detect_running_status ss-local "/var/run/sslocal1.pid"
 		fi
 	fi

@@ -375,32 +375,45 @@ get_ss_node(){
 	local action="$2"
 	unset remarks server_raw_1 server_raw_2 server_tmp server_port_tmp server server_port encrypt_info decrypt_info encrypt_method password plugin_support obfs_para plugin_prog obfs_method obfs_host group
 	
-	remarks=$(echo "${urllink}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
-	echo "${remarks}" | isutf8 -q
-	if [ "$?" != "0" ];then
-		echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
-	fi
-	
 	server_raw_1=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
 	if [ -n "${server_raw_1}" ];then
 		server_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $1}')
 		server_port_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $2}')
 	fi
 	encrypt_info=$(echo "${urllink}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f1)
-	decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
-	server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
-	if [ -n "${server_raw_2}" ];then
-		server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
-		server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
+	echo ${encrypt_info} | base64 -d >/dev/null 2>&1 
+	if [ "$?" != "0" ];then
+		# not base64
+		encrypt_method=${encrypt_info}
+		password=$(echo "${urllink}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f2)
+		remarks=$(echo "${urllink}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
+		echo "${remarks}" | isutf8 -q
+		if [ "$?" != "0" ];then
+			echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
+		fi
+	else
+		# base64
+		decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
+		server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+		if [ -n "${server_raw_2}" ];then
+			server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
+			server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
+		fi
+		encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
+		password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+		remarks=$(echo "${decrypt_info}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
+		echo "${remarks}" | isutf8 -q
+		if [ "$?" != "0" ];then
+			echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
+		fi
 	fi
+
 	if [ -n "${server_tmp}" ];then
 		server=${server_tmp}
 	fi
 	if [ -n "${server_port_tmp}" ];then
 		server_port=${server_port_tmp}
 	fi
-	encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
-	password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
 	password=$(echo ${password} | base64_encode | sed 's/[[:space:]]//g')
 	plugin_support=$(echo "${urllink}"|grep -Eo "plugin=")
 	# ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNToxMjM@1.1.1.1:8388/?plugin=obfs-local%3bobfs%3dhttp%3bobfs-host%3dwww.bing.com#test_obfs-local
@@ -1643,7 +1656,7 @@ get_vless_node(){
 	x_flow=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "flow" | awk -F"=" '{print $2}')
 	x_fp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "fp=" | awk -F"=" '{print $2}')
 	x_pbk=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "pbk=" | awk -F"=" '{print $2}')
-	x_sid=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sid " | awk -F"=" '{print $2}')
+	x_sid=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sid=" | awk -F"=" '{print $2}')
 	x_spx=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "spx=" | awk -F"=" '{print $2}')
 	case ${x_type} in
 	tcp)

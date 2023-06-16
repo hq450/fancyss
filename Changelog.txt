@@ -1,5 +1,10 @@
 fancyss Changelog
 ===========================================
+3.1.4 (20230616)
+   - fix	修复部分机型trojan配置文件检查不过的问题；
+   - fix	修复Xray REALITY通过链接添加节点时，shortId丢失的问题；
+   - fix	修复部分ss节点无法通过通过链接添加的问题；
+
 3.1.2 - 3.1.3 (20230615)
    - update	Xray二进制更新到1.8.1；
    - add	节点支持添加Xray REALITY支持；
@@ -40,7 +45,7 @@ fancyss Changelog
    
 3.0.9 (20230609)
    - fix	修复xray json模式下，服务器配置ip地址识别成域名的问题；
-   - fix	修复hnd_v8包，使用trojan运行trojan节点，4.1.xx内核机型，如AC86U、AX86U等机型traojan配置文件检查不过的问题；
+   - fix	修复hnd_v8包，使用trojan运行trojan节点，4.1.xx内核机型，如AC86U、AX86U等机型trojan配置文件检查不过的问题；
    - fix	修复hnd_v8和mtk包，勾选ecs后国内/国外dns不通的问题；
    - fix	修复mtk包ss-tunnel/ssr-tunnel无法运行的问题；
    - fix	修复fancyss_lite包丢失ss-tunnel，导致在ss节点的chinadns-ng DNS模式下，可信DNS-1无法使用udp的问题；
