@@ -373,7 +373,7 @@ decode_url_link(){
 get_ss_node(){
 	local urllink="$1"
 	local action="$2"
-	unset remarks server_raw_1 server_raw_2 server_tmp server_port_tmp server server_port encrypt_info decrypt_info encrypt_method password plugin_support obfs_para plugin_prog obfs_method obfs_host group
+	unset remarks server_raw_1 server_raw_2 server_tmp server_port_tmp server server_port encrypt_info decrypt_info encrypt_method password plugin_support obfs_para plugin_prog obfs_method obfs_host group string_nu
 	
 	server_raw_1=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
 	if [ -n "${server_raw_1}" ];then
@@ -381,9 +381,9 @@ get_ss_node(){
 		server_port_tmp=$(echo "${server_raw_1}" | awk -F':' '{print $2}')
 	fi
 	encrypt_info=$(echo "${urllink}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f1)
-	echo ${encrypt_info} | base64 -d >/dev/null 2>&1 
+	decode_url_link "$encrypt_info" >/dev/null 2>&1
 	if [ "$?" != "0" ];then
-		# not base64
+		# first string not base64,
 		encrypt_method=${encrypt_info}
 		password=$(echo "${urllink}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g'|cut -d "|" -f2)
 		remarks=$(echo "${urllink}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
@@ -392,19 +392,39 @@ get_ss_node(){
 			echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
 		fi
 	else
-		# base64
-		decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
-		server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
-		if [ -n "${server_raw_2}" ];then
-			server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
-			server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
-		fi
-		encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
-		password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
-		remarks=$(echo "${decrypt_info}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
-		echo "${remarks}" | isutf8 -q
-		if [ "$?" != "0" ];then
-			echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
+		# first string is base64
+		string_nu=$(echo "${urllink}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | sed 's/|/\n/g' | wc -l)
+		if [ "${string_nu}" -eq "1" ];then
+			# all base64
+			decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
+			server_raw_2=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+			if [ -n "${server_raw_2}" ];then
+				server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
+				server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
+			fi
+			encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
+			password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+			remarks=$(echo "${decrypt_info}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
+			echo "${remarks}" | isutf8 -q
+			if [ "$?" != "0" ];then
+				echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
+			fi
+		elif [ "${string_nu}" -gt "1" ];then
+			# part base64
+			# ss://MjAyMi1ibGFrZTMtYWVzLTI1Ni1nY206TWtjeGJsTkJXbUpKemRvY25ERUpOSk5BUw==@39.175.1.182:26573#SGP%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B9
+			decrypt_info=$(decode_url_link $(echo "$encrypt_info"))
+			server_raw_2=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+			if [ -n "${server_raw_2}" ];then
+				server_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $1}')
+				server_port_tmp=$(echo "${server_raw_2}" | awk -F':' '{print $2}')
+			fi
+			encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
+			password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+			remarks=$(echo "${urllink}" | awk -F"#" '{print $NF}' | urldecode | sed 's/^[[:space:]]//g')
+			echo "${remarks}" | isutf8 -q
+			if [ "$?" != "0" ];then
+				echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
+			fi
 		fi
 	fi
 
@@ -451,18 +471,20 @@ get_ss_node(){
 		ss_group_hash""
 	fi
 
-	#echo ------------
-	#echo remarks: ${remarks}
-	#echo server: ${server}
-	#echo server_port: ${server_port}
-	#echo encrypt_method: ${encrypt_method}
-	#echo password: ${password}
-	#echo plugin_prog: ${plugin_prog}
-	#echo ss_obfs: ${ss_obfs}
-	#echo ss_obfs_host: ${ss_obfs_host}
-	#echo ss_v2ray: ${ss_v2ray}
-	#echo ss_v2_opts: ${ss_v2_opts}
-	#echo ------------
+	# echo ------------
+	# echo encrypt_info: ${encrypt_info}
+	# echo decrypt_info: ${decrypt_info}
+	# echo remarks: ${remarks}
+	# echo server: ${server}
+	# echo server_port: ${server_port}
+	# echo encrypt_method: ${encrypt_method}
+	# echo password: ${password}
+	# echo plugin_prog: ${plugin_prog}
+	# echo ss_obfs: ${ss_obfs}
+	# echo ss_obfs_host: ${ss_obfs_host}
+	# echo ss_v2ray: ${ss_v2ray}
+	# echo ss_v2_opts: ${ss_v2_opts}
+	# echo ------------
 
 	if [ "${action}" == "1" ];then
 		if [ -n "${ss_group}" -a -n "${server}" -a -n "${remarks}" -a -n "${server_port}" -a -n "${password}" -a -n "${encrypt_method}" ]; then
