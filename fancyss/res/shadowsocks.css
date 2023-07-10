@@ -54,6 +54,11 @@
 .showDragHandle{
 	cursor: move;
 }
+textarea {
+	word-wrap: break-word;
+	word-break: break-all;
+}
+
 input[type=button]:focus, textarea:focus {
 	outline: none;
 }
@@ -303,7 +308,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border-bottom:none;
 }
 #app[skin=ASUSWRT] #log_content1, #app[skin=ASUSWRT] #log_content_f, #app[skin=ASUSWRT] #log_content_c{
-	width:97%;
+	width:100%;
 	padding-left:4px;
 	padding-right:37px;
 	font-family:'Lucida Console';
@@ -439,7 +444,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border-bottom:1px solid #91071f;
 }
 #app[skin=ROG] #log_content1, #app[skin=ROG] #log_content_f, #app[skin=ROG] #log_content_c{
-	width:97%;
+	width:100%;
 	padding-left:4px;
 	padding-right:37px;
 	font-family:'Lucida Console';
@@ -573,7 +578,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border-bottom:1px solid #92650F;
 }
 #app[skin=TUF] #log_content1, #app[skin=TUF] #log_content_f, #app[skin=TUF] #log_content_c{
-	width:97%;
+	width:100%;
 	padding-left:4px;
 	padding-right:37px;
 	font-family:'Lucida Console';
@@ -707,7 +712,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border-bottom:1px solid #2ed9c3;
 }
 #app[skin=TS] #log_content1, #app[skin=TS] #log_content_f, #app[skin=TS] #log_content_c{
-	width:97%;
+	width:100%;
 	padding-left:4px;
 	padding-right:37px;
 	font-family:'Lucida Console';
@@ -780,3 +785,4 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
     border: 1px solid #2ed9c3;
 }
 
+.show-btn5, .show-btn6{display: inline; !important}

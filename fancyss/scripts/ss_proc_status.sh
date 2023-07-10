@@ -224,13 +224,13 @@ GET_SUBS_UPDATE(){
 }
 
 GET_CURRENT_NODE_TYPE(){
-	local TYPE=$(dbus get ssconf_basic_type_${ssconf_basic_node})
-	echo "$(GET_TYPE_NAME ${TYPE})节点"
+	#local TYPE=$(dbus get ss_node_${ssconf_basic_node} | base64_decode | run jq '.type')
+	echo "$(GET_TYPE_NAME ${ss_basic_type})节点"
 }
 
 GET_CURRENT_NODE_NAME(){
-	local NAME=$(dbus get ssconf_basic_name_${ssconf_basic_node})
-	echo "${NAME}"
+	#local NAME=$(dbus get ss_node_${ssconf_basic_node} | base64_decode | run jq '.name')
+	echo "${ss_basic_name}"
 }
 
 GET_PROG_STAT(){
@@ -990,7 +990,7 @@ check_status() {
 	local CURR_BAKI=$(echo ${ss_wan_black_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_WHTD=$(echo ${ss_wan_white_domain} | base64_decode |sed '/^#/d'|sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_WHTI=$(echo ${ss_wan_white_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
-	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | grep -E "^http|^https" | wc -l)
+	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | sed 's/^[[:space:]]//g' | grep -Ec "^http")
 	local CURR_NODE=$(dbus list ssconf | grep "_name_" | wc -l)
 	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.gfwlist.date')
 	local CHNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnroute.date')

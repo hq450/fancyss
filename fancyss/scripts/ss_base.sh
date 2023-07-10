@@ -9,8 +9,44 @@
 
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
+NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
+export PATH=${NEW_PATH}
 source helper.sh
-eval $(dbus export ss)
+eval $(dbus export ss | sed 's/export //' | sed 's/;export /\n/g;' | sed '/ssconf_.*$/d'|sed 's/^/export /' | tr '\n' ';')
+unset usb2jffs_time_hour
+unset usb2jffs_week
+unset usb2jffs_title
+unset usb2jffs_day
+unset usb2jffs_rsync
+unset usb2jffs_sync
+unset usb2jffs_inter_day
+unset usb2jffs_inter_pre
+unset usb2jffs_version
+unset usb2jffs_mount_path
+unset usb2jffs_inter_hour
+unset usb2jffs_time_min
+unset usb2jffs_inter_min
+unset usb2jffs_backupfile_name
+unset usb2jffs_backup_file
+unset usb2jffs_mtd_jffs
+unset usb2jffs_warn_2
+unset DEVICENAME
+unset DEVNAME
+unset DEVPATH
+unset DEVTYPE
+unset INTERFACE
+unset PRODUCT
+unset USBPORT
+unset SUBSYSTEM
+unset SEQNUM
+unset MAJOR
+unset MINOR
+unset PERP_SVPID
+unset SHLVL
+unset TERM
+unset PERP_BASE
+unset HOME
+
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 
 # ss_basic_type
@@ -22,18 +58,20 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 # 5 trojan
 # 6 naive
 
-cur_node=${ssconf_basic_node}
-base_1="type mode server port method password ss_obfs ss_obfs_host ss_v2ray ss_v2ray_opts rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_json"
+cur_node=$(dbus get ssconf_basic_node)
+base_1="name type mode server port method password ss_obfs ss_obfs_host ss_v2ray ss_v2ray_opts rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_json"
 base_2="use_kcp v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_tfo naive_prot naive_server naive_port naive_user naive_pass"
 for config in ${base_1} ${base_2}
 do
-	key_1=ssconf_basic_${config}_${cur_node}
-	key_2=ss_basic_${config}
-	tmp="export $key_2=\$$key_1"
-	eval ${tmp}
+	key_1=$(dbus get ssconf_basic_${config}_${cur_node})
+	if [ -n "$key_1" ];then
+		key_2=ss_basic_${config}
+		tmp="export $key_2=\"$key_1\""
+		eval ${tmp}
+	fi
 	unset key_1 key_2
 done
-
+# ------------------------------------------------
 gfw_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "1")
 chn_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "2|3")
 all_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "5")

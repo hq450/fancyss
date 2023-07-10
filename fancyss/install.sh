@@ -427,15 +427,6 @@ install_now(){
 	if [ -n "$(which socat)" ];then
 		rm -rf /tmp/shadowsocks/bin/uredir
 	fi
-	if [ -x "/koolshare/bin/jq" ];then
-		rm -rf /tmp/shadowsocks/bin/jq
-	fi
-	if [ -x "/koolshare/bin/sponge" ];then
-		rm -rf /tmp/shadowsocks/bin/sponge
-	fi
-	if [ -x "/koolshare/bin/isutf8" ];then
-		rm -rf /tmp/shadowsocks/bin/isutf8
-	fi
 
 	# 检测储存空间是否足够
 	echo_date "检测jffs分区剩余空间..."
