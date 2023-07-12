@@ -65,6 +65,10 @@ input[type=button]:focus, textarea:focus {
 input[type=checkbox]{
 	vertical-align:middle;
 }
+input[type=radio]{
+	vertical-align:middle;
+	margin-top: -2px;
+}
 #log_content3, #loading_block2 {line-height:1.5}
 .SimpleNote { padding:5px 10px;}
 .smartdns_textarea{
@@ -785,4 +789,3 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
     border: 1px solid #2ed9c3;
 }
 
-.show-btn5, .show-btn6{display: inline; !important}

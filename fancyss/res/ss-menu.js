@@ -1286,6 +1286,23 @@ function openssHint(itemNum) {
 		statusmenu += "如果勾选此选项，那么程序启动后将不会进行相应的检测，这可以节约一些fancyss的启动时间。";
 		_caption = "跳过程序启动检测";
 		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 145) {
+		width = "680px";
+		statusmenu = "<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。<br /><br />";
+		statusmenu += "chinadns-ng支持过滤ipv6 DNS（AAAA）查询，具体情况见<a href='https://github.com/zfl9/chinadns-ng#命令选项' target='_blank'><u><font color='#00F'>chinadns-ng的命令选项</font></u></a>。<br /><br />";
+		statusmenu += "○ a：过滤 所有 域名的 AAAA 查询<br />";
+		statusmenu += "○ m：过滤 tag:chn 域名的 AAAA 查询<br />";
+		statusmenu += "○ g：过滤 tag:gfw 域名的 AAAA 查询<br />";
+		statusmenu += "○ n：过滤 tag:none 域名的 AAAA 查询<br />";
+		statusmenu += "○ c：禁止向 china 上游转发 AAAA 查询<br />";
+		statusmenu += "○ t：禁止向 trust 上游转发 AAAA 查询<br />";
+		statusmenu += "○ C：当 tag:none 域名的 AAAA 查询只存在 china 上游路径时，过滤 china 上游的 非大陆ip 响应<br />";
+		statusmenu += "○ T：当 tag:none 域名的 AAAA 查询只存在 trust 上游路径时，过滤 trust 上游的 非大陆ip 响应<br /><br />";
+		statusmenu += "如 act：过滤 所有 域名的 AAAA 查询、禁止向 china 上游转发 AAAA 查询、禁止向 trust 上游转发 AAAA 查询<br />";
+		statusmenu += "如 gt：过滤 tag:gfw 域名的 AAAA 查询、禁止向 trust 上游转发 AAAA 查询<br />";
+		statusmenu += "如 mc：过滤 tag:chn 域名的 AAAA 查询、禁止向 china 上游转发 AAAA 查询<br />";
+		_caption = "说明";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

@@ -2177,7 +2177,7 @@ start_dns_new(){
 			local EXT="-p ${ss_basic_chng_repeat_times}"
 		fi
 
-		# 6. 生成chinands-ng的国内DNS
+		# 6. 生成chinadns-ng的国内DNS
 		if [ "${ss_basic_chng_china_1_enable}" == "1" ];then
 			if [ -z "${ss_basic_chng_china_1_prot}" ];then
 				ss_basic_chng_china_1_prot="1"
@@ -2384,7 +2384,7 @@ start_dns_new(){
 			local CDNS="${CDNS_2}"
 		fi
 
-		# 7. 生成chinands-ng的可信DNS -1 （代理）
+		# 7. 生成chinadns-ng的可信DNS -1 （代理）
 		if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
 			if [ -z "${ss_basic_chng_trust_1_opt}" ];then
 				# use dns2socks as default
@@ -2510,7 +2510,7 @@ start_dns_new(){
 			fi
 		fi
 
-		# 8. 生成chinands-ng的可信DNS-2
+		# 8. 生成chinadns-ng的可信DNS-2
 		if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
 			# 8.0 判断
 			if [ "${ss_basic_chng_trust_2_opt}" == "1" -z "${ss_basic_chng_trust_2_opt_udp}" ];then
@@ -2642,9 +2642,24 @@ start_dns_new(){
 
 		# 9. start_chinadns-ng
 		echo_date "开启chinadns-ng，用于【国内所有网站 + 国外所有网站】的DNS解析..."
+
 		if [ "${ss_basic_chng_no_ipv6}" == "1" ];then
-			local EXT="${EXT} -N"
+			if [ "${ss_basic_chng_act}" != "1" -a "${ss_basic_chng_gt}" != "1" -a "${ss_basic_chng_mc}" != "1" ];then
+				ss_basic_chng_act="0"
+				ss_basic_chng_gt="1"
+				ss_basic_chng_mc="0"
+			fi
+			if [ "${ss_basic_chng_act}" == "1" ];then
+				local EXT="${EXT} -N act"
+			fi
+			if [ "${ss_basic_chng_gt}" == "1" ];then
+				local EXT="${EXT} -N gt"
+			fi
+			if [ "${ss_basic_chng_mc}" == "1" ];then
+				local EXT="${EXT} -N mc"
+			fi
 		fi
+		
 		if [ "${DNS_PLAN}" == "1" ];then
 			# match cdn.txt first, go to chn DNS;
 			# then match gfwlist.txt, go to trust DNS
@@ -2653,7 +2668,7 @@ start_dns_new(){
 		elif [ "${DNS_PLAN}" == "2" ];then
 			# match cdn.txt first, go to chn DNS;
 			# all domain have no match goes to trust DNS;
-			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g gfw -m /tmp/cdn.txt
+			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -m /tmp/cdn.txt -d gfw
 		else
 			# legacy
 			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M
@@ -3262,7 +3277,7 @@ create_dnsmasq_conf() {
 	# 4. append black domain list, through proxy
 	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
 	if [ -n "${ss_wan_black_domain}" ]; then
-		echo_date "生成域名黑名单"
+		echo_date "生成域名黑名单！"
 		echo "# -------- for black_domain --------" >>/tmp/wblist.conf
 		for wan_black_domain in ${wanblackdomains}; do
 			detect_domain "${wan_black_domain}"
@@ -3278,7 +3293,7 @@ create_dnsmasq_conf() {
 						if [ "${ss_basic_mode}" == "6" ];then
 							echo "${wan_black_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/${ss_direct_user}/g" >>/tmp/wblist.conf
 						else
-							echo "${wan_black_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/${CDN}#${DNSC_PORT}/g" >>/tmp/wblist.conf
+							echo "${wan_black_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
 						fi
 					fi
 				fi

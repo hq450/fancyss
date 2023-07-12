@@ -1740,6 +1740,7 @@ get_online_rule_now(){
 		# 将订阅后的文件，覆盖为本地的相同link hash的文件
 		cp -rf ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt ${DIR}/local_${sub_count}_${SUB_LINK_HASH:0:4}.txt
 	fi
+	return 0
 }
 
 exit_sub(){
