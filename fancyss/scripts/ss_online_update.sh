@@ -9,8 +9,6 @@ LANG=C
 LOCK_FILE=/var/lock/online_update.lock
 LOG_FILE=/tmp/upload/ss_log.txt
 DIR="/tmp/fancyss_subs"
-SUB_FILE_ENC="${DIR}/sub_file_encode.txt"
-SUB_FILE_DEC="${DIR}/sub_file_decode.txt"
 LOCAL_NODES_SPL="$DIR/ss_nodes_spl.txt"
 LOCAL_NODES_BAK="$DIR/ss_nodes_bak.txt"
 NODES_SEQ=$(dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
@@ -393,7 +391,6 @@ remove_null(){
 			# remove node
 			local _local_group=$(cat $DIR/local_*_${local_hash}.txt | run jq -rc '.group' | sed 's/_.*$//' | sort -u | sed 's/$/ + /g' | sed ':a;N;$!ba;s#\n##g' | sed 's/ + $//g')
 			echo_date "⚠️检测到【${_local_group}】机场已经不再订阅！尝试删除该订阅的节点！"
-			#find $DIR -name "local_*_${local_hash}.txt" -type f | xargs rm -rf
 			rm -rf $DIR/local_*_${local_hash}.txt
 		fi
 	done
@@ -1164,14 +1161,11 @@ add_vless_node(){
 		x_headtype_tcp=""
 		x_headtype_kcp=""
 		x_headtype_quic=""
-		x_grpc_mode=${x_headerType}
-		x_grpc_mode_ext=${x_mode}
-		if [ -z "${x_grpc_mode}" ];then
-			if [ -n "${x_grpc_mode_ext}" ];then
-				x_grpc_mode="${x_grpc_mode_ext}"
-			else
-				x_grpc_mode="gun"
-			fi
+		x_grpc_mode=${x_mode}
+		if [ -n "${x_grpc_mode}" ];then
+			x_grpc_mode="${x_grpc_mode}"
+		else
+			x_grpc_mode="gun"
 		fi
 		if [ -n "${x_serviceName}" ];then
 			x_path="${x_serviceName}"
@@ -1428,19 +1422,19 @@ dnsmasq_rule(){
 
 download_by_curl(){
 	echo_date "1️⃣使用curl下载订阅，第一次尝试下载..."
-	curl -4sSk --connect-timeout 6 "$1" 2>/dev/null >${SUB_FILE_ENC}
+	curl -4sSk --connect-timeout 6 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 	
 	echo_date "2️⃣使用curl下载订阅失败，第二次尝试下载..."
-	curl -4sSk --connect-timeout 10 "$1" 2>/dev/null >${SUB_FILE_ENC}
+	curl -4sSk --connect-timeout 10 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 
 	echo_date "3️⃣使用curl下载订阅失败，第三次尝试下载..."
-	curl -4sSk --connect-timeout 12 "$1" 2>/dev/null >${SUB_FILE_ENC}
+	curl -4sSk --connect-timeout 12 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi	
@@ -1456,19 +1450,19 @@ download_by_wget(){
 	fi
 	
 	echo_date "1️⃣使用wget下载订阅，第一次尝试下载..."
-	wget -4 -t 1 -T 10 --dns-timeout=5 -q ${EXT_OPT} "$1" -O ${SUB_FILE_ENC}
+	wget -4 -t 1 -T 10 --dns-timeout=5 -q ${EXT_OPT} "$1" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 
 	echo_date "2️⃣使用wget下载订阅，第二次尝试下载..."
-	wget -4 -t 1 -T 15 --dns-timeout=10 -q ${EXT_OPT} "$1" -O ${SUB_FILE_ENC}
+	wget -4 -t 1 -T 15 --dns-timeout=10 -q ${EXT_OPT} "$1" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi	
 	
 	echo_date "3️⃣使用wget下载订阅，第三次尝试下载..."
-	wget -4 -t 1 -T 20 --dns-timeout=15 -q ${EXT_OPT} "$1" -O ${SUB_FILE_ENC}
+	wget -4 -t 1 -T 20 --dns-timeout=15 -q ${EXT_OPT} "$1" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
@@ -1478,7 +1472,7 @@ download_by_wget(){
 
 download_by_aria2(){
 	echo_date "⬇️使用aria2c下载订阅..."
-	rm -rf ${SUB_FILE_ENC}
+	rm -rf ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	/koolshare/aria2/aria2c --check-certificate=false --quiet=true -d $DIR -o ssr_subscribe_file.txt $1
 	if [ "$?" == "0" ]; then
 		return 0
@@ -1534,29 +1528,29 @@ get_online_rule_now(){
 		echo_date "🆗下载成功，继续检测下载内容..."
 
 		#可能有跳转
-		local jump=$(grep -Eo "Redirecting|301" ${SUB_FILE_ENC})
+		local jump=$(grep -Eo "Redirecting|301" ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt)
 		if [ -n "$jump" ]; then
 			echo_date "⤴️订阅链接可能有跳转，尝试更换wget进行下载..."
-			rm ${SUB_FILE_ENC}
+			rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			download_by_wget "${SUB_LINK}"
 		fi
 
 		#下载为空...
-		if [ "$(cat ${SUB_FILE_ENC} | wc -c)" == "0" ]; then
+		if [ "$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | wc -c)" == "0" ]; then
 			echo_date "🈳下载内容为空，尝试更换wget进行下载..."
-			rm ${SUB_FILE_ENC}
+			rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			download_by_wget "${SUB_LINK}"
 		fi
 
 		# 404
-		local wrong1=$(cat ${SUB_FILE_ENC} | grep -E "404")
+		local wrong1=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -E "404")
 		if [ -n "${wrong1}" ]; then
 			echo_date "⚠️解析错误！原因：该订阅链接无法访问，错误代码：404！"
 			return 1
 		fi
 		
 		# 产品信息错误
-		local wrong=$(cat ${SUB_FILE_ENC} | grep -E "\{")
+		local wrong=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -E "\{")
 		if [ -n "${wrong}" ]; then
 			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
 			echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
@@ -1565,7 +1559,7 @@ get_online_rule_now(){
 		fi
 
 		# 非base64编码
-		dec64 $(cat ${SUB_FILE_ENC}) >/dev/null 2>&1
+		dec64 $(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt) >/dev/null 2>&1
 		if [ "$?" != "0" ]; then
 			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
 			echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
@@ -1573,7 +1567,7 @@ get_online_rule_now(){
 		fi
 	else
 		echo_date "⚠️使用curl下载订阅失败，尝试更换wget进行下载..."
-		rm ${SUB_FILE_ENC}
+		rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		download_by_wget "${SUB_LINK}"
 
 		#返回错误
@@ -1591,14 +1585,14 @@ get_online_rule_now(){
 		fi
 
 		#下载为空...
-		if [ "$(cat ${SUB_FILE_ENC} | wc -c)" == "0" ]; then
+		if [ "$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | wc -c)" == "0" ]; then
 			echo_date "⚠️下载内容为空！️该订阅链接不包含任何节点信息"
 			echo_date "⚠️请检查你的服务商是否更换了订阅链接！"
 			return 1
 		fi
 		
 		# 产品信息错误
-		local wrong2=$(cat ${SUB_FILE_ENC} | grep -E "\{")
+		local wrong2=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -E "\{")
 		if [ -n "${wrong2}" ]; then
 			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
 			echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
@@ -1607,7 +1601,7 @@ get_online_rule_now(){
 		fi
 
 		# 非base64编码
-		dec64 $(cat ${SUB_FILE_ENC}) >/dev/null 2>&1
+		dec64 $(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt) >/dev/null 2>&1
 		if [ "$?" != "0" ]; then
 			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
 			echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
@@ -1621,37 +1615,37 @@ get_online_rule_now(){
 	# 8. 解析订阅原始文本
 	# xargs --show-limits </dev/null to get arg_max, GT-AX6000 is 131072, which means 128kb
 	# 如果订阅原始文本超过128kb，会导致echo，printf命令无法完整输出，所以直接对文件操作即可
-	cat ${SUB_FILE_ENC} | tr -d '\n' | sed 's/$/===/' | base64 -d > ${SUB_FILE_DEC}
+	cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | tr -d '\n' | sed 's/$/===/' | base64 -d > ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" != "0" ]; then
 		echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
 	fi
 
 	# 9. 一些机场使用的换行符是dos格式（\r\n\)，在路由Linux下会出问题！转换成unix格式
 	if [ -n "$(which dos2unix)" ];then
-		dos2unix -u ${SUB_FILE_DEC}
+		dos2unix -u ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	else
-		tr -d '\r' < ${SUB_FILE_DEC} | sponge ${SUB_FILE_DEC}
+		tr -d '\r' < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | sponge ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	fi
-	echo "" >> ${SUB_FILE_DEC}
-	local NODE_NU_RAW=$(cat ${SUB_FILE_DEC} | grep -c "://")
+	echo "" >> ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
+	local NODE_NU_RAW=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -c "://")
 	echo_date "🆗初步解析成功！共获得${NODE_NU_RAW}个节点！"
 
 	# 11. 检测 ss ssr vmess
-	NODE_FORMAT1=$(cat ${SUB_FILE_DEC} | grep -E "^ss://")
-	NODE_FORMAT2=$(cat ${SUB_FILE_DEC} | grep -E "^ssr://")
-	NODE_FORMAT3=$(cat ${SUB_FILE_DEC} | grep -E "^vmess://")
-	NODE_FORMAT4=$(cat ${SUB_FILE_DEC} | grep -E "^vless://")
-	NODE_FORMAT5=$(cat ${SUB_FILE_DEC} | grep -E "^trojan://")
+	NODE_FORMAT1=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^ss://")
+	NODE_FORMAT2=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^ssr://")
+	NODE_FORMAT3=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vmess://")
+	NODE_FORMAT4=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vless://")
+	NODE_FORMAT5=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^trojan://")
 	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT5}" ];then
 		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan节点，退出！"
 		return 1
 	fi
 	
-	local NODE_NU_SS=$(cat ${SUB_FILE_DEC} | grep -Ec "^ss://") || "0"
-	local NODE_NU_SR=$(cat ${SUB_FILE_DEC} | grep -Ec "^ssr://") || "0"
-	local NODE_NU_VM=$(cat ${SUB_FILE_DEC} | grep -Ec "^vmess://") || "0"
-	local NODE_NU_VL=$(cat ${SUB_FILE_DEC} | grep -Ec "^vless://") || "0"
-	local NODE_NU_TJ=$(cat ${SUB_FILE_DEC} | grep -Ec "^trojan://") || "0"
+	local NODE_NU_SS=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ss://") || "0"
+	local NODE_NU_SR=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ssr://") || "0"
+	local NODE_NU_VM=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vmess://") || "0"
+	local NODE_NU_VL=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vless://") || "0"
+	local NODE_NU_TJ=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^trojan://") || "0"
 	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_VM} + ${NODE_NU_VL} + ${NODE_NU_TJ}))
 	if [ "${NODE_NU_TT}" -lt "${NODE_NU_RAW}" ];then
 		echo_date "ℹ️${NODE_NU_RAW}个节点中，一共检测到${NODE_NU_TT}个支持节点！"
@@ -1697,7 +1691,7 @@ get_online_rule_now(){
 			continue
 			;;
 		esac
-	done < ${SUB_FILE_DEC}
+	done < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	echo_date "-------------------------------------------------------------------"
 	if [ -f "${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt" ];then
 		echo_date "ℹ️在线节点解析完毕，开始将订阅节点和和本地节点进行对比！"
@@ -1734,13 +1728,14 @@ get_online_rule_now(){
 		# 将订阅后的文件，覆盖为本地的相同link hash的文件
 		rm -rf ${ISLOCALFILE}
 		cp -rf ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt ${DIR}/local_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		return 0
 	else
 		echo_date "🔶当前订阅链来源【${ONLINE_GROUP}】在本地尚无节点！"
 		echo_date "🆚对比结果：检测到新的订阅节点，生成节点添加文件！"
 		# 将订阅后的文件，覆盖为本地的相同link hash的文件
 		cp -rf ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt ${DIR}/local_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		return 0
 	fi
-	return 0
 }
 
 exit_sub(){
@@ -1819,7 +1814,7 @@ start_online_update(){
 	echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
 
 	# 5. 写入所有节点
-	local ISNEW=$(find $DIR -name "local_*_*.txt" -type f)
+	local ISNEW=$(find $DIR -name "local_*_*.txt")
 	if [ -n "${ISNEW}" ];then
 		find $DIR -name "local_*.txt" | sort -n | xargs cat >$DIR/ss_nodes_new.txt
 		local md5sum_old=$(md5sum ${LOCAL_NODES_BAK} 2>/dev/null | awk '{print $1}')
@@ -1838,13 +1833,16 @@ start_online_update(){
 		nodes_stats
 		echo_date "🧹一点点清理工作..."
 		echo_date "🎉所有订阅任务完成，请等待6秒，或者手动关闭本窗口！"
+	else
+		echo_date "⚠️出错！未找到节点写入文件！"
+		echo_date "⚠️退出订阅！"
 	fi
 	echo_date "==================================================================="
 }
 
 subscribe_failed(){
 	# 当订阅失败后，在这里进行一些处理...
-	rm -rf ${SUB_FILE_ENC} >/dev/null 2>&1
+	rm -rf ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt >/dev/null 2>&1
 	#echo ""
 }
 
@@ -1852,7 +1850,7 @@ subscribe_failed(){
 start_offline_update() {
 	echo_date "==================================================================="
 	echo_date "ℹ️通过ss/ssr/vmess/vless链接添加节点..."
-	rm -rf ${SUB_FILE_ENC} >/dev/null 2>&1
+	rm -rf ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt >/dev/null 2>&1
 	rm -rf /$DIR/*
 	local nodes=$(dbus get ss_base64_links | base64 -d | urldecode)
 	for node in $nodes

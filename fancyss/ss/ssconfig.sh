@@ -2668,11 +2668,18 @@ start_dns_new(){
 			# all domain have no match goes to chn DNS;
 			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -d chn -M
 		elif [ "${DNS_PLAN}" == "2" ];then
+			# new (less dns leak, chn cdn depends on cdn.txt)
 			# match cdn.txt first, go to chn DNS;
 			# all domain have no match goes to trust DNS;
-			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -m /tmp/cdn.txt -d gfw
+			# run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -m /tmp/cdn.txt -d gfw
+			# ------
+			# use legacy
+			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M
 		else
-			# legacy
+			# legacy (better chn cdn)
+			# match cdn.txt first, go to chn DNS;
+			# then match gfwlist.txt, go to trust DNS
+			# all domain have no match goes to both chn DNS and trust DNS;
 			run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M
 		fi
 		detect_running_status chinadns-ng
