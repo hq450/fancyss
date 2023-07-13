@@ -1071,6 +1071,7 @@ add_vmess_node(){
 add_vless_node(){
 	local decode_link="$1"
 	local action="$2"
+	local strtype="$3"
 	unset x_server_raw x_server x_server_port x_remarks x_uuid x_host x_path x_encryption x_type
 	unset x_headerType x_headtype_tcp x_headtype_kcp x_headtype_quic x_grpc_modex_security_tmp x_security
 	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash x_kcp_seed
@@ -1246,7 +1247,11 @@ add_vless_node(){
 	
 	if [ -z "${x_server}" -o -z "${x_remarks}" -o -z "${x_server_port}" -o -z "${x_uuid}" ]; then
 		# 丢弃无效节点
-		echo_date "🔴vless节点：检测到一个错误节点，跳过！"
+		if [ "${strtype}" == "vmess" ];then
+			echo_date "🟠vmess节点：检测到一个错误节点，跳过！"
+		else
+			echo_date "🔴vless节点：检测到一个错误节点，跳过！"
+		fi
 		return 1
 	fi
 
@@ -1258,7 +1263,11 @@ add_vless_node(){
 		fi
 	fi
 
-	echo_date "🟣vless节点：${x_remarks}"
+	if [ "${strtype}" == "vmess" ];then
+		echo_date "🟠vmess节点：${x_remarks}"
+	else
+		echo_date "🟣vless节点：${x_remarks}"
+	fi
 	
 	json_init
 	json_add_string group "${x_group_hash}"
@@ -1266,7 +1275,11 @@ add_vless_node(){
 	json_add_string name "${x_remarks}"
 	json_add_string port "${x_server_port}"
 	json_add_string server "${x_server}"
-	json_add_string type "4"
+	if [ "${strtype}" == "vmess" ];then
+		json_add_string type "3"
+	else
+		json_add_string type "4"
+	fi
 	json_add_string xray_encryption "${x_encryption}"
 	json_add_string xray_fingerprint "${x_fp}"
 	json_add_string xray_flow "${x_flow}"
@@ -1670,7 +1683,14 @@ get_online_rule_now(){
 			add_ssr_node "${node_info}" 1
 			;;
 		vmess)
-			add_vmess_node "${node_info}" 1
+			local _match=$(echo "${node_info}" | grep -E "@|?|type")
+			if [ -n "${_match}" ];then
+				#明文的vmess链接
+				add_vless_node "${node_info}" 1 vmess
+			else
+				#base64的vmess链接
+				add_vmess_node "${node_info}" 1
+			fi
 			;;
 		vless)
 			add_vless_node "${node_info}" 1
@@ -1850,8 +1870,8 @@ subscribe_failed(){
 start_offline_update() {
 	echo_date "==================================================================="
 	echo_date "ℹ️通过ss/ssr/vmess/vless链接添加节点..."
-	rm -rf ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt >/dev/null 2>&1
-	rm -rf /$DIR/*
+	mkdir -p $DIR
+	rm -rf $DIR/*
 	local nodes=$(dbus get ss_base64_links | base64 -d | urldecode)
 	for node in $nodes
 	do
@@ -1859,19 +1879,29 @@ start_offline_update() {
 		local node_info=$(echo ${node} | sed -n 's/.\+:\/\/\(.*\)$/\1/p')
 		case $node_type in
 		ss)
-			add_ss_node ${node_info} 2
+			add_ss_node "${node_info}" 2
 			;;
 		ssr)
-			add_ssr_node ${node_info} 2
+			add_ssr_node "${node_info}" 2
 			;;
 		vmess)
-			add_vmess_node ${node_info} 2
+			echo "${node_info}"
+			local _match=$(echo "${node_info}" | grep -E "@|\?|type")
+			if [ -n "${_match}" ];then
+				#明文的vmess链接
+				echo 123
+				add_vless_node "${node_info}" 2 vmess
+			else
+				#base64的vmess链接
+				echo 234
+				add_vmess_node "${node_info}" 2
+			fi
 			;;
 		vless)
-			add_vless_node ${node_info} 2
+			add_vless_node "${node_info}" 2
 			;;
 		trojan)
-			add_trojan_node ${node_info} 2
+			add_trojan_node "${node_info}" 2
 			;;
 		*)
 			echo_date "⚠️尚不支持${node_type}格式的节点，跳过！"

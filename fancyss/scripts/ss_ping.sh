@@ -104,7 +104,16 @@ ping_web(){
 		return 0
 	fi
 
-	# 3. 有结果文件，且lock不存在，比较下上次ping结果生成的时间，如果是10分钟以内，则不需要重新ping
+	# 3. 如果有结果该文件，且没有lock（ping完成了的），需要检测下节点数量和ping数量是否一致，避免新增节点没有ping
+	local ping_nu=$(cat /tmp/upload/ping.txt | wc -l)
+	local node_nu=$(dbus list ssconf_basic_ | grep _server_ | grep -v "server_ip" | wc -l)
+	if [ "${ping_nu}" -ne "${node_nu}" ];then
+		clean_ping
+		start_ping
+		return 0
+	fi
+
+	# 4. 如果有结果该文件，且没有lock（ping完成了的），且节点数和ping结果数一致，比较下上次ping结果生成的时间，如果是10分钟以内，则不需要重新ping
 	date -r ping.txt "+%s"
 	TS_LST=$(date -r /tmp/upload/ping.txt "+%s")
 	TS_NOW=$(date +%s)
