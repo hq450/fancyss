@@ -1,6 +1,9 @@
 fancyss Changelog
 ===========================================
-3.1.6 (20230712)
+3.1.8 (todo)
+   - fix	修复开启xray进程守护后，xray启动失败的问题
+
+3.1.7 (20230712)
    - update	chinadns-ng的丢弃AAAA记录功能细化，现在可以单独丢弃部分AAA记录，比如经过代理的AAAA记录
    - fix	修复大陆白名单模式下chinadns-ng启动参数不正确的问题
    - fix	修复编辑naive节点时，顶部显示的是添加trojan节点的问题

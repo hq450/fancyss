@@ -41,11 +41,8 @@ unset SUBSYSTEM
 unset SEQNUM
 unset MAJOR
 unset MINOR
-unset PERP_SVPID
 unset SHLVL
 unset TERM
-unset PERP_BASE
-unset HOME
 
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 

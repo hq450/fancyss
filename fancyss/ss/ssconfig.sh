@@ -1189,10 +1189,12 @@ kill_process() {
 	local xray_process=$(pidof xray)
 	if [ -n "$xray_process" ]; then
 		echo_date "关闭xray进程..."
-		[ -f "/koolshare/perp/xray/rc.main" ] && perpctl d xray >/dev/null 2>&1
-		rm -rf /koolshare/perp/xray
 		killall xray >/dev/null 2>&1
 		kill -9 "$xray_process" >/dev/null 2>&1
+	fi
+	if [ -d "/koolshare/perp/xray" ];then
+		perpctl d xray >/dev/null 2>&1
+		rm -rf /koolshare/perp/xray
 	fi
 
 	local trojan_process=$(pidof trojan)
