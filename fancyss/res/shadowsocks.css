@@ -160,6 +160,8 @@ input[type=radio]{
 	white-space: nowrap;
 	overflow:hidden;
 	text-overflow:ellipsis;
+	padding-left: 0;
+	padding-right: 0;
 }
 .nickname, .server{
 	white-space: nowrap;
