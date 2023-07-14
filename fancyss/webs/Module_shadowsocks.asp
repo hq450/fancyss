@@ -53,7 +53,7 @@ var noChange2 = 0;
 var noChange_status = 0;
 var noChange_dns = 0;
 var poped = 0;
-var submit_flag="0";
+var submit_flag = "0";
 var x = 5;
 var ping_result = "";
 var save_flag = "";
@@ -303,6 +303,12 @@ function refresh_options() {
 		var option_text = $("#ss_basic_s_resolver_udp").find('option[value=' + db_ss["ss_basic_s_resolver_udp"] + ']').text();
 		$('#ss_basic_s_resolver_udp option[value=' + db_ss["ss_basic_s_resolver_udp"] + ']').text(option_text + '✅');
 	}
+	// 节点列表显示行数
+	$("#ss_basic_row").find('option').remove().end();
+	for (var i = 10; i <= 27; i++) {
+		$("#ss_basic_row").append('<option value="' + i + '">' + i + '</option>');
+	}
+	E("ss_basic_row").value = db_ss["ss_basic_row"]||18;
 }
 function save() {
 	var node_sel = E("ssconf_basic_node").value;
@@ -1023,7 +1029,7 @@ function update_visibility() {
 	var h = E("ss_basic_s_resolver").value;
 	var h_0 = E("ss_basic_s_resolver_udp").value;
 	var h_1 = E("ss_basic_s_resolver_tcp").value;
-	var i = E("ss_basic_ping_node").value == "0";
+	var i = E("ss_basic_ping_node").value;
 	var j = E("ss_basic_chng_china_1_enable").checked;
 	var j0 = E("ss_basic_chng_china_1_prot").value;
 	var j1 = E("ss_basic_chng_china_1_udp").value == "96";
@@ -1075,9 +1081,11 @@ function update_visibility() {
 	showhide("ss_sstunnel_user_note", (f == "4"));											//fancyss-full
 	showhide("ss_direct_user", (f == "8"));
 	showhide("ss_basic_tri_reboot_time_note", (g != "0"));
-	showhide("ss_basic_ping_method", i);
-	showhide("ss_basic_ping_btn", i);
-	showhide("ss_ping_ts_show", i);
+	showhide("ss_basic_ping_method", i == "0");
+	showhide("ss_basic_webtest_url", i == "1");
+	showhide("ss_basic_ping_btn", i == "0");
+	showhide("ss_basic_webtest_btn", i == "1");
+	showhide("ss_ping_ts_show", i == "0");
 	showhide("ss_basic_chng_china_1_prot", j);
 	showhide("ss_basic_chng_china_1_ecs", j);
 	showhide("ss_basic_chng_china_1_ecs_note", j);
@@ -2533,8 +2541,6 @@ function refresh_table() {
 	});
 }
 function refresh_html() {
-	//console.log("refresh_html");
-	// how many row to show
 	var pageH = parseInt(E("FormTitle").style.height.split("px")[0]);
 	if(db_ss["ss_basic_row"]){
 		nodeN = parseInt(db_ss["ss_basic_row"]);
@@ -2543,44 +2549,36 @@ function refresh_html() {
 	var nodeL  = parseInt((pageH-nodeT)/trsH) - 3;
 	nodeH = nodeN*trsH
 	if (nodeN > nodeL){
-		//var maxH = node_nu*trsH + trsH
 		$("#ss_list_table").attr("style", "height:" + (nodeH + trsH) + "px");
 	}else{
 		$("#ss_list_table").removeAttr("style");
 	}
-	var btnMv = (nodeN - node_nu)*trsH
-	if(btnMv > 0){
-		var btnTop = (nodeT + nodeH + 12) - (nodeN - node_nu)*trsH
-	}else{
-		var btnTop = (nodeT + nodeH + 12)
-	}
+
 	//console.log("页面整体高度：", pageH);
 	//console.log("最大能显示行：", nodeL);
 	//console.log("定义的显示行：", nodeN);
 	//console.log("实际显示的行：", ss_nodes.length);
 	//console.log("节点列表上界：", nodeT);
 	//console.log("节点列表高度nodeH：", nodeH);
-	// write option to ss_basic_row 
-	$("#ss_basic_row").find('option').remove().end();
-	for (var i = 10; i <= nodeL; i++) {
-		$("#ss_basic_row").append('<option value="' + i + '">' + i + '</option>');
-	}
-	E("ss_basic_row").value = db_ss["ss_basic_row"]||nodeL;
-	
+
 	// define col width in different situation
 	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
 	if(node_nu && E("ss_basic_ping_node").value != "off"){
 		//开启ping
 		if(noserver == "1"){
+			//关闭server
 			var width = ["", "5%", "54%", "0%", "14%", "12%", "10%", "5%", ];
 		}else{
+			//开启server
 			var width = ["", "5%", "28%", "26%", "14%", "12%", "10%", "5%", ];
 		}
 	}else{
 		//关闭ping
 		if(noserver == "1"){
+			//关闭server
 			var width = ["", "5%", "64%", "0%", "16%", "0%", "10%", "5%" ];
 		}else{
+			//开启server
 			var width = ["", "5%", "36%", "30%", "14%", "0%", "10%", "5%" ];
 		}
 	}
@@ -2588,7 +2586,7 @@ function refresh_html() {
 	var html = '';
 	html += '<div class="nodeTable" style="height:' + trsH + 'px; margin: -1px 0px 0px 0px; width:750px;">'
 	html += '<table width="750px" border="0" align="center" cellpadding="4" cellspacing="0" class="FormTable_table" style="margin:-1px 0px 0px 0px;">'
-	html += '<tr height="' + trsH + '">'
+	html += '<tr height="' + trsH + 'px">'
 	html += '<th style="width:' + width[1] + ';">序号</th>'
 	html += '<th style="width:' + width[2] + ';cursor:pointer" onclick="hide_name();" title="点我隐藏节点名称信息!" >节点名称</th>'
 	if(noserver != "1"){
@@ -2701,13 +2699,7 @@ function refresh_html() {
 		html +='</td>';
 		//ping/丢包
 		if(node_nu && E("ss_basic_ping_node").value != "off"){
-			if(c["type"] == "3" && c["v2ray_use_json"] == "1"){
-				html += '<td style="width:' + width[5] + ';"></td>';
-			}else if(c["type"] == "4" && c["xray_use_json"] == "1"){
-				html += '<td style="width:' + width[5] + ';"></td>';
-			}else{
-				html += '<td style="width:' + width[5] + ';" id="ss_node_ping_' + c["node"] + '" class="ping"></td>';
-			}
+			html += '<td style="width:' + width[5] + ';" id="ss_node_ping_' + c["node"] + '" class="ping"></td>';
 		}
 		//节点编辑
 		html += '<td style="width:' + width[6] + ';">'
@@ -2723,7 +2715,6 @@ function refresh_html() {
 	html += '</div>'
 	html += '</div>'
 	// botton region
-	//html += '<div align="center" class="nodeTable" style="top: ' + btnTop + 'px; width: 750px; position: absolute;">'
 	html += '<div align="center" class="nodeTable" style="width: 750px;margin-top:20px">'
 	html += '<input id="add_ss_node" class="button_gen" onClick="Add_profile()" type="button" value="添加节点"/>'
 	if(node_nu){
@@ -3065,8 +3056,11 @@ function ping_switch() {
 	//当ping功能关闭时，保存ss_basic_ping_node的关闭值，然后刷新表格以隐藏ping显示
 	var dbus_post = {};
 	if(E("ss_basic_ping_node").value == "off"){
+		E("ss_basic_webtest_url").style.display = "none";
 		E("ss_basic_ping_method").style.display = "none";
 		E("ss_basic_ping_btn").style.display = "none";
+		E("ss_basic_webtest_btn").style.display = "none";
+		E("ss_ping_ts_show").style.display = "none";
 		dbus_post["ss_basic_ping_node"] = "off";
 		//now post
 		var id = parseInt(Math.random() * 100000000);
@@ -3086,20 +3080,35 @@ function ping_switch() {
 				}
 			}
 		});
-	}else{
+	}else if(E("ss_basic_ping_node").value == "0"){
 		E("ss_basic_ping_method").style.display = "";
 		E("ss_basic_ping_btn").style.display = "";
+		E("ss_ping_ts_show").style.display = "";
+		E("ss_basic_webtest_url").style.display = "none";
+		E("ss_basic_webtest_btn").style.display = "none";
+	}else if(E("ss_basic_ping_node").value == "1"){
+		E("ss_basic_ping_method").style.display = "none";
+		E("ss_basic_ping_btn").style.display = "none";
+		E("ss_ping_ts_show").style.display = "none";
+		E("ss_basic_webtest_url").style.display = "";
+		E("ss_basic_webtest_btn").style.display = "";
 	}
 }
-function ping_now() {
+function test_now(test_flag) {
 	//点击【开始ping！】，需要重新请求一次后台脚本来ping，所以刷新一次表格，然后ping
 	var dbus_post = {};
 	dbus_post["ss_basic_ping_node"] = E("ss_basic_ping_node").value;
-	dbus_post["ss_basic_ping_method"] = E("ss_basic_ping_method").value;
-
+	if(test_flag == 0){
+		var post_para = "manual_ping";
+		dbus_post["ss_basic_ping_method"] = E("ss_basic_ping_method").value;
+	}else if(test_flag == 1){
+		var post_para = "manual_webtest";
+		dbus_post["ss_basic_webtest_url"] = E("ss_basic_webtest_url").value;
+	}
+	
 	//now post
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_ping.sh", "params":["manual_ping"], "fields": dbus_post};
+	var postData = {"id": id, "method": "ss_ping.sh", "params":[post_para], "fields": dbus_post};
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -3108,10 +3117,14 @@ function ping_now() {
 		dataType: "json",
 		success: function(response) {
 			if (response.result == id){
-				//清空内存中的ping结果，表格渲染完成后会重新请求的
-				ping_result = "";
-				$(".show-btn1").trigger("click");
-				refresh_table();
+				if (test_flag == 0){
+					//清空内存中的ping结果，表格渲染完成后会重新请求的
+					ping_result = "";
+					$(".show-btn1").trigger("click");
+					refresh_table();
+				}else if (test_flag == 1){
+					console.log(response.result);
+				}
 			}
 		}
 	});
@@ -6203,6 +6216,7 @@ function reset_smartdns_conf(){
 													}
 													var option_trit = [["0", "关闭"], ["2", "每隔2分钟"], ["5", "每隔5分钟"], ["10", "每隔10分钟"], ["15", "每隔15分钟"], ["20", "每隔20分钟"], ["25", "每隔25分钟"], ["30", "每隔30分钟"]];
 													var pingm = [["1", "1次/节点"], ["2", "5次/节点"], ["3", "10次/节点"], ["4", "20次/节点"]];
+													var weburl = ["developer.google.cn/generate_204", "connectivitycheck.gstatic.com/generate_204", "www.gstatic.com/generate_204"];
 													$('#table_addons').forms([
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;导出fancyss配置', hint:'24', multi: [
@@ -6240,8 +6254,10 @@ function reset_smartdns_conf(){
 														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">节点列表</td></tr>'},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点延迟测试设置', multi: [
 															{ id:'ss_basic_ping_node', type:'select', style:'width:auto;max-width:220px', func:'onchange="ping_switch();"', options:[]},
-															{ id:'ss_basic_ping_method', type:'select', style:'width:auto', help:'109', options:pingm, value:'1'},
-															{ suffix:'&nbsp;<input id="ss_basic_ping_btn" class="ss_btn" style="cursor:pointer;" onClick="ping_now()" type="button" value="开始ping！"/>'},
+															{ id:'ss_basic_ping_method', type:'select', style:'width:auto', options:pingm, value:'1'},
+															{ id:'ss_basic_webtest_url', type:'select', style:'width:240px', options:weburl, value:'1'},
+															{ suffix:'&nbsp;<input id="ss_basic_ping_btn" class="ss_btn" style="cursor:pointer;" onClick="test_now(0)" type="button" value="开始ping！"/>'},
+															{ suffix:'&nbsp;<input id="ss_basic_webtest_btn" class="ss_btn" style="cursor:pointer;" onClick="test_now(1)" type="button" value="开始测试！"/>'},
 															{ suffix:'&nbsp;&nbsp;<lable id="ss_ping_ts_show"></lable>' },
 														]},
 														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点列表最大显示行数', id:'ss_basic_row', type:'select', func:'onchange="save_row();"', style:'width:auto', options:[]},

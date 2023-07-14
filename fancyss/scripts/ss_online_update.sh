@@ -289,7 +289,7 @@ skipdb2json(){
 	fi
 	echo_date "➡️开始整理本地节点到文件，请稍等..."
 	# 将所有节点数据储存到文件，顺便清理掉空值的key
-	dbus list ssconf_basic_ | grep -E "_[0-9]?+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >${DIR}/ssconf_keyval.txt
+	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >${DIR}/ssconf_keyval.txt
 	NODES_SEQ=$(cat ${DIR}/ssconf_keyval.txt | sed -n 's/name_\([0-9]\+\)=.*/\1/p'| sort -n)
 	for nu in ${NODES_SEQ}
 	do
@@ -487,7 +487,7 @@ check_nodes(){
 	echo_date "➡️开始节点数据检查..."
 	local ADJUST=0
 	local MAX_NU=${NODE_INDEX}
-	dbus list ssconf_basic_ | grep -E "_[0-9]?+=" >${DIR}/ssconf_keyval_origin.txt
+	dbus list ssconf_basic_ | grep -E "_[0-9]+=" >${DIR}/ssconf_keyval_origin.txt
 	local KEY_NU=$(cat ${DIR}/ssconf_keyval_origin.txt | wc -l)
 	local VAL_NU=$(cat ${DIR}/ssconf_keyval_origin.txt | cut -d "=" -f2 | sed '/^$/d' | wc -l)
 	echo_date "ℹ️最大节点序号：${MAX_NU}"
@@ -1772,7 +1772,7 @@ start_online_update(){
 	# echo_date "⚙️test: 脚本环境变量：$(env | wc -l)个"
 	
 	# 0. var define
-	NODES_SEQ=$(dbus list ssconf_basic_name_ | grep -E "_[0-9]?+=" | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
+	NODES_SEQ=$(dbus list ssconf_basic_name_ | grep -E "_[0-9]+=" | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
 	SEQ_NU=$(echo ${NODES_SEQ} | tr ' ' '\n' | sed '/^$/d' | wc -l)
 
 	# 1. 如果本地没有订阅的节点，同时没有订阅链接，则退出订阅

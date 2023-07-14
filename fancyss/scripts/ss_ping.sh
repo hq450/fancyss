@@ -7,6 +7,10 @@ NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'
 export PATH=${NEW_PATH}
 TMP=/tmp/fancyss_ping
 
+run(){
+	env -i PATH=${PATH} "$@"
+}
+
 start_ping(){
 	touch /tmp/ss_ping.lock
 	eval $(dbus export ss_basic_ping)
@@ -50,13 +54,36 @@ start_ping(){
 		BEGN_NODE=$((${CURR_NODE} - 10))
 	fi
 
+	# get all servers in json
+	dbus list ssconf_basic_ | grep _json_ | grep -v _use_json_ | while read line
+	do
+		local _NU=$(echo "${line}" | awk -F "=" '{print $1}' | awk -F "_" '{print $NF}')
+		local _SERVER_1=$(echo "${line}" | sed 's/^ssconf_basic_\w\+_[0-9]\?\+=//' | base64_decode | run jq -r .outbounds[0].settings.vnext[0].address)
+		local _SERVER_2=$(echo "${line}" | sed 's/^ssconf_basic_\w\+_[0-9]\?\+=//' | base64_decode | run jq -r .outbounds[0].settings.servers[0].address)
+		if [ -n "${_SERVER_1}" ];then
+			local _SERVER=${_SERVER_1}
+		else
+			if [ -n "${_SERVER_2}" ];then
+				local _SERVER=${_SERVER_2}
+			else
+				local _SERVER=""
+			fi
+		fi
+		if [ -n "${_SERVER}" -a -n "${_NU}" ];then
+			echo ssconf_basic_server_${_NU}=${_SERVER} >> ${TMP}/all_servers.txt
+		fi
+	done
+
 	if [ "${BEGN_NODE}" -gt "1" ];then
-		dbus list ssconf_basic_ | grep _server_ | grep -v "server_ip" | sort -n -t "_" -k 4 > ${TMP}/all_servers.txt
+		# get all server 1
+		dbus list ssconf_basic_ | grep _server_ | grep -v "server_ip" | grep -E "_[0-9]+=" >> ${TMP}/all_servers.txt
+		sort -n -t "_" -k 4 ${TMP}/all_servers.txt | run sponge ${TMP}/all_servers.txt
 		sed -n "1,${BEGN_NODE}p" ${TMP}/all_servers.txt > ${TMP}/all_servers_1.txt
 		sed "1,${BEGN_NODE}d" ${TMP}/all_servers.txt >> ${TMP}/all_servers_2.txt
 		cat ${TMP}/all_servers_2.txt ${TMP}/all_servers_1.txt > ${TMP}/all_servers_new.txt
 	else
-		dbus list ssconf_basic_ | grep _server_ | grep -v "server_ip" | sort -n -t "_" -k 4 > ${TMP}/all_servers_new.txt
+		dbus list ssconf_basic_ | grep _server_ | grep -v "server_ip" | grep -E "_[0-9]+=" >> ${TMP}/all_servers.txt
+		sort -n -t "_" -k 4 ${TMP}/all_servers.txt > ${TMP}/all_servers_new.txt
 	fi
 
 	# 清空 ping.txt文件
@@ -163,6 +190,93 @@ clean_ping(){
 	fi
 }
 
+# ----------------------------------------------------------------------
+# webtest
+gen_confs(){
+	mkdir -p $TMP
+	rm -rf $TMP/*
+
+	# 多线程ping，一次ping $MAX_THREAD 个; armv7比较渣渣，线程数给少点
+	CORES=$(cat /proc/cpuinfo | grep -Ec "processor")
+	ARCH=$(uname -m)
+	MAX_THREAD="100"
+	case $ARCH in
+	aarch64)
+		BASE_RATE=10
+		;;
+	armv7l)
+		BASE_RATE=5
+		;;
+	esac
+	MAX_THREAD=$(($CORES * $BASE_RATE))
+	
+	
+	dbus list ssconf_basic_server_ |  grep -E "_[0-9]?+=" | grep -v "server_ip" | sed 's/^ssconf_basic_server_//' | awk -F"=" '{print $1}' | sort -n > ${TMP}/all_servers_nu.txt
+	cat ${TMP}/all_servers_nu.txt | xargs -n "${MAX_THREAD}" | while read nus
+	do
+		for nu in $nus
+		do
+			# get server type
+			node_webtest $nu
+		done
+		wait
+	done
+	wait
+}
+
+node_webtest(){
+	gen_jsons $nu
+	run_xray
+	httping_test
+}
+
+gen_jsons(){
+	local nu=$1
+	local type=$(dbus get ssconf_basic_type_${nu})
+	case $type in
+		0)
+			gen_outbound_ss $nu
+			gen_inbound $nu
+			gen_routing $nu
+			;;
+		1)
+			gen_outbound_ssr $nu
+			gen_inbound $nu
+			gen_routing $nu
+			;;					
+		3)
+			gen_outbound_v2ray $nu
+			gen_inbound $nu
+			gen_routing $nu
+			;;	
+		4)
+			gen_outbound_xray $nu
+			gen_inbound $nu
+			gen_routing $nu
+			;;
+		5)
+			gen_outbound_trojan $nu
+			gen_inbound $nu
+			gen_routing $nu
+			;;
+	esac
+}
+
+gen_outbound_ss(){
+	local node=$1
+
+}
+
+
+run_xray(){
+	echo 123
+}
+httping_test(){
+	echo 123
+}
+
+# ----------------------------------------------------------------------
+
 case $2 in
 web_ping)
 	# 当用户进入插件，插件列表渲染好后开始调用本脚本进行ping
@@ -174,7 +288,12 @@ manual_ping)
 	# tell web: you can start ping now
 	http_response $1
 	;;
-web_test)
+web_webtest)
+	# 当用户进入插件，插件列表渲染好后开始调用本脚本进行ping
+	webtest
+	;;
+manual_webtest)
 	echo XU6J03M6
+	http_response $1
 	;;
 esac
