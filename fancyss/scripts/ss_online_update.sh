@@ -1628,7 +1628,7 @@ get_online_rule_now(){
 	# 8. 解析订阅原始文本
 	# xargs --show-limits </dev/null to get arg_max, GT-AX6000 is 131072, which means 128kb
 	# 如果订阅原始文本超过128kb，会导致echo，printf命令无法完整输出，所以直接对文件操作即可
-	cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | tr -d '\n' | sed 's/$/===/' | base64 -d > ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
+	cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | tr -d '\n' | sed 's/-/+/g;s/_/\//g' | sed 's/$/===/' | base64 -d > ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" != "0" ]; then
 		echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
 	fi
