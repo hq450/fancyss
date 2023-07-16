@@ -887,6 +887,7 @@ add_vmess_node(){
 	
 	# 传输协议: tcp kcp ws h2 quic grpc
 	v_net=$(json_query net "${decrypt_info}")
+	[ -z "${v_net}" ] && v_net="tcp"
 	
 	# 伪装类型，在tcp kcp quic中使用，grpc mode借用此字段，ws和h2中不使用
 	v_type=$(json_query type "${decrypt_info}")
@@ -1019,7 +1020,7 @@ add_vmess_node(){
 	# echo vmess_tls: ${v_tls}
 	# echo ------------------
 	
-	if [ -z "${v_ps}" -o -z "${v_add}" -o -z "${v_port}" -o -z "${v_id}" -o -z "${v_net}" ];then
+	if [ -z "${v_ps}" -o -z "${v_add}" -o -z "${v_port}" -o -z "${v_id}" ];then
 		# 丢弃无效节点
 		echo_date "🔴vmess节点：检测到一个错误节点，跳过！"
 		return 1
