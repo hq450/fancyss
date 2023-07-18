@@ -77,6 +77,7 @@ var option_xflow = [["", "none"], ["xtls-rprx-vision", "xtls-rprx-vision"], ["xt
 var option_fingerprint = ["chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized", ""];
 var option_naive_prot = ["https", "quic"];
 var heart_count = 1;
+var stop_scroll = 0;
 const pattern=/[`~!@#$^&*()=|{}':;'\\\[\]\.<>\/?~！@#￥……&*（）——|{}%【】'；：""'。，、？\s]/g;
 String.prototype.myReplace = function(f, e){
 	var reg = new RegExp(f, "g"); 
@@ -85,6 +86,14 @@ String.prototype.myReplace = function(f, e){
 function init() {
 	show_menu(menu_hook);
 	get_dbus_data();
+}
+
+function scroll_msg() {
+	if(stop_scroll == 0) {
+		$('#scroll_msg').stop().animate({scrollTop: 23}, 500, 'swing', function() {
+			$(this).find('li:last').after($('li:first', this));
+		});
+	}
 }
 function refresh_dbss() {
 	$.ajax({
@@ -2318,12 +2327,25 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_naive_port").value = "443";	//fancyss-full
 			E("ss_node_table_naive_user").value = "";		//fancyss-full
 			E("ss_node_table_naive_pass").value = "";		//fancyss-full
+			// refresh panel
+			refresh_node_panel();
 		}
 	});
 	$("#vpnc_settings").fadeOut(300);
 	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
 }
-
+function refresh_node_panel() {
+	$.ajax({
+		type: "GET",
+		url: "/_api/ss",
+		dataType: "json",
+		async: false,
+		success: function(data) {
+			db_ss = data.result[0];
+			ss_node_sel();
+		}
+	});
+}
 function generate_node_info() {
 	// 统计节点信息
 	ss_nodes = [];
@@ -3492,30 +3514,58 @@ function message_show() {
 		dataType: 'json',
 		cache: false,
 		success: function(res) {
-			var rand = parseInt(Math.random() * 100)
+			var rand_1 = parseInt(Math.random() * 100)
+			// 通知1，一般通知下更新日志，如果已经升级到最新版本，则不再显示更新日志
 			if (res["msg_1"] && res["switch_1"]){
-				// 通知1
-				if (rand < res["switch_1"]){
-					$("#msg_1").html(res["msg_1"]);
+				if (rand_1 < res["switch_1"]){
+					if (versionCompare(res["version"], db_ss["ss_basic_version_local"])) {
+						$("#fixed_msg").append('<li id="msg_1" style="list-style: none;height:23px">' + res["msg_1"] + '</li>');
+					}
 				}
 			}
+			// 通知2，其它重要通知的时候使用
 			if (res["msg_2"] && res["switch_2"]){
-				// 通知1
-				if (rand < res["switch_2"]){
-					$("#msg_2").html(res["msg_2"]);
+				if (rand_1 < res["switch_2"]){
+					$("#fixed_msg").append('<li id="msg_2" style="list-style: none;height:23px">' + res["msg_2"] + '</li>');
 				}
 			}
-			if (res["msg_3"] && res["switch_3"]){
-				// 广告1
-				if (rand < res["switch_3"]){
-					$("#msg_3").html(res["msg_3"]);
+			// 广告位，广告不能放太多，要优质，稍多的话限制显示数量，以滚动形式显示，免得太碍人眼
+			var ads_count = 0;
+			var rand_2 = parseInt(Math.random() * 100)
+			for(var i = 3; i < 10; i++){
+				if (res["msg_" + i] && res["switch_" + i]){
+					if (rand_2 < res["switch_" + i]){
+						$("#scroll_msg").append('<li id="msg_"' + i + ' style="list-style: none;height:23px">' + res["msg_" + i] + '</li>');
+						ads_count++;
+					}
 				}
 			}
-			if (res["msg_4"] && res["switch_4"]){
-				// 广告2
-				if (rand < res["switch_4"]){
-					$("#msg_4").html(res["msg_4"]);
-				}
+			// 如果只有两个广告，就全部显示，且不进行滚动
+			console.log(ads_count + "个广告！")
+			if (ads_count == 0) return;
+			if (ads_count <= 2){
+				$("#scroll_msg").css("height", (ads_count * 23) + "px");
+				return;
+			}
+			//超过两个广告，则广告显示高度为推送的高度
+			if (res["scroll_line"]){
+				$("#scroll_msg").css("height", (res["scroll_line"] * 23) + "px");
+			}else{
+				$("#scroll_msg").css("height", "23px");
+			}
+			//鼠标放上广告停止滚动
+			$("#scroll_msg").on("mouseover", function() {
+				stop_scroll = 1;
+			});
+			//鼠标移开恢复滚动
+			$("#scroll_msg").on("mouseleave", function() {
+				stop_scroll = 0;
+			});
+			//开始滚动，每个广告停留5s
+			if (res["ads_time"]){
+				setInterval("scroll_msg();", res["ads_time"]);
+			}else{
+				setInterval("scroll_msg();", 5000);
 			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
@@ -4803,8 +4853,8 @@ function reset_smartdns_conf(){
 										</div>
 										<div style="margin:10px 0 0 5px;" class="splitLine"></div>
 										<div class="SimpleNote" id="head_illustrate">
-											<ul style="padding:0;margin:0;line-height:1.8">
-												<li id="msg_0" style="list-style: none;">
+											<ul id="fixed_msg" style="padding:0;margin:0;line-height:1.8;">
+												<li id="msg_0" style="list-style: none;height:23px">
 													📌 本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>
 													、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>
 													、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2ray</u></em></a>
@@ -4814,10 +4864,8 @@ function reset_smartdns_conf(){
 													六种客户端的科学上网、游戏加速工具。
 													&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw" target="_blank"><em>【Telegram交流群】</em></a>
 												</li>
-												<li id="msg_1" style="list-style: none;"></li>
-												<li id="msg_2" style="list-style: none;"></li>
-												<li id="msg_3" style="list-style: none;"></li>
-												<li id="msg_4" style="list-style: none;"></li>
+											</ul>
+											<ul id="scroll_msg" style="padding:0;margin:0;line-height:1.8;overflow: hidden;">
 											</ul>
 										</div>
 										<!-- this is the popup area for process status -->
