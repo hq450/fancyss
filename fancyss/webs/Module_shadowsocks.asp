@@ -3535,7 +3535,7 @@ function message_show() {
 			for(var i = 3; i < 10; i++){
 				if (res["msg_" + i] && res["switch_" + i]){
 					if (rand_2 < res["switch_" + i]){
-						$("#scroll_msg").append('<li id="msg_"' + i + ' style="list-style: none;height:23px">' + res["msg_" + i] + '</li>');
+						$("#scroll_msg").append('<li id="msg_' + i + '" style="list-style: none;height:23px">' + res["msg_" + i] + '</li>');
 						ads_count++;
 					}
 				}
