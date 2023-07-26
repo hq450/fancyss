@@ -88,13 +88,29 @@ input[type=radio]{
 	-moz-border-radius: 5px;
 	border-radius: 5px;
 	z-index: 200;
-	/*background-color:#2B373B;*/
-	margin-left: 25px;
-	top: 320px;
-	width:700px;
+	top: 250px;
+	width:750px;
 	return height:auto;
 	box-shadow: 3px 3px 10px #000;
-	display:none;
+	line-height:1.8;
+	padding-bottom: 10px;
+	display: none;
+}
+.fancyss_qis {
+	position: absolute;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+	z-index: 200;
+	background-color:#2B373B;
+	margin-left: 10px;
+	top: 250px;
+	width:730px;
+	return height:auto;
+	box-shadow: 3px 3px 10px #000;
+	line-height:1.8;
+	padding-bottom: 10px;
+	visibility:hidden;
 }
 .content_status {
 	position: absolute;
@@ -102,7 +118,6 @@ input[type=radio]{
 	-moz-border-radius: 5px;
 	border-radius:10px;
 	z-index: 10;
-	/*background-color:#2B373B;*/
 	margin-left: -215px;
 	top: 240px;
 	width:980px;
@@ -110,6 +125,20 @@ input[type=radio]{
 	box-shadow: 3px 3px 10px #000;
 	background: rgba(0,0,0,0.85);
 	display:none;
+}
+.content_status_ext {
+	position: absolute;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius:5px;
+	z-index: 200;
+	margin-left: -215px;
+	top: 240px;
+	width:980px;
+	return height:auto;
+	box-shadow: 3px 3px 10px #000;
+	background: rgba(0,0,0,0.85);
+	visibility:hidden;
 }
 .user_title{
 	text-align:center;
@@ -122,8 +151,8 @@ input[type=radio]{
 	width:680px;
 	font-size:12px;
 	color:#FFFFFF;
-	margin-top:10px;
-	*margin-left:10px;
+	/*margin-top:10px;*/
+	/*margin-left:10px;*/
 }
 .QISform_wireless thead {
 	font-size:15px;
@@ -132,7 +161,7 @@ input[type=radio]{
 }
 .QISform_wireless th {
 	padding-left:10px;
-	*padding-left:30px;
+	/*padding-left:30px;*/
 	font-size:12px;
 	font-weight:bolder;
 	color: #FFFFFF;
@@ -245,6 +274,106 @@ body .layui-layer-lan .layui-layer-btn {text-align:center}
 body .layui-layer-lan .layui-layer-btn0 {border-color:#22ab39; background-color:#22ab39;color:#fff; background:#22ab39}
 body .layui-layer-lan .layui-layer-btn .layui-layer-btn1 {border-color:#1678ff; background-color:#1678ff;color:#fff;}
 body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:#FF6600;color:#fff;}
+.dropdownbtn {
+	background-color: white;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	column-gap: var(--gap);
+	padding: 0.6rem;
+	cursor: pointer;
+	border-radius: var(--radius);
+	border: none;
+	box-shadow: var(--shadow);
+	position: relative;
+}
+.dropdown {
+	position: absolute;
+	width: 150px;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	box-shadow: var(--shadow);
+	border-radius: var(--radius);
+	margin-top: 0.3rem;
+	background: white;
+	visibility: hidden;
+	opacity: 0;
+	transform: translateY(0.5rem);
+	transition: all 0.1s cubic-bezier(0.16, 1, 0.5, 1);
+	border: solid 1px #2ED9C3;
+	background: rgb(0 0 0);
+	--color: #2ed9c3;
+	--gap: 0.5rem;
+	--radius: 5px;
+}
+#app[skin=ASUSWRT] .dropdown {
+	border: solid 1px #67767d;
+	--color: #67767d;
+}
+#app[skin=ROG] .dropdown {
+	border: solid 1px #91071f;
+	--color: #91071f;
+}
+#app[skin=TUF] .dropdown {
+	border: solid 1px #92650F;
+	--color: #92650F;
+}
+#app[skin=TS] .dropdown {
+	border: solid 1px #2ed9c3;
+	--color: #2ed9c3;
+}
+.dropdown a {
+	display: flex;
+	align-items: center;
+	column-gap: var(--gap);
+	padding: 0.8rem 1rem;
+	text-decoration: none;
+}
+.dropdown a:hover {
+	background-color: var(--color);
+	color: white;
+}
+.show {
+	visibility: visible;
+	opacity: 1;
+	transform: translateY(0rem);
+}
+.fancyss_qis {
+	position: absolute;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+	z-index: 200;
+	background-color:#2B373B;
+	margin-left: 10px;
+	top: 250px;
+	width:730px;
+	return height:auto;
+	box-shadow: 3px 3px 10px #000;
+	/*display:none;*/
+	line-height:1.8;
+	visibility:hidden;
+}
+/*only for rog tuf ts*/
+#app[skin=ROG] .pop_div_bg{background-color: #030102;outline: solid 1px #91071f;}
+#app[skin=TUF] .pop_div_bg{background-color: #030102;outline: solid 1px #92650F;}
+#app[skin=TS] .pop_div_bg{background-color: #030102;outline: solid 1px #2ED9C3;}
+#app[skin=ROG] .FormTable {background-color: rgb(177 177 177 / 0%);border: none;}
+#app[skin=TUF] .FormTable {background-color: rgb(177 177 177 / 0%);border: none;}
+#app[skin=TS] .FormTable {background-color: rgb(177 177 177 / 0%);border: none;}
+#app[skin=ROG] .FormTable th {border: none;}
+#app[skin=TUF] .FormTable th {border: none;}
+#app[skin=TS] .FormTable th {border: none;}
+#app[skin=ROG] .FormTable td {border: none;}
+#app[skin=TUF] .FormTable td {border: none;}
+#app[skin=TS] .FormTable td {border: none;}
+#app[skin=ROG] #table_test {border: 0.5px solid  #91071f;}
+#app[skin=TUF] #table_test {border: 0.5px solid  #92650F;}
+#app[skin=TS] #table_test {border: 0.5px solid  #2ED9C3;}
+#app[skin=ROG] .content_status_ext {outline: 1px solid #91071f;}
+#app[skin=TUF] .content_status_ext {outline: 1px solid #92650F;}
+#app[skin=TS] .content_status_ext {outline: 1px solid #2ED9C3;}
 
 /*ASUSWRT*/
 #app[skin=ASUSWRT] .myDragClass{

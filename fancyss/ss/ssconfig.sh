@@ -722,7 +722,7 @@ __get_server_resolver() {
 
 	if [ "${idx}" == "99" ]; then
 		if [ "${tye}" == "tcp" ];then
-			local user_content=${ss_basic_s_resolver_udp_user}
+			local user_content=${ss_basic_s_resolver_tcp_user}
 		else
 			local user_content=${ss_basic_s_resolver_udp_user}
 		fi
@@ -810,7 +810,7 @@ __resolve_server_domain() {
 					local current=$(shuf -i 1-18 -n 1)
 				elif [ "${ss_basic_s_resolver_udp}" == "-1" ];then
 					local current=$(shuf -i 1-8 -n 1)
-				elif [ "${ss_basic_s_resolver_udp}" == "-1" ];then
+				elif [ "${ss_basic_s_resolver_udp}" == "-2" ];then
 					local current=$(shuf -i 11-18 -n 1)
 				fi
 			fi
@@ -1106,7 +1106,7 @@ __resolve_server_domain() {
 	fi
 
 	# resolve failed
-	if [  "${SERVER_IP}" == "127.0.0.1" ]; then
+	if [ "${SERVER_IP}" == "127.0.0.1" ]; then
 		return 1
 	fi
 	
@@ -1509,7 +1509,7 @@ ss_arg() {
 	fi
 
 	if [ "${ss_basic_ss_v2ray}" == "1" ]; then
-		if [ "${ss_basic_ss_obfs}" == "tls" -o "${ss_basic_ss_obfs}" == "tls" ]; then
+		if [ "${ss_basic_ss_obfs}" == "http" -o "${ss_basic_ss_obfs}" == "tls" ]; then
 			echo_date "检测到你同时开启了obfs-local和v2ray-plugin！。"
 			echo_date "插件只能支持开启一个SIP002插件！"
 			echo_date "请更正设置后重试！"
@@ -1656,8 +1656,18 @@ start_ss_local() {
 			run_bg sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d
 			detect_running_status sslocal
 		else
+			local ARG_1 ARG_2
+			if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
+				local ARG_1="--fast-open"
+				echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+			fi
+
+			if [ "${ss_basic_tnd}" == "1" ]; then
+				local ARG_2="--no-delay"
+			fi
+		
 			echo_date "开启ss-local(shadowsocks-libev)，提供socks5代理端口：23456"
-			run_bg ss-local -l 23456 -c ${CONFIG_FILE} ${ARG_OBFS} -u -f /var/run/sslocal1.pid
+			run_bg ss-local -l 23456 -c ${CONFIG_FILE} ${ARG_OBFS} ${ARG_1} ${ARG_2} -u -f /var/run/sslocal1.pid
 			detect_running_status ss-local "/var/run/sslocal1.pid"
 		fi
 	fi
@@ -3743,8 +3753,7 @@ start_ss_redir() {
 }
 
 fire_redir() {
-	local ARG_1=""
-	local ARG_2=""
+	local ARG_1 ARG_2 ARG_3
 	if [ "${ss_basic_type}" == "0" -a "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ];then
 		local ARG_1="--reuse-port"
 	fi
@@ -3757,8 +3766,6 @@ fire_redir() {
 	if [ "${ss_basic_type}" == "0" -a "$ss_basic_tnd" == "1" ]; then
 		echo_date "$BIN开启TCP_NODELAY支持."
 		local ARG_3="--no-delay"
-	else
-		local ARG_3=""
 	fi
 
 	if [ "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ]; then
@@ -4667,19 +4674,22 @@ creat_xray_json() {
 			EOF
 		fi
 		# outbounds area
+		[ -z "${ss_basic_xray_alterid}" ] && ss_basic_xray_alterid="0"
+		[ -z "${ss_basic_xray_prot}" ] && ss_basic_xray_prot="vless"
 		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
-					"protocol": "vless",
+					"protocol": "${ss_basic_xray_prot}",
 					"settings": {
 						"vnext": [
 							{
 								"address": "${ss_basic_server}",
-								"port": $ss_basic_port,
+								"port": ${ss_basic_port},
 								"users": [
 									{
 										"id": "$ss_basic_xray_uuid"
+										,"alterId": $ss_basic_xray_alterid
 										,"security": "auto"
 										,"encryption": "$ss_basic_xray_encryption"
 										,"flow": $(get_value_null $ss_basic_xray_flow)
@@ -4712,6 +4722,9 @@ creat_xray_json() {
 		EOF
 		echo_date "解析Xray配置文件..."
 		sed -i '/null/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		if [ "${ss_basic_xray_prot}" == "vless" ];then
+			sed -i '/alterId/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		fi
 		if [ "${LINUX_VER}" == "26" ]; then
 			sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
 		fi

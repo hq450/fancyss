@@ -1,6 +1,9 @@
 function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
+function isObjectEmpty(obj) {
+	return Object.keys(obj).length === 0;
+}
 var elem = {
 	parentElem: function(e, tagName) {
 		e = E(e);
@@ -1302,6 +1305,39 @@ function openssHint(itemNum) {
 		statusmenu += "如 gt：过滤 tag:gfw 域名的 AAAA 查询、禁止向 trust 上游转发 AAAA 查询<br />";
 		statusmenu += "如 mc：过滤 tag:chn 域名的 AAAA 查询、禁止向 china 上游转发 AAAA 查询<br />";
 		_caption = "说明";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 146) {
+		width = "600px";
+		statusmenu = "fancyss现在同时支持ping测试和web延迟测试，ping延迟测试和web延迟测试各有优缺点，在实际使用中更建议使用web延迟测试<br /><br />";
+		statusmenu += "ping延迟的优点<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;1. 测试速度快<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;2. 能反应到服务器的丢包情况<br /><br />";
+		statusmenu += "ping延迟的缺点<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;1. 只能测试到服务器的icmp包延迟，且服务器禁ping后无法获取延迟<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;2. 中转机场只能获得到国内中转服务器的延迟，无法获得到国外代理服务器的延迟<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;3. 能ping通不代表此节点可用，ping不通也不代表节点不可用（可能是服务器禁ping）<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;4. ping低不代表该节点访问网页延迟低<br /><br />";
+		statusmenu += "web延迟的优点<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;1. 能反应当前节点代理是否可用，能测出延迟即代表节点可用<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;2. 能测试到实际经过代理访问网页的延迟，不受机场中转影响<br /><br />";
+		statusmenu += "web延迟的缺点<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;1. 测试速度较慢，虽然web延迟测试是多线程的，但是也无法和PC相比<br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;2. 无法反应节点的丢包情况，当然如果丢包及其严重，也会测试不通<br />";
+		_caption = "说明：";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 147) {
+		width = "500px";
+		statusmenu = "1. 此处设定的域名将用于所有节点的web延迟测试，同时用于插件运行状态中的国外运行状态检测（保存后立即生效）<br /><br />";
+		statusmenu += "2. 不同的url测试的结果不一样是正常的，fancyss在3.2.1版本之前一直是采用的www.google.com.tw作为测试域名，现在可以根据自己的情况自由选择<br /><br />";
+		statusmenu += "3. 因为机场节点服务器通常是各个国家的，要测试到最好的延迟，使用一些大服务商提供的测试url更加准确，比如google、apple、clodflare<br /><br />";
+		statusmenu += "4. 部分中转机场会在中转机上劫持测试url，以返回更好的延迟，导致比如香港、美国等不同地区节点测出相似的延迟，此时建议更换测试url，以获得真实延迟<br />";
+		_caption = "说明：";
+		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 148) {
+		width = "500px";
+		statusmenu += "1. 此处设定的域名将用于插件运行状态中的国内运行状态检测，（保存后立即生效）fancyss在3.2.1版本之前使用的是www.baidu.com<br /><br />";
+		statusmenu += "2. fancyss在3.2.1版本之前使用的是www.baidu.com作为测试域名，现在可以根据自己情况选择一个延迟较低的来使用<br />";
+		_caption = "说明：";
 		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	}
 	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');

@@ -2,7 +2,6 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 
-source /koolshare/scripts/base.sh
 source /koolshare/scripts/ss_base.sh
 
 LOGFILE_F=/tmp/upload/ssf_status.txt
@@ -71,6 +70,19 @@ failover_action(){
 		# 重启
 		start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 	elif [ "$ss_failover_s4_1" == "2" ];then
+		if [ "$ss_failover_s4_2" == "3" ];then
+			if [ ! -f "/tmp/upload/webtest_bakcup.txt" ];then
+				LOGM "$LOGTIME1 fancyss：没有找到web延迟测试结果，采取切换到下个节点的策略..."
+				ss_failover_s4_1="2"
+			fi
+			local CURR_NODE=${ssconf_basic_node}
+			local FAST_NODE=$(cat /tmp/upload/webtest_bakcup.txt|sed '/failed/d;/stop/d;/ns/d' | sort -t">" -nk2 | sed "/^${CURR_NODE}>/d" | head -n1 | awk -F ">" '{print $1}')
+			if [ -z "${FAST_NODE}" ];then
+				LOGM "$LOGTIME1 fancyss：没有找到web延迟测试最低的节点，采取切换到下个节点的策略..."
+				ss_failover_s4_1="2"
+			fi
+		fi
+	
 		if [ "$ss_failover_s4_2" == "1" ];then
 			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
 			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
@@ -80,8 +92,8 @@ failover_action(){
 			# 降级
 			dbus set ss_failover_s4_3=$CURRENT
 			# 重启
-			dbus set ss_heart_beat="1"
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			dbus set ss_heart_beat="1"
 		elif [ "$ss_failover_s4_2" == "2" ];then
 			NEXT_NODE=$(($CURRENT + 1))
 			MAXT_NODE=$(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)
@@ -97,8 +109,13 @@ failover_action(){
 			# 切换
 			dbus set ssconf_basic_node=$NEXT_NODE
 			# 重启
-			dbus set ss_heart_beat="1"
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			dbus set ss_heart_beat="1"
+		elif [ "$ss_failover_s4_2" == "3" ];then
+			LOGM "$LOGTIME1 fancyss：切换到web延迟最低节点：[$(dbus get ssconf_basic_name_${FAST_NODE})]..."
+			dbus set ssconf_basic_node=$FAST_NODE
+			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			dbus set ss_heart_beat="1"
 		fi
 	fi	
 }
@@ -111,7 +128,7 @@ failover_check_1(){
 		return
 	fi
 	
-	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s1" | grep -c "200 OK")
+	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s1" | grep -Ec "200 OK|204 OK")
 	if [ "$OK_MARK" == "0" ];then
 		failover_action 1
 	fi
@@ -125,7 +142,7 @@ failover_check_2(){
 		return
 	fi
 
-	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s2_1" | grep -vc "200 OK")
+	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s2_1" | grep -Evc "200 OK|204 OK")
 	if [ "$OK_MARK" -gt "$ss_failover_s2_2" ];then
 		failover_action 2
 	fi
@@ -139,7 +156,7 @@ failover_check_3(){
 		return
 	fi
 
-	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s3_1" | grep -E "200 OK" | grep -oe "⏱ [0-9].* ms" | sed 's/⏱ //g'| sed 's/ ms//g' | awk '{sum+=$1} END {print sum/NR}' | awk '{printf "%.0f\n",$1}')
+	local OK_MARK=$(cat "$LOGFILE_F" | sed '/fancyss/d' | tail -n "$ss_failover_s3_1" | grep -E "200 OK|204 OK" | grep -oe "⏱ [0-9].* ms" | sed 's/⏱ //g'| sed 's/ ms//g' | awk '{sum+=$1} END {print sum/NR}' | awk '{printf "%.0f\n",$1}')
 	#echo "$LOGTIME1 fancyss：前15次状态平均延迟：$OK_MARK ！"
 	if [ "$OK_MARK" -gt "$ss_failover_s3_2" ];then
 		failover_action 3 "$OK_MARK"

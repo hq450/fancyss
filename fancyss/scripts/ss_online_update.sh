@@ -99,6 +99,8 @@ unset PWD
 # ssconf_basic_v2ray_json_
 # ssconf_basic_xray_use_json_
 # ssconf_basic_xray_uuid_
+# ssconf_basic_xray_alterid_
+# ssconf_basic_xray_prot_
 # ssconf_basic_xray_encryption_
 # ssconf_basic_xray_flow_
 # ssconf_basic_xray_network_
@@ -1090,6 +1092,9 @@ add_vless_node(){
 	fi
 	
 	x_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
+	if [ "${strtype}" == "vmess" ];then
+		x_aid=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "alterId" | awk -F"=" '{print $2}')
+	fi
 	x_host=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "host" | awk -F"=" '{print $2}')
 	x_path=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "path" | awk -F"=" '{print $2}' | urldecode)
 	x_encryption=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "encryption" | awk -F"=" '{print $2}')
@@ -1276,11 +1281,8 @@ add_vless_node(){
 	json_add_string name "${x_remarks}"
 	json_add_string port "${x_server_port}"
 	json_add_string server "${x_server}"
-	if [ "${strtype}" == "vmess" ];then
-		json_add_string type "3"
-	else
-		json_add_string type "4"
-	fi
+	json_add_string type "4"
+	json_add_string xray_alterid "${x_aid}"
 	json_add_string xray_encryption "${x_encryption}"
 	json_add_string xray_fingerprint "${x_fp}"
 	json_add_string xray_flow "${x_flow}"
@@ -1297,6 +1299,7 @@ add_vless_node(){
 	json_add_string xray_network_security_alpn_h2 "${x_alpn_h2}"
 	json_add_string xray_network_security_alpn_http "${x_alpn_http}"
 	json_add_string xray_network_security_sni "${x_sni}"
+	json_add_string xray_prot "${strtype}"
 	json_add_string xray_publickey "${x_pbk}"
 	json_add_string xray_shortid "${x_sid}"
 	json_add_string xray_show "0"
@@ -1694,7 +1697,7 @@ get_online_rule_now(){
 			fi
 			;;
 		vless)
-			add_vless_node "${node_info}" 1
+			add_vless_node "${node_info}" 1 vless
 			;;
 		trojan)
 			add_trojan_node "${node_info}" 1
@@ -1886,20 +1889,17 @@ start_offline_update() {
 			add_ssr_node "${node_info}" 2
 			;;
 		vmess)
-			echo "${node_info}"
 			local _match=$(echo "${node_info}" | grep -E "@|\?|type")
 			if [ -n "${_match}" ];then
 				#明文的vmess链接
-				echo 123
 				add_vless_node "${node_info}" 2 vmess
 			else
 				#base64的vmess链接
-				echo 234
 				add_vmess_node "${node_info}" 2
 			fi
 			;;
 		vless)
-			add_vless_node "${node_info}" 2
+			add_vless_node "${node_info}" 2 vless
 			;;
 		trojan)
 			add_trojan_node "${node_info}" 2

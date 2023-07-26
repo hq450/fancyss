@@ -55,7 +55,6 @@ var noChange_dns = 0;
 var poped = 0;
 var submit_flag = "0";
 var x = 5;
-var ping_result = "";
 var save_flag = "";
 var STATUS_FLAG;
 var SMARTDNS_FLAG;
@@ -78,6 +77,8 @@ var option_fingerprint = ["chrome", "firefox", "safari", "ios", "android", "edge
 var option_naive_prot = ["https", "quic"];
 var heart_count = 1;
 var stop_scroll = 0;
+var close_latency_flag = 0;
+var stopFlag = 1;
 const pattern=/[`~!@#$^&*()=|{}':;'\\\[\]\.<>\/?~！@#￥……&*（）——|{}%【】'；：""'。，、？\s]/g;
 String.prototype.myReplace = function(f, e){
 	var reg = new RegExp(f, "g"); 
@@ -152,10 +153,6 @@ function conf2obj(obj, action) {
 		if (field == "ss_base64_links") {
 			continue;
 		}
-		// fill in html, not input or select...
-		if (field == "ss_basic_ping_ts") {
-			$("#ss_ping_ts_show").html("<em>上次ping时间: " + obj[field] + "</em>")
-		}		
 		// base64_decode then fill
 		if (field == "ss_basic_naive_pass") {		//fancyss-full
 			el.value = Base64.decode(obj[field]);	//fancyss-full
@@ -216,18 +213,13 @@ function ss_node_sel() {
 function refresh_options() {
 	if (node_max == 0) return false;
 	var option0 = $("#ssconf_basic_node");
-	var option1 = $("#ss_basic_ping_node");
 	var option2 = $("#ss_basic_udp_node");
 	var option3 = $("#ss_failover_s4_3");
 	
 	option0.find('option').remove().end();
-	option1.find('option').remove().end();
 	option2.find('option').remove().end();
 	option3.find('option').remove().end();
 	
-	option1.append('<option value="off" selected>关闭延迟测试</option>');
-	option1.append('<option value="0">ping延迟测试</option>');
-	//option1.append('<option value="1">web延迟测试</option>');
 	for (var field in confs) {
 		var c = confs[field];
 		if(c["type"] == "3" && c["v2ray_use_json"] == "1"){
@@ -292,7 +284,6 @@ function refresh_options() {
 		}
 	}
 	option0.val(db_ss["ssconf_basic_node"]||"1");
-	option1.val(db_ss["ss_basic_ping_node"]||"off");
 	option2.val(db_ss["ss_basic_udp_node"]||"1");
 	option3.val((db_ss["ss_failover_s4_3"])||"1");
 	// refresh node dns resolv option
@@ -326,7 +317,7 @@ function save() {
 	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
 	// key define
-	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_basic_ping_node", "ss_basic_ping_method", "ss_dns_plan", "ss_basic_chng_china_1_prot", "ss_basic_chng_china_1_udp", "ss_basic_chng_china_1_udp_user", "ss_basic_chng_china_1_tcp", "ss_basic_chng_china_1_tcp_user", "ss_basic_chng_china_1_doh", "ss_basic_chng_china_2_prot", "ss_basic_chng_china_2_udp", "ss_basic_chng_china_2_udp_user", "ss_basic_chng_china_2_tcp", "ss_basic_chng_china_2_tcp_user", "ss_basic_chng_china_2_doh", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt_udp_val", "ss_basic_chng_trust_1_opt_udp_val_user", "ss_basic_chng_trust_1_opt_tcp_val", "ss_basic_chng_trust_1_opt_tcp_val_user", "ss_basic_chng_trust_1_opt_doh_val", "ss_basic_chng_trust_2_opt_doh", "ss_basic_chng_trust_2_opt", "ss_basic_chng_trust_2_opt_udp", "ss_basic_chng_trust_2_opt_tcp", "ss_basic_chng_repeat_times", "ss_china_dns", "ss_china_dns_user", "ss_basic_smrt", "ss_basic_dohc_sel_china", "ss_basic_dohc_udp_china", "ss_basic_dohc_udp_china_user", "ss_basic_dohc_tcp_china", "ss_basic_dohc_tcp_china_user", "ss_basic_dohc_doh_china", "ss_basic_dohc_sel_foreign", "ss_basic_dohc_tcp_foreign", "ss_basic_dohc_tcp_foreign_user", "ss_basic_dohc_doh_foreign", "ss_basic_dohc_cache_timeout", "ss_foreign_dns", "ss_dns2socks_user", "ss_sstunnel_user", "ss_direct_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_s_resolver", "ss_basic_s_resolver_udp", "ss_basic_s_resolver_udp_user", "ss_basic_s_resolver_tcp", "ss_basic_s_resolver_tcp_user", "ss_basic_s_resolver_doh" ];
+	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_dns_plan", "ss_basic_chng_china_1_prot", "ss_basic_chng_china_1_udp", "ss_basic_chng_china_1_udp_user", "ss_basic_chng_china_1_tcp", "ss_basic_chng_china_1_tcp_user", "ss_basic_chng_china_1_doh", "ss_basic_chng_china_2_prot", "ss_basic_chng_china_2_udp", "ss_basic_chng_china_2_udp_user", "ss_basic_chng_china_2_tcp", "ss_basic_chng_china_2_tcp_user", "ss_basic_chng_china_2_doh", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt_udp_val", "ss_basic_chng_trust_1_opt_udp_val_user", "ss_basic_chng_trust_1_opt_tcp_val", "ss_basic_chng_trust_1_opt_tcp_val_user", "ss_basic_chng_trust_1_opt_doh_val", "ss_basic_chng_trust_2_opt_doh", "ss_basic_chng_trust_2_opt", "ss_basic_chng_trust_2_opt_udp", "ss_basic_chng_trust_2_opt_tcp", "ss_basic_chng_repeat_times", "ss_china_dns", "ss_china_dns_user", "ss_basic_smrt", "ss_basic_dohc_sel_china", "ss_basic_dohc_udp_china", "ss_basic_dohc_udp_china_user", "ss_basic_dohc_tcp_china", "ss_basic_dohc_tcp_china_user", "ss_basic_dohc_doh_china", "ss_basic_dohc_sel_foreign", "ss_basic_dohc_tcp_foreign", "ss_basic_dohc_tcp_foreign_user", "ss_basic_dohc_doh_foreign", "ss_basic_dohc_cache_timeout", "ss_foreign_dns", "ss_dns2socks_user", "ss_sstunnel_user", "ss_direct_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_s_resolver", "ss_basic_s_resolver_udp", "ss_basic_s_resolver_udp_user", "ss_basic_s_resolver_tcp", "ss_basic_s_resolver_tcp_user", "ss_basic_s_resolver_doh" ];
 	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_noserver", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_vcore", "ss_basic_tcore", "ss_basic_xguard", "ss_basic_rust", "ss_basic_tjai", "ss_basic_nonetcheck", "ss_basic_notimecheck", "ss_basic_nochnipcheck", "ss_basic_nofrnipcheck", "ss_basic_noruncheck", "ss_basic_nofdnscheck", "ss_basic_nocdnscheck", "ss_basic_olddns", "ss_basic_advdns", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_basic_chng_no_ipv6", "ss_basic_chng_act", "ss_basic_chng_gt", "ss_basic_chng_mc", "ss_basic_mcore", "ss_basic_dohc_proxy", "ss_basic_dohc_ecs_china", "ss_basic_dohc_ecs_foreign", "ss_basic_dohc_cache_reuse", "ss_basic_chng_china_1_enable", "ss_basic_chng_china_2_enable", "ss_basic_chng_china_1_ecs", "ss_basic_chng_trust_1_enable", "ss_basic_chng_trust_2_enable", "ss_basic_chng_china_2_ecs", "ss_basic_chng_trust_1_ecs", "ss_basic_chng_trust_2_ecs" ];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
@@ -985,15 +976,16 @@ function verifyFields(r) {
 	if (Ti == "4") $(".re4_" + In).show();
 	// failover
 	if(E("ss_failover_enable").checked){
+		$("#interval_settings").show();
 		$("#failover_settings_1").show();
 		$("#failover_settings_2").show();
 		$("#failover_settings_3").show();
 	}else{
+		$("#interval_settings").hide();
 		$("#failover_settings_1").hide();
 		$("#failover_settings_2").hide();
 		$("#failover_settings_3").hide();
 	}
-	showhide("ss_failover_text_1",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2" && E("ss_failover_s4_2").value == "2");
 	showhide("ss_failover_s4_2",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2");
 	showhide("ss_failover_s4_3",  E("ss_failover_enable").checked && E("ss_failover_s4_1").value == "2" && E("ss_failover_s4_2").value == "1");
 	// node sub pannel
@@ -1038,7 +1030,6 @@ function update_visibility() {
 	var h = E("ss_basic_s_resolver").value;
 	var h_0 = E("ss_basic_s_resolver_udp").value;
 	var h_1 = E("ss_basic_s_resolver_tcp").value;
-	var i = E("ss_basic_ping_node").value;
 	var j = E("ss_basic_chng_china_1_enable").checked;
 	var j0 = E("ss_basic_chng_china_1_prot").value;
 	var j1 = E("ss_basic_chng_china_1_udp").value == "96";
@@ -1090,11 +1081,6 @@ function update_visibility() {
 	showhide("ss_sstunnel_user_note", (f == "4"));											//fancyss-full
 	showhide("ss_direct_user", (f == "8"));
 	showhide("ss_basic_tri_reboot_time_note", (g != "0"));
-	showhide("ss_basic_ping_method", i == "0");
-	showhide("ss_basic_webtest_url", i == "1");
-	showhide("ss_basic_ping_btn", i == "0");
-	showhide("ss_basic_webtest_btn", i == "1");
-	showhide("ss_ping_ts_show", i == "0");
 	showhide("ss_basic_chng_china_1_prot", j);
 	showhide("ss_basic_chng_china_1_ecs", j);
 	showhide("ss_basic_chng_china_1_ecs_note", j);
@@ -1116,6 +1102,9 @@ function update_visibility() {
 	showhide("ss_basic_chng_gt", s);
 	showhide("ss_basic_chng_mc", s);
 	showhide("ss_basic_chng_right", s);
+	var t1 = E("ss_basic_lt_cru_opts").value == "1";
+	var t2 = E("ss_basic_lt_cru_opts").value == "2";
+	showhide("ss_basic_lt_cru_time", t1 || t2);
 	if (j == true){
 		if(j0 == "1" && j1){
 			$("#ss_basic_chng_china_1_ecs").hide();
@@ -1253,7 +1242,7 @@ function update_visibility() {
 
 function Add_profile() { //点击节点页面内添加节点动作
 	$('body').prepend(tableApi.genFullScreen());
-	$('.fullScreen').fadeIn(300);
+	$('.fullScreen').show();
 	tabclickhandler(0); //默认显示添加ss节点
 	E("ss_node_table_name").value = "";
 	E("ss_node_table_server").value = "";
@@ -1287,19 +1276,22 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("add_node").style.display = "";
 	E("edit_node").style.display = "none";
 	E("continue_add").style.display = "";
-	$("#vpnc_settings").fadeIn(300);
-	var bodyRect = document.body.getBoundingClientRect(),
-	elemRect = E("add_ss_node").getBoundingClientRect(),
-	offset   = elemRect.top - bodyRect.top;
-	if (offset > 820){
-		$(".contentM_qis").css("top", offset - 820 + "px");
-	}else{
-		$(".contentM_qis").css("top", "0px");
-	}
+	show_add_node_panel();
 }
-function cancel_add_rule() { //点击添加节点面板上的返回
-	$("#vpnc_settings").fadeOut(300);
-	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
+function show_add_node_panel(){
+	// show add node pannel
+	document.scrollingElement.scrollTop = 0;
+	//$('html, body').css({overflow: 'hidden', height: '100%'});
+	$("#add_fancyss_node").show();
+	$(".contentM_qis").css("top", "0px");
+	$("#cancel_Btn").css("margin-left", "160px");
+	$('#add_fancyss_node_title').html("添加节点");
+}
+function cancel_add_node() {
+	//点击添加节点面板上的返回
+	$("#add_fancyss_node").hide();
+	//$('html, body').css({overflow: 'auto', height: 'auto'});
+	$("body").find(".fullScreen").show(function() { tableApi.removeElement("fullScreen"); });
 }
 function tabclickhandler(_type) {
 	E('ssTitle').className = "vpnClientTitle_td_unclick";
@@ -1958,6 +1950,7 @@ function add_ss_node_conf(flag) {
 			for (var i = 0; i < params5_2.length; i++) {
 				ns[p + "_" + params5_2[i] + "_" + node_max] = E("ss_node_table_" + params5_2[i]).checked ? '1' : '';
 			}
+			ns[p + "_xray_prot_" + node_max] = "vless";
 		}
 		ns[p + "_type_" + node_max] = "4";
 	} else if (flag == 'trojan') {
@@ -2020,7 +2013,7 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_naive_port").value = "443";	//fancyss-full
 				E("ss_node_table_naive_user").value = "";		//fancyss-full
 				E("ss_node_table_naive_pass").value = "";		//fancyss-full
-				cancel_add_rule();
+				cancel_add_node();
 			}
 		}
 	});
@@ -2037,7 +2030,7 @@ function remove_conf_table(o) {
 	//console.log("删除第", id, "个节点！！！")
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -2112,7 +2105,7 @@ function edit_conf_table(o) {
 			E("ss_node_table_" + params1_input[i]).value = c[params1_input[i]];
 		}
 	}
-	E("cancelBtn").style.display = "";
+	E("cancel_Btn").style.display = "";
 	E("add_node").style.display = "none";
 	E("edit_node").style.display = "";
 	E("continue_add").style.display = "none";
@@ -2178,10 +2171,9 @@ function edit_conf_table(o) {
 		tabclickhandler(6);
 	}
 	//fancyss_naive_2
-	$(".contentM_qis").css("top", "120px");
-	$('body').prepend(tableApi.genFullScreen());
-	$('.fullScreen').fadeIn(300);
-	$("#vpnc_settings").fadeIn(300);
+	show_add_node_panel();
+	$("#cancel_Btn").css("margin-left", "10px");
+	$('#add_fancyss_node_title').html("修改节点");
 }
 function edit_ss_node_conf(flag) {
 	var ns = {};
@@ -2331,8 +2323,7 @@ function edit_ss_node_conf(flag) {
 			refresh_node_panel();
 		}
 	});
-	$("#vpnc_settings").fadeOut(300);
-	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
+	cancel_add_node();
 }
 function refresh_node_panel() {
 	$.ajax({
@@ -2389,6 +2380,12 @@ function generate_node_info() {
 				obj[params[i]] = db_ss[ofield];
 			}
 		}
+		if(db_ss["ssconf_basic_xray_prot_" + idx] == "vmess"){
+			obj["xray_prot"] = "vmess";
+		}else{
+			obj["xray_prot"] = "vless";
+		}
+		
 		//兼容部分，这些值是空的话需要填为0
 		var params_sp = ["use_kcp", "use_lb", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
 		for (var i = 0; i < params_sp.length; i++) {
@@ -2585,8 +2582,8 @@ function refresh_html() {
 
 	// define col width in different situation
 	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
-	if(node_nu && E("ss_basic_ping_node").value != "off"){
-		//开启ping
+	if(node_nu && db_ss["ss_basic_latency_opt"] != "0"){
+		//开启延迟测试
 		if(noserver == "1"){
 			//关闭server
 			var width = ["", "5%", "54%", "0%", "14%", "12%", "10%", "5%", ];
@@ -2595,7 +2592,7 @@ function refresh_html() {
 			var width = ["", "5%", "28%", "26%", "14%", "12%", "10%", "5%", ];
 		}
 	}else{
-		//关闭ping
+		//关闭延迟测试
 		if(noserver == "1"){
 			//关闭server
 			var width = ["", "5%", "64%", "0%", "16%", "0%", "10%", "5%" ];
@@ -2615,8 +2612,11 @@ function refresh_html() {
 		html += '<th style="width:' + width[3] + ';cursor:pointer" onclick="hide_server();" title="点我隐藏服务器信息!" >服务器地址</th>'
 	}
 	html += '<th style="width:' + width[4] + ';">类型</th>'
-	if(node_nu && E("ss_basic_ping_node").value != "off"){
-		html += '<th style="width:' + width[5] + ';" id="ping_th">ping/丢包</th>'
+	if(node_nu && db_ss["ss_basic_latency_opt"] == "1"){
+		html += '<th style="width:' + width[5] + ';" id="depay_th">ping/丢包</th>'
+	}
+	if(node_nu && db_ss["ss_basic_latency_opt"] == "2"){
+		html += '<th style="width:' + width[5] + ';" id="depay_th">web落地延迟</th>'
 	}
 	html += '<th style="width:' + width[6] + ';">编辑</th>'
 	html += '<th style="width:' + width[7] + ';">使用</th>'
@@ -2674,11 +2674,11 @@ function refresh_html() {
 					}														//fancyss-full
 				}else{														//fancyss-full
 					if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
-						html +='ss_libev-obfs';
+						html +='ss-libev+obfs';
 					}else if(c["ss_v2ray"] == "1"){							//fancyss-full
-						html +='ss_libev-v2ray';							//fancyss-full
+						html +='ss-libev+v2ray';							//fancyss-full
 					}else{
-						html +='ss_libev';
+						html +='ss-libev';
 					}
 				}															//fancyss-full
 				break;
@@ -2704,7 +2704,7 @@ function refresh_html() {
 				if(c["protoc"]){
 					html +='xray-' + c["protoc"];
 				}else{
-					html +='xray-vless';
+					html +='xray-' + c["xray_prot"];
 				}
 				break;
 			case '5' :
@@ -2720,8 +2720,8 @@ function refresh_html() {
 		}
 		html +='</td>';
 		//ping/丢包
-		if(node_nu && E("ss_basic_ping_node").value != "off"){
-			html += '<td style="width:' + width[5] + ';" id="ss_node_ping_' + c["node"] + '" class="ping"></td>';
+		if(node_nu && (db_ss["ss_basic_latency_opt"] == "1" || db_ss["ss_basic_latency_opt"] == "2")){
+			html += '<td style="width:' + width[5] + ';" id="ss_node_lt_' + c["node"] + '" class="latency"></td>';
 		}
 		//节点编辑
 		html += '<td style="width:' + width[6] + ';">'
@@ -2737,8 +2737,17 @@ function refresh_html() {
 	html += '</div>'
 	html += '</div>'
 	// botton region
-	html += '<div align="center" class="nodeTable" style="width: 750px;margin-top:20px">'
-	html += '<input id="add_ss_node" class="button_gen" onClick="Add_profile()" type="button" value="添加节点"/>'
+	html += '<div align="center" class="nodeTable" id="node_button" style="width: 750px;margin-top:20px">'
+	if(node_nu){
+		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">'
+		html += '<div class="dropdown" id="dropdown">'
+		html += '<a onclick="test_latency_now(1)" href="javascript:void(0);"></lable>开始 ping 延迟测试<lable id="ss_ping_pts_show"></lable></a>'
+		html += '<a onclick="test_latency_now(2)" href="javascript:void(0);"></lable>开始 web 延迟测试<lable id="ss_ping_wts_show"></lable></a>'
+		html += '<a onclick="test_latency_now(0)" href="javascript:void(0);"></lable>关闭延迟测试功能</a>'
+		html += '<a onclick="open_latency_sett()" href="javascript:void(0);"></lable>设置</a>'
+		html += '</div>'
+	}
+	html += '<input style="margin-left:10px" id="add_ss_node" class="button_gen" onClick="Add_profile()" type="button" value="添加节点"/>'
 	if(node_nu){
 		html += '<input style="margin-left:10px" class="button_gen" type="button" onclick="save()" value="保存&应用">'
 	}
@@ -2754,12 +2763,8 @@ function refresh_html() {
 		//ss_node_sel();
 	}
 	// ask or not ask for ping
-	if(E("ss_basic_ping_node").value == "0"){
-		if(ping_result != ""){
-			write_ping(ping_result);
-		}else{
-			ping_test();
-		}
+	if(db_ss["ss_basic_latency_opt"]){
+		latency_test(db_ss["ss_basic_latency_opt"]);
 	}
 	// select default node
 	select_default_node(2);
@@ -2767,6 +2772,39 @@ function refresh_html() {
 	if(E("ss_basic_dragable").checked){
 		order_adjustment();
 	}
+	// dp
+	const dropdownBtn = document.getElementById("dropdownbtn");
+	const dropdownMenu = document.getElementById("dropdown");
+	
+	// Toggle dropdown function
+	const toggleDropdown = function () {
+	  var lef = $('#dropdownbtn').offset().left;
+	  var top = $('#dropdownbtn').offset().top;
+	  var eleh = $("#dropdown").height();
+	  $('#dropdown').offset({left: lef, top: (top - eleh)});
+	  dropdownMenu.classList.toggle("show");
+	};
+	
+	// Toggle dropdown open/close when dropdown button is clicked
+	dropdownBtn.addEventListener("click", function (e) {
+	  e.stopPropagation();
+	  toggleDropdown();
+	});
+	
+	// Close dropdown when dom element is clicked
+	E("app").addEventListener("click", function () {
+	  if (dropdownMenu.classList.contains("show")) {
+	    toggleDropdown();
+	  }
+	});
+	// if(db_ss["ss_basic_ping_ts"]){
+	// 	$("#ss_ping_pts_show").html("<em>【上次完成时间: " + db_ss["ss_basic_ping_ts"] + "】</em>")
+	// 	$("#dropdown").width(370);
+	// }
+	// if(db_ss["ss_basic_webtest_ts"]){
+	// 	$("#ss_ping_wts_show").html("<em>【上次完成时间: " + db_ss["ss_basic_webtest_ts"] + "】</em>")
+	// 	$("#dropdown").width(370);
+	// }
 }
 function hide_name(){
 	//var sw = $(".node_name").width();
@@ -2814,7 +2852,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "ss_v2ray", "ss_v2ray_opts", "use_lb", "ping", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -2883,7 +2921,7 @@ function reorder_trs(){
 		$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(4)').attr("id", "server_" + new_nu);
 		if($('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5)').attr("id") != undefined){
 			//ping/丢包
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5)').attr("id", "ss_node_ping_" + new_nu);
+			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5)').attr("id", "ss_node_lt_" + new_nu);
 			//编辑节点
 			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(6) input:nth-child(1)').attr("id", "dd_node_" + new_nu);
 			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(6) input:nth-child(2)').attr("id", "td_node_" + new_nu);
@@ -2926,6 +2964,7 @@ function select_default_node(o){
 			//关闭开关，则清除节点的勾选
 			E("ss_basic_enable").checked = false;
 		}
+		$("#reset_select").hide();
 	}else if(o == 2){
 		//定义点击总开关行为 + 表格加载完毕行为
 		if(E("ss_basic_enable").checked){
@@ -2951,7 +2990,7 @@ function select_default_node(o){
 	}
 }
 function apply_this_ss_node(rowdata) {
-	cancel_add_rule();
+	cancel_add_node();
 	var enable_id = $(rowdata).attr("id");
 	var enable_id = enable_id.split("_")[3];
 	var $activateItem = $(rowdata);
@@ -3074,19 +3113,49 @@ function showQRcode(data) {
 function cleanCode(){
 	$("#qrcode_show").fadeOut(300);
 }
-function ping_switch() {
-	//当ping功能关闭时，保存ss_basic_ping_node的关闭值，然后刷新表格以隐藏ping显示
+function open_latency_sett() {
+	update_visibility();
+	// show
+	$('body').prepend(tableApi.genFullScreen());
+	$('.fullScreen').show();
+	document.scrollingElement.scrollTop = 0;
+	E("latency_test_settings").style.visibility = "visible";
+	var page_h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+	var page_w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+	var elem_h = E("latency_test_settings").clientHeight;
+	var elem_w = E("latency_test_settings").clientWidth;
+	var elem_h_offset = (page_h - elem_h) / 2 - 90;
+	var elem_w_offset = (page_w - elem_w) / 2 + 90;
+	if(elem_h_offset < 0){
+		elem_h_offset = 10;
+	}
+	$('#latency_test_settings').offset({top: elem_h_offset, left: elem_w_offset});
+}
+function leav_test_sett() {
+	E("latency_test_settings").style.visibility = "hidden";
+	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
+}
+function save_latency_sett(){
 	var dbus_post = {};
-	if(E("ss_basic_ping_node").value == "off"){
-		E("ss_basic_webtest_url").style.display = "none";
-		E("ss_basic_ping_method").style.display = "none";
-		E("ss_basic_ping_btn").style.display = "none";
-		E("ss_basic_webtest_btn").style.display = "none";
-		E("ss_ping_ts_show").style.display = "none";
-		dbus_post["ss_basic_ping_node"] = "off";
+	var post_para = 0;
+	dbus_post["ss_basic_pingm"] = E("ss_basic_pingm").value;
+	dbus_post["ss_basic_wt_furl"] = E("ss_basic_wt_furl").value;
+	dbus_post["ss_basic_wt_curl"] = E("ss_basic_wt_curl").value;
+	dbus_post["ss_basic_lt_cru_opts"] = E("ss_basic_lt_cru_opts").value;
+	dbus_post["ss_basic_lt_cru_time"] = E("ss_basic_lt_cru_time").value;
+	var post_dbus = compfilter(db_ss, dbus_post);
+	if(isObjectEmpty(post_dbus) == false){
+		if(post_dbus.hasOwnProperty("ss_basic_wt_furl")){
+			post_para += 1;
+		}
+		if(post_dbus.hasOwnProperty("ss_basic_wt_curl")){
+			post_para += 2;
+		}
+		//console.log(post_para);
+		//console.log(post_dbus);
 		//now post
 		var id = parseInt(Math.random() * 100000000);
-		var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": dbus_post};
+		var postData = {"id": id, "method": "ss_ping.sh", "params":[post_para], "fields": post_dbus};
 		$.ajax({
 			type: "POST",
 			cache:false,
@@ -3095,37 +3164,24 @@ function ping_switch() {
 			dataType: "json",
 			success: function(response) {
 				if (response.result == id){
-					//清空内存中的ping结果，在未刷新界面情况下，下次打开ping功能就能重新请求了
-					ping_result = "";
-					$(".show-btn1").trigger("click");
-					refresh_table();
+					leav_test_sett();
+					refresh_dbss();
 				}
 			}
 		});
-	}else if(E("ss_basic_ping_node").value == "0"){
-		E("ss_basic_ping_method").style.display = "";
-		E("ss_basic_ping_btn").style.display = "";
-		E("ss_ping_ts_show").style.display = "";
-		E("ss_basic_webtest_url").style.display = "none";
-		E("ss_basic_webtest_btn").style.display = "none";
-	}else if(E("ss_basic_ping_node").value == "1"){
-		E("ss_basic_ping_method").style.display = "none";
-		E("ss_basic_ping_btn").style.display = "none";
-		E("ss_ping_ts_show").style.display = "none";
-		E("ss_basic_webtest_url").style.display = "";
-		E("ss_basic_webtest_btn").style.display = "";
+	}else{
+		leav_test_sett();
 	}
 }
-function test_now(test_flag) {
-	//点击【开始ping！】，需要重新请求一次后台脚本来ping，所以刷新一次表格，然后ping
+function test_latency_now(test_flag) {
 	var dbus_post = {};
-	dbus_post["ss_basic_ping_node"] = E("ss_basic_ping_node").value;
+	dbus_post["ss_basic_latency_opt"] = test_flag;
 	if(test_flag == 0){
-		var post_para = "manual_ping";
-		dbus_post["ss_basic_ping_method"] = E("ss_basic_ping_method").value;
+		var post_para = "close_latency_test";
 	}else if(test_flag == 1){
+		var post_para = "manual_ping";
+	}else if(test_flag == 2){
 		var post_para = "manual_webtest";
-		dbus_post["ss_basic_webtest_url"] = E("ss_basic_webtest_url").value;
 	}
 	
 	//now post
@@ -3139,28 +3195,36 @@ function test_now(test_flag) {
 		dataType: "json",
 		success: function(response) {
 			if (response.result == id){
-				if (test_flag == 0){
-					//清空内存中的ping结果，表格渲染完成后会重新请求的
-					ping_result = "";
-					$(".show-btn1").trigger("click");
-					refresh_table();
-				}else if (test_flag == 1){
-					console.log(response.result);
+				$(".show-btn1").trigger("click");
+				refresh_table();
+				if(test_flag == 0){
+					close_latency_flag=1;
+					$("#ss_ping_pts_show").html("");
+					$("#ss_ping_wts_show").html("");
+					$("#dropdown").width(150);
+				}
+				if(test_flag == "1"){
+					$(".latency").html("waiting...");
+				}
+				if(test_flag == "2"){
+					$(".latency").html("waiting...");
 				}
 			}
 		}
 	});
 }
-function ping_test() {
-	//提交ping请求，拿到ping结果
-	if(E("ss_basic_ping_node").value == "0"){
-		$(".ping").html("测试中...");
-	}else{
-		return false;
+function latency_test(action) {
+	if(action == "0") return;
+	
+	if(action == "1"){
+		var bash_para = "web_ping";
+	}
+	if(action == "2"){
+		var bash_para = "web_webtest";
 	}
 	//now post
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_ping.sh", "params":["web_ping"], "fields": ""};
+	var postData = {"id": id, "method": "ss_ping.sh", "params":[bash_para], "fields": ""};
 	$.ajax({
 		type: "POST",
 		async: true,
@@ -3169,104 +3233,172 @@ function ping_test() {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			//console.log(response);
-			get_ping_data();
-			//write_ping(response);
+			//console.log(response.result)
+			if(db_ss["ss_basic_latency_opt"] == "1"){
+				$(".latency").html("waiting...");
+			}else if(db_ss["ss_basic_latency_opt"] == "2"){
+				$(".latency").html("waiting...");
+			}
+			get_latency_data(action);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
-			//console.log(XmlHttpRequest.responseText);
-			$(".ping").html("失败!");
+			$(".latency").html("失败!");
 		},
 		timeout: 60000
 	});
 }
-function get_ping_data(){
+function get_latency_data(action){
+	if(close_latency_flag == 1) return false;
+	if(action == "1"){
+		var URL = '/_temp/ping.txt'
+	}else if(action == "2"){
+		var URL = '/_temp/webtest.txt'
+	}
 	$.ajax({
-		url: '/_temp/ping.txt',
+		url: URL,
 		type: 'GET',
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
 			//console.log(res);
-			const lines = res.split('\n');
-			const array = [];
-    		lines.forEach(line => {
-    		  // Split each line by '>' and trim any extra whitespace
-    		  const parts = line.split('>').map(part => part.trim());
-
-    		  // Convert the values to the desired data types
-    		  const item = [
-    		    parseInt(parts[0]),
-    		    parseFloat(parts[1]),
-    		    parts[2]
-    		  ];
-
-    		  // Push the item to the array
-    		  array.push(item);
-    		});
-    		//console.log(array[0]);
-    		//console.log(array.length);
-    		write_ping(array);
+			if(action == "1"){
+				const lines = res.split('\n');
+				const array = [];
+				lines.forEach(line => {
+					const parts = line.split('>').map(part => part.trim());
+					const item = [parseInt(parts[0]), parseFloat(parts[1]), parts[2]];
+					array.push(item);
+				});
+				write_ping(array);
+			}else if(action == "2"){
+				const lines = res.split('\n');
+				const array = [];
+				lines.forEach(line => {
+					const parts = line.split('>').map(part => part.trim());
+					const item = [parts[0], parts[1]];
+					array.push(item);
+				});
+				//console.log(array);
+				write_webtest(array);
+			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
-			//$(".ping").html("失败!");
-			setTimeout("get_ping_data();", 1000);
+			setTimeout("get_latency_data(" + action + ");", 1000);
 		},
 	});
 }
 function write_ping(ps){
-	if (String(ps).length <= 2){
-		if(db_ss["ss_basic_ping_node"] == "0"){
-			$(".ping").html("超时！");
-		}else{
-			$(".ping").html("");
-			$("#ss_node_ping_" + db_ss["ss_basic_ping_node"]).html("超时！");
-		}
-	}else{
-		for(var i = 0; i<ps.length; i++){
-			var nu = parseInt(ps[i][0]);
-			var ping = parseFloat(ps[i][1]);
-			var loss = ps[i][2];
-			if (!ping){
-				if(E("ss_basic_ping_method").value == 1){
+	for(var i = 0; i<ps.length; i++){
+		var nu = parseInt(ps[i][0]);
+		var ping = parseFloat(ps[i][1]);
+		var loss = ps[i][2];
+		if (!ping){
+			if(E("ss_basic_pingm").value == 1){
+				test_result = '<font color="#FF0000">failed</font>';
+			}else{
+				if(loss == ""){
 					test_result = '<font color="#FF0000">failed</font>';
 				}else{
-					if(loss == ""){
-						test_result = '<font color="#FF0000">failed</font>';
-					}else{
-						test_result = '<font color="#FF0000">failed/' + loss + '</font>';
-					}
+					test_result = '<font color="#FF0000">failed/' + loss + '</font>';
+				}
+			}
+		}else{
+			if(E("ss_basic_pingm").value == 1){
+				$('#depay_th').html("ping");
+				if (ping <= 50){
+					test_result = '<font color="#1bbf35">' + ping.toPrecision(3) +'ms</font>';
+				}else if (ping > 50 && ping <= 100) {
+					test_result = '<font color="#3399FF">' + ping.toPrecision(3) +'ms</font>';
+				}else{
+					test_result = '<font color="#f36c21">' + ping.toPrecision(3) +'ms</font>';
 				}
 			}else{
-				if(E("ss_basic_ping_method").value == 1){
-					$('#ping_th').html("ping");
-					if (ping <= 50){
-						test_result = '<font color="#1bbf35">' + ping.toPrecision(3) +'ms</font>';
-					}else if (ping > 50 && ping <= 100) {
-						test_result = '<font color="#3399FF">' + ping.toPrecision(3) +'ms</font>';
-					}else{
-						test_result = '<font color="#f36c21">' + ping.toPrecision(3) +'ms</font>';
-					}
+				$('#depay_th').html("ping/丢包");
+				if (ping <= 50){
+					test_result = '<font color="#1bbf35">' + ping.toPrecision(3) +'ms/' + loss + '</font>';
+				}else if (ping > 50 && ping <= 100) {
+					test_result = '<font color="#3399FF">' + ping.toPrecision(3) +'ms/' + loss + '</font>';
 				}else{
-					$('#ping_th').html("ping/丢包");
-					if (ping <= 50){
-						test_result = '<font color="#1bbf35">' + ping.toPrecision(3) +'ms/' + loss + '</font>';
-					}else if (ping > 50 && ping <= 100) {
-						test_result = '<font color="#3399FF">' + ping.toPrecision(3) +'ms/' + loss + '</font>';
-					}else{
-						test_result = '<font color="#f36c21">' + ping.toPrecision(3) +'ms/' + loss + '</font>';
-					}
+					test_result = '<font color="#f36c21">' + ping.toPrecision(3) +'ms/' + loss + '</font>';
 				}
 			}
-			if($('#ss_node_ping_' + nu)){
-				$('#ss_node_ping_' + nu).html(test_result);
+		}
+		if($('#ss_node_lt_' + nu)){
+			$('#ss_node_lt_' + nu).html(test_result);
+		}
+	}
+	if(ps.length < node_nu){
+		setTimeout("get_latency_data(1);", 1000);
+	}else{
+		//console.log("write ping finished")
+		// write last ping finish time
+		$.ajax({
+			type: "GET",
+			url: "/_api/ss_basic_ping_ts",
+			dataType: "json",
+			async: false,
+			success: function(data) {
+				db_get = data.result[0];
+				if(db_get["ss_basic_ping_ts"]){
+					$("#ss_ping_pts_show").html("<em>【上次完成时间: " + db_get["ss_basic_ping_ts"] + "】</em>")
+					$("#dropdown").width(370);
+				}
+			}
+		});
+	}
+}
+function write_webtest(ps){
+	var stop_wt = 0;
+	for(var i = 0; i<ps.length; i++){
+		var nu = ps[i][0];
+		var lag = ps[i][1];
+		if (nu == "stop"){
+			stop_wt = 1;
+			continue;
+		}
+
+		if($.isNumeric(lag)){
+			if (lag <= 100){
+				test_result = '<font color="#1bbf35">' + lag +' ms</font>';
+			}else if (lag > 100 && lag <= 200) {
+				test_result = '<font color="#3399FF">' + lag +' ms</font>';
+			}else if (lag > 200 && lag <= 300) {
+				test_result = '<font color="#f36c21">' + lag +' ms</font>';
+			}else{
+				test_result = '<font color="#FF0066">' + lag +' ms</font>';
+			}
+		}else{
+			if(lag == "failed"){
+				test_result = '<font color="#FF0000">failed!</font>';
+			}else if(lag == "ns"){
+				test_result = '<font color="#FF0000">不支持!</font>';
+			}else{
+				test_result = '<font color="#00FFCC">' + lag +'</font>'
 			}
 		}
-		if(ps.length < node_nu){
-			setTimeout("get_ping_data();", 1000);
-		}else{
-			console.log("write ping finished")
+		
+		if($('#ss_node_lt_' + nu)){
+			$('#ss_node_lt_' + nu).html(test_result);
 		}
+	}
+	if(stop_wt == "0"){
+		setTimeout("get_latency_data(2);", 1000);
+	}else{
+		//console.log("write latency finished")
+		// write last webtest finish time
+		$.ajax({
+			type: "GET",
+			url: "/_api/ss_basic_webtest_ts",
+			dataType: "json",
+			async: false,
+			success: function(data) {
+				db_get = data.result[0];
+				if(db_get["ss_basic_webtest_ts"]){
+					$("#ss_ping_wts_show").html("<em>【上次完成时间: " + db_get["ss_basic_webtest_ts"] + "】</em>")
+					$("#dropdown").width(370);
+				}
+			}
+		});
 	}
 }
 function save_row(action) {
@@ -3444,6 +3576,7 @@ function remove_doh_cache() {
 	});
 }
 function get_heart_beat() {
+	if(E("ss_failover_enable").checked == false) return;
 	$.ajax({
 		type: "GET",
 		url: "/_api/ss_heart_beat",
@@ -3541,7 +3674,7 @@ function message_show() {
 				}
 			}
 			// 如果只有两个广告，就全部显示，且不进行滚动
-			console.log(ads_count + "个广告！")
+			//console.log(ads_count + "个广告！")
 			if (ads_count == 0) return;
 			if (ads_count <= 2){
 				$("#scroll_msg").css("height", (ads_count * 23) + "px");
@@ -3833,7 +3966,18 @@ function get_ss_status_back() {
 			E("ss_state3").innerHTML = "国内连接 - " + "Waiting....";
 		}
 	});
-	setTimeout("get_ss_status_back();", 3000);
+	if (E("ss_basic_interval").value == "1"){
+		var time_wait = 3000;
+	}else if(E("ss_basic_interval").value == "2"){
+		var time_wait = 7000;
+	}else if(E("ss_basic_interval").value == "3"){
+		var time_wait = 15000;
+	}else if(E("ss_basic_interval").value == "4"){
+		var time_wait = 31000;
+	}else if(E("ss_basic_interval").value == "5"){
+		var time_wait = 63000;
+	}
+	setTimeout("get_ss_status_back();", time_wait);
 }
 //fancyss_full_1
 function get_udp_status(){
@@ -3994,22 +4138,46 @@ function get_dns_log(s) {
 	});
 }
 function close_ssf_status() {
-	$("#ssf_status_div").fadeOut(200);
+	E("ssf_status_div").style.visibility = "hidden";
+	$('html, body').css({overflow: 'auto', height: 'auto'});
+	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
 	STATUS_FLAG = 0;
 }
 function close_ssc_status() {
-	$("#ssc_status_div").fadeOut(200);
+	E("ssc_status_div").style.visibility = "hidden";
+	$('html, body').css({overflow: 'auto', height: 'auto'});
+	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
 	STATUS_FLAG = 0;
 }
 function lookup_status_log(s) {
 	STATUS_FLAG = 1;
+	$('body').prepend(tableApi.genFullScreen());
+	$('.fullScreen').show();
+	document.scrollingElement.scrollTop = 0;
+	var page_h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+	var page_w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 	if(s == 1){
-		$("#ssf_status_div").fadeIn(500);
+		var elem_h = $("#ssf_status_div").height();
+		var elem_w = $("#ssf_status_div").width();
+		var elem_h_offset = (page_h - elem_h) / 2;
+		var elem_w_offset = (page_w - elem_w) / 2 + 90;
+		if(elem_h_offset < 0) elem_h_offset = 10;
+		$("#ssf_test_url").html(E("ss_basic_wt_furl").value)
+		E("ssf_status_div").style.visibility = "visible";
+		$('#ssf_status_div').offset({top: elem_h_offset, left: elem_w_offset});
 		get_status_log(1);
 	}else{
-		$("#ssc_status_div").fadeIn(500);
+		var elem_h = $("#ssc_status_div").height();
+		var elem_w = $("#ssc_status_div").width();
+		var elem_h_offset = (page_h - elem_h) / 2;
+		var elem_w_offset = (page_w - elem_w) / 2 + 90;
+		if(elem_h_offset < 0) elem_h_offset = 10;
+		$("#ssc_test_url").html(E("ss_basic_wt_curl").value)
+		E("ssc_status_div").style.visibility = "visible";
+		$('#ssc_status_div').offset({top: elem_h_offset, left: elem_w_offset});
 		get_status_log(2);
 	}
+	$('html, body').css({overflow: 'hidden', height: '100%'});
 }
 function get_status_log(s) {
 	if(STATUS_FLAG == 0) return;
@@ -4039,7 +4207,7 @@ function get_status_log(s) {
 			if (noChange_status > 10) {
 				return false;
 			} else {
-				setTimeout('get_status_log("' + s + '");', 1500);
+				setTimeout('get_status_log("' + s + '");', 3123);
 			}
 			retArea.value = response;
 			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
@@ -4803,1563 +4971,1632 @@ function reset_smartdns_conf(){
 		push_data("ss_conf.sh", "reset_smartdns_smrt_" + q,  dbus);
 	}
 }
+function mOver(obj, hint){
+	$(obj).css({
+		"color": "#00ffe4",
+		"text-decoration": "underline"
+	});
+	openssHint(hint);
+}
+function mOut(obj){
+	$(obj).css({
+		"color": "#fff",
+		"text-decoration": ""
+	});
+	E("overDiv").style.visibility = "hidden";
+}
 </script>
 </head>
 <body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">
-<div id="TopBanner"></div>
-<div id="Loading" class="popup_bg"></div>
-<div id="LoadingBar" class="popup_bar_bg_ks" style="z-index: 200;" >
-<table cellpadding="5" cellspacing="0" id="loadingBarBlock" class="loadingBarBlock" align="center">
-	<tr>
-		<td height="100">
-		<div id="loading_block3" style="margin:10px auto;margin-left:10px;width:85%; font-size:12pt;"></div>
-		<div id="loading_block2" style="margin:10px auto;width:95%;"></div>
-		<div id="log_content2" style="margin-left:15px;margin-right:15px;margin-top:10px;overflow:hidden">
-			<textarea cols="50" rows="30" wrap="on" readonly="readonly" id="log_content3" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="border:1px solid #000;width:99%; font-family:'Lucida Console'; font-size:11px;background:transparent;color:#FFFFFF;outline: none;padding-left:3px;padding-right:22px;overflow-x:hidden"></textarea>
+	<div id="TopBanner"></div>
+	<div id="Loading" class="popup_bg"></div>
+	<div id="LoadingBar" class="popup_bar_bg_ks" style="z-index: 200;" >
+	<table cellpadding="5" cellspacing="0" id="loadingBarBlock" class="loadingBarBlock" align="center">
+		<tr>
+			<td height="100">
+			<div id="loading_block3" style="margin:10px auto;margin-left:10px;width:85%; font-size:12pt;"></div>
+			<div id="loading_block2" style="margin:10px auto;width:95%;"></div>
+			<div id="log_content2" style="margin-left:15px;margin-right:15px;margin-top:10px;overflow:hidden">
+				<textarea cols="50" rows="30" wrap="on" readonly="readonly" id="log_content3" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="border:1px solid #000;width:99%; font-family:'Lucida Console'; font-size:11px;background:transparent;color:#FFFFFF;outline: none;padding-left:3px;padding-right:22px;overflow-x:hidden"></textarea>
+			</div>
+			<div id="ok_button" class="apply_gen" style="background: #000;display: none;">
+				<input id="ok_button1" class="button_gen" type="button" onclick="hideSSLoadingBar()" value="确定">
+			</div>
+			</td>
+		</tr>
+	</table>
+	</div>
+	<!--============================this is the popup area for latency settings========================================-->
+	<div id="latency_test_settings" class="fancyss_qis pop_div_bg">
+		<table class="QISform_wireless" border="0" align="center" cellpadding="5" cellspacing="0">
+			<tr>
+				<td>
+					<div class="user_title">节点延迟测试设置</div>
+					<div id="latency_test_settings_div">
+						<table id="table_test" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable">
+							<script type="text/javascript">
+								var pingm = [["1", "1次/节点"], ["2", "5次/节点"], ["3", "10次/节点"], ["4", "20次/节点"]];
+								var furl = [
+											  "http://www.google.com/generate_204",
+											  "http://www.gstatic.com/generate_204",
+											  "http://developer.google.cn/generate_204",
+											  "http://connectivitycheck.gstatic.com/generate_204",
+											  "http://edge.microsoft.com/captiveportal/generate_204",
+											  "http://cp.cloudflare.com",
+											  "http://captive.apple.com",
+											  "http://www.google.com",
+											  "http://www.google.com.hk",
+											  "http://www.google.com.tw"
+											 ];
+								var curl = [
+											  "http://www.baidu.com",
+											  "http://www.sina.com",
+											  "http://www.weibo.com",
+											  "http://connectivitycheck.platform.hicloud.com/generate_204",
+											  "http://wifi.vivo.com.cn/generate_204",
+											  "http://www.apple.com/library/test/success.html",
+											  "http://connect.rom.miui.com/generate_204",
+											  "http://www.msftconnecttest.com/connecttest.txt"
+											 ];
+								var lt_cru = [
+											["0", "关闭定时测试"],
+											["1", "定时测试web延迟"]
+										   ]
+								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["25", "每隔25分钟"], ["30", "每隔30分钟"]];
+								$('#table_test').forms([
+									{ title: '延迟测试设置', thead:'1'},
+									{ title: 'ping延迟测试次数', id:'ss_basic_pingm', type:'select', style:'width:auto', options:pingm, value:''},
+									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_wt_furl', type:'select', style:'width:auto', options:furl, value:''},
+									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_wt_curl', type:'select', style:'width:auto', options:curl, value:''},
+									{ title: '定时测试节点延迟', multi: [
+										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
+										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},
+									]},
+								]);
+							</script>
+						</table>
+					</div>
+				</td>
+			</tr>
+		</table>
+		<span style="margin-left:30px">【ping延迟测试】和【web延迟测试】在节点列表里只能展示一个，关于两者的优缺点请见<a onmouseover="mOver(this, 146)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);"><font color="#ffcc00">[详细说明]</font></a>。<br/></span>
+		<span style="margin-left:30px">【web延迟测试】中设置的国外域名，同样会用于插件顶部[插件运行状态]中的国外链接延迟测试</span>
+		<div style="padding-top:10px;padding-bottom:10px;width:100%;text-align:center;">
+			<input id="save_latency_sett" class="button_gen" type="button" onclick="save_latency_sett();" value="保存">
+			<input id="leav_test_sett" class="button_gen" type="button" onclick="leav_test_sett();" value="返回">
 		</div>
-		<div id="ok_button" class="apply_gen" style="background: #000;display: none;">
-			<input id="ok_button1" class="button_gen" type="button" onclick="hideSSLoadingBar()" value="确定">
-		</div>
-		</td>
-	</tr>
-</table>
-</div>
-<table class="content" align="center" cellpadding="0" cellspacing="0">
-	<tr>
-		<td width="17">&nbsp;</td>
-		<td valign="top" width="202">
-			<div id="mainMenu"></div>
-			<div id="subMenu"></div>
-		</td>
-		<td valign="top">
-			<div id="tabMenu" class="submenuBlock"></div>
-			<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0">
-				<tr>
-					<td align="left" valign="top">
-						<div>
-							<table width="760px" border="0" cellpadding="5" cellspacing="0" bordercolor="#6b8fa3" class="FormTitle" id="FormTitle">
-								<tr>
-									<td bgcolor="#4D595D" colspan="3" valign="top">
-										<div>&nbsp;</div>
-										<div id="title_name" class="formfonttitle"></div>
-										<script type="text/javascript">
-											var MODEL = '<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>';
-											var FANCYSS_TITLE=" - " + pkg_name;
-											$("#title_name").html(MODEL + " 科学上网插件" + FANCYSS_TITLE);
-											$("#ss_title").html(MODEL + " - fancyss");
-										</script>										
-										<div style="float:right; width:15px; height:25px;margin-top:-20px">
-											<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
-										</div>
-										<div style="margin:10px 0 0 5px;" class="splitLine"></div>
-										<div class="SimpleNote" id="head_illustrate">
-											<ul id="fixed_msg" style="padding:0;margin:0;line-height:1.8;">
-												<li id="msg_0" style="list-style: none;height:23px">
-													📌 本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>
-													、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>
-													、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2ray</u></em></a>
-													、<a href="https://github.com/XTLS/xray-core" target="_blank"><em><u>Xray</u></em></a>
-													、<a href="https://github.com/trojan-gfw/trojan" target="_blank"><em><u>Trojan</u></em></a>
-													、<a href="https://github.com/klzgrad/naiveproxy" target="_blank"><em><u>NaïveProxy</u></em></a>
-													六种客户端的科学上网、游戏加速工具。
-													&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw" target="_blank"><em>【Telegram交流群】</em></a>
-												</li>
-											</ul>
-											<ul id="scroll_msg" style="padding:0;margin:0;line-height:1.8;overflow: hidden;">
-											</ul>
-										</div>
-										<!-- this is the popup area for process status -->
-										<div id="detail_status" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;">
-											<div class="user_title">【科学上网】状态检测</div>
-											<div style="margin-left:15px"><i>&nbsp;&nbsp;详细状态检测可以让你了解插件相关二进制和iptables的运行状况，用以排除一些使用中的问题。</i></div>
-											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
-												<textarea cols="63" rows="36" wrap="off" id="proc_status" style="line-height:1.45;width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+	</div>
+	<!--===================================Ending of zerotier latency settings===========================================-->
+	<table class="content" align="center" cellpadding="0" cellspacing="0">
+		<tr>
+			<td width="17">&nbsp;</td>
+			<td valign="top" width="202">
+				<div id="mainMenu"></div>
+				<div id="subMenu"></div>
+			</td>
+			<td valign="top">
+				<div id="tabMenu" class="submenuBlock"></div>
+				<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0">
+					<tr>
+						<td align="left" valign="top">
+							<div>
+								<table width="760px" border="0" cellpadding="5" cellspacing="0" bordercolor="#6b8fa3" class="FormTitle" id="FormTitle">
+									<tr>
+										<td bgcolor="#4D595D" colspan="3" valign="top">
+											<div>&nbsp;</div>
+											<div id="title_name" class="formfonttitle"></div>
+											<script type="text/javascript">
+												var MODEL = '<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>';
+												var FANCYSS_TITLE=" - " + pkg_name;
+												$("#title_name").html(MODEL + " 科学上网插件" + FANCYSS_TITLE);
+												$("#ss_title").html(MODEL + " - fancyss");
+											</script>										
+											<div style="float:right; width:15px; height:25px;margin-top:-20px">
+												<img id="return_btn" onclick="reload_Soft_Center();" align="right" style="cursor:pointer;position:absolute;margin-left:-30px;margin-top:-25px;" title="返回软件中心" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'"></img>
 											</div>
-											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">
+											<div style="margin:10px 0 0 5px;" class="splitLine"></div>
+											<div class="SimpleNote" id="head_illustrate">
+												<ul id="fixed_msg" style="padding:0;margin:0;line-height:1.8;">
+													<li id="msg_0" style="list-style: none;height:23px">
+														📌 本插件是支持<a href="https://github.com/shadowsocks/shadowsocks-libev" target="_blank"><em><u>SS</u></em></a>
+														、<a href="https://github.com/shadowsocksrr/shadowsocksr-libev" target="_blank"><em><u>SSR</u></em></a>
+														、<a href="https://github.com/v2ray/v2ray-core" target="_blank"><em><u>V2ray</u></em></a>
+														、<a href="https://github.com/XTLS/xray-core" target="_blank"><em><u>Xray</u></em></a>
+														、<a href="https://github.com/trojan-gfw/trojan" target="_blank"><em><u>Trojan</u></em></a>
+														、<a href="https://github.com/klzgrad/naiveproxy" target="_blank"><em><u>NaïveProxy</u></em></a>
+														六种客户端的科学上网、游戏加速工具。
+														&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw" target="_blank"><em>【Telegram交流群】</em></a>
+													</li>
+												</ul>
+												<ul id="scroll_msg" style="padding:0;margin:0;line-height:1.8;overflow: hidden;">
+												</ul>
 											</div>
-										</div>
-										<!-- this is the popup area for foreign status -->
-										<div id="ssf_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
-											<div class="user_title">国外历史状态 - www.google.com.tw</div>
-											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
-											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
-												<textarea cols="63" rows="36" wrap="off" id="log_content_f" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:10px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											<!-- this is the popup area for process status -->
+											<div id="detail_status" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;">
+												<div class="user_title">【科学上网】状态检测</div>
+												<div style="margin-left:15px"><i>&nbsp;&nbsp;详细状态检测可以让你了解插件相关二进制和iptables的运行状况，用以排除一些使用中的问题。</i></div>
+												<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden">
+													<textarea cols="63" rows="36" wrap="off" id="proc_status" style="line-height:1.45;width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input class="button_gen" type="button" onclick="close_proc_status();" value="返回主界面">
+												</div>
 											</div>
-											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="download_route_file(6);" value="下载日志">
-												<input class="button_gen" type="button" onclick="close_ssf_status();" value="返回主界面">
-												<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
-												<lable>&nbsp;暂停日志刷新</lable>
+											<!-- this is the popup area for foreign status -->
+											<div id="ssf_status_div" class="content_status_ext" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;margin-left:0px;width:748px;">
+												<div class="user_title">国外历史状态 - <lable id="ssf_test_url"></lable></div>
+												<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
+												<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
+													<textarea cols="63" rows="36" wrap="off" id="log_content_f" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:10px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input class="button_gen" type="button" onclick="download_route_file(6);" value="下载日志">
+													<input class="button_gen" type="button" onclick="close_ssf_status();" value="返回主界面">
+													<input style="margin-left:10px" type="checkbox" id="ss_failover_c4">
+													<lable>&nbsp;暂停日志刷新</lable>
+												</div>
 											</div>
-										</div>
-										<!-- this is the popup area for china status -->
-										<div id="ssc_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;display: none;margin-left:0px;width:748px;">
-											<div class="user_title">国内历史状态 - www.baidu.com</div>
-											<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
-											<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
-												<textarea cols="63" rows="36" wrap="off" id="log_content_c" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:10px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											<!-- this is the popup area for china status -->
+											<div id="ssc_status_div" class="content_status_ext" style="box-shadow: 3px 3px 10px #000;margin-top: -20px;margin-left:0px;width:748px;">
+												<div class="user_title">国内历史状态 - <lable id="ssc_test_url"></lable></div>
+												<div style="margin-left:15px"><i>&nbsp;&nbsp;此功能仅在开启故障转移时生效。</i></div>
+												<div style="margin: 10px 10px 10px 10px;width:98%;text-align:center;overflow:hidden;">
+													<textarea cols="63" rows="36" wrap="off" id="log_content_c" style="width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:10px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input class="button_gen" type="button" onclick="download_route_file(7);" value="下载日志">
+													<input class="button_gen" type="button" onclick="close_ssc_status();" value="返回主界面">
+													<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
+												</div>
 											</div>
-											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="download_route_file(7);" value="下载日志">
-												<input class="button_gen" type="button" onclick="close_ssc_status();" value="返回主界面">
-												<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
+											<!-- this is the popup area for china status -->
+											<div id="dns_status_div" class="content_status_ext" style="box-shadow: 3px 3px 10px #000;margin-top: -140px;margin-left:0px;width:748px;">
+												<div class="user_title">DNS解析测试</div>
+												<div style="margin-left:15px" id="dns_test_note_1"></div>
+												<div style="margin-left:15px" id="dns_test_note_2"></div>
+												<div style="margin-left:15px" id="dns_test_note_3"></div>
+												<div style="margin: 10px 10px 10px 10px;width:98%;outline: 1px solid #727272;text-align:center;overflow:hidden;">
+													<textarea cols="63" rows="40" wrap="off" id="log_content_dns" style="line-height: 140%;width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input id="log_dig" class="button_gen" style="display:none;" type="button" onclick="download_route_file(10);" value="下载日志">
+													<input id="log_resv" class="button_gen" style="display:none;" type="button" onclick="download_route_file(11);" value="下载日志">
+													<input class="button_gen" type="button" onclick="close_dns_status();" value="返回主界面">
+													<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
+												</div>
 											</div>
-										</div>
-										<!-- this is the popup area for china status -->
-										<div id="dns_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -140px;display: none;margin-left:0px;width:748px;">
-											<div class="user_title">DNS解析测试</div>
-											<div style="margin-left:15px" id="dns_test_note_1"></div>
-											<div style="margin-left:15px" id="dns_test_note_2"></div>
-											<div style="margin-left:15px" id="dns_test_note_3"></div>
-											<div style="margin: 10px 10px 10px 10px;width:98%;outline: 1px solid #727272;text-align:center;overflow:hidden;">
-												<textarea cols="63" rows="40" wrap="off" id="log_content_dns" style="line-height: 140%;width:98%;padding-left:13px;padding-right:33px;border:0px solid #222;font-family:'Lucida Console'; font-size:11px;background: transparent;color:#FFFFFF;outline: none;overflow-x:hidden;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											<!-- this is the popup area for QRcode -->
+											<div id="qrcode_show" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: 90px;margin-left:197px;width:356px;height:356px;background: #fff;">
+												<div style="text-align: center;margin-top:10px"><span id="qrtitle" style="font-size:16px;color:#000;"></span></div>
+												<div id="qrcode" style="margin: 10px 50px 10px 50px;width:256px;height:256px;text-align:center;overflow:hidden">
+												</div>
+												<div style="margin-top:15px;padding-bottom:10px;width:100%;text-align:center;">
+													<input class="button_gen" type="button" onclick="cleanCode();" value="返回">
+												</div>
 											</div>
-											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input id="log_dig" class="button_gen" style="display:none;" type="button" onclick="download_route_file(10);" value="下载日志">
-												<input id="log_resv" class="button_gen" style="display:none;" type="button" onclick="download_route_file(11);" value="下载日志">
-												<input class="button_gen" type="button" onclick="close_dns_status();" value="返回主界面">
-												<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
+											<!-- this is the popup area for smartdns rules -->
+											<div id="smartdns_settings" class="smartdns_pop" style="box-shadow: 3px 3px 10px #000;margin-top: -65px;position: absolute;-webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius:10px;z-index: 10;background-color:#2B373B;margin-left: -215px;top: 240px;width:980px;return height:auto;box-shadow: 3px 3px 10px #000;background: rgba(0,0,0,0.85);display:none;">
+												<div class="user_title" id="smartdns_conf_area">SmartDns配置文件</div>
+												<div style="margin-left:15px" id="smartdns_conf_note"></div>
+												<div id="user_tr" style="margin: 10px 10px 10px 10px;width:98%;text-align:center;">
+													<textarea class="smartdns_textarea" cols="63" rows="30" wrap="off" id="smartdns_chnd_conf" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input id="edit_node_1" class="button_gen" type="button" onclick="save_smartdns_conf();" value="保存配置">	
+													<input id="edit_node_2" class="button_gen" type="button" onclick="reset_smartdns_conf();" value="恢复默认配置">	
+													<input id="edit_node_3" class="button_gen" type="button" onclick="close_smartdns_conf();" value="返回主界面">
+												</div>
 											</div>
-										</div>
-										<!-- this is the popup area for QRcode -->
-										<div id="qrcode_show" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: 90px;margin-left:197px;display: none;width:356px;height:356px;background: #fff;">
-											<div style="text-align: center;margin-top:10px"><span id="qrtitle" style="font-size:16px;color:#000;"></span></div>
-											<div id="qrcode" style="margin: 10px 50px 10px 50px;width:256px;height:256px;text-align:center;overflow:hidden">
-											</div>
-											<div style="margin-top:15px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" type="button" onclick="cleanCode();" value="返回">
-											</div>
-										</div>
-										<!-- this is the popup area for smartdns rules -->
-										<div id="smartdns_settings" class="smartdns_pop" style="box-shadow: 3px 3px 10px #000;margin-top: -65px;position: absolute;-webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius:10px;z-index: 10;background-color:#2B373B;margin-left: -215px;top: 240px;width:980px;return height:auto;box-shadow: 3px 3px 10px #000;background: rgba(0,0,0,0.85);display:none;">
-											<div class="user_title" id="smartdns_conf_area">SmartDns配置文件</div>
-											<div style="margin-left:15px" id="smartdns_conf_note"></div>
-											<div id="user_tr" style="margin: 10px 10px 10px 10px;width:98%;text-align:center;">
-												<textarea class="smartdns_textarea" cols="63" rows="30" wrap="off" id="smartdns_chnd_conf" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-											</div>
-											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input id="edit_node_1" class="button_gen" type="button" onclick="save_smartdns_conf();" value="保存配置">	
-												<input id="edit_node_2" class="button_gen" type="button" onclick="reset_smartdns_conf();" value="恢复默认配置">	
-												<input id="edit_node_3" class="button_gen" type="button" onclick="close_smartdns_conf();" value="返回主界面">
-											</div>
-										</div>
-										<!-- end of the popouparea -->
-										<div id="ss_switch_show" style="margin:-1px 0px 0px 0px;">
-											<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="ss_switch_table">
-												<thead>
-												<tr>
-													<td colspan="2">开关</td>
-												</tr>
-												</thead>
-												<tr>
-												<th id="ss_switch">科学上网开关</th>
-													<td colspan="2">
-														<div class="switch_field" style="display:table-cell;float: left;">
-															<label for="ss_basic_enable">
-																<input id="ss_basic_enable" class="switch" type="checkbox" style="display: none;">
-																<div class="switch_container" >
-																	<div class="switch_bar"></div>
-																	<div class="switch_circle transition_style">
-																		<div></div>
+											<!-- end of the popouparea -->
+											<div id="ss_switch_show" style="margin:-1px 0px 0px 0px;">
+												<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="ss_switch_table">
+													<thead>
+													<tr>
+														<td colspan="2">开关</td>
+													</tr>
+													</thead>
+													<tr>
+													<th id="ss_switch">科学上网开关</th>
+														<td colspan="2">
+															<div class="switch_field" style="display:table-cell;float: left;">
+																<label for="ss_basic_enable">
+																	<input id="ss_basic_enable" class="switch" type="checkbox" style="display: none;">
+																	<div class="switch_container" >
+																		<div class="switch_bar"></div>
+																		<div class="switch_circle transition_style">
+																			<div></div>
+																		</div>
 																	</div>
-																</div>
-															</label>
-														</div>
-														<div id="update_button" style="display:table-cell;float: left;position: absolute;margin-left:70px;padding: 5.5px 0px;">
-															<a id="updateBtn" type="button" class="ss_btn" style="cursor:pointer" onclick="update_ss()">检查并更新</a>
-														</div>
-														<div id="ss_version_show" style="display:table-cell;float: left;position: absolute;margin-left:170px;padding: 5.5px 0px;">
-															<a><i>当前版本：</i></a>
-														</div>
-														<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 5.5px 0px;">
-															<a type="button" class="ss_btn" target="_blank" href="https://github.com/hq450/fancyss/blob/3.0/Changelog.txt">更新日志</a>
-														</div>
-														<div style="display:table-cell;float: left;margin-left:350px;position: absolute;padding: 5.5px 0px;">
-															<a type="button" class="ss_btn" href="javascript:void(0);" onclick="pop_help()">插件帮助</a>
-														</div>
-													</td>
-												</tr>
-												<tr id="ss_state">
-													<th>插件运行状态</th>
-													<td>
-														<div style="display:table-cell;float: left;margin-left:0px;">
-															<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(0)">
-																<span id="ss_state2">国外连接 - Waiting...</span>
-																<br/>
-																<span id="ss_state3">国内连接 - Waiting...</span>
-															</a>
-														</div>
-														<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 10.5px 0px;">
-															<!--<a type="button" class="ss_btn" style="cursor:pointer" onclick="pop_111(3)" href="javascript:void(0);">分流检测</a>-->
-															<a type="button" class="ss_btn" target="https://ip.skk.moe/" href="https://ip.skk.moe/">分流检测</a>
-														</div>
-														<div style="display:table-cell;float: left;margin-left:350px;position: absolute;padding: 10.5px 0px;">
-															<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_proc_status()" href="javascript:void(0);">详细状态</a>
-														</div>
-													</td>
-												</tr>
-											</table>
-										</div>
-										<div id="tablets">
-											<table style="margin:10px 0px 0px 0px;border-collapse:collapse" width="100%" height="37px">
-												<tr>
-													<td cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#222">
-														<input id="show_btn0" class="show-btn0" style="cursor:pointer" type="button" value="帐号设置" />
-														<input id="show_btn1" class="show-btn1" style="cursor:pointer" type="button" value="节点管理" />
-														<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="故障转移" />
-														<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="DNS设定" />
-														<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="黑白名单" />
-														<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="KCP加速" />		<!--fancyss-full-->
-														<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="UDP加速"/>		<!--fancyss-full-->
-														<input id="show_btn7" class="show-btn7" style="cursor:pointer" type="button" value="更新管理" />
-														<input id="show_btn8" class="show-btn8" style="cursor:pointer" type="button" value="访问控制" />
-														<input id="show_btn9" class="show-btn9" style="cursor:pointer" type="button" value="附加功能" />
-														<input id="show_btn10" class="show-btn10" style="cursor:pointer" type="button" value="查看日志" />
-													</td>
-												</tr>
-											</table>
-										</div>
-										<div id="vpnc_settings" class="contentM_qis pop_div_bg">
-											<table class="QISform_wireless" border="0" align="center" cellpadding="5" cellspacing="0">
-												<tr style="height:32px;">
-													<td>
-														<table width="100%" border="0" align="left" cellpadding="0" cellspacing="0" class="vpnClientTitle">
-															<tr>
-													  		<td width="16.67%" align="center" id="ssTitle" onclick="tabclickhandler(0);">添加SS节点</td>
-													  		<td width="16.67%" align="center" id="ssrTitle" onclick="tabclickhandler(1);">添加SSR节点</td>
-													  		<td width="16.67%" align="center" id="v2rayTitle" onclick="tabclickhandler(3);">添加V2Ray节点</td>
-													  		<td width="16.67%" align="center" id="xrayTitle" onclick="tabclickhandler(4);">添加Xray节点</td>
-													  		<td width="16.67%" align="center" id="trojanTitle" onclick="tabclickhandler(5);">添加Trojan节点</td>
-													  		<td width="16.67%" align="center" id="naiveTitle" onclick="tabclickhandler(6);">添加Naïve节点</td>	<!--fancyss-full-->
-															</tr>
-														</table>
-													</td>
-												</tr>
-												<tr>
-													<td>
-														<div>
-														<table id="table_edit" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable">
-															<script type="text/javascript">
-																$('#table_edit').forms([
-																	// common
-																	{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:412px', value: "2"},
-																	{ title: '使用json配置', rid:'v2ray_use_json_tr', id:'ss_node_table_v2ray_use_json', type:'checkbox', func:'v', help:'27', value:false},
-																	{ title: '使用json配置', rid:'xray_use_json_tr', id:'ss_node_table_xray_use_json', type:'checkbox', func:'v', help:'25', value:false},
-																	{ title: '节点别名', rid:'ss_name_support_tr', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:400px'},
-																	{ title: '服务器地址', rid:'ss_server_support_tr', id:'ss_node_table_server', type:'text', maxlen:'64', style:'width:400px'},
-																	{ title: '服务器端口', rid:'ss_port_support_tr', id:'ss_node_table_port', type:'text', maxlen:'64', style:'width:400px'},
-																	{ title: '密码', rid:'ss_passwd_support_tr', id:'ss_node_table_password', type:'text', maxlen:'64', style:'width:400px'},
-																	{ title: '加密方式', rid:'ss_method_support_tr', id:'ss_node_table_method', type:'select', options:option_method, style:'width:412px', value: "aes-256-cfb"},
-																	// ss
-																	{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:412px', value: "0"},
-																	{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
-																	{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:412px', value: "0"},		//fancyss-full
-																	{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:400px', ph:'tls;host=example.com;path=/'},			//fancyss-full
-																	// ssr
-																	{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:412px', value: "0"},
-																	{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:400px', ph:'id:password'},
-																	{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:412px', value: "0"},
-																	{ title: '混淆参数 (obfs_param)', rid:'ssr_obfs_param_tr', id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
-																	// v2ray
-																	{ title: '<em>服务器配置</em>（以下配置使用vmess作为传出协议，其它传出协议请使用json配置）', class:'v2ray_elem', th:'2'},
-																	{ title: '用户id (id)', rid:'v2ray_uuid_tr', id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:400px'},
-																	{ title: '额外ID (Alterld)', rid:'v2ray_alterid_tr', id:'ss_node_table_v2ray_alterid', type:'text', maxlen:'300', style:'width:400px', value: "0"},
-																	{ title: '加密方式 (security)', rid:'v2ray_security_tr', id:'ss_node_table_v2ray_security', type:'select', options:option_v2enc, style:'width:412px', value: "auto"},
-																	{ title: '<em>底层传输方式</em>', class:'v2ray_elem', th:'2'},
-																	{ title: '传输协议 (network)', rid:'v2ray_network_tr', id:'ss_node_table_v2ray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
-																	{ title: '* tcp伪装类型 (type)', rid:'v2ray_headtype_tcp_tr', id:'ss_node_table_v2ray_headtype_tcp', type:'select', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
-																	{ title: '* kcp伪装类型 (type)', rid:'v2ray_headtype_kcp_tr', id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
-																	{ title: '* quic伪装类型 (type)', rid:'v2ray_headtype_quic_tr', id:'ss_node_table_v2ray_headtype_quic', type:'select', options:option_headquic, value: "none"},
-																	{ title: '* grpc模式', rid:'v2ray_grpc_mode_tr', id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
-																	{ title: '* 伪装域名 (host)', rid:'v2ray_network_host_tr', id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:400px'},
-																	{ title: '* 路径 (path)', rid:'v2ray_network_path_tr', id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																	{ title: '* kcp seed', rid:'v2ray_kcp_seed_tr', id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																	{ title: '底层传输安全', rid:'v2ray_network_security_tr', id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:412px', value: "none"},
-																	{ title: '* 跳过证书验证 (AllowInsecure)', rid:'v2ray_network_security_ai_tr', id:'ss_node_table_v2ray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
-																	{ title: '* alpn', rid:'v2ray_network_security_alpn_tr', multi: [
-																		{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_h2">h2' },
-																		{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_http">http/1.1' },
-																	]},
-																	{ title: 'SNI', rid:'v2ray_network_security_sni_tr', id:'ss_node_table_v2ray_network_security_sni', type:'text'},
-																	{ title: '多路复用 (Mux)', rid:'v2ray_mux_enable_tr', id:'ss_node_table_v2ray_mux_enable', type:'checkbox', func:'v', value: false},
-																	{ title: '* Mux并发连接数', rid:'v2ray_mux_concurrency_tr', id:'ss_node_table_v2ray_mux_concurrency', type:'text', maxlen:'300', style:'width:400px'},
-																	{ title: 'v2ray json', rid:'v2ray_json_tr', id:'ss_node_table_v2ray_json', type:'textarea', rows:'32', ph:ph_v2ray, style:'width:400px'},
-																	// xray
-																	{ title: '<em>服务器配置</em>（以下配置使用vless作为传出协议，其它传出协议请使用json配置）', class:'xray_elem', th:'2'},
-																	{ title: '用户id (id)', rid:'xray_uuid_tr', id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:400px'},
-																	{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
-																	{ title: 'flow (流控模式，没有请留空)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', options:option_xflow, style:'width:412px', value: ""},
-																	{ title: '<em>底层传输方式</em>', class:'xray_elem', th:'2'},
-																	{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
-																	{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
-																	{ title: '* 伪装类型 (type)', rid:'xray_headtype_kcp_tr', id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
-																	{ title: '* quic伪装类型 (type)', rid:'xray_headtype_quic_tr', id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
-																	{ title: '* grpc模式', rid:'xray_grpc_mode_tr', id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: "multi"},
-																	{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
-																	{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																	{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																	{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"], ["reality", "reality"]], style:'width:412px', value: "none"},
-																	{ title: '* 跳过证书验证 (AllowInsecure)', rid:'xray_network_security_ai_tr', id:'ss_node_table_xray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
-																	{ title: '* alpn', rid:'xray_network_security_alpn_tr', multi: [
-																		{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_h2">h2' },
-																		{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_http">http/1.1' },
-																	]},
-																	{ title: '* show', rid:'xray_show_tr', id:'ss_node_table_xray_show', type:'checkbox', value:false},
-																	{ title: '* fingerprint', rid:'xray_fingerprint_tr', id:'ss_node_table_xray_fingerprint', type:'select', options:option_fingerprint, value: ""},
-																	{ title: '* SNI', rid:'xray_network_security_sni_tr', id:'ss_node_table_xray_network_security_sni', type:'text'},
-																	{ title: '* publicKey', rid:'xray_publickey_tr', id:'ss_node_table_xray_publickey', maxlen:'300', style:'width:400px', type:'text'},
-																	{ title: '* shortId', rid:'xray_shortid_tr', id:'ss_node_table_xray_shortid', type:'text'},
-																	{ title: '* spiderX', rid:'xray_spiderx_tr', id:'ss_node_table_xray_spiderx', type:'text'},
-																	{ title: 'xray json', rid:'xray_json_tr', id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:400px'},
-																	// trojan
-																	{ title: 'trojan 密码', rid:'trojan_uuid_tr', id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
-																	{ title: '跳过证书验证 (AllowInsecure)', rid:'trojan_ai_tr', id:'ss_node_table_trojan_ai', type:'checkbox', value: "false"},
-																	{ title: 'SNI', rid:'trojan_sni_tr', id:'ss_node_table_trojan_sni', type:'text'},
-																	{ title: 'tcp fast open', rid:'trojan_tfo_tr', id:'ss_node_table_trojan_tfo', type:'checkbox', value: "false"},
-																	// naive
-																	{ title: 'NaïveProxy 协议', rid:'naive_prot_tr', id:'ss_node_table_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', style:'width:412px', value: "https"},		//fancyss-full
-																	{ title: 'NaïveProxy 服务器', rid:'naive_server_tr', id:'ss_node_table_naive_server', type:'text', maxlen:'300', style:'width:400px'},														//fancyss-full
-																	{ title: 'NaïveProxy 端口', rid:'naive_port_tr', id:'ss_node_table_naive_port', type:'text', maxlen:'300', style:'width:400px', value: "443"},												//fancyss-full
-																	{ title: 'NaïveProxy 账户', rid:'naive_user_tr', id:'ss_node_table_naive_user', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
-																	{ title: 'NaïveProxy 密码', rid:'naive_pass_tr', id:'ss_node_table_naive_pass', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
-																]);
-															</script>
-															</table>
-														</div>
-													</td>
-												</tr>
-											</table>
-											<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
-												<input class="button_gen" style="margin-left: 160px;" type="button" onclick="cancel_add_rule();" id="cancelBtn" value="返回">
-												<input id="add_node" class="button_gen" type="button" onclick="add_ss_node_conf(save_flag);" value="添加">
-												<input id="edit_node" style="display: none;" class="button_gen" type="button" onclick="edit_ss_node_conf(save_flag);" value="修改">
-												<a id="continue_add" style="display: none;margin-left: 20px;"><input id="continue_add_box" type="checkbox"  />连续添加</a>
-											</div>
-										</div>
-										<div id="tablet_0" style="display: none;">
-											<table id="table_basic" width="100%" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													$('#table_basic').forms([
-														// commom
-														{ title: '节点选择', id:'ssconf_basic_node', type:'select', func:'onchange="ss_node_sel();"', style:'width:auto;min-width:164px;max-width:450px;', options:[], value: "1"},
-														{ title: '模式', id:'ss_basic_mode', type:'select', func:'v', hint:'1', options:option_modes, value: "1"},
-														{ title: '使用json配置', id:'ss_basic_v2ray_use_json', type:'checkbox', func:'v', hint:'27'},
-														{ title: '使用json配置', id:'ss_basic_xray_use_json', type:'checkbox', func:'v', hint:'27'},
-														{ title: '服务器地址', id:'ss_basic_server', type:'text', maxlen:'100'},
-														{ title: '服务器端口', id:'ss_basic_port', type:'text', maxlen:'100'},
-														{ title: '密码', id:'ss_basic_password', type:'password', maxlen:'100', peekaboo:'1'},
-														{ title: '加密方式', id:'ss_basic_method', type:'select', func:'v', hint:'5', options:option_method},
-														// ss
-														{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
-														{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', type:'text', maxlen:'100', ph:'bing.com'},
-														{ title: 'v2ray-plugin', id:'ss_basic_ss_v2ray', type:'select', hint: '7', func:'v', options:[["0", "关闭"], ["1", "打开"]], value: "0"},				//fancyss-full
-														{ title: 'v2ray-plugin参数', id:'ss_basic_ss_v2ray_opts', type:'text', maxlen:'300', ph:'tls;host=yourhost.com;path=/;'},								//fancyss-full
-														// ssr
-														{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', type:'select', func:'v', options:option_protocals},
-														{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
-														{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},
-														{ title: '混淆参数 (obfs_param)', id:'ss_basic_rss_obfs_param', type:'text', hint:'11', maxlen:'300', ph:'cloudflare.com;bing.com'},
-														// v2ray
-														{ title: '用户id (id)', id:'ss_basic_v2ray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
-														{ title: '额外ID (Alterld)', id:'ss_basic_v2ray_alterid', type:'text', hint:'48', maxlen:'50'},
-														{ title: '加密方式 (security)', id:'ss_basic_v2ray_security', type:'select', hint:'47', options:option_v2enc},
-														{ title: '传输协议 (network)', id:'ss_basic_v2ray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"]},
-														{ title: '* tcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
-														{ title: '* kcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
-														{ title: '* quic伪装类型 (type)', id:'ss_basic_v2ray_headtype_quic', type:'select', options:option_headquic},
-														{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', type:'select', options:option_grpcmode},
-														{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
-														{ title: '* 路径 (path)', rid:'ss_basic_v2ray_network_path_tr', id:'ss_basic_v2ray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
-														{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
-														{ title: '底层传输安全', id:'ss_basic_v2ray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"]]},
-														{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_v2ray_network_security_ai', type:'checkbox', hint:'56'},
-														{ title: '* alpn', id:'ss_basic_v2ray_network_security_alpn', multi: [
-															{ suffix: '<input type="checkbox" id="ss_basic_v2ray_network_security_alpn_h2">h2' },
-															{ suffix: '<input type="checkbox" id="ss_basic_v2ray_network_security_alpn_http">http/1.1' },
-														]},
-														{ title: '* SNI', id:'ss_basic_v2ray_network_security_sni', type:'text'},
-														{ title: '多路复用 (Mux)', id:'ss_basic_v2ray_mux_enable', type:'checkbox', func:'v', hint:'31'},
-														{ title: 'Mux并发连接数', id:'ss_basic_v2ray_mux_concurrency', type:'text', hint:'32', maxlen:'300'},
-														{ title: 'v2ray json', id:'ss_basic_v2ray_json', type:'textarea', rows:'36', ph:ph_v2ray},
-														// xray
-														{ title: '用户id (id)', id:'ss_basic_xray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
-														{ title: '加密 (encryption)', id:'ss_basic_xray_encryption', type:'text', hint:'55', maxlen:'50'},
-														{ title: 'flow (流控模式，没有请留空)', id:'ss_basic_xray_flow', type:'select', options:option_xflow},
-														{ title: '传输协议 (network)', id:'ss_basic_xray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"]},
-														{ title: '* tcp伪装类型 (type)', id:'ss_basic_xray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
-														{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
-														{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', type:'select', options:option_headquic},
-														{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', type:'select', options:option_grpcmode},
-														{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
-														{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
-														{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
-														{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"], ["reality", "reality"]]},
-														{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', hint:'56'},
-														{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', multi: [
-															{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_h2">h2' },
-															{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_http">http/1.1' },
-														]},
-														{ title: '* show', id:'ss_basic_xray_show', type:'checkbox'},
-														{ title: '* fingerprint', id:'ss_basic_xray_fingerprint', type:'select', options:option_fingerprint},
-														{ title: '* SNI', id:'ss_basic_xray_network_security_sni', type:'text', ph:'realitySettings中的serverName'},
-														{ title: '* publickey', id:'ss_basic_xray_publickey', type:'password', maxlen:'300', style:'width:320px;', ph:'填写公钥', peekaboo:'1'},
-														{ title: '* shortId', id:'ss_basic_xray_shortid', type:'text', ph:'没有请留空'},
-														{ title: '* spiderX', id:'ss_basic_xray_spiderx', type:'text', ph:'没有请留空'},
-														{ title: 'xray json', id:'ss_basic_xray_json', type:'textarea', rows:'36', ph:ph_xray},
-														{ title: '其它', rid:'v2ray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},	//fancyss-full
-														{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新/切换xray程序</a>'},
-														//trojan
-														{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
-														{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai_tr', multi: [
-															{ suffix: '<input type="checkbox" id="ss_basic_trojan_ai">' },
-															{ suffix:'<lable id="ss_basic_trojan_ai_note"></lable>' },
-														]},
-														{ title: 'SNI', id:'ss_basic_trojan_sni', type:'text'},
-														{ title: 'tcp fast open', id:'ss_basic_trojan_tfo', type:'checkbox'},
-														// naive
-														{ title: 'NaïveProxy 协议', id:'ss_basic_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', value: "https"},								//fancyss-full
-														{ title: 'NaïveProxy 服务器', id:'ss_basic_naive_server', type:'text', maxlen:'300'},																					//fancyss-full
-														{ title: 'NaïveProxy 端口', id:'ss_basic_naive_port', type:'text', maxlen:'300', value: "443"},																			//fancyss-full
-														{ title: 'NaïveProxy 账户', id:'ss_basic_naive_user', type:'text', maxlen:'300'},																						//fancyss-full
-														{ title: 'NaïveProxy 密码', id:'ss_basic_naive_pass', type:'text', maxlen:'300'},																						//fancyss-full
-													]);
-												</script>
-											</table>
-										</div>
-										<div id="tablet_1" style="display: none;">
-											<div id="ss_list_table"></div>
-										</div>
-										<div id="tablet_2" style="display: none;">
-											<table id="table_failover" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
-												<script type="text/javascript">
-													var fa1 = ["2", "3", "4", "5"];
-													var fa2_1 = ["10", "15", "20"];
-													var fa2_2 = ["2", "3", "4", "5", "6", "7", "8"];
-													var fa3_1 = ["10", "15", "20"];
-													var fa3_2 = ["100", "150", "200", "250", "300", "350", "400", "450", "500", "1000"];
-													var fa4_1 = [["0", "关闭插件"], ["1", "重启插件"], ["2", "切换到"]];
-													var fa4_2 = [["1", "备用节点"], ["2", "下个节点"]];
-													var fa5 = [["1", "2s - 3s"], ["2", "4s - 7s"], ["3", "8s - 15s"], ["4", "16s - 31s"], ["5", "32s - 63s"]];
-													$('#table_failover').forms([
-														{ title: '故障转移开关', id:'ss_failover_enable',type:'checkbox', func:'v', value:false},
-														{ title: '故障转移设置', rid:'failover_settings_1', multi: [
-															{ suffix:'<div style="margin-top: 5px;">' },
-															{ id:'ss_failover_c1', type:'checkbox', value:false },
-															{ suffix:'<lable>👉&nbsp;国外连续发生&nbsp;</lable>' },
-															{ id:'ss_failover_s1', type:'select', style:'width:auto', options:fa1, value:'3'},
-															{ suffix:'<lable>&nbsp;次故障；<br /></lable>' },
-															{ suffix:'</div>' },
-															//line3
-															{ suffix:'<div style="margin-top: 5px;">' },
-															{ id:'ss_failover_c2', type:'checkbox', value:false },
-															{ suffix:'<lable>👉&nbsp;最近&nbsp;</lable>' },
-															{ id:'ss_failover_s2_1', type:'select', style:'width:auto', options:fa2_1, value:'15'},
-															{ suffix:'<lable>&nbsp;次国外状态检测中，故障次数超过&nbsp;</lable>' },
-															{ id:'ss_failover_s2_2', type:'select', style:'width:auto', options:fa2_2, value:'4'},
-															{ suffix:'<lable>&nbsp;次；<br /></lable>' },
-															{ suffix:'</div>' },
-															//line4
-															{ suffix:'<div style="margin-top: 5px;">' },
-															{ id:'ss_failover_c3', type:'checkbox', value:false },
-															{ suffix:'<lable>👉&nbsp;最近&nbsp;</lable>' },
-															{ id:'ss_failover_s3_1', type:'select', style:'width:auto', options:fa3_1, value:'20'},
-															{ suffix:'<lable>&nbsp;次国外状态检测中，平均延迟超过&nbsp;</lable>' },
-															{ id:'ss_failover_s3_2', type:'select', style:'width:auto', options:fa3_2, value:'500'},
-															{ suffix:'<lable>ms<br /></lable>' },
-															{ suffix:'</div>' },
-															//line5
-															{ suffix:'<div style="margin-top: 5px;">' },
-															{ suffix:'<lable>&nbsp;以上有一个条件满足，则&nbsp;</lable>' },
-															{ id:'ss_failover_s4_1', type:'select', style:'width:auto', func:'v', options:fa4_1, value:'2'},
-															{ id:'ss_failover_s4_2', type:'select', style:'width:auto', func:'v', options:fa4_2, value:'2'},
-															{ id:'ss_failover_s4_3', type:'select', style:'width:170px', func:'v', options:[]},
-															{ suffix:'<lable id="ss_failover_text_1">&nbsp;，即在节点列表内顺序循环。&nbsp;</lable>' },
-															{ suffix:'</div>' },
-														]},
-														{ title: '状态检测时间间隔', rid:'interval_settings', multi: [
-															{ id:'ss_basic_interval', type:'select', style:'width:auto',options:fa5, value:'2'},
-															{ suffix:'<small>&nbsp;默认：4 - 7s</small>' },
-														]},
-														{ title: '历史记录保存数量', rid:'failover_settings_2', multi: [
-															{ suffix:'<lable>最多保留&nbsp;</lable>' },
-															{ id:'ss_failover_s5', type:'select', style:'width:auto',options:["1000", "2000", "3000", "4000"], value:'2000'},
-															{ suffix:'<lable>&nbsp;行日志&nbsp;</lable>' },
-														]},
-														{ title: '查看历史状态', rid:'failover_settings_3', multi: [
-															{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
-															{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
-														]},
-													]);
-												</script>
-											</table>
-										</div>
-										<div id="tablet_3" style="display: none;">
-											<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
-													var isp_dns_1=isp_dns_raw.split(" ")[0];
-													var isp_dns_2=isp_dns_raw.split(" ")[1];
-													validator.ipv4_addr(isp_dns_1)
-													var option_dnsp = [
-																	   ["1", "chinadns-ng"]
-																	  ,["2", "smartdns"]			//fancyss-full
-																	  ,["3", "dohclient"]			//fancyss-full
-																	  ];
-
-													// 进阶DNS方案1 chinadns-ng国内:协议选择
-													option_dnsngc_prot = [
-																		  ["1", "udp"]
-																		 ,["2", "tcp"]
-																		 ,["3", "DoH"]				//fancyss-full
-																		];
-													// 进阶DNS方案1 chinadns-ng国内dns:udp 
-													var option_dnsngc_udp = [];
-													if(isp_dns_1 && isp_dns_2){
-														option_dnsngc_udp.push(["group", "运营商DNS"]);
-														option_dnsngc_udp.push(["1", "⚪" + isp_dns_1]);
-														option_dnsngc_udp.push(["2", "⚪" + isp_dns_2]);
-													}else if(isp_dns_1 && !isp_dns_2){
-														option_dnsngc_udp.push(["group", "运营商DNS"]);
-														option_dnsngc_udp.push(["1", isp_dns_1]);
-													}
-													option_dnsngc_udp.push(["group", "阿里公共DNS"]);
-													option_dnsngc_udp.push(["3", "🟠223.5.5.5"]);
-													option_dnsngc_udp.push(["4", "🟠223.6.6.6"]);
-													option_dnsngc_udp.push(["group", "DNSPod DNS"]);
-													option_dnsngc_udp.push(["5", "🟠119.29.29.29"]);
-													option_dnsngc_udp.push(["6", "🟠119.28.28.28"]);
-													option_dnsngc_udp.push(["group", "114 DNS"]);
-													option_dnsngc_udp.push(["7", "⚫114.114.114.114"]);
-													option_dnsngc_udp.push(["8", "⚫114.114.115.115"]);
-													option_dnsngc_udp.push(["group", "OneDNS"]);
-													option_dnsngc_udp.push(["9", "🟠117.50.11.11（拦截版）"]);
-													option_dnsngc_udp.push(["10", "🟠52.80.66.66（拦截版）"]);
-													option_dnsngc_udp.push(["11", "🟠117.50.10.10（纯净版）"]);
-													option_dnsngc_udp.push(["12", "🟠52.80.52.52（纯净版）"]);
-													option_dnsngc_udp.push(["13", "🟠117.50.60.30（家庭版）"]);
-													option_dnsngc_udp.push(["14", "🟠52.80.60.30（家庭版）"]);
-													option_dnsngc_udp.push(["group", "360安全DNS"]);
-													option_dnsngc_udp.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);
-													option_dnsngc_udp.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);
-													option_dnsngc_udp.push(["17", "🟠123.125.81.6（联通）"]);
-													option_dnsngc_udp.push(["18", "🟠140.207.198.6（联通）"]);
-													option_dnsngc_udp.push(["group", "cnnic DNS"]);
-													option_dnsngc_udp.push(["19", "⚫1.2.4.8"]);
-													option_dnsngc_udp.push(["20", "⚫210.2.4.8"]);
-													option_dnsngc_udp.push(["group", "百度DNS"]);
-													option_dnsngc_udp.push(["21", "🟠180.76.76.76"]);
-													option_dnsngc_udp.push(["group", "教育网DNS"]);
-													option_dnsngc_udp.push(["22", "🟠101.6.6.6:5353（清华大学）"]);
-													option_dnsngc_udp.push(["23", "⚫58.132.8.1（北京）"]);
-													option_dnsngc_udp.push(["24", "⚫101.7.8.9（北京）"]);
-													option_dnsngc_udp.push(["group", "SmartDNS"]);				//fancyss-full
-													option_dnsngc_udp.push(["96", "⚫SmartDNS (UDP)"]);		//fancyss-full
-													option_dnsngc_udp.push(["group", "自定义DNS"]);
-													option_dnsngc_udp.push(["99", "⚪自定义DNS (UDP)"]);
-													// 进阶DNS方案1 chinadns-ng国内tcp | 进阶DNS方案3 dohclient 国内 tcp
-													option_dnsngc_tcp = [
-																		 ["group", "阿里公共DNS"],
-																		 ["3", "🟠223.5.5.5"],
-																		 ["4", "🟠223.6.6.6"],
-																		 ["group", "DNSPod DNS"],
-																		 //["5", "🟠119.29.29.29"],
-																		 ["6", "🟠119.28.28.28"],
-																		 ["group", "114 DNS"],
-																		 ["7", "⚫114.114.114.114"],
-																		 ["8", "⚫114.114.115.115"],
-																		 ["group", "OneDNS"],
-																		 ["10", "🟠52.80.66.66（拦截版）"],
-																		 ["12", "🟠52.80.52.52（纯净版）"],
-																		 ["group", "360安全DNS"],
-																		 ["16", "🟠218.30.118.6（电信/铁通/移动）"],
-																		 ["17", "🟠123.125.81.6（联通）"],
-																		 ["18", "🟠140.207.198.6（联通）"],
-																		 ["group", "教育网DNS"],
-																		 ["22", "🟠101.6.6.6:5353（清华大学）"],
-																		 ["group", "SmartDNS"],				//fancyss-full
-																		 ["97", "⚫SmartDNS (tcp)"],		//fancyss-full
-																		 ["group", "自定义DNS"],
-																		 ["99", "⚪自定义DNS (tcp)"]
-																		 ];
-													option_dnsngc_doh = [									//fancyss-full
-																		 ["group", "dohclient"],			//fancyss-full
-																		 ["1", "🟠阿里公共DNS"],			//fancyss-full
-																		 ["2", "🟠DNSPod公共DNS"],			//fancyss-full
-																		 ["3", "🟠360安全DNS"],				//fancyss-full
-																		 ["group", "SmartDNS"],				//fancyss-full
-																		 ["98", "⚫多上游DoH服务器"]		//fancyss-full
-																		 ];									//fancyss-full
-													var option_dnsngf_1_opt = [
-																			   ["1", "udp"]
-																		 	  ,["2", "tcp"]
-																			  ,["3", "DoH"]					//fancyss-full
-																		 ];
-													var option_dnsngf_1_val_udp = [
-																		 		   ["group", "Google DNS"],
-																				   ["1", "🟠8.8.8.8"],
-																				   ["2", "🟠8.8.4.4"],
-																		 		   ["group", "Cloudflare DNS"],
-																				   ["3", "⚫1.1.1.1"],
-																				   ["4", "⚫1.0.0.1"],
-																		 		   ["group", "Quad9"],
-																				   ["5", "🟠9.9.9.11"],
-																				   ["6", "🟠149.112.112.11"],
-																		 		   ["group", "OpenDNS"],
-																				   ["7", "⚫208.67.222.222"],
-																				   ["8", "⚫208.67.220.220"],
-																		 		   ["group", "DNS.SB"],
-																				   ["9", "⚫185.222.222.222"],
-																				   ["10", "⚫45.11.45.11"],
-																		 		   ["group", "AdGuard"],
-																				   ["11", "🟡94.140.14.14"],
-																				   ["12", "🟡94.140.15.15"],
-																		 		   ["group", "quad101"],
-																				   ["13", "🟠101.101.101.101"],
-																				   ["14", "🟠101.102.103.104"],
-																		 		   ["group", "自定义DNS"],
-																				   ["99", "⚪自定义DNS（udp）"]
-																			  	  ];
-													var option_dnsngf_1_val_tcp = [
-																		 		   ["group", "Google DNS"],
-																				   ["1", "🟠8.8.8.8"],
-																				   ["2", "🟠8.8.4.4"],
-																		 		   ["group", "Cloudflare DNS"],
-																				   ["3", "⚫1.1.1.1"],
-																				   ["4", "⚫1.0.0.1"],
-																		 		   ["group", "Quad9"],
-																				   ["5", "🟠9.9.9.11"],
-																				   ["6", "🟠149.112.112.11"],
-																		 		   ["group", "OpenDNS"],
-																				   ["7", "⚫208.67.222.222"],
-																				   ["8", "⚫208.67.220.220"],
-																		 		   ["group", "DNS.SB"],
-																				   ["9", "⚫185.222.222.222"],
-																				   ["10", "⚫45.11.45.11"],
-																		 		   ["group", "AdGuard"],
-																				   ["11", "🟡94.140.14.14"],
-																				   ["12", "🟡94.140.15.15"],
-																		 		   ["group", "quad101"],
-																				   ["13", "🟠101.101.101.101"],
-																				   ["14", "🟠101.102.103.104"],
-																		 		   ["group", "自定义DNS"],
-																				   ["99", "⚪自定义DNS（tcp）"]
-																			  	  ];
-													var option_dnsngf_1_val_doh = [										//fancyss-full
-																	   			   ["11", "⚫Cloudflare"],				//fancyss-full
-																	   			   ["12", "🟠Google"],					//fancyss-full
-																	   			   ["13", "🟠quad9"],					//fancyss-full
-																	   			   ["14", "🟡AdGuard"],					//fancyss-full
-																	   			   ["15", "🟠Quad 101"],				//fancyss-full
-																	   			   ["16", "⚫OpenDNS"],					//fancyss-full
-																	   			   ["17", "⚫DNS.SB"],					//fancyss-full
-																	   			   ["18", "⚫cleanbrowsing"],			//fancyss-full
-																	  		       ["23", "⚫nextdns"],					//fancyss-full
-																				  ];									//fancyss-full
-													var option_dnsngf_2_val = [											//fancyss-full
-																		 	   ["group", "国外直连组 (dohclient)"],		//fancyss-full
-																	  		   ["11", "⚫Cloudflare"],					//fancyss-full
-																	  		   ["16", "⚫OpenDNS"],						//fancyss-full
-																	  		   ["17", "⚫DNS.SB"],						//fancyss-full
-																	   		   ["18", "⚫cleanbrowsing"],				//fancyss-full
-																	  		   ["19", "⚫he.net"],						//fancyss-full
-																	  		   ["20", "⚫PureDNS"],						//fancyss-full
-																	  		   ["21", "⚫dnslow"],						//fancyss-full
-																	  		   ["22", "🟠dnswarden"],					//fancyss-full
-																	  		   ["24", "⚫bebasid"],						//fancyss-full
-																	  		   ["25", "🟠AT&T "],						//fancyss-full
-																		 	   ["group", "国内直连组 (dohclient)"],		//fancyss-full
-																	  		   ["1", "🟠阿里公共DNS"],					//fancyss-full
-																	  		   ["2", "🟠DNSPod公共DNS"],				//fancyss-full
-																	  		   ["3", "🟠360安全DNS"],					//fancyss-full
-																		 	   ["group", "其它 (SmartDNS)"],			//fancyss-full
-																	  		   ["97", "⚫SmartDNS"],					//fancyss-full
-																	  		  ];										//fancyss-full
-													// 进阶DNS方案1 chinadns-ng国外dns-2
-													var option_dnsngf_2_opt = [
-																		  	   ["1", "udp"]
-																		  	  ,["2", "tcp"]
-																		  	  ,["3", "DoH"]								//fancyss-full
-																			  ];
-													// 进阶DNS方案2 smartdns
-													var option_smrt = [													//fancyss-full
-																	   ["1", "1：国内：运营商DNS；国外：代理"],			//fancyss-full
-																	   ["2", "2：国内：运营商DNS，国外：直连"],			//fancyss-full
-																	   ["3", "3：国内：运营商DNS，国外：代理 + 直连"],	//fancyss-full
-																	   ["4", "4：国内：多上游DNS，国外：代理"],			//fancyss-full
-																	   ["5", "5：国内：多上游DNS，国外：直连"],			//fancyss-full
-																	   ["6", "6：国内：多上游DNS，国外：代理 + 直连"],	//fancyss-full
-																	   ["7", "7：自定义配置1"],							//fancyss-full
-																	   ["8", "8：自定义配置2"],							//fancyss-full
-																	   ["9", "9：自定义配置3"]							//fancyss-full
-																	  ];												//fancyss-full
-													// 进阶DNS方案3 dohclient 国内 doh/udp
-													option_protc_sel_chn = [											//fancyss-full
-																		  ["1", "udp"],									//fancyss-full
-																		  ["2", "tcp"],									//fancyss-full
-																		  ["3", "DoH"]									//fancyss-full
-																		 ];												//fancyss-full
-													option_protc_sel_frn = [											//fancyss-full
-																		  ["2", "tcp"],									//fancyss-full
-																		  ["3", "DoH"]									//fancyss-full
-																		 ];												//fancyss-full
-													// 进阶DNS方案3 dohclient 国内udp
-													var option_dohc_udp_china = [];										//fancyss-full
-													if(isp_dns_1 && isp_dns_2){											//fancyss-full
-														option_dohc_udp_china.push(["group", "运营商DNS"]);				//fancyss-full
-														option_dohc_udp_china.push(["1", "⚪" + isp_dns_1]);			//fancyss-full
-														option_dohc_udp_china.push(["2", "⚪" + isp_dns_2]);			//fancyss-full
-													}else if(isp_dns_1 && !isp_dns_2){									//fancyss-full
-														option_dohc_udp_china.push(["group", "运营商DNS"]);				//fancyss-full
-														option_dohc_udp_china.push(["1", "⚪" + isp_dns_1]);			//fancyss-full
-													}																	//fancyss-full
-													option_dohc_udp_china.push(["group", "阿里公共DNS"]);				//fancyss-full
-													option_dohc_udp_china.push(["3", "🟠223.5.5.5"]);					//fancyss-full
-													option_dohc_udp_china.push(["4", "🟠223.6.6.6"]);					//fancyss-full
-													option_dohc_udp_china.push(["group", "DNSPod DNS"]);				//fancyss-full
-													option_dohc_udp_china.push(["5", "🟠119.29.29.29"]);				//fancyss-full
-													option_dohc_udp_china.push(["6", "🟠119.28.28.28"]);				//fancyss-full
-													option_dohc_udp_china.push(["group", "114 DNS"]);					//fancyss-full
-													option_dohc_udp_china.push(["7", "⚫114.114.114.114"]);				//fancyss-full
-													option_dohc_udp_china.push(["8", "⚫114.114.115.115"]);				//fancyss-full
-													option_dohc_udp_china.push(["group", "OneDNS"]);					//fancyss-full
-													option_dohc_udp_china.push(["9", "🟠117.50.11.11（拦截版）"]);			//fancyss-full
-													option_dohc_udp_china.push(["10", "🟠52.80.66.66（拦截版）"]);			//fancyss-full
-													option_dohc_udp_china.push(["11", "🟠117.50.10.10（纯净版）"]);			//fancyss-full
-													option_dohc_udp_china.push(["12", "🟠52.80.52.52（纯净版）"]);			//fancyss-full
-													option_dohc_udp_china.push(["13", "🟠117.50.60.30（家庭版）"]);			//fancyss-full
-													option_dohc_udp_china.push(["14", "🟠52.80.60.30（家庭版）"]);			//fancyss-full
-													option_dohc_udp_china.push(["group", "360安全DNS"]);					//fancyss-full
-													option_dohc_udp_china.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);	//fancyss-full
-													option_dohc_udp_china.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);	//fancyss-full
-													option_dohc_udp_china.push(["17", "🟠123.125.81.6（联通）"]);			//fancyss-full
-													option_dohc_udp_china.push(["18", "🟠140.207.198.6（联通）"]);			//fancyss-full
-													option_dohc_udp_china.push(["group", "cnnic DNS"]);						//fancyss-full
-													option_dohc_udp_china.push(["19", "⚫1.2.4.8"]);						//fancyss-full
-													option_dohc_udp_china.push(["20", "⚫210.2.4.8"]);						//fancyss-full
-													option_dohc_udp_china.push(["group", "百度DNS"]);						//fancyss-full
-													option_dohc_udp_china.push(["21", "🟠180.76.76.76"]);					//fancyss-full
-													option_dohc_udp_china.push(["group", "教育网DNS"]);						//fancyss-full
-													option_dohc_udp_china.push(["22", "🟠101.6.6.6:5353（清华大学）"]);		//fancyss-full
-													option_dohc_udp_china.push(["23", "⚫58.132.8.1（北京）"]);				//fancyss-full
-													option_dohc_udp_china.push(["24", "⚫101.7.8.9（北京）"]);				//fancyss-full
-													option_dohc_udp_china.push(["group", "自定义DNS"]);						//fancyss-full
-													option_dohc_udp_china.push(["99", "⚪自定义DNS (udp)"]);				//fancyss-full
-													option_dohc_tcp_china = [												//fancyss-full
-																			 ["group", "阿里公共DNS"],						//fancyss-full
-																			 ["3", "🟠223.5.5.5"],							//fancyss-full
-																			 ["4", "🟠223.6.6.6"],							//fancyss-full
-																			 ["group", "DNSPod DNS"],						//fancyss-full
-																			 ["5", "🟠119.29.29.29"],						//fancyss-full
-																			 ["6", "🟠119.28.28.28"],						//fancyss-full
-																			 ["group", "114 DNS"],							//fancyss-full
-																			 ["7", "⚫114.114.114.114"],					//fancyss-full
-																			 ["8", "⚫114.114.115.115"],					//fancyss-full
-																			 ["group", "OneDNS"],							//fancyss-full
-																			 ["10", "🟠52.80.66.66（拦截版）"],				//fancyss-full
-																			 ["12", "🟠52.80.52.52（纯净版）"],				//fancyss-full
-																			 ["group", "360安全DNS"],						//fancyss-full
-																			 ["16", "🟠218.30.118.6（电信/铁通/移动）"],	//fancyss-full
-																			 ["17", "🟠123.125.81.6（联通）"],				//fancyss-full
-																			 ["18", "🟠140.207.198.6（联通）"],				//fancyss-full
-																			 ["group", "教育网DNS"],						//fancyss-full
-																			 ["22", "🟠101.6.6.6:5353（清华大学）"],		//fancyss-full
-																			 ["group", "自定义DNS"],						//fancyss-full
-																			 ["99", "⚪自定义DNS (tcp)"]					//fancyss-full
-																			];												//fancyss-full
-													// 进阶DNS方案3 dohclient 国内 doh
-													option_dohc_doh_china = [												//fancyss-full
-																			 ["1", "🟠阿里公共DNS"],						//fancyss-full
-																			 ["2", "🟠DNSPod公共DNS"],						//fancyss-full
-																			 ["3", "🟠360安全DNS"]							//fancyss-full
-																			];												//fancyss-full
-													// 进阶DNS方案3 dohclient 国外 tcp
-													var option_dohc_tcp_foreign = [											//fancyss-full
-																	   ["1", "Cloudflare [1.1.1.1]"],						//fancyss-full
-																	   ["2", "Cloudflare [1.0.0.1]"],						//fancyss-full
-																	   ["3", "Google [8.8.8.8]"],							//fancyss-full
-																	   ["4", "Google [8.8.4.4]"],							//fancyss-full
-																	   ["5", "quad9 [9.9.9.9]"],							//fancyss-full
-																	   ["6", "OpenDNS [208.67.222.222]"],					//fancyss-full
-																	   ["7", "OpenDNS [208.67.220.220]"],					//fancyss-full
-																	   ["8", "DNS.SB [185.222.222.222]"],					//fancyss-full
-																	   ["9", "DNS.SB [45.11.45.11]"],						//fancyss-full
-																	   ["10", "quad101 [101.101.101.101]"],					//fancyss-full
-																	   ["11", "quad101 [101.102.103.104]"],					//fancyss-full
-																	   ["12", "AdGuard [94.140.14.14]"],					//fancyss-full
-																	   ["13", "AdGuard [94.140.15.15]"],					//fancyss-full
-																	   ["99", "自定义DNS(tcp)"]								//fancyss-full
-																	  ];													//fancyss-full
-													// 进阶DNS方案3 dohclient 国外 doh
-													var option_dohcf = [													//fancyss-full
-																	   ["11", "⚫Cloudflare"],								//fancyss-full
-																	   ["12", "🟠Google"],									//fancyss-full
-																	   ["13", "🟠quad9"],									//fancyss-full
-																	   ["14", "🟡AdGuard"],									//fancyss-full
-																	   ["15", "🟠Quad 101"],								//fancyss-full
-																	   ["16", "⚫OpenDNS"],									//fancyss-full
-																	   ["17", "⚫DNS.SB"]									//fancyss-full
-																	  ];													//fancyss-full
-													var option_cache_timeout = [["0", "从不过期"], ["1", "根据ttl"], ["1800", "半小时"], ["3600", "一小时"], ["7200", "两小时"], ["43200", "12小时"], ["86400", "24小时"]];  //fancyss-full
-													// 基础DNS方案：中国dns
-													var option_chndns = [];
-													if(isp_dns_1 && isp_dns_2){
-														option_chndns.push(["group", "运营商DNS"]);
-														option_chndns.push(["1", isp_dns_1]);
-														option_chndns.push(["2", isp_dns_2]);
-													}else if(isp_dns_1 && !isp_dns_2){
-														option_chndns.push(["group", "运营商DNS"]);
-														option_chndns.push(["1", isp_dns_1]);
-													}
-													option_chndns.push(["group", "阿里公共DNS"]);
-													option_chndns.push(["3", "223.5.5.5"]);
-													option_chndns.push(["4", "223.6.6.6"]);
-													option_chndns.push(["group", "DNSPod DNS"]);
-													option_chndns.push(["5", "119.29.29.29"]);
-													option_chndns.push(["6", "119.28.28.28"]);
-													option_chndns.push(["group", "114 DNS"]);
-													option_chndns.push(["7", "114.114.114.114"]);
-													option_chndns.push(["8", "114.114.115.115"]);
-													option_chndns.push(["group", "OneDNS"]);
-													option_chndns.push(["9", "117.50.11.11（拦截版）"]);
-													option_chndns.push(["10", "52.80.66.66（拦截版）"]);
-													option_chndns.push(["11", "117.50.10.10（纯净版）"]);
-													option_chndns.push(["12", "52.80.52.52（纯净版）"]);
-													option_chndns.push(["13", "117.50.60.30（家庭版）"]);
-													option_chndns.push(["14", "52.80.60.30（家庭版）"]);
-													option_chndns.push(["group", "360安全DNS"]);
-													option_chndns.push(["15", "101.226.4.6（电信/铁通/移动）"]);
-													option_chndns.push(["16", "218.30.118.6（电信/铁通/移动）"]);
-													option_chndns.push(["17", "123.125.81.6（联通）"]);
-													option_chndns.push(["18", "140.207.198.6（联通）"]);
-													option_chndns.push(["group", "cnnic DNS"]);
-													option_chndns.push(["19", "1.2.4.8"]);
-													option_chndns.push(["20", "210.2.4.8"]);
-													option_chndns.push(["group", "百度DNS"]);
-													option_chndns.push(["21", "180.76.76.76"]);
-													option_chndns.push(["group", "教育网DNS"]);
-													option_chndns.push(["22", "101.6.6.6:5353（清华大学）"]);
-													option_chndns.push(["23", "58.132.8.1（北京）"]);
-													option_chndns.push(["24", "101.7.8.9（北京）"]);
-													option_chndns.push(["group", "SmartDNS"]);										//fancyss-full
-													option_chndns.push(["98", "SmartDNS (UDP)"]);									//fancyss-full
-													option_chndns.push(["group", "自定义DNS"]);
-													option_chndns.push(["99", "自定义DNS (UDP)"]);
-													// 基础DNS方案：外国dns
-													var option_dnsf = [["3", "🚀 dns2socks"],
-																	   ["4", "🚀 ss-tunnel"],										//fancyss-full
-																	   ["7", "🚀 v2ray/xray_dns"],
-																	   ["9", "🌏 smartdns"],										//fancyss-full
-																	   ["8", "🌏 直连（udp）"]
-																	  ];
-													// 节点域名解析DNS方案
-													var option_dnsresolv = [["0", "udp查询"],
-																			["1", "tcp查询"],
-																			["2", "smartdns（DoH+DoT）"],							//fancyss-full
-																			["3", "dohclient（DoH）"],								//fancyss-full
-																		   ];
-													// 节点域名解析DNS方案： udp选项
-													var option_udp_resv = [
-																		   ["group", "自动选取"],
-																		   ["0", "自动选取模式（国内 + 国外）"],
-																		   ["-1", "自动选取模式（仅国内）"],
-																		   ["-2", "自动选取模式（仅国外）"],
-																		   ["group", "国内DNS"],
-																		   ["1", "阿里DNS【223.5.5.5】"],
-																		   ["2", "DNSPod DNS【119.29.29.29】"],
-																		   ["3", "114DNS【114.114.114.114】"],
-																		   ["4", "OneDNS【52.80.66.66】"],
-																		   ["5", "360安全DNS 电信/铁通/移动【123.125.81.6】"],
-																		   ["6", "360安全DNS 联通【140.207.198.6】"],
-																		   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
-																		   ["8", "百度DNS【180.76.76.76】"],
-																		   ["group", "国外DNS"],
-																		   ["11", "Google DNS【8.8.8.8】"],
-																		   ["12", "CloudFlare DNS【1.1.1.1】"],
-																		   ["13", "Quad9 Secured【9.9.9.11】"],
-																		   ["14", "OpenDNS【208.67.222.222】"],
-																		   ["15", "DNS.SB【185.222.222.222】"],
-																		   ["16", "AdGuard【94.140.14.14】"],
-																		   ["17", "Quad101【101.101.101.101】"],
-																		   ["18", "CleanBrowsing【185.228.168.9】"],
-																		   ["group", "自定义DNS"],
-																		   ["99", "自定义DNS (udp)"],
-																		  ];
-													// 节点域名解析DNS方案： tcp选项
-													var option_tcp_resv = [
-																		   ["group", "自动选取"],
-																		   ["0", "自动选取模式（国内 + 国外）"],
-																		   ["-1", "自动选取模式（仅国内）"],
-																		   ["-2", "自动选取模式（仅国外）"],
-																		   ["group", "国内DNS"],
-																		   ["1", "阿里DNS【223.5.5.5】"],
-																		   ["2", "DNSPod DNS【119.29.29.29】"],
-																		   ["3", "114DNS【114.114.114.114】"],
-																		   ["4", "OneDNS【52.80.66.66】"],
-																		   ["5", "360安全DNS 电信/铁通/移动【123.125.81.6】"],
-																		   ["6", "360安全DNS 联通【140.207.198.6】"],
-																		   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
-																		   ["group", "国外DNS"],
-																		   ["11", "Google DNS【8.8.8.8】"],
-																		   ["12", "CloudFlare DNS【1.1.1.1】"],
-																		   ["13", "Quad9 Secured【9.9.9.11】"],
-																		   ["14", "OpenDNS【208.67.222.222】"],
-																		   ["15", "DNS.SB【185.222.222.222】"],
-																		   ["16", "AdGuard【94.140.14.14】"],
-																		   ["17", "Quad101【101.101.101.101】"],
-																		   ["group", "自定义DNS"],
-																		   ["99", "自定义DNS (tcp)"],
-																		  ];
-													// 节点域名解析DNS方案： dohclient选项
-													option_dohc_doh_resv = [							//fancyss-full
-																			["group", "国外DoH DNS"],	//fancyss-full
-																			["1", "Cloudflare"],		//fancyss-full
-																			["2", "OpenDNS"],			//fancyss-full
-																			["3", "DNS.SB"],			//fancyss-full
-																			["4", "cleanbrowsing"]		//fancyss-full
-																			["group", "国内DoH DNS"],	//fancyss-full
-																			["14", "阿里公共DNS"],		//fancyss-full
-																			["15", "DNSPod公共DNS"],	//fancyss-full
-																			["16", "360安全DNS"],		//fancyss-full
-																		   ]; 							//fancyss-full
-													var option_dig = [
-																	  ["group", "国内域名"],
-																	  ["www.baidu.com", "www.baidu.com"],
-																	  ["www.sina.com.cn", "www.sina.com.cn"],
-																	  ["www.sohu.com", "www.sohu.com"],
-																	  ["www.163.com", "www.163.com"],
-																	  ["www.qq.com", "www.qq.com"],
-																	  ["www.taobao.com", "www.taobao.com"],
-																	  ["www.jd.com", "www.jd.com"],
-																	  ["www.bilibili.com", "www.bilibili.com"],
-																	  ["www.bing.com", "www.bing.com"],
-																	  ["group", "国外域名"],
-																	  ["www.google.com", "www.google.com"],
-																	  ["www.google.com.hk", "www.google.com.hk"],
-																	  ["www.youtube.com", "www.youtube.com"],
-																	  ["www.facebook.com", "www.facebook.com"],
-																	  ["www.twitter.com", "www.twitter.com"],
-																	  ["www.wikipedia.org", "www.wikipedia.org"],
-																	  ["www.instagram.com", "www.instagram.com"],
-																	  ["www.netflix.com", "www.netflix.com"],
-																	  ["www.reddit.com", "www.reddit.com"],
-																	  ["www.github.com", "www.github.com"],
-																	 ];
-													var ph1 = "需端口号如：8.8.8.8:53"
-													var ph2 = "需端口号如：8.8.8.8#53"
-													var ph3 = "# 填入自定义的dnsmasq设置，一行一个&#10;# 例如hosts设置：&#10;address=/weibo.com/2.2.2.2&#10;# 防DNS劫持设置：&#10;bogus-nxdomain=220.250.64.18"
-													$('#table_dns').forms([
-														{ title: '<em>DNS方案设置</em>', thtd:1 , multi: [
-															{ id:'ss_basic_olddns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(136)"><font color="#ffcc00">基础</font></a>', value: 0},
-															{ id:'ss_basic_advdns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(137)"><font color="#ffcc00">进阶</font></a>', value: 1},
-														]},
-														{ title: '选择DNS主方案', class:'new_dns_main', multi: [
-															{ id: 'ss_dns_plan', type:'select', func:'u', options:option_dnsp, style:'width:209px;', value:'1'},
-														]},
-														// new_dns: chinadns-ng
-														{ title: '&nbsp;&nbsp;*选择中国DNS-1 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
-															{ id: 'ss_basic_chng_china_1_enable', type:'checkbox', func:'u', value:true},
-															{ id: 'ss_basic_chng_china_1_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'1'},
-															{ id: 'ss_basic_chng_china_1_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:auto;', value:'1'},
-															{ id: 'ss_basic_chng_china_1_udp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
-															{ id: 'ss_basic_chng_china_1_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'1'},
-															{ id: 'ss_basic_chng_china_1_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
-															{ id: 'ss_basic_chng_china_1_doh', type:'select', func:'u', options:option_dnsngc_doh, style:'width:200px;', value:'1'},																					//fancyss-full
-															{ suffix:'&nbsp;&nbsp;'},
-															{ suffix:'<a type="button" id="edit_smartdns_conf_10" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(10)">编辑smartdns配置</a>'},														//fancyss-full
-															{ suffix:'<a type="button" id="edit_smartdns_conf_11" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(11)">编辑smartdns配置</a>'},														//fancyss-full
-															{ suffix:'<a type="button" id="edit_smartdns_conf_12" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(12)">编辑smartdns配置</a>'},														//fancyss-full
-															{ prefix: '<a id="ss_basic_chng_china_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_1_ecs', type: 'checkbox', value:true },
-															{ suffix: '<a type="button" id="dohclient_cache_manage_chn1" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2051">缓存管理</a>' },				//fancyss-full
-														]},
-														{ title: '&nbsp;&nbsp;*选择中国DNS-2 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
-															{ id: 'ss_basic_chng_china_2_enable', type:'checkbox', func:'u', value:true},
-															{ id: 'ss_basic_chng_china_2_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'2'},
-															{ id: 'ss_basic_chng_china_2_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:200px;', value:'5'},
-															{ id: 'ss_basic_chng_china_2_udp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
-															{ id: 'ss_basic_chng_china_2_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'5'},
-															{ id: 'ss_basic_chng_china_2_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
-															{ id: 'ss_basic_chng_china_2_doh', type:'select', func:'u', options:option_dnsngc_doh, style:'width:200px;', value:'1'},																					//fancyss-full
-															{ suffix:'&nbsp;&nbsp;'},
-															{ suffix:'<a type="button" id="edit_smartdns_conf_13" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(10)">编辑smartdns配置</a>'},														//fancyss-full
-															{ suffix:'<a type="button" id="edit_smartdns_conf_14" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(11)">编辑smartdns配置</a>'},														//fancyss-full
-															{ suffix:'<a type="button" id="edit_smartdns_conf_15" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(12)">编辑smartdns配置</a>'},														//fancyss-full
-															{ prefix: '<a id="ss_basic_chng_china_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_2_ecs', type: 'checkbox', value:true },
-															{ suffix: '<a type="button" id="dohclient_cache_manage_chn2" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2052">缓存管理</a>' },				//fancyss-full
-														]},
-														{ title: '&nbsp;&nbsp;*选择可信DNS-1 <font color="#FF0066">(代理) 🚀</font>', hint:'134', class:'new_dns chng', rid:'dns_plan_foreign_1', multi: [
-															{ id: 'ss_basic_chng_trust_1_enable', type:'checkbox', func:'u', value:true},
-															{ id: 'ss_basic_chng_trust_1_opt', type:'select', func:'u', options:option_dnsngf_1_opt, style:'width:50px;', value:'2'},
-															{ id: 'ss_basic_chng_trust_1_opt_udp_val', type:'select', func:'u', options:option_dnsngf_1_val_udp, style:'width:auto;', value:'1'},
-															{ id: 'ss_basic_chng_trust_1_opt_udp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_basic_chng_trust_1_opt_tcp_val', type:'select', func:'u', options:option_dnsngf_1_val_tcp, style:'width:auto;', value:'1'},
-															{ id: 'ss_basic_chng_trust_1_opt_tcp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_basic_chng_trust_1_opt_doh_val', type:'select', func:'u', options:option_dnsngf_1_val_doh, style:'width:auto;', value:'12'},																		//fancyss-full
-															{ suffix: '&nbsp;&nbsp;'},
-															{ prefix: '<a id="ss_basic_chng_trust_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(131)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_1_ecs', type: 'checkbox', value:true },
-															{ suffix: '<a type="button" id="dohclient_cache_manage_frn1" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2055">缓存管理</a>' },				//fancyss-full
-														]},
-														{ title: '&nbsp;&nbsp;*选择可信DNS-2 <em>(直连) 🌏</em>', class:'new_dns chng', hint:'135', rid:'dns_plan_foreign_2', multi: [
-															{ id: 'ss_basic_chng_trust_2_enable', type:'checkbox', func:'u', value:false},
-															{ id: 'ss_basic_chng_trust_2_opt', type:'select', func:'u', options:option_dnsngf_2_opt, style:'width:50px;', value:'0'},
-															{ id: 'ss_basic_chng_trust_2_opt_udp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
-															{ id: 'ss_basic_chng_trust_2_opt_tcp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
-															{ id: 'ss_basic_chng_trust_2_opt_doh', type:'select', func:'u', options:option_dnsngf_2_val, style:'width:auto;', value:'2'},																				//fancyss-full
-															{ suffix: '&nbsp;&nbsp;'},
-															{ suffix: '<a type="button" id="edit_smartdns_conf_30" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(30)">编辑smartdns配置</a>'},														//fancyss-full
-															{ prefix: '<a id="ss_basic_chng_trust_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(132)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_2_ecs', type: 'checkbox', value:true },
-															{ suffix: '<a type="button" id="dohclient_cache_manage_frn2" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2056">缓存管理</a>' },				//fancyss-full
-															//{ suffix: '<span id="ss_basic_chng_direct_user_note"><br />⚠️直连情况下可能存在DNS污染，请自行解决！</span>'},
-														]},	
-														//{ title: '&nbsp;&nbsp;*丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', id:'ss_basic_chng_no_ipv6', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;*丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', hint:'145', id:'ss_basic_chng_x', multi: [
-															{ id:'ss_basic_chng_no_ipv6', type:'checkbox', func:'u', value: true},
-															{ suffix: '<a id="ss_basic_chng_left">&nbsp;&nbsp;&nbsp;&nbsp;【</a>' },
-															{ id:'ss_basic_chng_act', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xact" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">act</font></a>&nbsp;&nbsp;', value: 0},
-															{ id:'ss_basic_chng_gt', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xgt" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">gt</font></a>&nbsp;&nbsp;', value: 1},
-															{ id:'ss_basic_chng_mc', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xmc" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">mt</font></a>', value: 0},
-															{ suffix: '<a id="ss_basic_chng_right">&nbsp;&nbsp;】</a>' },
-														]},
-														
-														{ title: '&nbsp;&nbsp;*发送重复DNS查询包（--repeat-times）', class:'new_dns chng', id:'ss_basic_chng_repeat_times', type:'text', value: '2'},
-														// new_dns: smartdns
-														{ title: '&nbsp;&nbsp;*选择smartdns配置', class:'new_dns smrt', multi: [																						//fancyss-full
-															{ id: 'ss_basic_smrt', type:'select', func:'u', options:option_smrt, style:'width:260px;', value:'1'},														//fancyss-full
-															{ suffix: '&nbsp;&nbsp;'},																																	//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_51" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(51)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_52" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(52)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_53" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(53)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_54" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(54)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_55" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(55)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_56" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(56)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_57" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(57)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_58" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(58)">编辑smartdns配置</a>'},		//fancyss-full
-															{ suffix: '<a type="button" id="edit_smartdns_conf_59" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(59)">编辑smartdns配置</a>'},		//fancyss-full
-														]},																																								//fancyss-full
-														// new_dns: dohclient
-														{ title: '&nbsp;&nbsp;*选择国内DNS', class:'new_dns dohc', hint:'122', multi: [																																					//fancyss-full
-															{ id: 'ss_basic_dohc_sel_china', type:'select', func:'u', options:option_protc_sel_chn, style:'width:50px;', value:'3'},																									//fancyss-full
-															{ id: 'ss_basic_dohc_udp_china', type:'select', func:'u', options:option_dnsngc_udp, style:'width:190px;', value:'3'},																										//fancyss-full
-															{ id: 'ss_basic_dohc_udp_china_user', type: 'text', style:'width:110px;', ph:'114.114.114.114' },																															//fancyss-full
-															{ id: 'ss_basic_dohc_tcp_china', type:'select', func:'u', options:option_dohc_tcp_china, style:'width:190px;', value:'1'},																									//fancyss-full
-															{ id: 'ss_basic_dohc_tcp_china_user', type: 'text', style:'width:110px;', ph:'114.114.114.114' },																															//fancyss-full
-															{ id: 'ss_basic_dohc_doh_china', type:'select', func:'u', options:option_dohc_doh_china, style:'width:190px;', value:'1'},																									//fancyss-full
-															{ prefix: '&nbsp;<a id="ss_basic_dhoc_chn_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(123)"><font color="#ffcc00"><u>ECS</u></font></a>', id: 'ss_basic_dohc_ecs_china', type: 'checkbox', value:true },						//fancyss-full
-														]},																																																								//fancyss-full
-														{ title: '&nbsp;&nbsp;*选择国外DNS', class:'new_dns dohc', hint:'124', multi: [																																					//fancyss-full
-															{ id: 'ss_basic_dohc_sel_foreign', type:'select', func:'u', options:option_protc_sel_frn, style:'width:50px;', value:'3'},																									//fancyss-full
-															{ id: 'ss_basic_dohc_tcp_foreign', type:'select', func:'u', options:option_dohc_tcp_foreign, style:'width:190px;', value:'3'},																								//fancyss-full
-															{ id: 'ss_basic_dohc_tcp_foreign_user', type: 'text', style:'width:110px;', ph:'8.8.8.8' },																																	//fancyss-full
-															{ id: 'ss_basic_dohc_doh_foreign', type:'select', func:'u', options:option_dohcf, style:'width:190px;', value:'12'},																											//fancyss-full
-															{ prefix: '&nbsp;<a id="ss_basic_dhoc_frn_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(125)"><font color="#ffcc00"><u>ECS</u></font></a>', id: 'ss_basic_dohc_ecs_foreign', type: 'checkbox', value:true },					//fancyss-full
-															{ prefix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(126)"><font color="#ffcc00"><u>Proxy</u></font></a>', id: 'ss_basic_dohc_proxy', type: 'checkbox', value:true },						//fancyss-full
-														]},																																																								//fancyss-full
-														{ title: '&nbsp;&nbsp;*缓存管理', class:'new_dns dohc', multi: [																																								//fancyss-full
-															{ prefix: '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(127)"><font color="#ffcc00"><u>缓存时长</u>：</font></a>' },																		//fancyss-full
-															{ id: 'ss_basic_dohc_cache_timeout', type:'select', func:'u', options:option_cache_timeout, style:'width:100px;', value:'1'},																								//fancyss-full
-															{ suffix: '&nbsp;&nbsp;<a type="button" id="dohclient_cache_manage_dohc" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':7913">缓存管理</a>' },					//fancyss-full
-															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="remove_doh_cache(1)">清空缓存</a>&nbsp;&nbsp;'},																						//fancyss-full
-															{ prefix: '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(128)"><font color="#ffcc00"><u>缓存持久化</u></font></a>', id: 'ss_basic_dohc_cache_reuse', type: 'checkbox', value:false },		//fancyss-full
-														]},																																																								//fancyss-full
-														// old_dns	
-														{ title: '选择中国DNS', class:'old_dns', multi: [
-															{ id: 'ss_china_dns', type:'select', func:'u', options:option_chndns, style:'width:auto;', value:'3'},
-															{ id: 'ss_china_dns_user', type: 'text', ph:'114.114.114.114' }
-														]},
-														{ title: '选择外国DNS（🌏直连 | 🚀代理） ', class:'old_dns', hint:'26', rid:'dns_plan_foreign', multi: [
-															{ id: 'ss_foreign_dns', type:'select', func:'u', options:option_dnsf, style:'width:auto;'},
-															{ id: 'ss_dns2socks_user', type: 'text', style: 'width:auto;', value:'8.8.8.8:53', ph:ph1 },
-															{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
-															{ id: 'ss_direct_user', type: 'text', value:'8.8.8.8#53', ph:ph2 },
-															{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},	//fancyss-full
-															{ suffix: '<span id="ss_disable_aaaa_note">丢弃AAAA记录</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
-															{ suffix: '<span id="ss_doh_note">&nbsp;&nbsp;DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~</span>' },  //fancyss-full
-															{ suffix: '<span id="ss_v2_note"></span>' },
-														]},
-														{ title: '<em>其它DNS相关设置</em>', th:'2'},
-														{ title: 'DNS重定向', id:'ss_basic_dns_hijack', type:'checkbox', hint:'106', value:true},
-														{ title: 'DNS解析测试', rid: 'ss_dns_test', multi: [
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(1)">测试cdn</a>&nbsp;&nbsp;'},
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(2)">测试apple china</a>&nbsp;&nbsp;'},
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(3)">测试google china</a>&nbsp;&nbsp;'},
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(4)">测试gfwlist</a>&nbsp;&nbsp;'},
-															//{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(5)">测试cdn-china</a>&nbsp;&nbsp;'},
-														]},
-														{ title: 'DNS解析测试(dig)', rid: 'ss_dig_test', multi: [
-															{ id: 'ss_basic_dig_opt', type:'select', func:'u', options:option_dig, style:'width:240px;', value:'1'},
-															{ suffix: '&nbsp;&nbsp;' },
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(6)">dig</a>&nbsp;&nbsp;'},
-														]},
-														{ title: '重启dnsmasq', rid: 'ss_dnsmasq_restart', multi: [	
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
-														]},	
-														// server dns resolver
-														{ title: '节点域名解析DNS方案', hint:'107', multi: [
-															{ id: 'ss_basic_s_resolver', type:'select', func:'u', options:option_dnsresolv, style:'width:140px;', value:'0'},
-															{ id: 'ss_basic_s_resolver_udp', type:'select', func:'u', options:option_udp_resv, style:'width:160px;', value:'0'},
-															{ id: 'ss_basic_s_resolver_udp_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
-															{ id: 'ss_basic_s_resolver_tcp', type:'select', func:'u', options:option_tcp_resv, style:'width:160px;', value:'0'},
-															{ id: 'ss_basic_s_resolver_tcp_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
-															{ id: 'ss_basic_s_resolver_doh', type:'select', func:'u', options:option_dohc_doh_resv, style:'width:160px;', value:'3'},								//fancyss-full
-															{ suffix: '&nbsp;&nbsp;' },
-															{ suffix: '<a type="button" id="edit_smartdns_conf_40" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(40)">编辑smartdns配置</a>'},	//fancyss-full
-														]},
-														{ title: '自定义dnsmasq', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
-													]);
-													var curr_host = window.location.hostname;												//fancyss-full
-													$("#dohclient_cache_manage_chn1").attr("href", "http://" + curr_host + ":2051");		//fancyss-full
-													$("#dohclient_cache_manage_chn2").attr("href", "http://" + curr_host + ":2052");		//fancyss-full
-													$("#dohclient_cache_manage_frn1").attr("href", "http://" + curr_host + ":2055");		//fancyss-full
-													$("#dohclient_cache_manage_frn2").attr("href", "http://" + curr_host + ":2056");		//fancyss-full
-													$("#dohclient_cache_manage_dohc").attr("href", "http://" + curr_host + ":7913");		//fancyss-full
-												</script>
-											</table>
-										</div>
-										<div id="tablet_4" style="display: none;">
-											<table id="table_wblist" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													var ph1 = "# 填入不需要走代理的外网ip地址，一行一个，格式（IP/CIDR）如下&#10;2.2.2.2&#10;3.3.3.3&#10;4.4.4.4/24";
-													var ph2 = "# 填入不需要走代理的域名，一行一个，格式如下：&#10;google.com&#10;facebook.com&#10;# 需要清空电脑DNS缓存，才能立即看到效果。";
-													var ph3 = "# 填入需要强制走代理的外网ip地址，一行一个，格式（IP/CIDR）如下：&#10;5.5.5.5&#10;6.6.6.6&#10;7.7.7.7/8";
-													var ph4 = "# 填入需要强制走代理的域名，一行一个，格式如下：&#10;baidu.com&#10;taobao.com&#10;# 需要清空电脑DNS缓存，才能立即看到效果。";
-													$('#table_wblist').forms([
-														{ title: 'IP/CIDR白名单<br><br><font color="#ffcc00">添加不需要走代理的外网ip地址</font>', id:'ss_wan_white_ip', type:'textarea', hint:'38', rows:'7', ph:ph1},
-														{ title: '域名白名单<br><br><font color="#ffcc00">添加不需要走代理的域名</font>', id:'ss_wan_white_domain', type:'textarea', hint:'39', rows:'7', ph:ph2},
-														{ title: 'IP/CIDR黑名单<br><br><font color="#ffcc00">添加需要强制走代理的外网ip地址</font>', id:'ss_wan_black_ip', type:'textarea', hint:'40', rows:'7', ph:ph3},
-														{ title: '域名黑名单<br><br><font color="#ffcc00">添加需要强制走代理的域名</font>', id:'ss_wan_black_domain', type:'textarea', hint:'41', rows:'7', ph:ph4},
-													]);
-												</script>
-											</table>
-										</div>
-										<!--fancyss_full_1-->
-										<div id="tablet_5" style="display: none;">
-											<table id="table_kcp" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													var option_kcpm = [ "manual", "normal", "fast", "fast2", "fast3" ];
-													var option_kcpe = [ "aes", "aes-128", "aes-192", "salsa20", "blowfish", "twofish", "cast5", "3des", "tea", "xtea", "xor", "none"];
-													var ph1 = "请将速度模式为manual的参数和其它参数依次填写进来";
-													var ph2 = "# 填入你的kcptun运行参数，每个参数用空格隔开，格式如下：&#10;--crypt salsa20 --key mjy211 --sndwnd 1024 --rcvwnd 1024 --mtu 1300 --nocomp --mode fast2";
-													$('#table_kcp').forms([
-														{ title: 'KCP加速开关', id:'ss_basic_use_kcp', type:'checkbox', func:'v', value:false},
-														{ title: 'KCP参数配置方式', id:'ss_basic_kcp_method', type:'select', func:'v', options:[["1", "选择模式"], ["2", "输入模式"]], value:'2'},
-														{ title: 'kcp本地监听地址：端口 （-l）', multi: [
-															{ id: 'ss_basic_kcp_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_kcp_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1091'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(90)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: 'kcp服务器地址：端口 （-r）', multi: [
-															{ id: 'ss_basic_kcp_server', type: 'text', maxlen:'200', style:'width:120px;'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_kcp_port', type: 'text', maxlen:'200', style:'width:44px;'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(91)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '密码 (--key)', rid:'ss_basic_kcp_password_tr', id:'ss_basic_kcp_password', type:'password', maxlen:'200', peekaboo:'1'},
-														{ title: '速度模式 (--mode)', rid:'ss_basic_kcp_mode_tr', id:'ss_basic_kcp_mode', type:'select', options:option_kcpm, value:'fast2'},
-														{ title: '加密方式 (--crypt)', rid:'ss_basic_kcp_encrypt_tr', id:'ss_basic_kcp_encrypt', type:'select', options:option_kcpe, value:'aes-192'},
-														{ title: 'MTU (--mtu)', rid:'ss_basic_kcp_mtu_tr', id:'ss_basic_kcp_mtu', type:'text', maxlen:'200'},
-														{ title: '发送窗口 (--sndwnd)', rid:'ss_basic_kcp_sndwnd_tr', id:'ss_basic_kcp_sndwnd', type:'text', maxlen:'200'},
-														{ title: '接收窗口 (--rcvwnd)', rid:'ss_basic_kcp_rcvwnd_tr', id:'ss_basic_kcp_rcvwnd', type:'text', maxlen:'200'},
-														{ title: '链接数 (--conn)', rid:'ss_basic_kcp_conn_tr', id:'ss_basic_kcp_conn', type:'text', maxlen:'200'},
-														{ title: '关闭数据压缩 (--nocomp)', rid:'ss_basic_kcp_nocomp_tr', id:'ss_basic_kcp_nocomp', type:'checkbox', value:false},
-														{ title: '其它配置项', rid:'ss_basic_kcp_extra_tr', id:'ss_basic_kcp_extra', type:'text', maxlen:'200', style:'width:95%', ph:ph1},
-														{ title: 'KCP参数', rid:'ss_basic_kcp_parameter_tr', id:'ss_basic_kcp_parameter', type:'textarea', rows:'4', ph:ph2},
-													]);
-												</script>
-											</table>
-										</div>
-										<div id="tablet_6" style="display: none;">
-											<table id="table_udp_main" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													$('#table_udp_main').forms([
-														{ title: '加速节点选择', multi: [
-															{ id: 'ss_basic_udp_node', type: 'select', options:[]},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(97)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '设置ss/ssr-redir MTU', multi: [
-															{ id: 'ss_basic_udp_upstream_mtu', type: 'select', func:'u', options:[["0", "不设定"], ["1", "手动指定"]]},
-															{ id: 'ss_basic_udp_upstream_mtu_value', type: 'text', value:'1200', style:'width:40px;'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(98)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '帮助信息', multi: [
-															{ suffix: '<ul><li>你可以只开启UDPspeeder加速udp，或者只开启UDP2raw将udp转为tcp；</li>' },
-															{ suffix: '<li>你也可以将UDPspeeder和UDP2raw都开启，并配置它们串联工作；</li><li>帮助文档：' },
-															{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/blob/master/doc/README.zh-cn.v1.md"><em><u>UDPspeederV1</u></em></a>&nbsp;&nbsp;' },
-															{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/blob/master/doc/README.zh-cn.md"><em><u>UDPspeederV2</u></em></a>&nbsp;&nbsp;' },
-															{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/udp2raw-tunnel/blob/master/doc/README.zh-cn.md"><em><u>udp2raw-tunnel</u></em></a>' },
-															{ suffix: '</li></ul>' },
-														]},
-														{ title: 'UDPspeeder运行状态', suffix: '<span id="udp_status">获取中...</span>'},
-													]);
-												</script>
-											</table>
-											<div id="sub_tablets">
-												<table style="margin:10px 0px 0px 0px;border-collapse:collapse" width="100%" height="37px">
-													<tr width="235px">
-														<td colspan="4" cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#000">
-															<input id="sub_btn1" class="sub-btn1 active2" style="cursor:pointer" type="button" value="UDPspeeder" />
-															<input id="sub_btn2" class="sub-btn2" style="cursor:pointer" type="button" value="UDP2raw-tunnel" />
+																</label>
+															</div>
+															<div id="update_button" style="display:table-cell;float: left;position: absolute;margin-left:70px;padding: 5.5px 0px;">
+																<a id="updateBtn" type="button" class="ss_btn" style="cursor:pointer" onclick="update_ss()">检查并更新</a>
+															</div>
+															<div id="ss_version_show" style="display:table-cell;float: left;position: absolute;margin-left:170px;padding: 5.5px 0px;">
+																<a><i>当前版本：</i></a>
+															</div>
+															<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 5.5px 0px;">
+																<a type="button" class="ss_btn" target="_blank" href="https://github.com/hq450/fancyss/blob/3.0/Changelog.txt">更新日志</a>
+															</div>
+															<div style="display:table-cell;float: left;margin-left:350px;position: absolute;padding: 5.5px 0px;">
+																<a type="button" class="ss_btn" href="javascript:void(0);" onclick="pop_help()">插件帮助</a>
+															</div>
+														</td>
+													</tr>
+													<tr id="ss_state">
+														<th>插件运行状态</th>
+														<td>
+															<div style="display:table-cell;float: left;margin-left:0px;">
+																<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(0)">
+																	<span id="ss_state2">国外连接 - Waiting...</span>
+																	<br/>
+																	<span id="ss_state3">国内连接 - Waiting...</span>
+																</a>
+															</div>
+															<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 10.5px 0px;">
+																<!--<a type="button" class="ss_btn" style="cursor:pointer" onclick="pop_111(3)" href="javascript:void(0);">分流检测</a>-->
+																<a type="button" class="ss_btn" target="https://ip.skk.moe/" href="https://ip.skk.moe/">分流检测</a>
+															</div>
+															<div style="display:table-cell;float: left;margin-left:350px;position: absolute;padding: 10.5px 0px;">
+																<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_proc_status()" href="javascript:void(0);">详细状态</a>
+															</div>
 														</td>
 													</tr>
 												</table>
 											</div>
-											<table id="table_udp" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													$('#table_udp').forms([
-														//speeder
-														{ title: '<em>UDPspeeder 设置</em>', th:'2', class:'speeder'},
-														{ title: 'UDPspeeder开关', id:'ss_basic_udp_boost_enable', type:'checkbox', class:'speeder', value:false},
-														{ title: 'UDPspeeder版本', class:'speeder', multi: [
-															{ id: 'ss_basic_udp_software', type: 'select', func:'v', style:'width:132px', options:[["1", "UDPspeederV1"], ["2", "UDPspeederV2"]]},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(104)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														//speederv1
-														{ title: '<em>UDPspeederV1 参数设置</em>', th:'2', class:'speederv1'},
-														{ title: '* 本地监听地址：端口 （-l）', class:'speederv1', multi: [
-															{ id: 'ss_basic_udpv1_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_udpv1_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 服务器地址：端口 （-r）', class:'speederv1', multi: [
-															{ id: 'ss_basic_udpv1_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_udpv1_rport', type: 'text', maxlen:'200', style:'width:44px;'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(100)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 密码 (--key)', id:'ss_basic_udpv1_password', type:'password', maxlen:'200', class:'speederv1', style:'width:120px', peekaboo:'1'},
-														{ title: '以下为包发送选项，两端设置可以不同, 只影响本地包发送。', th:'2', class:'speederv1'},
-														{ title: '* 冗余包数量 （-d）', id:'ss_basic_udpv1_duplicate_nu', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值。</a>'},
-														{ title: '* 冗余包发送延迟 （-t）', id:'ss_basic_udpv1_duplicate_time', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认值20（2ms），留空则使用默认值</a>'},
-														{ title: '* 原始数据抖动延迟 （-j）', id:'ss_basic_udpv1_jitter', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值</a>'},
-														{ title: '* 数据发送和接受报告 （--report）', id:'ss_basic_udpv1_report', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>单位：s，留空则不使用。</a>'},
-														{ title: '* 随机丢包 （--random-drop）', id:'ss_basic_udpv1_drop', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>单位：0.01%，留空则不使用。</a>'},
-														{ title: '以下为包接收选项，两端设置可以不同，只影响本地包接受。', th:'2', class:'speederv1'},
-														{ title: '* 关闭重复包过滤器 （--disable-filter）', id:'ss_basic_udpv1_disable_filter', type:'checkbox', class:'speederv1', value:false},
-														//speederv2
-														{ title: '<em>UDPspeederV2 参数设置</em>', th:'2', class:'speederv2'},
-														{ title: '* 本地监听地址：端口 （-l）', class:'speederv2', multi: [
-															{ id: 'ss_basic_udpv2_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_udpv2_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 服务器地址：端口 （-r）', class:'speederv2', multi: [
-															{ id: 'ss_basic_udpv2_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_udpv2_rport', type: 'text', maxlen:'200', style:'width:44px;'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(100)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 密码 (--key)', id:'ss_basic_udpv2_password', type:'password', maxlen:'200', class:'speederv2', style:'width:120px', peekaboo:'1'},
-														{ title: '以下为包发送选项，两端设置可以不同, 只影响本地包发送。', th:'2', class:'speederv2'},
-														{ title: '* fec参数 （-f）', class:'speederv2', multi: [
-															{ id: 'ss_basic_udpv2_fec', type: 'text', maxlen:'200', style:'width:120px;'},
-															{ suffix: '&nbsp;<a>必填，x:y，每x个包额外发送y个包。</a>' },
-															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/wiki/%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C">fec使用经验</a>' },
-														]},
-														{ title: '* timeout参数 （--timeout）', id:'ss_basic_udpv2_timeout', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认8，留空则使用默认值。</a>'},
-														{ title: '* mode参数 （--mode）', id:'ss_basic_udpv2_mode', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值。</a>'},
-														{ title: '* 数据发送和接受报告 （--report）', id:'ss_basic_udpv2_report', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：s，留空则不使用。</a>'},
-														{ title: '* mtu参数 （--mtu）', id:'ss_basic_udpv2_mtu', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>默认1250，留空则使用默认值。</a>'},
-														{ title: '* 原始数据抖动延迟 （-j,--jitter）', id:'ss_basic_udpv2_jitter', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认0，留空则使用默认值。</a>'},
-														{ title: '* 时间窗口 （-i,--interval）', id:'ss_basic_udpv2_interval', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认0，留空则使用默认值。</a>'},
-														{ title: '* 随机丢包 （--random-drop）', id:'ss_basic_udpv2_drop', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：0.01%，默认0，留空则使用默认值。</a>'},
-														{ title: '以下服务器和客户端设置必须一致！', th:'2', class:'speederv2'},
-														{ title: '* 关闭数据包随机填充（--disable-obscure）', id:'ss_basic_udpv2_disableobscure', type:'checkbox', class:'speederv2', value:false, suffix:'&nbsp;<a>关闭可节省一点带宽和cpu。</a>'},
-														{ title: '* 关闭数据包验证（--disable-checksum）', id:'ss_basic_udpv2_disablechecksum', type:'checkbox', class:'speederv2', value:false, suffix:'&nbsp;<a>关闭可节省一点带宽和cpu。</a>'},
-														{ title: '其它参数', th:'2', class:'speederv2'},
-														{ title: '* 其它参数', id:'ss_basic_udpv2_other', type:'text', style:'width:95%', class:'speederv2', maxlen:'200', suffix:'<br />&nbsp;<a>其它高级参数，请手动输入，如 -q1 等。</a>'},
-														//udp2raw
-														{ title: '<em>UDP2raw 设置</em>', th:'2', class:'udp2raw'},
-														{ title: 'UDP2raw开关', id:'ss_basic_udp2raw_boost_enable', type:'checkbox', class:'udp2raw', value:false},
-														{ title: '<em>UDP2raw 参数设置</em>', th:'2', class:'udp2raw'},
-														{ title: '* 本地监听地址：端口 （-l）', class:'udp2raw', multi: [
-															{ id: 'ss_basic_udp2raw_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_udp2raw_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1093'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(101)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 服务器地址：端口 （-r）', class:'udp2raw', multi: [
-															{ id: 'ss_basic_udp2raw_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
-															{ suffix: '&nbsp;:&nbsp;' },
-															{ id: 'ss_basic_udp2raw_rport', type: 'text', maxlen:'200', style:'width:44px;'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(102)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 密码 (--key)', id:'ss_basic_udp2raw_password', type:'password', maxlen:'200', class:'udp2raw', style:'width:120px', peekaboo:'1'},
-														{ title: '* 模式（--raw-mode）', id:'ss_basic_udp2raw_rawmode', type:'select', style:'width:132px', class:'udp2raw', options:["faketcp", "udp", "icmp"], value:'faketcp', suffix:'&nbsp;<a>默认:faketcp</a>'},
-														{ title: '* 加密模式 （--cipher-mode）', id:'ss_basic_udp2raw_ciphermode', type:'select', style:'width:132px', class:'udp2raw', options:["aes128cbc", "aes128cfb", "xor", "none"], value:'aes128cbc', suffix:'&nbsp;<a>默认:aes128cbc</a>'},
-														{ title: '* 校验模式 （--auth-mode）', id:'ss_basic_udp2raw_authmode', type:'select', style:'width:132px', class:'udp2raw', options:["md5", "hmac_sha1", "crc32", "icmp", "simple", "none"], value:'md5', suffix:'&nbsp;<a>默认:md5</a>'},
-														{ title: '* 自动添加/删除iptables（-a,--auto-rule）', id:'ss_basic_udp2raw_a', type:'checkbox', class:'udp2raw', value:true, suffix:'<a>建议请勾选此选项</a>'},
-														{ title: '* 定期检查iptables（--keep-rule）', id:'ss_basic_udp2raw_keeprule', type:'checkbox', class:'udp2raw', value:true, suffix:'<a>建议请勾选此选项</a>'},
-														{ title: '* 绕过本地iptables（--lower-level）', class:'udp2raw', multi: [
-															{ id: 'ss_basic_udp2raw_lowerlevel', type: 'text', maxlen:'200', style:'width:120px;'},
-															{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(103)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-														]},
-														{ title: '* 其它参数', id:'ss_basic_udp2raw_other', type:'text', style:'width:95%', class:'udp2raw', maxlen:'200', suffix:'<br />&nbsp;<a>其它未列出来的参数，请手动输入，如 --force-sock-buf --seq-mode 1 等。</a>'},
-													]);
-												</script>
-											</table>
-										</div>
-										<!--fancyss_full_2-->
-										<div id="tablet_7" style="display: none;">
-											<table id="table_rules" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
-												<script type="text/javascript">
-													var option_ruleu = [];
-													for (var i = 0; i < 24; i++){
-														var _tmp = [];
-														_i = i < 10 ? String("0" + i) : String(i)
-														_tmp[0] = i;
-														_tmp[1] = _i + ":00时";
-														option_ruleu.push(_tmp);
-													}
-													function addCommas(nStr) {
-														nStr += '';
-														var x = nStr.split('.');
-														var x1 = x[0];
-														var x2 = x.length > 1 ? '.' + x[1] : '';
-														var rgx = /(\d+)(\d{3})/;
-														while (rgx.test(x1)) {
-														    x1 = x1.replace(rgx, '$1' + ',' + '$2');
+											<div id="tablets">
+												<table style="margin:10px 0px 0px 0px;border-collapse:collapse" width="100%" height="37px">
+													<tr>
+														<td cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#222">
+															<input id="show_btn0" class="show-btn0" style="cursor:pointer" type="button" value="帐号设置" />
+															<input id="show_btn1" class="show-btn1" style="cursor:pointer" type="button" value="节点管理" />
+															<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="故障转移" />
+															<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="DNS设定" />
+															<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="黑白名单" />
+															<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="KCP加速" />		<!--fancyss-full-->
+															<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="UDP加速"/>		<!--fancyss-full-->
+															<input id="show_btn7" class="show-btn7" style="cursor:pointer" type="button" value="更新管理" />
+															<input id="show_btn8" class="show-btn8" style="cursor:pointer" type="button" value="访问控制" />
+															<input id="show_btn9" class="show-btn9" style="cursor:pointer" type="button" value="附加功能" />
+															<input id="show_btn10" class="show-btn10" style="cursor:pointer" type="button" value="查看日志" />
+														</td>
+													</tr>
+												</table>
+											</div>
+											<div id="add_fancyss_node" class="contentM_qis pop_div_bg">
+												<table class="QISform_wireless" border="0" align="center" cellpadding="5" cellspacing="0">
+													<tr style="height:32px;">
+														<td>
+															<div id="add_fancyss_node_title" class="user_title">添加节点</div>
+															<div>
+																<table width="100%" border="0" align="left" cellpadding="0" cellspacing="0" class="vpnClientTitle">
+																	<tr>
+														  			<td width="16.67%" align="center" id="ssTitle" onclick="tabclickhandler(0);">添加SS节点</td>
+														  			<td width="16.67%" align="center" id="ssrTitle" onclick="tabclickhandler(1);">添加SSR节点</td>
+														  			<td width="16.67%" align="center" id="v2rayTitle" onclick="tabclickhandler(3);">添加V2Ray节点</td>
+														  			<td width="16.67%" align="center" id="xrayTitle" onclick="tabclickhandler(4);">添加Xray节点</td>
+														  			<td width="16.67%" align="center" id="trojanTitle" onclick="tabclickhandler(5);">添加Trojan节点</td>
+														  			<td width="16.67%" align="center" id="naiveTitle" onclick="tabclickhandler(6);">添加Naïve节点</td>	<!--fancyss-full-->
+																	</tr>
+																</table>
+															</div>
+														</td>
+													</tr>
+													<tr>
+														<td>
+															<div>
+															<table id="table_add_nodes" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable">
+																<script type="text/javascript">
+																	$('#table_add_nodes').forms([
+																		// common
+																		{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:412px;', value: "2"},
+																		{ title: '使用json配置', rid:'v2ray_use_json_tr', id:'ss_node_table_v2ray_use_json', type:'checkbox', func:'v', help:'27', value:false},
+																		{ title: '使用json配置', rid:'xray_use_json_tr', id:'ss_node_table_xray_use_json', type:'checkbox', func:'v', help:'25', value:false},
+																		{ title: '节点别名', rid:'ss_name_support_tr', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '服务器地址', rid:'ss_server_support_tr', id:'ss_node_table_server', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '服务器端口', rid:'ss_port_support_tr', id:'ss_node_table_port', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '密码', rid:'ss_passwd_support_tr', id:'ss_node_table_password', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '加密方式', rid:'ss_method_support_tr', id:'ss_node_table_method', type:'select', options:option_method, style:'width:412px', value: "aes-256-cfb"},
+																		// ss
+																		{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:412px', value: "0"},
+																		{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
+																		{ title: 'v2ray-plugin', rid:'ss_v2ray_support', id:'ss_node_table_ss_v2ray', type:'select', func:'v', options:[["0", "关闭"], ["1", "开启"]], style:'width:412px', value: "0"},		//fancyss-full
+																		{ title: 'v2ray-plugin参数', rid:'ss_v2ray_opts_support', id:'ss_node_table_ss_v2ray_opts', type:'text', maxlen:'300', style:'width:400px', ph:'tls;host=example.com;path=/'},			//fancyss-full
+																		// ssr
+																		{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:412px', value: "0"},
+																		{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:400px', ph:'id:password'},
+																		{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:412px', value: "0"},
+																		{ title: '混淆参数 (obfs_param)', rid:'ssr_obfs_param_tr', id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
+																		// v2ray
+																		{ title: '<em>服务器配置</em>（以下配置使用vmess作为传出协议，其它传出协议请使用json配置）', class:'v2ray_elem', th:'2'},
+																		{ title: '用户id (id)', rid:'v2ray_uuid_tr', id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:400px'},
+																		{ title: '额外ID (Alterld)', rid:'v2ray_alterid_tr', id:'ss_node_table_v2ray_alterid', type:'text', maxlen:'300', style:'width:400px', value: "0"},
+																		{ title: '加密方式 (security)', rid:'v2ray_security_tr', id:'ss_node_table_v2ray_security', type:'select', options:option_v2enc, style:'width:412px', value: "auto"},
+																		{ title: '<em>底层传输方式</em>', class:'v2ray_elem', th:'2'},
+																		{ title: '传输协议 (network)', rid:'v2ray_network_tr', id:'ss_node_table_v2ray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
+																		{ title: '* tcp伪装类型 (type)', rid:'v2ray_headtype_tcp_tr', id:'ss_node_table_v2ray_headtype_tcp', type:'select', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
+																		{ title: '* kcp伪装类型 (type)', rid:'v2ray_headtype_kcp_tr', id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
+																		{ title: '* quic伪装类型 (type)', rid:'v2ray_headtype_quic_tr', id:'ss_node_table_v2ray_headtype_quic', type:'select', options:option_headquic, value: "none"},
+																		{ title: '* grpc模式', rid:'v2ray_grpc_mode_tr', id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
+																		{ title: '* 伪装域名 (host)', rid:'v2ray_network_host_tr', id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '* 路径 (path)', rid:'v2ray_network_path_tr', id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* kcp seed', rid:'v2ray_kcp_seed_tr', id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '底层传输安全', rid:'v2ray_network_security_tr', id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:412px', value: "none"},
+																		{ title: '* 跳过证书验证 (AllowInsecure)', rid:'v2ray_network_security_ai_tr', id:'ss_node_table_v2ray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
+																		{ title: '* alpn', rid:'v2ray_network_security_alpn_tr', multi: [
+																			{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_h2">h2' },
+																			{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_http">http/1.1' },
+																		]},
+																		{ title: 'SNI', rid:'v2ray_network_security_sni_tr', id:'ss_node_table_v2ray_network_security_sni', type:'text'},
+																		{ title: '多路复用 (Mux)', rid:'v2ray_mux_enable_tr', id:'ss_node_table_v2ray_mux_enable', type:'checkbox', func:'v', value: false},
+																		{ title: '* Mux并发连接数', rid:'v2ray_mux_concurrency_tr', id:'ss_node_table_v2ray_mux_concurrency', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: 'v2ray json', rid:'v2ray_json_tr', id:'ss_node_table_v2ray_json', type:'textarea', rows:'32', ph:ph_v2ray, style:'width:400px'},
+																		// xray
+																		{ title: '<em>服务器配置</em>（以下配置使用vless作为传出协议，其它传出协议请使用json配置）', class:'xray_elem', th:'2'},
+																		{ title: '用户id (id)', rid:'xray_uuid_tr', id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
+																		{ title: 'flow (流控模式，没有请留空)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', options:option_xflow, style:'width:412px', value: ""},
+																		{ title: '<em>底层传输方式</em>', class:'xray_elem', th:'2'},
+																		{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
+																		{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
+																		{ title: '* 伪装类型 (type)', rid:'xray_headtype_kcp_tr', id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
+																		{ title: '* quic伪装类型 (type)', rid:'xray_headtype_quic_tr', id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
+																		{ title: '* grpc模式', rid:'xray_grpc_mode_tr', id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: "multi"},
+																		{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"], ["reality", "reality"]], style:'width:412px', value: "none"},
+																		{ title: '* 跳过证书验证 (AllowInsecure)', rid:'xray_network_security_ai_tr', id:'ss_node_table_xray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
+																		{ title: '* alpn', rid:'xray_network_security_alpn_tr', multi: [
+																			{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_h2">h2' },
+																			{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_http">http/1.1' },
+																		]},
+																		{ title: '* show', rid:'xray_show_tr', id:'ss_node_table_xray_show', type:'checkbox', value:false},
+																		{ title: '* fingerprint', rid:'xray_fingerprint_tr', id:'ss_node_table_xray_fingerprint', type:'select', options:option_fingerprint, value: ""},
+																		{ title: '* SNI', rid:'xray_network_security_sni_tr', id:'ss_node_table_xray_network_security_sni', type:'text'},
+																		{ title: '* publicKey', rid:'xray_publickey_tr', id:'ss_node_table_xray_publickey', maxlen:'300', style:'width:400px', type:'text'},
+																		{ title: '* shortId', rid:'xray_shortid_tr', id:'ss_node_table_xray_shortid', type:'text'},
+																		{ title: '* spiderX', rid:'xray_spiderx_tr', id:'ss_node_table_xray_spiderx', type:'text'},
+																		{ title: 'xray json', rid:'xray_json_tr', id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:400px'},
+																		// trojan
+																		{ title: 'trojan 密码', rid:'trojan_uuid_tr', id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '跳过证书验证 (AllowInsecure)', rid:'trojan_ai_tr', id:'ss_node_table_trojan_ai', type:'checkbox', value: "false"},
+																		{ title: 'SNI', rid:'trojan_sni_tr', id:'ss_node_table_trojan_sni', type:'text'},
+																		{ title: 'tcp fast open', rid:'trojan_tfo_tr', id:'ss_node_table_trojan_tfo', type:'checkbox', value: "false"},
+																		// naive
+																		{ title: 'NaïveProxy 协议', rid:'naive_prot_tr', id:'ss_node_table_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', style:'width:412px', value: "https"},		//fancyss-full
+																		{ title: 'NaïveProxy 服务器', rid:'naive_server_tr', id:'ss_node_table_naive_server', type:'text', maxlen:'300', style:'width:400px'},														//fancyss-full
+																		{ title: 'NaïveProxy 端口', rid:'naive_port_tr', id:'ss_node_table_naive_port', type:'text', maxlen:'300', style:'width:400px', value: "443"},												//fancyss-full
+																		{ title: 'NaïveProxy 账户', rid:'naive_user_tr', id:'ss_node_table_naive_user', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
+																		{ title: 'NaïveProxy 密码', rid:'naive_pass_tr', id:'ss_node_table_naive_pass', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
+																	]);
+																</script>
+																</table>
+															</div>
+														</td>
+													</tr>
+												</table>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input class="button_gen" style="margin-left: 160px;" type="button" onclick="cancel_add_node();" id="cancel_Btn" value="返回">
+													<input id="add_node" class="button_gen" type="button" onclick="add_ss_node_conf(save_flag);" value="添加">
+													<input id="edit_node" style="display: none;" class="button_gen" type="button" onclick="edit_ss_node_conf(save_flag);" value="修改">
+													<a id="continue_add" style="display: none;margin-left: 20px;"><input id="continue_add_box" type="checkbox"  />连续添加</a>
+												</div>
+											</div>
+											<div id="tablet_0" style="display: none;">
+												<table id="table_basic" width="100%" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														$('#table_basic').forms([
+															// commom
+															{ title: '节点选择', id:'ssconf_basic_node', type:'select', func:'onchange="ss_node_sel();"', style:'width:auto;min-width:164px;max-width:450px;', options:[], value: "1"},
+															{ title: '模式', id:'ss_basic_mode', type:'select', func:'v', hint:'1', options:option_modes, value: "1"},
+															{ title: '使用json配置', id:'ss_basic_v2ray_use_json', type:'checkbox', func:'v', hint:'27'},
+															{ title: '使用json配置', id:'ss_basic_xray_use_json', type:'checkbox', func:'v', hint:'27'},
+															{ title: '服务器地址', id:'ss_basic_server', type:'text', maxlen:'100'},
+															{ title: '服务器端口', id:'ss_basic_port', type:'text', maxlen:'100'},
+															{ title: '密码', id:'ss_basic_password', type:'password', maxlen:'100', peekaboo:'1'},
+															{ title: '加密方式', id:'ss_basic_method', type:'select', func:'v', hint:'5', options:option_method},
+															// ss
+															{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
+															{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', type:'text', maxlen:'100', ph:'bing.com'},
+															{ title: 'v2ray-plugin', id:'ss_basic_ss_v2ray', type:'select', hint: '7', func:'v', options:[["0", "关闭"], ["1", "打开"]], value: "0"},				//fancyss-full
+															{ title: 'v2ray-plugin参数', id:'ss_basic_ss_v2ray_opts', type:'text', maxlen:'300', ph:'tls;host=yourhost.com;path=/;'},								//fancyss-full
+															// ssr
+															{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', type:'select', func:'v', options:option_protocals},
+															{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
+															{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},
+															{ title: '混淆参数 (obfs_param)', id:'ss_basic_rss_obfs_param', type:'text', hint:'11', maxlen:'300', ph:'cloudflare.com;bing.com'},
+															// v2ray
+															{ title: '用户id (id)', id:'ss_basic_v2ray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
+															{ title: '额外ID (Alterld)', id:'ss_basic_v2ray_alterid', type:'text', hint:'48', maxlen:'50'},
+															{ title: '加密方式 (security)', id:'ss_basic_v2ray_security', type:'select', hint:'47', options:option_v2enc},
+															{ title: '传输协议 (network)', id:'ss_basic_v2ray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"]},
+															{ title: '* tcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
+															{ title: '* kcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
+															{ title: '* quic伪装类型 (type)', id:'ss_basic_v2ray_headtype_quic', type:'select', options:option_headquic},
+															{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', type:'select', options:option_grpcmode},
+															{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
+															{ title: '* 路径 (path)', rid:'ss_basic_v2ray_network_path_tr', id:'ss_basic_v2ray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+															{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '底层传输安全', id:'ss_basic_v2ray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"]]},
+															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_v2ray_network_security_ai', type:'checkbox', hint:'56'},
+															{ title: '* alpn', id:'ss_basic_v2ray_network_security_alpn', multi: [
+																{ suffix: '<input type="checkbox" id="ss_basic_v2ray_network_security_alpn_h2">h2' },
+																{ suffix: '<input type="checkbox" id="ss_basic_v2ray_network_security_alpn_http">http/1.1' },
+															]},
+															{ title: '* SNI', id:'ss_basic_v2ray_network_security_sni', type:'text'},
+															{ title: '多路复用 (Mux)', id:'ss_basic_v2ray_mux_enable', type:'checkbox', func:'v', hint:'31'},
+															{ title: 'Mux并发连接数', id:'ss_basic_v2ray_mux_concurrency', type:'text', hint:'32', maxlen:'300'},
+															{ title: 'v2ray json', id:'ss_basic_v2ray_json', type:'textarea', rows:'36', ph:ph_v2ray},
+															// xray
+															{ title: '用户id (id)', id:'ss_basic_xray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
+															{ title: '加密 (encryption)', id:'ss_basic_xray_encryption', type:'text', hint:'55', maxlen:'50'},
+															{ title: 'flow (流控模式，没有请留空)', id:'ss_basic_xray_flow', type:'select', options:option_xflow},
+															{ title: '传输协议 (network)', id:'ss_basic_xray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"]},
+															{ title: '* tcp伪装类型 (type)', id:'ss_basic_xray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
+															{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
+															{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', type:'select', options:option_headquic},
+															{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', type:'select', options:option_grpcmode},
+															{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', type:'text', hint:'28', maxlen:'300', ph:'没有请留空'},
+															{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+															{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', hint:'30', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"], ["reality", "reality"]]},
+															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', hint:'56'},
+															{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', multi: [
+																{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_h2">h2' },
+																{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_http">http/1.1' },
+															]},
+															{ title: '* show', id:'ss_basic_xray_show', type:'checkbox'},
+															{ title: '* fingerprint', id:'ss_basic_xray_fingerprint', type:'select', options:option_fingerprint},
+															{ title: '* SNI', id:'ss_basic_xray_network_security_sni', type:'text', ph:'realitySettings中的serverName'},
+															{ title: '* publickey', id:'ss_basic_xray_publickey', type:'password', maxlen:'300', style:'width:320px;', ph:'填写公钥', peekaboo:'1'},
+															{ title: '* shortId', id:'ss_basic_xray_shortid', type:'text', ph:'没有请留空'},
+															{ title: '* spiderX', id:'ss_basic_xray_spiderx', type:'text', ph:'没有请留空'},
+															{ title: 'xray json', id:'ss_basic_xray_json', type:'textarea', rows:'36', ph:ph_xray},
+															{ title: '其它', rid:'v2ray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},	//fancyss-full
+															{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新/切换xray程序</a>'},
+															//trojan
+															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
+															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai_tr', multi: [
+																{ suffix: '<input type="checkbox" id="ss_basic_trojan_ai">' },
+																{ suffix:'<lable id="ss_basic_trojan_ai_note"></lable>' },
+															]},
+															{ title: 'SNI', id:'ss_basic_trojan_sni', type:'text'},
+															{ title: 'tcp fast open', id:'ss_basic_trojan_tfo', type:'checkbox'},
+															// naive
+															{ title: 'NaïveProxy 协议', id:'ss_basic_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', value: "https"},								//fancyss-full
+															{ title: 'NaïveProxy 服务器', id:'ss_basic_naive_server', type:'text', maxlen:'300'},																					//fancyss-full
+															{ title: 'NaïveProxy 端口', id:'ss_basic_naive_port', type:'text', maxlen:'300', value: "443"},																			//fancyss-full
+															{ title: 'NaïveProxy 账户', id:'ss_basic_naive_user', type:'text', maxlen:'300'},																						//fancyss-full
+															{ title: 'NaïveProxy 密码', id:'ss_basic_naive_pass', type:'text', maxlen:'300'},																						//fancyss-full
+														]);
+													</script>
+												</table>
+											</div>
+											<div id="tablet_1" style="display: none;">
+												<div id="ss_list_table"></div>
+											</div>
+											<div id="tablet_2" style="display: none;">
+												<table id="table_failover" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
+													<script type="text/javascript">
+														var fa1 = ["2", "3", "4", "5"];
+														var fa2_1 = ["10", "15", "20"];
+														var fa2_2 = ["2", "3", "4", "5", "6", "7", "8"];
+														var fa3_1 = ["10", "15", "20"];
+														var fa3_2 = ["100", "150", "200", "250", "300", "350", "400", "450", "500", "1000"];
+														var fa4_1 = [["0", "关闭插件"], ["1", "重启插件"], ["2", "切换到"]];
+														var fa4_2 = [["1", "备用节点"], ["2", "下个节点"], ["3", "web延迟最低的节点"]];
+														var fa5 = [["1", "2s - 3s"], ["2", "4s - 7s"], ["3", "8s - 15s"], ["4", "16s - 31s"], ["5", "32s - 63s"]];
+														$('#table_failover').forms([
+															{ title: '故障转移开关', id:'ss_failover_enable',type:'checkbox', func:'v', value:false},
+															{ title: '故障转移设置', rid:'failover_settings_1', multi: [
+																{ suffix:'<div style="margin-top: 5px;">' },
+																{ id:'ss_failover_c1', type:'checkbox', value:false },
+																{ suffix:'<lable>👉&nbsp;国外连续发生&nbsp;</lable>' },
+																{ id:'ss_failover_s1', type:'select', style:'width:auto', options:fa1, value:'3'},
+																{ suffix:'<lable>&nbsp;次故障；<br /></lable>' },
+																{ suffix:'</div>' },
+																//line3
+																{ suffix:'<div style="margin-top: 5px;">' },
+																{ id:'ss_failover_c2', type:'checkbox', value:false },
+																{ suffix:'<lable>👉&nbsp;最近&nbsp;</lable>' },
+																{ id:'ss_failover_s2_1', type:'select', style:'width:auto', options:fa2_1, value:'15'},
+																{ suffix:'<lable>&nbsp;次国外状态检测中，故障次数超过&nbsp;</lable>' },
+																{ id:'ss_failover_s2_2', type:'select', style:'width:auto', options:fa2_2, value:'4'},
+																{ suffix:'<lable>&nbsp;次；<br /></lable>' },
+																{ suffix:'</div>' },
+																//line4
+																{ suffix:'<div style="margin-top: 5px;">' },
+																{ id:'ss_failover_c3', type:'checkbox', value:false },
+																{ suffix:'<lable>👉&nbsp;最近&nbsp;</lable>' },
+																{ id:'ss_failover_s3_1', type:'select', style:'width:auto', options:fa3_1, value:'20'},
+																{ suffix:'<lable>&nbsp;次国外状态检测中，平均延迟超过&nbsp;</lable>' },
+																{ id:'ss_failover_s3_2', type:'select', style:'width:auto', options:fa3_2, value:'500'},
+																{ suffix:'<lable>ms<br /></lable>' },
+																{ suffix:'</div>' },
+																//line5
+																{ suffix:'<div style="margin-top: 5px;">' },
+																{ suffix:'<lable>&nbsp;以上有一个条件满足，则&nbsp;</lable>' },
+																{ id:'ss_failover_s4_1', type:'select', style:'width:auto', func:'v', options:fa4_1, value:'2'},
+																{ id:'ss_failover_s4_2', type:'select', style:'width:auto', func:'v', options:fa4_2, value:'2'},
+																{ id:'ss_failover_s4_3', type:'select', style:'width:170px', func:'v', options:[]},
+																{ suffix:'</div>' },
+															]},
+															{ title: '状态检测时间间隔', rid:'interval_settings', multi: [
+																{ id:'ss_basic_interval', type:'select', style:'width:auto',options:fa5, value:'2'},
+																{ suffix:'<small>&nbsp;默认：4 - 7s</small>' },
+															]},
+															{ title: '历史记录保存数量', rid:'failover_settings_2', multi: [
+																{ suffix:'<lable>最多保留&nbsp;</lable>' },
+																{ id:'ss_failover_s5', type:'select', style:'width:auto',options:["1000", "2000", "3000", "4000"], value:'2000'},
+																{ suffix:'<lable>&nbsp;行日志&nbsp;</lable>' },
+															]},
+															{ title: '查看历史状态', rid:'failover_settings_3', multi: [
+																{ suffix:'<a type="button" id="look_logf" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(1)">国外状态历史</a>&nbsp;' },
+																{ suffix:'<a type="button" id="look_logc" class="ss_btn" style="cursor:pointer" onclick="lookup_status_log(2)">国内状态历史</a>' },
+															]},
+														]);
+													</script>
+												</table>
+											</div>
+											<div id="tablet_3" style="display: none;">
+												<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
+														var isp_dns_1=isp_dns_raw.split(" ")[0];
+														var isp_dns_2=isp_dns_raw.split(" ")[1];
+														validator.ipv4_addr(isp_dns_1)
+														var option_dnsp = [
+																		   ["1", "chinadns-ng"]
+																		  ,["2", "smartdns"]			//fancyss-full
+																		  ,["3", "dohclient"]			//fancyss-full
+																		  ];
+	
+														// 进阶DNS方案1 chinadns-ng国内:协议选择
+														option_dnsngc_prot = [
+																			  ["1", "udp"]
+																			 ,["2", "tcp"]
+																			 ,["3", "DoH"]				//fancyss-full
+																			];
+														// 进阶DNS方案1 chinadns-ng国内dns:udp 
+														var option_dnsngc_udp = [];
+														if(isp_dns_1 && isp_dns_2){
+															option_dnsngc_udp.push(["group", "运营商DNS"]);
+															option_dnsngc_udp.push(["1", "⚪" + isp_dns_1]);
+															option_dnsngc_udp.push(["2", "⚪" + isp_dns_2]);
+														}else if(isp_dns_1 && !isp_dns_2){
+															option_dnsngc_udp.push(["group", "运营商DNS"]);
+															option_dnsngc_udp.push(["1", isp_dns_1]);
 														}
-														return x1 + x2;
-													}
-													//var ipsn='<% nvram_get("chnroute_ips"); %>'
-													var gfwl = addCommas('<% nvram_get("ipset_numbers"); %>');
-													var chnl = addCommas('<% nvram_get("chnroute_numbers"); %>');
-													var chnn = addCommas('<% nvram_get("chnroute_ips"); %>');
-													var cdnn = addCommas('<% nvram_get("cdn_numbers"); %>');
-													$('#table_rules').forms([
-														{ title: 'gfwlist域名数量', multi: [
-															{ suffix: '<em>'+ gfwl +'</em>&nbsp;条，版本：' },
-															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf" target="_blank">' },
-															{ suffix: '<i><% nvram_get("update_ipset"); %></i></a>' },
-														]},
-														{ title: '大陆白名单IP段数量', multi: [
-															{ suffix: '<em>'+ chnl +'</em>&nbsp;行，包含 <em>' + chnn + '</em>&nbsp;个ip地址，版本：' },
-															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/chnroute.txt" target="_blank">' },
-															{ suffix: '<i><% nvram_get("update_chnroute"); %></i></a>' },
-														]},
-														{ title: '国内域名数量（cdn名单）', multi: [
-															{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
-															{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/cdn.txt" target="_blank">' },
-															{ suffix: '<i><% nvram_get("update_cdn"); %></i></a>' },
-														]},
-														{ title: '规则定时更新任务', hint:'44', multi: [
-															{ id:'ss_basic_rule_update', type:'select', func:'u', style:'width:auto', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
-															{ id:'ss_basic_rule_update_time', type:'select', style:'width:auto', options:option_ruleu, value:'4'},
-															{ suffix: '<a id="update_choose">' },
-															{ suffix: '<input type="checkbox" id="ss_basic_gfwlist_update" title="选择此项应用gfwlist.conf自动更新">gfwlist' },
-															{ suffix: '<input type="checkbox" id="ss_basic_chnroute_update" title="选择此项应用chnroute.txt自动更新">chnroute' },
-															{ suffix: '<input type="checkbox" id="ss_basic_cdn_update" title="选择此项应用cdn.txt自动更新">cdn</a>' },
-															{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(1)">保存设置</a>' },
-														]},
-														{ title: '规则手动更新', multi: [
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(2)">立即更新规则</a>'},
-														]},
-														{ title: '二进制更新', multi: [
-															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>&nbsp;'},//fancyss-full
-															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新/切换xray程序</a>&nbsp;'},
-															{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},//fancyss-full
-														]},
-													]);
-												</script>
-											</table>
-											<table id="table_subscribe" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													var option_noded = [["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["6", "周日"]];
-													var option_nodeh = [];
-													for (var i = 0; i < 24; i++){
-														var _tmp = [];
-														_i = String(i)
-														_tmp[0] = _i;
-														_tmp[1] = _i + "点";
-														option_nodeh.push(_tmp);
-													}
-													var ph1 = "此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！&#10;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：&#10;-------------------------------------------------&#10;🚀xx机场 ssr&#10;https://abcd.airport.com/xxx&#10;&#10;🛩️yy机场 ss&#10;https://xyza.com/xxx&#10;-------------------------------------------------&#10;填写完成后点击下面的【保存并订阅】按钮开始订阅！";
-													var ph2 = "多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷";
-													var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
-													$('#table_subscribe').forms([
-														{ title: '节点订阅设置', thead:'1'},
-														{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray/Trojan</font>', id:'ss_online_links', type:'textarea', hint:'116', rows:'12', ph:ph1},
-														
-														{ title: '订阅节点模式设定', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
-														{ title: '下载订阅时走ss/ssr/v2ray/v2ray代理网络', id:'ss_basic_online_links_goss', type:'select', style:'width:auto', options:[["0", "不走代理"], ["1", "走代理"]], value:'0'},
-														{ title: '订阅计划任务', multi: [
-															{ id:'ss_basic_node_update', type:'select', style:'width:auto', func:'u', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
-															{ id:'ss_basic_node_update_day', type:'select', style:'width:auto', options:option_noded, value:'6'},
-															{ id:'ss_basic_node_update_hr', type:'select', style:'width:auto', options:option_nodeh, value:'3'},
-														]},
-														{ title: '[排除]关键词（含关键词的节点不会添加）', rid:'ss_basic_exclude_tr', id:'ss_basic_exclude', type:'text', hint:'110', maxlen:'300', style:'width:95%', ph:ph2},
-														{ title: '[包括]关键词（含关键词的节点才会添加）', rid:'ss_basic_include_tr', id:'ss_basic_include', type:'text', hint:'111', maxlen:'300', style:'width:95%', ph:ph3},
-														{ title: '删除节点', rid: 'ss_basic_remove_node', multi: [
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(0)">删除全部节点</a>'},
-															{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(1)">删除全部订阅节点</a>'},
-														]},
-														{ title: '保存配置', rid: 'ss_sub_save_only', multi: [
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(2)">仅保存设置</a>'},
-														]},
-														{ title: '节点订阅', hint:'112', multi: [
-															{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(3)">保存并订阅</a>'},
-															{ prefix: '&nbsp;&nbsp;订阅高级设定', id: 'ss_adv_sub', type: 'checkbox', value:false, func:'v' },
-														]}
-													]);
-												</script>
-											</table>
-											<table id="table_link" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-												<script type="text/javascript">
-													var ph1 = "填入以ss://或者ssr://或者vmess://或者vless://开头的链接，多个链接请分行填写";
-													$('#table_subscribe').forms([
-														{ title: '通过ss/ssr/vmess/vless链接添加节点', thead:'1'},
-														{ title: 'ss/ssr/vmess/vless链接', id:'ss_base64_links', type:'textarea', hint:117, rows:'11', ph:ph1},
-														{ title: '操作', suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(4)">解析并保存为节点</a>'},
-													]);
-												</script>
-											</table>
-										</div>
-										<div id="tablet_8" style="display: none;">
-											<div id="ss_acl_table"></div>
-											<div id="ACL_note" style="margin:10px 0 0 5px">
-												<div><i>1&nbsp;&nbsp;默认状态下，所有局域网的主机都会走当前节点的模式（主模式），相当于即不启用局域网访问控制。</i></div>
-												<div><i>2&nbsp;&nbsp;当你设置默认规则为不通过代理，添加了主机走大陆白名单模式，则只有添加的主机才会走代理(大陆白名单模式)。</i></div>
-												<div><i>3&nbsp;&nbsp;当你设置默认规则为正在使用节点的模式，除了添加的主机才会走相应的模式，未添加的主机会走默认规则的模式。</i></div>
-												<div><i>4&nbsp;&nbsp;如果为使用的节点配置了KCP协议，或者负载均衡，因为它们不支持udp，所以不能控制主机走游戏模式。</i></div>
-												<div><i>5&nbsp;&nbsp;如果需要自定义端口范围，适用英文逗号和冒号，参考格式：80,443,5566:6677,7777:8888</i></div>
+														option_dnsngc_udp.push(["group", "阿里公共DNS"]);
+														option_dnsngc_udp.push(["3", "🟠223.5.5.5"]);
+														option_dnsngc_udp.push(["4", "🟠223.6.6.6"]);
+														option_dnsngc_udp.push(["group", "DNSPod DNS"]);
+														option_dnsngc_udp.push(["5", "🟠119.29.29.29"]);
+														option_dnsngc_udp.push(["6", "🟠119.28.28.28"]);
+														option_dnsngc_udp.push(["group", "114 DNS"]);
+														option_dnsngc_udp.push(["7", "⚫114.114.114.114"]);
+														option_dnsngc_udp.push(["8", "⚫114.114.115.115"]);
+														option_dnsngc_udp.push(["group", "OneDNS"]);
+														option_dnsngc_udp.push(["9", "🟠117.50.11.11（拦截版）"]);
+														option_dnsngc_udp.push(["10", "🟠52.80.66.66（拦截版）"]);
+														option_dnsngc_udp.push(["11", "🟠117.50.10.10（纯净版）"]);
+														option_dnsngc_udp.push(["12", "🟠52.80.52.52（纯净版）"]);
+														option_dnsngc_udp.push(["13", "🟠117.50.60.30（家庭版）"]);
+														option_dnsngc_udp.push(["14", "🟠52.80.60.30（家庭版）"]);
+														option_dnsngc_udp.push(["group", "360安全DNS"]);
+														option_dnsngc_udp.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);
+														option_dnsngc_udp.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);
+														option_dnsngc_udp.push(["17", "🟠123.125.81.6（联通）"]);
+														option_dnsngc_udp.push(["18", "🟠140.207.198.6（联通）"]);
+														option_dnsngc_udp.push(["group", "cnnic DNS"]);
+														option_dnsngc_udp.push(["19", "⚫1.2.4.8"]);
+														option_dnsngc_udp.push(["20", "⚫210.2.4.8"]);
+														option_dnsngc_udp.push(["group", "百度DNS"]);
+														option_dnsngc_udp.push(["21", "🟠180.76.76.76"]);
+														option_dnsngc_udp.push(["group", "教育网DNS"]);
+														option_dnsngc_udp.push(["22", "🟠101.6.6.6:5353（清华大学）"]);
+														option_dnsngc_udp.push(["23", "⚫58.132.8.1（北京）"]);
+														option_dnsngc_udp.push(["24", "⚫101.7.8.9（北京）"]);
+														option_dnsngc_udp.push(["group", "SmartDNS"]);				//fancyss-full
+														option_dnsngc_udp.push(["96", "⚫SmartDNS (UDP)"]);		//fancyss-full
+														option_dnsngc_udp.push(["group", "自定义DNS"]);
+														option_dnsngc_udp.push(["99", "⚪自定义DNS (UDP)"]);
+														// 进阶DNS方案1 chinadns-ng国内tcp | 进阶DNS方案3 dohclient 国内 tcp
+														option_dnsngc_tcp = [
+																			 ["group", "阿里公共DNS"],
+																			 ["3", "🟠223.5.5.5"],
+																			 ["4", "🟠223.6.6.6"],
+																			 ["group", "DNSPod DNS"],
+																			 //["5", "🟠119.29.29.29"],
+																			 ["6", "🟠119.28.28.28"],
+																			 ["group", "114 DNS"],
+																			 ["7", "⚫114.114.114.114"],
+																			 ["8", "⚫114.114.115.115"],
+																			 ["group", "OneDNS"],
+																			 ["10", "🟠52.80.66.66（拦截版）"],
+																			 ["12", "🟠52.80.52.52（纯净版）"],
+																			 ["group", "360安全DNS"],
+																			 ["16", "🟠218.30.118.6（电信/铁通/移动）"],
+																			 ["17", "🟠123.125.81.6（联通）"],
+																			 ["18", "🟠140.207.198.6（联通）"],
+																			 ["group", "教育网DNS"],
+																			 ["22", "🟠101.6.6.6:5353（清华大学）"],
+																			 ["group", "SmartDNS"],				//fancyss-full
+																			 ["97", "⚫SmartDNS (tcp)"],		//fancyss-full
+																			 ["group", "自定义DNS"],
+																			 ["99", "⚪自定义DNS (tcp)"]
+																			 ];
+														option_dnsngc_doh = [									//fancyss-full
+																			 ["group", "dohclient"],			//fancyss-full
+																			 ["1", "🟠阿里公共DNS"],			//fancyss-full
+																			 ["2", "🟠DNSPod公共DNS"],			//fancyss-full
+																			 ["3", "🟠360安全DNS"],				//fancyss-full
+																			 ["group", "SmartDNS"],				//fancyss-full
+																			 ["98", "⚫多上游DoH服务器"]		//fancyss-full
+																			 ];									//fancyss-full
+														var option_dnsngf_1_opt = [
+																				   ["1", "udp"]
+																			 	  ,["2", "tcp"]
+																				  ,["3", "DoH"]					//fancyss-full
+																			 ];
+														var option_dnsngf_1_val_udp = [
+																			 		   ["group", "Google DNS"],
+																					   ["1", "🟠8.8.8.8"],
+																					   ["2", "🟠8.8.4.4"],
+																			 		   ["group", "Cloudflare DNS"],
+																					   ["3", "⚫1.1.1.1"],
+																					   ["4", "⚫1.0.0.1"],
+																			 		   ["group", "Quad9"],
+																					   ["5", "🟠9.9.9.11"],
+																					   ["6", "🟠149.112.112.11"],
+																			 		   ["group", "OpenDNS"],
+																					   ["7", "⚫208.67.222.222"],
+																					   ["8", "⚫208.67.220.220"],
+																			 		   ["group", "DNS.SB"],
+																					   ["9", "⚫185.222.222.222"],
+																					   ["10", "⚫45.11.45.11"],
+																			 		   ["group", "AdGuard"],
+																					   ["11", "🟡94.140.14.14"],
+																					   ["12", "🟡94.140.15.15"],
+																			 		   ["group", "quad101"],
+																					   ["13", "🟠101.101.101.101"],
+																					   ["14", "🟠101.102.103.104"],
+																			 		   ["group", "自定义DNS"],
+																					   ["99", "⚪自定义DNS（udp）"]
+																				  	  ];
+														var option_dnsngf_1_val_tcp = [
+																			 		   ["group", "Google DNS"],
+																					   ["1", "🟠8.8.8.8"],
+																					   ["2", "🟠8.8.4.4"],
+																			 		   ["group", "Cloudflare DNS"],
+																					   ["3", "⚫1.1.1.1"],
+																					   ["4", "⚫1.0.0.1"],
+																			 		   ["group", "Quad9"],
+																					   ["5", "🟠9.9.9.11"],
+																					   ["6", "🟠149.112.112.11"],
+																			 		   ["group", "OpenDNS"],
+																					   ["7", "⚫208.67.222.222"],
+																					   ["8", "⚫208.67.220.220"],
+																			 		   ["group", "DNS.SB"],
+																					   ["9", "⚫185.222.222.222"],
+																					   ["10", "⚫45.11.45.11"],
+																			 		   ["group", "AdGuard"],
+																					   ["11", "🟡94.140.14.14"],
+																					   ["12", "🟡94.140.15.15"],
+																			 		   ["group", "quad101"],
+																					   ["13", "🟠101.101.101.101"],
+																					   ["14", "🟠101.102.103.104"],
+																			 		   ["group", "自定义DNS"],
+																					   ["99", "⚪自定义DNS（tcp）"]
+																				  	  ];
+														var option_dnsngf_1_val_doh = [										//fancyss-full
+																		   			   ["11", "⚫Cloudflare"],				//fancyss-full
+																		   			   ["12", "🟠Google"],					//fancyss-full
+																		   			   ["13", "🟠quad9"],					//fancyss-full
+																		   			   ["14", "🟡AdGuard"],					//fancyss-full
+																		   			   ["15", "🟠Quad 101"],				//fancyss-full
+																		   			   ["16", "⚫OpenDNS"],					//fancyss-full
+																		   			   ["17", "⚫DNS.SB"],					//fancyss-full
+																		   			   ["18", "⚫cleanbrowsing"],			//fancyss-full
+																		  		       ["23", "⚫nextdns"],					//fancyss-full
+																					  ];									//fancyss-full
+														var option_dnsngf_2_val = [											//fancyss-full
+																			 	   ["group", "国外直连组 (dohclient)"],		//fancyss-full
+																		  		   ["11", "⚫Cloudflare"],					//fancyss-full
+																		  		   ["16", "⚫OpenDNS"],						//fancyss-full
+																		  		   ["17", "⚫DNS.SB"],						//fancyss-full
+																		   		   ["18", "⚫cleanbrowsing"],				//fancyss-full
+																		  		   ["19", "⚫he.net"],						//fancyss-full
+																		  		   ["20", "⚫PureDNS"],						//fancyss-full
+																		  		   ["21", "⚫dnslow"],						//fancyss-full
+																		  		   ["22", "🟠dnswarden"],					//fancyss-full
+																		  		   ["24", "⚫bebasid"],						//fancyss-full
+																		  		   ["25", "🟠AT&T "],						//fancyss-full
+																			 	   ["group", "国内直连组 (dohclient)"],		//fancyss-full
+																		  		   ["1", "🟠阿里公共DNS"],					//fancyss-full
+																		  		   ["2", "🟠DNSPod公共DNS"],				//fancyss-full
+																		  		   ["3", "🟠360安全DNS"],					//fancyss-full
+																			 	   ["group", "其它 (SmartDNS)"],			//fancyss-full
+																		  		   ["97", "⚫SmartDNS"],					//fancyss-full
+																		  		  ];										//fancyss-full
+														// 进阶DNS方案1 chinadns-ng国外dns-2
+														var option_dnsngf_2_opt = [
+																			  	   ["1", "udp"]
+																			  	  ,["2", "tcp"]
+																			  	  ,["3", "DoH"]								//fancyss-full
+																				  ];
+														// 进阶DNS方案2 smartdns
+														var option_smrt = [													//fancyss-full
+																		   ["1", "1：国内：运营商DNS；国外：代理"],			//fancyss-full
+																		   ["2", "2：国内：运营商DNS，国外：直连"],			//fancyss-full
+																		   ["3", "3：国内：运营商DNS，国外：代理 + 直连"],	//fancyss-full
+																		   ["4", "4：国内：多上游DNS，国外：代理"],			//fancyss-full
+																		   ["5", "5：国内：多上游DNS，国外：直连"],			//fancyss-full
+																		   ["6", "6：国内：多上游DNS，国外：代理 + 直连"],	//fancyss-full
+																		   ["7", "7：自定义配置1"],							//fancyss-full
+																		   ["8", "8：自定义配置2"],							//fancyss-full
+																		   ["9", "9：自定义配置3"]							//fancyss-full
+																		  ];												//fancyss-full
+														// 进阶DNS方案3 dohclient 国内 doh/udp
+														option_protc_sel_chn = [											//fancyss-full
+																			  ["1", "udp"],									//fancyss-full
+																			  ["2", "tcp"],									//fancyss-full
+																			  ["3", "DoH"]									//fancyss-full
+																			 ];												//fancyss-full
+														option_protc_sel_frn = [											//fancyss-full
+																			  ["2", "tcp"],									//fancyss-full
+																			  ["3", "DoH"]									//fancyss-full
+																			 ];												//fancyss-full
+														// 进阶DNS方案3 dohclient 国内udp
+														var option_dohc_udp_china = [];										//fancyss-full
+														if(isp_dns_1 && isp_dns_2){											//fancyss-full
+															option_dohc_udp_china.push(["group", "运营商DNS"]);				//fancyss-full
+															option_dohc_udp_china.push(["1", "⚪" + isp_dns_1]);			//fancyss-full
+															option_dohc_udp_china.push(["2", "⚪" + isp_dns_2]);			//fancyss-full
+														}else if(isp_dns_1 && !isp_dns_2){									//fancyss-full
+															option_dohc_udp_china.push(["group", "运营商DNS"]);				//fancyss-full
+															option_dohc_udp_china.push(["1", "⚪" + isp_dns_1]);			//fancyss-full
+														}																	//fancyss-full
+														option_dohc_udp_china.push(["group", "阿里公共DNS"]);				//fancyss-full
+														option_dohc_udp_china.push(["3", "🟠223.5.5.5"]);					//fancyss-full
+														option_dohc_udp_china.push(["4", "🟠223.6.6.6"]);					//fancyss-full
+														option_dohc_udp_china.push(["group", "DNSPod DNS"]);				//fancyss-full
+														option_dohc_udp_china.push(["5", "🟠119.29.29.29"]);				//fancyss-full
+														option_dohc_udp_china.push(["6", "🟠119.28.28.28"]);				//fancyss-full
+														option_dohc_udp_china.push(["group", "114 DNS"]);					//fancyss-full
+														option_dohc_udp_china.push(["7", "⚫114.114.114.114"]);				//fancyss-full
+														option_dohc_udp_china.push(["8", "⚫114.114.115.115"]);				//fancyss-full
+														option_dohc_udp_china.push(["group", "OneDNS"]);					//fancyss-full
+														option_dohc_udp_china.push(["9", "🟠117.50.11.11（拦截版）"]);			//fancyss-full
+														option_dohc_udp_china.push(["10", "🟠52.80.66.66（拦截版）"]);			//fancyss-full
+														option_dohc_udp_china.push(["11", "🟠117.50.10.10（纯净版）"]);			//fancyss-full
+														option_dohc_udp_china.push(["12", "🟠52.80.52.52（纯净版）"]);			//fancyss-full
+														option_dohc_udp_china.push(["13", "🟠117.50.60.30（家庭版）"]);			//fancyss-full
+														option_dohc_udp_china.push(["14", "🟠52.80.60.30（家庭版）"]);			//fancyss-full
+														option_dohc_udp_china.push(["group", "360安全DNS"]);					//fancyss-full
+														option_dohc_udp_china.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);	//fancyss-full
+														option_dohc_udp_china.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);	//fancyss-full
+														option_dohc_udp_china.push(["17", "🟠123.125.81.6（联通）"]);			//fancyss-full
+														option_dohc_udp_china.push(["18", "🟠140.207.198.6（联通）"]);			//fancyss-full
+														option_dohc_udp_china.push(["group", "cnnic DNS"]);						//fancyss-full
+														option_dohc_udp_china.push(["19", "⚫1.2.4.8"]);						//fancyss-full
+														option_dohc_udp_china.push(["20", "⚫210.2.4.8"]);						//fancyss-full
+														option_dohc_udp_china.push(["group", "百度DNS"]);						//fancyss-full
+														option_dohc_udp_china.push(["21", "🟠180.76.76.76"]);					//fancyss-full
+														option_dohc_udp_china.push(["group", "教育网DNS"]);						//fancyss-full
+														option_dohc_udp_china.push(["22", "🟠101.6.6.6:5353（清华大学）"]);		//fancyss-full
+														option_dohc_udp_china.push(["23", "⚫58.132.8.1（北京）"]);				//fancyss-full
+														option_dohc_udp_china.push(["24", "⚫101.7.8.9（北京）"]);				//fancyss-full
+														option_dohc_udp_china.push(["group", "自定义DNS"]);						//fancyss-full
+														option_dohc_udp_china.push(["99", "⚪自定义DNS (udp)"]);				//fancyss-full
+														option_dohc_tcp_china = [												//fancyss-full
+																				 ["group", "阿里公共DNS"],						//fancyss-full
+																				 ["3", "🟠223.5.5.5"],							//fancyss-full
+																				 ["4", "🟠223.6.6.6"],							//fancyss-full
+																				 ["group", "DNSPod DNS"],						//fancyss-full
+																				 ["5", "🟠119.29.29.29"],						//fancyss-full
+																				 ["6", "🟠119.28.28.28"],						//fancyss-full
+																				 ["group", "114 DNS"],							//fancyss-full
+																				 ["7", "⚫114.114.114.114"],					//fancyss-full
+																				 ["8", "⚫114.114.115.115"],					//fancyss-full
+																				 ["group", "OneDNS"],							//fancyss-full
+																				 ["10", "🟠52.80.66.66（拦截版）"],				//fancyss-full
+																				 ["12", "🟠52.80.52.52（纯净版）"],				//fancyss-full
+																				 ["group", "360安全DNS"],						//fancyss-full
+																				 ["16", "🟠218.30.118.6（电信/铁通/移动）"],	//fancyss-full
+																				 ["17", "🟠123.125.81.6（联通）"],				//fancyss-full
+																				 ["18", "🟠140.207.198.6（联通）"],				//fancyss-full
+																				 ["group", "教育网DNS"],						//fancyss-full
+																				 ["22", "🟠101.6.6.6:5353（清华大学）"],		//fancyss-full
+																				 ["group", "自定义DNS"],						//fancyss-full
+																				 ["99", "⚪自定义DNS (tcp)"]					//fancyss-full
+																				];												//fancyss-full
+														// 进阶DNS方案3 dohclient 国内 doh
+														option_dohc_doh_china = [												//fancyss-full
+																				 ["1", "🟠阿里公共DNS"],						//fancyss-full
+																				 ["2", "🟠DNSPod公共DNS"],						//fancyss-full
+																				 ["3", "🟠360安全DNS"]							//fancyss-full
+																				];												//fancyss-full
+														// 进阶DNS方案3 dohclient 国外 tcp
+														var option_dohc_tcp_foreign = [											//fancyss-full
+																		   ["1", "Cloudflare [1.1.1.1]"],						//fancyss-full
+																		   ["2", "Cloudflare [1.0.0.1]"],						//fancyss-full
+																		   ["3", "Google [8.8.8.8]"],							//fancyss-full
+																		   ["4", "Google [8.8.4.4]"],							//fancyss-full
+																		   ["5", "quad9 [9.9.9.9]"],							//fancyss-full
+																		   ["6", "OpenDNS [208.67.222.222]"],					//fancyss-full
+																		   ["7", "OpenDNS [208.67.220.220]"],					//fancyss-full
+																		   ["8", "DNS.SB [185.222.222.222]"],					//fancyss-full
+																		   ["9", "DNS.SB [45.11.45.11]"],						//fancyss-full
+																		   ["10", "quad101 [101.101.101.101]"],					//fancyss-full
+																		   ["11", "quad101 [101.102.103.104]"],					//fancyss-full
+																		   ["12", "AdGuard [94.140.14.14]"],					//fancyss-full
+																		   ["13", "AdGuard [94.140.15.15]"],					//fancyss-full
+																		   ["99", "自定义DNS(tcp)"]								//fancyss-full
+																		  ];													//fancyss-full
+														// 进阶DNS方案3 dohclient 国外 doh
+														var option_dohcf = [													//fancyss-full
+																		   ["11", "⚫Cloudflare"],								//fancyss-full
+																		   ["12", "🟠Google"],									//fancyss-full
+																		   ["13", "🟠quad9"],									//fancyss-full
+																		   ["14", "🟡AdGuard"],									//fancyss-full
+																		   ["15", "🟠Quad 101"],								//fancyss-full
+																		   ["16", "⚫OpenDNS"],									//fancyss-full
+																		   ["17", "⚫DNS.SB"]									//fancyss-full
+																		  ];													//fancyss-full
+														var option_cache_timeout = [["0", "从不过期"], ["1", "根据ttl"], ["1800", "半小时"], ["3600", "一小时"], ["7200", "两小时"], ["43200", "12小时"], ["86400", "24小时"]];  //fancyss-full
+														// 基础DNS方案：中国dns
+														var option_chndns = [];
+														if(isp_dns_1 && isp_dns_2){
+															option_chndns.push(["group", "运营商DNS"]);
+															option_chndns.push(["1", isp_dns_1]);
+															option_chndns.push(["2", isp_dns_2]);
+														}else if(isp_dns_1 && !isp_dns_2){
+															option_chndns.push(["group", "运营商DNS"]);
+															option_chndns.push(["1", isp_dns_1]);
+														}
+														option_chndns.push(["group", "阿里公共DNS"]);
+														option_chndns.push(["3", "223.5.5.5"]);
+														option_chndns.push(["4", "223.6.6.6"]);
+														option_chndns.push(["group", "DNSPod DNS"]);
+														option_chndns.push(["5", "119.29.29.29"]);
+														option_chndns.push(["6", "119.28.28.28"]);
+														option_chndns.push(["group", "114 DNS"]);
+														option_chndns.push(["7", "114.114.114.114"]);
+														option_chndns.push(["8", "114.114.115.115"]);
+														option_chndns.push(["group", "OneDNS"]);
+														option_chndns.push(["9", "117.50.11.11（拦截版）"]);
+														option_chndns.push(["10", "52.80.66.66（拦截版）"]);
+														option_chndns.push(["11", "117.50.10.10（纯净版）"]);
+														option_chndns.push(["12", "52.80.52.52（纯净版）"]);
+														option_chndns.push(["13", "117.50.60.30（家庭版）"]);
+														option_chndns.push(["14", "52.80.60.30（家庭版）"]);
+														option_chndns.push(["group", "360安全DNS"]);
+														option_chndns.push(["15", "101.226.4.6（电信/铁通/移动）"]);
+														option_chndns.push(["16", "218.30.118.6（电信/铁通/移动）"]);
+														option_chndns.push(["17", "123.125.81.6（联通）"]);
+														option_chndns.push(["18", "140.207.198.6（联通）"]);
+														option_chndns.push(["group", "cnnic DNS"]);
+														option_chndns.push(["19", "1.2.4.8"]);
+														option_chndns.push(["20", "210.2.4.8"]);
+														option_chndns.push(["group", "百度DNS"]);
+														option_chndns.push(["21", "180.76.76.76"]);
+														option_chndns.push(["group", "教育网DNS"]);
+														option_chndns.push(["22", "101.6.6.6:5353（清华大学）"]);
+														option_chndns.push(["23", "58.132.8.1（北京）"]);
+														option_chndns.push(["24", "101.7.8.9（北京）"]);
+														option_chndns.push(["group", "SmartDNS"]);										//fancyss-full
+														option_chndns.push(["98", "SmartDNS (UDP)"]);									//fancyss-full
+														option_chndns.push(["group", "自定义DNS"]);
+														option_chndns.push(["99", "自定义DNS (UDP)"]);
+														// 基础DNS方案：外国dns
+														var option_dnsf = [["3", "🚀 dns2socks"],
+																		   ["4", "🚀 ss-tunnel"],										//fancyss-full
+																		   ["7", "🚀 v2ray/xray_dns"],
+																		   ["9", "🌏 smartdns"],										//fancyss-full
+																		   ["8", "🌏 直连（udp）"]
+																		  ];
+														// 节点域名解析DNS方案
+														var option_dnsresolv = [["0", "udp查询"],
+																				["1", "tcp查询"],
+																				["2", "smartdns（DoH+DoT）"],							//fancyss-full
+																				["3", "dohclient（DoH）"],								//fancyss-full
+																			   ];
+														// 节点域名解析DNS方案： udp选项
+														var option_udp_resv = [
+																			   ["group", "自动选取"],
+																			   ["0", "自动选取模式（国内 + 国外）"],
+																			   ["-1", "自动选取模式（仅国内）"],
+																			   ["-2", "自动选取模式（仅国外）"],
+																			   ["group", "国内DNS"],
+																			   ["1", "阿里DNS【223.5.5.5】"],
+																			   ["2", "DNSPod DNS【119.29.29.29】"],
+																			   ["3", "114DNS【114.114.114.114】"],
+																			   ["4", "OneDNS【52.80.66.66】"],
+																			   ["5", "360安全DNS 电信/铁通/移动【123.125.81.6】"],
+																			   ["6", "360安全DNS 联通【140.207.198.6】"],
+																			   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
+																			   ["8", "百度DNS【180.76.76.76】"],
+																			   ["group", "国外DNS"],
+																			   ["11", "Google DNS【8.8.8.8】"],
+																			   ["12", "CloudFlare DNS【1.1.1.1】"],
+																			   ["13", "Quad9 Secured【9.9.9.11】"],
+																			   ["14", "OpenDNS【208.67.222.222】"],
+																			   ["15", "DNS.SB【185.222.222.222】"],
+																			   ["16", "AdGuard【94.140.14.14】"],
+																			   ["17", "Quad101【101.101.101.101】"],
+																			   ["18", "CleanBrowsing【185.228.168.9】"],
+																			   ["group", "自定义DNS"],
+																			   ["99", "自定义DNS (udp)"],
+																			  ];
+														// 节点域名解析DNS方案： tcp选项
+														var option_tcp_resv = [
+																			   ["group", "自动选取"],
+																			   ["0", "自动选取模式（国内 + 国外）"],
+																			   ["-1", "自动选取模式（仅国内）"],
+																			   ["-2", "自动选取模式（仅国外）"],
+																			   ["group", "国内DNS"],
+																			   ["1", "阿里DNS【223.5.5.5】"],
+																			   ["2", "DNSPod DNS【119.29.29.29】"],
+																			   ["3", "114DNS【114.114.114.114】"],
+																			   ["4", "OneDNS【52.80.66.66】"],
+																			   ["5", "360安全DNS 电信/铁通/移动【123.125.81.6】"],
+																			   ["6", "360安全DNS 联通【140.207.198.6】"],
+																			   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
+																			   ["group", "国外DNS"],
+																			   ["11", "Google DNS【8.8.8.8】"],
+																			   ["12", "CloudFlare DNS【1.1.1.1】"],
+																			   ["13", "Quad9 Secured【9.9.9.11】"],
+																			   ["14", "OpenDNS【208.67.222.222】"],
+																			   ["15", "DNS.SB【185.222.222.222】"],
+																			   ["16", "AdGuard【94.140.14.14】"],
+																			   ["17", "Quad101【101.101.101.101】"],
+																			   ["group", "自定义DNS"],
+																			   ["99", "自定义DNS (tcp)"],
+																			  ];
+														// 节点域名解析DNS方案： dohclient选项
+														option_dohc_doh_resv = [							//fancyss-full
+																				["group", "国外DoH DNS"],	//fancyss-full
+																				["1", "Cloudflare"],		//fancyss-full
+																				["2", "OpenDNS"],			//fancyss-full
+																				["3", "DNS.SB"],			//fancyss-full
+																				["4", "cleanbrowsing"]		//fancyss-full
+																				["group", "国内DoH DNS"],	//fancyss-full
+																				["14", "阿里公共DNS"],		//fancyss-full
+																				["15", "DNSPod公共DNS"],	//fancyss-full
+																				["16", "360安全DNS"],		//fancyss-full
+																			   ]; 							//fancyss-full
+														var option_dig = [
+																		  ["group", "国内域名"],
+																		  ["www.baidu.com", "www.baidu.com"],
+																		  ["www.sina.com.cn", "www.sina.com.cn"],
+																		  ["www.sohu.com", "www.sohu.com"],
+																		  ["www.163.com", "www.163.com"],
+																		  ["www.qq.com", "www.qq.com"],
+																		  ["www.taobao.com", "www.taobao.com"],
+																		  ["www.jd.com", "www.jd.com"],
+																		  ["www.bilibili.com", "www.bilibili.com"],
+																		  ["www.bing.com", "www.bing.com"],
+																		  ["group", "国外域名"],
+																		  ["www.google.com", "www.google.com"],
+																		  ["www.google.com.hk", "www.google.com.hk"],
+																		  ["www.youtube.com", "www.youtube.com"],
+																		  ["www.facebook.com", "www.facebook.com"],
+																		  ["www.twitter.com", "www.twitter.com"],
+																		  ["www.wikipedia.org", "www.wikipedia.org"],
+																		  ["www.instagram.com", "www.instagram.com"],
+																		  ["www.netflix.com", "www.netflix.com"],
+																		  ["www.reddit.com", "www.reddit.com"],
+																		  ["www.github.com", "www.github.com"],
+																		 ];
+														var ph1 = "需端口号如：8.8.8.8:53"
+														var ph2 = "需端口号如：8.8.8.8#53"
+														var ph3 = "# 填入自定义的dnsmasq设置，一行一个&#10;# 例如hosts设置：&#10;address=/weibo.com/2.2.2.2&#10;# 防DNS劫持设置：&#10;bogus-nxdomain=220.250.64.18"
+														$('#table_dns').forms([
+															{ title: '<em>DNS方案设置</em>', thtd:1 , multi: [
+																{ id:'ss_basic_olddns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(136)"><font color="#ffcc00">基础</font></a>', value: 0},
+																{ id:'ss_basic_advdns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(137)"><font color="#ffcc00">进阶</font></a>', value: 1},
+															]},
+															{ title: '选择DNS主方案', class:'new_dns_main', multi: [
+																{ id: 'ss_dns_plan', type:'select', func:'u', options:option_dnsp, style:'width:209px;', value:'1'},
+															]},
+															// new_dns: chinadns-ng
+															{ title: '&nbsp;&nbsp;*选择中国DNS-1 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng_china_1_enable', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_china_1_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'1'},
+																{ id: 'ss_basic_chng_china_1_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_china_1_udp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+																{ id: 'ss_basic_chng_china_1_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'1'},
+																{ id: 'ss_basic_chng_china_1_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+																{ id: 'ss_basic_chng_china_1_doh', type:'select', func:'u', options:option_dnsngc_doh, style:'width:200px;', value:'1'},																					//fancyss-full
+																{ suffix:'&nbsp;&nbsp;'},
+																{ suffix:'<a type="button" id="edit_smartdns_conf_10" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(10)">编辑smartdns配置</a>'},														//fancyss-full
+																{ suffix:'<a type="button" id="edit_smartdns_conf_11" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(11)">编辑smartdns配置</a>'},														//fancyss-full
+																{ suffix:'<a type="button" id="edit_smartdns_conf_12" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(12)">编辑smartdns配置</a>'},														//fancyss-full
+																{ prefix: '<a id="ss_basic_chng_china_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_1_ecs', type: 'checkbox', value:true },
+																{ suffix: '<a type="button" id="dohclient_cache_manage_chn1" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2051">缓存管理</a>' },				//fancyss-full
+															]},
+															{ title: '&nbsp;&nbsp;*选择中国DNS-2 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng_china_2_enable', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_china_2_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'2'},
+																{ id: 'ss_basic_chng_china_2_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:200px;', value:'5'},
+																{ id: 'ss_basic_chng_china_2_udp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+																{ id: 'ss_basic_chng_china_2_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'5'},
+																{ id: 'ss_basic_chng_china_2_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+																{ id: 'ss_basic_chng_china_2_doh', type:'select', func:'u', options:option_dnsngc_doh, style:'width:200px;', value:'1'},																					//fancyss-full
+																{ suffix:'&nbsp;&nbsp;'},
+																{ suffix:'<a type="button" id="edit_smartdns_conf_13" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(10)">编辑smartdns配置</a>'},														//fancyss-full
+																{ suffix:'<a type="button" id="edit_smartdns_conf_14" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(11)">编辑smartdns配置</a>'},														//fancyss-full
+																{ suffix:'<a type="button" id="edit_smartdns_conf_15" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(12)">编辑smartdns配置</a>'},														//fancyss-full
+																{ prefix: '<a id="ss_basic_chng_china_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_2_ecs', type: 'checkbox', value:true },
+																{ suffix: '<a type="button" id="dohclient_cache_manage_chn2" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2052">缓存管理</a>' },				//fancyss-full
+															]},
+															{ title: '&nbsp;&nbsp;*选择可信DNS-1 <font color="#FF0066">(代理) 🚀</font>', hint:'134', class:'new_dns chng', rid:'dns_plan_foreign_1', multi: [
+																{ id: 'ss_basic_chng_trust_1_enable', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_trust_1_opt', type:'select', func:'u', options:option_dnsngf_1_opt, style:'width:50px;', value:'2'},
+																{ id: 'ss_basic_chng_trust_1_opt_udp_val', type:'select', func:'u', options:option_dnsngf_1_val_udp, style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_1_opt_udp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_1_opt_tcp_val', type:'select', func:'u', options:option_dnsngf_1_val_tcp, style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_1_opt_tcp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_1_opt_doh_val', type:'select', func:'u', options:option_dnsngf_1_val_doh, style:'width:auto;', value:'12'},																		//fancyss-full
+																{ suffix: '&nbsp;&nbsp;'},
+																{ prefix: '<a id="ss_basic_chng_trust_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(131)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_1_ecs', type: 'checkbox', value:true },
+																{ suffix: '<a type="button" id="dohclient_cache_manage_frn1" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2055">缓存管理</a>' },				//fancyss-full
+															]},
+															{ title: '&nbsp;&nbsp;*选择可信DNS-2 <em>(直连) 🌏</em>', class:'new_dns chng', hint:'135', rid:'dns_plan_foreign_2', multi: [
+																{ id: 'ss_basic_chng_trust_2_enable', type:'checkbox', func:'u', value:false},
+																{ id: 'ss_basic_chng_trust_2_opt', type:'select', func:'u', options:option_dnsngf_2_opt, style:'width:50px;', value:'0'},
+																{ id: 'ss_basic_chng_trust_2_opt_udp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
+																{ id: 'ss_basic_chng_trust_2_opt_tcp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
+																{ id: 'ss_basic_chng_trust_2_opt_doh', type:'select', func:'u', options:option_dnsngf_2_val, style:'width:auto;', value:'2'},																				//fancyss-full
+																{ suffix: '&nbsp;&nbsp;'},
+																{ suffix: '<a type="button" id="edit_smartdns_conf_30" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(30)">编辑smartdns配置</a>'},														//fancyss-full
+																{ prefix: '<a id="ss_basic_chng_trust_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(132)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_2_ecs', type: 'checkbox', value:true },
+																{ suffix: '<a type="button" id="dohclient_cache_manage_frn2" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':2056">缓存管理</a>' },				//fancyss-full
+																//{ suffix: '<span id="ss_basic_chng_direct_user_note"><br />⚠️直连情况下可能存在DNS污染，请自行解决！</span>'},
+															]},	
+															//{ title: '&nbsp;&nbsp;*丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', id:'ss_basic_chng_no_ipv6', type:'checkbox', value:true},
+															{ title: '&nbsp;&nbsp;*丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', hint:'145', id:'ss_basic_chng_x', multi: [
+																{ id:'ss_basic_chng_no_ipv6', type:'checkbox', func:'u', value: true},
+																{ suffix: '<a id="ss_basic_chng_left">&nbsp;&nbsp;&nbsp;&nbsp;【</a>' },
+																{ id:'ss_basic_chng_act', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xact" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">act</font></a>&nbsp;&nbsp;', value: 0},
+																{ id:'ss_basic_chng_gt', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xgt" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">gt</font></a>&nbsp;&nbsp;', value: 1},
+																{ id:'ss_basic_chng_mc', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xmc" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">mt</font></a>', value: 0},
+																{ suffix: '<a id="ss_basic_chng_right">&nbsp;&nbsp;】</a>' },
+															]},
+															
+															{ title: '&nbsp;&nbsp;*发送重复DNS查询包（--repeat-times）', class:'new_dns chng', id:'ss_basic_chng_repeat_times', type:'text', value: '2'},
+															// new_dns: smartdns
+															{ title: '&nbsp;&nbsp;*选择smartdns配置', class:'new_dns smrt', multi: [																						//fancyss-full
+																{ id: 'ss_basic_smrt', type:'select', func:'u', options:option_smrt, style:'width:260px;', value:'1'},														//fancyss-full
+																{ suffix: '&nbsp;&nbsp;'},																																	//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_51" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(51)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_52" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(52)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_53" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(53)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_54" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(54)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_55" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(55)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_56" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(56)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_57" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(57)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_58" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(58)">编辑smartdns配置</a>'},		//fancyss-full
+																{ suffix: '<a type="button" id="edit_smartdns_conf_59" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(59)">编辑smartdns配置</a>'},		//fancyss-full
+															]},																																								//fancyss-full
+															// new_dns: dohclient
+															{ title: '&nbsp;&nbsp;*选择国内DNS', class:'new_dns dohc', hint:'122', multi: [																																					//fancyss-full
+																{ id: 'ss_basic_dohc_sel_china', type:'select', func:'u', options:option_protc_sel_chn, style:'width:50px;', value:'3'},																									//fancyss-full
+																{ id: 'ss_basic_dohc_udp_china', type:'select', func:'u', options:option_dnsngc_udp, style:'width:190px;', value:'3'},																										//fancyss-full
+																{ id: 'ss_basic_dohc_udp_china_user', type: 'text', style:'width:110px;', ph:'114.114.114.114' },																															//fancyss-full
+																{ id: 'ss_basic_dohc_tcp_china', type:'select', func:'u', options:option_dohc_tcp_china, style:'width:190px;', value:'1'},																									//fancyss-full
+																{ id: 'ss_basic_dohc_tcp_china_user', type: 'text', style:'width:110px;', ph:'114.114.114.114' },																															//fancyss-full
+																{ id: 'ss_basic_dohc_doh_china', type:'select', func:'u', options:option_dohc_doh_china, style:'width:190px;', value:'1'},																									//fancyss-full
+																{ prefix: '&nbsp;<a id="ss_basic_dhoc_chn_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(123)"><font color="#ffcc00"><u>ECS</u></font></a>', id: 'ss_basic_dohc_ecs_china', type: 'checkbox', value:true },						//fancyss-full
+															]},																																																								//fancyss-full
+															{ title: '&nbsp;&nbsp;*选择国外DNS', class:'new_dns dohc', hint:'124', multi: [																																					//fancyss-full
+																{ id: 'ss_basic_dohc_sel_foreign', type:'select', func:'u', options:option_protc_sel_frn, style:'width:50px;', value:'3'},																									//fancyss-full
+																{ id: 'ss_basic_dohc_tcp_foreign', type:'select', func:'u', options:option_dohc_tcp_foreign, style:'width:190px;', value:'3'},																								//fancyss-full
+																{ id: 'ss_basic_dohc_tcp_foreign_user', type: 'text', style:'width:110px;', ph:'8.8.8.8' },																																	//fancyss-full
+																{ id: 'ss_basic_dohc_doh_foreign', type:'select', func:'u', options:option_dohcf, style:'width:190px;', value:'12'},																											//fancyss-full
+																{ prefix: '&nbsp;<a id="ss_basic_dhoc_frn_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(125)"><font color="#ffcc00"><u>ECS</u></font></a>', id: 'ss_basic_dohc_ecs_foreign', type: 'checkbox', value:true },					//fancyss-full
+																{ prefix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(126)"><font color="#ffcc00"><u>Proxy</u></font></a>', id: 'ss_basic_dohc_proxy', type: 'checkbox', value:true },						//fancyss-full
+															]},																																																								//fancyss-full
+															{ title: '&nbsp;&nbsp;*缓存管理', class:'new_dns dohc', multi: [																																								//fancyss-full
+																{ prefix: '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(127)"><font color="#ffcc00"><u>缓存时长</u>：</font></a>' },																		//fancyss-full
+																{ id: 'ss_basic_dohc_cache_timeout', type:'select', func:'u', options:option_cache_timeout, style:'width:100px;', value:'1'},																								//fancyss-full
+																{ suffix: '&nbsp;&nbsp;<a type="button" id="dohclient_cache_manage_dohc" class="ss_btn" style="cursor:pointer" target="_blank" href="http://' + '<% nvram_get("lan_ipaddr"); %>' + ':7913">缓存管理</a>' },					//fancyss-full
+																{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="remove_doh_cache(1)">清空缓存</a>&nbsp;&nbsp;'},																						//fancyss-full
+																{ prefix: '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(128)"><font color="#ffcc00"><u>缓存持久化</u></font></a>', id: 'ss_basic_dohc_cache_reuse', type: 'checkbox', value:false },		//fancyss-full
+															]},																																																								//fancyss-full
+															// old_dns	
+															{ title: '选择中国DNS', class:'old_dns', multi: [
+																{ id: 'ss_china_dns', type:'select', func:'u', options:option_chndns, style:'width:auto;', value:'3'},
+																{ id: 'ss_china_dns_user', type: 'text', ph:'114.114.114.114' }
+															]},
+															{ title: '选择外国DNS（🌏直连 | 🚀代理） ', class:'old_dns', hint:'26', rid:'dns_plan_foreign', multi: [
+																{ id: 'ss_foreign_dns', type:'select', func:'u', options:option_dnsf, style:'width:auto;'},
+																{ id: 'ss_dns2socks_user', type: 'text', style: 'width:auto;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
+																{ id: 'ss_direct_user', type: 'text', value:'8.8.8.8#53', ph:ph2 },
+																{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},	//fancyss-full
+																{ suffix: '<span id="ss_disable_aaaa_note">丢弃AAAA记录</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
+																{ suffix: '<span id="ss_doh_note">&nbsp;&nbsp;DNS over HTTPS (DoH)，<a href="https://cloudflare-dns.com/zh-Hans/" target="_blank"><em>cloudflare服务</em></a>，拒绝一切污染~</span>' },  //fancyss-full
+																{ suffix: '<span id="ss_v2_note"></span>' },
+															]},
+															{ title: '<em>其它DNS相关设置</em>', th:'2'},
+															{ title: 'DNS重定向', id:'ss_basic_dns_hijack', type:'checkbox', hint:'106', value:true},
+															{ title: 'DNS解析测试', rid: 'ss_dns_test', multi: [
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(1)">测试cdn</a>&nbsp;&nbsp;'},
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(2)">测试apple china</a>&nbsp;&nbsp;'},
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(3)">测试google china</a>&nbsp;&nbsp;'},
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(4)">测试gfwlist</a>&nbsp;&nbsp;'},
+																//{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(5)">测试cdn-china</a>&nbsp;&nbsp;'},
+															]},
+															{ title: 'DNS解析测试(dig)', rid: 'ss_dig_test', multi: [
+																{ id: 'ss_basic_dig_opt', type:'select', func:'u', options:option_dig, style:'width:240px;', value:'1'},
+																{ suffix: '&nbsp;&nbsp;' },
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(6)">dig</a>&nbsp;&nbsp;'},
+															]},
+															{ title: '重启dnsmasq', rid: 'ss_dnsmasq_restart', multi: [	
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
+															]},	
+															// server dns resolver
+															{ title: '节点域名解析DNS方案', hint:'107', multi: [
+																{ id: 'ss_basic_s_resolver', type:'select', func:'u', options:option_dnsresolv, style:'width:140px;', value:'0'},
+																{ id: 'ss_basic_s_resolver_udp', type:'select', func:'u', options:option_udp_resv, style:'width:160px;', value:'0'},
+																{ id: 'ss_basic_s_resolver_udp_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
+																{ id: 'ss_basic_s_resolver_tcp', type:'select', func:'u', options:option_tcp_resv, style:'width:160px;', value:'0'},
+																{ id: 'ss_basic_s_resolver_tcp_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
+																{ id: 'ss_basic_s_resolver_doh', type:'select', func:'u', options:option_dohc_doh_resv, style:'width:160px;', value:'3'},								//fancyss-full
+																{ suffix: '&nbsp;&nbsp;' },
+																{ suffix: '<a type="button" id="edit_smartdns_conf_40" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf(40)">编辑smartdns配置</a>'},	//fancyss-full
+															]},
+															{ title: '自定义dnsmasq', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
+														]);
+														var curr_host = window.location.hostname;												//fancyss-full
+														$("#dohclient_cache_manage_chn1").attr("href", "http://" + curr_host + ":2051");		//fancyss-full
+														$("#dohclient_cache_manage_chn2").attr("href", "http://" + curr_host + ":2052");		//fancyss-full
+														$("#dohclient_cache_manage_frn1").attr("href", "http://" + curr_host + ":2055");		//fancyss-full
+														$("#dohclient_cache_manage_frn2").attr("href", "http://" + curr_host + ":2056");		//fancyss-full
+														$("#dohclient_cache_manage_dohc").attr("href", "http://" + curr_host + ":7913");		//fancyss-full
+													</script>
+												</table>
 											</div>
-										</div>
-										<div id="tablet_9" style="display: none;">
-											<table id="table_addons" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
-												<script type="text/javascript">
-													var title1 = "填写说明：&#13;此处填写1-23之间任意小时&#13;小时间用逗号间隔，如：&#13;当天的8点、10点、15点则填入：8,10,15"
-													var option_rebc = [["0", "关闭"], ["1", "每天"], ["2", "每周"], ["3", "每月"], ["4", "每隔"], ["5", "自定义"]];
-													var option_rebw = [["1", "一"], ["2", "二"], ["3", "三"], ["4", "四"], ["5", "五"], ["6", "六"], ["7", "日"]];
-													var option_rebd = [];
-													for (var i = 1; i < 32; i++){
-														var _tmp = [];
-														_i = String(i)
-														_tmp[0] = _i;
-														_tmp[1] = _i + "日";
-														option_rebd.push(_tmp);
-													}
-													var option_rebim = ["1", "5", "10", "15", "20", "25", "30"];
-													var option_rebih = [];
-													for (var i = 1; i < 13; i++) option_rebih.push(String(i));
-													var option_rebid = [];
-													for (var i = 1; i < 31; i++) option_rebid.push(String(i));
-													var option_rebip = [["1", "分钟"], ["2", "小时"], ["3", "天"]];
-													var option_rebh = [];
-													for (var i = 0; i < 24; i++){
-														var _tmp = [];
-														_i = String(i)
-														_tmp[0] = _i;
-														_tmp[1] = _i + "时";
-														option_rebh.push(_tmp);
-													}
-													var option_rebm = [];
-													for (var i = 0; i < 61; i++){
-														var _tmp = [];
-														_i = String(i)
-														_tmp[0] = _i;
-														_tmp[1] = _i + "分";
-														option_rebm.push(_tmp);
-													}
-													var option_trit = [["0", "关闭"], ["2", "每隔2分钟"], ["5", "每隔5分钟"], ["10", "每隔10分钟"], ["15", "每隔15分钟"], ["20", "每隔20分钟"], ["25", "每隔25分钟"], ["30", "每隔30分钟"]];
-													var pingm = [["1", "1次/节点"], ["2", "5次/节点"], ["3", "10次/节点"], ["4", "20次/节点"]];
-													var weburl = ["developer.google.cn/generate_204", "connectivitycheck.gstatic.com/generate_204", "www.gstatic.com/generate_204"];
-													$('#table_addons').forms([
-														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;导出fancyss配置', hint:'24', multi: [
-															{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(1);" value="导出配置">'},
-															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="remove_SS_node();" value="清空配置">'},
-															{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(2);" value="打包插件">'},
-														]},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;恢复fancyss配置', hint:'24', multi: [
-															{ suffix:'<input style="color:#FFCC00;*color:#000;width: 200px;" id="ss_file" type="file" name="file"/>'},
-															{ suffix:'<img id="loadingicon" style="margin-left:5px;margin-right:5px;display:none;" src="/images/InternetScan.gif"/>'},
-															{ suffix:'<span id="ss_file_info" style="display:none;">完成</span>'},
-															{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="upload_ss_backup();" value="恢复配置"/>'},
-														]},											
-														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">定时任务</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件定时重启设定', multi: [
-															{ id:'ss_reboot_check', type:'select', style:'width:auto', func:'v', options:option_rebc, value:'0'},
-															{ id:'ss_basic_week', type:'select', style:'width:auto', css:'re2', options:option_rebw, value:'1'},
-															{ id:'ss_basic_day', type:'select', style:'width:auto', css:'re3', options:option_rebd, value:'1'},
-															{ id:'ss_basic_inter_min', type:'select', style:'width:auto', css:'re4_1', options:option_rebim, value:'1'},
-															{ id:'ss_basic_inter_hour', type:'select', style:'width:auto', css:'re4_2', options:option_rebih, value:'1'},
-															{ id:'ss_basic_inter_day', type:'select', style:'width:auto', css:'re4_3', options:option_rebid, value:'1'},
-															{ id:'ss_basic_inter_pre', type:'select', style:'width:auto', func:'v', css:'re4', options:option_rebip, value:'1'},
-															{ id:'ss_basic_custom', type:'text', style:'width:150px', css:'re5', ph:'8,10,15', title:title1},
-															{ suffix:'<span class="re5">&nbsp;小时</span>'},
-															{ id:'ss_basic_time_hour', type:'select', style:'width:auto', css:'re1 re2 re3 re4_3', options:option_rebh, value:'0'},
-															{ id:'ss_basic_time_min', type:'select', style:'width:auto', css:'re1 re2 re3 re4_3 re5', options:option_rebm, value:'0'},
-															{ suffix:'&nbsp;<span class="re1 re2 re3 re4 re5">重启插件</span>'},
-															{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="set_cron(1)">保存设置</a>'},
-														]},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件触发重启设定', multi: [
-															{ id:'ss_basic_tri_reboot_time', type:'select', style:'width:auto', help:'109', func:'u', options:option_trit, value:'0'},
-															{ suffix:'<span id="ss_basic_tri_reboot_time_note">&nbsp;解析服务器IP，如果发生变更，则重启插件！</span>'},
-															{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="set_cron(2)">保存设置</a>'},
-														]},
-														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">节点列表</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点延迟测试设置', multi: [
-															{ id:'ss_basic_ping_node', type:'select', style:'width:auto;max-width:220px', func:'onchange="ping_switch();"', options:[]},
-															{ id:'ss_basic_ping_method', type:'select', style:'width:auto', options:pingm, value:'1'},
-															{ id:'ss_basic_webtest_url', type:'select', style:'width:240px', options:weburl, value:'1'},
-															{ suffix:'&nbsp;<input id="ss_basic_ping_btn" class="ss_btn" style="cursor:pointer;" onClick="test_now(0)" type="button" value="开始ping！"/>'},
-															{ suffix:'&nbsp;<input id="ss_basic_webtest_btn" class="ss_btn" style="cursor:pointer;" onClick="test_now(1)" type="button" value="开始测试！"/>'},
-															{ suffix:'&nbsp;&nbsp;<lable id="ss_ping_ts_show"></lable>' },
-														]},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点列表最大显示行数', id:'ss_basic_row', type:'select', func:'onchange="save_row();"', style:'width:auto', options:[]},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;开启生成二维码功能', id:'ss_basic_qrcode', func:'v', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;开启节点排序功能', id:'ss_basic_dragable', func:'v', type:'checkbox', value:true},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点管理页面设为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点管理页面隐藏服务器地址', id:'ss_basic_noserver', func:'v', type:'checkbox', value:false},
-														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},								//fancyss-hnd
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss协议开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行V2ray节点', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},									//fancyss-full
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行trojan节点', id:'ss_basic_tcore', help:'119', type:'checkbox', value:false},								//fancyss-full
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;Xray启用进程守护', id:'ss_basic_xguard', hint:'115', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [															//fancyss-full
-															{ id:'ss_basic_rust', type:'checkbox', value:false},																									//fancyss-full
-															{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">下载 shadowsocks-rust 二进制</a>'}		//fancyss-full
-														]}, 																																						//fancyss-full
-														{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;所有trojan节点强制允许不安全', id:'ss_basic_tjai', help:'120', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过时间一致性检测', id:'ss_basic_notimecheck', hint:'139', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过国内DNS可用性检测', id:'ss_basic_nocdnscheck', hint:'140', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过可信DNS可用性检测', id:'ss_basic_nofdnscheck', hint:'141', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过国内出口ip检测', id:'ss_basic_nochnipcheck', hint:'142', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过代理出口ip检测', id:'ss_basic_nofrnipcheck', hint:'143', type:'checkbox', value:false},
-														{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过程序启动检测', id:'ss_basic_noruncheck', hint:'144', type:'checkbox', value:false},
-													]);
-												</script>
-											</table>
-										</div>
-										<div id="tablet_10" style="display: none;">
-											<div id="log_content" style="overflow:hidden;">
-												<textarea cols="63" rows="36" wrap="on" readonly="readonly" id="log_content1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+											<div id="tablet_4" style="display: none;">
+												<table id="table_wblist" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														var ph1 = "# 填入不需要走代理的外网ip地址，一行一个，格式（IP/CIDR）如下&#10;2.2.2.2&#10;3.3.3.3&#10;4.4.4.4/24";
+														var ph2 = "# 填入不需要走代理的域名，一行一个，格式如下：&#10;google.com&#10;facebook.com&#10;# 需要清空电脑DNS缓存，才能立即看到效果。";
+														var ph3 = "# 填入需要强制走代理的外网ip地址，一行一个，格式（IP/CIDR）如下：&#10;5.5.5.5&#10;6.6.6.6&#10;7.7.7.7/8";
+														var ph4 = "# 填入需要强制走代理的域名，一行一个，格式如下：&#10;baidu.com&#10;taobao.com&#10;# 需要清空电脑DNS缓存，才能立即看到效果。";
+														$('#table_wblist').forms([
+															{ title: 'IP/CIDR白名单<br><br><font color="#ffcc00">添加不需要走代理的外网ip地址</font>', id:'ss_wan_white_ip', type:'textarea', hint:'38', rows:'7', ph:ph1},
+															{ title: '域名白名单<br><br><font color="#ffcc00">添加不需要走代理的域名</font>', id:'ss_wan_white_domain', type:'textarea', hint:'39', rows:'7', ph:ph2},
+															{ title: 'IP/CIDR黑名单<br><br><font color="#ffcc00">添加需要强制走代理的外网ip地址</font>', id:'ss_wan_black_ip', type:'textarea', hint:'40', rows:'7', ph:ph3},
+															{ title: '域名黑名单<br><br><font color="#ffcc00">添加需要强制走代理的域名</font>', id:'ss_wan_black_domain', type:'textarea', hint:'41', rows:'7', ph:ph4},
+														]);
+													</script>
+												</table>
 											</div>
-										</div>
-										<div class="apply_gen" id="loading_icon">
-											<img id="loadingIcon" style="display:none;" src="/images/InternetScan.gif">
-										</div>
-										<div id="apply_button" class="apply_gen">
-											<input class="button_gen" type="button" onclick="save()" value="保存&应用">
-											<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
-										</div>
-									</td>
-								</tr>
-							</table>
-						</div>
-					</td>
-				</tr>
-			</table>
-		</td>
-		<td width="10" align="center" valign="top"></td>
-	</tr>
-</table>
-<div id="footer"></div>
+											<!--fancyss_full_1-->
+											<div id="tablet_5" style="display: none;">
+												<table id="table_kcp" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														var option_kcpm = [ "manual", "normal", "fast", "fast2", "fast3" ];
+														var option_kcpe = [ "aes", "aes-128", "aes-192", "salsa20", "blowfish", "twofish", "cast5", "3des", "tea", "xtea", "xor", "none"];
+														var ph1 = "请将速度模式为manual的参数和其它参数依次填写进来";
+														var ph2 = "# 填入你的kcptun运行参数，每个参数用空格隔开，格式如下：&#10;--crypt salsa20 --key mjy211 --sndwnd 1024 --rcvwnd 1024 --mtu 1300 --nocomp --mode fast2";
+														$('#table_kcp').forms([
+															{ title: 'KCP加速开关', id:'ss_basic_use_kcp', type:'checkbox', func:'v', value:false},
+															{ title: 'KCP参数配置方式', id:'ss_basic_kcp_method', type:'select', func:'v', options:[["1", "选择模式"], ["2", "输入模式"]], value:'2'},
+															{ title: 'kcp本地监听地址：端口 （-l）', multi: [
+																{ id: 'ss_basic_kcp_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_kcp_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1091'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(90)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: 'kcp服务器地址：端口 （-r）', multi: [
+																{ id: 'ss_basic_kcp_server', type: 'text', maxlen:'200', style:'width:120px;'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_kcp_port', type: 'text', maxlen:'200', style:'width:44px;'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(91)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '密码 (--key)', rid:'ss_basic_kcp_password_tr', id:'ss_basic_kcp_password', type:'password', maxlen:'200', peekaboo:'1'},
+															{ title: '速度模式 (--mode)', rid:'ss_basic_kcp_mode_tr', id:'ss_basic_kcp_mode', type:'select', options:option_kcpm, value:'fast2'},
+															{ title: '加密方式 (--crypt)', rid:'ss_basic_kcp_encrypt_tr', id:'ss_basic_kcp_encrypt', type:'select', options:option_kcpe, value:'aes-192'},
+															{ title: 'MTU (--mtu)', rid:'ss_basic_kcp_mtu_tr', id:'ss_basic_kcp_mtu', type:'text', maxlen:'200'},
+															{ title: '发送窗口 (--sndwnd)', rid:'ss_basic_kcp_sndwnd_tr', id:'ss_basic_kcp_sndwnd', type:'text', maxlen:'200'},
+															{ title: '接收窗口 (--rcvwnd)', rid:'ss_basic_kcp_rcvwnd_tr', id:'ss_basic_kcp_rcvwnd', type:'text', maxlen:'200'},
+															{ title: '链接数 (--conn)', rid:'ss_basic_kcp_conn_tr', id:'ss_basic_kcp_conn', type:'text', maxlen:'200'},
+															{ title: '关闭数据压缩 (--nocomp)', rid:'ss_basic_kcp_nocomp_tr', id:'ss_basic_kcp_nocomp', type:'checkbox', value:false},
+															{ title: '其它配置项', rid:'ss_basic_kcp_extra_tr', id:'ss_basic_kcp_extra', type:'text', maxlen:'200', style:'width:95%', ph:ph1},
+															{ title: 'KCP参数', rid:'ss_basic_kcp_parameter_tr', id:'ss_basic_kcp_parameter', type:'textarea', rows:'4', ph:ph2},
+														]);
+													</script>
+												</table>
+											</div>
+											<div id="tablet_6" style="display: none;">
+												<table id="table_udp_main" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														$('#table_udp_main').forms([
+															{ title: '加速节点选择', multi: [
+																{ id: 'ss_basic_udp_node', type: 'select', options:[]},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(97)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '设置ss/ssr-redir MTU', multi: [
+																{ id: 'ss_basic_udp_upstream_mtu', type: 'select', func:'u', options:[["0", "不设定"], ["1", "手动指定"]]},
+																{ id: 'ss_basic_udp_upstream_mtu_value', type: 'text', value:'1200', style:'width:40px;'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(98)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '帮助信息', multi: [
+																{ suffix: '<ul><li>你可以只开启UDPspeeder加速udp，或者只开启UDP2raw将udp转为tcp；</li>' },
+																{ suffix: '<li>你也可以将UDPspeeder和UDP2raw都开启，并配置它们串联工作；</li><li>帮助文档：' },
+																{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/blob/master/doc/README.zh-cn.v1.md"><em><u>UDPspeederV1</u></em></a>&nbsp;&nbsp;' },
+																{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/blob/master/doc/README.zh-cn.md"><em><u>UDPspeederV2</u></em></a>&nbsp;&nbsp;' },
+																{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/udp2raw-tunnel/blob/master/doc/README.zh-cn.md"><em><u>udp2raw-tunnel</u></em></a>' },
+																{ suffix: '</li></ul>' },
+															]},
+															{ title: 'UDPspeeder运行状态', suffix: '<span id="udp_status">获取中...</span>'},
+														]);
+													</script>
+												</table>
+												<div id="sub_tablets">
+													<table style="margin:10px 0px 0px 0px;border-collapse:collapse" width="100%" height="37px">
+														<tr width="235px">
+															<td colspan="4" cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#000">
+																<input id="sub_btn1" class="sub-btn1 active2" style="cursor:pointer" type="button" value="UDPspeeder" />
+																<input id="sub_btn2" class="sub-btn2" style="cursor:pointer" type="button" value="UDP2raw-tunnel" />
+															</td>
+														</tr>
+													</table>
+												</div>
+												<table id="table_udp" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														$('#table_udp').forms([
+															//speeder
+															{ title: '<em>UDPspeeder 设置</em>', th:'2', class:'speeder'},
+															{ title: 'UDPspeeder开关', id:'ss_basic_udp_boost_enable', type:'checkbox', class:'speeder', value:false},
+															{ title: 'UDPspeeder版本', class:'speeder', multi: [
+																{ id: 'ss_basic_udp_software', type: 'select', func:'v', style:'width:132px', options:[["1", "UDPspeederV1"], ["2", "UDPspeederV2"]]},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(104)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															//speederv1
+															{ title: '<em>UDPspeederV1 参数设置</em>', th:'2', class:'speederv1'},
+															{ title: '* 本地监听地址：端口 （-l）', class:'speederv1', multi: [
+																{ id: 'ss_basic_udpv1_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_udpv1_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 服务器地址：端口 （-r）', class:'speederv1', multi: [
+																{ id: 'ss_basic_udpv1_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_udpv1_rport', type: 'text', maxlen:'200', style:'width:44px;'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(100)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 密码 (--key)', id:'ss_basic_udpv1_password', type:'password', maxlen:'200', class:'speederv1', style:'width:120px', peekaboo:'1'},
+															{ title: '以下为包发送选项，两端设置可以不同, 只影响本地包发送。', th:'2', class:'speederv1'},
+															{ title: '* 冗余包数量 （-d）', id:'ss_basic_udpv1_duplicate_nu', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值。</a>'},
+															{ title: '* 冗余包发送延迟 （-t）', id:'ss_basic_udpv1_duplicate_time', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认值20（2ms），留空则使用默认值</a>'},
+															{ title: '* 原始数据抖动延迟 （-j）', id:'ss_basic_udpv1_jitter', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值</a>'},
+															{ title: '* 数据发送和接受报告 （--report）', id:'ss_basic_udpv1_report', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>单位：s，留空则不使用。</a>'},
+															{ title: '* 随机丢包 （--random-drop）', id:'ss_basic_udpv1_drop', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>单位：0.01%，留空则不使用。</a>'},
+															{ title: '以下为包接收选项，两端设置可以不同，只影响本地包接受。', th:'2', class:'speederv1'},
+															{ title: '* 关闭重复包过滤器 （--disable-filter）', id:'ss_basic_udpv1_disable_filter', type:'checkbox', class:'speederv1', value:false},
+															//speederv2
+															{ title: '<em>UDPspeederV2 参数设置</em>', th:'2', class:'speederv2'},
+															{ title: '* 本地监听地址：端口 （-l）', class:'speederv2', multi: [
+																{ id: 'ss_basic_udpv2_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_udpv2_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 服务器地址：端口 （-r）', class:'speederv2', multi: [
+																{ id: 'ss_basic_udpv2_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_udpv2_rport', type: 'text', maxlen:'200', style:'width:44px;'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(100)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 密码 (--key)', id:'ss_basic_udpv2_password', type:'password', maxlen:'200', class:'speederv2', style:'width:120px', peekaboo:'1'},
+															{ title: '以下为包发送选项，两端设置可以不同, 只影响本地包发送。', th:'2', class:'speederv2'},
+															{ title: '* fec参数 （-f）', class:'speederv2', multi: [
+																{ id: 'ss_basic_udpv2_fec', type: 'text', maxlen:'200', style:'width:120px;'},
+																{ suffix: '&nbsp;<a>必填，x:y，每x个包额外发送y个包。</a>' },
+																{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/wiki/%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C">fec使用经验</a>' },
+															]},
+															{ title: '* timeout参数 （--timeout）', id:'ss_basic_udpv2_timeout', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认8，留空则使用默认值。</a>'},
+															{ title: '* mode参数 （--mode）', id:'ss_basic_udpv2_mode', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值。</a>'},
+															{ title: '* 数据发送和接受报告 （--report）', id:'ss_basic_udpv2_report', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：s，留空则不使用。</a>'},
+															{ title: '* mtu参数 （--mtu）', id:'ss_basic_udpv2_mtu', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>默认1250，留空则使用默认值。</a>'},
+															{ title: '* 原始数据抖动延迟 （-j,--jitter）', id:'ss_basic_udpv2_jitter', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认0，留空则使用默认值。</a>'},
+															{ title: '* 时间窗口 （-i,--interval）', id:'ss_basic_udpv2_interval', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认0，留空则使用默认值。</a>'},
+															{ title: '* 随机丢包 （--random-drop）', id:'ss_basic_udpv2_drop', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：0.01%，默认0，留空则使用默认值。</a>'},
+															{ title: '以下服务器和客户端设置必须一致！', th:'2', class:'speederv2'},
+															{ title: '* 关闭数据包随机填充（--disable-obscure）', id:'ss_basic_udpv2_disableobscure', type:'checkbox', class:'speederv2', value:false, suffix:'&nbsp;<a>关闭可节省一点带宽和cpu。</a>'},
+															{ title: '* 关闭数据包验证（--disable-checksum）', id:'ss_basic_udpv2_disablechecksum', type:'checkbox', class:'speederv2', value:false, suffix:'&nbsp;<a>关闭可节省一点带宽和cpu。</a>'},
+															{ title: '其它参数', th:'2', class:'speederv2'},
+															{ title: '* 其它参数', id:'ss_basic_udpv2_other', type:'text', style:'width:95%', class:'speederv2', maxlen:'200', suffix:'<br />&nbsp;<a>其它高级参数，请手动输入，如 -q1 等。</a>'},
+															//udp2raw
+															{ title: '<em>UDP2raw 设置</em>', th:'2', class:'udp2raw'},
+															{ title: 'UDP2raw开关', id:'ss_basic_udp2raw_boost_enable', type:'checkbox', class:'udp2raw', value:false},
+															{ title: '<em>UDP2raw 参数设置</em>', th:'2', class:'udp2raw'},
+															{ title: '* 本地监听地址：端口 （-l）', class:'udp2raw', multi: [
+																{ id: 'ss_basic_udp2raw_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_udp2raw_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1093'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(101)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 服务器地址：端口 （-r）', class:'udp2raw', multi: [
+																{ id: 'ss_basic_udp2raw_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
+																{ suffix: '&nbsp;:&nbsp;' },
+																{ id: 'ss_basic_udp2raw_rport', type: 'text', maxlen:'200', style:'width:44px;'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(102)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 密码 (--key)', id:'ss_basic_udp2raw_password', type:'password', maxlen:'200', class:'udp2raw', style:'width:120px', peekaboo:'1'},
+															{ title: '* 模式（--raw-mode）', id:'ss_basic_udp2raw_rawmode', type:'select', style:'width:132px', class:'udp2raw', options:["faketcp", "udp", "icmp"], value:'faketcp', suffix:'&nbsp;<a>默认:faketcp</a>'},
+															{ title: '* 加密模式 （--cipher-mode）', id:'ss_basic_udp2raw_ciphermode', type:'select', style:'width:132px', class:'udp2raw', options:["aes128cbc", "aes128cfb", "xor", "none"], value:'aes128cbc', suffix:'&nbsp;<a>默认:aes128cbc</a>'},
+															{ title: '* 校验模式 （--auth-mode）', id:'ss_basic_udp2raw_authmode', type:'select', style:'width:132px', class:'udp2raw', options:["md5", "hmac_sha1", "crc32", "icmp", "simple", "none"], value:'md5', suffix:'&nbsp;<a>默认:md5</a>'},
+															{ title: '* 自动添加/删除iptables（-a,--auto-rule）', id:'ss_basic_udp2raw_a', type:'checkbox', class:'udp2raw', value:true, suffix:'<a>建议请勾选此选项</a>'},
+															{ title: '* 定期检查iptables（--keep-rule）', id:'ss_basic_udp2raw_keeprule', type:'checkbox', class:'udp2raw', value:true, suffix:'<a>建议请勾选此选项</a>'},
+															{ title: '* 绕过本地iptables（--lower-level）', class:'udp2raw', multi: [
+																{ id: 'ss_basic_udp2raw_lowerlevel', type: 'text', maxlen:'200', style:'width:120px;'},
+																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(103)"><font color="#ffcc00"><u>帮助</u></font></a>' },
+															]},
+															{ title: '* 其它参数', id:'ss_basic_udp2raw_other', type:'text', style:'width:95%', class:'udp2raw', maxlen:'200', suffix:'<br />&nbsp;<a>其它未列出来的参数，请手动输入，如 --force-sock-buf --seq-mode 1 等。</a>'},
+														]);
+													</script>
+												</table>
+											</div>
+											<!--fancyss_full_2-->
+											<div id="tablet_7" style="display: none;">
+												<table id="table_rules" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
+													<script type="text/javascript">
+														var option_ruleu = [];
+														for (var i = 0; i < 24; i++){
+															var _tmp = [];
+															_i = i < 10 ? String("0" + i) : String(i)
+															_tmp[0] = i;
+															_tmp[1] = _i + ":00时";
+															option_ruleu.push(_tmp);
+														}
+														function addCommas(nStr) {
+															nStr += '';
+															var x = nStr.split('.');
+															var x1 = x[0];
+															var x2 = x.length > 1 ? '.' + x[1] : '';
+															var rgx = /(\d+)(\d{3})/;
+															while (rgx.test(x1)) {
+															    x1 = x1.replace(rgx, '$1' + ',' + '$2');
+															}
+															return x1 + x2;
+														}
+														//var ipsn='<% nvram_get("chnroute_ips"); %>'
+														var gfwl = addCommas('<% nvram_get("ipset_numbers"); %>');
+														var chnl = addCommas('<% nvram_get("chnroute_numbers"); %>');
+														var chnn = addCommas('<% nvram_get("chnroute_ips"); %>');
+														var cdnn = addCommas('<% nvram_get("cdn_numbers"); %>');
+														$('#table_rules').forms([
+															{ title: 'gfwlist域名数量', multi: [
+																{ suffix: '<em>'+ gfwl +'</em>&nbsp;条，版本：' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf" target="_blank">' },
+																{ suffix: '<i><% nvram_get("update_ipset"); %></i></a>' },
+															]},
+															{ title: '大陆白名单IP段数量', multi: [
+																{ suffix: '<em>'+ chnl +'</em>&nbsp;行，包含 <em>' + chnn + '</em>&nbsp;个ip地址，版本：' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/chnroute.txt" target="_blank">' },
+																{ suffix: '<i><% nvram_get("update_chnroute"); %></i></a>' },
+															]},
+															{ title: '国内域名数量（cdn名单）', multi: [
+																{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/cdn.txt" target="_blank">' },
+																{ suffix: '<i><% nvram_get("update_cdn"); %></i></a>' },
+															]},
+															{ title: '规则定时更新任务', hint:'44', multi: [
+																{ id:'ss_basic_rule_update', type:'select', func:'u', style:'width:auto', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
+																{ id:'ss_basic_rule_update_time', type:'select', style:'width:auto', options:option_ruleu, value:'4'},
+																{ suffix: '<a id="update_choose">' },
+																{ suffix: '<input type="checkbox" id="ss_basic_gfwlist_update" title="选择此项应用gfwlist.conf自动更新">gfwlist' },
+																{ suffix: '<input type="checkbox" id="ss_basic_chnroute_update" title="选择此项应用chnroute.txt自动更新">chnroute' },
+																{ suffix: '<input type="checkbox" id="ss_basic_cdn_update" title="选择此项应用cdn.txt自动更新">cdn</a>' },
+																{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(1)">保存设置</a>' },
+															]},
+															{ title: '规则手动更新', multi: [
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(2)">立即更新规则</a>'},
+															]},
+															{ title: '二进制更新', multi: [
+																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>&nbsp;'},//fancyss-full
+																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新/切换xray程序</a>&nbsp;'},
+																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},//fancyss-full
+															]},
+														]);
+													</script>
+												</table>
+												<table id="table_subscribe" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														var option_noded = [["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["6", "周日"]];
+														var option_nodeh = [];
+														for (var i = 0; i < 24; i++){
+															var _tmp = [];
+															_i = String(i)
+															_tmp[0] = _i;
+															_tmp[1] = _i + "点";
+															option_nodeh.push(_tmp);
+														}
+														var ph1 = "此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！&#10;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：&#10;-------------------------------------------------&#10;🚀xx机场 ssr&#10;https://abcd.airport.com/xxx&#10;&#10;🛩️yy机场 ss&#10;https://xyza.com/xxx&#10;-------------------------------------------------&#10;填写完成后点击下面的【保存并订阅】按钮开始订阅！";
+														var ph2 = "多个关键词用英文逗号分隔，如：测试,过期,剩余,曼谷,M247,D01,硅谷";
+														var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
+														$('#table_subscribe').forms([
+															{ title: '节点订阅设置', thead:'1'},
+															{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray/Trojan</font>', id:'ss_online_links', type:'textarea', hint:'116', rows:'12', ph:ph1},
+															
+															{ title: '订阅节点模式设定', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
+															{ title: '下载订阅时走ss/ssr/v2ray/v2ray代理网络', id:'ss_basic_online_links_goss', type:'select', style:'width:auto', options:[["0", "不走代理"], ["1", "走代理"]], value:'0'},
+															{ title: '订阅计划任务', multi: [
+																{ id:'ss_basic_node_update', type:'select', style:'width:auto', func:'u', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
+																{ id:'ss_basic_node_update_day', type:'select', style:'width:auto', options:option_noded, value:'6'},
+																{ id:'ss_basic_node_update_hr', type:'select', style:'width:auto', options:option_nodeh, value:'3'},
+															]},
+															{ title: '[排除]关键词（含关键词的节点不会添加）', rid:'ss_basic_exclude_tr', id:'ss_basic_exclude', type:'text', hint:'110', maxlen:'300', style:'width:95%', ph:ph2},
+															{ title: '[包括]关键词（含关键词的节点才会添加）', rid:'ss_basic_include_tr', id:'ss_basic_include', type:'text', hint:'111', maxlen:'300', style:'width:95%', ph:ph3},
+															{ title: '删除节点', rid: 'ss_basic_remove_node', multi: [
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(0)">删除全部节点</a>'},
+																{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(1)">删除全部订阅节点</a>'},
+															]},
+															{ title: '保存配置', rid: 'ss_sub_save_only', multi: [
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(2)">仅保存设置</a>'},
+															]},
+															{ title: '节点订阅', hint:'112', multi: [
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(3)">保存并订阅</a>'},
+																{ prefix: '&nbsp;&nbsp;订阅高级设定', id: 'ss_adv_sub', type: 'checkbox', value:false, func:'v' },
+															]}
+														]);
+													</script>
+												</table>
+												<table id="table_link" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														var ph1 = "填入以ss://或者ssr://或者vmess://或者vless://开头的链接，多个链接请分行填写";
+														$('#table_subscribe').forms([
+															{ title: '通过ss/ssr/vmess/vless链接添加节点', thead:'1'},
+															{ title: 'ss/ssr/vmess/vless链接', id:'ss_base64_links', type:'textarea', hint:117, rows:'11', ph:ph1},
+															{ title: '操作', suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(4)">解析并保存为节点</a>'},
+														]);
+													</script>
+												</table>
+											</div>
+											<div id="tablet_8" style="display: none;">
+												<div id="ss_acl_table"></div>
+												<div id="ACL_note" style="margin:10px 0 0 5px">
+													<div><i>1&nbsp;&nbsp;默认状态下，所有局域网的主机都会走当前节点的模式（主模式），相当于即不启用局域网访问控制。</i></div>
+													<div><i>2&nbsp;&nbsp;当你设置默认规则为不通过代理，添加了主机走大陆白名单模式，则只有添加的主机才会走代理(大陆白名单模式)。</i></div>
+													<div><i>3&nbsp;&nbsp;当你设置默认规则为正在使用节点的模式，除了添加的主机才会走相应的模式，未添加的主机会走默认规则的模式。</i></div>
+													<div><i>4&nbsp;&nbsp;如果为使用的节点配置了KCP协议，或者负载均衡，因为它们不支持udp，所以不能控制主机走游戏模式。</i></div>
+													<div><i>5&nbsp;&nbsp;如果需要自定义端口范围，适用英文逗号和冒号，参考格式：80,443,5566:6677,7777:8888</i></div>
+												</div>
+											</div>
+											<div id="tablet_9" style="display: none;">
+												<table id="table_addons" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
+													<script type="text/javascript">
+														var title1 = "填写说明：&#13;此处填写1-23之间任意小时&#13;小时间用逗号间隔，如：&#13;当天的8点、10点、15点则填入：8,10,15"
+														var option_rebc = [["0", "关闭"], ["1", "每天"], ["2", "每周"], ["3", "每月"], ["4", "每隔"], ["5", "自定义"]];
+														var option_rebw = [["1", "一"], ["2", "二"], ["3", "三"], ["4", "四"], ["5", "五"], ["6", "六"], ["7", "日"]];
+														var option_rebd = [];
+														for (var i = 1; i < 32; i++){
+															var _tmp = [];
+															_i = String(i)
+															_tmp[0] = _i;
+															_tmp[1] = _i + "日";
+															option_rebd.push(_tmp);
+														}
+														var option_rebim = ["1", "5", "10", "15", "20", "25", "30"];
+														var option_rebih = [];
+														for (var i = 1; i < 13; i++) option_rebih.push(String(i));
+														var option_rebid = [];
+														for (var i = 1; i < 31; i++) option_rebid.push(String(i));
+														var option_rebip = [["1", "分钟"], ["2", "小时"], ["3", "天"]];
+														var option_rebh = [];
+														for (var i = 0; i < 24; i++){
+															var _tmp = [];
+															_i = String(i)
+															_tmp[0] = _i;
+															_tmp[1] = _i + "时";
+															option_rebh.push(_tmp);
+														}
+														var option_rebm = [];
+														for (var i = 0; i < 61; i++){
+															var _tmp = [];
+															_i = String(i)
+															_tmp[0] = _i;
+															_tmp[1] = _i + "分";
+															option_rebm.push(_tmp);
+														}
+														var option_trit = [["0", "关闭"], ["2", "每隔2分钟"], ["5", "每隔5分钟"], ["10", "每隔10分钟"], ["15", "每隔15分钟"], ["20", "每隔20分钟"], ["25", "每隔25分钟"], ["30", "每隔30分钟"]];
+														var pingm = [["1", "1次/节点"], ["2", "5次/节点"], ["3", "10次/节点"], ["4", "20次/节点"]];
+														var weburl = ["developer.google.cn/generate_204", "connectivitycheck.gstatic.com/generate_204", "www.gstatic.com/generate_204"];
+														$('#table_addons').forms([
+															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;导出fancyss配置', hint:'24', multi: [
+																{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(1);" value="导出配置">'},
+																{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="remove_SS_node();" value="清空配置">'},
+																{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(2);" value="打包插件">'},
+															]},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;恢复fancyss配置', hint:'24', multi: [
+																{ suffix:'<input style="color:#FFCC00;*color:#000;width: 200px;" id="ss_file" type="file" name="file"/>'},
+																{ suffix:'<img id="loadingicon" style="margin-left:5px;margin-right:5px;display:none;" src="/images/InternetScan.gif"/>'},
+																{ suffix:'<span id="ss_file_info" style="display:none;">完成</span>'},
+																{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="upload_ss_backup();" value="恢复配置"/>'},
+															]},											
+															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">定时任务</td></tr>'},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件定时重启设定', multi: [
+																{ id:'ss_reboot_check', type:'select', style:'width:auto', func:'v', options:option_rebc, value:'0'},
+																{ id:'ss_basic_week', type:'select', style:'width:auto', css:'re2', options:option_rebw, value:'1'},
+																{ id:'ss_basic_day', type:'select', style:'width:auto', css:'re3', options:option_rebd, value:'1'},
+																{ id:'ss_basic_inter_min', type:'select', style:'width:auto', css:'re4_1', options:option_rebim, value:'1'},
+																{ id:'ss_basic_inter_hour', type:'select', style:'width:auto', css:'re4_2', options:option_rebih, value:'1'},
+																{ id:'ss_basic_inter_day', type:'select', style:'width:auto', css:'re4_3', options:option_rebid, value:'1'},
+																{ id:'ss_basic_inter_pre', type:'select', style:'width:auto', func:'v', css:'re4', options:option_rebip, value:'1'},
+																{ id:'ss_basic_custom', type:'text', style:'width:150px', css:'re5', ph:'8,10,15', title:title1},
+																{ suffix:'<span class="re5">&nbsp;小时</span>'},
+																{ id:'ss_basic_time_hour', type:'select', style:'width:auto', css:'re1 re2 re3 re4_3', options:option_rebh, value:'0'},
+																{ id:'ss_basic_time_min', type:'select', style:'width:auto', css:'re1 re2 re3 re4_3 re5', options:option_rebm, value:'0'},
+																{ suffix:'&nbsp;<span class="re1 re2 re3 re4 re5">重启插件</span>'},
+																{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="set_cron(1)">保存设置</a>'},
+															]},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件触发重启设定', multi: [
+																{ id:'ss_basic_tri_reboot_time', type:'select', style:'width:auto', help:'109', func:'u', options:option_trit, value:'0'},
+																{ suffix:'<span id="ss_basic_tri_reboot_time_note">&nbsp;解析服务器IP，如果发生变更，则重启插件！</span>'},
+																{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="set_cron(2)">保存设置</a>'},
+															]},
+															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">节点列表</td></tr>'},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点列表最大显示行数', id:'ss_basic_row', type:'select', func:'onchange="save_row();"', style:'width:auto', options:[]},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;开启生成二维码功能', id:'ss_basic_qrcode', func:'v', type:'checkbox', value:true},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;开启节点排序功能', id:'ss_basic_dragable', func:'v', type:'checkbox', value:true},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点管理页面设为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;节点管理页面隐藏服务器地址', id:'ss_basic_noserver', func:'v', type:'checkbox', value:false},
+															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', help:'108', type:'checkbox', value:true},								//fancyss-hnd
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;ss协议开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行V2ray节点', id:'ss_basic_vcore', help:'114', type:'checkbox', value:false},									//fancyss-full
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用Xray核心运行trojan节点', id:'ss_basic_tcore', help:'119', type:'checkbox', value:false},								//fancyss-full
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;Xray启用进程守护', id:'ss_basic_xguard', hint:'115', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;用shadowsocks-rust替代shadowsocks-libev', hint:'118', multi: [															//fancyss-full
+																{ id:'ss_basic_rust', type:'checkbox', value:false},																									//fancyss-full
+																{ suffix: '&nbsp;&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">下载 shadowsocks-rust 二进制</a>'}		//fancyss-full
+															]}, 																																						//fancyss-full
+															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;所有trojan节点强制允许不安全', id:'ss_basic_tjai', help:'120', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过时间一致性检测', id:'ss_basic_notimecheck', hint:'139', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过国内DNS可用性检测', id:'ss_basic_nocdnscheck', hint:'140', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过可信DNS可用性检测', id:'ss_basic_nofdnscheck', hint:'141', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过国内出口ip检测', id:'ss_basic_nochnipcheck', hint:'142', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过代理出口ip检测', id:'ss_basic_nofrnipcheck', hint:'143', type:'checkbox', value:false},
+															{ title: '&nbsp;&nbsp;&nbsp;&nbsp;插件开启时 - 跳过程序启动检测', id:'ss_basic_noruncheck', hint:'144', type:'checkbox', value:false},
+														]);
+													</script>
+												</table>
+											</div>
+											<div id="tablet_10" style="display: none;">
+												<div id="log_content" style="overflow:hidden;">
+													<textarea cols="63" rows="36" wrap="on" readonly="readonly" id="log_content1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+											</div>
+											<div class="apply_gen" id="loading_icon">
+												<img id="loadingIcon" style="display:none;" src="/images/InternetScan.gif">
+											</div>
+											<div id="apply_button" class="apply_gen">
+												<input class="button_gen" type="button" onclick="save()" value="保存&应用">
+												<input style="margin-left:10px" id="ss_failover_save" class="button_gen" onclick="save_failover()" type="button" value="保存本页设置">
+											</div>
+										</td>
+									</tr>
+								</table>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</td>
+			<td width="10" align="center" valign="top"></td>
+		</tr>
+	</table>
+	<div id="footer"></div>
 </body>
 </html>

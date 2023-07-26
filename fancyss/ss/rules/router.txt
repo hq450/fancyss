@@ -1,3 +1,5 @@
+google.com
+google.com.hk
 google.com.tw
 dns.google.com
 github.com
@@ -11,3 +13,9 @@ icanhazip.com
 ipinfo.io
 ipecho.net
 ip.sb
+www.gstatic.com
+developer.google.cn
+connectivitycheck.gstatic.com
+edge.microsoft.com
+cp.cloudflare.com
+captive.apple.com
