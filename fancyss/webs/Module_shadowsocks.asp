@@ -2773,38 +2773,29 @@ function refresh_html() {
 		order_adjustment();
 	}
 	// dp
-	const dropdownBtn = document.getElementById("dropdownbtn");
-	const dropdownMenu = document.getElementById("dropdown");
-	
-	// Toggle dropdown function
-	const toggleDropdown = function () {
-	  var lef = $('#dropdownbtn').offset().left;
-	  var top = $('#dropdownbtn').offset().top;
-	  var eleh = $("#dropdown").height();
-	  $('#dropdown').offset({left: lef, top: (top - eleh)});
-	  dropdownMenu.classList.toggle("show");
-	};
-	
-	// Toggle dropdown open/close when dropdown button is clicked
-	dropdownBtn.addEventListener("click", function (e) {
-	  e.stopPropagation();
-	  toggleDropdown();
-	});
-	
-	// Close dropdown when dom element is clicked
-	E("app").addEventListener("click", function () {
-	  if (dropdownMenu.classList.contains("show")) {
-	    toggleDropdown();
-	  }
-	});
-	// if(db_ss["ss_basic_ping_ts"]){
-	// 	$("#ss_ping_pts_show").html("<em>【上次完成时间: " + db_ss["ss_basic_ping_ts"] + "】</em>")
-	// 	$("#dropdown").width(370);
-	// }
-	// if(db_ss["ss_basic_webtest_ts"]){
-	// 	$("#ss_ping_wts_show").html("<em>【上次完成时间: " + db_ss["ss_basic_webtest_ts"] + "】</em>")
-	// 	$("#dropdown").width(370);
-	// }
+	if(node_nu){
+		const dropdownBtn = document.getElementById("dropdownbtn");
+		const dropdownMenu = document.getElementById("dropdown");
+		// Toggle dropdown function
+		const toggleDropdown = function () {
+		  var lef = $('#dropdownbtn').offset().left;
+		  var top = $('#dropdownbtn').offset().top;
+		  var eleh = $("#dropdown").height();
+		  $('#dropdown').offset({left: lef, top: (top - eleh)});
+		  dropdownMenu.classList.toggle("show");
+		};
+		// Toggle dropdown open/close when dropdown button is clicked
+		dropdownBtn.addEventListener("click", function (e) {
+		  e.stopPropagation();
+		  toggleDropdown();
+		});
+		// Close dropdown when dom element is clicked
+		E("app").addEventListener("click", function () {
+		  if (dropdownMenu.classList.contains("show")) {
+		    toggleDropdown();
+		  }
+		});
+	}
 }
 function hide_name(){
 	//var sw = $(".node_name").width();
