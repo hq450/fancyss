@@ -455,7 +455,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border:0px solid #222;
 	background:#475A5F;
 }
-#app[skin=ASUSWRT] #ss_basic_v2ray_json, #app[skin=ASUSWRT] #ss_basic_xray_json, #app[skin=ASUSWRT] #ss_dnsmasq, #app[skin=ASUSWRT] #ss_wan_white_ip, #app[skin=ASUSWRT] #ss_wan_white_domain, #app[skin=ASUSWRT] #ss_wan_black_ip, #app[skin=ASUSWRT] #ss_wan_black_domain, #app[skin=ASUSWRT] #ss_online_links, #app[skin=ASUSWRT] #ss_base64_links, #app[skin=ASUSWRT] #ss_node_table_v2ray_json, #app[skin=ASUSWRT] #ss_node_table_xray_json, #app[skin=ASUSWRT] #ss_basic_kcp_parameter{
+#app[skin=ASUSWRT] #ss_basic_v2ray_json, #app[skin=ASUSWRT] #ss_basic_xray_json, #app[skin=ASUSWRT] #ss_basic_tuic_json, #app[skin=ASUSWRT] #ss_dnsmasq, #app[skin=ASUSWRT] #ss_wan_white_ip, #app[skin=ASUSWRT] #ss_wan_white_domain, #app[skin=ASUSWRT] #ss_wan_black_ip, #app[skin=ASUSWRT] #ss_wan_black_domain, #app[skin=ASUSWRT] #ss_online_links, #app[skin=ASUSWRT] #ss_base64_links, #app[skin=ASUSWRT] #ss_node_table_v2ray_json, #app[skin=ASUSWRT] #ss_node_table_xray_json, #app[skin=ASUSWRT] #ss_node_table_tuic_json, #app[skin=ASUSWRT] #ss_basic_kcp_parameter{
 	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;
@@ -591,7 +591,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border:0px solid #222;
 	background:transparent;
 }
-#app[skin=ROG] #ss_basic_v2ray_json, #app[skin=ROG] #ss_basic_xray_json, #app[skin=ROG] #ss_dnsmasq, #app[skin=ROG] #ss_wan_white_ip, #app[skin=ROG] #ss_wan_white_domain, #app[skin=ROG] #ss_wan_black_ip, #app[skin=ROG] #ss_wan_black_domain, #app[skin=ROG] #ss_online_links, #app[skin=ROG] #ss_base64_links, #app[skin=ROG] #ss_node_table_v2ray_json, #app[skin=ROG] #ss_node_table_xray_json, #app[skin=ROG] #ss_basic_kcp_parameter{
+#app[skin=ROG] #ss_basic_v2ray_json, #app[skin=ROG] #ss_basic_xray_json, #app[skin=ROG] #ss_basic_tuic_json, #app[skin=ROG] #ss_dnsmasq, #app[skin=ROG] #ss_wan_white_ip, #app[skin=ROG] #ss_wan_white_domain, #app[skin=ROG] #ss_wan_black_ip, #app[skin=ROG] #ss_wan_black_domain, #app[skin=ROG] #ss_online_links, #app[skin=ROG] #ss_base64_links, #app[skin=ROG] #ss_node_table_v2ray_json, #app[skin=ROG] #ss_node_table_xray_json, #app[skin=ROG] #ss_node_table_tuic_json, #app[skin=ROG] #ss_basic_kcp_parameter{
 	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;
@@ -725,7 +725,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border:0px solid #222;
 	background:transparent;
 }
-#app[skin=TUF] #ss_basic_v2ray_json, #app[skin=TUF] #ss_basic_xray_json, #app[skin=TUF] #ss_dnsmasq, #app[skin=TUF] #ss_wan_white_ip, #app[skin=TUF] #ss_wan_white_domain, #app[skin=TUF] #ss_wan_black_ip, #app[skin=TUF] #ss_wan_black_domain, #app[skin=TUF] #ss_online_links, #app[skin=TUF] #ss_base64_links, #app[skin=TUF] #ss_node_table_v2ray_json, #app[skin=TUF] #ss_node_table_xray_json, #app[skin=TUF] #ss_basic_kcp_parameter{
+#app[skin=TUF] #ss_basic_v2ray_json, #app[skin=TUF] #ss_basic_xray_json, #app[skin=TUF] #ss_basic_tuic_json, #app[skin=TUF] #ss_dnsmasq, #app[skin=TUF] #ss_wan_white_ip, #app[skin=TUF] #ss_wan_white_domain, #app[skin=TUF] #ss_wan_black_ip, #app[skin=TUF] #ss_wan_black_domain, #app[skin=TUF] #ss_online_links, #app[skin=TUF] #ss_base64_links, #app[skin=TUF] #ss_node_table_v2ray_json, #app[skin=TUF] #ss_node_table_xray_json, #app[skin=TUF] #ss_node_table_tuic_json, #app[skin=TUF] #ss_basic_kcp_parameter{
 	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;
@@ -859,7 +859,7 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 	border:0px solid #222;
 	background:transparent;
 }
-#app[skin=TS] #ss_basic_v2ray_json, #app[skin=TS] #ss_basic_xray_json, #app[skin=TS] #ss_dnsmasq, #app[skin=TS] #ss_wan_white_ip, #app[skin=TS] #ss_wan_white_domain, #app[skin=TS] #ss_wan_black_ip, #app[skin=TS] #ss_wan_black_domain, #app[skin=TS] #ss_online_links, #app[skin=TS] #ss_base64_links, #app[skin=TS] #ss_node_table_v2ray_json, #app[skin=TS] #ss_node_table_xray_json, #app[skin=TS] #ss_basic_kcp_parameter{
+#app[skin=TS] #ss_basic_v2ray_json, #app[skin=TS] #ss_basic_xray_json, #app[skin=TS] #ss_basic_tuic_json, #app[skin=TS] #ss_dnsmasq, #app[skin=TS] #ss_wan_white_ip, #app[skin=TS] #ss_wan_white_domain, #app[skin=TS] #ss_wan_black_ip, #app[skin=TS] #ss_wan_black_domain, #app[skin=TS] #ss_online_links, #app[skin=TS] #ss_base64_links, #app[skin=TS] #ss_node_table_v2ray_json, #app[skin=TS] #ss_node_table_xray_json, #app[skin=TS] #ss_node_table_tuic_json, #app[skin=TS] #ss_basic_kcp_parameter{
 	width:98%;
 	font-family:'Lucida Console';
 	font-size:12px;

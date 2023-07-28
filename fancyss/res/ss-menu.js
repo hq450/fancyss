@@ -197,7 +197,8 @@ function pop_help() {
 				、<a target="_blank" href="https://github.com/XTLS/xray-core"><u>Xray</u></a>\
 				、<a target="_blank" href="https://github.com/trojan-gfw/trojan"><u>Trojan</u></a>\
 				、<a target="_blank" href="https://github.com/klzgrad/naiveproxy"><u>NaïveProxy</u></a>\
-				六种客户端的科学上网、游戏加速工具。<br \><br \>\
+				、<a target="_blank" href="https://github.com/EAimTY/tuic"><u>tuic</u></a>\
+				七种客户端的科学上网、游戏加速工具。<br \><br \>\
 				本插件支持以Asuswrt、Asuswrt-Merlin为基础的，带软件中心的固件，目前固件均由<a style="color:#e7bd16" target="_blank" href="https://www.koolcenter.com/">https:\/\/www.koolcenter.com/</a>提供。<br \><br \>\
 				使用本插件有任何问题，可以前往<a style="color:#e7bd16" target="_blank" href="https://github.com/hq450/fancyss/issues"><u>github的issue页面</u></a>反馈~<br \><br \>\
 				● 插件交流：<a style="color:#e7bd16" target="_blank" href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw"><u>加入telegram群组</u></a><br \><br \>\

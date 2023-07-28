@@ -135,6 +135,9 @@ GET_PROXY_TOOL(){
 	6)
 		echo "naive"
 		;;
+	7)
+		echo "tuic"
+		;;
 	esac
 }
 
@@ -157,6 +160,9 @@ GET_TYPE_NAME(){
 		;;
 	6)
 		echo "NaïveProxy"
+		;;
+	7)
+		echo "tuic"
 		;;
 	esac
 }
@@ -356,6 +362,20 @@ GET_PROG_STAT(){
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
+	elif [ "${ss_basic_type}" == "7" ]; then
+		# tuic
+		local TUIC=$(pidof tuic-client)
+		if [ -n "${TUIC}" ]; then
+			echo "tuic-client	运行中🟢		socks5		${TUIC}"
+		else
+			echo "tuic-client	未运行🔴		socks5"
+		fi
+		local IPT2SOCKS=$(pidof ipt2socks)
+		if [ -n "${IPT2SOCKS}" ]; then
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
+		else
+			echo "ipt2socks	未运行🔴		透明代理"
+		fi
 	fi
 
 	# DNS program
@@ -395,7 +415,7 @@ GET_PROG_STAT(){
 				fi
 			elif [ "${ss_basic_type}" == "5" ]; then
 				# trojan
-				local TROJAN_SOCKS=$(ps | grep "trojan" | grep client | awk '{print $1}')
+				local TROJAN_SOCKS=$(netstat -nlp | grep 23456 | grep LISTEN | grep trojan | awk '{print $NF}' | awk -F "/" '{print $1}' | tr "\n" " ")
 				if [ -n "${TROJAN_SOCKS}" ]; then
 					echo "trojan		运行中🟢		socks5		${TROJAN_SOCKS}" 
 
@@ -895,7 +915,6 @@ ECHO_VERSION(){
 	fi
 	echo "dns2socks		$(run dns2socks /?|sed '/^$/d'|head -n1|awk '{print $2}')			https://sourceforge.net/projects/dns2socks/"
 	echo "chinadns-ng		$(run chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
-	echo "httping			$(run httping -V 2>&1 | head -n1 | awk '{print $2}'|sed 's/,//g')			https://www.vanheusden.com/httping/"
 	if [ -x "/koolshare/bin/ss-tunnel" ];then
 		echo "trojan			$(run trojan -v 2>&1 | head -n1 | awk '{print $NF}')			https://github.com/trojan-gfw/trojan"
 	fi
@@ -919,6 +938,9 @@ ECHO_VERSION(){
 	fi
 	if [ -x "/koolshare/bin/naive" ];then
 		echo "naive			$(run naive --version|awk '{print $NF}')		https://github.com/klzgrad/naiveproxy"
+	fi
+	if [ -x "/koolshare/bin/tuic-client" ];then
+		echo "tuic-client		$(run tuic-client -v|awk '{print $NF}')			https://github.com/EAimTY/tuic"
 	fi
 	echo --------------------------------------------------------------------------------------------------------
 }

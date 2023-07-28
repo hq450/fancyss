@@ -56,7 +56,7 @@ start_ping(){
 	fi
 
 	# get all servers in json
-	dbus list ssconf_basic_ | grep _json_ | grep -v _use_json_ | while read line
+	dbus list ssconf_basic_ | grep ray_json_ | while read line
 	do
 		local _NU=$(echo "${line}" | awk -F "=" '{print $1}' | awk -F "_" '{print $NF}')
 		local _SERVER_1=$(echo "${line}" | sed 's/^ssconf_basic_\w\+_[0-9]\?\+=//' | base64_decode | run jq -r .outbounds[0].settings.vnext[0].address)
@@ -69,6 +69,21 @@ start_ping(){
 			else
 				local _SERVER=""
 			fi
+		fi
+		if [ -n "${_SERVER}" -a -n "${_NU}" ];then
+			echo ssconf_basic_server_${_NU}=${_SERVER} >> ${TMP1}/all_servers.txt
+		fi
+	done
+
+	# get all servers in tuic json
+	dbus list ssconf_basic_ | grep tuic_json_ | while read line
+	do
+		local _NU=$(echo "${line}" | awk -F "=" '{print $1}' | awk -F "_" '{print $NF}')
+		local _SERVER_1=$(echo "${line}" | sed 's/^ssconf_basic_\w\+_[0-9]\?\+=//' | base64_decode | run jq -r '.relay.server' | awk -F ":" '{print $1}')
+		if [ -n "${_SERVER_1}" ];then
+			local _SERVER=${_SERVER_1}
+		else
+			local _SERVER=""
 		fi
 		if [ -n "${_SERVER}" -a -n "${_NU}" ];then
 			echo ssconf_basic_server_${_NU}=${_SERVER} >> ${TMP1}/all_servers.txt
@@ -273,6 +288,7 @@ sort_nodes(){
 	# 04 xray
 	# 05 trojan
 	# 06 naive
+	# 07 tuic
 
 	# sort by type first
 	local count=1
@@ -461,6 +477,9 @@ test_nodes(){
 			;;
 		06)
 			test_11_nv $file_name
+			;;
+		07)
+			test_12_tc $file_name
 			;;
 		esac
 	done
@@ -932,9 +951,9 @@ test_11_nv(){
 				# 2. start naiveproxy
 				local new_port=$(($base_port + $nu))
 				if [ -z "${_server_ip}" ];then
-					${TMP2}/wt-naive --listen=socks://127.0.0.1:${new_port} --proxy=$(dbus get ssconf_basic_naive_prot_${nu})://$(dbus get ssconf_basic_naive_user_${nu}):$(dbus get ssconf_basic_naive_pass_${nu} | base64_decode)@$(dbus get ssconf_basic_naive_server_${nu}):$(dbus get ssconf_basic_naive_port_${nu}) >/dev/null 2>&1 &
+					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${new_port} --proxy=$(dbus get ssconf_basic_naive_prot_${nu})://$(dbus get ssconf_basic_naive_user_${nu}):$(dbus get ssconf_basic_naive_pass_${nu} | base64_decode)@$(dbus get ssconf_basic_naive_server_${nu}):$(dbus get ssconf_basic_naive_port_${nu}) >/dev/null 2>&1 &
 				else
-					${TMP2}/wt-naive --listen=socks://127.0.0.1:${new_port} --proxy=$(dbus get ssconf_basic_naive_prot_${nu})://$(dbus get ssconf_basic_naive_user_${nu}):$(dbus get ssconf_basic_naive_pass_${nu} | base64_decode)@$(dbus get ssconf_basic_naive_server_${nu}):$(dbus get ssconf_basic_naive_port_${nu}) --host-resolver-rules="MAP $(dbus get ssconf_basic_naive_server_${nu}) ${_server_ip}" >/dev/null 2>&1 &
+					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${new_port} --proxy=$(dbus get ssconf_basic_naive_prot_${nu})://$(dbus get ssconf_basic_naive_user_${nu}):$(dbus get ssconf_basic_naive_pass_${nu} | base64_decode)@$(dbus get ssconf_basic_naive_server_${nu}):$(dbus get ssconf_basic_naive_port_${nu}) --host-resolver-rules="MAP $(dbus get ssconf_basic_naive_server_${nu}) ${_server_ip}" >/dev/null 2>&1 &
 				fi
 
 				sleep 2
@@ -957,6 +976,48 @@ test_11_nv(){
 	
 	killall wt-naive >/dev/null 2>&1
 	rm -rf ${TMP2}/wt-naive
+}
+
+test_12_tc(){
+	local file=$1
+
+	# alisa binary
+	ln -sf /koolshare/bin/tuic-client ${TMP2}/wt-tuic
+	killall wt-tuic >/dev/null 2>&1
+
+	local base_port=50600
+	cat ${TMP2}/${file} | xargs -n 2 | while read nus; do
+		for nu in $nus; do
+			{
+				# 1. gen json
+				local new_port=$(($base_port + $nu))
+				local new_addr="127.0.0.1:${new_port}"
+				dbus get ssconf_basic_tuic_json_${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${TMP2}/conf/tuic-${new_port}.json
+
+				# 2. start tuic
+				run ${TMP2}/wt-tuic -c ${TMP2}/conf/tuic-${new_port}.json >/dev/null 2>&1 &
+
+				sleep 2
+
+				# 4. start curl test
+				curl_test ${nu} ${new_port}
+
+				# 5. stop tuic
+				local _pid=$(ps | grep "wt-tuic" | grep -v grep | grep ${new_port} | awk '{print $1}')
+				if [ -n "${_pid}" ];then
+					kill -9 ${_pid} >/dev/null 2>&1
+				fi
+			} &
+		done
+		wait
+
+		# merge all curl test result
+		find /tmp/fancyss_webtest/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+	done
+	
+	killall wt-tuic >/dev/null 2>&1
+	#rm -rf ${TMP2}/wt-tuic
+	#rm -rf ${TMP2}/conf/*
 }
 
 creat_v2ray_json() {
@@ -1814,8 +1875,9 @@ clean_webtest(){
 	killall wt-rss-local >/dev/null 2>&1
 	killall wt-v2ray >/dev/null 2>&1
 	killall wt-xray >/dev/null 2>&1
-	killall wt-naive >/dev/null 2>&1
 	killall wt-trojan >/dev/null 2>&1
+	killall wt-naive >/dev/null 2>&1
+	killall wt-tuic >/dev/null 2>&1
 	killall curl-fancyss >/dev/null 2>&1
 
 	# 2. kill all other ss_ping.sh

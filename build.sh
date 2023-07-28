@@ -147,7 +147,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/v2ray-plugin
 		rm -rf ./shadowsocks/bin/kcptun
 		rm -rf ./shadowsocks/bin/trojan
-		#rm -rf ./shadowsocks/bin/ss-tunnel
 		rm -rf ./shadowsocks/bin/trojan
 		rm -rf ./shadowsocks/bin/speederv1
 		rm -rf ./shadowsocks/bin/speederv2
@@ -157,6 +156,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/dohclient
 		rm -rf ./shadowsocks/bin/dohclient-cache
 		rm -rf ./shadowsocks/bin/naive
+		rm -rf ./shadowsocks/bin/tuic
 		rm -rf ./shadowsocks/bin/ipt2socks
 		rm -rf ./shadowsocks/bin/haveged
 		# remove scripts
@@ -180,6 +180,7 @@ gen_folder(){
 		sed -i '/fancyss-dns/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/naiveproxy/d' ./shadowsocks/res/ss-menu.js
 		sed -i '/naiveproxy/d' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i '/tuic/d' ./shadowsocks/res/ss-menu.js
 		# remove options from shadowsocks-rust: shadowsocks2022 encryption method
 		sed -i 's/\,\s\"2022-blake3-aes-128-gcm\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"2022-blake3-aes-256-gcm\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -187,6 +188,7 @@ gen_folder(){
 		# remove lines bewteen matchs
 		sed -i '/fancyss_full_1/,/fancyss_full_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_naive_1/,/fancyss_naive_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i '/fancyss_tuic_1/,/fancyss_tuic_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		# remove strings from page
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -194,6 +196,8 @@ gen_folder(){
 		sed -i 's/\,\s\"naive_port\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_user\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_pass\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"naive_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"tuic_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_vcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_tcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_rust\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -293,10 +297,10 @@ gen_folder(){
 		# modify words
 		# trojan 用xray运行，所以trojan多核心功能删除
 		sed -i 's/ss\/ssr\/trojan/ss\/ssr/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/六种客户端/五种客户端/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/16\.67/20/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/七种客户端/五种客户端/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/14\.286/20/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\s\&\&\s\!\snaive_on//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/六种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js
+		sed -i 's/七种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/shadowsocks_2/shadowsocks_lite_2/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/config\.json\.js/config_lite\.json\.js/g' ./shadowsocks/res/ss-menu.js
 		
