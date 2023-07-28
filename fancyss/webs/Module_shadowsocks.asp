@@ -3911,7 +3911,7 @@ function get_ss_status_front() {
 		async: true,
 		data: JSON.stringify(postData),
 		success: function(response) {
-			var arr = response.result.split("@@");
+			var arr = Base64.decode(response.result).split("@@");
 			if (arr[0] == "" || arr[1] == "") {
 				E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
 				E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
@@ -3941,8 +3941,9 @@ function get_ss_status_back() {
 		async: true,
 		cache:false,
 		success: function(response) {
-			if(response.indexOf("@@") != -1){
-				var arr = response.split("@@");
+			var res = Base64.decode(response.trim());
+			if(res.indexOf("@@") != -1){
+				var arr = res.split("@@");
 				if (arr[0] == "" || arr[1] == "") {
 					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
 					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
@@ -3991,7 +3992,7 @@ function get_udp_status(){
 }
 //fancyss_full_2
 function close_dns_status() {
-	$("#dns_status_div").fadeOut(200);
+	$("#dns_status_div").hide(200);
 	STATUS_FLAG = 0;
 }
 function dns_test(s) {
@@ -4054,7 +4055,7 @@ function dns_test(s) {
 		$("#dns_test_note_2").html('<i>&nbsp;&nbsp;' + note2 + '</i>');
 	}
 	if(note3){
-		$("#dns_test_note_3").html('<i>&nbsp;&nbsp;' + note3 + '</i>');
+		$("#dns_test_note_3").show('<i>&nbsp;&nbsp;' + note3 + '</i>');
 	}
 	$("#dns_status_div").fadeIn(500);
 	var id = parseInt(Math.random() * 100000000);
@@ -5141,7 +5142,7 @@ function mOut(obj){
 												</div>
 											</div>
 											<!-- this is the popup area for china status -->
-											<div id="dns_status_div" class="content_status_ext" style="box-shadow: 3px 3px 10px #000;margin-top: -140px;margin-left:0px;width:748px;">
+											<div id="dns_status_div" class="content_status" style="box-shadow: 3px 3px 10px #000;margin-top: -140px;margin-left:0px;width:748px;">
 												<div class="user_title">DNS解析测试</div>
 												<div style="margin-left:15px" id="dns_test_note_1"></div>
 												<div style="margin-left:15px" id="dns_test_note_2"></div>

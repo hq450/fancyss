@@ -2776,12 +2776,14 @@ start_dns_old() {
 		fi
 	fi
 
+	# 从 3.2.3开始，插件要求所有代理都开启23456端口，用于状态检测
+	start_ss_local
+
 	# 3. Start DNS2SOCKS (default)
 	if [ "${ss_foreign_dns}" == "3" -o -z "${ss_foreign_dns}" ]; then
 		if [ -z "${ss_foreign_dns}" ]; then
 			dbus set ss_foreign_dns="3"
 		fi
-		start_ss_local
 		[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 		[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 		start_dns2socks ${ss_dns2socks_user} 7913 0
@@ -2804,7 +2806,6 @@ start_dns_old() {
 		elif [ "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" ]; then
 			echo_date $(__get_type_full_name ${ss_basic_type})下不支持ss-tunnel，改用dns2socks！
 			dbus set ss_foreign_dns=3
-			start_ss_local
 			[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			start_dns2socks ${ss_dns2socks_user} 7913 0
@@ -2820,7 +2821,6 @@ start_dns_old() {
 		else
 			echo_date "$(__get_type_full_name ${ss_basic_type})下不支持${VCORE_NAME} dns，改用dns2socks！"
 			dbus set ss_foreign_dns=3
-			start_ss_local
 			[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			start_dns2socks ${ss_chinadnsng_user} 7913 0
@@ -2856,7 +2856,6 @@ start_dns_old() {
 		else
 			echo_date "非回国模式，国外DNS直连解析不能使用，自动切换到dns2socks方案。"
 			dbus set ss_foreign_dns=3
-			start_ss_local
 			[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
 			[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
 			start_dns2socks ${ss_dns2socks_user} 7913 0
@@ -4048,58 +4047,41 @@ creat_v2ray_json() {
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			echo_date 配置${VCORE_NAME} dns，用于dns解析...
-			cat >>"${V2RAY_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-					"protocol": "dokodemo-door",
-					"port": ${DNSF_PORT},
+		echo_date 配置${VCORE_NAME} dns，用于dns解析...
+		cat >>"${V2RAY_CONFIG_TEMP}" <<-EOF
+			"inbounds": [
+				{
+				"protocol": "dokodemo-door",
+				"port": ${DNSF_PORT},
+				"settings": {
+					"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
+					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+					"network": "udp",
+					"timeout": 0,
+					"followRedirect": false
+					}
+				},
+				{
+					"port": 23456,
+					"listen": "0.0.0.0",
+					"protocol": "socks",
 					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+						"auth": "noauth",
+						"udp": true,
+						"ip": "127.0.0.1"
 					}
-				],
-			EOF
-		else
-			# inbounds area (23456 for socks5)
-			cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
-				"inbounds": [
-					{
-						"port": 23456,
-						"listen": "0.0.0.0",
-						"protocol": "socks",
-						"settings": {
-							"auth": "noauth",
-							"udp": true,
-							"ip": "127.0.0.1"
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+				},
+				{
+					"listen": "0.0.0.0",
+					"port": 3333,
+					"protocol": "dokodemo-door",
+					"settings": {
+						"network": "tcp,udp",
+						"followRedirect": true
 					}
-				],
-			EOF
-		fi
+				}
+			],
+		EOF
 		# outbounds area
 		cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
 			"outbounds": [
@@ -4167,68 +4149,47 @@ creat_v2ray_json() {
 		if [ "$OBS" != "null" ]; then
 			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
-								},
-								\"inbounds\": [
-									{
-										\"protocol\": \"dokodemo-door\", 
-										\"port\": ${DNSF_PORT},
-										\"settings\": {
-											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})\",
-											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
-											\"network\": \"udp\",
-											\"timeout\": 0,
-											\"followRedirect\": false
-										}
-									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
+		local TEMPLATE="{
+							\"log\": {
+								\"access\": \"none\",
+								\"error\": \"none\",
+								\"loglevel\": \"none\"
+							},
+							\"inbounds\": [
+								{
+									\"protocol\": \"dokodemo-door\", 
+									\"port\": ${DNSF_PORT},
+									\"settings\": {
+										\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})\",
+										\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+										\"network\": \"udp\",
+										\"timeout\": 0,
+										\"followRedirect\": false
 									}
-								]
-							}"
-		else
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
 								},
-								\"inbounds\": [
-									{
-										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
-										\"protocol\": \"socks\",
-										\"settings\": {
-											\"auth\": \"noauth\",
-											\"udp\": true,
-											\"ip\": \"127.0.0.1\",
-											\"clients\": null
-										},
-										\"streamSettings\": null
+								{
+									\"port\": 23456,
+									\"listen\": \"0.0.0.0\",
+									\"protocol\": \"socks\",
+									\"settings\": {
+										\"auth\": \"noauth\",
+										\"udp\": true,
+										\"ip\": \"127.0.0.1\",
+										\"clients\": null
 									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
+									\"streamSettings\": null
+								},
+								{
+									\"listen\": \"0.0.0.0\",
+									\"port\": 3333,
+									\"protocol\": \"dokodemo-door\",
+									\"settings\": {
+										\"network\": \"tcp,udp\",
+										\"followRedirect\": true
 									}
-								]
-							}"
-		fi
+								}
+							]
+						}"
 		echo_date "解析${VCORE_NAME}配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date "${VCORE_NAME}配置文件写入成功到$V2RAY_CONFIG_FILE"
@@ -4621,58 +4582,41 @@ creat_xray_json() {
 			},
 		EOF
 		# inbounds area (7913 for dns resolve)
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			echo_date 配置xray dns，用于dns解析...
-			cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-					"protocol": "dokodemo-door",
-					"port": ${DNSF_PORT},
+		echo_date 配置xray dns，用于dns解析...
+		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+			"inbounds": [
+				{
+				"protocol": "dokodemo-door",
+				"port": ${DNSF_PORT},
+				"settings": {
+					"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
+					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+					"network": "udp",
+					"timeout": 0,
+					"followRedirect": false
+					}
+				},
+				{
+					"port": 23456,
+					"listen": "0.0.0.0",
+					"protocol": "socks",
 					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+						"auth": "noauth",
+						"udp": true,
+						"ip": "127.0.0.1"
 					}
-				],
-			EOF
-		else
-			# inbounds area (23456 for socks5)
-			cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-						"port": 23456,
-						"listen": "0.0.0.0",
-						"protocol": "socks",
-						"settings": {
-							"auth": "noauth",
-							"udp": true,
-							"ip": "127.0.0.1"
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+				},
+				{
+					"listen": "0.0.0.0",
+					"port": 3333,
+					"protocol": "dokodemo-door",
+					"settings": {
+						"network": "tcp,udp",
+						"followRedirect": true
 					}
-				],
-			EOF
-		fi
+				}
+			],
+		EOF
 		# outbounds area
 		[ -z "${ss_basic_xray_alterid}" ] && ss_basic_xray_alterid="0"
 		[ -z "${ss_basic_xray_prot}" ] && ss_basic_xray_prot="vless"
@@ -4754,68 +4698,47 @@ creat_xray_json() {
 		if [ "$OBS" != "null" ]; then
 			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
-								},
-								\"inbounds\": [
-									{
-										\"protocol\": \"dokodemo-door\", 
-										\"port\": ${DNSF_PORT},
-										\"settings\": {
-											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})\",
-											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
-											\"network\": \"udp\",
-											\"timeout\": 0,
-											\"followRedirect\": false
-										}
-									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
+		local TEMPLATE="{
+							\"log\": {
+								\"access\": \"none\",
+								\"error\": \"none\",
+								\"loglevel\": \"none\"
+							},
+							\"inbounds\": [
+								{
+									\"protocol\": \"dokodemo-door\", 
+									\"port\": ${DNSF_PORT},
+									\"settings\": {
+										\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})\",
+										\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+										\"network\": \"udp\",
+										\"timeout\": 0,
+										\"followRedirect\": false
 									}
-								]
-							}"
-		else
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
 								},
-								\"inbounds\": [
-									{
-										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
-										\"protocol\": \"socks\",
-										\"settings\": {
-											\"auth\": \"noauth\",
-											\"udp\": true,
-											\"ip\": \"127.0.0.1\",
-											\"clients\": null
-										},
-										\"streamSettings\": null
+								{
+									\"port\": 23456,
+									\"listen\": \"0.0.0.0\",
+									\"protocol\": \"socks\",
+									\"settings\": {
+										\"auth\": \"noauth\",
+										\"udp\": true,
+										\"ip\": \"127.0.0.1\",
+										\"clients\": null
 									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
+									\"streamSettings\": null
+								},
+								{
+									\"listen\": \"0.0.0.0\",
+									\"port\": 3333,
+									\"protocol\": \"dokodemo-door\",
+									\"settings\": {
+										\"network\": \"tcp,udp\",
+										\"followRedirect\": true
 									}
-								]
-							}"
-		fi
+								}
+							]
+						}"
 		echo_date "解析Xray配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${XRAY_CONFIG_FILE}"
 		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
@@ -4953,25 +4876,6 @@ start_xray() {
 }
 
 creat_trojan_json(){
-	# open socks5 on port 23456
-	if [ "${ss_basic_advdns}" != "1" -a "${ss_foreign_dns}" == "3" ]; then
-		trojan_socks=1
-	fi
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "2" ]; then
-		trojan_socks=1
-	fi
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "3" ]; then
-		trojan_socks=1
-	fi
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "2" ]; then
-		if [ "${ss_basic_smrt}" == "1" -o "${ss_basic_smrt}" == "3" -o "${ss_basic_smrt}" == "4" -o "${ss_basic_smrt}" == "6" -o "${ss_basic_smrt}" == "7" -o "${ss_basic_smrt}" == "8" -o "${ss_basic_smrt}" == "9" ];then
-			trojan_socks=1
-		fi
-	fi
-	if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "3" -a "${ss_basic_dohc_proxy}" == "1" ]; then
-		trojan_socks=1
-	fi
-
 	# do not create json file on start
 	if [ -n "${WAN_ACTION}" ]; then
 		echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
@@ -4983,8 +4887,7 @@ creat_trojan_json(){
 		if [ "${ss_basic_tcore}" == "1" ];then
 			echo_date "创建xray的trojan配置文件到${TROJAN_CONFIG_FILE}"
 		else
-			echo_date "创建$(__get_type_abbr_name)的配置文件到${TROJAN_CONFIG_FILE}"
-			[ "${trojan_socks}" == "1" ] && echo_date "创建$(__get_type_abbr_name)的client配置文件到${TROJAN_CONFIG_FILE_SOCKS}"
+			echo_date "创建$(__get_type_abbr_name)的client配置文件到${TROJAN_CONFIG_FILE_SOCKS}"
 		fi
 	fi
 
@@ -5001,75 +4904,41 @@ creat_trojan_json(){
 				"loglevel": "none"
 			},
 		EOF
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			echo_date 配置${TCORE_NAME} dns，用于dns解析...
-			cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-					"protocol": "dokodemo-door",
-					"port": ${DNSF_PORT},
-					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+		echo_date 配置${TCORE_NAME} dns，用于dns解析...
+		cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
+			"inbounds": [
+				{
+				"protocol": "dokodemo-door",
+				"port": ${DNSF_PORT},
+				"settings": {
+					"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
+					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+					"network": "udp",
+					"timeout": 0,
+					"followRedirect": false
 					}
-				],
-			EOF
-		else
-			if [ "${trojan_socks}" == "1" ];then
-				# inbounds area (23456 for socks5)
-				cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
-					"inbounds": [
-						{
-							"port": 23456,
-							"listen": "0.0.0.0",
-							"protocol": "socks",
-							"settings": {
-								"auth": "noauth",
-								"udp": true,
-								"ip": "127.0.0.1"
-							}
-						},
-						{
-							"listen": "0.0.0.0",
-							"port": 3333,
-							"protocol": "dokodemo-door",
-							"settings": {
-								"network": "tcp,udp",
-								"followRedirect": true
-							}
-						}
-					],
-				EOF
-			else
-				# inbounds area
-				cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
-					"inbounds": [
-						{
-							"listen": "0.0.0.0",
-							"port": 3333,
-							"protocol": "dokodemo-door",
-							"settings": {
-								"network": "tcp,udp",
-								"followRedirect": true
-							}
-						}
-					],
-				EOF
-			fi
-		fi
+				},
+				{
+					"port": 23456,
+					"listen": "0.0.0.0",
+					"protocol": "socks",
+					"settings": {
+						"auth": "noauth",
+						"udp": true,
+						"ip": "127.0.0.1"
+					}
+				},
+				{
+					"listen": "0.0.0.0",
+					"port": 3333,
+					"protocol": "dokodemo-door",
+					"settings": {
+						"network": "tcp,udp",
+						"followRedirect": true
+					}
+				}
+			],
+		EOF
 		# outbounds area
 		cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
@@ -5181,75 +5050,68 @@ creat_trojan_json(){
 			close_in_five flag
 		fi
 		
-		if [ "${trojan_socks}" == "1" ]; then
-			# 3:  dns2socks
-			# 4:  ss-tunnel    →   fall back to dns2socks
-			# 5:  chinadns1    →   use dns2socks as upstream
-			# 7:  v2ray_dns    →   fall back to dns2socks
-			# 10: chinadns-ng  →   use dns2socks as upstream
-			cat > "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
-				{
-					"run_type": "client",
-					"local_addr": "127.0.0.1",
-					"local_port": 23456,
-					"remote_addr": "${ss_basic_server}",
-					"remote_port": ${ss_basic_port},
-					"password": ["${ss_basic_trojan_uuid}"],
-					"log_level": 1,
-					"ssl": {
-						"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
-						"verify_hostname": true,
-						"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
-						"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
-						"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
-						"sni": $(get_value_null ${ss_basic_trojan_sni}),
-						"alpn": ["h2","http/1.1"],
-						"reuse_session": true,
-						"session_ticket": false,
-						"curves": ""
-					},
-					"tcp": {
-					"no_delay": true,
-					"keep_alive": true,
-					"reuse_port": false,
-			EOF
-			if [ "${LINUX_VER}" != "26" ]; then
-				cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
-					"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
-				EOF
-			else
-				cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
-					"fast_open": false,
-				EOF
-			fi
+		cat > "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+			{
+				"run_type": "client",
+				"local_addr": "127.0.0.1",
+				"local_port": 23456,
+				"remote_addr": "${ss_basic_server}",
+				"remote_port": ${ss_basic_port},
+				"password": ["${ss_basic_trojan_uuid}"],
+				"log_level": 1,
+				"ssl": {
+					"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
+					"verify_hostname": true,
+					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
+					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
+					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
+					"sni": $(get_value_null ${ss_basic_trojan_sni}),
+					"alpn": ["h2","http/1.1"],
+					"reuse_session": true,
+					"session_ticket": false,
+					"curves": ""
+				},
+				"tcp": {
+				"no_delay": true,
+				"keep_alive": true,
+				"reuse_port": false,
+		EOF
+		if [ "${LINUX_VER}" != "26" ]; then
 			cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
-					"fast_open_qlen": 20
-					}
-				}
+				"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
 			EOF
-			echo_date 解析trojan的client配置文件...
-			run jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
-			if [ "$?" != "0" ];then
-				echo_date "json配置解析错误，错误信息如下："
-				echo_date $(cat /tmp/trojan_para_tmp.txt) 
-				echo_date "请更正你的错误然后重试！！"
-				rm -rf /tmp/trojan_para_tmp.txt
-				close_in_five flag
-			fi
-			run jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
-			echo_date "解析成功！trojan的client配置文件成功写入到${TROJAN_CONFIG_FILE_SOCKS}"
+		else
+			cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+				"fast_open": false,
+			EOF
+		fi
+		cat >> "${TROJAN_CONFIG_TEMP_SOCKS}" <<-EOF
+				"fast_open_qlen": 20
+				}
+			}
+		EOF
+		echo_date 解析trojan的client配置文件...
+		run jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >/tmp/trojan_para_tmp.txt 2>&1
+		if [ "$?" != "0" ];then
+			echo_date "json配置解析错误，错误信息如下："
+			echo_date $(cat /tmp/trojan_para_tmp.txt) 
+			echo_date "请更正你的错误然后重试！！"
+			rm -rf /tmp/trojan_para_tmp.txt
+			close_in_five flag
+		fi
+		run jq --tab . ${TROJAN_CONFIG_TEMP_SOCKS} >${TROJAN_CONFIG_FILE_SOCKS}
+		echo_date "解析成功！trojan的client配置文件成功写入到${TROJAN_CONFIG_FILE_SOCKS}"
 
-			echo_date 测试trojan的client配置文件....
-			result=$(run /koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
-			if [ -n "${result}" ]; then
-				echo_date 测试结果：${result}
-				echo_date trojan的client配置文件通过测试!!!
-			else
-				echo_date trojan的client配置文件没有通过测试，请检查设置!!!
-				rm -rf ${TROJAN_CONFIG_TEMP_SOCKS}
-				rm -rf ${TROJAN_CONFIG_FILE_SOCKS}
-				close_in_five flag
-			fi
+		echo_date 测试trojan的client配置文件....
+		result=$(run /koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE_SOCKS} 2>&1 | grep "The config file looks good.")
+		if [ -n "${result}" ]; then
+			echo_date 测试结果：${result}
+			echo_date trojan的client配置文件通过测试!!!
+		else
+			echo_date trojan的client配置文件没有通过测试，请检查设置!!!
+			rm -rf ${TROJAN_CONFIG_TEMP_SOCKS}
+			rm -rf ${TROJAN_CONFIG_FILE_SOCKS}
+			close_in_five flag
 		fi
 	fi
 }
@@ -5302,7 +5164,7 @@ start_trojan(){
 			run_bg trojan
 		fi
 
-		if [ "${trojan_socks}" == "1" -a -f "${TROJAN_CONFIG_FILE_SOCKS}" ];then
+		if [ -f "${TROJAN_CONFIG_FILE_SOCKS}" ];then
 			run_bg trojan -c ${TROJAN_CONFIG_FILE_SOCKS}
 		fi
 	fi

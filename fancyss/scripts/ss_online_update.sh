@@ -1437,21 +1437,50 @@ dnsmasq_rule(){
 	fi
 }
 
+go_proxy(){
+	# 4. subscribe go through proxy or not
+	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
+		if [ "$(get_fancyss_running_status)" == "1" ];then
+			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			dnsmasq_rule add "${DOMAIN_NAME}"
+		else
+			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，改用常规网络下载..."
+			dnsmasq_rule remove
+		fi
+	else
+		echo_date "⬇️使用常规网络下载..."
+		dnsmasq_rule remove
+	fi
+}
+
 download_by_curl(){
+	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive")
+		if [ -n "${SOCKS5_OPEN}" ];then
+			local EXT_ARG="-x socks5h://127.0.0.1:23456"
+			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+		else
+			local EXT_ARG=""
+			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，改用常规网络下载..."
+		fi
+	else
+		echo_date "⬇️使用常规网络下载..."
+		dnsmasq_rule remove
+	fi
 	echo_date "1️⃣使用curl下载订阅，第一次尝试下载..."
-	curl -4sSk --connect-timeout 6 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 6 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 	
 	echo_date "2️⃣使用curl下载订阅失败，第二次尝试下载..."
-	curl -4sSk --connect-timeout 10 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 10 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 
 	echo_date "3️⃣使用curl下载订阅失败，第三次尝试下载..."
-	curl -4sSk --connect-timeout 12 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 12 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi	
@@ -1460,6 +1489,9 @@ download_by_curl(){
 }
 
 download_by_wget(){
+	# if go proxy or not
+	go_proxy
+	
 	if [ -n $(echo $1 | grep -E "^https") ]; then
 		local EXT_OPT="--no-check-certificate"
 	else
@@ -1488,6 +1520,7 @@ download_by_wget(){
 }
 
 download_by_aria2(){
+	go_proxy
 	echo_date "⬇️使用aria2c下载订阅..."
 	rm -rf ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	/koolshare/aria2/aria2c --check-certificate=false --quiet=true -d $DIR -o ssr_subscribe_file.txt $1
@@ -1523,23 +1556,9 @@ get_online_rule_now(){
 
 	# 3. try to delete some file left by last sublink subscribe
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
-
-	# 4. subscribe go through proxy or not
-	echo_date "📁准备下载订阅链接到本地临时文件，请稍等..."
-	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
-		if [ "$(get_fancyss_running_status)" == "1" ];then
-			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			dnsmasq_rule add "${DOMAIN_NAME}"
-		else
-			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，改用常规网络下载..."
-			dnsmasq_rule remove
-		fi
-	else
-		echo_date "⬇️使用常规网络下载..."
-		dnsmasq_rule remove
-	fi
 	
 	# 7. download sublink
+	echo_date "📁准备下载订阅链接到本地临时文件，请稍等..."
 	download_by_curl "${SUB_LINK}"
 	if [ "$?" == "0" ]; then
 		echo_date "🆗下载成功，继续检测下载内容..."
