@@ -5,7 +5,7 @@ fancyss Changelog
        		自己简单测试了下，同一个时间和节点，四川电信直连 BWG US: Los Angeles, California (DC9 CT CN2GIA)服务器，icmp ping 175ms
        		tuic下行速度477MB/s，落地延迟183ms
        		vless+grpc+reality下行速度132MB/s，落地延迟195ms
-       		以上测试仅供参考
+       		测试机型：GT-AX6000，以上测试仅供参考！
 
 3.2.3 (20230728)
    - note	再次提醒：从3.2.0及以前版本更新而来，访问插件页面请清理浏览器缓存（ctrl + F5），否则页面会显示错乱！
