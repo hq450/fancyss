@@ -4998,72 +4998,6 @@ creat_trojan_json(){
 		
 		cat > "${TROJAN_CONFIG_TEMP}" <<-EOF
 			{
-				"run_type": "nat",
-				"local_addr": "0.0.0.0",
-				"local_port": 3333,
-				"remote_addr": "${ss_basic_server}",
-				"remote_port": ${ss_basic_port},
-				"password": ["${ss_basic_trojan_uuid}"],
-				"log_level": 1,
-				"ssl": {
-					"verify": $(get_reverse_switch ${ss_basic_trojan_ai}),
-					"verify_hostname": true,
-					"cert": "/rom/etc/ssl/certs/ca-certificates.crt",
-					"cipher": "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA",
-					"cipher_tls13": "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384",
-					"sni": $(get_value_null ${ss_basic_trojan_sni}),
-					"alpn": ["h2","http/1.1"],
-					"reuse_session": true,
-					"session_ticket": false,
-					"curves": ""
-				},
-				"tcp": {
-				"no_delay": true,
-				"keep_alive": true,
-		EOF
-		if [ "${LINUX_VER}" != "26" ]; then
-			cat >> "${TROJAN_CONFIG_TEMP}" <<-EOF
-					"reuse_port": $(get_function_switch ${ss_basic_mcore}),
-					"fast_open": $(get_function_switch ${ss_basic_trojan_tfo}),
-			EOF
-		else
-			cat >> "${TROJAN_CONFIG_TEMP}" <<-EOF
-					"reuse_port": false,
-					"fast_open": false,
-			EOF
-		fi
-		cat >> "${TROJAN_CONFIG_TEMP}" <<-EOF
-				"fast_open_qlen": 20
-				}
-			}
-		EOF
-		
-		echo_date "解析trojan的nat配置文件..."
-		run jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
-		if [ "$?" != "0" ];then
-			echo_date "json配置解析错误，错误信息如下："
-			echo_date $(cat /tmp/trojan_para_tmp.txt) 
-			echo_date "请更正你的错误然后重试！！"
-			rm -rf /tmp/trojan_para_tmp.txt
-			close_in_five flag
-		fi
-		run jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
-		echo_date "解析成功！trojan的nat配置文件成功写入到${TROJAN_CONFIG_FILE}"
-
-		echo_date 测试trojan的nat配置文件....
-		result=$(run /koolshare/bin/trojan -t ${TROJAN_CONFIG_FILE} 2>&1 | grep "The config file looks good.")
-		if [ -n "${result}" ]; then
-			echo_date 测试结果：${result}
-			echo_date trojan的nat配置文件通过测试!!!
-		else
-			echo_date trojan的nat配置文件没有通过测试，请检查设置!!!
-			rm -rf ${TROJAN_CONFIG_TEMP}
-			rm -rf ${TROJAN_CONFIG_FILE}
-			close_in_five flag
-		fi
-		
-		cat > "${TROJAN_CONFIG_TEMP}" <<-EOF
-			{
 				"run_type": "client",
 				"local_addr": "127.0.0.1",
 				"local_port": 23456,
@@ -5102,7 +5036,7 @@ creat_trojan_json(){
 				}
 			}
 		EOF
-		echo_date 解析trojan的配置文件...
+		echo_date "解析trojan的配置文件..."
 		run jq --tab . ${TROJAN_CONFIG_TEMP} >/tmp/trojan_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
@@ -5164,9 +5098,13 @@ start_trojan(){
 		fi
 		detect_running_status xray
 	else
+		echo_date "开启ipt2socks进程，用于透明代理..."
+		run_bg ipt2socks -p 23456 -l 3333 -4 -R
+		detect_running_status2 ipt2socks 23456
+		
 		# start trojan
 		if [ "${ss_basic_mcore}" == "1" ]; then
-			echo_date trojan开启$THREAD线程支持.
+			echo_date "trojan开启$THREAD线程支持."
 			local i=1
 			while [ $i -le $THREAD ]; do
 				run_bg trojan
@@ -5174,10 +5112,6 @@ start_trojan(){
 			done
 		else
 			run_bg trojan
-		fi
-
-		if [ -f "${TROJAN_CONFIG_FILE}" ];then
-			run_bg trojan -c ${TROJAN_CONFIG_FILE}
 		fi
 	fi
 }

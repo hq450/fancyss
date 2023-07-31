@@ -341,11 +341,11 @@ GET_PROG_STAT(){
 				echo "Xray	未运行🔴		透明代理"
 			fi
 		else
-			local TROJAN=$(netstat -nlp | grep 3333 | grep LISTEN | grep trojan | awk '{print $NF}' | awk -F "/" '{print $1}' | tr "\n" " ")
-			if [ -n "${TROJAN}" ]; then
-				echo "trojan		运行中🟢		透明代理		${TROJAN}"
+			local IPT2SOCKS=$(pidof ipt2socks)
+			if [ -n "${IPT2SOCKS}" ]; then
+				echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
 			else
-				echo "trojan		未运行🔴		透明代理"
+				echo "ipt2socks	未运行🔴		透明代理"
 			fi
 		fi
 	elif [ "${ss_basic_type}" == "6" ]; then

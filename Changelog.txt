@@ -1,5 +1,10 @@
 fancyss Changelog
 ===========================================
+3.2.5 (20230731)
+   - fix	修复使用trojan运行trojan协议节点时代理不通的问题
+   - fix	修复请空插件所有配置后，再次配置节点无法进行ping和web延迟测试的问题
+   - fix	修复插件关闭时，trojan节点web延迟测试全部failed的问题
+
 3.2.4 (20230729)
    - add	fancyss full版本添加tuic协议(https://github.com/EAimTY/tuic)支持，lite版本不支持;
        		自己简单测试了下，同一个时间和节点，四川电信直连 BWG US: Los Angeles, California (DC9 CT CN2GIA)服务器，icmp ping 175ms

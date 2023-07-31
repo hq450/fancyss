@@ -901,7 +901,7 @@ test_10_tj(){
 	rm -rf $TMP2/conf/*
 
 	# now we can start wt-trojan to host multiple outbounds
-	run ${TMP2}/wt-trojan run -confdir /tmp/fancyss_webtest/json/ >/dev/null 2>&1 &
+	run ${TMP2}/wt-trojan run -confdir /tmp/fancyss_webtest/json >/dev/null 2>&1 &
 
 	# make sure wt-trojan is runing, otherwise output error
 	sleep 3
@@ -1578,6 +1578,12 @@ creat_trojan_json(){
 		local trojan_ai="1"
 	fi
 	local trojan_tfo=$(dbus get ssconf_basic_trojan_tfo_${nu})
+	local _server_ip=$(_get_server_ip ${trojan_server})
+	if [ -z "${_server_ip}" ];then
+		_server_ip=${trojan_server}
+	fi
+
+	
 	# outbounds area
 	cat >>$TMP2/conf/${nu}_outbounds.json <<-EOF
 		{
@@ -1587,7 +1593,7 @@ creat_trojan_json(){
 				"protocol": "trojan",
 				"settings": {
 					"servers": [{
-					"address": "${trojan_server}",
+					"address": "${_server_ip}",
 					"port": ${trojan_port},
 					"password": "${trojan_uuid}"
 					}]
@@ -1646,7 +1652,7 @@ curl_test(){
 	local port=$2
 
 	# curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:23456 --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" http://www.google.com.tw
-
+	
 	# test multiple time and get the best one
 	local ret=$(run curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
 	local ret=${ret}@$(run curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)

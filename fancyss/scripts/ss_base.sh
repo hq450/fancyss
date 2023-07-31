@@ -146,6 +146,9 @@ if [ "${ss_basic_chng_china_2_tcp}" == "5" ];then
 	ss_basic_chng_china_2_tcp="6"
 fi
 
+[ -z "$(dbus get ss_basic_wt_furl)" ] && ss_basic_wt_furl="http://www.google.com.tw"
+[ -z "$(dbus get ss_basic_wt_curl)" ] && ss_basic_wt_curl="http://www.baidu.com"
+
 #----------------------------
 number_test(){
 	case $1 in
