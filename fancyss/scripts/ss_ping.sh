@@ -635,7 +635,8 @@ test_03_ss(){
 	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
 		for nu in $nus; do
 			{
-				echo -en "${nu}>ns\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>testing\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>ns\n" >>${TMP2}/results/${nu}.txt
 			} &
 		done
 		wait
@@ -650,7 +651,8 @@ test_04_ss(){
 	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
 		for nu in $nus; do
 			{
-				echo -en "${nu}>ns\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>testing\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>ns\n" >>${TMP2}/results/${nu}.txt
 			} &
 		done
 		wait
@@ -665,7 +667,8 @@ test_05_ss(){
 	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
 		for nu in $nus; do
 			{
-				echo -en "${nu}>ns\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>testing\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>ns\n" >>${TMP2}/results/${nu}.txt
 			} &
 		done
 		wait
@@ -680,7 +683,8 @@ test_06_ss(){
 	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
 		for nu in $nus; do
 			{
-				echo -en "${nu}>ns\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>testing\n" >>/tmp/upload/webtest.txt
+				echo -en "${nu}>ns\n" >>${TMP2}/results/${nu}.txt
 			} &
 		done
 		wait

@@ -116,14 +116,36 @@ if [ "${ss_basic_type}" == "5" -a "${ss_basic_tjai}" == "1" ];then
 	#eval ss_basic_trojan_ai_${cur_node}=1
 fi
 
+# ss_basic_dns_flag="1"    使用代理的udp
+# ss_basic_dns_flag="2"    使用代理的socks
+
 # v2ray/xray使用自带dns
+ss_basic_dns_flag="0"
 DNSF_PORT=1055
+if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "1" ];then
+	# 新dns方案  chinadns-ng，udp 方案
+	ss_basic_dns_flag="1"
+	if [ "${ss_basic_tcore}" != "1" -a "${ss_basic_type}" == "5" ];then
+		# trojan下只有xray核心支持udp，trojan核心不支持udp
+		ss_basic_dns_flag="2"
+	fi
+fi
+if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "2" ];then
+	# 新dns方案 chinadns-ng，tcp 方案，dns2socks，socks5 23456 needed
+	ss_basic_dns_flag="2"
+fi
+if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "3" ];then
+	# 新dns方案 chinadns-ng，dohclient，socks5 23456 needed
+	ss_basic_dns_flag="2"
+fi
 if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "2" ];then
 	# 新dns方案  chinadns-ng，v2ray/xray原生dns，经过smartdns，非socks5 + dns2socks 方案
+	ss_basic_dns_flag="2"
 	DNSF_PORT=7913
 fi
 if [ "${ss_basic_advdns}" != "1" -a "${ss_foreign_dns}" == "7" ]; then
 	# 旧dns方案，v2ray/xray原生dns，非socks5 + dns2socks 方案
+	ss_basic_dns_flag="1"
 	DNSF_PORT=7913
 fi
 
@@ -131,8 +153,10 @@ if [ "${ss_basic_advdns}" != "1" -a "${ss_foreign_dns}" == "4" ]; then
 	# 旧dns方案，ss-tunnel，非socks5 + dns2socks 方案
 	if [ "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" -o "${ss_basic_type}" == "6" ];then
 		# v2ray xray trojan naive 不支持ss-tunnel，会自动切换到dns2socks，所以默认应该开启socks5
+		ss_basic_dns_flag="2"
 		DNSF_PORT=7913
 	else
+		ss_basic_dns_flag="1"
 		DNSF_PORT=7913
 	fi
 fi
