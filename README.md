@@ -6,7 +6,7 @@
 ## 插件特色
 
 - 多平台支持：博通armv7，博通arm64，联发科Filogic 830 MT7986A
-- 多客户端支持：Shadowsocks、ShadowsocksR、V2ray、Xray、Trojan、NaïveProxy
+- 多客户端支持：Shadowsocks、ShadowsocksR、V2ray、Xray、Trojan、NaïveProxy、tuic
 - shadowsocks支持SIP003插件：simple-obfs和v2ray-plugin；V2ray和Xray支持多种协议配置
 - 多种模式支持：gfwlist模式、大陆白名单、游戏模式、全局模式、回国模式
 - 提供多种现成的DNS方案，并且可以自由方便的进行DNS方案自定义配置
