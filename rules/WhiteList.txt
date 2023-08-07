@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2023-08-05
+-e ## Last update: 2023-08-07
 
 .*\b0-6\.com
 .*\b00\.net
@@ -6235,7 +6235,6 @@
 .*\b91985\.com
 .*\b91ac\.com
 .*\b91act\.com
-.*\b91aliyun\.com
 .*\b91all\.net
 .*\b91anjian\.com
 .*\b91art\.net
@@ -8829,6 +8828,7 @@
 .*\bares\.dl\.playstation\.net
 .*\barestech-sz\.com
 .*\bareweloongyet\.com
+.*\barfans\.com
 .*\barhieason\.com
 .*\barhoo\.com
 .*\bariesmob\.com
@@ -10192,6 +10192,7 @@
 .*\bbendibao\.com
 .*\bbendiso\.com
 .*\bbendiw\.cc
+.*\bbendizhidao\.com
 .*\bbenduo\.net
 .*\bbenellimotor\.com
 .*\bbengbeng\.com
@@ -26202,6 +26203,7 @@
 .*\bhi2000\.net
 .*\bhiaal\.com
 .*\bhiagr\.com
+.*\bhiaiabc\.com
 .*\bhiapk\.com
 .*\bhiavr\.com
 .*\bhibea\.com
@@ -31990,7 +31992,6 @@
 .*\bjpbeta\.net
 .*\bjpchinapress\.com
 .*\bjpeen\.com
-.*\bjpegonline\.com
 .*\bjperation\.com
 .*\bjpg\.cm
 .*\bjpggod\.com
@@ -38511,6 +38512,7 @@
 .*\bmobotap\.com
 .*\bmobring\.co
 .*\bmobrtb\.com
+.*\bmobsurl\.com
 .*\bmobtou\.com
 .*\bmobvoi\.com
 .*\bmocache\.com
@@ -38934,6 +38936,7 @@
 .*\bmtcsys\.com
 .*\bmtcx99\.com
 .*\bmtcxsw\.com
+.*\bmtcxx\.com
 .*\bmtdpai\.com
 .*\bmtdpgame\.com
 .*\bmtedu\.com
@@ -39301,6 +39304,7 @@
 .*\bmypethome\.com
 .*\bmypian\.com
 .*\bmypiao\.com
+.*\bmypiaojia\.com
 .*\bmypitaya\.com
 .*\bmypity\.com
 .*\bmypm\.net
@@ -54188,6 +54192,7 @@
 .*\bwdmcake\.com
 .*\bwdmuz\.com
 .*\bwdodo\.com
+.*\bwdomob\.com
 .*\bwdres\.com
 .*\bwdsrc\.com
 .*\bwdstory\.com
@@ -56821,6 +56826,7 @@
 .*\bxhpiano\.com
 .*\bxhqqt\.com
 .*\bxhscdn\.com
+.*\bxhscdn\.net
 .*\bxhsd\.com
 .*\bxhslink\.com
 .*\bxhsyww\.com
@@ -60160,6 +60166,7 @@
 .*\bykqnl\.com
 .*\bykread\.com
 .*\byks365\.com
+.*\byksdks\.com
 .*\byksq\.net
 .*\bykstarshine\.com
 .*\byksuit\.com
