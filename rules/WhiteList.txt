@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2023-09-11
+-e ## Last update: 2023-09-13
 
 .*\b0-6\.com
 .*\b00\.net
@@ -4254,7 +4254,6 @@
 .*\b52solution\.com
 .*\b52souji\.net
 .*\b52souluo\.com
-.*\b52soutu\.com
 .*\b52survey\.com
 .*\b52svip\.cc
 .*\b52svn\.com
@@ -11656,6 +11655,7 @@
 .*\bbx58\.com
 .*\bbxb2b\.com
 .*\bbxcc\.vip
+.*\bbxcqd\.com
 .*\bbxdaka\.com
 .*\bbxdlkj\.com
 .*\bbxemln\.com
@@ -29510,7 +29510,6 @@
 .*\bipuu\.net
 .*\bipv4\.host
 .*\bipv6dns\.com
-.*\bipyker\.com
 .*\bipyy\.com
 .*\biq123\.com
 .*\biqalliance\.org
@@ -32582,6 +32581,7 @@
 .*\bkaiyuan\.me
 .*\bkaiyuangroup\.cc
 .*\bkaiyuanhotels\.com
+.*\bkaiyuanweilaikeji\.com
 .*\bkaiyun\.com
 .*\bkajicam\.com
 .*\bkaka\.com
@@ -36936,7 +36936,6 @@
 .*\bmarkmall\.com
 .*\bmarkmiao\.com
 .*\bmarknum\.com
-.*\bmarkonreview\.com
 .*\bmarkorchem\.com
 .*\bmarksmile\.com
 .*\bmarmot-cloud\.com
@@ -41094,7 +41093,6 @@
 .*\bpandatv\.com
 .*\bpandoe\.com
 .*\bpandolia\.net
-.*\bpandownload\.com
 .*\bpanduoduo\.net
 .*\bpanduoduo\.online
 .*\bpanewslab\.com
@@ -44888,6 +44886,7 @@
 .*\bruixunidc\.com
 .*\bruixunidc\.net
 .*\bruiyang-ra\.com
+.*\bruiyuanobserve\.com
 .*\bruiyunit\.com
 .*\bruizong-gz\.com
 .*\brujiazg\.com
@@ -51154,7 +51153,6 @@
 .*\btripbaba\.com
 .*\btripbe\.com
 .*\btriphr\.com
-.*\btriple7photography\.com
 .*\btriplexservice\.com
 .*\btripodeck\.com
 .*\btripsanxia\.net
@@ -54700,7 +54698,6 @@
 .*\bwhzydz\.com
 .*\bwhzyht\.com
 .*\bwi799\.com
-.*\bwiblog\.net
 .*\bwicep\.com
 .*\bwicp\.net
 .*\bwicp\.vip
@@ -59925,6 +59922,7 @@
 .*\byongsy\.com
 .*\byongtu\.net
 .*\byongxinby\.com
+.*\byongxinji\.com
 .*\byongxintex\.com
 .*\byongzhentang\.com
 .*\byonho\.com
@@ -61511,6 +61509,7 @@
 .*\bzcsbbs\.com
 .*\bzcskj\.com
 .*\bzctl\.net
+.*\bzctpt\.com
 .*\bzctx\.com
 .*\bzcwlsc\.com
 .*\bzcwxjx\.com
@@ -61534,6 +61533,7 @@
 .*\bzdexe\.com
 .*\bzdface\.com
 .*\bzdfx\.net
+.*\bzdgzc\.com
 .*\bzdh168\.com
 .*\bzdhaitao\.com
 .*\bzdhaitao\.net
