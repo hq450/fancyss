@@ -2676,7 +2676,7 @@ function generate_node_info() {
 					server_prot = json.outbounds.protocol;
 				}
 			}
-			obj["server"] = server_add;
+			obj["server"] = server_addr;
 			obj["protoc"] = server_prot;
 		}
 		if(db_ss[p + "_xray_use_json_" + idx] ==  "1"){
