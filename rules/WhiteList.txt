@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2023-09-27
+-e ## Last update: 2023-09-30
 
 .*\b0-6\.com
 .*\b00\.net
@@ -1842,7 +1842,6 @@
 .*\b2022cdnpl\.com
 .*\b2022pola\.com
 .*\b2023game\.com
-.*\b2029\.cc
 .*\b202m\.com
 .*\b202wan\.com
 .*\b2048sj\.com
@@ -2542,7 +2541,6 @@
 .*\b33aml\.com
 .*\b33app\.net
 .*\b33bus\.com
-.*\b33hei\.com
 .*\b33ip\.com
 .*\b33iq\.com
 .*\b33jianzhi\.com
@@ -5416,7 +5414,6 @@
 .*\b77dushu\.com
 .*\b77ebooks\.com
 .*\b77hd\.com
-.*\b77hei\.com
 .*\b77l\.com
 .*\b77mh\.app
 .*\b77music\.com
@@ -12094,6 +12091,7 @@
 .*\bcapitalcloud\.net
 .*\bcapitalonline\.net
 .*\bcapjoy\.com
+.*\bcaplanking\.com
 .*\bcapsuleshanghai\.com
 .*\bcapvision\.com
 .*\bcapwhale\.com
@@ -16246,6 +16244,7 @@
 .*\bctfmall\.com
 .*\bctfo\.com
 .*\bctfund\.com
+.*\bctg75\.com
 .*\bctghealthy\.com
 .*\bctghr\.com
 .*\bcthhmu\.com
@@ -29087,7 +29086,6 @@
 .*\bindier\.com
 .*\bindmi\.com
 .*\binduta\.com
-.*\bindvaan\.com
 .*\bineice\.com
 .*\binengyuan\.com
 .*\binesa-it\.com
@@ -31722,7 +31720,6 @@
 .*\bjsdaima\.com
 .*\bjsdcly\.com
 .*\bjsdesign1\.com
-.*\bjsdthx\.com
 .*\bjseepub\.com
 .*\bjseoptics\.com
 .*\bjser\.io
@@ -33558,7 +33555,6 @@
 .*\bkuguopush\.com
 .*\bkugz\.net
 .*\bkuhii\.com
-.*\bkuhua\.net
 .*\bkuicc\.com
 .*\bkuihuakeji\.com
 .*\bkuihuo\.com
@@ -33828,7 +33824,6 @@
 .*\blactec\.net
 .*\bladiyoga\.com
 .*\bladjzs\.com
-.*\bladouban\.com
 .*\blady177\.com
 .*\blady361\.com
 .*\blady8844\.com
@@ -39964,7 +39959,6 @@
 .*\bntrcb\.com
 .*\bnttui\.com
 .*\bntuiw\.com
-.*\bntvalumium\.com
 .*\bntwikis\.com
 .*\bntwzy\.com
 .*\bntyswlkj\.com
@@ -40866,7 +40860,6 @@
 .*\bpabulika\.com
 .*\bpacdn\.com
 .*\bpacgatelaw\.com
-.*\bpackage-design\.net
 .*\bpacktom\.com
 .*\bpackty\.com
 .*\bpactera\.com
@@ -41192,7 +41185,6 @@
 .*\bpddcdn\.com
 .*\bpddeu\.com
 .*\bpddim\.com
-.*\bpddjw\.com
 .*\bpddpic\.com
 .*\bpddugc\.com
 .*\bpddzj\.com
@@ -49373,7 +49365,6 @@
 .*\btangrenjv\.com
 .*\btangruiqian\.com
 .*\btangsanshu\.com
-.*\btangshencs\.com
 .*\btangshijun\.com
 .*\btangshuang\.net
 .*\btangshui\.net
@@ -52308,6 +52299,7 @@
 .*\buuzham\.com
 .*\buuzhufu\.com
 .*\buuzo\.net
+.*\buuzone\.com
 .*\buuzu\.com
 .*\buuzuonline\.com
 .*\buuzuonline\.net
@@ -53529,6 +53521,7 @@
 .*\bwboll\.com
 .*\bwbolt\.com
 .*\bwbpvc\.com
+.*\bwbsdz\.com
 .*\bwbsrf\.com
 .*\bwbsz\.com
 .*\bwbtech\.com
