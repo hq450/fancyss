@@ -20,6 +20,7 @@ start_ping(){
 
 	mkdir -p $TMP1
 	rm -rf $TMP1/*
+	mkdir -p $TMP1/result
 
 	# 多线程ping，一次ping $MAX_THREAD 个; armv7比较渣渣，线程数给少点
 	CORES=$(cat /proc/cpuinfo | grep -Ec "processor")
@@ -123,11 +124,17 @@ start_ping(){
 				[ -z "${ping_time}" ] && ping_time="failed"
 				ping_loss=$(echo ${ping_text}|grep loss|awk -F ', ' '{print $3}'|awk '{print $1}')
 				echo "${node_nu}>${ping_time}>${ping_loss}" >>/tmp/upload/ping.txt
+				echo "${node_nu}>${ping_time}>${ping_loss}" > $TMP1/result/${node_nu}.txt
 			} &
 		done
 		wait
 	done
-	wait
+
+	# finished
+	cat $TMP1/result/*.txt >/tmp/upload/ping.txt
+	echo -en "stop>stop\n" >>/tmp/upload/ping.txt
+
+	# write ts
 	local TS_LOG=$(date -r /tmp/upload/ping.txt "+%Y/%m/%d %X")
 	dbus set ss_basic_ping_ts="${TS_LOG}"
 
@@ -537,7 +544,7 @@ test_01_ss(){
 
 				# 3. start curl test
 				curl_test ${nu} ${new_port}
-				sed -i "/testing/d" /tmp/upload/webtest.txt
+				# sed -i "/testing/d" /tmp/upload/webtest.txt
 				
 				# 4. stop ss-local
 				if [ -f "${TMP2}/pids/${nu}.pid" ];then
