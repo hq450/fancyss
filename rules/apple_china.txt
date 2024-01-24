@@ -92,6 +92,7 @@ itunesconnect.apple.com
 mesu-cdn.apple.com.akadns.net
 mesu-china.apple.com.akadns.net
 mesu.apple.com
+ml.cdn-apple.com
 music.apple.com
 ocsp-lb.apple.com.akadns.net
 ocsp.apple.com
