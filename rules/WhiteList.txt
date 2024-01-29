@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2024-01-27
+-e ## Last update: 2024-01-29
 
 .*\b0-6\.com
 .*\b00\.net
@@ -1138,6 +1138,7 @@
 .*\b155\.com
 .*\b155175\.com
 .*\b155idc\.com
+.*\b156669\.com
 .*\b156pay\.com
 .*\b15803\.com
 .*\b1588\.tv
@@ -4983,7 +4984,6 @@
 .*\b6a\.com
 .*\b6aas\.com
 .*\b6abc\.net
-.*\b6acm\.com
 .*\b6an8\.com
 .*\b6api\.net
 .*\b6apt\.com
@@ -5449,7 +5449,6 @@
 .*\b80\.com
 .*\b80\.hk
 .*\b80000\.cc
-.*\b800020308\.com
 .*\b800423\.com
 .*\b800535\.com
 .*\b8006506\.com
@@ -5893,7 +5892,6 @@
 .*\b90576\.com
 .*\b906you\.com
 .*\b90907\.com
-.*\b90bola\.cc
 .*\b90bola\.me
 .*\b90ckm\.com
 .*\b90e\.com
@@ -6464,6 +6462,7 @@
 .*\b99997aaa\.com
 .*\b99998aaa\.com
 .*\b999ask\.com
+.*\b999bb222ww\.com
 .*\b999bj\.com
 .*\b999brain\.com
 .*\b999inandon\.com
@@ -7909,6 +7908,7 @@
 .*\bambition-soft\.com
 .*\bambkct\.com
 .*\bambow\.com
+.*\bamcfortune\.com
 .*\bamchamchina\.org
 .*\bamdotibet\.com
 .*\bamec-inc\.com
@@ -9893,6 +9893,7 @@
 .*\bbertadata\.com
 .*\bberui\.com
 .*\bbes\.ren
+.*\bbeschannels\.com
 .*\bbesclouds\.com
 .*\bbesg-bee\.com
 .*\bbesget\.com
@@ -12025,6 +12026,7 @@
 .*\bccbpension\.com
 .*\bccbride\.com
 .*\bcccbs\.net
+.*\bcccccccccccccccccccccccccccccccccccccccccccccc\.cc
 .*\bcccdun\.com
 .*\bcccf-cloud\.com
 .*\bccchz\.com
@@ -12259,6 +12261,7 @@
 .*\bcddgg\.net
 .*\bcddscj\.com
 .*\bcddsgk\.com
+.*\bcddys\.me
 .*\bcde-os\.com
 .*\bcdedu\.com
 .*\bcdeledu\.com
@@ -12691,6 +12694,7 @@
 .*\bcgyou\.com
 .*\bcgyouxi\.com
 .*\bcgyu\.com
+.*\bcgyx\.tv
 .*\bcgzair\.com
 .*\bcgzy\.net
 .*\bcgzyw\.com
@@ -16544,6 +16548,7 @@
 .*\bdakayi\.cc
 .*\bdakele\.com
 .*\bdalaba\.com
+.*\bdalao\.net
 .*\bdalaosz\.com
 .*\bdalianair-china\.com
 .*\bdalianiso\.com
@@ -17266,7 +17271,6 @@
 .*\bdfysw\.net
 .*\bdfyuan\.com
 .*\bdfyxs\.com
-.*\bdfyydl\.com
 .*\bdfyzx\.com
 .*\bdfzmzyc\.com
 .*\bdfzxvip\.com
@@ -17932,6 +17936,7 @@
 .*\bdnsdizhi\.com
 .*\bdnse0\.com
 .*\bdnse1\.com
+.*\bdnse2\.com
 .*\bdnsfamily\.com
 .*\bdnsfast\.online
 .*\bdnsff\.com
@@ -19090,6 +19095,7 @@
 .*\beayou\.com
 .*\beayuan\.com
 .*\beayyou\.com
+.*\beazhm\.com
 .*\beazytec-cloud\.com
 .*\beb80\.com
 .*\bebadu\.net
@@ -19129,6 +19135,7 @@
 .*\bebtrust\.com
 .*\bebuckler\.com
 .*\bebways\.com
+.*\bebyte\.com
 .*\bec-ae\.com
 .*\bec-cloudtech\.com
 .*\bec-founder\.com
@@ -20016,6 +20023,7 @@
 .*\beugnnn\.com
 .*\beui\.cc
 .*\beuibe\.com
+.*\beuino\.com
 .*\beulike\.com
 .*\beulixos\.com
 .*\beureka\.name
@@ -21820,7 +21828,6 @@
 .*\bfyapi\.net
 .*\bfybiji\.com
 .*\bfybxw\.com
-.*\bfychinago\.com
 .*\bfycpu\.com
 .*\bfydeos\.com
 .*\bfydns360\.net
@@ -36192,6 +36199,7 @@
 .*\bmanibnb\.com
 .*\bmaninmusic\.com
 .*\bmanjiwang\.com
+.*\bmanlaxy\.com
 .*\bmanlinggame\.com
 .*\bmanlongye\.com
 .*\bmanluoni\.com
@@ -37356,6 +37364,7 @@
 .*\bmkstone\.club
 .*\bmktcreator\.com
 .*\bmktdatatech\.com
+.*\bmktzb\.com
 .*\bmktzr\.com
 .*\bmkvcn\.com
 .*\bmkwhat\.com
@@ -41218,6 +41227,7 @@
 .*\bpocomagnetic\.com
 .*\bpocosite\.com
 .*\bpocsuite\.org
+.*\bpodcast\.xyz
 .*\bpodfest\.tech
 .*\bpodinns\.com
 .*\bpodjiasu\.org
@@ -43183,7 +43193,6 @@
 .*\bqycn\.org
 .*\bqycname\.com
 .*\bqydimg\.com
-.*\bqyec\.com
 .*\bqyer\.com
 .*\bqyerstatic\.com
 .*\bqyestar\.com
@@ -44751,6 +44760,7 @@
 .*\bsdqoi2d\.com
 .*\bsdrcu\.com
 .*\bsdrsks\.org
+.*\bsdsf8\.com
 .*\bsdsgwy\.com
 .*\bsdshshb\.com
 .*\bsdsmefina\.com
@@ -51056,6 +51066,7 @@
 .*\buchangdi\.com
 .*\buchiha\.ltd
 .*\buchis\.com
+.*\buchoice\.cc
 .*\buchuanbo\.com
 .*\bucicq\.com
 .*\bucjoy\.com
@@ -52183,6 +52194,7 @@
 .*\bvoole\.com
 .*\bvoole\.net
 .*\bvoopoo\.com
+.*\bvootoo\.net
 .*\bvoovlive\.com
 .*\bvoovmeeting\.com
 .*\bvortexfun\.com
@@ -55433,7 +55445,6 @@
 .*\bxhnews\.net
 .*\bxhostserver\.com
 .*\bxhpfw\.com
-.*\bxhpiano\.com
 .*\bxhqqt\.com
 .*\bxhscdn\.com
 .*\bxhscdn\.net
@@ -60301,6 +60312,8 @@
 .*\bza-doctor\.com
 .*\bzabaow\.com
 .*\bzabeiy\.com
+.*\bzabiuq\.com
+.*\bzabiur\.com
 .*\bzablog\.me
 .*\bzac1993\.com
 .*\bzacaog\.com
@@ -62182,6 +62195,7 @@
 .*\bzmndjm\.com
 .*\bzmnds\.com
 .*\bzmnedu\.com
+.*\bzmneysz\.com
 .*\bzmnoa\.com
 .*\bzmnrz\.com
 .*\bzmobuy\.com
