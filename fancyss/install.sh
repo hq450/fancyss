@@ -327,6 +327,7 @@ install_now(){
 	local TITLE="科学上网 ${PKG_TYPE}"
 	local DESCR="科学上网 ${PKG_TYPE} for AsusWRT/Merlin platform"
 	echo_date "安装版本：${PKG_NAME}_${PLVER}"
+	
 	# stop first
 	local ENABLE=$(dbus get ss_basic_enable)
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
