@@ -27,10 +27,12 @@ backup_tar(){
 	mkdir shadowsocks/webs
 	mkdir shadowsocks/res
 	echo_date "请等待一会儿..."
-	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+")
-	local pkg_arch=$(echo ${pkg_name} | awk -F"_" '{print $2}')
-	local pkg_type=$(echo ${pkg_name} | awk -F"_" '{print $3}')
+	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_exta=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_EXTA=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_vers=$(dbus get ss_basic_version_local)
+	local _pkg_name=${pkg_name}_${pkg_arch}_${pkg_type}${pkg_exta}
 	TARGET_FOLDER=/tmp/shadowsocks
 	cp /koolshare/scripts/ss_install.sh ${TARGET_FOLDER}/install.sh
 	cp /koolshare/scripts/uninstall_shadowsocks.sh ${TARGET_FOLDER}/uninstall.sh
@@ -54,6 +56,9 @@ backup_tar(){
 	cp /koolshare/bin/ss-tunnel ${TARGET_FOLDER}/bin/
 	if [ -x "/koolshare/bin/uredir" ];then
 		cp /koolshare/bin/uredir ${TARGET_FOLDER}/bin/
+	fi
+	if [ -x "/koolshare/bin/websocketd" ];then
+		cp /koolshare/bin/websocketd ${TARGET_FOLDER}/bin/
 	fi
 	if [ "${pkg_type}" != "lite" ];then
 		cp /koolshare/bin/dohclient ${TARGET_FOLDER}/bin/
@@ -82,7 +87,7 @@ backup_tar(){
 	cp /koolshare/res/ss-menu.js ${TARGET_FOLDER}/res/
 	cp /koolshare/res/tablednd.js ${TARGET_FOLDER}/res/
 	cp /koolshare/res/qrcode.js ${TARGET_FOLDER}/res/
-	cp /koolshare/res/shadowsocks.css ${TARGET_FOLDER}/res/
+	cp /koolshare/res/fancyss.css ${TARGET_FOLDER}/res/
 	cp -r /koolshare/ss ${TARGET_FOLDER}/
 	rm -rf ${TARGET_FOLDER}/ss/*.json
 	# arch
@@ -91,8 +96,9 @@ backup_tar(){
 	rm -rf ${TARGET_FOLDER}
 	mv /tmp/shadowsocks.tar.gz /tmp/files
 
-	if [ -n "${pkg_name}" -a -n "${pkg_vers}" ];then
-		ln -sf /tmp/files/shadowsocks.tar.gz /tmp/files/${pkg_name}_${pkg_vers}.tar.gz
+	if [ -n "${_pkg_name}" -a -n "${pkg_vers}" ];then
+		echo_date "打包文件名：${_pkg_name}_${pkg_vers}.tar.gz"
+		ln -sf /tmp/files/shadowsocks.tar.gz /tmp/files/${_pkg_name}_${pkg_vers}.tar.gz
 	fi
 	echo_date "打包完毕！"
 }

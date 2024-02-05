@@ -309,22 +309,23 @@ check_chn_public_ip(){
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(detect_ip ip.clang.cn 5)
+		REMOTE_IP_OUT=$(detect_ip ip.ddnsto.com 5 0)
 		REMOTE_IP_OUT_SRC="ip.ddnsto.com"
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(detect_ip ip.clang.cn 5)
-		REMOTE_IP_OUT=$(curl -4sk --connect-timeout 2 https://ip.clang.cn 2>&1 | grep -v "Terminated" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+		REMOTE_IP_OUT=$(detect_ip https://ip.clang.cn 5 0)
+		#REMOTE_IP_OUT=$(curl -4sk --connect-timeout 2 https://ip.clang.cn 2>&1 | grep -v "Terminated" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+		REMOTE_IP_OUT_SRC="ip.clang.com"
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(detect_ip whatismyip.akamai.com 5)
+		REMOTE_IP_OUT=$(detect_ip whatismyip.akamai.com 5 0)
 		REMOTE_IP_OUT_SRC="whatismyip.akamai.com"
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(curl -4sk --connect-timeout 2 https://api.myip.com 2>&1 | grep -v "Terminated" |run jq -r '.ip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+		REMOTE_IP_OUT=$(curl-fancyss -4sk --connect-timeout 2 http://api.myip.com 2>&1 | grep -v "Terminated" | run jq -r '.ip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 		REMOTE_IP_OUT_SRC="api.myip.com"
 	fi
 
@@ -686,7 +687,6 @@ __get_type_abbr_name() {
 
 __get_server_resolver() {
 	local idx=$1
-	local tye=$2
 	local res
 		# tcp/udp servers
 		# ------------------ 国内 -------------------
@@ -725,11 +725,7 @@ __get_server_resolver() {
 		[ "${idx}" == "18" ] && res="185.228.168.9"
 
 	if [ "${idx}" == "99" ]; then
-		if [ "${tye}" == "tcp" ];then
-			local user_content=${ss_basic_s_resolver_tcp_user}
-		else
-			local user_content=${ss_basic_s_resolver_udp_user}
-		fi
+		local user_content=${ss_basic_server_resolv_user}
 		if [ -n "${user_content}" ];then
 			local res_ip=$(echo "${user_content}"|awk -F"#|:" '{print $1}')
 			local res_ip=$(__valid_ip ${res_ip})
@@ -747,14 +743,9 @@ __get_server_resolver() {
 
 __get_server_resolver_port() {
 	local idx=$1
-	local tye=$2
 	local res
 	if [ "${idx}" == "99" ]; then
-		if [ "${tye}" == "tcp" ];then
-			local user_content=${ss_basic_s_resolver_tcp_user}
-		else
-			local user_content=${ss_basic_s_resolver_udp_user}
-		fi
+		local user_content=${ss_basic_server_resolv_user}
 		if [ -n "${user_content}" ];then
 			local res_port=$(echo "${user_content}"|awk -F"#|:" '{print $2}')
 			local res_port=$(__valid_port ${res_port})
@@ -782,326 +773,114 @@ __resolve_server_domain() {
 		return 2
 	fi
 
-	if [ -z "${ss_basic_s_resolver}" ];then
-		ss_basic_s_resolver=0
-		ss_basic_s_resolver_udp=0
-		dbus set ss_basic_s_resolver=0
-		dbus set ss_basic_s_resolver_udp=0
-	fi
-	# in lite version, smartdns and dohclient may not exist
-	if [ "${ss_basic_s_resolver}" == "2" -a ! -x "/koolshare/bin/smartdns" ];then
-		ss_basic_s_resolver=0
-		ss_basic_s_resolver_udp=0
-		dbus set ss_basic_s_resolver=0
-		dbus set ss_basic_s_resolver_udp=0
-	fi
-	if [ "${ss_basic_s_resolver}" == "3" -a ! -x "/koolshare/bin/dohclient" ];then
-		ss_basic_s_resolver=0
-		ss_basic_s_resolver_udp=0
-		dbus set ss_basic_s_resolver=0
-		dbus set ss_basic_s_resolver_udp=0
+	if [ -z "${ss_basic_server_resolv}" ];then
+		ss_basic_server_resolv="-1"
+		dbus set ss_basic_server_resolv="-1"
 	fi
 
-	# start to resolv
-	if [ "${ss_basic_s_resolver}" == "0" ];then
-		# udp dns lookup
-		if [ "${ss_basic_s_resolver_udp}" -le "0" ];then
-			local count=0
-			local current=${ss_basic_lastru}
-			if [ $(number_test ${current}) != "0" ];then
-				# 如果上次解析成功的DNS不存在，则随机一个
-				if [ "${ss_basic_s_resolver_udp}" == "0" ];then
-					local current=$(shuf -i 1-18 -n 1)
-				elif [ "${ss_basic_s_resolver_udp}" == "-1" ];then
-					local current=$(shuf -i 1-8 -n 1)
-				elif [ "${ss_basic_s_resolver_udp}" == "-2" ];then
-					local current=$(shuf -i 11-18 -n 1)
-				fi
+	# start to resolv, udp dns lookup
+	if [ "${ss_basic_server_resolv}" -le "0" ];then
+		local count=0
+		local current=${ss_basic_lastru}
+		if [ $(number_test ${current}) != "0" ];then
+			# 如果上次解析成功的DNS不存在，则随机一个
+			if [ "${ss_basic_server_resolv}" == "0" ];then
+				local current=$(shuf -i 1-18 -n 1)
+			elif [ "${ss_basic_server_resolv}" == "-1" ];then
+				local current=$(shuf -i 1-8 -n 1)
+			elif [ "${ss_basic_server_resolv}" == "-2" ];then
+				local current=$(shuf -i 11-18 -n 1)
 			fi
-			# check current value
-			if [ "${ss_basic_s_resolver_udp}" == "0" ];then
-				# 国内 + 国外自动选择，区间为 1-7和11-18
+		fi
+		# check current value
+		if [ "${ss_basic_server_resolv}" == "0" ];then
+			# 国内 + 国外自动选择，区间为 1-7和11-18
+			if [ ${current} -gt 8 -a ${current} -lt 11 ];then
+				current=11
+			fi
+			if [ ${current} -lt 1 -o ${current} -gt 18 ];then
+				current=1
+			fi
+		fi
+		if [ "${ss_basic_server_resolv}" == "-1" ];then
+			# 国内自动选择，区间为 1-7
+			if [ ${current} -lt 1 -o ${current} -gt 8 ];then
+				current=1
+			fi
+		fi
+		if [ "${ss_basic_server_resolv}" == "-2" ];then
+			# 国外自动选择，区间为 11-18
+			if [ ${current} -lt 11 -o ${current} -gt 18 ];then
+				current=11
+			fi
+		fi
+		# 只解析一轮
+		until [ ${count} -eq 18 ]; do
+			echo_date "尝试解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current}):$(__get_server_resolver_port ${current})"
+			SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(__valid_ip ${SERVER_IP})
+			if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
+				dbus set ss_basic_lastru=${current}
+				break
+			fi
+			
+			let current++
+			if [ "${ss_basic_server_resolv}" == "0" ];then
 				if [ ${current} -gt 8 -a ${current} -lt 11 ];then
+					echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
 					current=11
 				fi
 				if [ ${current} -lt 1 -o ${current} -gt 18 ];then
 					current=1
+					echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
+				else
+					echo_date "解析失败！自动切换到下一个DNS服务器！"
 				fi
-			fi
-			if [ "${ss_basic_s_resolver_udp}" == "-1" ];then
-				# 国内自动选择，区间为 1-7
+			elif [ "${ss_basic_server_resolv}" == "-1" ];then
 				if [ ${current} -lt 1 -o ${current} -gt 8 ];then
 					current=1
+					echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
+				else
+					echo_date "解析失败！自动切换到国内组列表下一个DNS服务器！"
 				fi
-			fi
-			if [ "${ss_basic_s_resolver_udp}" == "-2" ];then
-				# 国外自动选择，区间为 11-18
+			elif [ "${ss_basic_server_resolv}" == "-2" ];then
 				if [ ${current} -lt 11 -o ${current} -gt 18 ];then
 					current=11
+					echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
+				else
+					echo_date "解析失败！自动切换到国外组列表下一个DNS服务器！"
 				fi
-			fi
-			# 只解析一轮
-			until [ ${count} -eq 18 ]; do
-				echo_date "尝试udp解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current} udp):$(__get_server_resolver_port ${current} udp)"
-				SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${current} udp) -t 2 -i 1 @$(__get_server_resolver ${current} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-				SERVER_IP=$(__valid_ip ${SERVER_IP})
-				if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
-					dbus set ss_basic_lastru=${current}
-					break
-				fi
-				
-				let current++
-				if [ "${ss_basic_s_resolver_udp}" == "0" ];then
-					if [ ${current} -gt 8 -a ${current} -lt 11 ];then
-						echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
-						current=11
-					fi
-					if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-						current=1
-						echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
-					else
-						echo_date "解析失败！自动切换到下一个DNS服务器！"
-					fi
-				elif [ "${ss_basic_s_resolver_udp}" == "-1" ];then
-					if [ ${current} -lt 1 -o ${current} -gt 8 ];then
-						current=1
-						echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
-					else
-						echo_date "解析失败！自动切换到国内组列表下一个DNS服务器！"
-					fi
-				elif [ "${ss_basic_s_resolver_udp}" == "-2" ];then
-					if [ ${current} -lt 11 -o ${current} -gt 18 ];then
-						current=11
-						echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
-					else
-						echo_date "解析失败！自动切换到国外组列表下一个DNS服务器！"
-					fi
-				fi
-				
-				let count++
-			done
-		elif [ "${ss_basic_s_resolver_udp}" == "99" ];then
-			# 自定义udp解析服务器
-			echo_date "尝试udp解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_s_resolver_udp} udp):$(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp)"
-			SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_s_resolver_udp} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
-			if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-				echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
-			fi
-		else
-			# 指定udp解析服务器
-			if [ -z "${ss_basic_s_resolver_udp}" ];then
-				ss_basic_s_resolver_udp=3
-			fi
-			if [ "${ss_basic_s_resolver_udp}" == "2" -a -z "${ISP_DNS2}" ];then
-				# 如果ISPDNS-2不存在，强制使用ISPDNS-1
-				ss_basic_s_resolver_udp=1
-			fi
-			if [ "${ss_basic_s_resolver_udp}" == "1" -a -z "${ISP_DNS1}" ];then
-				# 如果ISPDNS-1不存在，强制使用公共DNS：223.5.5.5
-				ss_basic_s_resolver_udp=3
-			fi
-			echo_date "尝试udp解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_s_resolver_udp}：$(__get_server_resolver ${ss_basic_s_resolver_udp} udp):$(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp)"
-			SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_s_resolver_udp} udp) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_s_resolver_udp} udp) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
-			if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-				echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
-			fi
-		fi
-	elif [ "${ss_basic_s_resolver}" == "1" ];then
-		# tcp dns lookup
-		if [ "${ss_basic_s_resolver_tcp}" -le "0" ];then
-			# tcp 自动模式
-			local count=0
-			local current=${ss_basic_lastrt}
-			if [ $(number_test ${current}) != "0" ];then
-				# 如果上次解析成功的DNS不存在，则随机一个
-				if [ "${ss_basic_s_resolver_tcp}" == "0" ];then
-					local current=$(shuf -i 1-17 -n 1)
-				elif [ "${ss_basic_s_resolver_tcp}" == "-1" ];then
-					local current=$(shuf -i 1-7 -n 1)
-				elif [ "${ss_basic_s_resolver_tcp}" == "-1" ];then
-					local current=$(shuf -i 11-17 -n 1)
-				fi
-			fi
-			# check current value
-			if [ "${ss_basic_s_resolver_tcp}" == "0" ];then
-				# 国内 + 国外自动选择，区间为 1-7和11-18
-				if [ ${current} -gt 7 -a ${current} -lt 11 ];then
-					current=11
-				fi
-				if [ ${current} -lt 1 -o ${current} -gt 17 ];then
-					current=1
-				fi
-			fi
-			if [ "${ss_basic_s_resolver_tcp}" == "-1" ];then
-				# 国内自动选择，区间为 1-7
-				if [ ${current} -lt 1 -o ${current} -gt 7 ];then
-					current=1
-				fi
-			fi
-			if [ "${ss_basic_s_resolver_tcp}" == "-2" ];then
-				# 国外自动选择，区间为 11-17
-				if [ ${current} -lt 11 -o ${current} -gt 17 ];then
-					current=11
-				fi
-			fi			
-			# 只解析一轮
-			until [ ${count} -eq 17 ]; do
-				echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current} tcp):$(__get_server_resolver_port ${current} tcp)"
-				run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${current} tcp)#$(__get_server_resolver_port ${current} tcp)"
-				detect_running_status2 dns2tcp 1054 slient
-				SERVER_IP=$(run dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-				SERVER_IP=$(__valid_ip ${SERVER_IP})
-				if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
-					dbus set ss_basic_lastrt=${current}
-					break
-				fi
-				let current++
-				if [ "${ss_basic_s_resolver_tcp}" == "0" ];then
-					if [ ${current} -gt 7 -a ${current} -lt 11 ];then
-						echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
-						current=11
-					fi
-					if [ ${current} -lt 1 -o ${current} -gt 17 ];then
-						current=1
-						echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
-					else
-						echo_date "解析失败！自动切换到下一个DNS服务器！"
-					fi
-				elif [ "${ss_basic_s_resolver_tcp}" == "-1" ];then
-					if [ ${current} -lt 1 -o ${current} -gt 7 ];then
-						current=1
-						echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
-					else
-						echo_date "解析失败！自动切换到国内组列表下一个DNS服务器！"
-					fi
-				elif [ "${ss_basic_s_resolver_tcp}" == "-2" ];then
-					if [ ${current} -lt 11 -o ${current} -gt 17 ];then
-						current=11
-						echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
-					else
-						echo_date "解析失败！自动切换到国外组列表下一个DNS服务器！"
-					fi
-				fi
-				let count++
-			done
-			local DNS2TCP_PIDS=$(ps | grep dns2tcp | grep -v grep | grep 1054 | awk '{print $1}')
-			kill -9 ${DNS2TCP_PIDS}
-			if [ -z "${SERVER_IP}" ]; then
-				echo_date "列表内的DNS已经尝试一轮，且全部解析失败，不再尝试解析，请检查网络或更换方案！"
-			fi
-		elif [ "${ss_basic_s_resolver_tcp}" == "99" ];then
-			# 自定义tcp解析服务器
-			echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp):$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
-			run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
-			detect_running_status2 dns2tcp 1054 slient
-			SERVER_IP=$(run dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
-			local DNS2TCP_PID=$(ps | grep dns2tcp | grep -v grep | grep 1054 | awk '{print $1}')
-			kill -9 ${DNS2TCP_PID}
-			if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-				echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
-			fi
-		else
-			# 指定tcp解析服务器
-			if [ -z "${ss_basic_s_resolver_tcp}" ];then
-				ss_basic_s_resolver_tcp=3
-			fi
-			if [ "${ss_basic_s_resolver_tcp}" == "2" -a -z "${ISP_DNS2}" ];then
-				# 如果ISPDNS-2不存在，强制使用ISPDNS-1
-				ss_basic_s_resolver_tcp=1
-			fi
-			if [ "${ss_basic_s_resolver_tcp}" == "1" -a -z "${ISP_DNS1}" ];then
-				# 如果ISPDNS-1不存在，强制使用公共DNS：223.5.5.5
-				ss_basic_s_resolver_tcp=3
-			fi
-			echo_date "尝试tcp解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_s_resolver_tcp}：$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp):$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
-			run_bg dns2tcp -L"127.0.0.1#1054" -R"$(__get_server_resolver ${ss_basic_s_resolver_tcp} tcp)#$(__get_server_resolver_port ${ss_basic_s_resolver_tcp} tcp)"
-			detect_running_status2 dns2tcp 1054 slient
-			SERVER_IP=$(run dnsclient -p 1054 -t 2 -i 1 127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
-			local DNS2TCP_PID=$(ps | grep dns2tcp | grep -v grep | grep 1054 | awk '{print $1}')
-			kill -9 ${DNS2TCP_PID}
-			if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-				echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
-			fi
-		fi
-	elif [ "${ss_basic_s_resolver}" == "2" ];then
-			# smartdns(doh + dot)
-			echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用DNS方案为smartdns，如果无法解析，请编辑smartdns配置！"
-			rm -rf /tmp/smartdns*
-			echo_date "开启smartdns，用于节点服务器的域名解析..."
-			if [ -f "/koolshare/ss/rules/smartdns_resolver_doh_user.conf" ];then
-				cp -rf /koolshare/ss/rules/smartdns_resolver_doh_user.conf /tmp/upload/smartdns_resolver_doh.conf
-				run_bg smartdns -S -c /koolshare/ss/rules/smartdns_resolver_doh_user.conf -p /var/run/smartdns_sr.pid
-			else
-				cp -rf /koolshare/ss/rules/smartdns_resolver_doh.conf /tmp/upload/smartdns_resolver_doh.conf
-				run_bg smartdns -S -c /koolshare/ss/rules/smartdns_resolver_doh.conf -p /var/run/smartdns_sr.pid
-			fi	
-			detect_running_status smartdns "/var/run/smartdns_sr.pid"
-
-			SERVER_IP=$(run dnsclient -p 5885 -t 3 -i 1 @127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
-			
-			if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-				echo_date "解析失败！请选择其它节点域名解析方案！"
-			fi
-
-			kill -9 $(cat /var/run/smartdns_sr.pid)
-			rm -rf /var/run/smartdns_sr.pid
-	elif [ "${ss_basic_s_resolver}" == "3" ];then
-			local doh_pid_resv=$(ps -w | grep "dohclient" | grep -v "grep" | grep -E "5885|doh_resv" | awk '{print $1}')
-			local DOHPATH="/dns-query"
-			if [ -z "${doh_pid_resv}" ];then
-				get_dns_doh ${ss_basic_s_resolver_doh}
-				echo_date "尝试解析$(__get_type_abbr_name)域名，方案为dohclient + ${DOHNAME}，如无法解析请切换方案！"
-				local CARGS="addr=${DOHADDR}&host=${DOHHOST}&path=${DOHPATH}&post=0&keep-alive=600&proxy=0&ecs=0"
-				cat >/tmp/doh_resv.conf <<-EOF
-					config cfg
-					    option bind_addr '0.0.0.0'
-					    option bind_port '5885'
-					    option chnroute '/koolshare/ss/rules/chnroute.txt'
-					    option timeout '10'
-					    option log_file '/tmp/doh_resv.log'
-					    option log_level '5'
-					    option cache_timeout '1'
-					    option cache_db '/tmp/doh_resv.db'
-					    option mode '1'
-					    option channel doh
-					    option channel_args '${CARGS}'
-				EOF
-				# use perp to start dohclient
-				mkdir -p /koolshare/perp/doh_resv
-				cat >/koolshare/perp/doh_resv/rc.main <<-EOF
-					#!/bin/sh
-					source /koolshare/scripts/base.sh
-					CMD="dohclient --config=/tmp/doh_resv.conf"
-
-					if test \${1} = 'start' ; then   
-						exec 2>&1
-						exec \$CMD
-					fi
-					exit 0
-					
-				EOF
-				chmod +x /koolshare/perp/doh_resv/rc.main
-				chmod +t /koolshare/perp/doh_resv/
-				sync
-				perpctl A doh_resv >/dev/null 2>&1
-				perpctl u doh_resv >/dev/null 2>&1
-				detect_running_status2 dohclient doh_resv
 			fi
 			
-			SERVER_IP=$(run dnsclient -p 5885 -t 5 -i 1 @127.0.0.1 $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
-
-			if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-				echo_date "解析失败！请选择其它节点域名解析方案！"
-			fi
-
-	elif [ "${ss_basic_s_resolver}" == "4" ];then
-		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用DNS方案为自定义DNS，如果无法解析，请更换DNS！"
+			let count++
+		done
+	elif [ "${ss_basic_server_resolv}" == "99" ];then
+		# 自定义udp解析服务器
+		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
+		SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		SERVER_IP=$(__valid_ip ${SERVER_IP})
+		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
+			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
+		fi
+	else
+		# 指定udp解析服务器
+		if [ -z "${ss_basic_server_resolv}" ];then
+			ss_basic_server_resolv=3
+		fi
+		if [ "${ss_basic_server_resolv}" == "2" -a -z "${ISP_DNS2}" ];then
+			# 如果ISPDNS-2不存在，强制使用ISPDNS-1
+			ss_basic_server_resolv=1
+		fi
+		if [ "${ss_basic_server_resolv}" == "1" -a -z "${ISP_DNS1}" ];then
+			# 如果ISPDNS-1不存在，强制使用公共DNS：223.5.5.5
+			ss_basic_server_resolv=3
+		fi
+		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_server_resolv}：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
+		SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		SERVER_IP=$(__valid_ip ${SERVER_IP})
+		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
+			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
+		fi
 	fi
 
 	# resolve failed
@@ -1172,7 +951,6 @@ restore_conf() {
 	remove_file /tmp/upload/smartdns_smrt_7.conf $?
 	remove_file /tmp/upload/smartdns_smrt_8.conf $?
 	remove_file /tmp/upload/smartdns_smrt_9.conf $?
-	remove_file /tmp/doh_resv.conf $?
 	remove_file /tmp/doh_main.conf $?
 	remove_file /tmp/doh_frn1.conf $?
 	remove_file /tmp/doh_frn2.conf $?
@@ -1295,18 +1073,6 @@ kill_process() {
 	if [ -n "$ud2raw_process" ]; then
 		echo_date "关闭ud2raw进程..."
 		killall udp2raw >/dev/null 2>&1
-	fi
-
-	local doh_pid_resv=$(ps -w | grep "dohclient" | grep -v "grep" | grep -E "5885|doh_resv" | awk '{print $1}')
-	if [ -n "${doh_pid_resv}" -a "${ss_basic_s_resolver}" != "3" -o "${ss_basic_enable}" != "1" ]; then
-		echo_date "关闭用于节点域名解析的dohclient进程..."
-		[ -f "/koolshare/perp/doh_resv/rc.main" ] && perpctl d doh_resv >/dev/null 2>&1
-		rm -rf /koolshare/perp/doh_resv
-		kill -9 ${doh_pid_resv} >/dev/null 2>&1
-		rm -rf /tmp/doh_resv.conf  >/dev/null 2>&1
-		rm -rf /tmp/doh_resv.db >/dev/null 2>&1
-		rm -rf /tmp/doh_resv.log >/dev/null 2>&1
-		rm -rf /var/run/doh_resv.pid >/dev/null 2>&1
 	fi
 
 	local doh_pid_chn1=$(ps -w | grep "dohclient" | grep -v "grep" | grep -E "1056|doh_chn1" | awk '{print $1}')
@@ -3304,9 +3070,23 @@ create_dnsmasq_conf() {
 			echo "${ROUTER_DOMAIN}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/router/g" >>/tmp/wblist.conf
 		done
 	fi
+	
+	# 4.1 append udp black domain list for GPTmode, through proxy
+	local GPT_DOMAINS=$(cat /koolshare/ss/rules/udplist.txt)
+	if [ "${ss_basic_udpgpt}"  == "1" ];then
+		echo "# -------- for udp --------" >>/tmp/wblist.conf
+		for GPT_DOMAIN in ${GPT_DOMAINS}
+		do
+			echo "${GPT_DOMAIN}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
+			echo "${GPT_DOMAIN}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/chatgpt/g" >>/tmp/wblist.conf
+		done
+	fi
 
-	# 4. append black domain list, through proxy
+	# 4.2 append black domain list, through proxy
 	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
+	if [ "${ss_basic_proxy_newb}" == "1" ];then
+		local wanblackdomains="${wanblackdomains} bing.com"
+	fi
 	if [ -n "${ss_wan_black_domain}" ]; then
 		echo_date "生成域名黑名单！"
 		echo "# -------- for black_domain --------" >>/tmp/wblist.conf
@@ -3335,7 +3115,7 @@ create_dnsmasq_conf() {
 			fi
 		done
 	fi
-
+	
 	# 5. append white domain list, not through proxy
 	# gfwlist模式
 	#    走代理的只有gfwlist名单内域名，所以不走代理就是希望其中一些域名不翻墙（且国内也访问不了），比如一些黄色网站，所以应该用国内DNS去解析
@@ -4078,7 +3858,7 @@ creat_v2ray_json() {
 					},
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "127.0.0.1",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -4103,7 +3883,7 @@ creat_v2ray_json() {
 				"inbounds": [
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "127.0.0.1",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -4211,7 +3991,7 @@ creat_v2ray_json() {
 									},
 									{
 										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"127.0.0.1\",
 										\"protocol\": \"socks\",
 										\"settings\": {
 											\"auth\": \"noauth\",
@@ -4242,7 +4022,7 @@ creat_v2ray_json() {
 								\"inbounds\": [
 									{
 										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"127.0.0.1\",
 										\"protocol\": \"socks\",
 										\"settings\": {
 											\"auth\": \"noauth\",
@@ -4673,7 +4453,7 @@ creat_xray_json() {
 					},
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "127.0.0.1",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -4698,7 +4478,7 @@ creat_xray_json() {
 				"inbounds": [
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "127.0.0.1",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -4820,7 +4600,7 @@ creat_xray_json() {
 									},
 									{
 										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"127.0.0.1\",
 										\"protocol\": \"socks\",
 										\"settings\": {
 											\"auth\": \"noauth\",
@@ -4851,7 +4631,7 @@ creat_xray_json() {
 								\"inbounds\": [
 									{
 										\"port\": 23456,
-										\"listen\": \"0.0.0.0\",
+										\"listen\": \"127.0.0.1\",
 										\"protocol\": \"socks\",
 										\"settings\": {
 											\"auth\": \"noauth\",
@@ -5055,7 +4835,7 @@ creat_trojan_json(){
 					},
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "127.0.0.1",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -5080,7 +4860,7 @@ creat_trojan_json(){
 				"inbounds": [
 					{
 						"port": 23456,
-						"listen": "0.0.0.0",
+						"listen": "127.0.0.1",
 						"protocol": "socks",
 						"settings": {
 							"auth": "noauth",
@@ -5414,7 +5194,11 @@ flush_nat() {
 		iptables -t mangle -D PREROUTING $mangle_index >/dev/null 2>&1
 	done
 	iptables -t mangle -F SHADOWSOCKS >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS >/dev/null 2>&1
+	iptables -t mangle -F SHADOWSOCKS_GPT >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GPT >/dev/null 2>&1
+	iptables -t mangle -F SHADOWSOCKS_GFW >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GFW >/dev/null 2>&1
+	iptables -t mangle -F SHADOWSOCKS_CHN >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_CHN >/dev/null 2>&1
 	iptables -t mangle -F SHADOWSOCKS_GAM >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GAM >/dev/null 2>&1
+	iptables -t mangle -F SHADOWSOCKS_GLO >/dev/null 2>&1 && iptables -t mangle -X SHADOWSOCKS_GLO >/dev/null 2>&1
 	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 >/dev/null 2>&1
 	iptables -t nat -F OUTPUT >/dev/null 2>&1
 	iptables -t nat -X SHADOWSOCKS_EXT >/dev/null 2>&1
@@ -5425,6 +5209,7 @@ flush_nat() {
 	ipset -F white_list >/dev/null 2>&1 && ipset -X white_list >/dev/null 2>&1
 	ipset -F black_list >/dev/null 2>&1 && ipset -X black_list >/dev/null 2>&1
 	ipset -F gfwlist >/dev/null 2>&1 && ipset -X gfwlist >/dev/null 2>&1
+	ipset -F chatgpt >/dev/null 2>&1 && ipset -X chatgpt >/dev/null 2>&1
 	ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
 	#remove_redundant_rule
 	ip_rule_exist=$(ip rule show | grep "lookup 310" | grep -c 310)
@@ -5446,6 +5231,7 @@ creat_ipset() {
 	echo_date 创建ipset名单
 	ipset -! create white_list nethash && ipset flush white_list
 	ipset -! create black_list nethash && ipset flush black_list
+	ipset -! create chatgpt nethash && ipset flush chatgpt
 	ipset -! create gfwlist nethash && ipset flush gfwlist
 	ipset -! create router nethash && ipset flush router
 	ipset -! create chnroute nethash && ipset flush chnroute
@@ -5475,12 +5261,12 @@ add_white_black_ip() {
 	[ -n "${IFIP_DNS2}" ] && ISP_DNS_b="${ISP_DNS2}" || ISP_DNS_b=""
 	local ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 ${ISP_DNS_a} ${ISP_DNS_b} ${SBSI} $(get_wan0_cidr)"
 	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
-		ss_wan_white_ip=$(echo ${ss_wan_white_ip} | base64_decode | sed '/\#/d')
-		echo_date "应用IP/CIDR白名单"
-		for ip in ${ss_wan_white_ip} ${ALL_NODE_DOMAINS} ${ip_lan}
-		do
-			ipset -! add white_list $ip >/dev/null 2>&1
-		done
+	ss_wan_white_ip=$(echo ${ss_wan_white_ip} | base64_decode | sed '/\#/d')
+	echo_date "应用IP/CIDR白名单"
+	for ip in ${ss_wan_white_ip} ${ALL_NODE_DOMAINS} ${ip_lan}
+	do
+		ipset -! add white_list $ip >/dev/null 2>&1
+	done
 }
 
 get_action_chain() {
@@ -5566,13 +5352,23 @@ lan_acess_control() {
 			fi
 			# 1 acl in SHADOWSOCKS for nat
 			iptables -t nat -A SHADOWSOCKS $(factor $ipaddr "-s") -p tcp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
+			
 			# 2 acl in OUTPUT（used by koolproxy）
 			iptables -t nat -A SHADOWSOCKS_EXT -p tcp $(factor $ports "-m multiport --dport") -m mark --mark "$ipaddr_hex" -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
+			
 			# 3 acl in SHADOWSOCKS for mangle
-			if [ "$proxy_mode" == "3" ]; then
-				iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
+			if [ "$proxy_mode" != "0" ];then
+				if [ "$ss_basic_udpoff" == "1" ];then
+					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+				fi
+				if [ "$ss_basic_udpall" == "1" ];then
+					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
+				fi
+				if [ "$ss_basic_udpgpt" == "1" ];then
+					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -j SHADOWSOCKS_GPT
+				fi
 			else
-				[ "$mangle" == "1" ] && iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+				iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
 			fi
 		done
 
@@ -5619,6 +5415,7 @@ dns_hijack_control() {
 apply_nat_rules() {
 	#----------------------BASIC RULES---------------------
 	echo_date 写入iptables规则到nat表中...
+	
 	# 创建SHADOWSOCKS nat rule
 	iptables -t nat -N SHADOWSOCKS
 
@@ -5628,58 +5425,93 @@ apply_nat_rules() {
 	
 	# 扩展
 	iptables -t nat -N SHADOWSOCKS_EXT
-	# IP/cidr/白域名 白名单控制（不走ss）
+	
+	# IP/cidr/白域名 白名单控制（不go proxy）
 	iptables -t nat -A SHADOWSOCKS -p tcp -m set --match-set white_list dst -j RETURN
 	iptables -t nat -A SHADOWSOCKS_EXT -p tcp -m set --match-set white_list dst -j RETURN
+	
 	#-----------------------FOR GLOABLE---------------------
 	# 创建gfwlist模式nat rule
 	iptables -t nat -N SHADOWSOCKS_GLO
-	# IP黑名单控制-gfwlist（走ss）
+	# IP黑名单控制-gfwlist（go proxy）
 	iptables -t nat -A SHADOWSOCKS_GLO -p tcp -j REDIRECT --to-ports 3333
+	
 	#-----------------------FOR GFWLIST---------------------
 	# 创建gfwlist模式nat rule
 	iptables -t nat -N SHADOWSOCKS_GFW
-	# IP/CIDR/黑域名 黑名单控制（走ss）
+	# IP/CIDR/黑域名 黑名单控制（go proxy）
 	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# IP黑名单控制-gfwlist（走ss）
+	# IP黑名单控制-gfwlist（go proxy）
 	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
+	
 	#-----------------------FOR CHNMODE---------------------
 	# 创建大陆白名单模式nat rule
 	iptables -t nat -N SHADOWSOCKS_CHN
-	# IP/CIDR/域名 黑名单控制（走ss）
+	# IP/CIDR/域名 黑名单控制（go proxy）
 	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（走ss）
+	# cidr黑名单控制-chnroute（go proxy）
 	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 3333
+	
 	#-----------------------FOR GAMEMODE---------------------
 	# 创建游戏模式nat rule
 	iptables -t nat -N SHADOWSOCKS_GAM
-	# IP/CIDR/域名 黑名单控制（走ss）
+	# IP/CIDR/域名 黑名单控制（go proxy）
 	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（走ss）
+	# cidr黑名单控制-chnroute（go proxy）
 	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 3333
+	
 	#-----------------------FOR HOMEMODE---------------------
 	# 创建回国模式nat rule
 	iptables -t nat -N SHADOWSOCKS_HOM
-	# IP/CIDR/域名 黑名单控制（走ss）
+	# IP/CIDR/域名 黑名单控制（go proxy）
 	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（走ss）
+	# cidr黑名单控制-chnroute（go proxy）
 	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set chnroute dst -j REDIRECT --to-ports 3333
 
-	[ "$mangle" == "1" ] && load_tproxy
-	[ "$mangle" == "1" ] && ip rule add fwmark 0x07 table 310
-	[ "$mangle" == "1" ] && ip route add local 0.0.0.0/0 dev lo table 310
+	load_tproxy
+	ip rule add fwmark 0x07 table 310
+	ip route add local 0.0.0.0/0 dev lo table 310
 	# 创建游戏模式udp rule
-	[ "$mangle" == "1" ] && iptables -t mangle -N SHADOWSOCKS
-	# IP/cidr/白域名 白名单控制（不走ss）
-	[ "$mangle" == "1" ] && iptables -t mangle -A SHADOWSOCKS -p udp -m set --match-set white_list dst -j RETURN
+	iptables -t mangle -N SHADOWSOCKS
+	# IP/cidr/白域名 白名单控制（不go proxy）
+	iptables -t mangle -A SHADOWSOCKS -p udp -m set --match-set white_list dst -j RETURN
+
+	# 创建GPT模式udp rule
+	iptables -t mangle -N SHADOWSOCKS_GPT
+	# IP/CIDR/域名 黑名单控制（go proxy）
+	# iptables -t mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# ipset黑名单控制-chatgpt（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set chatgpt dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+
+	# 创建gfw模式udp rule
+	iptables -t mangle -N SHADOWSOCKS_GFW
+	# IP/CIDR/域名 黑名单控制（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# ipset黑名单控制-gfwlist（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+
+	# 创建白名单模式udp rule
+	iptables -t mangle -N SHADOWSOCKS_CHN
+	# IP/CIDR/域名 黑名单控制（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# cidr黑名单控制-chnroute（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+
 	# 创建游戏模式udp rule
-	[ "$mangle" == "1" ] && iptables -t mangle -N SHADOWSOCKS_GAM
-	# IP/CIDR/域名 黑名单控制（走ss）
-	[ "$mangle" == "1" ] && iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# cidr黑名单控制-chnroute（走ss）
-	[ "$mangle" == "1" ] && iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	iptables -t mangle -N SHADOWSOCKS_GAM
+	# IP/CIDR/域名 黑名单控制（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# cidr黑名单控制-chnroute（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+
+	# 创建glo模式udp rule
+	iptables -t mangle -N SHADOWSOCKS_GLO
+	# IP/CIDR/域名 黑名单控制（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GLO -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# cidr黑名单控制-chnroute（go proxy）
+	iptables -t mangle -A SHADOWSOCKS_GLO -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	#-------------------------------------------------------
-	# 局域网黑名单（不走ss）/局域网黑名单（走ss）
+	# 局域网黑名单（不go proxy）/局域网黑名单（go proxy）
 	lan_acess_control
 	# DNS 劫持
 	dns_hijack_control
@@ -5690,19 +5522,37 @@ apply_nat_rules() {
 
 	# 把最后剩余流量重定向到相应模式的nat表中对应的主模式的链
 	iptables -t nat -A SHADOWSOCKS -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	
 	iptables -t nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 
-	# 如果是主模式游戏模式，则把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM链
-	# 如果主模式不是游戏模式，则不需要把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM，不然会造成其他模式主机的udp也走游戏模式
-	###[ "$mangle" == "1" ] && ss_acl_default_mode=3
-	[ "$ss_acl_default_mode" != "0" -a "$ss_acl_default_mode" != "3" ] && ss_acl_default_mode=0
-	[ "$ss_basic_mode" == "3" ] && iptables -t mangle -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
+	if [ "$ss_basic_mode" == "3" ];then
+		# 如果是主模式游戏模式，则把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM链
+		if [ "$ss_acl_default_mode" == "3" ];then
+			iptables -t mangle -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GAM
+		else
+			iptables -t mangle -A SHADOWSOCKS -p udp -j RETURN
+		fi
+	else
+		# 如果主模式不是游戏模式，则不需要把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM，不然会造成其他模式主机的udp也走游戏模式
+		if [ "$ss_basic_udpoff" == "1" ];then
+			iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+		fi
+		
+		if [ "$ss_basic_udpall" == "1" ];then
+			iptables -t mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+		fi
+
+		if [ "$ss_basic_udpgpt" == "1" ];then
+			iptables -t mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j SHADOWSOCKS_GPT
+		fi
+	fi
+	
 	# 重定所有流量到 SHADOWSOCKS
 	KP_NU=$(iptables -nvL PREROUTING -t nat | sed 1,2d | sed -n '/KOOLPROXY/=' | head -n1)
 	[ "$KP_NU" == "" ] && KP_NU=0
 	INSET_NU=$(expr "$KP_NU" + 1)
 	iptables -t nat -I PREROUTING "$INSET_NU" -p tcp -j SHADOWSOCKS
-	[ "$mangle" == "1" ] && iptables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS
+	[ "$mangle" != "0" ] && iptables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS
 
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		echo_date "开启DNS劫持功能功能，防止DNS污染..."
@@ -5903,6 +5753,7 @@ stop_status() {
 		kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 		kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 		killall curl >/dev/null 2>&1
+		killall curl-fancyss >/dev/null 2>&1
 		killall httping >/dev/null 2>&1
 		rm -rf /tmp/upload/ss_status.txt
 	fi
@@ -6024,17 +5875,17 @@ check_chn_dns(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		REMOTE_IP_FRN=$(detect_ip icanhazip.com 5)
+		REMOTE_IP_FRN=$(detect_ip icanhazip.com 5 1)
 		REMOTE_IP_FRN_SRC="icanhazip.com"
 	fi
 	
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		REMOTE_IP_FRN=$(detect_ip ipecho.net/plain 5)
+		REMOTE_IP_FRN=$(detect_ip ipecho.net/plain 5 1)
 		REMOTE_IP_FRN_SRC="ipecho.net/plain"
 	fi
 
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		REMOTE_IP_FRN=$(detect_ip ip.sb 5)
+		REMOTE_IP_FRN=$(detect_ip ip.sb 5 1)
 		REMOTE_IP_FRN_SRC="ip.sb"
 	fi
 
@@ -6245,6 +6096,11 @@ check_status() {
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
 		run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
 	fi
+
+	# 对一些域名进行预解析，如果本地有解析缓存，解析没有走路由器，则ipset没有写入导致无法走代理，所以一些域名可以预解析一次
+	run_bg dnsclient -t 5 -i 2 @127.0.0.1 openai.com
+	run_bg dnsclient -t 5 -i 2 @127.0.0.1 chat.openai.com
+	run_bg dnsclient -t 5 -i 2 @127.0.0.1 stun.syncthing.net
 }
 
 disable_ss() {
@@ -6358,6 +6214,14 @@ get_status() {
 	iptables -nvL SHADOWSOCKS_GLO -t nat
 }
 
+start_ws(){
+	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket.sh" ];then
+		if [ -z "$(pidof websocketd)" ];then
+			run_bg websocketd --port=803 /bin/sh /koolshare/ss/websocket.sh
+		fi
+	fi
+}
+
 # =========================================================================
 
 case $ACTION in
@@ -6367,6 +6231,7 @@ start)
 		logger "[软件中心]: 启动科学上网插件！"
 		apply_ss >>"$LOG_FILE"
 		#get_status >> /tmp/upload/test.txt
+		start_ws
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
 	fi
@@ -6386,7 +6251,7 @@ restart)
 	set_lock
 	donwload_binary
 	apply_ss
-	#sleep 200
+	start_ws
 	echo_date
 	echo_date "Across the Great Wall we can reach every corner in the world!"
 	echo_date

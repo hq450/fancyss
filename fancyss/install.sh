@@ -10,6 +10,10 @@ DIR=$(cd $(dirname $0); pwd)
 module=${DIR##*/}
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
+run_bg(){
+	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
+}
+
 get_model(){
 	local ODMPID=$(nvram get odmpid)
 	local PRODUCTID=$(nvram get productid)
@@ -327,7 +331,6 @@ install_now(){
 	local TITLE="科学上网 ${PKG_TYPE}"
 	local DESCR="科学上网 ${PKG_TYPE} for AsusWRT/Merlin platform"
 	echo_date "安装版本：${PKG_NAME}_${PLVER}"
-	
 	# stop first
 	local ENABLE=$(dbus get ss_basic_enable)
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
@@ -385,10 +388,11 @@ install_now(){
 	rm -rf /koolshare/res/tablednd.js
 
 	rm -rf /koolshare/res/shadowsocks.css
+	rm -rf /koolshare/res/fancyss.css
 	find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 	find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
-	# optional file maybe exist should be removed
+	# optional file maybe exist should be removed, do not remove on install
 	# rm -rf /koolshare/bin/sslocal
 	# rm -rf /koolshare/bin/dig
 
@@ -425,9 +429,12 @@ install_now(){
 		sync
 	fi
 
-	# some file do not need to install
+	# some file in package no not need to install
 	if [ -n "$(which socat)" ];then
 		rm -rf /tmp/shadowsocks/bin/uredir
+	fi
+	if [ -f "/koolshrae/bin/websocketd" ];then
+		rm -rf /tmp/shadowsocks/bin/websocketd
 	fi
 
 	# 检测储存空间是否足够
@@ -468,6 +475,13 @@ install_now(){
 	chmod 755 /koolshare/scripts/ss* >/dev/null 2>&1
 	chmod 755 /koolshare/bin/* >/dev/null 2>&1
 
+	# start some process before fancyss start
+	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket.sh" ];then
+		if [ -z "$(pidof websocketd)" ];then
+			run_bg websocketd --port=803 /bin/sh /koolshare/ss/websocket.sh
+		fi
+	fi
+	
 	# intall different UI
 	set_skin
 
@@ -534,6 +548,11 @@ install_now(){
 			[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
 		fi
 	fi
+
+	[ -z "${ss_basic_proxy_newb}" ] && dbus set ss_basic_proxy_newb=1
+	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=0
+	[ -z "${ss_basic_udpall}" ] && dbus set ss_basic_udpall=0
+	[ -z "${ss_basic_udpgpt}" ] && dbus set ss_basic_udpgpt=1
 
 	if [ "${ss_disable_aaaa}" != "1" ];then
 		dbus set ss_basic_chng_no_ipv6=0

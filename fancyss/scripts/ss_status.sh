@@ -8,6 +8,7 @@ LOGFILE_C=/tmp/upload/ssc_status.txt
 LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 CURRENT=$(dbus get ssconf_basic_node)
+HEART_STATUS=$(dbus get ss_heart_beat)
 eval $(dbus export ss_failover_enable)
 CHN_TEST_SITE=$(dbus get ss_basic_wt_curl)
 FRN_TEST_SITE=$(dbus get ss_basic_wt_furl)
@@ -55,9 +56,9 @@ get_foreign_status(){
 		# get foreign status through 23456 socks5 port (resolve test server domain in local)
 		local ret0=$(run curl-fancyss -o /dev/null -s -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 	else
-		# get foreign status through transparent proxy (resolve test server domain in local)
-		# local ret0=$(run curl-fancyss -o /dev/null -s -I --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 		log1='国外链接 【'${LOGTIME}'】 <font color='#FF0000'>X</font>'
+		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"
+		[ "${ss_failover_enable}" == "1" ] && echo ${ret1} >> ${LOGFILE_F}
 		return 0
 	fi
 	
@@ -87,20 +88,66 @@ get_foreign_status(){
 	fi
 }
 
-[ -n "$(ps|grep ssconfig.sh|grep -v grep)" ] && exit
-[ "$(dbus get ss_basic_enable)" != "1" ] && exit
-
-if [ "${ss_failover_enable}" == "1" ];then
-	get_china_status $1
-	get_foreign_status $1
-	echo "${log1}@@${log2}" | base64_encode >/tmp/upload/ss_status.txt
-else
-	if [ "$(dbus get ss_basic_wait)" == "1" ];then
-		log1="国外链接 【${LOGTIME}】：等待..."
-		log2="国内链接 【${LOGTIME}】：等待..."
-	else
-		get_china_status $1
-		get_foreign_status $1
+prepare(){
+	# 1. exit when fancyss not enabled
+	local fancyss_enable=$(dbus get ss_basic_enable)
+	if [ "${fancyss_enable}" != "1" ];then
+		exit
 	fi
-	http_response $(echo "${log1}@@${log2}" | base64_encode)
-fi
+	
+	# 2. exit when ssconfig.sh is running
+	local _ssconfig=$(ps | grep "ssconfig.sh" | grep -v grep)
+	if [ -n "${_ssconfig}" ];then
+		exit
+	fi
+
+	# 3. kill all other ss_status.sh process if exist
+	local current_pid=$$
+	local ss_status_pids=$(ps | grep -E "ss_status\.sh" | awk '{print $1}'| grep -v ${current_pid})
+	if [ -n "${ss_status_pids}" ];then
+		for ss_status_pid in ${ss_status_pids}
+		do
+			kill -9 ${ss_status_pid} >/dev/null 2>&1
+		done
+	fi
+
+	# 4. killall curl-fancyss
+	killall curl-fancyss
+	local fancyss_pids=$(ps | grep "curl-fancyss" | grep -v "grep" | grep -E "${CHN_TEST_SITE}|${FRN_TEST_SITE}" | awk '{print $1}')
+	if [ -n "${fancyss_pids}" ];then
+		for fancyss_pid in ${fancyss_pids}
+		do
+			kill -9 ${fancyss_pid} >/dev/null 2>&1
+		done
+	fi
+}
+
+case $1 in
+	ws)
+		if [ "$(dbus get ss_basic_wait)" == "1" ];then
+			log1="国外链接 【${LOGTIME}】：等待..."
+			log2="国内链接 【${LOGTIME}】：等待..."
+		else
+			get_china_status $1
+			get_foreign_status $1
+		fi
+		echo "${log1}@@${log2}"
+	;;
+	*)
+		if [ "${ss_failover_enable}" == "1" ];then
+			get_china_status $1
+			get_foreign_status $1
+			echo -e -n  "${log1}@@${log2}@@${HEART_STATUS}\n" >/tmp/upload/ss_status.txt
+		else
+			if [ "$(dbus get ss_basic_wait)" == "1" ];then
+				log1="国外链接 【${LOGTIME}】：等待..."
+				log2="国内链接 【${LOGTIME}】：等待..."
+			else
+				get_china_status $1
+				get_foreign_status $1
+			fi
+			http_response $(echo "${log1}@@${log2}")
+		fi
+	;;
+esac
+

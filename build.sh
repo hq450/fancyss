@@ -54,7 +54,7 @@ gen_folder(){
 	rm -rf shadowsocks
 	cp -rf fancyss shadowsocks
 
-	# different platform
+	# different platform	
 	if [ "${platform}" == "hnd" ];then
 		rm -rf ./shadowsocks/bin-arm
 		rm -rf ./shadowsocks/bin-hnd_v8
@@ -62,13 +62,9 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin-mtk
 		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
+		rm -rf ./shadowsocks/bin/websocketd
 		echo hnd > ./shadowsocks/.valid
-		if [ "${release_type}" == "debug" ];then
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		else
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
-			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		fi
+		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"hnd\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "hnd_v8" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -78,12 +74,7 @@ gen_folder(){
 		mv ./shadowsocks/bin-hnd_v8 ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		echo hnd_v8 > ./shadowsocks/.valid
-		if [ "${release_type}" == "debug" ];then
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		else
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
-			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_hnd_v8_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		fi
+		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"hnd_v8\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "qca" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -93,29 +84,20 @@ gen_folder(){
 		mv ./shadowsocks/bin-qca ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		echo qca > ./shadowsocks/.valid
-		if [ "${release_type}" == "debug" ];then
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_qca_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		else
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_qca_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
-			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_qca_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		fi
+		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"qca\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "arm" ];then
 		rm -rf ./shadowsocks/bin-hnd
 		rm -rf ./shadowsocks/bin-hnd_v8
 		rm -rf ./shadowsocks/bin-qca
 		rm -rf ./shadowsocks/bin-mtk
+		rm -rf ./shadowsocks/bin/websocketd
 		mv ./shadowsocks/bin-arm ./shadowsocks/bin
 		echo arm > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		if [ "${release_type}" == "debug" ];then
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_arm_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		else
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_arm_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
-			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_arm_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp		
-		fi
+		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"arm\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "mtk" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -126,12 +108,14 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/uredir
 		rm -rf ./shadowsocks/bin/README.md
 		echo mtk > ./shadowsocks/.valid
-		if [ "${release_type}" == "debug" ];then
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_full_debug/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		else
-			[ "${pkgtype}" == "full" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_full/g' ./shadowsocks/webs/Module_shadowsocks.asp
-			[ "${pkgtype}" == "lite" ] && sed -i 's/fancyss_platform_type/fancyss_mtk_lite/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		fi
+		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"mtk\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
+	fi
+
+	if [ "${release_type}" != "debug" ];then
+		sed -i 's/PKG_EXTA=\"_debug\"/PKG_EXTA=\"\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
+	fi
+	if [ "${pkgtype}" == "lite" ];then
+		sed -i 's/var PKG_TYPE=\"full\"/var PKG_TYPE=\"lite\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	
 	if [ "${pkgtype}" == "full" ];then
@@ -156,9 +140,13 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/dohclient
 		rm -rf ./shadowsocks/bin/dohclient-cache
 		rm -rf ./shadowsocks/bin/naive
-		rm -rf ./shadowsocks/bin/tuic
+		rm -rf ./shadowsocks/bin/tuic-client
 		rm -rf ./shadowsocks/bin/ipt2socks
 		rm -rf ./shadowsocks/bin/haveged
+
+		if [ "${platform}" == "hnd_v8" ];then
+			rm -rf ./shadowsocks/bin/websocketd
+		fi
 		# remove scripts
 		rm -rf ./shadowsocks/scripts/ss_lb_config.sh
 		rm -rf ./shadowsocks/scripts/ss_v2ray.sh

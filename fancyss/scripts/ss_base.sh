@@ -53,7 +53,7 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 # 3 v2ray
 # 4 xray
 # 5 trojan
-# 6 naive
+# 6 naive (不支持udp)
 
 cur_node=$(dbus get ssconf_basic_node)
 base_1="name type mode server port method password ss_obfs ss_obfs_host ss_v2ray ss_v2ray_opts rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_prot xray_alterid xray_json tuic_json"
@@ -82,14 +82,49 @@ else
 	DNS_PLAN=2
 fi
 
-# udp代理
-if [ -n "${game_on}" -o "${ss_basic_mode}" == "3" ];then
+# ---------------------- udp代理 ----------------------
+# 1. 非游戏模式，访问控制内无游戏模式，且关闭了udp代理	（当前模式 off udp）
+# 2. 非游戏模式，访问控制内无游戏模式，且开启了udp代理	（当前模式 all udp）
+# 3. 非游戏模式，访问控制内无游戏模式，且开启了gpt代理	（当前模式 gpt udp）
+
+# 1. 非游戏模式，访问控制内有游戏模式，且关闭了udp代理	（当前模式 off udp + 游戏模式 all udp）
+# 2. 非游戏模式，访问控制内有游戏模式，且开启了udp代理	（当前模式 all udp + 游戏模式 all udp）
+# 3. 非游戏模式，访问控制内有游戏模式，且开启了gpt代理	（当前模式 gpt udp + 游戏模式 all udp）
+
+# 1. 游戏模式，访问控制内无其他模式，且关闭了udp代理	（游戏模式 all udp）
+# 2. 游戏模式，访问控制内无其他模式，且开启了udp代理	（游戏模式 all udp）
+# 3. 游戏模式，访问控制内无其他模式，且开启了gpt代理	（游戏模式 all udp）
+
+# 1. 游戏模式，访问控制内有其他模式，且关闭了udp代理	（游戏模式 all udp + 其他模式 off udp）
+# 2. 游戏模式，访问控制内有其他模式，且开启了udp代理	（游戏模式 all udp + 其他模式 all udp）
+# 3. 游戏模式，访问控制内有其他模式，且开启了gpt代理	（游戏模式 all udp + 其他模式 gpt udp）
+
+# 默认不开启udp
+mangle=0
+
+if [ "${ss_basic_mode}" == "3" ];then
+	# 游戏模式下启用udp
 	mangle=1
 fi
 
-if [ "${ss_basic_type}" == "6" -a "${ss_basic_mode}" == "3" ];then
+# 访问控制内有主机开启了游戏模式
+if [ -n "${game_on}" ];then
+	mangle=1
+fi
+
+if [ "${ss_basic_udpall}" == "1" ];then
+	mangle=1
+fi
+
+if [ "${ss_basic_udpgpt}" == "1" ];then
+	mangle=1
+fi
+
+# naive 节点不支持udp
+if [ "${ss_basic_type}" == "6" ];then
 	mangle=0
 fi
+
 
 if [ "${ss_basic_type}" == "6" ];then
 	ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)

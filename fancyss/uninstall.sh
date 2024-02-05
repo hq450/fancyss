@@ -2,9 +2,13 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 
+# stop process
 sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
+
+# remove configure
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
 
+# remove files
 rm -rf /koolshare/scripts/ss_*
 rm -rf /koolshare/webs/Module_shadowsocks*
 rm -rf /koolshare/bin/ss-redir
@@ -48,6 +52,7 @@ rm -rf /koolshare/res/tablednd.js
 rm -rf /koolshare/ss
 
 rm -rf /koolshare/res/shadowsocks.css
+rm -rf /koolshare/res/fancyss.css
 find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 

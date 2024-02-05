@@ -84,6 +84,33 @@ start_fancyss(){
 	echo XU6J03M6
 }
 
+# call by ws
+case $1 in
+start)
+	set_lock
+	true > /tmp/upload/ss_log.txt
+	pre_start
+	start_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	unset_lock
+	;;
+start_by_ws)
+	set_lock
+	pre_start
+	start_fancyss
+	unset_lock
+	;;
+stop)
+	# 为了避免ss_config.sh本身也卡住，所以stop过程不使用文件锁，强行关闭
+	true > /tmp/upload/ss_log.txt
+	pre_stop
+	stop_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	;;
+test)
+	sleep 100
+	;;
+esac
+
+# call by httpdb
 case $2 in
 start)
 	set_lock
@@ -91,6 +118,12 @@ start)
 	http_response "$1"
 	pre_start
 	start_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	unset_lock
+	;;
+start_by_ws)
+	set_lock
+	pre_start
+	start_fancyss
 	unset_lock
 	;;
 stop)

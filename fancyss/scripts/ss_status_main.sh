@@ -109,7 +109,14 @@ failover_action(){
 			# 切换
 			dbus set ssconf_basic_node=$NEXT_NODE
 			# 重启
-			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			#start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			echo_date "========================================================================" >/tmp/upload/ss_log.txt
+			echo_date "" >>/tmp/upload/ss_log.txt
+			echo_date "故障转移：重启fancyss！" >>/tmp/upload/ss_log.txt
+			echo_date "" >>/tmp/upload/ss_log.txt
+			echo_date "========================================================================" >>/tmp/upload/ss_log.txt
+			start-stop-daemon -S -q -x /koolshare/ss/ssconfig.sh -- restart >>/tmp/upload/ss_log.txt
+			
 			dbus set ss_heart_beat="1"
 		elif [ "$ss_failover_s4_2" == "3" ];then
 			LOGM "$LOGTIME1 fancyss：切换到web延迟最低节点：[$(dbus get ssconf_basic_name_${FAST_NODE})]..."

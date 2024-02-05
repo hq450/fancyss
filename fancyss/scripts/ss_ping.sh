@@ -237,7 +237,7 @@ webtest_web(){
 	fi
 
 	# 3. 如果有结果该文件，且没有lock（webtest完成了的），需要检测下节点数量和webtest数量是否一致，避免新增节点没有webtest
-	local webtest_nu=$(cat /tmp/upload/webtest.txt | sed '/stop/d' | wc -l)
+	local webtest_nu=$(cat /tmp/upload/webtest.txt | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
 	local node_nu=$(dbus list ssconf_basic_ | grep _name_ | wc -l)
 	if [ "${webtest_nu}" -ne "${node_nu}" ];then
 		clean_webtest
@@ -246,11 +246,11 @@ webtest_web(){
 	fi
 
 	# 4. 如果有结果该文件，且没有lock（webtest完成了的），且节点数和webtest结果数一致，比较下上次webtest结果生成的时间，如果是15分钟以内，则不需要重新webtest
-	TS_LST=$(date -r /tmp/upload/webtest.txt "+%s")
-	TS_NOW=$(date +%s)
+	TS_LST=$(/bin/date -r /tmp/upload/webtest.txt "+%s")
+	TS_NOW=$(/bin/date +%s)
 	TS_DUR=$((${TS_NOW} - ${TS_LST}))
 	if [ "${TS_DUR}" -lt "1800" ];then
-		http_response "ok2, webtest result in 15min, do not refresh!"
+		http_response "ok2, webtest result in 30min, do not refresh!"
 	else
 		clean_webtest
 		start_webtest
@@ -267,6 +267,7 @@ start_webtest(){
 	mkdir -p ${TMP2}/conf
 	mkdir -p ${TMP2}/pids
 	mkdir -p ${TMP2}/results
+	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
 
 	# 2. 分类
 	sort_nodes
@@ -492,7 +493,7 @@ test_nodes(){
 	done
 	
 	# finish mark
-	find /tmp/fancyss_webtest/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+	find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
 	echo -en "stop>stop\n" >>/tmp/upload/webtest.txt
 
 	# record timestamp
@@ -501,6 +502,86 @@ test_nodes(){
 
 	# copy webtest.txt for other useage
 	cp -rf /tmp/upload/webtest.txt /tmp/upload/webtest_bakcup.txt
+}
+
+test_01_ss_new(){
+	local file=$1
+
+	# multi thread
+	[ -e /tmp/fd1 ] || mknod /tmp/fd1 p
+	exec 3<>/tmp/fd1
+	rm -rf /tmp/fd1
+
+	awk 'BEGIN { for (i=1; i<=8; i++) printf("%d\n", i) }' | while read seq
+	do
+		echo
+	done >&3
+
+	# alisa binary
+	ln -sf /koolshare/bin/ss-local ${TMP2}/wt-ss-local
+	killall wt-ss-local >/dev/null 2>&1
+
+	# get extra option for shadowsocks-libev
+	local ARG_1 ARG_2
+	if [ "$(dbus get ss_basic_tfo)" == "1" -a "${LINUX_VER}" != "26" ]; then
+		local ARG_1="--fast-open"
+		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	fi
+	if [ "$(dbus get ss_basic_tnd)" == "1" ]; then
+		local ARG_2="--no-delay"
+	fi
+
+	# start to test
+	local base_port=50600
+	cat ${TMP2}/${file} | while read nu; do
+		read -u3
+		{
+			# 0. write testing info
+			echo -en "${nu}>testing...\n" >>${TMP2}/results/${nu}.txt
+			# find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+			cat ${TMP2}/results/*.txt > /tmp/upload/webtest.txt
+			
+			# 1. resolve server
+			local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_server_${nu}))
+			if [ -z "${_server_ip}" ];then
+				echo -en "${nu}:\t解析失败！\n"
+				continue
+			fi
+			
+			# 2. start ss-local
+			local new_port=$(($base_port + $nu))
+			# run ${TMP2}/wt-ss-local -s ${_server_ip} -p $(dbus get ssconf_basic_port_${nu}) -b 0.0.0.0 -l ${new_port} -k $(dbus get ssconf_basic_password_${nu} | base64_decode) -m $(dbus get ssconf_basic_method_${nu}) $ARG_1 $ARG_2 -f ${TMP2}/pids/${nu}.pid >/dev/null 2>&1
+			# wait_program wt-ss-local
+			run ${TMP2}/wt-ss-local -s ${_server_ip} -p $(dbus get ssconf_basic_port_${nu}) -b 0.0.0.0 -l ${new_port} -k $(dbus get ssconf_basic_password_${nu} | base64_decode) -m $(dbus get ssconf_basic_method_${nu}) $ARG_1 $ARG_2 >/dev/null 2>&1 &
+			detect_running_status2 wt-ss-local ${new_port}
+			sleep 1
+
+			# 3. start curl test
+			curl_test ${nu} ${new_port}
+
+			# 4. write tested info
+			# find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+			cat ${TMP2}/results/*.txt > /tmp/upload/webtest.txt
+			
+			# 5. stop ss-local
+			if [ -f "${TMP2}/pids/${nu}.pid" ];then
+				kill -9 $(cat ${TMP2}/pids/${nu}.pid) >/dev/null 2>&1
+			fi
+			local _pid=$(ps -w | grep wt-ss-local | grep ${new_port} | awk '{print $1}')
+			if [ -n "${_pid}" ];then
+				kill -9 ${_pid} >/dev/null 2>&1
+			fi
+			
+			echo >&3
+		} &
+	done
+	wait
+	
+	exec 3<&-
+	exec 3>&-
+	
+	rm -rf ${TMP2}/pids/*
+	rm -rf ${TMP2}/wt-ss-local
 }
 
 test_01_ss(){
@@ -1665,25 +1746,21 @@ curl_test(){
 	# curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:23456 --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" http://www.google.com.tw
 	
 	# test multiple time and get the best one
-	local ret=$(run curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=${ret}@$(run curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=${ret}@$(run curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
 	local ret=$(echo $ret | sed 's/@/\n/g' | sort -n | head -n1)
 	local _match=$(echo "${ret}"|grep -E "\|")
 	if [ -z ${_match} ];then
-		echo -en "${nu}>failed\n" >>/tmp/upload/webtest.txt
 		echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 	else
 		local ret_time=$(echo $ret | awk -F "|" '{printf "%.0f\n", $1 * 1000}')
 		local ret_code=$(echo $ret | awk -F "|" '{print $2}')
 
 		# 5. show result
-		# sed -i "/^${nu}>/d" /tmp/upload/webtest.txt
 		if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
-			echo -en "${nu}>${ret_time}\n" >>/tmp/upload/webtest.txt
 			echo -en "${nu}>${ret_time}\n" >>${TMP2}/results/${nu}.txt
 		else
-			echo -en "${nu}>failed\n" >>/tmp/upload/webtest.txt
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 		fi
 	fi
@@ -1896,6 +1973,7 @@ clean_webtest(){
 	killall wt-naive >/dev/null 2>&1
 	killall wt-tuic >/dev/null 2>&1
 	killall curl-fancyss >/dev/null 2>&1
+	killall curl-webtest >/dev/null 2>&1
 
 	# 2. kill all other ss_ping.sh
 	local current_pid=$$

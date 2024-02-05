@@ -149,7 +149,9 @@ function createFormFields(data, settings) {
 			}
 			if (f.suffix && (f.type != 'checkbox' && f.type != 'radio')) output += f.suffix;
 		});
-		if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.hint + ')">' + v.title + '</a></th><td>' + output;
+		//if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.hint + ')">' + v.title + '</a></th><td>' + output;
+		//if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onmouseover="mOver(this, ' + v.hint + ')" onmouseout="mOut(this)" ><em>' + v.title + '</em></a></th><td>' + output;
+		if (v.hint) form += '<th><a class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);" onmouseover="mOver(this, ' + v.hint + ')" onmouseout="RunmOut(this)" >' + v.title + '</a></th><td>' + output;
 		else if (v.thtd) form += '<th>' + v.title + '</th><td>' + output;
 		else form += '<th>' + v.title + '</th><td>' + output;
 		form += '</td></tr>';
@@ -513,9 +515,41 @@ function hideSSLoadingBar() {
 	checkss = 0;
 	refreshpage();
 }
+function mOver(obj, hint){
+	mouse_status = 1;
+	//$("#overDiv").unbind('mouseout', function() { 
+	//	E("overDiv").style.visibility = "hidden";
+	//});
+	$("#overDiv").unbind();
+	$(obj).css({
+		"color": "#00ffe4",
+		"text-decoration": "underline"
+	});
+	openssHint(hint);
+}
+function mOut(obj){
+	if (mouse_status == 1) return;
+	if ($("#overDiv").is(":hover") == false){
+		// close hint automaticly
+		E("overDiv").style.visibility = "hidden";
+	}else{
+		// close hint whetn mounseout
+		$("#overDiv").bind('mouseleave', function() {
+			E("overDiv").style.visibility = "hidden";
+		});
+	}
+}
+function RunmOut(obj){
+	$(obj).css({
+		"color": "#03a9f4",
+		"text-decoration": ""
+	});
+	setTimeout('mOut("' + obj + '");', 100);
+}
 function openssHint(itemNum) {
 	statusmenu = "";
 	width = "350px";
+	mouse_status = 0;
 	if (itemNum == 0) {
 		width = "850px";
 		bgcolor = "#CC0066",
@@ -546,7 +580,6 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.2：如果是升级新版本科学上网插件后出现这种情况：</font>fancyss插件从2015年6月，其核心部分就基本无改动，升级新版本出现这种情况，最大可能的原因，新版本升级了最新的ss或者ssr的主程序，解决方法可以通过回滚路由器内程序，也可以升级你的服务器端到最新，如果你是自己搭建的用户,建议最新原版shadowsocks-libev程序。"
 		statusmenu += "<br /><b><font color='#CC0066'>6：你遇到了非常少见的情况：</font></b>来这里反馈吧：<a href='https://telegram.me/joinchat/DCq55kC7pgWKX9J4cJ4dJw' target='_blank'><u><font color='#00F'>telegram</font></u></a>。"
 		_caption = "状态检测";
-		return overlib(statusmenu, OFFSETX, -460, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	}
 	if (itemNum == 1) {
 		width = "700px";
@@ -575,7 +608,6 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;提供给国外的朋友，通过在中间服务器翻回来，以享受一些视频、音乐等网络服务。<br />"
 		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~<br />"
 		_caption = "模式说明";
-		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 6) {
 		statusmenu = "此处选择你希望UDP的通道。<br />很多游戏都走udp的初衷就是加速udp连接。<br />如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
 		_caption = "游戏模式V2 UDP通道";
@@ -666,7 +698,6 @@ function openssHint(itemNum) {
 		statusmenu += "<br /><font color='#CC0066'><b>直连：</b></font>"
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;本地直接向DNS服务器请求获取国外网站的解析地址，目前此选项仅限于回国模式使用，因为在国外网络下查询国外DNS服务器不会有DNS污染。";
 		_caption = "国外DNS";
-		return overlib(statusmenu, OFFSETX, -860, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 27) {
 		statusmenu = "<br /><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vmess作为传出协议，不支持socks，shadowsocks，vless；提交后会根据你的配置自动生成v2ray的json配置。"
@@ -695,7 +726,6 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → quicSettings → security】位置"
 		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
 		_caption = "伪装域名 (host)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 29) {
 		width = "750px";
 		statusmenu = "<b>如果客户端json配置文件内没有此项，此处请留空！</b><br /><br />path的设定应该和服务器端保持一致，值应该和你nginx或者candy的配置内的一致！"
@@ -708,26 +738,16 @@ function openssHint(itemNum) {
 		statusmenu += "<br /><br /><font color='#CC0066'><b>4:quic path：</b></font>"
 		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → quicSettings → key】位置"
 		_caption = "路径 (path)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -290, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
-	} else if (itemNum == 30) {
-		width = "750px";
-		statusmenu = "<b>1. 对于V2ray：此处设定开启或者关闭tls传输</b><br />"
-		statusmenu += "<b>2. 对于Xray：此处设定开启tls/xtls，或者关闭tls传输</b>"
-		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → security】位置"
-		_caption = "底层传输安全";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 31) {
 		width = "400px";
 		statusmenu = "<b>此处控制开启或者关闭多路复用 (Mux)</b>"
 		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → mux → enabled】位置"
 		_caption = "多路复用 (Mux)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 32) {
 		width = "750px";
 		statusmenu = "<b>控制Mux并发连接数，默认值：8，如果客户端json配置文件没有请留空</b>"
 		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → mux → concurrency】位置，如果没有，请留空"
 		_caption = "Mux并发连接数";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 33) {
 		statusmenu = "填入需要强制用国内DNS解析的域名，一行一个，格式如下：。"
 		statusmenu += "<br />注意：不支持通配符！"
@@ -750,12 +770,10 @@ function openssHint(itemNum) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → network】位置"
 		_caption = "传输协议 (network)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 36) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → header → type】位置，如果没有此参数，则为不伪装"
 		_caption = "tcp伪装类型 (type)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 37) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → kcpSettings → header → type】位置，如果参数为none，则为不伪装"
@@ -801,27 +819,22 @@ function openssHint(itemNum) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → security】位置"
 		_caption = "加密方式 (security)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 48) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → alterId】位置"
 		_caption = "额外ID (Alterld)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 49) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → id】位置<br /><br />"
 		_caption = "用户id (id)";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 50) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → port】位置"
 		_caption = "端口（port）";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 51) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → address】位置"
 		_caption = "地址（address）";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 54) {
 		statusmenu = "更多信息，请参考<a href='https://breakwa11.blogspot.jp/2017/01/shadowsocksr-mu.html' target='_blank'><u><font color='#00F'>ShadowsocksR 协议参数文档</font></u></a>"
 		_caption = "协议参数（protocol）";
@@ -829,17 +842,14 @@ function openssHint(itemNum) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → encryption】位置<br /><br />此参数仅用于Xray的VLESS协议，不过目前VLESS没有自带加密。所以目前都设置为none，请用于可靠信道，如 TLS。<br /><br />参考文档：<a href='https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject' target='_blank'><font color='#00F'><u>https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject</u></font></a>"
 		_caption = "加密（encryption）";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 55) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → flow】位置<br /><br />此参数仅用于Xray的VLESS协议，此处设置流控模式，用于选择 XTLS 的算法，仅在xtls开启后此处设置才会生效！。<br /><br />参考文档：<a href='https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject' target='_blank'><font color='#00F'><u>https://xtls.github.io/config/outbounds/vless.html#outboundconfigurationobject</u></font></a>"
 		_caption = "加密（encryption）";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 56) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tlsSettings】位置<br /><br />设置为false表示安全，true表示不安全。很多机场没有配置tls证书的，需要设置为true才能使得节点正常工作<br />"
 		_caption = "加密（encryption）";
-		return overlib(statusmenu, OFFSETX, -560, OFFSETY, -90, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 90) {
 		statusmenu = "此处设定为预设不可更改。<br />&nbsp;&nbsp;&nbsp;&nbsp;1. 单开KCPTUN的情况下，ss-redir的TCP流量都会转发到此；<br />&nbsp;&nbsp;&nbsp;&nbsp;2. KCPTUN和UDP2raw串联的模式下，ss-redir的TCP流量才会转发到UDP2raw；"
 		_caption = "说明：";
@@ -886,18 +896,16 @@ function openssHint(itemNum) {
 		statusmenu = "DNS重定向.<br />&nbsp;&nbsp;&nbsp;&nbsp;开启该功能后，局域网内所有客户端的udp 53端口的DNS解析请求将会被强制劫持（制劫持）到使用路由器提供的DNS进行解析，以避免DNS污染。<br />&nbsp;&nbsp;&nbsp;&nbsp;例如当局域网内有用户在电脑上自定义DNS解析服务器为8.8.8.8时候，该电脑向8.8.8.8的DNS请求，将会被强制劫持到路由器的dns服务器如：192.168.50.1。例如在启用了本插件后，局域网内的设备已经可以访问谷歌网站，但是如果设备请求到了污染的DNS，会导致该设备无法访问谷歌，所以当你无法控制局域网内一些设备自定义DNS行为的情况下，启用该功能可以保证局域网内所有客户端不会受到DNS污染。"
 		_caption = "说明：";
 	} else if (itemNum == 107) {
-		width = "450px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;通常来说，代理节点ss/ssr/v2ray/xray/trojan的服务器地址都是域名格式，在启用节点的时候需要对其进行解析，以获取正确的IP地址，此处可以定义用于节点域名解析的DNS。";
-		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;此处提供了【udp查询】、【tcp查询】、【smartdns（DoH+DoT）】、【dohclient（DoH）】四种方式（lite版插件可能会做功能精简）。";
-		statusmenu += "<br /><br /><font color='#00F'>关于自动选取模式：</font>：在udp查询和tcp查询中设置了自动选取功能，可以自定义在全部DNS服务器内自动选取，或者单独在国内组或者国外组进行自动选取。自动选取模式下会随机使用你定义组内的某个DNS服务器，如果解析成功，下次解析将默认使用该服务器。如果解析失败或超时（2s），则会自动切换到组内下一个DNS服务器！直到解析成功，或者将组内的DNS服务器全部使用一次！";
-		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>1.</font>一些机场节点的域名托管在国外服务商，此时使用国外的DNS服务器效果可能更好。";
-		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>2.</font>目前有发现GFW对部分机场的节点域名投毒，导致节点IP解析错误，如需保证解析结果没有污染，推荐使用【smartdns（DoH+DoT）】，或者【dohclient（DoH） + 国外DoH服务器】来解析节点域名！";
-		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>3.</font>如果你本地网络的udp较差，可以尝试选用【tcp查询】、【smartdns（DoH+DoT）】、【dohclient（DoH）】方案来解析节点域名！";
+		width = "650px";
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;通常来说，代理节点服务器地址都是域名格式，在启用节点的时候需要对其进行解析，以获取正确的IP地址，此处可以定义用于节点域名解析的DNS。";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;此处提供了udp查询进行服务器节点的解析。";
+		statusmenu += "<br /><br /><font color='#00F'>关于自动选取模式：</font>：可以自定义在全部DNS服务器内自动选取，或者单独在国内组或者国外组进行自动选取。自动选取模式下会随机使用你定义组内的某个DNS服务器，如果解析成功，下次解析将默认使用该服务器。如果解析失败或超时（2s），则会自动切换到组内下一个DNS服务器！直到解析成功，或者将组内的DNS服务器全部使用一次！";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>1.</font>一些机场节点做了解析分流，因此建议国内使用插件选择国内组。";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>2.</font>一些机场节点的域名托管在国外服务商，此时使用国外的DNS服务器效果可能更好。";
 		_caption = "节点域名解析DNS服务器：";
-		return overlib(statusmenu, OFFSETX, 0, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 108) {
 		statusmenu = "ss/ssr/trojan多核心支持.<br />&nbsp;&nbsp;&nbsp;&nbsp;开启后ss-redir/rss-redir/trojan将同时运行在路由器的全部核心上，最大化ss-redir/rss-redir/trojan的性能。注意：如果线路速度不存在瓶颈，可能使CPU全部核心满载，影响路由的稳定性。"
-		_caption = "节点域名解析DNS服务器：";
+		_caption = "ss/ssr/trojan多核心支持：";
 	} else if (itemNum == 109) {
 		statusmenu = "插件触发重启设定说明：<br />&nbsp;&nbsp;&nbsp;&nbsp;当你的ss/ssr/koolgame/v2ray服务器，或者负载均衡服务器节点使用域名的时候，可以在此处设定定时解析域名时间，当检测到相应的解析地址发生改变的时候，定时任务会自动重启插件，以应用新的ip地址。<br />&nbsp;&nbsp;&nbsp;&nbsp;服务器有多个解析地址的建议不要使用！！v2ray开了cdn的也建议不要使用！！因为这可能会导致每次检测到的ip都不一样而让插件在后台频繁重启！"
 		_caption = "说明：";
@@ -907,9 +915,6 @@ function openssHint(itemNum) {
 	} else if (itemNum == 111) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能支持SS/SSR/V2ray/Xray订阅，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
 		_caption = "[包括]关键词：";
-	} else if (itemNum == 112) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;原有订阅方式，支持ss/ssr/v2ray订阅，订阅时会将订阅节点和本地节点交叉对比后添加/更改/删除。<br /><br /><b>优点：</b>订阅信息详细，知道新增/修改/删除了什么节点。<br /><br /><b>缺点：</b>订阅速度较为慢，长时间订阅更新后节点排序可能会被打乱。"
-		_caption = "节点订阅";
 	} else if (itemNum == 113) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;新订阅方式，成功获取远程节点后，先一次性删除本地订阅节点，然后再一次性写入远程节点。<br /><br /><b>优点：</b>因一次性写入，不需要做交叉对比，所以订阅速度快，且节点不会乱序。<br /><br /><b>缺点：</b>订阅信息较少，不知道订阅前后是否有节点变化！"
 		_caption = "快速订阅";
@@ -970,14 +975,12 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNS.SB【45.11.45.11】";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;quad101 【101.101.101.101】";
 		_caption = "说明";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 122) {
 		width = "450px";
 		statusmenu = "&nbsp;&nbsp;<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>类似于ChinaDNS，不过使用 DoH 作为上游服务器，同时还支持udp、tcp查询。<br /><br />";
 		statusmenu += "&nbsp;&nbsp;dohclient自带DNS分流，和ChinaDNS一样，可以指定一个国内上游DNS服务器和一个国外DNS服务器，并使用大陆IP地址段（chnroute.txt）进行分流。<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意：</font>如果你的网络环境udp查询效果不佳（udp差的大内网，上游限制等情况），可尝试更改为tcp或DoH查询，以规避udp被屏蔽、丢包、被QoS等情况。<br /><br />";
 		_caption = "dohclient：";
-		return overlib(statusmenu, OFFSETX, 0, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 123) {
 		width = "650px";
 		statusmenu = "ECS，即edns-client-subnet，<a href='https://taoshu.in/dns/edns-client-subnet.html' target='_blank'><u><font color='#00F'>ECS简介</font></u></a><br /><br />";
@@ -987,14 +990,12 @@ function openssHint(itemNum) {
 		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
 		_caption = "ECS说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 124) {
 		width = "450px";
 		statusmenu = "&nbsp;&nbsp;<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>类似于ChinaDNS，不过使用 DoH 作为上游服务器，同时还支持tcp查询。<br /><br />";
 		statusmenu += "&nbsp;&nbsp;dohclient自带DNS分流，和ChinaDNS一样，可以指定一个国内上游DNS服务器和一个国外DNS服务器，并使用大陆IP地址段（chnroute.txt）进行分流。<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意：</font>因国外udp查询无法强制使用代理，所以查询结果存在污染，故没有开放国外udp查询选项！<br /><br />";
 		_caption = "dohclient：";
-		return overlib(statusmenu, OFFSETX, 0, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 125) {
 		width = "650px";
 		statusmenu = "ECS，即edns-client-subnet，<a href='https://taoshu.in/dns/edns-client-subnet.html' target='_blank'><u><font color='#00F'>ECS简介</font></u></a><br /><br />";
@@ -1008,7 +1009,6 @@ function openssHint(itemNum) {
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
 		statusmenu += "🟡 代表该DNS服务器对部分域名查询支持ECS，部分域名查询不支持ECS，比如AdGuard；<br />";
 		_caption = "ECS说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 126) {
 		width = "450px";
 		statusmenu = "勾选此处后，国外的DNS查询将会强制使用本插件23456端口的socks5代理进行！<br /><br />";
@@ -1016,7 +1016,6 @@ function openssHint(itemNum) {
 		statusmenu += "<font color='#CC0066'>注意2：</font>即使部分DoH DNS服务器可以直连解析，也不能完全保证不丢包！所以建议全程勾选Proxy开关，除非你有特殊的要求！<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意3：</font>通过dohclient进行tcp协议的国外DNS查询，同样建议勾选Proxy，以规避屏蔽、丢包等情况！<br /><br />";
 		_caption = "Proxy说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 127) {
 		statusmenu = "缓存时长<br /><br />";
 		statusmenu += "&nbsp;&nbsp;dohclient自带了DNS缓存数据库功能，能将DNS查询结果缓存到本地，缓存文件位于/tmp/doh_main.db，选择不同的缓存策略可以获得不同的解析速度体验。<br /><br />";
@@ -1032,7 +1031,6 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;<font color='#00F'>说明3：</font>如果使用不同节点观看Netflix等流媒体，同样不建议勾选！<br /><br />";
 		statusmenu += "&nbsp;&nbsp;<font color='#00F'>说明4：</font>不论勾选与否，重启路由器后缓存都会丢失，插件开启后会重建全新缓存！<br /><br />";
 		_caption = "缓存持久化：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 129) {
 		width = "650px";
 		statusmenu = "&nbsp;&nbsp;自动选取模式下会随机请求列表里的某个DNS服务器，如果解析成功，下次解析将默认使用该服务器。";
@@ -1058,7 +1056,6 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNS.SB【45.11.45.11】";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;quad101 【101.101.101.101】";
 		_caption = "说明";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 130) {
 		// 中国DNS-1，中国DNS-2：ecs
 		width = "650px";
@@ -1076,7 +1073,6 @@ function openssHint(itemNum) {
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
 		statusmenu += "⚪ 代表该DNS服务器对ECS的支持不确定，一般来说运营商DNS都不支持ECS，自定义DNS随情况而定<br /><br />";
 		_caption = "ECS说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	} else if (itemNum == 131) {
 		// 可信DNS-1 ecs
 		width = "650px";
@@ -1095,7 +1091,6 @@ function openssHint(itemNum) {
 		statusmenu += "🟡 代表该DNS服务器对部分域名查询支持ECS，部分域名查询不支持ECS，比如AdGuard；<br />";
 		statusmenu += "⚪ 代表该DNS服务器对ECS的支持不确定，一般来说运营商DNS都不支持ECS，自定义DNS随情况而定<br /><br />";
 		_caption = "ECS说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 132) {
 		// 可信DNS-2 ecs
 		width = "650px";
@@ -1108,7 +1103,6 @@ function openssHint(itemNum) {
 		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
 		_caption = "ECS说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 133) {
 		// 中国DNS-1
 		width = "780px";
@@ -1144,7 +1138,6 @@ function openssHint(itemNum) {
 		statusmenu += "5️⃣DNS的选择没有绝对的最佳可言，适合自己的才是最好的，对于不懂如何选择的朋友，建议直接使用运营商DNS即可，无需纠结。<br /><br />";
 		statusmenu += "</div>";
 		_caption = "说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 		$("#overDiv_table5").css("line-height", "1.4");
 	} else if (itemNum == 134) {
 		width = "780px";
@@ -1182,7 +1175,6 @@ function openssHint(itemNum) {
 		statusmenu += "5️⃣NaïveProxy由于自身特性，不支持udp代理，所以Naïve节点的可信DNS-1无法使用udp协议！<br /><br />";
 		statusmenu += "</div>";
 		_caption = "说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 135) {
 		width = "780px";
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。";
@@ -1215,7 +1207,6 @@ function openssHint(itemNum) {
 		statusmenu += "3️⃣即使一些国外DNS服务没有被国家防火墙屏蔽，但由于是跨国直连，也有较大概率存在不稳定的情况。<br /><br />";
 		statusmenu += "</div>";
 		_caption = "说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 136) {
 		width = "690px";
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;基础DNS方案由fancyss 3.0.3及其以前版本的DNS方案演变继承而来，其主要特点如下：<br /><br />";
@@ -1229,7 +1220,6 @@ function openssHint(itemNum) {
 		statusmenu += "4️⃣在lite版本的fancyss中，为了更好的控制安装包的体积，因此smartdns功能被精简了。<br /><br />";
 		statusmenu += "</div>";
 		_caption = "基础DNS方案说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 137) {
 		width = "690px";
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;进阶DNS方案有更好的DNS分流和更低的dnsmasq负载，且开放了更多的设置选项，特点如下：<br /><br />";
@@ -1242,13 +1232,11 @@ function openssHint(itemNum) {
 		statusmenu += "3️⃣进阶DNS方案里，目前国内外DNS分流效果最好的是chinadns-ng，如无其它特殊要求，建议使用chinadns-ng作为默认的DNS方案即可。<br /><br />";
 		statusmenu += "</div>";
 		_caption = "进阶DNS方案说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 138) {
 		width = "450px";
 		statusmenu = "fancyss运行需要网络畅通，如果本地网络不通，fancyss将无法正常运行<br /><br />";
 		statusmenu += "如果能保证你的路由器本地网络稳定性，那么在插件开启时跳过网络可用性检测！";
 		_caption = "跳过网络可用性检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 139) {
 		width = "450px";
 		statusmenu = "因部分代理协议要求本地时间和服务器时间一致才能正常工作，比如vmess协议等<br /><br />";
@@ -1256,40 +1244,34 @@ function openssHint(itemNum) {
 		statusmenu = "此功能可能会导致系统提示时间未同步，如遇到此情况也建议勾选本选项<br /><br />";
 		statusmenu += "如果能保证你的路由器本地时间准确，或者你使用的协议对时间没有要求，那么在插件开启时跳过时间一致性检测！";
 		_caption = "跳过时间一致性检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 140) {
 		width = "450px";
 		statusmenu = "fancyss运行需要国内DNS畅通，如果不通，fancyss将无法正常运行<br /><br />";
 		statusmenu += "如果能保证你的国内DNS稳定畅通，那么在可以插件开启时跳过国内DNS可用性检测！";
 		_caption = "跳过国内DNS可用性检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 141) {
 		width = "450px";
 		statusmenu = "此可信DNS检测仅仅针对使用进阶DNS设定中的chinadns-ng<br /><br />";
 		statusmenu += "如果可信DNS不通，那么将会无法访问代理网站；当然，如果节点本身由问题，也可能导致可信DNS不通";
 		statusmenu += "勾选后将不会对可信DNS的可用性进行检测！";
 		_caption = "跳过可信DNS可用性检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 142) {
 		width = "450px";
 		statusmenu = "在插件开启初期（尚未开启代理程序和应用任何分流规则的时候），插件会对路由器网络的国内出口ip进行检测<br /><br />";
 		statusmenu += "此检测结果将会被用于国内DNS ECS功能的开启，如果你的国内DNS不不使用ECS，那么完全可以关闭此检测！";
 		statusmenu += "如果你的国内DNS使用了ECS功能，勾选此功能后会强制关掉国内DNS的ECS功能！";
 		_caption = "跳过国内出口ip检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 143) {
 		width = "450px";
 		statusmenu = "在插件开启后期（代理程序和分流规则等都已经应用完毕），插件会对路由器网络的代理出口ip进行检测<br /><br />";
 		statusmenu += "此检测结果将会被用于国外DNS ECS功能的开启，如果你的国外DNS不使用ECS，那么完全可以关闭此检测！";
 		statusmenu += "如果你的可信DNS使用了ECS功能，勾选此功能后会强制关掉可信DNS的ECS功能！";
 		_caption = "跳过代理出口ip检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 144) {
 		width = "450px";
 		statusmenu = "fancyss在开启的时候会运行代理程序、dns程序等相关程序，每个程序启动后会马上进行检测，以得知该程序是否已经在后台运行了.<br /><br />";
 		statusmenu += "如果勾选此选项，那么程序启动后将不会进行相应的检测，这可以节约一些fancyss的启动时间。";
 		_caption = "跳过程序启动检测";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 145) {
 		width = "680px";
 		statusmenu = "<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。<br /><br />";
@@ -1306,7 +1288,6 @@ function openssHint(itemNum) {
 		statusmenu += "如 gt：过滤 tag:gfw 域名的 AAAA 查询、禁止向 trust 上游转发 AAAA 查询<br />";
 		statusmenu += "如 mc：过滤 tag:chn 域名的 AAAA 查询、禁止向 china 上游转发 AAAA 查询<br />";
 		_caption = "说明";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 146) {
 		width = "600px";
 		statusmenu = "fancyss现在同时支持ping测试和web延迟测试，ping延迟测试和web延迟测试各有优缺点，在实际使用中更建议使用web延迟测试<br /><br />";
@@ -1325,7 +1306,6 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;1. 测试速度较慢，虽然web延迟测试是多线程的，但是也无法和PC相比<br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;2. 无法反应节点的丢包情况，当然如果丢包及其严重，也会测试不通<br />";
 		_caption = "说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 147) {
 		width = "500px";
 		statusmenu = "1. 此处设定的域名将用于所有节点的web延迟测试，同时用于插件运行状态中的国外运行状态检测（保存后立即生效）<br /><br />";
@@ -1333,15 +1313,28 @@ function openssHint(itemNum) {
 		statusmenu += "3. 因为机场节点服务器通常是各个国家的，要测试到最好的延迟，使用一些大服务商提供的测试url更加准确，比如google、apple、clodflare<br /><br />";
 		statusmenu += "4. 部分中转机场会在中转机上劫持测试url，以返回更好的延迟，导致比如香港、美国等不同地区节点测出相似的延迟，此时建议更换测试url，以获得真实延迟<br />";
 		_caption = "说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
 	} else if (itemNum == 148) {
 		width = "500px";
 		statusmenu += "1. 此处设定的域名将用于插件运行状态中的国内运行状态检测，（保存后立即生效）fancyss在3.2.1版本之前使用的是www.baidu.com<br /><br />";
 		statusmenu += "2. fancyss在3.2.1版本之前使用的是www.baidu.com作为测试域名，现在可以根据自己情况选择一个延迟较低的来使用<br />";
 		_caption = "说明：";
-		return overlib(statusmenu, OFFSETX, -160, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, ''); 
+	} else if (itemNum == 149) {
+		width = "600px";
+		statusmenu += "勾选new bing模式后，访问<a style='color:#00F' href='https://bing.com/' target='_blank'>https://bing.com/</a>将不会跳转到<a style='color:#00F' href='https://cn.bing.com/' target='_blank'>https://cn.bing.com/</a><br /><br />";
+		statusmenu += "如果勾选后依然跳转到bing中国，需要清除浏览器缓存后重试！<br /><br />";
+		statusmenu += "此功能等同于在域名黑名单内添加：bing.com<br />";
+		_caption = "说明：";
+	} else if (itemNum == 150) {
+		width = "650px";
+		statusmenu += "1. 因为游戏模式已经有了udp代理，此处功能仅针对gfwlist模式、大陆白名单模式、全局模式下的udp代理行为<br /><br />";
+		statusmenu += "2. 大陆白名单摸下，开启udp代理后，效果和游戏模式等同<br /><br />";
+		statusmenu += "3. 节点必须支持udp代理才能看到实际效果，否则希望被代理的udp包将无法抵达<br /><br />";
+		statusmenu += "4. 勾选仅chatgpt后，只有访问chatgpt网页的udp会被代理，其他udp包不会被代理<br /><br />";
+		statusmenu += "5. 勾选仅chatgpt后，还无法访问chatgpt的，请检查节点是否支持udp，节点的区域是否被openai限制。<br />";
+		_caption = "说明：";
 	}
-	return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
+	//return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
+	return overlib(statusmenu, OFFSETX, 30, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 
 	var tag_name = document.getElementsByTagName('a');
 	for (var i = 0; i < tag_name.length; i++)

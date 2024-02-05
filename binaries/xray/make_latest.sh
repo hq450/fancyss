@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 mkdir -p $DIR/.build_xray
 base_dir=$DIR/.build_xray
 cd ${base_dir}
-GO_VERSION="1.20.4"
+GO_VERSION="1.21.6"
 CODENAME="hq450@fancyss"
 
 echo "-----------------------------------------------------------------"
@@ -37,7 +37,7 @@ if [ ! -d ${base_dir}/Xray-core ];then
 else
 	cd ${base_dir}/Xray-core
 	git reset --hard && git clean -fdqx
-	git checkout master
+	git checkout main
 	git pull
 fi
 VERSIONTAG=$(git describe --abbrev=0 --tags)
@@ -46,7 +46,7 @@ mkdir -p ${base_dir}/${VERSIONTAG}
 rm -rf ${base_dir}/armv5
 rm -rf ${base_dir}/armv7
 rm -rf ${base_dir}/armv64
-#git checkout $VERSIONTAG
+git checkout $VERSIONTAG
 
 # build xray
 build_v2() {
