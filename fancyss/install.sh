@@ -501,7 +501,7 @@ install_now(){
 
 	# default values
 	eval $(dbus export ss)
-	echo_date "设置一些默认值..."
+	local PKG_TYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	# 3.0.4：国内DNS默认使用运营商DNS
 	[ -z "${ss_china_dns}" ] && dbus set ss_china_dns="1"
 	# 3.0.4 从老版本升级到3.0.4，原部分方案需要切换到进阶方案，因为这些方案已经不存在
@@ -553,10 +553,15 @@ install_now(){
 	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=0
 	[ -z "${ss_basic_udpall}" ] && dbus set ss_basic_udpall=0
 	[ -z "${ss_basic_udpgpt}" ] && dbus set ss_basic_udpgpt=1
-
-	if [ "${ss_disable_aaaa}" != "1" ];then
-		dbus set ss_basic_chng_no_ipv6=0
-	fi
+	[ -z "${ss_basic_nonetcheck}" ] && dbus set ss_basic_nonetcheck=1
+	[ -z "${ss_basic_notimecheck}" ] && dbus set ss_basic_notimecheck=1
+	[ -z "${ss_basic_nocdnscheck}" ] && dbus set ss_basic_nocdnscheck=1
+	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
+	
+	[ "${ss_disable_aaaa}" != "1" ] && dbus set ss_basic_chng_no_ipv6=1
+	[ -z "${ss_basic_chng_xact}" ] && dbus set ss_basic_chng_xact=0
+	[ -z "${ss_basic_chng_xgt}" ] && dbus set ss_basic_chng_xgt=1
+	[ -z "${ss_basic_chng_xmc}" ] && dbus set ss_basic_chng_xmc=0
 	
 	# others
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
@@ -565,16 +570,23 @@ install_now(){
 	[ -z "$(dbus get ss_basic_wt_furl)" ] && dbus set ss_basic_wt_furl="http://www.google.com.tw"
 	[ -z "$(dbus get ss_basic_wt_curl)" ] && dbus set ss_basic_wt_curl="http://www.baidu.com"
 	[ -z "${ss_basic_latency_opt}" ] && dbus set ss_basic_latency_opt="2"
+
+	# 因版本变化导致一些值没有了，更改一下
+	if [ "${ss_basic_chng_china_2_tcp}" == "5" ];then
+		dbus set ss_basic_chng_china_2_tcp="6"
+	fi
 	
 	# lite
-	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
-		ss_basic_vcore=1
+	if [ ! -x "/koolshare/bin/v2ray" ];then
+		dbus set ss_basic_vcore=1
+	else
+		dbus set ss_basic_vcore=0
 	fi
-	if [ ! -x "/tmp/shadowsocks/bin/trojan" ];then
-		ss_basic_tcore=1
-	fi
-	if [ ! -x "/tmp/shadowsocks/bin/sslocal" ];then
-		ss_basic_rust=0
+	if [ ! -x "/koolshare/bin/trojan" ];then
+		dbus set ss_basic_tcore=1
+	else
+		dbus set ss_basic_tcore=0
+		
 	fi
 	
 	# dbus value
