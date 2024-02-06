@@ -368,11 +368,19 @@ function save() {
 	dbus["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 	// collect data from checkbox
 	for (var i = 0; i < params_check.length; i++) {
-		dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
+		if (E(params_check[i])) {
+			dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
+		}else{
+			dbus[params_check[i]] = '0';
+		}
 	}
 	// data need base64 encode, format b with plain text
 	for (var i = 0; i < params_base64.length; i++) {
-		dbus[params_base64[i]] = Base64.encode(E(params_base64[i]).value);
+		if (E(params_base64[i])) {
+			dbus[params_base64[i]] = Base64.encode(E(params_base64[i]).value);
+		}else{
+			dbus[params_base64[i]] = "";
+		}
 	}
 	// collect values in acl table
 	if(E("ACL_table")){
@@ -2744,7 +2752,7 @@ function generate_node_info() {
 					server_prot = json.outbounds.protocol;
 				}
 			}
-			obj["server"] = server_add;
+			obj["server"] = server_addr;
 			obj["protoc"] = server_prot;
 		}
 		if(db_ss[p + "_xray_use_json_" + idx] ==  "1"){
@@ -6924,7 +6932,7 @@ function reset_smartdns_conf(){
 																{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(151)"><font color="#ffcc00">关闭</font></a>', value: 0},
 																{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(152)"><font color="#ffcc00">开启</font></a>', value: 1},
 																{ id:'ss_basic_udpgpt', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(153)"><font color="#ffcc00">仅chatgpt</font></a>', value: 2},
-															]},							//fancyss-hnd
+															]},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ss/ssr/trojan开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},								//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
