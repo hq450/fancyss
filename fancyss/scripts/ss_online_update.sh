@@ -1467,20 +1467,23 @@ download_by_curl(){
 		echo_date "⬇️使用常规网络下载..."
 		dnsmasq_rule remove
 	fi
+
+	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
+	
 	echo_date "1️⃣使用curl下载订阅，第一次尝试下载..."
-	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 6 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 6 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 	
 	echo_date "2️⃣使用curl下载订阅失败，第二次尝试下载..."
-	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 10 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 10 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 
 	echo_date "3️⃣使用curl下载订阅失败，第三次尝试下载..."
-	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 12 "$1" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 12 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi	
@@ -1498,20 +1501,22 @@ download_by_wget(){
 		local EXT_OPT=""
 	fi
 	
+	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
+	
 	echo_date "1️⃣使用wget下载订阅，第一次尝试下载..."
-	wget -4 -t 1 -T 10 --dns-timeout=5 -q ${EXT_OPT} "$1" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	wget -4 -t 1 -T 10 --dns-timeout=5 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 
 	echo_date "2️⃣使用wget下载订阅，第二次尝试下载..."
-	wget -4 -t 1 -T 15 --dns-timeout=10 -q ${EXT_OPT} "$1" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	wget -4 -t 1 -T 15 --dns-timeout=10 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi	
 	
 	echo_date "3️⃣使用wget下载订阅，第三次尝试下载..."
-	wget -4 -t 1 -T 20 --dns-timeout=15 -q ${EXT_OPT} "$1" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	wget -4 -t 1 -T 20 --dns-timeout=15 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
@@ -1837,7 +1842,7 @@ start_online_update(){
 	online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | wc -l)
 	until [ "${sub_count}" == "${online_url_nu}" ]; do
 		let sub_count+=1
-		url=$(dbus get ss_online_links | base64 -d | awk '{print $1}' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | sed -n "$sub_count p")
+		url=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | sed -n "$sub_count p")
 		[ -z "${url}" ] && continue
 		echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
 		[ "${online_url_nu}" -gt "1" ] && echo_date "📢开始第【${sub_count}】个订阅！订阅链接如下："
