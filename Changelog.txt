@@ -7,7 +7,7 @@ fancyss Changelog
    - fix	修复当订阅链接中有空格的时候，订阅链接被切割，导致无法订阅的问题
    - fix	修复从full版本安装成lite版本后，因部分节点lite版本不支持导致的问题
    - update	现在节点订阅日志也走websocket通讯，避免httpd崩溃
-   - note	因新增协议支持，full版本安装包再次增加不少，安装请注意jffs空间，建议使用usb2jffs插件扩容jffs
+   - note	因新增协议支持，full版本安装包再次增加不少体积，安装请注意jffs空间，建议使用usb2jffs插件扩容jffs
 
 3.2.6 - 3.2.7 (20240205)
    - update	安全性更新：关闭插件23456的socks5端口对外访问，以避免被人扫代和盗刷流量
