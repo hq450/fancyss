@@ -138,6 +138,9 @@ GET_PROXY_TOOL(){
 	7)
 		echo "tuic"
 		;;
+	8)
+		echo "hysteria2"
+		;;
 	esac
 }
 
@@ -163,6 +166,9 @@ GET_TYPE_NAME(){
 		;;
 	7)
 		echo "tuic"
+		;;
+	8)
+		echo "hysteria2"
 		;;
 	esac
 }
@@ -375,6 +381,14 @@ GET_PROG_STAT(){
 			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
+		fi
+	elif [ "${ss_basic_type}" == "8" ]; then
+		# tuic
+		local HY2=$(pidof hysteria2)
+		if [ -n "${HY2}" ]; then
+			echo "hysteria2	运行中🟢		透明代理		${HY2}"
+		else
+			echo "hysteria2	未运行🔴		透明代理"
 		fi
 	fi
 
@@ -941,6 +955,9 @@ ECHO_VERSION(){
 	fi
 	if [ -x "/koolshare/bin/tuic-client" ];then
 		echo "tuic-client		$(run tuic-client -v|awk '{print $NF}')			https://github.com/EAimTY/tuic"
+	fi
+	if [ -x "/koolshare/bin/hysteria2" ];then
+		echo "hysteria2		$(run hysteria2 version|grep Version|awk '{print $2}')			https://github.com/apernet/hysteria"
 	fi
 	echo --------------------------------------------------------------------------------------------------------
 }

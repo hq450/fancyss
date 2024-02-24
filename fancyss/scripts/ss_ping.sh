@@ -297,6 +297,7 @@ sort_nodes(){
 	# 05 trojan
 	# 06 naive
 	# 07 tuic
+	# 08 hysteria2
 
 	# sort by type first
 	local count=1
@@ -488,6 +489,9 @@ test_nodes(){
 			;;
 		07)
 			test_12_tc $file_name
+			;;
+		08)
+			test_13_h2 $file_name
 			;;
 		esac
 	done
@@ -1108,7 +1112,58 @@ test_12_tc(){
 	done
 	
 	killall wt-tuic >/dev/null 2>&1
-	#rm -rf ${TMP2}/wt-tuic
+	rm -rf ${TMP2}/wt-tuic
+}
+
+test_13_h2(){
+	local file=$1
+	local base_port=50600
+	
+	# alisa binary
+	rm -rf ${TMP2}/wt-hy2
+	rm -rf ${TMP2}/conf/*
+	ln -sf /koolshare/bin/hysteria2 ${TMP2}/wt-hy2
+	killall wt-hy2 >/dev/null 2>&1
+
+	# gen hy2 yaml
+	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
+		for nu in $nus; do
+			{
+				creat_hy2_yaml ${nu}
+			} &
+		done
+		wait
+	done
+
+	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
+		for nu in $nus; do
+			{
+				# 0. testing info
+				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+
+				# 1. start hy2       
+				if [ "${LINUX_VER}" == "419" -o "${LINUX_VER}" == "54" ];then
+					run ${TMP2}/wt-hy2 -c  ${TMP2}/conf/${nu}.yaml >/dev/null 2>&1 &
+				else
+					env -i PATH=${PATH} QUIC_GO_DISABLE_ECN=true ${TMP2}/wt-hy2 -c ${TMP2}/conf/${nu}.yaml >/dev/null 2>&1 &
+				fi
+				sleep 2
+
+				# 2. start curl test
+				local new_port=$(($base_port + $nu))
+				curl_test ${nu} ${new_port}
+
+				# 3. stop hy2
+				killall wt-hy2
+			} &
+		done
+		wait
+		
+		# merge all curl test result
+		find /tmp/fancyss_webtest/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+	done
+
+	rm -rf ${TMP2}/wt-hy2
 	#rm -rf ${TMP2}/conf/*
 }
 
@@ -1739,6 +1794,71 @@ creat_trojan_json(){
 	EOF
 }
 
+creat_hy2_yaml(){
+	local nu=$1
+	if [ -z "$(dbus get ssconf_basic_hy2_sni_${nu})" ];then
+		__valid_ip_silent "$(dbus get ssconf_basic_hy2_server_${nu})"
+		if [ "$?" != "0" ];then
+			# not ip, should be a domain
+			local hy2_sni=$(dbus get ssconf_basic_hy2_server_${nu})
+		else
+			local hy2_sni=""
+		fi
+	else
+		local hy2_sni="$(dbus get ssconf_basic_hy2_sni_${nu})"
+	fi
+
+	local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_hy2_server_${nu}))
+	if [ -z "${_server_ip}" ];then
+		# use domain
+		_server_ip=$(dbus get ssconf_basic_hy2_server_${nu})
+		#echo -en "${nu}:\t解析失败！\n"
+		#continue
+	fi
+
+	cat >> ${TMP2}/conf/${nu}.yaml <<-EOF
+		server: ${_server_ip}:$(dbus get ssconf_basic_hy2_port_${nu})
+		
+		auth: $(dbus get ssconf_basic_hy2_pass_${nu})
+
+		tls:
+		  sni: ${hy2_sni}
+		  insecure: $(get_function_switch $(dbus get ssconf_basic_hy2_ai_${nu}))
+		
+		fastOpen: $(get_function_switch $(dbus get ssconf_basic_hy2_tfo_${nu}))
+		
+	EOF
+	
+	if [ -n "$(dbus get ssconf_basic_hy2_up_${nu})" -o -n "$(dbus get ssconf_basic_hy2_dl_${nu})" ];then
+		cat >> ${TMP2}/conf/${nu}.yaml <<-EOF
+			bandwidth: 
+			  up: $(dbus get ssconf_basic_hy2_up_${nu}) mbps
+			  down: $(dbus get ssconf_basic_hy2_dl_${nu}) mbps
+			
+		EOF
+	fi
+
+	if [ "$(dbus get ssconf_basic_hy2_obfs_${nu})" == "1" -a -n "$(dbus get ssconf_basic_hy2_obfs_pass_${nu})" ];then
+		cat >> ${TMP2}/conf/${nu}.yaml <<-EOF
+			obfs:
+			  type: salamander
+			  salamander:
+			    password: "$(dbus get ssconf_basic_hy2_obfs_pass_${nu})"
+			
+		EOF
+	fi
+
+	local base_port=50600
+	cat >> ${TMP2}/conf/${nu}.yaml <<-EOF
+		transport:
+		  udp:
+		    hopInterval: 30s
+		
+		socks5:
+		  listen: 127.0.0.1:$(($base_port + $nu))
+	EOF
+}
+
 curl_test(){
 	local nu=$1
 	local port=$2
@@ -1972,6 +2092,7 @@ clean_webtest(){
 	killall wt-trojan >/dev/null 2>&1
 	killall wt-naive >/dev/null 2>&1
 	killall wt-tuic >/dev/null 2>&1
+	killall wt-hy2 >/dev/null 2>&1
 	killall curl-fancyss >/dev/null 2>&1
 	killall curl-webtest >/dev/null 2>&1
 

@@ -143,6 +143,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/tuic-client
 		rm -rf ./shadowsocks/bin/ipt2socks
 		rm -rf ./shadowsocks/bin/haveged
+		rm -rf ./shadowsocks/bin/hysteria2
 
 		if [ "${platform}" == "hnd_v8" ];then
 			rm -rf ./shadowsocks/bin/websocketd
@@ -177,6 +178,7 @@ gen_folder(){
 		sed -i '/fancyss_full_1/,/fancyss_full_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_naive_1/,/fancyss_naive_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_tuic_1/,/fancyss_tuic_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i '/fancyss_hy2_1/,/fancyss_hy2_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		# remove strings from page
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -282,13 +284,18 @@ gen_folder(){
 		sed -i 's/\, \"Socks5设置\"//g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/\, \"Module_shadowsocks_lb\.asp\"//g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/\, \"Module_shadowsocks_local\.asp\"//g' ./shadowsocks/res/ss-menu.js
+		# hysteria2
+		sed -i 's/\,\s\"ss_basic_hy2_up_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"ss_basic_hy2_dl_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"ss_basic_hy2_tfo_switch\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		# modify words
 		# trojan 用xray运行，所以trojan多核心功能删除
 		sed -i 's/ss\/ssr\/trojan/ss\/ssr/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/七种客户端/五种客户端/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/八种客户端/五种客户端/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/科学上网工具/科学上网、游戏加速工具/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/14\.286/20/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\s\&\&\s\!\snaive_on//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/七种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js
+		sed -i 's/八种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/shadowsocks_2/shadowsocks_lite_2/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/config\.json\.js/config_lite\.json\.js/g' ./shadowsocks/res/ss-menu.js
 		

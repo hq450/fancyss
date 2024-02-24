@@ -14,8 +14,8 @@ CHN_TEST_SITE=$(dbus get ss_basic_wt_curl)
 FRN_TEST_SITE=$(dbus get ss_basic_wt_furl)
 [ -z "${CHN_TEST_SITE}" ] && CHN_TEST_SITE="http://www.baidu.com"
 [ -z "${FRN_TEST_SITE}" ] && FRN_TEST_SITE="http://www.google.com.tw"
-SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic")
-REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal|v2ray|xray|trojan|ipt2socks")
+SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic|hysteria")
+REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal|v2ray|xray|trojan|ipt2socks|hysteria")
 
 run(){
 	env -i PATH=${PATH} "$@"

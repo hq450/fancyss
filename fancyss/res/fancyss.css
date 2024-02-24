@@ -375,6 +375,9 @@ body .layui-layer-lan .layui-layer-btn2 {border-color:#FF6600; background-color:
 #app[skin=TUF] .content_status_ext {outline: 1px solid #92650F;}
 #app[skin=TS] .content_status_ext {outline: 1px solid #2ED9C3;}
 
+/*node add table 20240219*/
+#app[skin=TUF] .vpnClientTitle_td_click {background-color: #ff5722;}
+
 /*ASUSWRT*/
 #app[skin=ASUSWRT] .myDragClass{
 	background-color:#396995;

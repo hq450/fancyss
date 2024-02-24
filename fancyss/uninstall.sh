@@ -32,6 +32,7 @@ rm -rf /koolshare/bin/xray
 rm -rf /koolshare/bin/v2ray
 rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/curl-fancyss
+rm -rf /koolshare/bin/hysteria2
 rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/bin/naive
 rm -rf /koolshare/bin/ipt2socks
@@ -60,7 +61,7 @@ find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 rm -rf /koolshare/bin/sslocal
 rm -rf /koolshare/bin/dig
 
-# legacy file should  be removed for sure
+# legacy file should be removed for sure
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/dnsmasq
 rm -rf /koolshare/bin/Pcap_DNSProxy

@@ -652,6 +652,9 @@ __get_type_full_name() {
 	7)
 		echo "tuic"
 		;;
+	8)
+		echo "hysteria2"
+		;;
 	esac
 }
 
@@ -681,6 +684,9 @@ __get_type_abbr_name() {
 		;;
 	7)
 		echo "tuic"
+		;;
+	8)
+		echo "hysteria2"
 		;;
 	esac
 }
@@ -1204,6 +1210,11 @@ kill_process() {
 		killall tuic-client
 	fi
 
+	local HY2_PID=$(ps | grep "hysteria2" | grep -v grep | awk '{print $1}')
+	if [ -n "${HY2_PID}" ];then
+		echo_date "关闭hysteria2进程..."
+		killall hysteria2
+	fi
 	# close tcp_fastopen
 	if [ "${LINUX_VER}" != "26" ]; then
 		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
@@ -3085,7 +3096,7 @@ create_dnsmasq_conf() {
 	# 4.2 append black domain list, through proxy
 	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
 	if [ "${ss_basic_proxy_newb}" == "1" ];then
-		local wanblackdomains="${wanblackdomains} bing.com"
+		local wanblackdomains="${wanblackdomains} bing.com ipinfo.io ip.sb"
 	fi
 	if [ -n "${ss_wan_black_domain}" ]; then
 		echo_date "生成域名黑名单！"
@@ -4699,7 +4710,7 @@ creat_xray_json() {
 					echo_date "请自行将Xray服务器的ip地址填入IP/CIDR白名单中!"
 					echo_date "为了确保Xray的正常工作，建议配置ip格式的Xray服务器地址！"
 					;;
-				2)  domain!
+				2)
 					echo_date "错误1！！检测到json配置内的Xray服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
 					echo_date "请更正你的错误然后重试！！"
 					close_in_five flag
@@ -5113,6 +5124,79 @@ start_tuic(){
 	detect_running_status tuic-client
 }
 
+start_hysteria2(){
+	rm -rf /koolshare/ss/hysteria2.yaml 2>/dev/null
+
+	echo_date "生成hysteria2配置文件..."
+	if [ -z "${ss_basic_hy2_sni}" ];then
+		__valid_ip_silent "${ss_basic_hy2_server}"
+		if [ "$?" != "0" ];then
+			# not ip, should be a domain
+			ss_basic_hy2_sni=${ss_basic_hy2_server}
+		else
+			ss_basic_hy2_sni=""
+		fi
+	else
+		ss_basic_hy2_sni="${ss_basic_hy2_sni}"
+	fi
+	cat >> /koolshare/ss/hysteria2.yaml <<-EOF
+		server: ${ss_basic_server}:${ss_basic_hy2_port}
+		
+		auth: ${ss_basic_hy2_pass}
+
+		tls:
+		  sni: ${ss_basic_hy2_sni}
+		  insecure: $(get_function_switch ${ss_basic_hy2_ai})
+		
+		fastOpen: $(get_function_switch ${ss_basic_hy2_tfo})
+		
+	EOF
+	
+	if [ -n "${ss_basic_hy2_up}" -o -n "${ss_basic_hy2_dl}" ];then
+		cat >> /koolshare/ss/hysteria2.yaml <<-EOF
+			bandwidth: 
+			  up: ${ss_basic_hy2_up} mbps
+			  down: ${ss_basic_hy2_dl} mbps
+			
+		EOF
+	fi
+
+	if [ "${ss_basic_hy2_obfs}" == "1" -a -n "${ss_basic_hy2_obfs_pass}" ];then
+		cat >> /koolshare/ss/hysteria2.yaml <<-EOF
+			obfs:
+			  type: salamander
+			  salamander:
+			    password: ${ss_basic_hy2_obfs_pass}
+			
+		EOF
+	fi
+
+	cat >> /koolshare/ss/hysteria2.yaml <<-EOF
+		transport:
+		  udp:
+		    hopInterval: 30s
+		
+		socks5:
+		  listen: 127.0.0.1:23456
+		
+		tcpRedirect:
+		  listen: :3333
+		
+		udpTProxy:
+		  listen: :3333
+		  timeout: 20s
+	EOF
+
+	echo_date "开启hysteria2进程..."
+	if [ "${LINUX_VER}" == "419" -o "${LINUX_VER}" == "54" ];then
+		run_bg hysteria2 -c /koolshare/ss/hysteria2.yaml
+	else
+		env -i PATH=${PATH} QUIC_GO_DISABLE_ECN=true hysteria2 -c /koolshare/ss/hysteria2.yaml >/dev/null 2>&1 &
+	fi
+	run_bg hysteria2 -c /koolshare/ss/hysteria2.yaml
+	detect_running_status hysteria2
+}
+
 write_cron_job() {
 	sed -i '/ssupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	if [ "1" == "$ss_basic_rule_update" ]; then
@@ -5259,7 +5343,7 @@ add_white_black_ip() {
 	[ -n "${ss_basic_server_ip}" ] && SBSI="${ss_basic_server_ip}" || SBSI=""
 	[ -n "${ISP_DNS1}" ] && ISP_DNS_a="${ISP_DNS1}" || ISP_DNS_a=""
 	[ -n "${IFIP_DNS2}" ] && ISP_DNS_b="${ISP_DNS2}" || ISP_DNS_b=""
-	local ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 ${ISP_DNS_a} ${ISP_DNS_b} ${SBSI} $(get_wan0_cidr)"
+	local ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 192.18.0.0/15 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 ${ISP_DNS_a} ${ISP_DNS_b} ${SBSI} $(get_wan0_cidr)"
 	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 	ss_wan_white_ip=$(echo ${ss_wan_white_ip} | base64_decode | sed '/\#/d')
 	echo_date "应用IP/CIDR白名单"
@@ -6162,6 +6246,7 @@ apply_ss() {
 	[ "${ss_basic_type}" == "5" ] && start_trojan
 	[ "${ss_basic_type}" == "6" ] && start_naive
 	[ "${ss_basic_type}" == "7" ] && start_tuic
+	[ "${ss_basic_type}" == "8" ] && start_hysteria2
 	start_kcp
 	start_dns
 	#===load nat start===

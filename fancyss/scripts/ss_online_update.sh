@@ -14,6 +14,9 @@ LOCAL_NODES_BAK="$DIR/ss_nodes_bak.txt"
 NODES_SEQ=$(dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
 NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.*[[:space:]]//')
 SUB_MODE=$(dbus get ssr_subscribe_mode)
+HY2_UP_SPEED=$(dbus get ss_basic_hy2_up_speed)
+HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
+HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)
 CURR_NODE=$(dbus get ssconf_basic_node)
 KEY_WORDS_1=$(dbus get ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(dbus get ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
@@ -131,6 +134,16 @@ unset PWD
 # ssconf_basic_naive_port_
 # ssconf_basic_naive_user_
 # ssconf_basic_naive_pass_
+# ssconf_basic_tuic_json_
+# ssconf_basic_hy2_server_
+# ssconf_basic_hy2_port_
+# ssconf_basic_hy2_pass_
+# ssconf_basic_hy2_obfs_
+# ssconf_basic_hy2_obfs_pass_
+# ssconf_basic_hy2_up_
+# ssconf_basic_hy2_dl_
+# ssconf_basic_hy2_sni_
+# ssconf_basic_hy2_tfo_
 # ssconf_basic_type_
 
 # 方案
@@ -378,10 +391,10 @@ remove_null(){
 		# 没有订阅节点，不进行检查
 		return
 	fi
-	local online_sub_urls=$(dbus get ss_online_links | base64 -d | awk '{print $1}' | sed '/^$/d' | sed '/^#/d'| sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http")
+	local online_sub_urls=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d'| sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
 	for online_sub_url in ${online_sub_urls}
 	do
-		local sublink_hash=$(echo ${online_sub_url} | md5sum | awk '{print $1}')
+		local sublink_hash=$(echo ${online_sub_url} | sed 's/%20/ /g' | md5sum | awk '{print $1}')
 		echo ${sublink_hash:0:4} >> $DIR/sublink_hash.txt
 	done
 
@@ -430,7 +443,13 @@ get_type_name() {
 			echo "trojan"
 		;;
 		6)
-			echo "naive"
+			echo "NaïveProxy"
+		;;
+		7)
+			echo "tuic"
+		;;
+		8)
+			echo "hysteria2"
 		;;
 	esac
 }
@@ -1398,6 +1417,108 @@ add_trojan_node(){
 	fi
 }
 
+add_hy2_node(){
+	local decode_link="$1"
+	local action="$2"
+	unset hy2_server hy2_server_port hy2_remarks hy2_uuid hy2_ai hy2_tfo hy2_sni_tmp hy2_peer_tmp hy2_sni hy2_group hy2_group_hash
+
+	hy2_server=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
+	hy2_pass=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '1p')
+	hy2_port=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '3p')
+
+	echo "${decode_link}" | grep -Eqo "#"
+	if [ "$?" != "0" ];then
+		hy2_remarks=${hy2_server}
+	else
+		hy2_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}' | urldecode)
+	fi
+
+	hy2_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
+	hy2_obfs=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "obfs" | grep -v "obfs-password" | awk -F"=" '{print $2}')
+	if [ -z "${hy2_obfs}" ];then
+		hy2_obfs="0"
+	fi
+	if [ "${hy2_obfs}" == "salamander" ];then
+		hy2_obfs="1"
+	fi
+	hy2_obfs_pass=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "obfs-password" | awk -F"=" '{print $2}')
+	hy2_ai=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "insecure" | awk -F"=" '{print $2}')
+	hy2_tfo=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "tfo" | awk -F"=" '{print $2}')
+	hy2_mport=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "mport" | awk -F"=" '{print $2}')
+	if [ -n "${hy2_mport}" ];then
+		hy2_port=${hy2_mport}
+	fi
+
+	if [ "${action}" == "1" ];then
+		hy2_group=${DOMAIN_NAME}
+		hy2_group_hash="${hy2_group}_${SUB_LINK_HASH:0:4}"
+	elif [ "${action}" == "2" ]; then
+		# 离线离线添加节点，group不需要
+		hy2_group=""
+		hy2_group_hash=""
+	fi
+	
+	# for debug, please keep it here
+	# echo ------------
+	# echo group: ${hy2_group}
+	# echo remarks: ${hy2_remarks}
+	# echo server: ${hy2_server}
+	# echo port: ${hy2_port}
+	# echo password: ${hy2_pass}
+	# echo hy2_obfs: ${hy2_obfs}
+	# echo hy2_obfs_pass: ${hy2_obfs_pass}
+	# echo Insecure: ${hy2_ai}
+	# echo SNI: ${hy2_sni}
+	# echo TFO: ${hy2_tfo}
+	# echo ------------	
+
+	if [ -z "${hy2_server}" -o -z "${hy2_remarks}" -o -z "${hy2_port}" -o -z "${hy2_pass}" ]; then
+		# 丢弃无效节点
+		echo_date "🔴hysteria2节点：检测到一个错误节点，跳过！"
+		return 1
+	fi
+
+	# 过滤节点
+	if [ "${action}" == "1" ]; then
+		filter_nodes "hysteria2" "${hy2_remarks}" "${hy2_server}"
+		if [ "$?" != "0" ];then
+			return 1
+		fi
+	fi
+
+	echo_date "🟤hysteria2节点：${hy2_remarks}"
+	
+	json_init
+	json_add_string group "${hy2_group_hash}"
+	json_add_string mode "${SUB_MODE}"
+	json_add_string name "${hy2_remarks}"
+	json_add_string hy2_server "${hy2_server}"
+	json_add_string hy2_port "${hy2_port}"
+	json_add_string hy2_pass "${hy2_pass}"
+	json_add_string hy2_ai "${hy2_ai}"
+	json_add_string hy2_sni "${hy2_sni}"
+	json_add_string hy2_obfs "${hy2_obfs}"
+	json_add_string hy2_obfs_pass "${hy2_obfs_pass}"
+	json_add_string hy2_up "${HY2_UP_SPEED}"
+	json_add_string hy2_dl "${HY2_DL_SPEED}"
+	if [ "${HY2_TFO_SWITCH}" == "2" ];then
+		json_add_string hy2_tfo "${hy2_tfo}"
+	elif [ "${HY2_TFO_SWITCH}" == "1" ];then
+		json_add_string hy2_tfo "1"
+	elif [ "${HY2_TFO_SWITCH}" == "0" ];then
+		json_add_string hy2_tfo "0"
+	else
+		json_add_string hy2_tfo "${hy2_tfo}"
+	fi
+	json_add_string type "8"
+
+	if [ "${action}" == "1" ];then
+		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+	elif [ "${action}" == "2" ]; then
+		json_write_object ${DIR}/offline_node_new.txt
+	fi
+}
+
 get_fancyss_running_status(){
 	local STATUS_1=$(dbus get ss_basic_enable 2>/dev/null)
 	local STATUS_2=$(iptables --t nat -S|grep SHADOWSOCKS|grep -w "3333" 2>/dev/null)
@@ -1677,8 +1798,9 @@ get_online_rule_now(){
 	NODE_FORMAT3=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vmess://")
 	NODE_FORMAT4=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vless://")
 	NODE_FORMAT5=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^trojan://")
-	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT5}" ];then
-		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan节点，退出！"
+	NODE_FORMAT6=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^hysteria2://")
+	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT6}" ];then
+		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2节点，退出！"
 		return 1
 	fi
 	
@@ -1687,7 +1809,8 @@ get_online_rule_now(){
 	local NODE_NU_VM=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vmess://") || "0"
 	local NODE_NU_VL=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vless://") || "0"
 	local NODE_NU_TJ=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^trojan://") || "0"
-	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_VM} + ${NODE_NU_VL} + ${NODE_NU_TJ}))
+	local NODE_NU_H2=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^hysteria2://") || "0"
+	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_VM} + ${NODE_NU_VL} + ${NODE_NU_TJ} + ${NODE_NU_H2}))
 	if [ "${NODE_NU_TT}" -lt "${NODE_NU_RAW}" ];then
 		echo_date "ℹ️${NODE_NU_RAW}个节点中，一共检测到${NODE_NU_TT}个支持节点！"
 	fi
@@ -1697,6 +1820,7 @@ get_online_rule_now(){
 	[ "${NODE_NU_VM}" -gt "0" ] && echo_date "🟠vmess节点：${NODE_NU_VM}个"
 	[ "${NODE_NU_VL}" -gt "0" ] && echo_date "🟣vless节点：${NODE_NU_VL}个"
 	[ "${NODE_NU_TJ}" -gt "0" ] && echo_date "🟡trojan节点：${NODE_NU_TJ}个"
+	[ "${NODE_NU_H2}" -gt "0" ] && echo_date "🟤hysteria2节点：${NODE_NU_H2}个"
 	echo_date "-------------------------------------------------------------------"
 
 	# 12. 开始解析并写入节点
@@ -1726,16 +1850,21 @@ get_online_rule_now(){
 		trojan)
 			add_trojan_node "${node_info}" 1
 			;;
+		hysteria2)
+			add_hy2_node "${node_info}" 1
+			;;
 		*)
-			# echo_date "⛔尚不支持${node_type}格式的节点，跳过！"
-			if [ -n "${node_info}" ];then
-				local _match=$(echo "${node_info}"|grep -E "//")
-				if [ -z "${_match}" ];then
-					echo_date "ℹ️$node"
-				else
-					echo "${node_info}"
-				fi
+			if [ -n "${node_type}" ];then
+				echo_date "⛔不支持${node_type}格式的节点，跳过！"
 			fi
+			# if [ -n "${node_info}" ];then
+			# 	local _match=$(echo "${node_info}"|grep -E "//")
+			# 	if [ -z "${_match}" ];then
+			# 		echo_date "ℹ️$node"
+			# 	else
+			# 		echo "${node_info}"
+			# 	fi
+			# fi
 			continue
 			;;
 		esac
@@ -1928,6 +2057,9 @@ start_offline_update() {
 		trojan)
 			add_trojan_node "${node_info}" 2
 			;;
+		hysteria2)
+			add_hy2_node "${node_info}" 2
+			;;
 		*)
 			echo_date "⚠️尚不支持${node_type}格式的节点，跳过！"
 			continue
@@ -1947,12 +2079,20 @@ start_offline_update() {
 	echo_date "==================================================================="
 }
 
-case $2 in
+if [ -z "$2" -a -n "$1" ];then
+	SH_ARG=$1
+	WEB_ACTION=0
+elif [ -n "$2" -a -n "$1" ];then
+	SH_ARG=$2
+	WEB_ACTION=1
+fi
+
+case $SH_ARG in
 0)
 	# 删除所有节点
 	set_lock
 	true > $LOG_FILE
-	http_response "$1"
+	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	remove_all_node | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
@@ -1961,7 +2101,7 @@ case $2 in
 	# 删除所有订阅节点
 	set_lock
 	true > $LOG_FILE
-	http_response "$1"
+	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	remove_sub_node | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
@@ -1970,7 +2110,7 @@ case $2 in
 	# 保存订阅设置但是不订阅
 	set_lock
 	true > $LOG_FILE
-	http_response "$1"
+	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	local_groups=$(dbus list ssconf_basic_group_ | cut -d "=" -f2 | sort -u | wc -l)
 	online_group=$(dbus get ss_online_links | base64 -d | awk '{print $1}' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -Ec "^http")
 	echo_date "保存订阅节点成功！" | tee -a $LOG_FILE
@@ -1996,7 +2136,7 @@ case $2 in
 	# 使用订阅链接订阅ss/ssr/V2ray节点
 	set_lock
 	true > $LOG_FILE
-	http_response "$1"
+	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	start_online_update | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
@@ -2005,7 +2145,7 @@ case $2 in
 	# 添加ss:// ssr:// vmess://离线节点
 	set_lock
 	true > $LOG_FILE
-	http_response "$1"
+	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	start_offline_update | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
