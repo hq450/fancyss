@@ -1,6 +1,7 @@
 fancyss Changelog
 ===========================================
-3.2.8 (20240224)
+3.2.8 - 3.2.9  (20240225)
+   - fix	3.2.9：修复lite版本无法手动添加节点的问题
    - add	fancyss full添加hysteria2协议支持
    - add	fancyss full添加hysteria2订阅支持，能在订阅的时候设定上下行带宽和 tcp fast open是否开启
    - add	fancyss full添加hysteria2 web 延迟检测支持
