@@ -80,7 +80,7 @@ var option_xflow = [["", "none"], ["xtls-rprx-vision", "xtls-rprx-vision"], ["xt
 //var option_xflow = ["", "xtls-rprx-vision", "xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-splice", "xtls-rprx-splice-udp443"];
 var option_fingerprint = ["chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized", ""];
 var option_naive_prot = ["https", "quic"];
-var option_hy2_obfs = [["0", "停用"], ["1", "salamander"]];
+var option_hy2_obfs = [["0", "停用"], ["1", "salamander"]];		//fancyss-full
 var stop_scroll = 0;
 var close_latency_flag = 0;
 var stopFlag = 1;
@@ -5356,9 +5356,9 @@ function save_online_nodes(action) {
 		dbus_post["ss_basic_exclude"] = E("ss_basic_exclude").value.replace(pattern,"") || "";
 		dbus_post["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 		dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
-		dbus_post["ss_basic_hy2_up_speed"] = E("ss_basic_hy2_up_speed").value;
-		dbus_post["ss_basic_hy2_dl_speed"] = E("ss_basic_hy2_dl_speed").value;
-		dbus_post["ss_basic_hy2_tfo_switch"] = E("ss_basic_hy2_tfo_switch").value;
+		dbus_post["ss_basic_hy2_up_speed"] = E("ss_basic_hy2_up_speed").value;			//fancyss-full
+		dbus_post["ss_basic_hy2_dl_speed"] = E("ss_basic_hy2_dl_speed").value;			//fancyss-full
+		dbus_post["ss_basic_hy2_tfo_switch"] = E("ss_basic_hy2_tfo_switch").value;		//fancyss-full
 	}
 
 	if(ws_flag == 1){
@@ -7013,7 +7013,7 @@ function reset_smartdns_conf(){
 												<table id="table_subscribe" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 													<script type="text/javascript">
 														var option_noded = [["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["6", "周日"]];
-														var option_hy2_tfo = [["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]];
+														var option_hy2_tfo = [["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]];							//fancyss-full
 														var option_nodeh = [];
 														for (var i = 0; i < 24; i++){
 															var _tmp = [];
