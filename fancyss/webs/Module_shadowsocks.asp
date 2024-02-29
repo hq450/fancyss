@@ -2339,10 +2339,10 @@ function add_ss_node_conf(flag) {
 		for (var i = 0; i < params8.length; i++) {
 			ns[p + "_" + params8[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params8[i]).val());
 		}
+		ns[p + "_hy2_ai_" + node_max] = E("ss_node_table_hy2_ai").checked ? '1' : '';
+		ns[p + "_hy2_tfo_" + node_max] = E("ss_node_table_hy2_tfo").checked ? '1' : '';
+		ns[p + "_type_" + node_max] = "8";
 	}
-	ns[p + "_hy2_ai_" + node_max] = E("ss_node_table_hy2_ai").checked ? '1' : '';
-	ns[p + "_hy2_tfo_" + node_max] = E("ss_node_table_hy2_tfo").checked ? '1' : '';
-	ns[p + "_type_" + node_max] = "8";
 	//fancyss_hy2_2
 	//push data to add new node
 	var id = parseInt(Math.random() * 100000000);
