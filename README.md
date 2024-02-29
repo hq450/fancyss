@@ -4,9 +4,9 @@
 - 此项目提供用于asuswrt、asuswrt-merlin为基础的，带软件中心固件（≥384）路由器的科学上网功能。
 
 ---
-- 📺 广告1：ChatGPT Plus、Netflix、Disney+、Spotify、YouTube等会员账号合租，输入优惠码: fancyss 享95折优惠，[🛒点此购买🛒](https://nf.video/9QQkT)
-- 🚀 广告2：fancyss合作top机场：<b>Nexitally/奶昔</b> | 全中转机场 / 优质线路资源 / 支持udp / 解锁流媒体，ChatGPT。[🛒点此注册购买🛒](https://nxboom.com/?PartnerCode=af8f126dd490446e80737444dd0064f6)
-- ✈️ 广告3：fancyss高速机场推荐：<b>ssLinks</b> | 性价比全中转机场 / 80+线路 / 流媒体解锁，输入优惠码: fancyss 享9折优惠。[🛒点此购买🛒](https://36d.biz#/register?code=yf6ozeEO)
+- 📺 广告1：[ChatGPT Plus、Netflix、Disney+、Spotify、YouTube等会员账号合租，95折优惠码: fancyss](https://nf.video/9QQkT)
+- 🚀 广告2：[fancyss合作top机场：<b>Nexitally/奶昔</b> | 全中转机场 / 优质线路资源 / 支持udp / 解锁流媒体，ChatGPT](https://nxboom.com/?PartnerCode=af8f126dd490446e80737444dd0064f6)
+- ✈️ 广告3：[fancyss高速机场推荐：<b>ssLinks</b> | 性价比全中转机场 / 80+线路 / 流媒体解锁，9折优惠码: fancyss](https://98a6251b6cd7471da86cca993b6dbe6f.36d.biz/#/register?code=yf6ozeEO)
 ---
 
 ## 插件特色
@@ -75,7 +75,7 @@
 | GT-AX11000 PRO                                               | 官改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | fancyss_hnd_v8 |
 | GT-AX11000 PRO                                 | 梅改 | 5.04axhnd.675x  | BCM4912   | armv8 | 4.19.183  | fancyss_hnd_v8 |
 | [RT-AX89X](https://www.koolcenter.com/posts/126)             | 官改 | qca-ipq806x     | ipq8074/a | armv7[^2] | 4.4.60    | fancyss_qca |
-| TX-TX6000 | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
+| TX-AX6000 | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
 | TUF-AX4200Q | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
 ## 版本选择
 
