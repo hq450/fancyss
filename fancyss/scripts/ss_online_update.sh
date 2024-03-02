@@ -1799,7 +1799,7 @@ get_online_rule_now(){
 	NODE_FORMAT4=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vless://")
 	NODE_FORMAT5=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^trojan://")
 	NODE_FORMAT6=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^hysteria2://")
-	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT6}" ];then
+	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT5}" -a -z "${NODE_FORMAT6}" ];then
 		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2节点，退出！"
 		return 1
 	fi
