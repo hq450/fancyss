@@ -5638,15 +5638,8 @@ function reset_smartdns_conf(){
 								var pingm = [["1", "1次/节点"], ["2", "5次/节点"], ["3", "10次/节点"], ["4", "20次/节点"]];
 								var furl = [
 											  "http://www.google.com/generate_204",
-											  "http://www.gstatic.com/generate_204",
 											  "http://developer.google.cn/generate_204",
-											  "http://connectivitycheck.gstatic.com/generate_204",
-											  "http://edge.microsoft.com/captiveportal/generate_204",
-											  "http://cp.cloudflare.com",
-											  "http://captive.apple.com",
-											  "http://www.google.com",
-											  "http://www.google.com.hk",
-											  "http://www.google.com.tw"
+										          "http://cp.cloudflare.com/generate_204",
 											 ];
 								var curl = [
 											  "http://www.baidu.com",
