@@ -1,5 +1,13 @@
 fancyss Changelog
 ===========================================
+3.3.2  (todo)
+   - remove	移除dohclient及其相关功能
+   - remove	移除smartdns及其相关功能
+   - remove	移除trojan二进制（4年未更新），现在trojian协议由xray运行
+   - remove	移除haproxy及负载均衡功能
+   - remove	移除v2ray-plugin二进制（机场基本上没有这个混淆插件，如自建shadowsocks + v2ray-plugin节点，会提示下载二进制）
+   - remove	移除socks5页面（因六、七年未更新，且只支持纯ss节点）
+
 3.3.1  (20240302)
    - fix	修复trojan节点无法订阅的问题
    - update	udp代理控制，chatgpt选项新增更多的相关域名
