@@ -18,6 +18,7 @@ cp_rules(){
 }
 
 sync_binary(){
+	#BINS="v2ray v2ray-plugin xray ss_rust kcptun naive"
 	BINS="v2ray v2ray-plugin xray ss_rust kcptun naive"
 	for BIN in $BINS;
 	do

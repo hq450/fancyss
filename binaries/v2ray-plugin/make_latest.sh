@@ -5,14 +5,14 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 mkdir -p $DIR/.build_v2ray-plugin
 base_dir=$DIR/.build_v2ray-plugin
 cd ${base_dir}
-GO_VERSION="1.20.4"
+GO_VERSION="1.22.2"
 CODENAME="hq450@fancyss"
 
 echo "-----------------------------------------------------------------"
 
 # prepare golang
 if [ ! -x ${base_dir}/go/bin/go ];then
-	[ ! -f "go${GO_VERSION}.linux-amd64.tar.gz" ] && wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+	[ ! -f "go${GO_VERSION}.linux-amd64.tar.gz" ] && wget https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz
 	tar -C ${base_dir} -xzf go${GO_VERSION}.linux-amd64.tar.gz
 fi
 export PATH=${base_dir}/go/bin:$PATH

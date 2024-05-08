@@ -1,0 +1,3 @@
+fa4cbfbbb792025e50833ffca55696f3  /home/sadog/koolshare/fancyss/binaries/v2ray-plugin/v5.15.1/v2ray-plugin_arm64
+d54ff7653203351295ba938d95055289  /home/sadog/koolshare/fancyss/binaries/v2ray-plugin/v5.15.1/v2ray-plugin_armv5
+66fdfebe00c38824743bcb5f26c0e992  /home/sadog/koolshare/fancyss/binaries/v2ray-plugin/v5.15.1/v2ray-plugin_armv7

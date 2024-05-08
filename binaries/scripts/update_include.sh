@@ -4,6 +4,7 @@ set_latest_release_version() {
   local LATEST_URL="https://github.com/$PROJECT/releases/latest"
   local LATEST_RELEASE=$(curl -L -s -H 'Accept: application/json' ${LATEST_URL})
   LATEST_VERSION=$(echo $LATEST_RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/; s/v//g; s/ //g')
+  echo "latest $BIN_NAME version is $LATEST_VERSION"
 }
 
 set_latest_prerelease_version() {
@@ -46,9 +47,14 @@ update(){
 
   rm -f "$FILE_NAME"
 
-  wget -O "$FILE_NAME" "$URL"
+  wget -O "$FILE_NAME" "$URL" >/dev/null 2>&1
+
+  if [ $? = !0 ];then
+	echo "download failed!"
+  fi
 
   local bin_name_in_archive=$(pattern_replace "$BIN_NAME_IN_ARCHIVE_PATTERN" "$2" "$1" "$LATEST_VERSION")
+  echo "prepare to untar $bin_name_in_archive from $FILE_NAME"
   extract_archive "$FILE_NAME" "$bin_name_in_archive"
 
   rm "$FILE_NAME"
