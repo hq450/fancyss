@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2024-05-18
+-e ## Last update: 2024-05-20
 
 .*\b0-6\.com
 .*\b0\.zone
@@ -4939,6 +4939,7 @@
 .*\b58woyou\.com
 .*\b58wzb\.com
 .*\b58xinrui\.com
+.*\b58xinwen\.com
 .*\b58xs\.la
 .*\b58xuexi\.com
 .*\b58yiji\.com
@@ -5469,7 +5470,6 @@
 .*\b67gu\.com
 .*\b67it\.com
 .*\b67joy\.com
-.*\b67ks\.net
 .*\b67mo\.com
 .*\b67omd71\.com
 .*\b67wanwan\.com
@@ -7213,7 +7213,6 @@
 .*\b99mk\.net
 .*\b99mst\.com
 .*\b99music\.net
-.*\b99niu\.com
 .*\b99pdf\.com
 .*\b99ppt\.com
 .*\b99pto\.com
@@ -12733,7 +12732,6 @@
 .*\bbtsemi\.com
 .*\bbtshidai\.com
 .*\bbtsmth\.com
-.*\bbtsmth\.org
 .*\bbtspreads\.com
 .*\bbtsteel\.com
 .*\bbtten\.com
@@ -12961,6 +12959,7 @@
 .*\bbygamesdk\.com
 .*\bbyguitar\.com
 .*\bbygw\.net
+.*\bbyhh\.net
 .*\bbyhlds\.com
 .*\bbyhlds\.net
 .*\bbyhua\.com
@@ -23915,6 +23914,7 @@
 .*\bfh77\.com
 .*\bfh77\.net
 .*\bfh86\.com
+.*\bfh888\.com
 .*\bfhb971\.com
 .*\bfhd001\.com
 .*\bfheb-six\.com
@@ -29215,6 +29215,7 @@
 .*\bhez70\.com
 .*\bheze\.cc
 .*\bhezebus\.com
+.*\bhezegd\.com
 .*\bhezeribao\.com
 .*\bhezhidongli\.com
 .*\bhezi\.com
@@ -32173,6 +32174,7 @@
 .*\bicnote\.com
 .*\bicnpt\.com
 .*\bicntv\.tv
+.*\bicntvcdn\.com
 .*\bicoat\.cc
 .*\bicoc\.bz
 .*\bicoc\.cc
@@ -33839,6 +33841,7 @@
 .*\bitto100\.com
 .*\bittribalwo\.com
 .*\bituad\.com
+.*\bituchong\.com
 .*\bitugo\.com
 .*\bituite\.com
 .*\bitutu\.tv
@@ -34523,6 +34526,7 @@
 .*\bjgzx\.org
 .*\bjgzyw\.com
 .*\bjh-dzcl\.com
+.*\bjh3737\.com
 .*\bjh3j\.com
 .*\bjh8k\.com
 .*\bjhcb\.net
@@ -37962,6 +37966,7 @@
 .*\bkrones-group\.com
 .*\bkrones\.com
 .*\bkrpano\.tech
+.*\bkrplanking\.com
 .*\bkrshadow\.com
 .*\bkrszf\.com
 .*\bkrzhs\.com
@@ -39354,6 +39359,7 @@
 .*\blerye\.com
 .*\bleshangzx\.com
 .*\bleshanvc\.com
+.*\bleshi123\.com
 .*\bleshiguang\.com
 .*\bleshizyimg\.com
 .*\bleshow\.com
@@ -40161,6 +40167,7 @@
 .*\bliudanking\.com
 .*\bliudatxt\.com
 .*\bliudatxt\.org
+.*\bliudayadan\.com
 .*\bliudon\.com
 .*\bliudon\.org
 .*\bliudu\.com
@@ -41323,6 +41330,7 @@
 .*\blycdw\.com
 .*\blycheer\.net
 .*\blyd6688\.com
+.*\blydaas\.com
 .*\blydconn\.com
 .*\blydct\.com
 .*\blydezx\.net
@@ -41668,6 +41676,7 @@
 .*\bmailizc\.com
 .*\bmailpanda\.com
 .*\bmailshanguo\.com
+.*\bmailyun\.net
 .*\bmaimaidx\.cc
 .*\bmaimaimaiw\.com
 .*\bmaimaiyouhuiquan\.com
@@ -42273,6 +42282,7 @@
 .*\bmeeuapp\.net
 .*\bmefcl\.com
 .*\bmegaemoji\.com
+.*\bmegagamelog\.com
 .*\bmegagenchina\.com
 .*\bmegajoy\.com
 .*\bmegalithwatch\.com
@@ -47805,6 +47815,7 @@
 .*\bpopqiu\.com
 .*\bpopsoft\.com
 .*\bpopumed\.com
+.*\bpopupgrade\.com
 .*\bpoputar\.com
 .*\bpopziti\.com
 .*\bporlockz\.com
@@ -48107,7 +48118,6 @@
 .*\bptsql\.org
 .*\bptteng\.com
 .*\bptweixin\.com
-.*\bptx4896\.com
 .*\bptxie\.com
 .*\bptxz\.com
 .*\bptyg\.com
@@ -50175,7 +50185,6 @@
 .*\bray-joy\.com
 .*\bray8\.cc
 .*\brayalto\.pro
-.*\braychien\.site
 .*\braycom-inv\.com
 .*\braycuslaser\.com
 .*\braydonet\.com
@@ -58325,6 +58334,7 @@
 .*\btoysir\.com
 .*\btoysol\.com
 .*\btozzger\.info
+.*\btpadx\.com
 .*\btpbook\.com
 .*\btpcdnde88de\.com
 .*\btpcmacao\.com
@@ -61625,6 +61635,7 @@
 .*\bweike\.fm
 .*\bweikeimg\.com
 .*\bweikejianghu\.com
+.*\bweikelink\.com
 .*\bweikengtech\.com
 .*\bweikeqi-biotech\.com
 .*\bweikuw\.com
@@ -64022,7 +64033,6 @@
 .*\bxcmgmall\.com
 .*\bxcmh\.cc
 .*\bxcn457\.com
-.*\bxcname\.com
 .*\bxcnchinese\.com
 .*\bxcnic\.net
 .*\bxcode\.me
@@ -65009,7 +65019,6 @@
 .*\bxindemarinenews\.com
 .*\bxindetihuiya\.com
 .*\bxindexuexi\.com
-.*\bxindi02\.site
 .*\bxindianti\.com
 .*\bxindingwealth\.com
 .*\bxindns\.com
@@ -66721,6 +66730,7 @@
 .*\byameijie\.com
 .*\byameisj\.com
 .*\byamibo\.com
+.*\byan678\.com
 .*\byanagou\.net
 .*\byananhongyun\.com
 .*\byanbaohui\.com
@@ -68935,6 +68945,7 @@
 .*\byslw\.com
 .*\bysmiji\.com
 .*\bysmine\.com
+.*\bysnews\.net
 .*\bysnns\.com
 .*\bysok\.net
 .*\bysoow\.com
@@ -69999,7 +70010,6 @@
 .*\bz0\.cc
 .*\bz01\.com
 .*\bz0ukun\.com
-.*\bz1233\.com
 .*\bz12345\.com
 .*\bz17\.link
 .*\bz2sci\.com
