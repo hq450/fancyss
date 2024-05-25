@@ -109,6 +109,7 @@ ml.cdn-apple.com
 music.apple.com
 ocsp-lb.apple.com.akadns.net
 ocsp.apple.com
+ocsp2-lb.apple.com.akadns.net
 ocsp2.apple.com
 oscdn.apple.com
 oscdn.origin-apple.com.akadns.net
