@@ -18,9 +18,19 @@ cp_rules(){
 }
 
 sync_binary(){
-	#BINS="v2ray v2ray-plugin xray ss_rust kcptun naive"
-	BINS="v2ray xray ss_rust kcptun naive"
-	for BIN in $BINS;
+	BINS_REMOVE="v2ray-plugin kcptun"
+	for BIN_REMOVE in $BINS_REMOVE;
+	do
+		echo ">>> remove old bin $BIN_REMOVE"
+		rm -rf ${CURR_PATH}/fancyss/bin-mtk/${BIN_REMOVE}
+		rm -rf ${CURR_PATH}/fancyss/bin-hnd_v8/${BIN_REMOVE}
+		rm -rf ${CURR_PATH}/fancyss/bin-hnd/${BIN_REMOVE}
+		rm -rf ${CURR_PATH}/fancyss/bin-qca/${BIN_REMOVE}
+		rm -rf ${CURR_PATH}/fancyss/bin-arm/${BIN_REMOVE}
+	done
+	
+	BINS_COPY="v2ray xray ss_rust naive"
+	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
 		if [ "${BIN}" == "v2ray" ];then
@@ -129,17 +139,9 @@ gen_folder(){
 		# remove binaries
 		rm -rf ./shadowsocks/bin/sslocal
 		rm -rf ./shadowsocks/bin/v2ray
-		rm -rf ./shadowsocks/bin/v2ray-plugin
-		rm -rf ./shadowsocks/bin/kcptun
-		rm -rf ./shadowsocks/bin/trojan
-		rm -rf ./shadowsocks/bin/trojan
 		rm -rf ./shadowsocks/bin/speederv1
 		rm -rf ./shadowsocks/bin/speederv2
 		rm -rf ./shadowsocks/bin/udp2raw
-		rm -rf ./shadowsocks/bin/haproxy
-		rm -rf ./shadowsocks/bin/smartdns
-		rm -rf ./shadowsocks/bin/dohclient
-		rm -rf ./shadowsocks/bin/dohclient-cache
 		rm -rf ./shadowsocks/bin/naive
 		rm -rf ./shadowsocks/bin/tuic-client
 		rm -rf ./shadowsocks/bin/ipt2socks
@@ -150,20 +152,12 @@ gen_folder(){
 			rm -rf ./shadowsocks/bin/websocketd
 		fi
 		# remove scripts
-		rm -rf ./shadowsocks/scripts/ss_lb_config.sh
 		rm -rf ./shadowsocks/scripts/ss_v2ray.sh
 		rm -rf ./shadowsocks/scripts/ss_rust_update.sh
-		rm -rf ./shadowsocks/scripts/ss_socks5.sh
 		rm -rf ./shadowsocks/scripts/ss_udp_status.sh
 		# remove rules
 		rm -rf ./shadowsocks/ss/rules/chn.acl
 		rm -rf ./shadowsocks/ss/rules/gfwlist.acl
-		rm -rf ./shadowsocks/ss/rules/cdns.json
-		rm -rf ./shadowsocks/ss/rules/smartdns*.conf
-		# remove pages
-		rm -rf ./shadowsocks/webs/Module_shadowsocks_lb.asp
-		rm -rf ./shadowsocks/webs/Module_shadowsocks_local.asp
-		rm -rf ./shadowsocks/ss/dohclient
 		# remove line
 		sed -i '/fancyss-full/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss-full/d' ./shadowsocks/res/ss-menu.js
@@ -259,32 +253,6 @@ gen_folder(){
 		sed -i 's/\,\s\"ss_basic_udp2raw_boost_enable\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_udp2raw_a\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_udp2raw_keeprule\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		# dns
-		sed -i 's/\,\s\"ss_basic_chng_china_1_doh\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_chng_china_2_doh\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_chng_trust_1_opt_doh_val\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_chng_trust_2_opt_doh\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_smrt\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_sel_china\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_udp_china\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_udp_china_user\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_tcp_china\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_tcp_china_user\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_doh_china\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_sel_foreign\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_tcp_foreign\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_tcp_foreign_user\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_doh_foreign\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_cache_timeout\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_proxy\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_ecs_china\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_ecs_foreign\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_dohc_cache_reuse\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_s_resolver_doh\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\, \"负载均衡设置\"//g' ./shadowsocks/res/ss-menu.js
-		sed -i 's/\, \"Socks5设置\"//g' ./shadowsocks/res/ss-menu.js
-		sed -i 's/\, \"Module_shadowsocks_lb\.asp\"//g' ./shadowsocks/res/ss-menu.js
-		sed -i 's/\, \"Module_shadowsocks_local\.asp\"//g' ./shadowsocks/res/ss-menu.js
 		# hysteria2
 		sed -i 's/\,\s\"ss_basic_hy2_up_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_hy2_dl_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp

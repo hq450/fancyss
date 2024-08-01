@@ -1,12 +1,16 @@
 fancyss Changelog
 ===========================================
-3.3.2  (todo)
+3.3.2  (20240802)
+   - add	添加RT-BE88U等102固件的支持
+   - note	因插件体积越来越大，本次主要是做插件瘦身，移除了一些二进制，DNS进阶部分只保留了chinands-ng
+       		后期会将chinands-ng升级到ChinaDNS-NG 2.0（https://github.com/zfl9/chinadns-ng/issues/144）
    - remove	移除dohclient及其相关功能
    - remove	移除smartdns及其相关功能
    - remove	移除trojan二进制（4年未更新），现在trojian协议由xray运行
    - remove	移除haproxy及负载均衡功能
    - remove	移除v2ray-plugin二进制（机场基本上没有这个混淆插件，如自建shadowsocks + v2ray-plugin节点，会提示下载二进制）
    - remove	移除socks5页面（因六、七年未更新，且只支持纯ss节点）
+   - remove	默认不提供kcptun二进制（如果使用kcptun加速，会提示下载二进制）
 
 3.3.1  (20240302)
    - fix	修复trojan节点无法订阅的问题

@@ -53,7 +53,7 @@ platform_test(){
 	local PKG_ARCH=$(cat ${DIR}/.valid)
 	local ROT_ARCH=$(uname -m)
 	local KEL_VERS=$(uname -r)
-	#local PKG_NAME=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | grep -Eo "pkg_name=.+"|grep -Eo "fancyss\w+")
+	#local PKG_NAME=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 	#local PKG_ARCH=$(echo ${pkg_name} | awk -F"_" '{print $2}')
 	#local PKG_TYPE=$(echo ${pkg_name} | awk -F"_" '{print $3}')
 
@@ -486,15 +486,12 @@ install_now(){
 	rm -rf /koolshare/bin/rss-tunnel
 	rm -rf /koolshare/bin/rss-local
 	rm -rf /koolshare/bin/obfs-local
-	rm -rf /koolshare/bin/haproxy
 	rm -rf /koolshare/bin/dns2socks
 	rm -rf /koolshare/bin/kcptun
 	rm -rf /koolshare/bin/chinadns-ng
-	rm -rf /koolshare/bin/smartdns
 	rm -rf /koolshare/bin/speederv1
 	rm -rf /koolshare/bin/speederv2
 	rm -rf /koolshare/bin/udp2raw
-	rm -rf /koolshare/bin/trojan
 	rm -rf /koolshare/bin/tuic-client
 	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
@@ -506,8 +503,6 @@ install_now(){
 	rm -rf /koolshare/bin/naive
 	rm -rf /koolshare/bin/ipt2socks
 	rm -rf /koolshare/bin/dnsclient
-	rm -rf /koolshare/bin/dohclient
-	rm -rf /koolshare/bin/dohclient-cache
 	rm -rf /koolshare/bin/dns2tcp
 	rm -rf /koolshare/bin/dns-ecs-forcer
 	rm -rf /koolshare/bin/uredir
@@ -527,6 +522,11 @@ install_now(){
 	rm -rf /koolshare/bin/dig
 
 	# legacy files should be removed
+	rm -rf /koolshare/bin/trojan
+	rm -rf /koolshare/bin/haproxy
+	rm -rf /koolshare/bin/smartdns
+	rm -rf /koolshare/bin/dohclient
+	rm -rf /koolshare/bin/dohclient-cache
 	rm -rf /koolshare/bin/v2ctl
 	rm -rf /koolshare/bin/dnsmasq
 	rm -rf /koolshare/bin/Pcap_DNSProxy
@@ -712,13 +712,7 @@ install_now(){
 	else
 		dbus set ss_basic_vcore=0
 	fi
-	if [ ! -x "/koolshare/bin/trojan" ];then
-		dbus set ss_basic_tcore=1
-	else
-		dbus set ss_basic_tcore=0
-		
-	fi
-	
+
 	# dbus value
 	echo_date "设置插件安装参数..."
 	dbus set ss_basic_version_local="${PLVER}"

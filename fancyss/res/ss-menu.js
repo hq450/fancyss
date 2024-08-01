@@ -323,8 +323,8 @@ function getNowFormatDate(s) {
 	console.log(s, currentdate);
 }
 function menu_hook() {
-	tabtitle[tabtitle.length - 1] = new Array("", "科学上网设置", "负载均衡设置", "Socks5设置", "__INHERIT__");
-	tablink[tablink.length - 1] = new Array("", "Module_shadowsocks.asp", "Module_shadowsocks_lb.asp", "Module_shadowsocks_local.asp", "NULL");
+	tabtitle[tabtitle.length - 1] = new Array("", "fancyss科学上网", "__INHERIT__");
+	tablink[tablink.length - 1] = new Array("", "Module_shadowsocks.asp", "NULL");
 }
 function versionCompare(v1, v2, options) {
 	var lexicographical = options && options.lexicographical,
@@ -498,15 +498,6 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 21) {
 		document.getElementById("loading_block3").innerHTML = "重启dnsmasq进程 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重启中 ...</font></li>");
-	} else if (action == 22) {
-		document.getElementById("loading_block3").innerHTML = "保存smartdns配置 ..."
-		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，保存中 ...</font></li>");
-	} else if (action == 23) {
-		document.getElementById("loading_block3").innerHTML = "重置smartdns配置 ..."
-		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重置中 ...</font></li>");
-	} else if (action == 24) {
-		document.getElementById("loading_block3").innerHTML = "清除dohclient缓存 ..."
-		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，清除中 ...</font></li>");
 	}
 }
 function hideSSLoadingBar() {
@@ -685,16 +676,6 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1：</b>gfwlist.txt内的国外网站解析使用v2ray_dns，其余全部使用你选择的中国DNS解析。";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2：</b>cdn.txt内的国内网站解析使用中国DNS，其余全部使用v2ray_dns。";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析通过vps代为请求；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。";
-		statusmenu += "<br /><font color='#CC0066'><b>SmartDNS：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;SmartDNS是一个运行在本地的DNS服务器，SmartDNS接受本地客户端的DNS查询请求，从多个上游DNS服务器获取DNS查询结果，并将访问速度最快的结果返回给客户端，提高网络访问速度。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;在本插件中，SmartDNS根据运行方式的不同，会生成不同的配置文件，简单的来说：SmartDNS的7913端口负责国外解析，SmartDNS的5335端口负责国内解析，具体如下。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅中国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用你选择的外国DNS方案，其余全部使用SmartDNS的5335端口解析。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（仅外国DNS设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用你选择的中国DNS解析。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式1（中国DNS和外国DNS均设定为SmartDNS）：</b>gfwlist.txt内的国外网站解析使用SmartDNS的7913端口解析，其余全部使用SmartDNS的5335端口解析。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅中国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用使用你选择外国DNS方案解析。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（仅外国DNS设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用你选择的中国DNS解析，其余全部使用SmartDNS的7913端口解析。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>模式2（中国DNS和外国DNS均设定为SmartDNS）：</b>cdn.txt内的国内网站解析使用SmartDNS的5335端口解析，其余全部使用SmartDNS的7913端口解析。";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>特点：</b>国外解析直连国外DNS服务器；模式2下由cdn.txt定义国内解析名单，对cpu负担稍大，建议使用dnsmasq-fastlookup。另外因为SmartDNS只会给出一个\"最优的\"解析结果，而可能对一些靠多个cdn解析同时连接下载加速的应用造成速度损失。";
 		statusmenu += "<br /><font color='#CC0066'><b>直连：</b></font>"
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;本地直接向DNS服务器请求获取国外网站的解析地址，目前此选项仅限于回国模式使用，因为在国外网络下查询国外DNS服务器不会有DNS污染。";
 		_caption = "国外DNS";
@@ -975,13 +956,7 @@ function openssHint(itemNum) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNS.SB【45.11.45.11】";
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;quad101 【101.101.101.101】";
 		_caption = "说明";
-	} else if (itemNum == 122) {
-		width = "450px";
-		statusmenu = "&nbsp;&nbsp;<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>类似于ChinaDNS，不过使用 DoH 作为上游服务器，同时还支持udp、tcp查询。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;dohclient自带DNS分流，和ChinaDNS一样，可以指定一个国内上游DNS服务器和一个国外DNS服务器，并使用大陆IP地址段（chnroute.txt）进行分流。<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意：</font>如果你的网络环境udp查询效果不佳（udp差的大内网，上游限制等情况），可尝试更改为tcp或DoH查询，以规避udp被屏蔽、丢包、被QoS等情况。<br /><br />";
-		_caption = "dohclient：";
-	} else if (itemNum == 123) {
+	}else if (itemNum == 123) {
 		width = "650px";
 		statusmenu = "ECS，即edns-client-subnet，<a href='https://taoshu.in/dns/edns-client-subnet.html' target='_blank'><u><font color='#00F'>ECS简介</font></u></a><br /><br />";
 		statusmenu += "&nbsp;&nbsp;勾选此ECS开关后，国内的DNS查询将会附加ECS标签，服务器会根据ECS标签里的网段信息，返回较近的解析IP地址，所以此处开启ECS后，国内的DNS查询CDN效果理论上会更好！<br /><br />";
@@ -990,48 +965,19 @@ function openssHint(itemNum) {
 		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
 		_caption = "ECS说明：";
-	} else if (itemNum == 124) {
-		width = "450px";
-		statusmenu = "&nbsp;&nbsp;<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>类似于ChinaDNS，不过使用 DoH 作为上游服务器，同时还支持tcp查询。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;dohclient自带DNS分流，和ChinaDNS一样，可以指定一个国内上游DNS服务器和一个国外DNS服务器，并使用大陆IP地址段（chnroute.txt）进行分流。<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意：</font>因国外udp查询无法强制使用代理，所以查询结果存在污染，故没有开放国外udp查询选项！<br /><br />";
-		_caption = "dohclient：";
-	} else if (itemNum == 125) {
+	}else if (itemNum == 125) {
 		width = "650px";
 		statusmenu = "ECS，即edns-client-subnet，<a href='https://taoshu.in/dns/edns-client-subnet.html' target='_blank'><u><font color='#00F'>ECS简介</font></u></a><br /><br />";
 		statusmenu += "&nbsp;&nbsp;勾选此ECS开关后，国外的DNS查询将会附加ECS标签，DNS服务器会根据ECS标签里的网段信息返回较近的解析IP地址，所以此处开启ECS后，国外的DNS查询CDN效果理论上会更好！<br /><br />";
 		statusmenu += "&nbsp;&nbsp;为了在DNS查询时附件上ECS信息，插件开启过程中会检测本机的国外出口公网IPV4地址（检测代理服务器出口地址），并用此地址作为ECS信息。为了避免用户准确的IP地址信息隐私泄露，插件默认情况下会将ip地址最后一位处理为0，同时使用24作为掩码来规避此情况。比如你的代理服务器出口IP地址为：1.1.1.1，那么查询时候会处理成：1.1.1.0/24，这对于DNS查询要求的地理信息精度已经完全够用，事实上，一部分支持ECS的DNS服务器强制要求掩码不能超过24。<br /><br />";
 		statusmenu += "&nbsp;&nbsp;成功开启ECS后，你可以使用本插件的<font color='#F00'>【DNS解析测试(dig)】</font>功能来查询国外域名，如果上游DNS支持ECS，且ECS开启成功则返回的查询结果中会带有ECS信息，比如返回的CLIENT-SUBNET字段会带有国外出口公网IPV4网段信息。<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意1：</font>如果代理服务器出口地址检测失败，国外DNS的ECS将会强制关闭，即使ECS开关处于勾选状态！<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意2：</font>部分DoH DNS服务尚未提供ECS支持，比如Cloudflare，不支持ECS的DNS查询的结果不带ECS标签，但是不会影响域名解析！<br /><br />";
+		statusmenu += "<font color='#CC0066'>注意：</font>如果代理服务器出口地址检测失败，国外DNS的ECS将会强制关闭，即使ECS开关处于勾选状态！<br /><br />";
 		statusmenu += "本插件使用了明显的标志符号标注了各个DNS服务器对ECS的支持情况，具体如下：<br />";
 		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
 		statusmenu += "🟡 代表该DNS服务器对部分域名查询支持ECS，部分域名查询不支持ECS，比如AdGuard；<br />";
 		_caption = "ECS说明：";
-	} else if (itemNum == 126) {
-		width = "450px";
-		statusmenu = "勾选此处后，国外的DNS查询将会强制使用本插件23456端口的socks5代理进行！<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意1：</font>在国内环境下，因gfw屏蔽等原因，除了部分国外DNS服务器可以直连解析，其它服务器均需要使用代理（勾选Proxy）才能正常使用！<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意2：</font>即使部分DoH DNS服务器可以直连解析，也不能完全保证不丢包！所以建议全程勾选Proxy开关，除非你有特殊的要求！<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意3：</font>通过dohclient进行tcp协议的国外DNS查询，同样建议勾选Proxy，以规避屏蔽、丢包等情况！<br /><br />";
-		_caption = "Proxy说明：";
-	} else if (itemNum == 127) {
-		statusmenu = "缓存时长<br /><br />";
-		statusmenu += "&nbsp;&nbsp;dohclient自带了DNS缓存数据库功能，能将DNS查询结果缓存到本地，缓存文件位于/tmp/doh_main.db，选择不同的缓存策略可以获得不同的解析速度体验。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;如果不知道如何选择，请保持默认，即【跟随TTL】；选择过高的缓存时长可能或导致长时间后，部分网站/服务的解析地址发生改变，但是本地无法得到更新的情况。<br /><br />";
-		_caption = "缓存时长说明：";
-	} else if (itemNum == 128) {
-		width = "450px";
-		statusmenu = "&nbsp;&nbsp;缓存持久化并非dohclient自带的功能，而是fancyss插件附加功能，该功能让用户决定在插件重启时是否重建缓存。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;<font color='#CC0066'>不勾选：</font>重启插件、更换节点等操作都会删除本地的缓存文件/tmp/doh_main.db，重启完成后重建全新的缓存。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;<font color='#CC0066'>勾选：</font>重启插件、更换节点等操作都会保留本地的dohclient缓存文件，重启完成后可以使用之前的缓存。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;<font color='#00F'>说明1：</font>如果你长期使用相同的代理节点，或者相近的节点（比如都是香港节点），可以考虑勾选。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;<font color='#00F'>说明2：</font>如果你使用较多的不同节点，且节点属地不一致，建议不勾选，不然不同节点下使用相同的缓存可能会导致CDN失效！<br /><br />";
-		statusmenu += "&nbsp;&nbsp;<font color='#00F'>说明3：</font>如果使用不同节点观看Netflix等流媒体，同样不建议勾选！<br /><br />";
-		statusmenu += "&nbsp;&nbsp;<font color='#00F'>说明4：</font>不论勾选与否，重启路由器后缓存都会丢失，插件开启后会重建全新缓存！<br /><br />";
-		_caption = "缓存持久化：";
-	} else if (itemNum == 129) {
+	}else if (itemNum == 129) {
 		width = "650px";
 		statusmenu = "&nbsp;&nbsp;自动选取模式下会随机请求列表里的某个DNS服务器，如果解析成功，下次解析将默认使用该服务器。";
 		statusmenu += "<br /><br />&nbsp;&nbsp;如果解析失败或超时（2s），则会自动切换域名列表里的下一个DNS服务器！直到解析成功，或者将列表里的所有DNS使用一轮！当然你也可指定一个DNS，或者自定义一个支持tcp协议查询的DNS用于节点域名的解析";
@@ -1063,11 +1009,10 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;勾选此ECS开关后，此处中国的DNS的DNS查询将会附加ECS标签，DNS服务器会根据ECS标签里的网段信息返回较近的解析IP地址，所以在使用公共DNS服务的时候开启ECS，国内的DNS查询CDN效果理论上会更好！<br /><br />";
 		statusmenu += "&nbsp;&nbsp;为了在DNS查询时附件上ECS信息，插件开启过程中会检测本机的国内出口公网IPV4地址，并用此地址作为ECS信息。为了避免用户准确的IP地址信息隐私泄露，插件默认情况下会将ip地址最后一位处理为0，同时使用24作为掩码来规避此情况。比如你的IP地址为：110.110.110.110，那么查询时候会处理成：110.110.110.0/24，这对于DNS查询要求的地理信息精度已经完全够用，事实上，一部分支持ECS的DNS服务器强制要求掩码不能超过24。<br /><br />";
 		statusmenu += "&nbsp;&nbsp;成功开启ECS后，你可以使用本插件的<font color='#F00'>【DNS解析测试(dig)】</font>功能来查询国内域名，如果上游DNS支持ECS，且ECS开启成功，则返回的查询结果中会带有ECS信息，比如返回结果的CLIENT-SUBNET字段会带有国内出口公网IPV4网段信息。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;为了实现支持ECS的DNS查询，udp DNS查询使用了dns-ecs-forcer程序，其来自rampageX的开源项目：<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>DEF</font></u></a>；tcp DNS查询使用了dns-ecs-forcer加dns2tcp两个程序，dns2tcp来自zfl9的开源项目：<a href='https://github.com/zfl9/dns2tcp' target='_blank'><u><font color='#00F'>dns2tcp</font></u></a>；DoH DNS查询使用了dohclient程序，其来自GangZhuo的开源项目：<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>。<br />";
+		statusmenu += "&nbsp;&nbsp;为了实现支持ECS的DNS查询，udp DNS查询使用了dns-ecs-forcer程序，其来自rampageX的开源项目：<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>DEF</font></u></a>；tcp DNS查询使用了dns-ecs-forcer加dns2tcp两个程序，dns2tcp来自zfl9的开源项目：<a href='https://github.com/zfl9/dns2tcp' target='_blank'><u><font color='#00F'>dns2tcp</font></u></a>。<br />";
 		statusmenu += "&nbsp;&nbsp;在此感谢以上作者的开源贡献！。<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意1：</font>并不是所有的上游DNS服务器都支持ECS！比如运营商DNS等，具体支持情况请用【DNS解析测试(dig)】查询国内域名测试。<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意2：</font>对不支持ECS的DNS，勾选上ECS也不会有负面影响，仅仅是查询的结果将不会返回ECS信息，但是不会影响域名正常解析！<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意3：</font>由于目前smartdns对于ECS的支持并不是很好，所以不论是udp、tcp还是DoH协议下，选择smartdns都不支持ECS！<br /><br />";
 		statusmenu += "本插件使用了明显的标志符号标注了各个DNS服务器对ECS的支持情况，具体如下：<br />";
 		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
@@ -1080,11 +1025,10 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;勾选此ECS开关后，此处可信DNS-1的DNS查询将会附加ECS标签，DNS服务器会根据ECS标签里的网段信息返回较近的解析IP地址，所以在使用国外可信DNS的时候开启ECS，国外的CDN效果理论上会更好！<br /><br />";
 		statusmenu += "&nbsp;&nbsp;为了在DNS查询时附件上ECS信息，插件开启过程中会检测本机的国外出口公网IPV4地址（即检测代理服务器出口地址），并用此地址作为ECS信息。为了避免用户准确的IP地址信息隐私泄露，插件默认情况下会将ip地址最后一位处理为0，同时使用24作为掩码来规避此情况。比如你的代理服务器出口IP地址为：1.1.1.1，那么查询时候会处理成：1.1.1.0/24，这对于DNS查询要求的地理信息精度已经完全够用，事实上，一部分支持ECS的DNS服务器强制要求掩码不能超过24。<br /><br />";
 		statusmenu += "&nbsp;&nbsp;成功开启ECS后，你可以使用本插件的<font color='#F00'>【DNS解析测试(dig)】</font>功能来查询国外域名，如果上游DNS支持ECS，且ECS开启成功则返回的查询结果中会带有ECS信息，比如返回的CLIENT-SUBNET字段会带有国外出口公网IPV4网段信息。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;为了实现支持ECS的DNS查询，dns2socks使用了支持ECS的V2.2版本；ss-tunnel和v2/xray_dns的DNS查询使用了dns-ecs-forcer程序，其来自rampageX的开源项目：<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>DEF</font></u></a>；dohclient程序本身支持ECS，其来自GangZhuo的开源项目：<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>。<br />";
+		statusmenu += "&nbsp;&nbsp;为了实现支持ECS的DNS查询，dns2socks使用了支持ECS的V2.2版本；ss-tunnel和v2/xray_dns的DNS查询使用了dns-ecs-forcer程序，其来自rampageX的开源项目：<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>DEF</font></u></a>。<br />";
 		statusmenu += "&nbsp;&nbsp;在此感谢以上作者的开源贡献！。<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意1：</font>如果代理服务器出口地址检测失败，可信DNS-1的ECS将会强制关闭，即使ECS开关处于勾选状态！<br /><br />";
 		statusmenu += "<font color='#CC0066'>注意2：</font>对不支持ECS的DNS，勾选上ECS也不会有负面影响，仅仅是查询的结果将不会返回ECS信息，但是不会影响域名正常解析！<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意3：</font>由于目前smartdns对于ECS的支持并不是很好，所以不论是udp、tcp还是DoH协议下，选择smartdns都不支持ECS！<br /><br />";
 		statusmenu += "本插件使用了明显的标志符号标注了各个DNS服务器对ECS的支持情况，具体如下（具体支持情况请使用<font color='#F00'>【DNS解析测试(dig)】</font>功能检测）：<br />";
 		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
 		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
@@ -1095,8 +1039,6 @@ function openssHint(itemNum) {
 		// 可信DNS-2 ecs
 		width = "650px";
 		statusmenu = "可信DNS-2 (--trust-dns)的DNS全部是直连查询类型，而很多国外DNS服务器被国家防火墙屏蔽，这就导致了直连解析能用的DNS服务器比较少。<br /><br />";
-		statusmenu += "<font color='#CC0066'>[直连] smartdns</font>：该smartdns定义了多组的DoH和DoT协议的上游DNS服务器，以保证可以获得国外域名的解析结果，由于目前smartdns对于ECS的支持并不是很好，所以不论是DoH还是DoT协议下，选择smartdns都不支持ECS！。<br /><br />";
-		statusmenu += "<font color='#CC0066'>[直连] dohclient</font>：由于dohclient只能定义一个上游服务器，所以此处给出了几个没有被屏蔽的上游DoH服务器，遗憾的是这几个服务器都不支持ECS，不然改解析方案也可以获得较好的国外cdn效果，不过此处还是提供了ECS开关，是为未来也许可以新增支持能直连DoH，且支持ECS的服务器。<br /><br />";
 		statusmenu += "<font color='#CC0066'>[直连] 原生udp</font>：直接使用udp协议，从本机（不经代理）向上级服务器发起DNS查询，不建议普通用户使用！由于国家防火墙具有的DNS抢答投毒机制，很难获得无污染的解析结果！但是也可能存在极少的非标准端口DNS，或者自己搭建的DNS服务器，可以获得无污染的解析结果。<br /><br />";
 		statusmenu += "<font color='#CC0066'>[直连] 原生tcp</font>：直接使用tcp协议，从本机（不经代理）向上级服务器发起DNS查询，不建议普通用户使用！，由于国家防火墙会对很多DNS服务器TCP查询请求进行TCP阻断，所以能用的服务器也不多！也存在一些非标准端口的DNS，或者自己搭建的支持tcp解析的DNS是可用的。<br /><br />";
 		statusmenu += "本插件使用了明显的标志符号标注了各个DNS服务器对ECS的支持情况，具体如下：<br />";
@@ -1109,7 +1051,7 @@ function openssHint(itemNum) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。";
 		statusmenu += "chinadns-ng支持自定义两组中国和两组可信DNS，中国DNS用于解析中国域名，可信DNS用于解析境外域名，具体情况见<a href='https://github.com/zfl9/chinadns-ng#工作原理' target='_blank'><u><font color='#00F'>chinadns-ng的工作原理</font></u></a>。";
 		statusmenu += "<br /><br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;在DNS进阶设定中，chinadns-ng方案开放了其两组中国和两组可信DNS的设定，并且在此基础上通过其它开源软件的协助，在chinadns的国内上游实现了tcp和DoH协议的DNS查询。具体如下：";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;在DNS进阶设定中，chinadns-ng方案开放了其两组中国和两组可信DNS的设定，并且在此基础上通过其它开源软件的协助，在chinadns的国内上游实现了tcp协议的DNS查询。具体如下：";
 		statusmenu += "<br /><br />";
 		statusmenu += "🔶<font color='#F00'>udp：</font><br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>chinadns-ng直接请求上游国内udp DNS服务器，获得解析结果，再经过chinadns-ng内部分流后给出结果。<br />";
@@ -1121,21 +1063,15 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS关：</font>DNS请求 → dnsmasq → chinadns-ng → dns2tcp → 国内tcp DNS服务器<br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS开：</font>DNS请求 → dnsmasq → chinadns-ng → dns-ecs-forcer → dns2tcp → 国内tcp DNS服务器";
 		statusmenu += "<br /><br />";
-		statusmenu += "🔶<font color='#F00'>DoH：</font><br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>使用开源程序<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>请求国内DoH DNS服务器，该程序支持DoH (dns over https) 协议下的DNS查询！<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS关：</font>DNS请求 → dnsmasq → chinadns-ng → dohclient (ecs=0) → 国内DoH DNS服务器<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS开：</font>DNS请求 → dnsmasq → chinadns-ng → dohclient (ecs=1) → 国内DoH DNS服务器";
-		statusmenu += "<br /><br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;以上udp和tcp协议下的ECS支持由开源工具<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>dns-ecs-forcer</font></u></a>程序实现。";
 		statusmenu += "<br />";
 		statusmenu += "--------------------------------------------------------------------------------------------------------------------";
 		statusmenu += "<br />";
 		statusmenu += "<div style='padding-left:16px;padding-right:16px'>";
 		statusmenu += "1️⃣需要至少开启一组中国DNS，即选择中国DNS-1和选择中国DNS-2至少开启一个，也可以同时开启，且不能两组都使用同样的设定。<br /><br />";
-		statusmenu += "2️⃣某些网络环境或运营商udp较差的情况，可以考虑使用tcp或者DoH协议，或者开一个udp协议作为基础，一个tcp或DoH协议作为保障，来保证国内DNS的正常解析。<br /><br />";
-		statusmenu += "3️⃣通常来说，使用运营商DNS可以获得较好的DNS查询效果，当然也不是绝对的，因为使用公共DNS，如果配合ECS也可以获得很好的效果。<br /><br />";
-		statusmenu += "4️⃣对于教育网环境，为了保证校内使用校园网资源的时候也获得教育网的ip解析结果，建议使用运营商DNS或者教育网DNS，也可以增加一个一个公共DNS配合使用。<br /><br />";
-		statusmenu += "5️⃣DNS的选择没有绝对的最佳可言，适合自己的才是最好的，对于不懂如何选择的朋友，建议直接使用运营商DNS即可，无需纠结。<br /><br />";
+		statusmenu += "2️⃣通常来说，使用运营商DNS可以获得较好的DNS查询效果，当然也不是绝对的，因为使用公共DNS，如果配合ECS也可以获得很好的效果。<br /><br />";
+		statusmenu += "3️⃣对于教育网环境，为了保证校内使用校园网资源的时候也获得教育网的ip解析结果，建议使用运营商DNS或者教育网DNS，也可以增加一个一个公共DNS配合使用。<br /><br />";
+		statusmenu += "4️⃣DNS的选择没有绝对的最佳可言，适合自己的才是最好的，对于不懂如何选择的朋友，建议直接使用运营商DNS即可，无需纠结。<br /><br />";
 		statusmenu += "</div>";
 		_caption = "说明：";
 		$("#overDiv_table5").css("line-height", "1.4");
@@ -1144,7 +1080,7 @@ function openssHint(itemNum) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。";
 		statusmenu += "chinadns-ng支持自定义两组中国和两组可信DNS，中国DNS用于解析中国域名，可信DNS用于解析境外域名，具体情况见<a href='https://github.com/zfl9/chinadns-ng#工作原理' target='_blank'><u><font color='#00F'>chinadns-ng的工作原理</font></u></a>。";
 		statusmenu += "<br /><br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;在DNS进阶设定中，chinadns-ng方案开放了其两组中国和两组可信DNS的设定，并且可信DNS-1方案均为经过节点代理的请求解析。并且通过其它开源软件的协助，在chinadns的国外上游实现了tcp和DoH协议的DNS查询。具体如下：";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;在DNS进阶设定中，chinadns-ng方案开放了其两组中国和两组可信DNS的设定，并且可信DNS-1方案均为经过节点代理的请求解析。并且通过其它开源软件的协助，在chinadns的国外上游实现了tcp协议的DNS查询。具体如下：";
 		statusmenu += "<br /><br />";
 		statusmenu += "🔶<font color='#F00'>udp：</font><br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>使用代理软件（ss/ssr/v2ray/xray/trojan）自己的udp代理，经过代理节点请求udp DNS服务器获得解析结果。<br />";
@@ -1156,23 +1092,16 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS关：</font>DNS请求 → dnsmasq → chinadns-ng → dns2socks(开ECS) → 代理软件(socks5) → 国外tcp DNS服务器<br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS开：</font>DNS请求 → dnsmasq → chinadns-ng → dns2socks(关ECS) → 代理软件(socks5) → 国外tcp DNS服务器<br />";
 		statusmenu += "<br /><br />";
-		statusmenu += "🔶<font color='#F00'>DoH：</font><br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>使用<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>，并通过代理软件（ss/ssr/v2ray/xray/trojan/naive）提供的socks5代理隧道进行DoH DNS查询。<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS关：</font>DNS请求 → dnsmasq → chinadns-ng → dohclient(ecs=0) → 代理软件(socks5) → 国外DoH DNS服务器<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS开：</font>DNS请求 → dnsmasq → chinadns-ng → dohclient(ecs=1) → 代理软件(socks5) → 国外DoH DNS服务器";
-		statusmenu += "<br /><br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;以上udp协议下的ECS支持由开源工具<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>dns-ecs-forcer</font></u></a>程序实现。<br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;以上tcp协议下的ECS支持由dns2socks程序实现。<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;以上DoH协议下的ECS支持由dohclient程序实现。";
 		statusmenu += "<br />";
 		statusmenu += "--------------------------------------------------------------------------------------------------------------------";
 		statusmenu += "<br />";
 		statusmenu += "<div style='padding-left:16px;padding-right:16px'>";
 		statusmenu += "1️⃣需要至少开启一组选可信DNS，以保证国外DNS的正常解析。<br /><br />";
-		statusmenu += "2️⃣某些不支持udp的代理服务器，无法使用udp协议，此时可以考虑切换到tcp或者DoH。<br /><br />";
-		statusmenu += "3️⃣某些没开53端口的代理服务器，无法在udp/tcp协议下使用53端口DNS服务器进行查询，可以考虑切换到dohclient。<br /><br />";
-		statusmenu += "4️⃣Trojan协议由trojan核心运行时不支持udp代理，Trojan协议由xray运行时候支持udp协议！<br /><br />";
-		statusmenu += "5️⃣NaïveProxy由于自身特性，不支持udp代理，所以Naïve节点的可信DNS-1无法使用udp协议！<br /><br />";
+		statusmenu += "2️⃣某些不支持udp的代理服务器，无法使用udp协议，此时可以考虑切换到tcp。<br /><br />";
+		statusmenu += "3️⃣Trojan协议由trojan核心运行时不支持udp代理，Trojan协议由xray运行时候支持udp协议！<br /><br />";
+		statusmenu += "4️⃣NaïveProxy由于自身特性，不支持udp代理，所以Naïve节点的可信DNS-1无法使用udp协议！<br /><br />";
 		statusmenu += "</div>";
 		_caption = "说明：";
 	} else if (itemNum == 135) {
@@ -1180,7 +1109,7 @@ function openssHint(itemNum) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。";
 		statusmenu += "chinadns-ng支持自定义两组中国和两组可信DNS，中国DNS用于解析中国域名，可信DNS用于解析境外域名，具体情况见<a href='https://github.com/zfl9/chinadns-ng#工作原理' target='_blank'><u><font color='#00F'>chinadns-ng的工作原理</font></u></a>。";
 		statusmenu += "<br /><br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;在DNS进阶设定中，chinadns-ng方案开放了其两组中国和两组可信DNS的设定，并且可信DNS-2方案均为直连请求（不经过节点代理）方案。并且通过其它开源软件的协助，在chinadns的国外上游实现了tcp和DoH协议的DNS查询。具体如下：";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;在DNS进阶设定中，chinadns-ng方案开放了其两组中国和两组可信DNS的设定，并且可信DNS-2方案均为直连请求（不经过节点代理）方案。并且通过其它开源软件的协助，在chinadns的国外上游实现了tcp协议的DNS查询。具体如下：";
 		statusmenu += "<br /><br />";
 		statusmenu += "🔶<font color='#F00'>udp：</font><br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>chinadns-ng直接请求上游国外udp DNS服务器，获得解析结果，再经过chinadns-ng内部分流后给出结果。。<br />";
@@ -1191,11 +1120,6 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>使用开源DNS工具<a href='https://github.com/zfl9/dns2tcp' target='_blank'><u><font color='#00F'>dns2tcp</font></u></a>，将DNS查询从udp模式转换为tcp模式，所以要求国外DNS服务器支持tcp查询。<br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS关：</font>DNS请求 → dnsmasq → chinadns-ng → dns2tcp → 国外tcp DNS服务器<br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS开：</font>DNS请求 → dnsmasq → chinadns-ng → dns-ecs-forcer → dns2tcp → 国外tcp DNS服务器";
-		statusmenu += "<br /><br />";
-		statusmenu += "🔶<font color='#F00'>DoH：</font><br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>原理：</font>使用开源程序<a href='https://github.com/GangZhuo/dohclient' target='_blank'><u><font color='#00F'>dohclient</font></u></a>请求国外DoH DNS服务器，该程序支持DoH (dns over https) 协议下的DNS查询！<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS关：</font>DNS请求 → dnsmasq → chinadns-ng → dohclient (ecs=0) → 国外DoH DNS服务器<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;<font color='#CC0066'>ECS开：</font>DNS请求 → dnsmasq → chinadns-ng → dohclient (ecs=1) → 国外DoH DNS服务器";
 		statusmenu += "<br /><br />";
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;以上udp和tcp协议下的ECS支持由开源工具<a href='https://github.com/rampageX/DEF' target='_blank'><u><font color='#00F'>dns-ecs-forcer</font></u></a>程序实现。";
 		statusmenu += "<br />";
@@ -1217,20 +1141,11 @@ function openssHint(itemNum) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶全局模式：下全部域名由外国DNS解析。<br /><br />";
 		statusmenu += "2️⃣因为dnsmasq分流需要加载较多规则，特别是大陆白名单和游戏模式下，需要用到包含了6万多条域名的cdn名单，且dnsmasq对名单的匹配是遍历的方式，所以dnsmasq进程需要消耗更多的cpu算力，这对一些性能较差的路由器来说不是特别友好。<br /><br />";
 		statusmenu += "3️⃣在基础DNS方案下，推荐的中国DNS方案为：运营商DNS；推荐的外国DNS解析方案为：dns2socks。<br /><br />";
-		statusmenu += "4️⃣在lite版本的fancyss中，为了更好的控制安装包的体积，因此smartdns功能被精简了。<br /><br />";
 		statusmenu += "</div>";
 		_caption = "基础DNS方案说明：";
 	} else if (itemNum == 137) {
 		width = "690px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;进阶DNS方案有更好的DNS分流和更低的dnsmasq负载，且开放了更多的设置选项，特点如下：<br /><br />";
-		statusmenu += "<div style='padding-left:16px;padding-right:16px'>";
-		statusmenu += "1️⃣在进阶DNS方案下，由对应子方案的程序进行国内外的DNS分流，具体如下：<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶chinadns-ng：由gfwlist和cdn名单配合大陆ip网段实现DNS分流，具体见<a href='https://github.com/zfl9/chinadns-ng#工作原理' target='_blank'><u><font color='#00F'>chinadns-ng工作原理</font></u></a>；<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶smartdns：由gfwlist和cdn名单配合解析组实现国内外DNS解析分流；<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶dohclient：由dohclient加载chnroute大陆ip网段实现国内外DNS解析分流；<br /><br />";
-		statusmenu += "2️⃣由于以上软件在名单列表匹配上均采用更加高效的方法，因此DNS分流并不会消耗太多cpu，且相比基础DNS方案中，dnsmasq的工作负担也大大降低了。<br /><br />";
-		statusmenu += "3️⃣进阶DNS方案里，目前国内外DNS分流效果最好的是chinadns-ng，如无其它特殊要求，建议使用chinadns-ng作为默认的DNS方案即可。<br /><br />";
-		statusmenu += "</div>";
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;进阶DNS方案使用chinadns-ng的分流方案，有更好的DNS分流和更低的dnsmasq负载，且开放了更多的设置选项，此方案下由gfwlist和cdn名单配合大陆ip网段实现DNS分流，具体见<a href='https://github.com/zfl9/chinadns-ng#工作原理' target='_blank'><u><font color='#00F'>chinadns-ng工作原理</font></u></a>；<br /><br />";
 		_caption = "进阶DNS方案说明：";
 	} else if (itemNum == 138) {
 		width = "450px";
