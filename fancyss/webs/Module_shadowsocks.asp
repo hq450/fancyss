@@ -5497,7 +5497,7 @@ function save_failover() {
 														、<a href="https://github.com/EAimTY/tuic" target="_blank"><em><u>tuic</u></em></a>    				<!--fancyss-full-->
 														、<a href="https://github.com/apernet/hysteria" target="_blank"><em><u>Hysteria2</u></em></a>    	<!--fancyss-full-->
 														八种客户端的科学上网工具。
-														<a href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw" target="_blank"><em>Telegram交流群</em></a>
+														<a href="https://t.me/+PzdfDBssIIFmMThl" target="_blank"><em>Telegram交流群</em></a>
 													</li>
 												</ul>
 												<ul id="scroll_msg" style="padding:0;margin:0;line-height:1.8;overflow: hidden;">
