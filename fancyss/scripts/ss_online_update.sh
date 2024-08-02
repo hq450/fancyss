@@ -1835,7 +1835,7 @@ get_online_rule_now(){
 			add_ssr_node "${node_info}" 1
 			;;
 		vmess)
-			local _match=$(echo "${node_info}" | grep -E "@|?|type")
+			local _match=$(echo "${node_info}" | grep -E "@|\?|type")
 			if [ -n "${_match}" ];then
 				#明文的vmess链接
 				add_vless_node "${node_info}" 1 vmess
