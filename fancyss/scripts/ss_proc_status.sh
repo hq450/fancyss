@@ -37,13 +37,7 @@ GET_DNS_TYPE() {
 }
 
 get_adv_plan(){
-	if [ "${ss_dns_plan}" == "1" ]; then
-		echo "chinadns-ng"
-	elif [ "${ss_dns_plan}" == "2" ]; then
-		echo "SmartDNS"
-	elif [ "${ss_dns_plan}" == "3" ]; then
-		echo "dohclient"
-	fi
+	echo "chinadns-ng"
 }
 
 
@@ -126,11 +120,7 @@ GET_PROXY_TOOL(){
 		echo "xray-core"
 		;;
 	5)
-		if [ "${ss_basic_tcore}"  == "1" ];then
-			echo "xray-core"
-		else
-			echo "trojan"
-		fi
+		echo "xray-core"
 		;;
 	6)
 		echo "naive"
@@ -319,7 +309,7 @@ GET_PROG_STAT(){
 				echo "v2ray		未运行🔴		透明代理"
 			fi
 		fi
-	elif [ "${ss_basic_type}" == "4" ]; then
+	elif [ "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" ]; then
 		# xray
 		local XRAY=$(pidof xray)
 		if [ -n "${XRAY}" ];then
@@ -331,28 +321,6 @@ GET_PROG_STAT(){
 			fi
 		else
 			echo "Xray	未运行🔴		透明代理"
-		fi
-	elif [ "${ss_basic_type}" == "5" ]; then
-		# trojan
-		if [ "${ss_basic_tcore}" == "1" ];then
-			local XRAY=$(pidof xray)
-			if [ -n "${XRAY}" ];then
-				local xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
-				if [ -n "${xray_time}" ];then
-					echo "Xray		运行中🟢		透明代理		${XRAY}	工作时长: ${xray_time}"
-				else
-					echo "Xray		运行中🟢		透明代理		${XRAY}"
-				fi
-			else
-				echo "Xray	未运行🔴		透明代理"
-			fi
-		else
-			local IPT2SOCKS=$(pidof ipt2socks)
-			if [ -n "${IPT2SOCKS}" ]; then
-				echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
-			else
-				echo "ipt2socks	未运行🔴		透明代理"
-			fi
 		fi
 	elif [ "${ss_basic_type}" == "6" ]; then
 		# naive
@@ -464,418 +432,208 @@ GET_PROG_STAT(){
 					echo "rss-tunnel	未运行🔴		DNS解析"
 				fi
 			fi
-		elif [ "${ss_foreign_dns}" == "9" ]; then
-			# smartdns
-			local SMD=$(pidof smartdns)
-			if [ -n "${SMD}" ];then
-				echo "smartdns	运行中🟢		DNS解析		${SMD}"
-			else
-				echo "smartdns	未运行🔴		DNS解析"
-			fi
-		fi
-
-		if [ "${ss_china_dns}" == "98" -a "${ss_foreign_dns}" != "9" ];then
-			# smartdns
-			local SMD=$(pidof smartdns)
-			if [ -n "${SMD}" ];then
-				echo "smartdns	运行中🟢		DNS解析		${SMD}"
-			else
-				echo "smartdns	未运行🔴		DNS解析"
-			fi
 		fi
 	else
 		# 进阶DNS方案
-		if [ "${ss_dns_plan}" == "1" ]; then
-			# 中国DNS-1
-			if [ "${ss_basic_chng_china_1_enable}" == "1" ];then
-				if [ "${ss_basic_chng_china_1_prot}" == "1" ];then
-					if [ "${ss_basic_chng_china_1_udp}" == "96" ];then
-						local SMD1=$(ps | grep "smartdns" | grep "smartdns_chng_china_udp" | awk '{print $1}')
-						if [ -n "${SMD1}" ];then
-							echo "smartdns	运行中🟢		中国1:UDP查询	${SMD1}"
-						else
-							echo "smartdns	未运行🔴		中国1:UDP查询"
-						fi
+		# 中国DNS-1
+		if [ "${ss_basic_chng_china_1_enable}" == "1" ];then
+			if [ "${ss_basic_chng_china_1_prot}" == "1" ];then
+				if [ "${ss_basic_chng_china_1_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
+					local DEF1=$(ps | grep "dns-ecs-forcer" | grep "051 " | awk '{print $1}')
+					if [ -n "${DEF1}" ];then
+						echo "dns-ecs-forcer	运行中🟢		中国1:ECS	${DEF1}"
 					else
-						if [ "${ss_basic_chng_china_1_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
-							local DEF1=$(ps | grep "dns-ecs-forcer" | grep "051 " | awk '{print $1}')
-							if [ -n "${DEF1}" ];then
-								echo "dns-ecs-forcer	运行中🟢		中国1:ECS	${DEF1}"
-							else
-								echo "dns-ecs-forcer	未运行🔴		中国1:ECS"
-							fi
-						fi
-					fi
-				fi
-				if [ "${ss_basic_chng_china_1_prot}" == "2" ];then
-					local D2T1=$(ps | grep "dns2tcp" | grep "051" | awk '{print $1}')
-					if [ -n "${D2T1}" ];then
-						echo "dns2tcp		运行中🟢		中国1:TCP查询	${D2T1}"
-					else
-						echo "dns2tcp		未运行🔴		中国1:TCP查询"
-					fi
-					if [ "${ss_basic_chng_china_1_ecs}" == "1"  -a "${ss_basic_nochnipcheck}" != "1" ];then
-						local DEF1=$(ps | grep "dns-ecs-forcer" | grep "051 " | awk '{print $1}')
-						if [ -n "${DEF1}" ];then
-							echo "dns-ecs-forcer	运行中🟢		中国1:ECS	${DEF1}"
-						else
-							echo "dns-ecs-forcer	未运行🔴		中国1:ECS"
-						fi
-					fi
-				fi
-				if [ "${ss_basic_chng_china_1_prot}" == "3" ];then
-					local DOH1=$(ps | grep "dohclient" | grep "chn1" | awk '{print $1}')
-					if [ -n "${DOH1}" ];then
-						echo "dohclient	运行中🟢		中国1:DoH查询	${DOH1}"
-					else
-						echo "dohclient	未运行🔴		中国1:DoH查询"
+						echo "dns-ecs-forcer	未运行🔴		中国1:ECS"
 					fi
 				fi
 			fi
+			if [ "${ss_basic_chng_china_1_prot}" == "2" ];then
+				local D2T1=$(ps | grep "dns2tcp" | grep "051" | awk '{print $1}')
+				if [ -n "${D2T1}" ];then
+					echo "dns2tcp		运行中🟢		中国1:TCP查询	${D2T1}"
+				else
+					echo "dns2tcp		未运行🔴		中国1:TCP查询"
+				fi
+				if [ "${ss_basic_chng_china_1_ecs}" == "1"  -a "${ss_basic_nochnipcheck}" != "1" ];then
+					local DEF1=$(ps | grep "dns-ecs-forcer" | grep "051 " | awk '{print $1}')
+					if [ -n "${DEF1}" ];then
+						echo "dns-ecs-forcer	运行中🟢		中国1:ECS	${DEF1}"
+					else
+						echo "dns-ecs-forcer	未运行🔴		中国1:ECS"
+					fi
+				fi
+			fi
+		fi
 
-			# 中国DNS-2
-			if [ "${ss_basic_chng_china_2_enable}" == "1" ];then
-				if [ "${ss_basic_chng_china_2_prot}" == "1" ];then
-					if [ "${ss_basic_chng_china_2_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
-						local DEF2=$(ps | grep "dns-ecs-forcer" | grep "052 " | awk '{print $1}')
-						if [ -n "${DEF2}" ];then
-							echo "dns-ecs-forcer	运行中🟢		中国2:ECS	${DEF2}"
-						else
-							echo "dns-ecs-forcer	未运行🔴		中国2:ECS"
-						fi
-					fi
-				elif [ "${ss_basic_chng_china_2_prot}" == "2" ];then
-					local D2T2=$(ps | grep "dns2tcp" | grep "052" | awk '{print $1}')
-					if [ -n "${D2T2}" ];then
-						echo "dns2tcp		运行中🟢		中国2:TCP查询	${D2T2}"
+		# 中国DNS-2
+		if [ "${ss_basic_chng_china_2_enable}" == "1" ];then
+			if [ "${ss_basic_chng_china_2_prot}" == "1" ];then
+				if [ "${ss_basic_chng_china_2_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
+					local DEF2=$(ps | grep "dns-ecs-forcer" | grep "052 " | awk '{print $1}')
+					if [ -n "${DEF2}" ];then
+						echo "dns-ecs-forcer	运行中🟢		中国2:ECS	${DEF2}"
 					else
-						echo "dns2tcp		未运行🔴		中国2:TCP查询"
+						echo "dns-ecs-forcer	未运行🔴		中国2:ECS"
 					fi
-					if [ "${ss_basic_chng_china_2_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
-						local DEF2=$(ps | grep "dns-ecs-forcer" | grep "052 " | awk '{print $1}')
-						if [ -n "${DEF2}" ];then
-							echo "dns-ecs-forcer	运行中🟢		中国2:ECS	${DEF2}"
-						else
-							echo "dns-ecs-forcer	未运行🔴		中国2:ECS"
-						fi
-					fi
-				elif [ "${ss_basic_chng_china_2_prot}" == "3" ];then
-					local DOH2=$(ps | grep "dohclient" | grep "chn2" | awk '{print $1}')
-					if [ -n "${DOH2}" ];then
-						echo "dohclient	运行中🟢		中国2:DoH查询	${DOH2}"
+				fi
+			elif [ "${ss_basic_chng_china_2_prot}" == "2" ];then
+				local D2T2=$(ps | grep "dns2tcp" | grep "052" | awk '{print $1}')
+				if [ -n "${D2T2}" ];then
+					echo "dns2tcp		运行中🟢		中国2:TCP查询	${D2T2}"
+				else
+					echo "dns2tcp		未运行🔴		中国2:TCP查询"
+				fi
+				if [ "${ss_basic_chng_china_2_ecs}" == "1" -a "${ss_basic_nochnipcheck}" != "1" ];then
+					local DEF2=$(ps | grep "dns-ecs-forcer" | grep "052 " | awk '{print $1}')
+					if [ -n "${DEF2}" ];then
+						echo "dns-ecs-forcer	运行中🟢		中国2:ECS	${DEF2}"
 					else
-						echo "dohclient	未运行🔴		中国2:DoH查询"
+						echo "dns-ecs-forcer	未运行🔴		中国2:ECS"
 					fi
 				fi
 			fi
+		fi
 
-			# 可信DNS-1
-			if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
-				if [ "${ss_basic_chng_trust_1_opt}" == "1" ];then
-					# udp
-					if [ "${ss_basic_type}" == "0" ];then
-						# ss
-						if [ "${ss_basic_rust}" == "1" ];then
-							local SS_RUST_TUNNEL=$(ps | grep "sslocal" | grep "055" | awk '{print $1}')
-							if [ -n "${SS_RUST_TUNNEL}" ];then
-								echo "sslocal		运行中🟢		可信1:UDP查询	${SS_RUST_TUNNEL}"
-							else
-								echo "sslocal		未运行🔴		可信1:UDP查询"
-							fi
+		# 可信DNS-1
+		if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
+			if [ "${ss_basic_chng_trust_1_opt}" == "1" ];then
+				# udp
+				if [ "${ss_basic_type}" == "0" ];then
+					# ss
+					if [ "${ss_basic_rust}" == "1" ];then
+						local SS_RUST_TUNNEL=$(ps | grep "sslocal" | grep "055" | awk '{print $1}')
+						if [ -n "${SS_RUST_TUNNEL}" ];then
+							echo "sslocal		运行中🟢		可信1:UDP查询	${SS_RUST_TUNNEL}"
 						else
-							local SS_TUNNEL=$(ps | grep "ss-tunnel" | grep "055" | awk '{print $1}')
-							if [ -n "${SS_TUNNEL}" ];then
-								echo "ss-tunnel	运行中🟢		可信1:UDP查询	${SS_TUNNEL}"
-							else
-								echo "ss-tunnel	未运行🔴		可信1:UDP查询"
-							fi
+							echo "sslocal		未运行🔴		可信1:UDP查询"
 						fi
-					elif [ "${ss_basic_type}" == "1" ];then
-						# ssr
-						local RSS_TUNNEL=$(ps | grep "rss-tunnel" | grep "055" | awk '{print $1}')
-						if [ -n "${RSS_TUNNEL}" ];then
-							echo "rss-tunnel	运行中🟢		可信1:UDP查询	${RSS_TUNNEL}"
+					else
+						local SS_TUNNEL=$(ps | grep "ss-tunnel" | grep "055" | awk '{print $1}')
+						if [ -n "${SS_TUNNEL}" ];then
+							echo "ss-tunnel	运行中🟢		可信1:UDP查询	${SS_TUNNEL}"
 						else
-							echo "rss-tunnel	未运行🔴		可信1:UDP查询"
+							echo "ss-tunnel	未运行🔴		可信1:UDP查询"
 						fi
 					fi
+				elif [ "${ss_basic_type}" == "1" ];then
+					# ssr
+					local RSS_TUNNEL=$(ps | grep "rss-tunnel" | grep "055" | awk '{print $1}')
+					if [ -n "${RSS_TUNNEL}" ];then
+						echo "rss-tunnel	运行中🟢		可信1:UDP查询	${RSS_TUNNEL}"
+					else
+						echo "rss-tunnel	未运行🔴		可信1:UDP查询"
+					fi
+				fi
 
-					if [ "${ss_basic_chng_trust_1_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
-						local DEF3=$(ps | grep "dns-ecs-forcer" | grep "055 " | awk '{print $1}')
-						if [ -n "${DEF3}" ];then
-							echo "dns-ecs-forcer	运行中🟢		可信1:ECS	${DEF3}"
-						else
-							echo "dns-ecs-forcer	未运行🔴		可信1:ECS"
-						fi
-					fi
-					
-				elif [ "${ss_basic_chng_trust_1_opt}" == "2" ];then
-					# tcp
-					local DNS2SOCKS=$(ps -w | grep "dns2socks" | grep "055" | awk '{print $1}')
-					if [ -n "${DNS2SOCKS}" ];then
-						echo "dns2socks	运行中🟢		可信1:TCP查询	${DNS2SOCKS}"
+				if [ "${ss_basic_chng_trust_1_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
+					local DEF3=$(ps | grep "dns-ecs-forcer" | grep "055 " | awk '{print $1}')
+					if [ -n "${DEF3}" ];then
+						echo "dns-ecs-forcer	运行中🟢		可信1:ECS	${DEF3}"
 					else
-						echo "dns2socks	未运行🔴		可信1:TCP查询"
-					fi
-					if [ "${ss_basic_type}" == "0" ];then
-						if [ "${ss_basic_rust}" == "1" ]; then
-							local SS_RUST_LOCAL=$(ps | grep "sslocal" | grep "23456" | awk '{print $1}')
-							if [ -n "${SS_RUST_LOCAL}" ];then
-								echo "sslocal		运行中🟢		可信1:socks5	${SS_RUST_LOCAL}"
-							else
-								echo "sslocal		未运行🔴		可信1:socks5"
-							fi
-						else
-							local SS_LOCAL=$(ps | grep "ss-local" | grep "23456" | awk '{print $1}')
-							if [ -n "${SS_LOCAL}" ];then
-								echo "ss-local	运行中🟢		可信1:socks5	${SS_LOCAL}"
-							else
-								echo "ss-local	未运行🔴		可信1:socks5"
-							fi
-						fi
-					elif [ "${ss_basic_type}" == "1" ];then
-						local SSR_LOCAL=$(ps | grep "rss-local" | grep "23456" | awk '{print $1}')
-						if [ -n "${SSR_LOCAL}" ]; then
-							echo "rss-local	运行中🟢		可信1:socks5	${SSR_LOCAL}" 
-						else
-							echo "rss-local	未运行🔴		可信1:socks5"
-						fi
-					elif [ "${ss_basic_type}" == "3" ];then
-						if [ "${ss_basic_vcore}" == "1" ];then
-							local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${XRAY_SOCKS}" ];then
-								echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
-							else
-								echo "xray		未运行🔴		可信1:socks5"
-							fi
-						else
-							local V2RAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "v2ray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${V2RAY_SOCKS}" ];then
-								echo "v2ray		运行中🟢		可信1:socks5	${V2RAY_SOCKS}"
-							else
-								echo "v2ray		未运行🔴		可信1:socks5"
-							fi
-						fi
-					elif [ "${ss_basic_type}" == "4" ];then
-						local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-						if [ -n "${XRAY_SOCKS}" ];then
-							echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
-						else
-							echo "xray		未运行🔴		可信1:socks5"
-						fi
-					elif [ "${ss_basic_type}" == "5" ];then
-						if [ "${ss_basic_tcore}" == "1" ];then
-							local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${XRAY_SOCKS}" ];then
-								echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
-							else
-								echo "xray		未运行🔴		可信1:socks5"
-							fi
-						else
-							local TROJAN_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "trojan" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${TROJAN_SOCKS}" ];then
-								echo "trojan		运行中🟢		可信1:socks5	${TROJAN_SOCKS}"
-							else
-								echo "trojan		未运行🔴		可信1:socks5"
-							fi
-						fi
-					fi
-				elif [ "${ss_basic_chng_trust_1_opt}" == "3" ];then
-					# dohclient
-					local DOH3=$(ps | grep "dohclient" | grep "frn1" | awk '{print $1}')
-					if [ -n "${DOH3}" ];then
-						echo "dohclient	运行中🟢		可信1:DoH查询	${DOH3}"
-					else
-						echo "dohclient	未运行🔴		可信1:DoH查询"
-					fi
-					if [ "${ss_basic_type}" == "0" ];then
-						if [ "${ss_basic_rust}" == "1" ]; then
-							local SS_RUST_LOCAL=$(ps | grep "sslocal" | grep "23456" | awk '{print $1}')
-							if [ -n "${SS_RUST_LOCAL}" ];then
-								echo "sslocal		运行中🟢		可信1:socks5	${SS_RUST_LOCAL}"
-							else
-								echo "sslocal		未运行🔴		可信1:socks5"
-							fi
-						else
-							local SS_LOCAL=$(ps | grep "ss-local" | grep "23456" | awk '{print $1}')
-							if [ -n "${SS_LOCAL}" ];then
-								echo "ss-local	运行中🟢		可信1:socks5	${SS_LOCAL}"
-							else
-								echo "ss-local	未运行🔴		可信1:socks5"
-							fi
-						fi
-					elif [ "${ss_basic_type}" == "1" ];then
-						local SSR_LOCAL=$(ps | grep "rss-local" | grep "23456" | awk '{print $1}')
-						if [ -n "${SSR_LOCAL}" ]; then
-							echo "rss-local	运行中🟢		可信1:socks5	${SSR_LOCAL}" 
-						else
-							echo "rss-local	未运行🔴		可信1:socks5"
-						fi
-					elif [ "${ss_basic_type}" == "3" ];then
-						if [ "${ss_basic_vcore}" == "1" ];then
-							local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${XRAY_SOCKS}" ];then
-								echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
-							else
-								echo "xray		未运行🔴		可信1:socks5"
-							fi
-						else
-							local V2RAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "v2ray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${V2RAY_SOCKS}" ];then
-								echo "v2ray		运行中🟢		可信1:socks5	${V2RAY_SOCKS}"
-							else
-								echo "v2ray		未运行🔴		可信1:socks5"
-							fi
-						fi
-					elif [ "${ss_basic_type}" == "4" ];then
-						local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-						if [ -n "${XRAY_SOCKS}" ];then
-							echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
-						else
-							echo "xray		未运行🔴		可信1:socks5"
-						fi
-					elif [ "${ss_basic_type}" == "5" ];then
-						if [ "${ss_basic_tcore}" == "1" ];then
-							local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${XRAY_SOCKS}" ];then
-								echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
-							else
-								echo "xray		未运行🔴		可信1:socks5"
-							fi
-						else
-							local TROJAN_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "trojan" | awk '{print $NF}' | awk -F "/" '{print $1}')
-							if [ -n "${TROJAN_SOCKS}" ];then
-								echo "trojan		运行中🟢		可信1:socks5	${TROJAN_SOCKS}"
-							else
-								echo "trojan		未运行🔴		可信1:socks5"
-							fi
-						fi
+						echo "dns-ecs-forcer	未运行🔴		可信1:ECS"
 					fi
 				fi
-			fi
-			# 可信DNS-2
-			if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
-				if [ "${ss_basic_chng_trust_2_opt}" == "1" ];then
-					if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
-						local DEF4=$(ps | grep "dns-ecs-forcer" | grep "056 " | awk '{print $1}')
-						if [ -n "${DEF4}" ];then
-							echo "dns-ecs-forcer	运行中🟢		可信2:ECS	${DEF4}"
-						else
-							echo "dns-ecs-forcer	未运行🔴		可信2:ECS"
-						fi
-					fi
-				elif [ "${ss_basic_chng_trust_2_opt}" == "2" ];then
-					local D2T4=$(ps | grep "dns2tcp" | grep "056" | awk '{print $1}')
-					if [ -n "${D2T4}" ];then
-						echo "dns2tcp		运行中🟢		可信2:TCP查询	${D2T4}"
-					else
-						echo "dns2tcp		未运行🔴		可信2:TCP查询"
-					fi
-					if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
-						local DEF4=$(ps | grep "dns-ecs-forcer" | grep "056 " | awk '{print $1}')
-						if [ -n "${DEF4}" ];then
-							echo "dns-ecs-forcer	运行中🟢		可信2:ECS	${DEF4}"
-						else
-							echo "dns-ecs-forcer	未运行🔴		可信2:ECS"
-						fi
-					fi
-				elif [ "${ss_basic_chng_trust_2_opt}" == "3" ];then
-					local DOH4=$(ps | grep "dohclient" | grep "frn2" | awk '{print $1}')
-					if [ -n "${DOH4}" ];then
-						echo "dohclient	运行中🟢		可信2:DoH查询	${DOH4}"
-					else
-						echo "dohclient	未运行🔴		可信2:DoH查询"
-					fi
+				
+			elif [ "${ss_basic_chng_trust_1_opt}" == "2" ];then
+				# tcp
+				local DNS2SOCKS=$(ps -w | grep "dns2socks" | grep "055" | awk '{print $1}')
+				if [ -n "${DNS2SOCKS}" ];then
+					echo "dns2socks	运行中🟢		可信1:TCP查询	${DNS2SOCKS}"
+				else
+					echo "dns2socks	未运行🔴		可信1:TCP查询"
 				fi
-			fi
-			# chinadns-ng
-			local CHNG=$(pidof chinadns-ng)
-			if [ -n "${CHNG}" ];then
-				echo "chinadns-ng	运行中🟢		DNS分流		${CHNG}"
-			else
-				echo "chinadns-ng	未运行🔴		DNS分流"
-			fi
-		elif [ "${ss_dns_plan}" == "2" ]; then
-			# smartdns
-			local SMD=$(pidof smartdns)
-			if [ -n "${SMD}" ];then
-				echo "smartdns	运行中🟢		DNS解析		${SMD}"
-			else
-				echo "smartdns	未运行🔴		DNS解析"
-			fi
-		elif [ "${ss_dns_plan}" == "3" ]; then
-			local DOH_MAIN=$(ps | grep "dohclient" | grep "main" | awk '{print $1}')
-			if [ -n "${DOH_MAIN}" ];then
-				echo "dohclient	运行中🟢		DNS解析		${DOH_MAIN}"
-			else
-				echo "dohclient	未运行🔴		DNS解析"
-			fi
-			if [ "${ss_basic_dohc_proxy}" == "1" ];then
 				if [ "${ss_basic_type}" == "0" ];then
 					if [ "${ss_basic_rust}" == "1" ]; then
 						local SS_RUST_LOCAL=$(ps | grep "sslocal" | grep "23456" | awk '{print $1}')
 						if [ -n "${SS_RUST_LOCAL}" ];then
-							echo "sslocal		运行中🟢		socks5		${SS_RUST_LOCAL}"
+							echo "sslocal		运行中🟢		可信1:socks5	${SS_RUST_LOCAL}"
 						else
-							echo "sslocal		未运行🔴		socks5"
+							echo "sslocal		未运行🔴		可信1:socks5"
 						fi
 					else
 						local SS_LOCAL=$(ps | grep "ss-local" | grep "23456" | awk '{print $1}')
 						if [ -n "${SS_LOCAL}" ];then
-							echo "ss-local	运行中🟢		socks5		${SS_LOCAL}"
+							echo "ss-local	运行中🟢		可信1:socks5	${SS_LOCAL}"
 						else
-							echo "ss-local	未运行🔴		socks5"
+							echo "ss-local	未运行🔴		可信1:socks5"
 						fi
 					fi
 				elif [ "${ss_basic_type}" == "1" ];then
 					local SSR_LOCAL=$(ps | grep "rss-local" | grep "23456" | awk '{print $1}')
 					if [ -n "${SSR_LOCAL}" ]; then
-						echo "rss-local	运行中🟢		socks5		${SSR_LOCAL}" 
+						echo "rss-local	运行中🟢		可信1:socks5	${SSR_LOCAL}" 
 					else
-						echo "rss-local	未运行🔴		socks5"
+						echo "rss-local	未运行🔴		可信1:socks5"
 					fi
 				elif [ "${ss_basic_type}" == "3" ];then
 					if [ "${ss_basic_vcore}" == "1" ];then
 						local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
 						if [ -n "${XRAY_SOCKS}" ];then
-							echo "xray		运行中🟢		socks5		${XRAY_SOCKS}"
+							echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
 						else
-							echo "xray		未运行🔴		socks5"
+							echo "xray		未运行🔴		可信1:socks5"
 						fi
 					else
 						local V2RAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "v2ray" | awk '{print $NF}' | awk -F "/" '{print $1}')
 						if [ -n "${V2RAY_SOCKS}" ];then
-							echo "v2ray		运行中🟢		socks5		${V2RAY_SOCKS}"
+							echo "v2ray		运行中🟢		可信1:socks5	${V2RAY_SOCKS}"
 						else
-							echo "v2ray		未运行🔴		socks5"
+							echo "v2ray		未运行🔴		可信1:socks5"
 						fi
 					fi
 				elif [ "${ss_basic_type}" == "4" ];then
 					local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
 					if [ -n "${XRAY_SOCKS}" ];then
-						echo "xray		运行中🟢		socks5		${XRAY_SOCKS}"
+						echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
 					else
-						echo "xray		未运行🔴		socks5"
+						echo "xray		未运行🔴		可信1:socks5"
 					fi
 				elif [ "${ss_basic_type}" == "5" ];then
-					if [ "${ss_basic_tcore}" == "1" ];then
-						local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
-						if [ -n "${XRAY_SOCKS}" ];then
-							echo "xray		运行中🟢		socks5		${XRAY_SOCKS}"
-						else
-							echo "xray		未运行🔴		socks5"
-						fi
+					local XRAY_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "xray" | awk '{print $NF}' | awk -F "/" '{print $1}')
+					if [ -n "${XRAY_SOCKS}" ];then
+						echo "xray		运行中🟢		可信1:socks5	${XRAY_SOCKS}"
 					else
-						local TROJAN_SOCKS=$(netstat -nlp | grep "23456" | grep "LISTEN" | grep "trojan" | awk '{print $NF}' | awk -F "/" '{print $1}')
-						if [ -n "${TROJAN_SOCKS}" ];then
-							echo "trojan		运行中🟢		socks5		${TROJAN_SOCKS}"
-						else
-							echo "trojan		未运行🔴		socks5"
-						fi
+						echo "xray		未运行🔴		可信1:socks5"
 					fi
 				fi
 			fi
 		fi
+		# 可信DNS-2
+		if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
+			if [ "${ss_basic_chng_trust_2_opt}" == "1" ];then
+				if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
+					local DEF4=$(ps | grep "dns-ecs-forcer" | grep "056 " | awk '{print $1}')
+					if [ -n "${DEF4}" ];then
+						echo "dns-ecs-forcer	运行中🟢		可信2:ECS	${DEF4}"
+					else
+						echo "dns-ecs-forcer	未运行🔴		可信2:ECS"
+					fi
+				fi
+			elif [ "${ss_basic_chng_trust_2_opt}" == "2" ];then
+				local D2T4=$(ps | grep "dns2tcp" | grep "056" | awk '{print $1}')
+				if [ -n "${D2T4}" ];then
+					echo "dns2tcp		运行中🟢		可信2:TCP查询	${D2T4}"
+				else
+					echo "dns2tcp		未运行🔴		可信2:TCP查询"
+				fi
+				if [ "${ss_basic_chng_trust_2_ecs}" == "1" -a "${ss_basic_nofrnipcheck}" != "1" ];then
+					local DEF4=$(ps | grep "dns-ecs-forcer" | grep "056 " | awk '{print $1}')
+					if [ -n "${DEF4}" ];then
+						echo "dns-ecs-forcer	运行中🟢		可信2:ECS	${DEF4}"
+					else
+						echo "dns-ecs-forcer	未运行🔴		可信2:ECS"
+					fi
+				fi
+			fi
+		fi
+		# chinadns-ng
+		local CHNG=$(pidof chinadns-ng)
+		if [ -n "${CHNG}" ];then
+			echo "chinadns-ng	运行中🟢		DNS分流		${CHNG}"
+		else
+			echo "chinadns-ng	未运行🔴		DNS分流"
+		fi
+		
 	fi
 	
 	if [ "${ss_basic_use_kcp}" == "1" ]; then
@@ -929,23 +687,15 @@ ECHO_VERSION(){
 	fi
 	echo "dns2socks		$(run dns2socks /?|sed '/^$/d'|head -n1|awk '{print $2}')			https://sourceforge.net/projects/dns2socks/"
 	echo "chinadns-ng		$(run chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
-	if [ -x "/koolshare/bin/ss-tunnel" ];then
-		echo "trojan			$(run trojan -v 2>&1 | head -n1 | awk '{print $NF}')			https://github.com/trojan-gfw/trojan"
-	fi
 	if [ -x "/koolshare/bin/v2ray" ];then
-		#local v2_info_all=$(run v2ray -version|head -n1)
 		local v2_info_all=$(run v2ray version|head -n1)
 		echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			https://github.com/v2fly/v2ray-core"
 	fi
-	echo "xray			$(run xray -version|head -n1|awk '{print $2}')			https://github.com/XTLS/Xray-core"
+	if [ -x "/koolshare/bin/xray" ];then
+		echo "xray			$(run xray -version|head -n1|awk '{print $2}')			https://github.com/XTLS/Xray-core"
+	fi
 	if [ -x "/koolshare/bin/v2ray-plugin" ];then
 		echo "v2ray-plugin		$(run v2ray-plugin -version|head -n1|awk '{print $2}')			https://github.com/teddysun/v2ray-plugin"
-	fi
-	if [ -x "/koolshare/bin/smartdns" ];then
-		echo "smartdns		$(run smartdns -v|awk '{print $2}')	https://github.com/pymumu/smartdns"
-	fi
-	if [ -x "/koolshare/bin/dohclient" ];then
-		echo "dohclient		$(run dohclient -V|awk '{print $2}')		https://github.com/GangZhuo/dohclient"
 	fi
 	if [ -x "/koolshare/bin/kcptun" ];then
 		echo "kcptun			$(run kcptun -v | awk '{print $NF}')		https://github.com/xtaci/kcptun"
