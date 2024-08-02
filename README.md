@@ -77,6 +77,7 @@
 | [RT-AX89X](https://www.koolcenter.com/posts/126)             | 官改 | qca-ipq806x     | ipq8074/a | armv7[^2] | 4.4.60    | fancyss_qca |
 | TX-AX6000 | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
 | TUF-AX4200Q | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
+| RT-BE88U | 官改 | 5.04behnd.4916 | BCM4916 | armv8 | 4.19.275 | fancyss_hnd_v8 |
 ## 版本选择
 
 fancyss 3.0支持hnd、hnd_v8、qca、arm、mtk 五个平台，每个平台又有full版本和lite版本
@@ -85,16 +86,15 @@ full版本为全功能版本，支持SS、 SSR、V2ray、 Xray、Trojan、Naïve
 
 lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客户端，安装包小巧，以下为lite版本精简内容：
 
-1. lite版本移除了v2ray、trojan二进制文件，默认使用xray-core来运行v2ray和trojan协议
-2. lite版本移除了NaïveProxy支持及其相关二进制文件：naive、ipt2socks
-3. lite版本移除了shadowsocks的v2ray-plugin插件功能及其对应的二进制文件：v2ray-plugin
-4. lite版本移除了UDP加速功能及其二进制文件：speederv1、speederv2、udp2raw
-5. lite版本移除了KCP加速功能及其二进制文件：kcptun
-6. lite版本移除了负载均衡支持及其页面和二进制文件：haproxy
-7. lite版本移除了直连解析的DNS方案及其二进制：cdns、chinadns、chinadns1、smartdns、https_dns_proxyy
-8. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
-9. lite版本移除了shadowsocks-rust替换shadowsocks-libev功能，默认由shadowsocks-libev运行ss协议
-10. lite版本移除了socks5页面及其脚本及其acl规则文件
+1. lite版本移除了NaïveProxy支持及其相关二进制文件：naive、ipt2socks
+2. lite版本移除了shadowsocks的v2ray-plugin插件功能及其对应的二进制文件：v2ray-plugin
+3. lite版本移除了UDP加速功能及其二进制文件：speederv1、speederv2、udp2raw
+4. lite版本移除了KCP加速功能及其二进制文件：kcptun
+5. lite版本移除了负载均衡支持及其页面和二进制文件：haproxy
+6. lite版本移除了直连解析的DNS方案及其二进制：chinadns、chinadns、https_dns_proxyy
+7. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
+8. lite版本移除了shadowsocks-rust替换shadowsocks-libev功能，默认由shadowsocks-libev运行ss协议
+9. lite版本移除了socks5页面及其脚本及其acl规则文件
 
 如果是不折腾以上被精简功能的用户，完全可以使用体积更小的lite版本
 

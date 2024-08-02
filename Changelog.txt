@@ -11,6 +11,11 @@ fancyss Changelog
    - remove	移除v2ray-plugin二进制（机场基本上没有这个混淆插件，如自建shadowsocks + v2ray-plugin节点，会提示下载二进制）
    - remove	移除socks5页面（因六、七年未更新，且只支持纯ss节点）
    - remove	默认不提供kcptun二进制（如果使用kcptun加速，会提示下载二进制）
+   - update	更新udplist，新增更多需要udp代理的域名
+   - update	xray二进制更新到v1.8.23
+   - update	v2ray二进制更新到v5.16.1
+   - update	naive二进制更新到v127.0.6533.64-1
+   - fix	修复xray、v2ray二进制更新时下载链接不完整的问题
 
 3.3.1  (20240302)
    - fix	修复trojan节点无法订阅的问题
