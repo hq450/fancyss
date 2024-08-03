@@ -4971,7 +4971,14 @@ detect_ip(){
 	local SUBJECT=$1
 	local TIMEOUT=$2
 	[ -z "${TIMEOUT}" ] && TIMEOUT="3"
-	local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+
+	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|naive|tuic")
+	if [ -n "${SOCKS5_OPEN}" ];then
+		local IP=$(run curl-fancyss -4s -x socks5://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+	else
+		local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+	fi
+
 	if [ -n "${IP}" ];then
 		echo $IP
 	else
@@ -5079,21 +5086,18 @@ check_chn_dns(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		#echo_date "检测地址：icanhazip.com"
-		REMOTE_IP_FRN=$(detect_ip icanhazip.com 5 1)
-		REMOTE_IP_FRN_SRC="icanhazip.com"
+		REMOTE_IP_FRN_SRC="http://ip.sb"
+		REMOTE_IP_FRN=$(detect_ip ${REMOTE_IP_FRN_SRC} 5 1)
 	fi
 	
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		#echo_date "检测地址：ipecho.net/plai"
-		REMOTE_IP_FRN=$(detect_ip ipecho.net/plain 5 1)
-		REMOTE_IP_FRN_SRC="ipecho.net/plain"
+		REMOTE_IP_FRN_SRC="https://icanhazip.com/"
+		REMOTE_IP_FRN=$(detect_ip ${REMOTE_IP_FRN_SRC} 3 1)
 	fi
-
+	
 	if [ -z "${REMOTE_IP_FRN}" ];then
-		#echo_date "检测地址：ip.sb"
-		REMOTE_IP_FRN=$(detect_ip ip.sb 5 1)
-		REMOTE_IP_FRN_SRC="ip.sb"
+		REMOTE_IP_FRN_SRC="https://ipecho.net/plain"
+		REMOTE_IP_FRN=$(detect_ip ${REMOTE_IP_FRN_SRC} 4 1)
 	fi
 
 	if [ -n "${REMOTE_IP_FRN}" ];then
@@ -5101,7 +5105,6 @@ check_frn_public_ip(){
 		if [ "$?" != "0" ]; then
 			# 国外ip
 			echo_date "代理服务器出口地址：${REMOTE_IP_FRN}，属地：海外，来源：${REMOTE_IP_FRN_SRC}"
-			
 		else
 			# 国内ip
 			echo_date "代理服务器出口地址：${REMOTE_IP_FRN}，属地：大陆，来源：${REMOTE_IP_FRN_SRC}"
