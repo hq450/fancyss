@@ -54,6 +54,7 @@ redirector.gvt1.com
 rsb.net
 s.c.lnkd.licdn.com
 s0.2mdn.net
+static.lancdn.com
 t1.tiles.ditu.live.com
 tse1-mm.cn.bing.net
 u.sb
@@ -71,7 +72,10 @@ www.googletagservices.com
 www.gov.cn
 www.henan.gov.cn.cdn30.com
 www.howbuy.com
+www.landian.vip
+www.landiannews.com
 www.microad-cn.com
+www.mojidict.com
 www.shandongair.com
 www.sunrtb.com
 www.yangfd.com

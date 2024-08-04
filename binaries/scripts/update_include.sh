@@ -59,9 +59,9 @@ update(){
 
   rm "$FILE_NAME"
   if [ "$3" = "best" ];then
-  	upx-4.0.2 --best "$bin_name_in_archive"
+  	upx-4.2.4 --best "$bin_name_in_archive"
   else
-  	upx-4.0.2 --lzma --ultra-brute "$bin_name_in_archive"
+  	upx-4.2.4 --lzma --ultra-brute "$bin_name_in_archive"
   fi
   mv "$bin_name_in_archive" "$dir/${bin_file_name}"
 }
