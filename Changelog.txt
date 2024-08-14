@@ -1,5 +1,21 @@
 fancyss Changelog
 ===========================================
+3.3.3
+   - note	本次主要为并修复一些已知问题，并继续优化插件占用jffs储存空间，实测全新安装，BE88U占用24.3MB
+   - add	添加GT-BE96等102官改固件的支持
+   - fix	修复某些情况下节点实际可用，国外出口ip检测失败的问题
+   - fix	修复telegram交流群地址失效，新地址：https://t.me/+PzdfDBssIIFmMThl
+   - fix	修复shadowsocks-rust无法在线更新的问题
+   - fix	修复full版本覆盖安装lite版本时，不支持的节点删除不干净的问题
+   - fix	修复hysteria2订阅，现在定于hy2节点时，如果未设置上下行速度，节点无法写入
+   - update	shadowsocks-rust二进制更新到v1.20.3（需要手动更新）
+   - update	优化新装插件后的引导弹窗
+   - update	现在如果系统curl支持proxy，那curl-fancyss不会安装，以进一步节约jffs空间
+   - update	同步最新规则
+   - remove	默认不提供udp2raw和udpspeeder二进制（如需要使用，会提示下载二进制）
+   - update	默认关闭kcp加速和udp加速功能，需要开启请前往【附加功能】-【其它】
+   - remove	默认不提供tuic二进制（如果使用tuic协议，会提示下载二进制），fancyss将逐步移除tuic支持，因为作者已放弃项目：https://www.eaimty.com/2023/opensource-project-based-on-hormone/
+
 3.3.2  (20240802)
    - add	添加RT-BE88U等102固件的支持
    - note	因插件体积越来越大，本次主要是做插件瘦身，移除了一些二进制，DNS进阶部分只保留了chinands-ng

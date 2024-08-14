@@ -1270,8 +1270,8 @@ creat_ss_json() {
 
 	if [ "$ss_basic_udp2raw_boost_enable" == "1" -o "$ss_basic_udp_boost_enable" == "1" ]; then
 		if [ "$ss_basic_udp_upstream_mtu" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
-			echo_date "设定MTU为 $ss_basic_udp_upstream_mtu_value"
-			cat /koolshare/ss/ss.json | run jq --argjson MTU $ss_basic_udp_upstream_mtu_value '. + {MTU: $MTU}' >/koolshare/ss/ss_tmp.json
+			echo_date "设定MTU为 ${ss_basic_udp_upstream_mtu_value}"
+			cat /koolshare/ss/ss.json | run jq --argjson MTU ${ss_basic_udp_upstream_mtu_value} '. + {MTU: $MTU}' >/koolshare/ss/ss_tmp.json
 			mv /koolshare/ss/ss_tmp.json /koolshare/ss/ss.json
 		fi
 	fi
@@ -2480,7 +2480,7 @@ start_kcp() {
 			echo_date ""
 			echo_date "重要提醒！！"
 			echo_date ""
-			echo_date "检测到你的使用了kcptun！但是本插件默认没有提供相关的二进制文件！"
+			echo_date "检测到你需要使用kcptun！但是本插件默认没有提供相关的二进制文件！"
 			echo_date "请前往下面的链接下载kcptun二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
 			echo_date "下载地址：https://github.com/hq450/fancyss/tree/3.0/binaries/kcptun"
 			echo_date ""
@@ -2521,19 +2521,47 @@ start_kcp() {
 start_speeder() {
 	#只有游戏模式下或者访问控制中有游戏模式主机，且udp加速节点和当前使用节点一致
 	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1092" ]; then
-		echo_date 检测到你配置了KCP与UDPspeeder串联.
+		echo_date "检测到你配置了KCP与UDPspeeder串联."
 		SPEED_KCP=1
 	fi
 
 	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1093" ]; then
-		echo_date 检测到你配置了KCP与UDP2raw串联.
+		echo_date "检测到你配置了KCP与UDP2raw串联."
 		SPEED_KCP=2
 	fi
+	echo_date "mangle：$mangle"
+	echo_date "ss_basic_udp_node：$ss_basic_udp_node"
+	echo_date "ssconf_basic_node：$ssconf_basic_node"
 
 	if [ "$mangle" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" -o "$SPEED_KCP" == "1" -o "$SPEED_KCP" == "2" ]; then
 		#开启udpspeeder
 		if [ "$ss_basic_udp_boost_enable" == "1" ]; then
 			if [ "$ss_basic_udp_software" == "1" ]; then
+				# 从3.3.3开始，speederv1二进制不在默认提供，需要用户自行下载
+				if [ -f "/koolshare/bin/speederv1" ];then
+					chmod +x /koolshare/bin/speederv1
+					local ret=$(run /koolshare/bin/speederv1 --help 2>&1)
+					if [ -z "${ret}" ];then
+						echo_date "检测到/koolshare/bin/目录下存在speederv1文件，但是无法运行！"
+						echo_date "请确保你下载了正确的二进制文件！"
+						close_in_five flag
+					fi
+				else
+					local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+					echo_date ""
+					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+					echo_date ""
+					echo_date "重要提醒！！"
+					echo_date ""
+					echo_date "检测到你需要使用speederv1！但是本插件默认没有提供相关的二进制文件！"
+					echo_date "请前往下面的链接下载speederv1二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
+					echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/speederv1"
+					echo_date ""
+					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+					echo_date ""
+					close_in_five flag
+				fi
+				
 				echo_date 开启UDPspeederV1进程.
 				[ -z "$ss_basic_udpv1_rserver" ] && ss_basic_udpv1_rserver="${ss_basic_server}_ip"
 				[ -n "$ss_basic_udpv1_duplicate_time" ] && duplicate_time="-t $ss_basic_udpv1_duplicate_time" || duplicate_time=""
@@ -2554,7 +2582,32 @@ start_speeder() {
 						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu
 				fi
 			elif [ "$ss_basic_udp_software" == "2" ]; then
-				echo_date 开启UDPspeederV2进程.
+				# 从3.3.3开始，speederv2二进制不在默认提供，需要用户自行下载
+				if [ -f "/koolshare/bin/speederv2" ];then
+					chmod +x /koolshare/bin/speederv2
+					local ret=$(run /koolshare/bin/speederv2 --help 2>&1)
+					if [ -z "${ret}" ];then
+						echo_date "检测到/koolshare/bin/目录下存在speederv2文件，但是无法运行！"
+						echo_date "请确保你下载了正确的二进制文件！"
+						close_in_five flag
+					fi
+				else
+					local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+					echo_date ""
+					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+					echo_date ""
+					echo_date "重要提醒！！"
+					echo_date ""
+					echo_date "检测到你需要使用speederv2！但是本插件默认没有提供相关的二进制文件！"
+					echo_date "请前往下面的链接下载speederv2二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
+					echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/speederv2"
+					echo_date ""
+					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+					echo_date ""
+					close_in_five flag
+				fi
+			
+				echo_date "开启UDPspeederV2进程."
 				[ -z "$ss_basic_udpv2_rserver" ] && ss_basic_udpv2_rserver="${ss_basic_server}_ip"
 				[ "$ss_basic_udpv2_disableobscure" == "1" ] && disable_obscure="--disable-obscure" || disable_obscure=""
 				[ "$ss_basic_udpv2_disablechecksum" == "1" ] && disable_checksum="--disable-checksum" || disable_checksum=""
@@ -2581,7 +2634,32 @@ start_speeder() {
 		fi
 		#开启udp2raw
 		if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
-			echo_date 开启UDP2raw进程.
+			# 从3.3.3开始，udp2raw二进制不在默认提供，需要用户自行下载
+			if [ -f "/koolshare/bin/udp2raw" ];then
+				chmod +x /koolshare/bin/udp2raw
+				local ret=$(run /koolshare/bin/udp2raw --help 2>&1)
+				if [ -z "${ret}" ];then
+					echo_date "检测到/koolshare/bin/目录下存在udp2raw文件，但是无法运行！"
+					echo_date "请确保你下载了正确的二进制文件！"
+					close_in_five flag
+				fi
+			else
+				local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+				echo_date ""
+				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+				echo_date ""
+				echo_date "重要提醒！！"
+				echo_date ""
+				echo_date "检测到你需要使用udp2raw！但是本插件默认没有提供相关的二进制文件！"
+				echo_date "请前往下面的链接下载udp2raw二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
+				echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/udp2raw"
+				echo_date ""
+				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+				echo_date ""
+				close_in_five flag
+			fi
+		
+			echo_date "开启UDP2raw进程."
 			[ -z "$ss_basic_udp2raw_rserver" ] && ss_basic_udp2raw_rserver="${ss_basic_server}_ip"
 			[ "$ss_basic_udp2raw_a" == "1" ] && UD2RAW_EX1="-a" || UD2RAW_EX1=""
 			[ "$ss_basic_udp2raw_keeprule" == "1" ] && UD2RAW_EX2="--keep-rule" || UD2RAW_EX2=""
@@ -2592,6 +2670,8 @@ start_speeder() {
 				--raw-mode $ss_basic_udp2raw_rawmode --cipher-mode $ss_basic_udp2raw_ciphermode --auth-mode $ss_basic_udp2raw_authmode \
 				$UD2RAW_LOW $ss_basic_udp2raw_other
 		fi
+	else
+		echo_date "-------→ udpspeeder未开启！"
 	fi
 }
 
@@ -4193,6 +4273,31 @@ start_naive(){
 }
 
 start_tuic(){
+	# 从3.3.3开始，tuic-client二进制不在默认提供，需要用户自行下载
+	if [ -f "/koolshare/bin/tuic-client" ];then
+		chmod +x /koolshare/bin/tuic-client
+		local ret=$(run /koolshare/bin/tuic-client --help 2>&1)
+		if [ -z "${ret}" ];then
+			echo_date "检测到/koolshare/bin/目录下存在tuic-client文件，但是无法运行！"
+			echo_date "请确保你下载了正确的二进制文件！"
+			close_in_five flag
+		fi
+	else
+		local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+		echo_date ""
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date ""
+		echo_date "重要提醒！！"
+		echo_date ""
+		echo_date "检测到你需要使用tuic-client！但是本插件默认没有提供相关的二进制文件！"
+		echo_date "请前往下面的链接下载tuic-client二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
+		echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/tuic-client"
+		echo_date ""
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date ""
+		close_in_five flag
+	fi
+	
 	rm -rf /koolshare/ss/tuic.json 2>/dev/null
 	echo "${ss_basic_tuic_json}" | base64_decode >/tmp/tuic_tmp_1.json
 	local RELAY=$(cat /tmp/tuic_tmp_1.json | run jq '.relay')
@@ -4930,31 +5035,6 @@ ss_pre_stop() {
 	done
 }
 
-httping_check() {
-	[ "$ss_basic_check" != "1" ] && return
-	echo "--------------------------------------------------------------------------------------"
-	echo "检查国内可用性..."
-	httping www.baidu.com -s -Z -r --ts -c 10 -i 0.5 -t 5 | tee /tmp/upload/china.txt
-	if [ "$?" != "0" ]; then
-		ehco "当前节点无法访问国内网络！"
-		#dbus set ssconf_basic_node=$
-	fi
-	echo "--------------------------------------------------------------------------------------"
-	echo "检查国外可用性..."
-	#httping www.google.com.tw -s -Z --proxy 127.0.0.1:23456 -5 -r --ts -c 5
-	httping www.google.com.tw -s -Z -5 -r --ts -c 10 -i 0.5 -t 2
-	if [ "$?" != "0" ]; then
-		echo "当前节点无法访问国外网络！"
-		echo "自动切换到下一个节点..."
-		ssconf_basic_node=$(($ssconf_basic_node + 1))
-		dbus set ssconf_basic_node=$ssconf_basic_node
-		apply_ss
-		return 1
-		#start-stop-daemon -S -q -x /koolshare/ss/ssconfig.sh 2>&1
-	fi
-	echo "--------------------------------------------------------------------------------------"
-}
-
 stop_status() {
 	local flag=$1
 	if [ -z "${flag}" ];then
@@ -5337,9 +5417,7 @@ apply_ss() {
 	[ "${ss_basic_type}" == "8" ] && start_hysteria2
 	start_kcp
 	start_dns
-	#===load nat start===
 	load_nat
-	#===load nat end===
 	restart_dnsmasq
 	auto_start
 	write_cron_job
@@ -5348,8 +5426,6 @@ apply_ss() {
 	write_numbers
 	finish_start
 	ss_post_start
-	#httping_check
-	#[ "$?" == "1" ] && return 1
 	check_status
 	# store current status
 	dbus set ss_basic_status="1"

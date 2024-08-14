@@ -28,9 +28,9 @@ get_fw_type() {
 	local KS_TAG=$(nvram get extendno|grep -E "_kool")
 	if [ -d "/koolshare" ];then
 		if [ -n "${KS_TAG}" ];then
-			FW_TYPE_NAME="koolshare官改固件"
+			FW_TYPE_NAME="koolcenter官改固件"
 		else
-			FW_TYPE_NAME="koolshare梅林改版固件"
+			FW_TYPE_NAME="koolcenter梅林改版固件"
 		fi
 	else
 		if [ "$(uname -o|grep Merlin)" ];then
@@ -50,20 +50,12 @@ platform_test(){
 	fi
 
 	# 继续判断各个固件的内核和架构
-	local PKG_ARCH=$(cat ${DIR}/.valid)
-	local ROT_ARCH=$(uname -m)
-	local KEL_VERS=$(uname -r)
-	#local PKG_NAME=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
-	#local PKG_ARCH=$(echo ${pkg_name} | awk -F"_" '{print $2}')
-	#local PKG_TYPE=$(echo ${pkg_name} | awk -F"_" '{print $3}')
-
-	if [ ! -x "/tmp/shadowsocks/bin/v2ray" ];then
-		PKG_TYPE="lite"
-		PKG_NAME="fancyss_${PKG_ARCH}_lite"
-	else
-		PKG_TYPE="full"
-		PKG_NAME="fancyss_${PKG_ARCH}_full"
-	fi
+	PKG_ARCH=$(cat ${DIR}/.valid)
+	ROT_ARCH=$(uname -m)
+	KEL_VERS=$(uname -r)
+	PKG_NAME=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+" | awk -F"=" '{print $2}' | sed 's/"//g')
+	PKG_ARCH=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' | sed 's/"//g')
+	PKG_TYPE=$(cat /tmp/shadowsocks/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+" | awk -F"=" '{print $2}' | sed 's/"//g')
 
 	# fancyss_arm
 	if [ "${PKG_ARCH}" == "arm" ];then
@@ -337,11 +329,11 @@ __get_name_by_type() {
 	esac
 }
 
-node2json(){
+full2lite(){
 	# 当从full版本切换到lite版本的时候，需要将naive，tuic，hysteria2节点进行备份后，从节点列表里删除相应节点
 	# 1. 将所有不支持的节点数据储存到备份文件
-	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >/tmp/fanycss_kv.txt
-	NODES_INFO=$(cat /tmp/fanycss_kv.txt | sed -n 's/type_\([0-9]\+=[678]\)/\1/p' | sort -n)
+	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >/tmp/fancyss_kv.txt
+	NODES_INFO=$(cat /tmp/fancyss_kv.txt | sed -n 's/type_\([0-9]\+=[678]\)/\1/p' | sort -n)
 	if [ -n "${NODES_INFO}" ];then
 		mkdir -p /koolshare/configs/fanyss
 		for NODE_INFO in ${NODES_INFO}
@@ -350,7 +342,7 @@ node2json(){
 			local TY=$(echo "${NODE_INFO}" | awk -F"=" '{print $2}')
 			echo_date "备份并从节点列表里移除第$NU个$(__get_name_by_type ${TY})节点：【$(dbus get ssconf_basic_name_${NU})】"
 			# 备份
-			cat /tmp/fanycss_kv.txt | grep "_${NU}=" | sed "s/_${NU}=/\":\"/" | sed 's/^/"/;s/$/\"/;s/$/,/g;1 s/^/{/;$ s/,$/}/' | tr -d '\n' | sed 's/$/\n/' >>/koolshare/configs/fanyss/fanycss_kv.json
+			cat /tmp/fancyss_kv.txt | grep "_${NU}=" | sed "s/_${NU}=/\":\"/" | sed 's/^/"/;s/$/\"/;s/$/,/g;1 s/^/{/;$ s/,$/}/' | tr -d '\n' | sed 's/$/\n/' >>/koolshare/configs/fanyss/fancyss_kv.json
 			# 删除
 			dbus list ssconf_basic_|grep "_${NU}="|sed -n 's/\(ssconf_basic_\w\+\)=.*/\1/p' |  while read key
 			do
@@ -358,15 +350,15 @@ node2json(){
 			done
 		done
 		
-		if [ -f "/koolshare/configs/fanyss/fanycss_kv.json" ];then
-			echo_date "📁lite版本不支持的节点成功备份到/koolshare/configs/fanyss/fanycss_kv.json"
-			rm -rf /tmp/fanycss_kv.txt
+		if [ -f "/koolshare/configs/fanyss/fancyss_kv.json" ];then
+			echo_date "📁lite版本不支持的节点成功备份到/koolshare/configs/fanyss/fancyss_kv.json"
+			rm -rf /tmp/fancyss_kv.txt
 		fi
 	fi
 }
 
-json2node(){
-	if [ ! -f "/koolshare/configs/fanyss/fanycss_kv.json" ];then
+lite2full(){
+	if [ ! -f "/koolshare/configs/fanyss/fancyss_kv.json" ];then
 		return
 	fi
 	
@@ -383,14 +375,14 @@ json2node(){
 	while read nodes; do
 		echo ${nodes} | sed 's/\",\"/\"\n\"/g;s/^{//;s/}$//' | sed 's/^\"/dbus set ssconf_basic_/g' | sed "s/\":/_${count}=/g" >>/tmp/${file_name}.sh
 		let count+=1
-	done < /koolshare/configs/fanyss/fanycss_kv.json
+	done < /koolshare/configs/fanyss/fancyss_kv.json
 	chmod +x /tmp/${file_name}.sh
 	sh /tmp/${file_name}.sh
 	echo_date "节点恢复成功！"
 	sync
 	rm -rf /tmp/${file_name}.sh
 	rm -rf /tmp/${file_name}.txt
-	rm -rf /koolshare/configs/fanyss/fanycss_kv.json
+	rm -rf /koolshare/configs/fanyss/fancyss_kv.json
 }
 
 check_empty_node(){
@@ -428,14 +420,19 @@ install_now(){
 	# default value
 	local PLVER=$(cat ${DIR}/ss/version)
 
+	#local PKG_ARCH_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
+	#local PKG_TYPE_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_TYPE=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
+	local TITLE_OLD=$(dbus get softcenter_module_shadowsocks_title)
+
 	# print message
-	local TITLE="科学上网 ${PKG_TYPE}"
+	local TITLE_NEW="科学上网 ${PKG_TYPE}"
 	local DESCR="科学上网 ${PKG_TYPE} for AsusWRT/Merlin platform"
-	echo_date "安装版本：${PKG_NAME}_${PLVER}"
+	echo_date "安装版本：${PKG_NAME}_${PKG_ARCH}_${PKG_TYPE}_${PLVER}"
+	
 	# stop first
 	local ENABLE=$(dbus get ss_basic_enable)
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
-		echo_date "安装前先关闭${TITLE}插件，保证文件更新成功！"
+		echo_date "安装前先关闭${TITLE_OLD}插件，保证文件更新成功！"
 		sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 	fi
 
@@ -457,18 +454,20 @@ install_now(){
 		fi
 	else
 		# 没有安装，此次为全新安装
-		OLD_TYPE=
+		OLD_TYPE=""
 	fi
 
 	# full → lite, backup nodes
 	if [ "${PKG_TYPE}" == "lite" -a "${OLD_TYPE}" == "full" ];then
-		node2json
+		echo_date "当前版本：full，即将安装：lite"
+		full2lite
 	fi
 	
 	# lite → full, restore nodes
 	if [ "${PKG_TYPE}" == "full" -a "${OLD_TYPE}" == "lite" ];then
 		# only restore backup node when upgrade fancyss from lite to full
-		json2node
+		echo_date "当前版本：lite，即将安装：full"
+		lite2full
 	fi
 
 	# check empty node
@@ -559,6 +558,14 @@ install_now(){
 	echo 1 > /proc/sys/vm/drop_caches
 	sync
 
+	# package modify
+
+	# curl-fancyss is not needed when curl in system support proxy (102 official mod and merlin mod have proxy enabled)
+	local CURL_PROXY_FLAG=$(curl -V|grep -Eo proxy)
+	if [ -n "${CURL_PROXY_FLAG}" ];then
+		rm -rf /tmp/shadowsocks/bin/curl-fancyss
+		ln -sf $(which curl) /koolshare/bin/curl-fancyss
+	fi
 	# some file in package no not need to install
 	if [ -n "$(which socat)" ];then
 		rm -rf /tmp/shadowsocks/bin/uredir
@@ -581,7 +588,7 @@ install_now(){
 
 	# isntall file
 	echo_date "开始复制文件！"
-	cd /tmp
+	cd /tmp	
 
 	echo_date "复制相关二进制文件！此步时间可能较长！"
 	cp -rf /tmp/shadowsocks/bin/* /koolshare/bin/
@@ -719,11 +726,11 @@ install_now(){
 	dbus set softcenter_module_${module}_version="${PLVER}"
 	dbus set softcenter_module_${module}_install="4"
 	dbus set softcenter_module_${module}_name="${module}"
-	dbus set softcenter_module_${module}_title="${TITLE}"
+	dbus set softcenter_module_${module}_title="${TITLE_NEW}"
 	dbus set softcenter_module_${module}_description="${DESCR}"
 	
 	# finish
-	echo_date "${TITLE}插件安装安装成功！"
+	echo_date "${TITLE_NEW}插件安装安装成功！"
 
 	# restart
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then

@@ -209,14 +209,19 @@ function pop_help() {
 	});
 }
 function pop_node_add() {
+	note = "<li>检测到你尚未添加任何代理节点！你至少需要一个节点，才能让插件正常工作！</li><br /> ";
+	note += "<li>如果你已经有节点，请从【手动添加】【节点订阅】【恢复配置】中选择一种添加。</li><br />";
 	require(['/res/layer/layer.js'], function(layer) {
 		layer.open({
 			type: 0,
+			skin: 'layui-layer-lan',
 			shade: 0.8,
-			title: '警告',
+			title: '提醒',
+			area: ['620px', '220px'],
 			time: 0,
+			btnAlign: 'c',
 			maxmin: true,
-			content: '你尚未添加任何节点信息！<br /> 点击下面按钮添加节点信息！',
+			content: note,
 			btn: ['手动添加', '订阅节点', '恢复配置'],
 			btn1: function() {
 				$("#add_ss_node").trigger("click");
@@ -228,6 +233,71 @@ function pop_node_add() {
 			btn3: function() {
 				$("#show_btn9").trigger("click");
 			},
+			success: function(layero, index){
+				console.log(index);
+				var page_h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+				var page_w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+				var elem_h = E("layui-layer" + index).clientHeight;
+				var elem_w = E("layui-layer" + index).clientWidth;
+				var elem_h_offset = (page_h - elem_h) / 2 - 90;
+				var elem_w_offset = (page_w - elem_w) / 2 + 90;
+				if(elem_h_offset < 0){
+					elem_h_offset = 10;
+				}
+				$('#layui-layer' + index).offset({top: elem_h_offset, left: elem_w_offset});
+			}
+		});
+		poped = 1;
+	});
+}
+
+function pop_node_add_ads() {
+	note = "<li>检测到你尚未添加任何代理节点！你至少需要一个节点，才能让插件正常工作！</li><br /> ";
+	note += "<li>如果你已经有节点，请从【手动添加】【节点订阅】【恢复配置】中选择一种添加。</li><br />";
+	note += "<li>如果你没有节点且不知道如何购买或搭建，可以点击【机场推荐】购买本插件推荐的机场<br />";
+	//ads_url_1 = 'https://123s.co/#/register?code=yf6ozeEO';
+	require(['/res/layer/layer.js'], function(layer) {
+		layer.open({
+			type: 0,
+			skin: 'layui-layer-lan',
+			shade: 0.8,
+			title: '提醒',
+			area: ['620px', '280px'],
+			time: 0,
+			btnAlign: 'c',
+			maxmin: true,
+			content: note,
+			btn: ['手动添加', '订阅节点', '恢复配置', '机场推荐'],
+			btn1: function() {
+				$("#add_ss_node").trigger("click");
+				layer.closeAll();
+			},
+			btn2: function() {
+				$("#show_btn7").trigger("click");
+			},
+			btn3: function() {
+				$("#show_btn9").trigger("click");
+			},
+			btn4: function() {
+				window.open(
+					ads_url_1,
+					'_blank'
+				);
+				return false;
+			},
+			success: function(layero, index){
+				console.log(index);
+				var page_h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+				var page_w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+				var elem_h = E("layui-layer" + index).clientHeight;
+				var elem_w = E("layui-layer" + index).clientWidth;
+				var elem_h_offset = (page_h - elem_h) / 2 - 90;
+				var elem_w_offset = (page_w - elem_w) / 2 + 90;
+				if(elem_h_offset < 0){
+					elem_h_offset = 10;
+				}
+				$('#layui-layer' + index).offset({top: elem_h_offset, left: elem_w_offset});
+			}
 		});
 		poped = 1;
 	});

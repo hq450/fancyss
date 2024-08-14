@@ -1422,6 +1422,16 @@ add_hy2_node(){
 	local action="$2"
 	unset hy2_server hy2_server_port hy2_remarks hy2_uuid hy2_ai hy2_tfo hy2_sni_tmp hy2_peer_tmp hy2_sni hy2_group hy2_group_hash
 
+	if [ -z "${HY2_UP_SPEED}" ];then
+		echo_date "🔴hysteria2节点：未设置上行速度，跳过！"
+		return 1
+	fi
+
+	if [ -z "${HY2_DL_SPEED}" ];then
+		echo_date "🔴hysteria2节点：未设置下行速度，跳过！"
+		return 1
+	fi
+
 	hy2_server=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
 	hy2_pass=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '1p')
 	hy2_port=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '3p')

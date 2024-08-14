@@ -18,7 +18,7 @@ cp_rules(){
 }
 
 sync_binary(){
-	BINS_REMOVE="v2ray-plugin kcptun"
+	BINS_REMOVE="v2ray-plugin kcptun sslocal"
 	for BIN_REMOVE in $BINS_REMOVE;
 	do
 		echo ">>> remove old bin $BIN_REMOVE"
@@ -29,7 +29,7 @@ sync_binary(){
 		rm -rf ${CURR_PATH}/fancyss/bin-arm/${BIN_REMOVE}
 	done
 	
-	BINS_COPY="v2ray xray ss_rust naive"
+	BINS_COPY="v2ray xray naive"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
@@ -122,6 +122,13 @@ gen_folder(){
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"mtk\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 
+	# remove some binary because it's not default provide by install packages
+	find ./shadowsocks/bin -name "speederv1" | xargs rm -rf
+	find ./shadowsocks/bin -name "speederv2" | xargs rm -rf
+	find ./shadowsocks/bin -name "udp2raw" | xargs rm -rf
+	find ./shadowsocks/bin -name "tuic-client" | xargs rm -rf
+
+	# wirte type string
 	if [ "${release_type}" != "debug" ];then
 		sed -i 's/PKG_EXTA=\"_debug\"/PKG_EXTA=\"\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
@@ -131,7 +138,7 @@ gen_folder(){
 	
 	if [ "${pkgtype}" == "full" ];then
 		# remove marked comment
-		# rm -rf ./shadowsocks/bin/sslocal
+		rm -rf ./shadowsocks/bin/sslocal
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_proc_status.sh
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_conf.sh
 		echo ".show-btn5, .show-btn6{display: inline; !important}" >> ./shadowsocks/res/shadowsocks.css
@@ -186,6 +193,8 @@ gen_folder(){
 		sed -i 's/\,\s\"ss_basic_vcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_tcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_rust\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"ss_basic_kcp_on\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"ss_basic_udp_on\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_v2ray\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_v2ray_opts\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"use_kcp\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -267,9 +276,6 @@ gen_folder(){
 		sed -i 's/八种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/shadowsocks_2/shadowsocks_lite_2/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/config\.json\.js/config_lite\.json\.js/g' ./shadowsocks/res/ss-menu.js
-		
-		# add css
-		echo ".show-btn5, .show-btn6{display: none; !important}" >> ./shadowsocks/res/shadowsocks.css
 	fi
 
 	if [ "${release_type}" == "release" ];then
