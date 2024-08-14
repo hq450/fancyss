@@ -70,6 +70,7 @@ do
 	fi
 	unset key_1 key_2
 done
+ssconf_basic_node=${cur_node}
 # ------------------------------------------------
 gfw_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "1")
 chn_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "2|3")

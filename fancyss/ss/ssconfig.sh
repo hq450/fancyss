@@ -2530,9 +2530,6 @@ start_speeder() {
 		echo_date "检测到你配置了KCP与UDP2raw串联."
 		SPEED_KCP=2
 	fi
-	echo_date "mangle：$mangle"
-	echo_date "ss_basic_udp_node：$ss_basic_udp_node"
-	echo_date "ssconf_basic_node：$ssconf_basic_node"
 
 	if [ "$mangle" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" -o "$SPEED_KCP" == "1" -o "$SPEED_KCP" == "2" ]; then
 		#开启udpspeeder
