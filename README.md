@@ -213,9 +213,6 @@ tx：华硕天选青色皮肤
 * 官改/梅改固件下载【网方网站】（最新固件）：[https://www.koolcenter.com](https://www.koolcenter.com/)
 * 官改/梅改固件下载【固件镜像】（次新固件）：[https://fw.koolcenter.com](https://fw.koolcenter.com)
 
-## 捐赠支持
-![usdt](https://github.com/hq450/fancyss/blob/451bf480983aa50edaf8869aed78e67680ac3594/pics/usdt.png)
-
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=hq450/fancyss&type=Date)](https://star-history.com/#hq450/fancyss&Date)
