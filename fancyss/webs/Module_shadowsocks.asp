@@ -6611,11 +6611,10 @@ function save_failover() {
 														var ph3 = "多个关键词用英文逗号分隔，如：香港,深圳,NF,BGP";
 														$('#table_subscribe').forms([
 															{ title: '节点订阅设置', thead:'1'},
-															//{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray/Trojan</font>', id:'ss_online_links', type:'textarea', hint:'116', rows:'12', ph:ph1},
-															{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray/Trojan</font>', multi: [																//fancyss-full
+															{ title: '订阅地址管理<br><br><font color="#ffcc00">支持SS/SSR/V2ray/Xray/Trojan</font>', multi: [
 																{ id:'ss_online_links', type:'textarea', hint:'116', rows:'12', ph:ph1},
-																{ suffix: '<span id="ss_sub_ads"></span>' },																//fancyss-full
-															]},																									//fancyss-full
+																{ suffix: '<span id="ss_sub_ads"></span>' },
+															]},
 															{ title: '订阅节点模式设定', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
 															{ title: 'hysteria2订阅设置', multi: [																//fancyss-full
 																{ suffix: '上行速度:' },																		//fancyss-full
