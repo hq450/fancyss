@@ -78,6 +78,7 @@
 | TX-AX6000 | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
 | TUF-AX4200Q | 官改 | mtk-MT798X | MT7986A | armv8 | 5.4.182 | fancyss_mtk |
 | RT-BE88U | 官改 | 5.04behnd.4916 | BCM4916 | armv8 | 4.19.275 | fancyss_hnd_v8 |
+| GT-BE96 | 官改 | 5.04behnd.4916 | BCM4916 | armv8 | 4.19.275 | fancyss_hnd_v8 |
 ## 版本选择
 
 fancyss 3.0支持hnd、hnd_v8、qca、arm、mtk 五个平台，每个平台又有full版本和lite版本
