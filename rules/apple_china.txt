@@ -46,6 +46,7 @@ clientflow.apple.com.akadns.net
 cn-smp-paymentservices.apple.com
 configuration.apple.com
 configuration.apple.com.akadns.net
+crl.apple.com
 cstat.apple.com
 cstat.cdn-apple.com
 dd-cdn.origin-apple.com.akadns.net
