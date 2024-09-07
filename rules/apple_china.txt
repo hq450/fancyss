@@ -51,6 +51,7 @@ cstat.apple.com
 cstat.cdn-apple.com
 dd-cdn.origin-apple.com.akadns.net
 dejavu.apple.com
+devstreaming-cdn.apple.com
 download.developer.apple.com
 experiments.apple.com
 gs-loc-cn.apple.com

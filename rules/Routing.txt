@@ -1,7 +1,7 @@
 -e [Local Routing]
 ## China mainland routing blocks
 ## Sources: https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest
-## Last update: 2024-09-04
+## Last update: 2024-09-07
 -e 
 
 ## IPv4
@@ -10226,7 +10226,6 @@
 2405:e1c0::/32
 2405:e600::/32
 2405:ed40::/32
-2405:ee80::/32
 2405:ef40::/30
 2405:f340::/32
 2405:f3c0::/32
