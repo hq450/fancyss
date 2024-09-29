@@ -27,13 +27,13 @@ get_domain_name(){
 
 get_china_status(){
 	# get result by curl
-	local ret0=$(run curl-fancyss -o /dev/null -s -I --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${CHN_TEST_SITE} 2>/dev/null)
+	local ret0=$(run curl-fancyss -o /dev/null -4sk -I --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${CHN_TEST_SITE} 2>/dev/null)
 	local ret_time=$(echo $ret0 | awk -F "|" '{printf "%.2f\n", $1 * 1000}')
 	local ret_code=$(echo $ret0 | awk -F "|" '{print $2}')
 	local ret_addr=$(echo $ret0 | awk -F "|" '{print $3}')
 
 	# write test result to file
-	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
+	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" -o "${ret_code}" == "301" ];then
 		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ ${ret_time} ms 🌎 ${ret_code} OK 🧮$1"
 	elif [ "${ret_code}" == "404" ];then
 		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ --- ms 🌎 ${ret_code} Not Found 🧮$1"
@@ -43,7 +43,7 @@ get_china_status(){
 	[ "${ss_failover_enable}" == "1" ] && echo ${ret1} >> ${LOGFILE_C}
 
 	# tell test result to web status check
-	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
+	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" -o "${ret_code}" == "301" ];then
 		local ret_time_ext=$(echo $ret0 | awk -F "|" '{printf "%.0f ms\n", $1 * 1000}')
 		log2='国内链接 【'${LOGTIME}'】 ✓&nbsp;&nbsp;'${ret_time_ext}''
 	else
@@ -54,7 +54,7 @@ get_foreign_status(){
 	# get result by curl
 	if [ -n "${SOCKS5_OPEN}" -a "${REDIRC_OPEN}" ];then
 		# get foreign status through 23456 socks5 port (resolve test server domain in local)
-		local ret0=$(run curl-fancyss -o /dev/null -s -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
+		local ret0=$(run curl-fancyss -o /dev/null -4sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 	else
 		log1='国外链接 【'${LOGTIME}'】 <font color='#FF0000'>X</font>'
 		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"
@@ -70,7 +70,7 @@ get_foreign_status(){
 	fi
 	
 	# write test result to file
-	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
+	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" -o "${ret_code}" == "301" ];then
 		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ ${ret_time} ms 🌎 ${ret_code} OK ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"
 	elif [ "${ret_code}" == "404" ];then
 		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ --- ms 🌎 ${ret_code} Not Found ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"
@@ -80,7 +80,7 @@ get_foreign_status(){
 	[ "${ss_failover_enable}" == "1" ] && echo ${ret1} >> ${LOGFILE_F}
 
 	# tell test result to web status check
-	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
+	if [ "${ret_code}" == "200" -o "${ret_code}" == "204" -o "${ret_code}" == "301" ];then
 		local ret_time_ext=$(echo $ret0 | awk -F "|" '{printf "%.0f ms\n", $1 * 1000}')
 		log1='国外链接 【'${LOGTIME}'】 ✓&nbsp;&nbsp;'${ret_time_ext}''
 	else

@@ -305,11 +305,6 @@ check_internet(){
 
 check_chn_public_ip(){
 	# 5.1 检测路由器公网出口IPV4地址
-	if [ -z "${REMOTE_IP_OUT}" -o "${REMOTE_IP_OUT}" == "null" ];then
-		REMOTE_IP_OUT=$(nvram get wan0_realip_ip)
-		REMOTE_IP_OUT_SRC="nvram: wan0_realip_ip"
-	fi
-
 	if [ -z "${REMOTE_IP_OUT}" ];then
 		REMOTE_IP_OUT=$(detect_ip ip.ddnsto.com 5 0)
 		REMOTE_IP_OUT_SRC="ip.ddnsto.com"
@@ -328,6 +323,11 @@ check_chn_public_ip(){
 	if [ -z "${REMOTE_IP_OUT}" ];then
 		REMOTE_IP_OUT=$(run curl-fancyss -4sk --connect-timeout 2 http://api.myip.com 2>&1 | grep -v "Terminated" | run jq -r '.ip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 		REMOTE_IP_OUT_SRC="api.myip.com"
+	fi
+
+	if [ -z "${REMOTE_IP_OUT}" -o "${REMOTE_IP_OUT}" == "null" ];then
+		REMOTE_IP_OUT=$(nvram get wan0_realip_ip)
+		REMOTE_IP_OUT_SRC="nvram: wan0_realip_ip"
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
@@ -5049,13 +5049,22 @@ stop_status() {
 detect_ip(){
 	local SUBJECT=$1
 	local TIMEOUT=$2
+	local METHOD=$3
 	[ -z "${TIMEOUT}" ] && TIMEOUT="3"
 
-	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|naive|tuic")
-	if [ -n "${SOCKS5_OPEN}" ];then
-		local IP=$(run curl-fancyss -4s -x socks5://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
-	else
+	if [ "${METHOD}" == "0" ];then
+		# 检测国内ip
+		echo_date "检测国内ip地址，检测地址：${SUBJECT}"
 		local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+	elif [ "${METHOD}" == "1" ];then
+		# 检测代理ip
+		echo_date "检测国外ip地址，检测地址：${SUBJECT}"
+		local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|naive|tuic")
+		if [ -n "${SOCKS5_OPEN}" ];then
+			local IP=$(run curl-fancyss -4s -x socks5://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+		else
+			local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+		fi
 	fi
 
 	if [ -n "${IP}" ];then
