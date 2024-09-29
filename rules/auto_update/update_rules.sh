@@ -17,15 +17,20 @@ get_gfwlist(){
 	# gfwlist.conf
 
 	# 1. download
-	${CURR_PATH}/fwlist.py gfwlist_download.conf >/dev/null 2>&1
-	if [ ! -f "gfwlist_download.conf" ]; then
+	${CURR_PATH}/fwlist.py gfwlist_1.txt >/dev/null 2>&1
+	if [ ! -f "gfwlist_1.txt" ]; then
 		echo "gfwlist download faild!"
 		exit 1
 	fi
 
+	curl -4sk https://raw.githubusercontent.com/pexcn/daily/gh-pages/gfwlist/gfwlist.txt >${CURR_PATH}/gfwlist_2.txt
+
+	# merge list
+	cat ${CURR_PATH}/gfwlist_1.txt ${CURR_PATH}/gfwlist_2.txt ${CURR_PATH}/gfwlist_ext.txt | grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | sort -u >${CURR_PATH}/gfwlist_merge.txt 
+
 	# 2. merge
-	cat ${CURR_PATH}/gfwlist_download.conf ${CURR_PATH}/gfwlist_fancyss.conf | grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" >${CURR_PATH}/gfwlist_merge.conf
-	cat ${CURR_PATH}/gfwlist_download.conf ${CURR_PATH}/gfwlist_fancyss.conf | grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/gfwlist/g" >>${CURR_PATH}/gfwlist_merge.conf
+	cat ${CURR_PATH}/gfwlist_merge.txt | sed "s/^/server=&\/./g" | sed "s/$/\/127.0.0.1#7913/g" >${CURR_PATH}/gfwlist_merge.conf
+	cat ${CURR_PATH}/gfwlist_merge.txt | sed "s/^/ipset=&\/./g" | sed "s/$/\/gfwlist/g" >>${CURR_PATH}/gfwlist_merge.conf
 
 	# 3. sort
 	sort -k 2 -t. -u ${CURR_PATH}/gfwlist_merge.conf >${CURR_PATH}/gfwlist_tmp.conf
@@ -470,7 +475,10 @@ get_cdntest(){
 finish(){
 	rm -f ${CURR_PATH}/gfwlist_tmp.conf
 	rm -f ${CURR_PATH}/gfwlist_merge.conf
-	rm -f ${CURR_PATH}/gfwlist_download.conf
+	rm -f ${CURR_PATH}/gfwlist_merge.txt
+	rm -f ${CURR_PATH}/gfwlist_1.txt
+	rm -f ${CURR_PATH}/gfwlist_2.txt
+	rm -f ${CURR_PATH}/gfwlist_ext.txt
 	rm -f ${CURR_PATH}/chnroute_tmp.txt
 	rm -f ${CURR_PATH}/chnroute_ipip_tmp.txt
 	rm -f ${CURR_PATH}/chnroute_apnic_tmp.txt
