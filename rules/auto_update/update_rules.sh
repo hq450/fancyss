@@ -58,27 +58,28 @@ get_gfwlist(){
 	jq --arg variable "${LINE_COUN}" '.gfwlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 }
 
-
-get_chnroute(){
+get_chnroute_misakaio(){
 	# chnroute.txt from misakaio
+	# 项目地址：https://github.com/misakaio/chnroutes2
+	# 详情：This project uses BGP feed from various sources to provide more accurate and up-to-date CN routes.
 
-	# source-1：misakaio, 20220604: total 3403 subnets, 298382954 unique IPs
-	wget -4 https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt -qO ${CURR_PATH}/chnroute_tmp.txt
+	curl -4sk https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt >${CURR_PATH}/chnroute_misakaio_tmp.txt
 
-	if [ ! -f "chnroute_tmp.txt" ]; then
-		echo "chnroute download faild!"
+	if [ ! -f "chnroute_misakaio_tmp.txt" ]; then
+		echo "chnroute_misakaio download faild!"
 		exit 1
 	fi
 
 	# 2. process
-	sed -i '/^#/d' chnroute_tmp.txt
+	sed -i '/^#/d' chnroute_misakaio_tmp.txt
 
 	# 3. compare
-	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_tmp.txt | awk '{print $1}')
-	local md5sum2=$(md5sum ${RULE_PATH}/chnroute.txt 2>/dev/null | awk '{print $1}')
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_misakaio_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute_misakaio.txt 2>/dev/null | awk '{print $1}')
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
-		echo "chnroute same md5!"
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute_misakaio.txt)
+		echo "chnroute_misakaio same md5! total $_IP_COUNT ips!"
 		return
 	fi
 	
@@ -87,90 +88,83 @@ get_chnroute(){
 	local URL="https://github.com/misakaio/chnroutes2/blob/master/chnroutes.txt"
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
-	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_tmp.txt | wc -l)
-	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute_tmp.txt)
-	jq --arg variable "${SOURCE}" '.chnroute.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${URL}" '.chnroute.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${CURR_DATE}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${MD5_VALUE}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${LINE_COUN}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${IP_COUNT}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_misakaio_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_misakaio_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute_misakaio.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute_misakaio.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute_misakaio.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute_misakaio.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute_misakaio.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute_misakaio.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 
 	# 5. update file
 	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
-	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
+	mv -f ${CURR_PATH}/chnroute_misakaio_tmp.txt ${RULE_PATH}/chnroute_misakaio.txt
 }
 
-get_chnroute2(){
-	# chnroute2.txt from ipip
+get_chnroute_cnisp(){
+	# 项目地址：https://github.com/gaoyifan/china-operator-ip
+	# 详情：依据中国网络运营商分类的IP地址库
 
-	# source-2：ipip, 20220604: total 6182 subnets, 13240665434 unique IPs
-	wget -4 https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset -qO ${CURR_PATH}/chnroute2_tmp.txt
+	curl -4sk https://raw.githubusercontent.com/17mon/china_ip_list/refs/heads/master/china_ip_list.txt >${CURR_PATH}/chnroute_cnisp_tmp.txt
 
-	if [ ! -f "chnroute2_tmp.txt" ]; then
-		echo "chnroute2 download faild!"
+	if [ ! -f "chnroute_cnisp_tmp.txt" ]; then
+		echo "chnroute_cnisp download faild!"
 		exit 1
 	fi
 
 	# 2. process
-	sed -i '/^#/d' chnroute2_tmp.txt
+	sed -i '/^#/d' chnroute_cnisp_tmp.txt
 
 	# 3. compare
-	local md5sum1=$(md5sum ${CURR_PATH}/chnroute2_tmp.txt | awk '{print $1}')
-	local md5sum2=$(md5sum ${RULE_PATH}/chnroute2.txt 2>/dev/null | awk '{print $1}')
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_cnisp_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute_cnisp.txt 2>/dev/null | awk '{print $1}')
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
-		echo "chnroute2 same md5!"
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute_cnisp.txt)
+		echo "chnroute_cnisp same md5! total $_IP_COUNT ips!"
 		return
 	fi
 	
 	# 4. write json
-	local SOURCE="ipip"
-	local URL="https://github.com/firehol/blocklist-ipsets/blob/master/ipip_country/ipip_country_cn.netset"
+	local SOURCE="cnisp"
+	local URL="https://github.com/gaoyifan/china-operator-ip"
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
-	local LINE_COUN=$(cat ${CURR_PATH}/chnroute2_tmp.txt | wc -l)
-	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute2_tmp.txt)
-	jq --arg variable "${SOURCE}" '.chnroute2.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${URL}" '.chnroute2.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${CURR_DATE}" '.chnroute2.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${MD5_VALUE}" '.chnroute2.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${LINE_COUN}" '.chnroute2.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${IP_COUNT}" '.chnroute2.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_cnisp_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_cnisp_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute_cnisp.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute_cnisp.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute_cnisp.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute_cnisp.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute_cnisp.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute_cnisp.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 
 	# 5. update file
 	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
-	mv -f ${CURR_PATH}/chnroute2_tmp.txt ${RULE_PATH}/chnroute2.txt
+	mv -f ${CURR_PATH}/chnroute_cnisp_tmp.txt ${RULE_PATH}/chnroute_cnisp.txt
 }
 
-get_chnroute3(){
-	# chnroute3.txt
+get_chnroute_apnic(){
+	# chnroute_apnic.txt
 
-	# source-3: mayaxcn, 20220604: total 8625 subnets, 343364510 unique IPs
-	# wget -4 https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt -qO ${CURR_PATH}/chnroute3_tmp.txt
-
-	# source-4: clang, 20220604: total 8625 subnets, 343364510 unique IPs
-	wget -4 https://ispip.clang.cn/all_cn.txt -qO ${CURR_PATH}/chnroute3_tmp.txt
+	curl -4sk http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest | awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > ${CURR_PATH}/chnroute_apnic_tmp.txt
 	
-	# source-5：apnic, 20220604: total 8625 subnets, 343364510 unique IPs
-	# wget -4 -O- http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest -qO ${CURR_PATH}/apnic.txt
-	# cat apnic.txt| awk -F\| '/CN\|ipv4/ { printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > ${CURR_PATH}/chnroute3_tmp.txt
-	# rm -rf ${CURR_PATH}/apnic.txt
-
-	if [ ! -f "chnroute3_tmp.txt" ]; then
-		echo "chnroute3 download faild!"
+	if [ ! -f "chnroute_apnic_tmp.txt" ]; then
+		echo "chnroute_apnic download faild!"
 		exit 1
 	fi
 
 	# 2. process
-	sed -i '/^#/d' chnroute3_tmp.txt
+	sed -i '/^#/d' chnroute_apnic_tmp.txt
 
 	# 3. compare
-	local md5sum1=$(md5sum ${CURR_PATH}/chnroute3_tmp.txt | awk '{print $1}')
-	local md5sum2=$(md5sum ${RULE_PATH}/chnroute3.txt 2>/dev/null | awk '{print $1}')
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_apnic_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute_apnic.txt 2>/dev/null | awk '{print $1}')
 	echo "---------------------------------"
 	if [ "$md5sum1"x = "$md5sum2"x ]; then
-		echo "chnroute3 same md5!"
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute_apnic.txt)
+		echo "chnroute_apnic same md5! total $_IP_COUNT ips!"
 		return
 	fi
 	
@@ -179,27 +173,190 @@ get_chnroute3(){
 	local URL="http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest"
 	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
 	local MD5_VALUE=${md5sum1}
-	local LINE_COUN=$(cat ${CURR_PATH}/chnroute3_tmp.txt | wc -l)
-	local IP_COUNT=$(awk -F "/" '{sum += 2^(32-$2)-2};END {print sum}' ${CURR_PATH}/chnroute3_tmp.txt)
-	jq --arg variable "${SOURCE}" '.chnroute3.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${URL}" '.chnroute3.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${CURR_DATE}" '.chnroute3.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${MD5_VALUE}" '.chnroute3.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${LINE_COUN}" '.chnroute3.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-	jq --arg variable "${IP_COUNT}" '.chnroute3.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_apnic_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_apnic_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute_apnic.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute_apnic.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute_apnic.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute_apnic.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute_apnic.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute_apnic.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 
 	# 5. update file
 	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
-	mv -f ${CURR_PATH}/chnroute3_tmp.txt ${RULE_PATH}/chnroute3.txt
+	mv -f ${CURR_PATH}/chnroute_apnic_tmp.txt ${RULE_PATH}/chnroute_apnic.txt
+}
+
+get_chnroute_17mon(){
+	# chnroute_17mon.txt from 17mon
+	# 项目地址：https://github.com/17mon/china_ip_list
+	# ip来源：IPList for China by IPIP.NET
+
+	curl -4s https://raw.githubusercontent.com/17mon/china_ip_list/refs/heads/master/china_ip_list.txt >${CURR_PATH}/chnroute_17mon_tmp.txt
+
+	if [ ! -f "chnroute_17mon_tmp.txt" ]; then
+		echo "chnroute_17mon download faild!"
+		exit 1
+	fi
+
+	# 2. process
+	sed -i '/^#/d' chnroute_17mon_tmp.txt
+
+	# 3. compare
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_17mon_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute_17mon.txt 2>/dev/null | awk '{print $1}')
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute_17mon.txt)
+		echo "chnroute_17mon same md5! total $_IP_COUNT ips!"
+		return
+	fi
+	
+	# 4. write json
+	local SOURCE="17mon/ipip"
+	local URL="https://raw.githubusercontent.com/17mon/china_ip_list/refs/heads/master/china_ip_list.txt"
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_17mon_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_17mon_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute_17mon.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute_17mon.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute_17mon.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute_17mon.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute_17mon.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute_17mon.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 5. update file
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute_17mon_tmp.txt ${RULE_PATH}/chnroute_17mon.txt
+}
+
+get_chnroute_ipip(){
+	# chnroute_ipip.txt from ipip
+	# source: firehol/blocklist-ipsets
+
+	curl -4sk https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ipip_country/ipip_country_cn.netset >${CURR_PATH}/chnroute_ipip_tmp.txt
+
+	if [ ! -f "chnroute_ipip_tmp.txt" ]; then
+		echo "chnroute_ipip download faild!"
+		exit 1
+	fi
+
+	# 2. process
+	sed -i '/^#/d' chnroute_ipip_tmp.txt
+
+	# 3. compare
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_ipip_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute_ipip.txt 2>/dev/null | awk '{print $1}')
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute_ipip.txt)
+		echo "chnroute_ipip same md5! total $_IP_COUNT ips!"
+		return
+	fi
+	
+	# 4. write json
+	local SOURCE="ipip.net"
+	local URL="https://github.com/firehol/blocklist-ipsets/blob/master/ipip_country/ipip_country_cn.netset"
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_ipip_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_ipip_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute_ipip.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute_ipip.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute_ipip.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute_ipip.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute_ipip.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute_ipip.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 5. update file
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute_ipip_tmp.txt ${RULE_PATH}/chnroute_ipip.txt
+}
+
+get_chnroute_maxmind(){
+	# chnroute_maxmind.txt from maxmind
+	# source: firehol/blocklist-ipsets
+
+	curl -4sk https://raw.githubusercontent.com/firehol/blocklist-ipsets/refs/heads/master/geolite2_country/country_cn.netset >${CURR_PATH}/chnroute_maxmind_tmp.txt
+
+	if [ ! -f "chnroute_maxmind_tmp.txt" ]; then
+		echo "chnroute_maxmind download faild!"
+		exit 1
+	fi
+
+	# 2. process
+	sed -i '/^#/d' chnroute_maxmind_tmp.txt
+
+	# 3. compare
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_maxmind_tmp.txt | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute_maxmind.txt 2>/dev/null | awk '{print $1}')
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute_maxmind.txt)
+		echo "chnroute_maxmind same md5! total $_IP_COUNT ips!"
+		return
+	fi
+	
+	# 4. write json
+	local SOURCE="maxmind/geolite2"
+	local URL="https://github.com/firehol/blocklist-ipsets/blob/master/geolite2_country/country_cn.netset"
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_maxmind_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_maxmind_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute_maxmind.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute_maxmind.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute_maxmind.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute_maxmind.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute_maxmind.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute_maxmind.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 5. update file
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute_maxmind_tmp.txt ${RULE_PATH}/chnroute_maxmind.txt
+}
+
+gen_chnroute_fancyss(){
+	# 1. merge rules
+	cat ${RULE_PATH}/chnroute_misakaio.txt ${RULE_PATH}/chnroute_cnisp.txt ${RULE_PATH}/chnroute_apnic.txt ${RULE_PATH}/chnroute_17mon.txt ${RULE_PATH}/chnroute_ipip.txt ${RULE_PATH}/chnroute_maxmind.txt | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | iprange >${CURR_PATH}/chnroute_tmp.txt
+
+	# 2. compare
+	local md5sum1=$(md5sum ${CURR_PATH}/chnroute_tmp.txt 2>/dev/null | awk '{print $1}')
+	local md5sum2=$(md5sum ${RULE_PATH}/chnroute.txt 2>/dev/null | awk '{print $1}')
+	echo "---------------------------------"
+	if [ "$md5sum1"x = "$md5sum2"x ]; then
+		local _IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${RULE_PATH}/chnroute.txt)
+		echo "chnroute same md5! total $_IP_COUNT ips!"
+		return
+	fi
+
+	# 3. write json
+	local SOURCE="fancyss"
+	local URL="https://github.com/hq450/fancyss/tree/3.0/rules"
+	local CURR_DATE=$(TZ=CST-8 date +%Y-%m-%d\ %H:%M)
+	local MD5_VALUE=${md5sum1}
+	local LINE_COUN=$(cat ${CURR_PATH}/chnroute_tmp.txt | wc -l)
+	local IP_COUNT=$(awk -F "/" '{if ($2 == "") $2 = 32;sum += 2^(32-$2)};END {print sum}' ${CURR_PATH}/chnroute_tmp.txt)
+	jq --arg variable "${SOURCE}" '.chnroute.source = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${URL}" '.chnroute.url = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${CURR_DATE}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${MD5_VALUE}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${LINE_COUN}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+	jq --arg variable "${IP_COUNT}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+
+	# 4. update file
+	echo "update chnroute from ${SOURCE}, total ${LINE_COUN} subnets, ${IP_COUNT} unique IPs !"
+	mv -f ${CURR_PATH}/chnroute_tmp.txt ${RULE_PATH}/chnroute.txt
 }
 
 get_cdn(){
 	# cdn.txt
 
 	# 1.download
-	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf -qO ${CURR_PATH}/accelerated-domains.china.conf
-	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf -qO ${CURR_PATH}/apple.china.conf
-	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf -qO ${CURR_PATH}/google.china.conf
+	curl -4sk https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf >${CURR_PATH}/accelerated-domains.china.conf
+	curl -4sk https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf >${CURR_PATH}/apple.china.conf
+	curl -4sk https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf >${CURR_PATH}/google.china.conf
 	if [ ! -f "accelerated-domains.china.conf" -o ! -f "apple.china.conf" -o ! -f "google.china.conf" ]; then
 		echo "cdn download faild!"
 		exit 1
@@ -285,7 +442,7 @@ get_google(){
 
 get_cdntest(){
 	# 1. get domain
-	wget -4 https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/cdn-testlist.txt -qO ${CURR_PATH}/cdn_test.txt
+	curl -4sk https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/cdn-testlist.txt >${CURR_PATH}/cdn_test.txt
 
 	# 2. compare
 	local md5sum1=$(md5sum ${CURR_PATH}/cdn_test.txt | sed 's/ /\n/g' | sed -n 1p)
@@ -315,8 +472,12 @@ finish(){
 	rm -f ${CURR_PATH}/gfwlist_merge.conf
 	rm -f ${CURR_PATH}/gfwlist_download.conf
 	rm -f ${CURR_PATH}/chnroute_tmp.txt
-	rm -f ${CURR_PATH}/chnroute2_tmp.txt
-	rm -f ${CURR_PATH}/chnroute3_tmp.txt
+	rm -f ${CURR_PATH}/chnroute_ipip_tmp.txt
+	rm -f ${CURR_PATH}/chnroute_apnic_tmp.txt
+	rm -f ${CURR_PATH}/chnroute_misakaio_tmp.txt
+	rm -f ${CURR_PATH}/chnroute_17mon_tmp.txt
+	rm -f ${CURR_PATH}/chnroute_maxmind_tmp.txt
+	rm -f ${CURR_PATH}/chnroute_cnisp_tmp.txt
 	rm -f ${CURR_PATH}/cdn_tmp.txt
 	rm -f ${CURR_PATH}/accelerated-domains.china.conf
 	rm -f ${CURR_PATH}/cdn_download.txt
@@ -329,12 +490,25 @@ finish(){
 	echo "---------------------------------"
 }
 
+clear_chnroute(){
+	find ${RULE_PATH} -maxdepth 1 -name "*chnroute*"|xargs -I {} sh -c "echo \"\" > '{}'"
+	echo "" >${RULE_PATH}/cdn.txt
+	echo "" >${RULE_PATH}/gfwlist.conf
+	echo "" >${RULE_PATH}/google_china.txt
+	echo "" >${RULE_PATH}/apple_china.txt
+	echo "" >${RULE_PATH}/cdn_test.txt
+}
+
 get_rules(){
 	prepare
 	get_gfwlist
-	get_chnroute
-	get_chnroute2
-	get_chnroute3
+	get_chnroute_misakaio
+	get_chnroute_cnisp
+	get_chnroute_apnic
+	get_chnroute_17mon
+	get_chnroute_ipip
+	get_chnroute_maxmind
+	gen_chnroute_fancyss
 	get_cdn
 	get_apple
 	get_google
@@ -342,4 +516,11 @@ get_rules(){
 	finish
 }
 
-get_rules
+case $1 in
+update)
+	get_rules
+	;;
+clear)
+	clear_chnroute
+	;;
+esac
