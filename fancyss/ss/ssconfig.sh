@@ -306,18 +306,18 @@ check_internet(){
 check_chn_public_ip(){
 	# 5.1 检测路由器公网出口IPV4地址
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(detect_ip ip.ddnsto.com 5 0)
-		REMOTE_IP_OUT_SRC="ip.ddnsto.com"
+		REMOTE_IP_OUT_SRC="http://ip.ddnsto.com"
+		REMOTE_IP_OUT=$(detect_ip ${REMOTE_IP_OUT_SRC} 5 0)
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(detect_ip https://ip.clang.cn 5 0)
-		REMOTE_IP_OUT_SRC="ip.clang.com"
+		REMOTE_IP_OUT_SRC="https://ip.clang.cn"
+		REMOTE_IP_OUT=$(detect_ip ${REMOTE_IP_OUT_SRC} 5 0)
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
-		REMOTE_IP_OUT=$(detect_ip whatismyip.akamai.com 5 0)
 		REMOTE_IP_OUT_SRC="whatismyip.akamai.com"
+		REMOTE_IP_OUT=$(detect_ip ${REMOTE_IP_OUT_SRC} 5 0)
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
@@ -352,7 +352,7 @@ check_chn_public_ip(){
 	fi
 
 	if [ -z "${ROUTER_IP_WAN}" ];then
-		local ROUTER_IP_WAN=$(ip addr show ppp0|grep -w inet|awk '{print $2}')|awk -F "/" '{print $1}'
+		local ROUTER_IP_WAN=$(ip addr show ppp0|grep -w inet|awk '{print $2}'|awk -F "/" '{print $1}')
 		local ROUTER_IP_WAN_SRC="ip addr show ppp0"
 	fi
 
@@ -375,7 +375,7 @@ check_chn_public_ip(){
 	fi
 	
 	# 5.3 判断
-	local ISCHN_OUT=$(awk -F'[./]' -v ip=${REMOTE_IP_OUT} ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt)
+	local ISCHN_OUT=$(awk -F'[./]' -v ip=${REMOTE_IP_OUT} '{for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt)
 	if [ -n "${ISCHN_OUT}" ];then
 		# 大陆地址
 		echo_date "公网出口IPV4地址：${REMOTE_IP_OUT}，属地：大陆，来源：${REMOTE_IP_OUT_SRC}"
@@ -5054,21 +5054,21 @@ detect_ip(){
 
 	if [ "${METHOD}" == "0" ];then
 		# 检测国内ip
-		echo_date "检测国内ip地址，检测地址：${SUBJECT}"
+		#echo_date "检测国内ip地址，检测地址：${SUBJECT}"
 		local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
-		echo_date "检测国外ip地址，检测地址：${SUBJECT}"
+		#echo_date "检测国外ip地址，检测地址：${SUBJECT}"
 		local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
-			local IP=$(run curl-fancyss -4s -x socks5://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+			local IP=$(run curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 		else
 			local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 		fi
 	fi
 
 	if [ -n "${IP}" ];then
-		echo $IP
+		echo ${IP}
 	else
 		echo ""
 	fi
@@ -5175,17 +5175,17 @@ check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 	if [ -z "${REMOTE_IP_FRN}" ];then
 		REMOTE_IP_FRN_SRC="http://ip.sb"
-		REMOTE_IP_FRN=$(detect_ip ${REMOTE_IP_FRN_SRC} 5 1)
+		REMOTE_IP_FRN=$(detect_ip "${REMOTE_IP_FRN_SRC}" 5 1)
 	fi
 	
 	if [ -z "${REMOTE_IP_FRN}" ];then
 		REMOTE_IP_FRN_SRC="https://icanhazip.com/"
-		REMOTE_IP_FRN=$(detect_ip ${REMOTE_IP_FRN_SRC} 3 1)
+		REMOTE_IP_FRN=$(detect_ip "${REMOTE_IP_FRN_SRC}" 3 1)
 	fi
 	
 	if [ -z "${REMOTE_IP_FRN}" ];then
 		REMOTE_IP_FRN_SRC="https://ipecho.net/plain"
-		REMOTE_IP_FRN=$(detect_ip ${REMOTE_IP_FRN_SRC} 4 1)
+		REMOTE_IP_FRN=$(detect_ip "${REMOTE_IP_FRN_SRC}" 4 1)
 	fi
 
 	if [ -n "${REMOTE_IP_FRN}" ];then
