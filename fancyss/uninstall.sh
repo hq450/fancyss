@@ -5,8 +5,14 @@
 # stop process
 sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 
+# stop websockted
+killall websocketd >/dev/null 2>&1
+
 # remove configure
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
+
+# remove websockted
+rm -rf /koolshare/bin/websocketd >/dev/null 2>&1
 
 # remove files
 rm -rf /koolshare/scripts/ss_*
@@ -42,12 +48,29 @@ rm -rf /koolshare/bin/dohclient-cache
 rm -rf /koolshare/bin/dns2tcp
 rm -rf /koolshare/bin/dns-ecs-forcer
 rm -rf /koolshare/bin/uredir
+# 如果系统里有jq，删掉/koolshare/bin/jq
+if [ -n /usr/bin/jq ];then
+	rm -rf /koolshare/bin/jq >/dev/null 2>&1
+fi
+
 rm -rf /koolshare/res/icon-shadowsocks.png
 rm -rf /koolshare/res/arrow-down.gif
 rm -rf /koolshare/res/arrow-up.gif
 rm -rf /koolshare/res/ss-menu.js
 rm -rf /koolshare/res/qrcode.js
 rm -rf /koolshare/res/tablednd.js
+
+# some file may exist in /data
+rm -rf /data/xray >/dev/null 2>&1
+rm -rf /data/v2ray >/dev/null 2>&1
+rm -rf /data/hysteria2 >/dev/null 2>&1
+rm -rf /data/naive >/dev/null 2>&1
+rm -rf /data/sslocal >/dev/null 2>&1
+rm -rf /data/ss-local >/dev/null 2>&1
+rm -rf /data/ss-redir >/dev/null 2>&1
+rm -rf /data/ss-tunnel >/dev/null 2>&1
+rm -rf /data/rss-local >/dev/null 2>&1
+rm -rf /data/rss-redir >/dev/null 2>&1
 
 # folder renmove
 rm -rf /koolshare/ss
@@ -82,7 +105,6 @@ rm -rf /koolshare/res/game.png
 
 # maybe used by other plugin, do not remove
 # rm -rf /koolshare/bin/sponge >/dev/null 2>&1
-# rm -rf /koolshare/bin/jq >/dev/null 2>&1
 # rm -rf /koolshare/bin/isutf8 >/dev/null 2>&1
 
 dbus remove softcenter_module_shadowsocks_home_url

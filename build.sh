@@ -18,7 +18,7 @@ cp_rules(){
 }
 
 sync_binary(){
-	BINS_REMOVE="v2ray-plugin kcptun sslocal"
+	BINS_REMOVE="v2ray-plugin kcptun"
 	for BIN_REMOVE in $BINS_REMOVE;
 	do
 		echo ">>> remove old bin $BIN_REMOVE"
@@ -29,7 +29,7 @@ sync_binary(){
 		rm -rf ${CURR_PATH}/fancyss/bin-arm/${BIN_REMOVE}
 	done
 	
-	BINS_COPY="v2ray xray naive"
+	BINS_COPY="v2ray xray naive ss_rust"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
@@ -138,7 +138,7 @@ gen_folder(){
 	
 	if [ "${pkgtype}" == "full" ];then
 		# remove marked comment
-		rm -rf ./shadowsocks/bin/sslocal
+		# rm -rf ./shadowsocks/bin/sslocal
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_proc_status.sh
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_conf.sh
 		echo ".show-btn5, .show-btn6{display: inline; !important}" >> ./shadowsocks/res/shadowsocks.css

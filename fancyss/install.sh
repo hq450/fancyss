@@ -278,6 +278,7 @@ platform_test(){
 set_skin(){
 	local UI_TYPE=ASUSWRT
 	local SC_SKIN=$(nvram get sc_skin)
+	local TS_FLAG=$(grep -o "2ED9C3" /www/css/difference.css 2>/dev/null|head -n1)
 	local ROG_FLAG=$(cat /www/form_style.css|grep -A1 ".tab_NW:hover{"|grep "background"|sed 's/,//g'|grep -o "2071044")
 	local TUF_FLAG=$(cat /www/form_style.css|grep -A1 ".tab_NW:hover{"|grep "background"|sed 's/,//g'|grep -o "D0982C")
 	local WRT_FLAG=$(cat /www/form_style.css|grep -A1 ".tab_NW:hover{"|grep "background"|sed 's/,//g'|grep -o "4F5B5F")
@@ -336,7 +337,7 @@ full2lite(){
 	# 1. 将所有不支持的节点数据储存到备份文件
 	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >/tmp/fancyss_kv.txt
 	NODES_INFO=$(cat /tmp/fancyss_kv.txt | sed -n 's/type_\([0-9]\+=[678]\)/\1/p' | sort -n)
-	if [ -n "${NODES_INFO}" ];then
+	if [ -n "${NODES_IN2FO}" ];then
 		mkdir -p /koolshare/configs/fanyss
 		for NODE_INFO in ${NODES_INFO}
 		do
@@ -415,6 +416,31 @@ check_empty_node(){
 		dbus set ssconf_basic_node=${NODE_FIRST}
 		ssconf_basic_node=${NODE_FIRST}
 		sync
+	fi
+}
+
+check_device(){
+	mkdir -p $1/rw_test
+	sync
+	if [ -d "$1/rw_test" ]; then
+		echo "rwTest=OK" >"$1/rw_test/rw_test.txt"
+		sync
+		if [ -f "$1/rw_test/rw_test.txt" ]; then
+			. "$1/rw_test/rw_test.txt"
+			if [ "$rwTest" = "OK" ]; then
+				rm -rf "$1/rw_test"
+				return "0"
+			else
+				#echo_date "发生错误！你选择的磁盘目录：${1}没有通过文件读取测试！"
+				return "1"
+			fi
+		else
+			#echo_date "发生错误！你选择的磁盘目录：${1}没有通过文件写入测试！"
+			return "1"
+		fi
+	else
+		#echo_date "发生错误！你选择的磁盘目录：${1}没有通过文件夹写入测试！"
+		return "1"
 	fi
 }
 
@@ -518,9 +544,23 @@ install_now(){
 	find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 	find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
 
-	# optional file maybe exist should be removed, do not remove on install
+	# optional file maybe exist should be removed, but no need remove on install/upgrade
 	# rm -rf /koolshare/bin/sslocal
+
+	# optional file maybe exist should be removed, remove on install
 	rm -rf /koolshare/bin/dig
+
+	# some file may exist in /data
+	rm -rf /data/xray >/dev/null 2>&1
+	rm -rf /data/v2ray >/dev/null 2>&1
+	rm -rf /data/hysteria2 >/dev/null 2>&1
+	rm -rf /data/naive >/dev/null 2>&1
+	rm -rf /data/sslocal >/dev/null 2>&1
+	rm -rf /data/ss-local >/dev/null 2>&1
+	rm -rf /data/ss-redir >/dev/null 2>&1
+	rm -rf /data/ss-tunnel >/dev/null 2>&1
+	rm -rf /data/rss-local >/dev/null 2>&1
+	rm -rf /data/rss-redir >/dev/null 2>&1
 
 	# legacy files should be removed
 	rm -rf /koolshare/bin/trojan
@@ -547,11 +587,11 @@ install_now(){
 
 	# these file maybe used by others plugin, do not remove
 	# rm -rf /koolshare/bin/sponge >/dev/null 2>&1
-	# rm -rf /koolshare/bin/jq >/dev/null 2>&1
+	# rm -rf /koolshare/bin/jq
 	# rm -rf /koolshare/bin/isutf8
-
+	
 	# small jffs router should remove more existing files
-	if [ "${MODEL}" == "RT-AX56U_V2" ];then
+	if [ "${MODEL}" == "RT-AX56U_V2" -o "${MODEL}" == "RT-AX57" ];then
 		rm -rf /jffs/syslog.log
 		rm -rf /jffs/syslog.log-1
 		rm -rf /jffs/wglist
@@ -568,15 +608,53 @@ install_now(){
 		rm -rf /tmp/shadowsocks/bin/curl-fancyss
 		ln -sf $(which curl) /koolshare/bin/curl-fancyss
 	fi
+
+	# jq is included in official 102 stock firmware higher version(RT-BE86U)
+	if [ -f /usr/bin/jq ];then
+		rm -rf /tmp/shadowsocks/bin/jq
+		if [ ! -L /koolshare/bin/jq ];then
+			ln -sf /usr/bin/jq /koolshare/bin/jq
+		fi
+	fi
+	
 	# some file in package no not need to install
 	if [ -n "$(which socat)" ];then
 		rm -rf /tmp/shadowsocks/bin/uredir
 	fi
+	
 	if [ -f "/koolshrae/bin/websocketd" ];then
 		rm -rf /tmp/shadowsocks/bin/websocketd
 	fi
 
-	# 检测储存空间是否足够
+	# 将一些较大的二进制文件安装到/data分区，以节约jffs分区空间
+	# 1. 卸载的时候记得删除/data分区内的二进制
+	# 2. 打包的时候应该用/data分区内的二进制
+	# 3. 更新二进制的时候应该检测/koolshare/bin下的是否为软连接，是的话应该更新真实位置的二进制
+	check_device "/data"
+	if [ "$?" == "0" ];then
+		# 检测data分区剩余空间
+		echo_date "检测/data分区剩余空间..."
+		local SPACE_DATA_AVAL1=$(df | grep -w "/data" | awk '{print $4}')
+		echo_date "/data分区剩余空间为：${SPACE_DATA_AVAL1}KB"
+		local _BINS="xray v2ray hysteria2 naive sslocal ss-local ss-redir ss-tunnel rss-local rss-tunnel rss-redir"
+		for _BIN in ${_BINS}
+		do
+			if [ -f "/tmp/shadowsocks/bin/${_BIN}" ];then
+				local SPACE_DATA_AVAL1=$(df | grep -w "/data" | awk '{print $4}')
+				local SPACE_DATA_AVAL2=$((${SPACE_DATA_AVAL1} - 256))
+				local BIN_SIZE=$(du /tmp/shadowsocks/bin/${_BIN} | awk '{print $1}')
+				if [ "${BIN_SIZE}" -lt "${SPACE_DATA_AVAL2}" ];then
+					echo_date "将${_BIN}安装到/data分区..."
+					mv /tmp/shadowsocks/bin/${_BIN} /data/
+					chmod +x /data/${_BIN} 
+					ln -sf /data/${_BIN} /koolshare/bin/${_BIN}
+				fi
+				sync
+			fi
+		done
+	fi
+
+	# 检测jffs储存空间是否足够
 	echo_date "检测jffs分区剩余空间..."
 	SPACE_AVAL=$(df | grep -w "/jffs" | awk '{print $4}')
 	SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
