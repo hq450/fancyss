@@ -1,0 +1,3 @@
+fc86900c64e992aaac00eb39bf1187de  naive_arm64
+e3abb85661226cb57962ffb154abd660  naive_armv5
+e3abb85661226cb57962ffb154abd660  naive_armv7
