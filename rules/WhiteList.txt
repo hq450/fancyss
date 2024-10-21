@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2024-10-19
+-e ## Last update: 2024-10-21
 
 .*\b0-6\.com
 .*\b0\.zone
@@ -5424,6 +5424,7 @@
 .*\b5a8\.org
 .*\b5aaa\.com
 .*\b5acbd\.com
+.*\b5adanci\.com
 .*\b5adanhao\.com
 .*\b5ag\.net
 .*\b5ailiwu\.com
@@ -10130,6 +10131,7 @@
 .*\baohuatextiles\.com
 .*\baojauto\.com
 .*\baojia-oil\.com
+.*\baojiahuashare\.com
 .*\baojian\.net
 .*\baojian2\.net
 .*\baojiaostudio\.com
@@ -34454,7 +34456,6 @@
 .*\bhandyfriendship\.com
 .*\bhanergy\.com
 .*\bhanergymobileenergy\.com
-.*\bhanfang8\.com
 .*\bhanfei\.net
 .*\bhanfeiyl\.com
 .*\bhanfengcars\.com
@@ -43075,7 +43076,6 @@
 .*\bjiningjj\.com
 .*\bjiniu\.work
 .*\bjiniutech\.com
-.*\bjinjianbio\.com
 .*\bjinjiang-group\.com
 .*\bjinjiang\.com
 .*\bjinjianginns\.com
@@ -44252,7 +44252,6 @@
 .*\bjskjcms\.com
 .*\bjsklcy\.com
 .*\bjskpcg\.org
-.*\bjsks-ya\.com
 .*\bjskuajing\.com
 .*\bjskwt\.com
 .*\bjslcjt\.com
@@ -64647,7 +64646,6 @@
 .*\bshfq\.com
 .*\bshfrp\.com
 .*\bshftth\.com
-.*\bshfuju\.com
 .*\bshfxrc\.com
 .*\bshgao\.com
 .*\bshgaoxin\.net
@@ -70003,7 +70001,6 @@
 .*\btianjin-patek\.com
 .*\btianjingames\.com
 .*\btianjingrong\.com
-.*\btianjinshunma\.com
 .*\btianjinwe\.com
 .*\btianjinyijiahua\.com
 .*\btianjiyy\.com
@@ -80303,6 +80300,7 @@
 .*\bxueyuhuangjinyan\.com
 .*\bxuezhangbb\.com
 .*\bxuezhangya\.com
+.*\bxuezhao\.space
 .*\bxuezhishi88\.com
 .*\bxuezhiyou\.com
 .*\bxuezhouyi\.com
@@ -85571,6 +85569,7 @@
 .*\bzgps168\.com
 .*\bzgpts\.com
 .*\bzgpy168\.com
+.*\bzgq\.ink
 .*\bzgqcdt\.com
 .*\bzgqczj\.com
 .*\bzgqkk\.com

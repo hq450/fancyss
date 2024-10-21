@@ -1,7 +1,7 @@
 -e [Local Hosts]
 ## China mainland domains
 ## Source: https://github.com/felixonmars/dnsmasq-china-list
-## Last update: 2024-10-19
+## Last update: 2024-10-21
 -e 
 
 Server=/0-6.com/
@@ -5424,6 +5424,7 @@ Server=/59yx.com/
 Server=/5a8.org/
 Server=/5aaa.com/
 Server=/5acbd.com/
+Server=/5adanci.com/
 Server=/5adanhao.com/
 Server=/5ag.net/
 Server=/5ailiwu.com/
@@ -10130,6 +10131,7 @@ Server=/aohuasports.com/
 Server=/aohuatextiles.com/
 Server=/aojauto.com/
 Server=/aojia-oil.com/
+Server=/aojiahuashare.com/
 Server=/aojian.net/
 Server=/aojian2.net/
 Server=/aojiaostudio.com/
@@ -34454,7 +34456,6 @@ Server=/handuyishe.com/
 Server=/handyfriendship.com/
 Server=/hanergy.com/
 Server=/hanergymobileenergy.com/
-Server=/hanfang8.com/
 Server=/hanfei.net/
 Server=/hanfeiyl.com/
 Server=/hanfengcars.com/
@@ -43075,7 +43076,6 @@ Server=/jiniance8.com/
 Server=/jiningjj.com/
 Server=/jiniu.work/
 Server=/jiniutech.com/
-Server=/jinjianbio.com/
 Server=/jinjiang-group.com/
 Server=/jinjiang.com/
 Server=/jinjianginns.com/
@@ -44252,7 +44252,6 @@ Server=/jskhfm.com/
 Server=/jskjcms.com/
 Server=/jsklcy.com/
 Server=/jskpcg.org/
-Server=/jsks-ya.com/
 Server=/jskuajing.com/
 Server=/jskwt.com/
 Server=/jslcjt.com/
@@ -64647,7 +64646,6 @@ Server=/shfoxmotor.com/
 Server=/shfq.com/
 Server=/shfrp.com/
 Server=/shftth.com/
-Server=/shfuju.com/
 Server=/shfxrc.com/
 Server=/shgao.com/
 Server=/shgaoxin.net/
@@ -70003,7 +70001,6 @@ Server=/tianjin-iwc.com/
 Server=/tianjin-patek.com/
 Server=/tianjingames.com/
 Server=/tianjingrong.com/
-Server=/tianjinshunma.com/
 Server=/tianjinwe.com/
 Server=/tianjinyijiahua.com/
 Server=/tianjiyy.com/
@@ -80303,6 +80300,7 @@ Server=/xueyuanjun.com/
 Server=/xueyuhuangjinyan.com/
 Server=/xuezhangbb.com/
 Server=/xuezhangya.com/
+Server=/xuezhao.space/
 Server=/xuezhishi88.com/
 Server=/xuezhiyou.com/
 Server=/xuezhouyi.com/
@@ -85571,6 +85569,7 @@ Server=/zgpingshu.com/
 Server=/zgps168.com/
 Server=/zgpts.com/
 Server=/zgpy168.com/
+Server=/zgq.ink/
 Server=/zgqcdt.com/
 Server=/zgqczj.com/
 Server=/zgqkk.com/
