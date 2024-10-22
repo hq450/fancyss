@@ -5,8 +5,8 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 mkdir -p $DIR/.build_v2ray
 base_dir=$DIR/.build_v2ray
 cd ${base_dir}
-GO_VERSION="1.22.2"
-UPX_VERSION="4.2.3"
+GO_VERSION="1.23.2"
+UPX_VERSION="4.2.4"
 CODENAME="hq450@fancyss"
 
 echo "-----------------------------------------------------------------"
