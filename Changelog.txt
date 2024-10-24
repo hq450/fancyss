@@ -1,5 +1,29 @@
 fancyss Changelog
 ===========================================
+3.3.4 (todo)
+   - note	此次主要更新各个协议的二进制，同时进一步优化jffs空间占用，另外修复了国内外出口检测的一些bug。
+   - update	shadowsocks-rust二进制更新到v1.21.0，且安装包内置
+   - update	v2ray二进制更新到v5.21.0
+   - update	xray二进制更新到v24.9.30
+   - update	naiveproxy二进制更新到v130.0.6723.40-5
+   - rules	规则更新：chnroute规则合并了多个来源，覆盖更全面，包含misakaio, cnisp, apnic, ipip, ipip_17mon, maxmind
+   - rules	规则更新：gfwlist在原有基础Loukky/gfwlist-by-loukky上合并了pexcn/daily的规则
+   - fix	修复国外状态检测时因代理不支持ipv6而国外×的问题（只检测ipv4）
+   - fix	修复国内状态检测因部分站点跳转显示国内×的问题
+   - fix	修复插件开启时国内出口ip地址可能检测出错的问题
+   - fix	修复插件开启时国外出口ip地址在一些情况下无法检测到出口ip的问题
+   - fix	修复手动安装插件时，天选路由器皮肤无法识别的问题
+   - fix	修复插件在最新102固件中（RT-BE86U），前端js报错，页面加载左侧经常黑边的问题
+   - fix	修复ss-rust二进制在线更新出现md5不一致的情况（在线修复）
+   - update	优化插件安装时占用的jffs空间，实测在BE86U上，全新安装仅需7M的jffs空间（利用了固件的/data分区，并至少保留其256KB空间）
+   - update	RT-AX57机型在安装前会尝试释放更多jffs空间再进行安装
+   - update	现在检测到固件自带jq程序，将不会安装包内jq，因为最新102固件（如BE86U）自带jq，
+   - update	现在检测到固件curl支持proxy（102改版固件支持该特性），将不会安装包内curl-fancyss，将节省1MB多的空间，
+   - ............
+   - todo	更新hysteria2二进制
+   - todo	更新v2ray，ss-rust更新机制（当安装在/data时，也应该更新到/data）
+   - todo	更新默认值，附加设置 - 插件开启检测中，除了国内ip检测和出口ip检测默认开启，其余关闭（打勾）
+   
 3.3.3
    - note	本次主要为并修复一些已知问题，并继续优化插件占用jffs储存空间，实测全新安装，BE88U占用24.3MB
    - add	添加GT-BE96等102官改固件的支持
