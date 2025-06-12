@@ -4961,7 +4961,7 @@ function refresh_acl_html() {
 	code += '<tr>'
 	// ip addr
 	code += '<td width="23%">'
-	code += '<input type="text" maxlength="15" class="input_ss_table" id="ss_acl_ip" align="left" style="float:left;width:110px;margin-left:16px;text-align:center" autocomplete="off" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">'
+	code += '<input type="text" maxlength="18" class="input_ss_table" id="ss_acl_ip" align="left" style="float:left;width:110px;margin-left:16px;text-align:center" autocomplete="off" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">'
 	code += '<img id="pull_arrow" height="14px;" src="/res/arrow-down.gif" align="right" onclick="pullLANIPList(this);" title="<#select_IP#>">'
 	code += '<div id="ClientList_Block" class="clientlist_dropdown" style="margin-left:2px;margin-top:25px;"></div>'
 	code += '</td>'
