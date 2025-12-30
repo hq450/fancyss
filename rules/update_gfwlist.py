@@ -1,89 +1,72 @@
-#!/usr/bin/env python  
-#coding=utf-8
-#  
-# Generate a list of dnsmasq rules with ipset for gfwlist
-#  
-# Copyright (C) 2014 http://www.shuyz.com   
-# Ref https://code.google.com/p/autoproxy-gfwlist/wiki/Rules    
- 
-import sys
-import urllib2 
-import re
-import os
-import datetime
+#!/usr/bin/env python3
+# coding=utf-8
+#
+# Generate a domain list from gfwlist (for dnsmasq/ipset rules generation)
+#
+# Copyright (C) 2014 http://www.shuyz.com
+# Ref https://code.google.com/p/autoproxy-gfwlist/wiki/Rules
+
 import base64
-#import shutil
- 
-#mydnsip = '127.0.0.1'
-#mydnsport = '1053'
+import io
+import re
+import sys
+from urllib.request import Request, urlopen
 
-if len(sys.argv) != 2:
-    print("update_gfwlist.py outfile.txt")
-    sys.exit(-1)
 
-outfile = sys.argv[1]
- 
-# the url of gfwlist
-baseurl = 'https://raw.githubusercontent.com/Loukky/gfwlist-by-loukky/master/gfwlist.txt'
-# baseurl = 'https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt'
-# baseurl = 'https://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt'
-# match comments/title/whitelist/ip address
-comment_pattern = '^\!|\[|^@@|^\d+\.\d+\.\d+\.\d+'
-domain_pattern = '([\w\-\_]+\.[\w\.\-\_]+)[\/\*]*' 
-tmpfile = '/tmp/gfwlisttmp'
-# do not write to router internal flash directly
-#outfile = '/tmp/gfwlist.conf'
-#rulesfile = '/etc/dnsmasq.d/gfwlist.conf'
- 
-fs =  file(outfile, 'w')
-#fs.write('# gfw list ipset rules for dnsmasq\n')
-#fs.write('# updated on ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '\n')
-#fs.write('#\n')
- 
-print 'fetching list...'
-content = urllib2.urlopen(baseurl, timeout=15).read().decode('base64')
- 
-# write the decoded content to file then read line by line
-tfs = open(tmpfile, 'w')
-tfs.write(content)
-tfs.close()
-tfs = open(tmpfile, 'r')
- 
-print 'page content fetched, analysis...'
- 
-# remember all blocked domains, in case of duplicate records
-domainlist = []
- 
-for line in tfs.readlines():	
-	if re.findall(comment_pattern, line):
-		#print 'this is a comment line: ' + line
-		#fs.write('#' + line)
-                pass
-	else:
-		domain = re.findall(domain_pattern, line)
-		if domain:
-			try:
-				found = domainlist.index(domain[0])
-				#print domain[0] + ' exists.'
-			except ValueError:
-				#print 'saving ' + domain[0]
-				domainlist.append(domain[0])
-				#fs.write('server=/.%s/%s#%s\n'%(domain[0],mydnsip,mydnsport))
-				#fs.write('ipset=/.%s/gfwlist\n'%domain[0])
-				fs.write('%s\n'%domain[0])
-		else:
-			#print 'no valid domain in this line: ' + line
-                        pass
-					
-tfs.close()	
-fs.close();
- 
-#print 'moving generated file to dnsmasg directory'
-#print outfile
-#shutil.move(outfile, rulesfile)
- 
-#print 'restart dnsmasq...'
-#print os.popen('/etc/init.d/dnsmasq restart').read()
- 
-print 'saving to file: ', outfile
-print 'done!'
+def _usage() -> None:
+    print("usage: update_gfwlist.py <outfile>", file=sys.stderr)
+
+
+def _decode_gfwlist(raw: bytes) -> str:
+    try:
+        decoded = base64.b64decode(raw)
+        text = decoded.decode("utf-8", "ignore")
+        if text.lstrip().startswith("[AutoProxy"):
+            return text
+    except Exception:
+        pass
+    return raw.decode("utf-8", "ignore")
+
+
+def main(argv) -> int:
+    if len(argv) != 2:
+        _usage()
+        return 2
+
+    outfile = argv[1]
+
+    baseurl = "https://raw.githubusercontent.com/Loukky/gfwlist-by-loukky/master/gfwlist.txt"
+    comment_re = re.compile(r"^\!|\[|^@@|^\d+\.\d+\.\d+\.\d+")
+    domain_re = re.compile(r"([\w\-\_]+\.[\w\.\-\_]+)[\/\*]*")
+
+    print("fetching list...")
+    try:
+        request = Request(baseurl, headers={"User-Agent": "fancyss-update-gfwlist/1.0"})
+        with urlopen(request, timeout=15) as response:
+            content = _decode_gfwlist(response.read())
+    except Exception as exc:
+        print(f"error: failed to fetch gfwlist: {exc}", file=sys.stderr)
+        return 1
+
+    print("page content fetched, analysis...")
+    seen = set()
+    with io.open(outfile, "w", encoding="utf-8", newline="\n") as out_fp:
+        for line in content.splitlines():
+            if comment_re.search(line):
+                continue
+            matches = domain_re.findall(line)
+            if not matches:
+                continue
+            domain = matches[0]
+            if domain in seen:
+                continue
+            seen.add(domain)
+            out_fp.write(f"{domain}\n")
+
+    print("saving to file:", outfile)
+    print("done!")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
