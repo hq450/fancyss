@@ -5008,6 +5008,7 @@ function refresh_acl_html() {
 		code += '<select id="ss_acl_mode_' + ac["acl_node"] + '" name="ss_acl_mode_' + ac["acl_node"] + '" style="width:140px;margin:0px 0px 0px 2px;" class="sel_option" onchange="set_mode_2(this);">';
 		if ($("#ss_basic_mode").val() == 6) {
 			code += '<option value="0">不通过代理</option>';
+			code += '<option value="5">全局代理模式</option>';
 			code += '<option value="6">回国模式</option>';
 		} else {
 			code += '<option value="0">不通过代理</option>';
