@@ -1,0 +1,3 @@
+493848b11e1f028c2f1ab873d637b9cf  xray_arm64
+9b06f278be22df39d38ec9c2736fa2fa  xray_armv5
+3d59ddba7ebba6451cd5696c6d968085  xray_armv7

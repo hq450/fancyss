@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 mkdir -p $DIR/.build_v2ray-plugin
 base_dir=$DIR/.build_v2ray-plugin
 cd ${base_dir}
-GO_VERSION="1.22.2"
+GO_VERSION="1.25.5"
 CODENAME="hq450@fancyss"
 
 echo "-----------------------------------------------------------------"
@@ -21,9 +21,9 @@ echo "-----------------------------------------------------------------"
 
 # get upx
 if [ ! -x ${base_dir}/upx ];then
-	[ ! -f "upx-4.0.2-amd64_linux.tar.xz" ] && wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz
-	tar xf upx-4.0.2-amd64_linux.tar.xz
-	cp ${base_dir}/upx-4.0.2-amd64_linux/upx ${base_dir}/
+	[ ! -f "upx-5.0.2-amd64_linux.tar.xz" ] && wget https://github.com/upx/upx/releases/download/v5.0.2/upx-5.0.2-amd64_linux.tar.xz
+	tar xf upx-5.0.2-amd64_linux.tar.xz
+	cp ${base_dir}/upx-5.0.2-amd64_linux/upx ${base_dir}/
 fi
 ${base_dir}/upx -V
 echo "-----------------------------------------------------------------"

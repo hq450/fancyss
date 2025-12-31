@@ -5,8 +5,8 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 mkdir -p $DIR/.build_xray
 base_dir=$DIR/.build_xray
 cd ${base_dir}
-GO_VERSION="1.23.4"
-UPX_VERSION="4.2.4"
+GO_VERSION="1.25.5"
+UPX_VERSION="5.0.2"
 CODENAME="hq450@fancyss"
 
 echo "-----------------------------------------------------------------"
@@ -52,25 +52,34 @@ rm -rf ${base_dir}/armv64
 git checkout $VERSIONTAG
 
 # remove some features from xray
+# # JSON & TOML & YAML
 # sed -i '/toml/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/yaml/d' ${base_dir}/Xray-core/main/distro/all/all.go
+# 
+# # Developer preview services
 # sed -i '/observatory/d' ${base_dir}/Xray-core/main/distro/all/all.go
-# sed -i '/confloader/d' ${base_dir}/Xray-core/main/distro/all/all.go
+# 
+# # Transports
 # sed -i '/httpupgrade/d' ${base_dir}/Xray-core/main/distro/all/all.go
+# 
+# # Default commander and all its services. This is an optional feature.
 # sed -i '/app\/commander/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/log\/command/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/proxyman\/command/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/stats\/command/d' ${base_dir}/Xray-core/main/distro/all/all.go
+# 
+# # Other optional features.
 # sed -i '/proxy\/dns/d' ${base_dir}/Xray-core/main/distro/all/all.go
-# sed -i '/proxy\/loopback/d' ${base_dir}/Xray-core/main/distro/all/all.go
-# sed -i '/headers\/noop/d' ${base_dir}/Xray-core/main/distro/all/all.go
-# sed -i '/internet\/domainsocket/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/fakedns/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/metrics/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/policy/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/reverse/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/router/d' ${base_dir}/Xray-core/main/distro/all/all.go
 # sed -i '/app\/stats/d' ${base_dir}/Xray-core/main/distro/all/all.go
+
+# Inbound and outbound proxies.
+sed -i '/proxy\/loopback/d' ${base_dir}/Xray-core/main/distro/all/all.go
+sed -i '/headers\/noop/d' ${base_dir}/Xray-core/main/distro/all/all.go
 
 # build xray
 build_v2() {

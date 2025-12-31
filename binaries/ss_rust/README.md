@@ -6,25 +6,28 @@
 
 ### arm64
 ```bash
-docker pull messense/rust-musl-cross:aarch64-musl
-alias rust-musl-builder='docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:aarch64-musl'
-rust-musl-builder cargo build --release --features "local local-tunnel local-redir multi-threaded stream-cipher aead-cipher-2022"
+# arm64
+sudo docker pull ghcr.io/rust-cross/rust-musl-cross:aarch64-musl
+sudo docker run --rm -it -v "$(pwd)":/home/rust/src ghcr.io/rust-cross/rust-musl-cross:aarch64-musl cargo build --release --features "local local-tunnel local-redir multi-threaded stream-cipher aead-cipher-2022"
+sudo docker run --rm -it -v "$(pwd)":/home/rust/src ghcr.io/rust-cross/rust-musl-cross:aarch64-musl musl-strip /home/rust/src/target/aarch64-unknown-linux-musl/release/sslocal
 ```
 
 ### arm7
 
 ```bash
-docker pull messense/rust-musl-cross:armv7-musleabihf
-alias rust-musl-builder='docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:armv7-musleabihf'
-rust-musl-builder cargo build --release --features "local local-tunnel local-redir multi-threaded stream-cipher aead-cipher-2022"
+# arm7
+sudo docker pull ghcr.io/rust-cross/rust-musl-cross:armv7-musleabihf
+sudo docker run --rm -it -v "$(pwd)":/home/rust/src ghcr.io/rust-cross/rust-musl-cross:armv7-musleabihf cargo build --release --features "local local-tunnel local-redir multi-threaded stream-cipher aead-cipher-2022"
+sudo docker run --rm -it -v "$(pwd)":/home/rust/src ghcr.io/rust-cross/rust-musl-cross:armv7-musleabihf musl-strip /home/rust/src/target/armv7-unknown-linux-musleabihf/release/sslocal
 ```
 
 
 ### arm5
 ```bash
-docker pull messense/rust-musl-cross:arm-musleabi
-alias rust-musl-builder='docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:arm-musleabi'
-rust-musl-builder cargo build --release --features "local local-tunnel local-redir multi-threaded stream-cipher aead-cipher-2022"
+# arm5
+sudo docker pull ghcr.io/rust-cross/rust-musl-cross:arm-musleabi
+sudo docker run --rm -it -v "$(pwd)":/home/rust/src ghcr.io/rust-cross/rust-musl-cross:arm-musleabi cargo build --release --features "local local-tunnel local-redir multi-threaded stream-cipher aead-cipher-2022"
+sudo docker run --rm -it -v "$(pwd)":/home/rust/src ghcr.io/rust-cross/rust-musl-cross:arm-musleabi musl-strip /home/rust/src/target/arm-unknown-linux-musleabi/release/sslocal
 ```
 
 编译完成后可以在`$(pwd)/target`下找到对应二进制文件，二进制文件需要进一步经过upx压缩即可使用

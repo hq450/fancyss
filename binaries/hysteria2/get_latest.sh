@@ -20,7 +20,6 @@ cd v${LATEST_VERSION}
 echo "download hysteria2_armv5"
 wget -O hysteria2_armv5 "https://github.com/apernet/hysteria/releases/download/app%2Fv${LATEST_VERSION}/hysteria-linux-armv5" >/dev/null 2>&1
 
-
 echo "download hysteria2_armv7"
 wget -O hysteria2_armv7 "https://github.com/apernet/hysteria/releases/download/app%2Fv${LATEST_VERSION}/hysteria-linux-arm" >/dev/null 2>&1
 
@@ -28,4 +27,4 @@ echo "download hysteria2_arm64"
 wget -O hysteria2_arm64 "https://github.com/apernet/hysteria/releases/download/app%2Fv${LATEST_VERSION}/hysteria-linux-arm64" >/dev/null 2>&1
 
 chmod +x *
-upx-4.2.4 --lzma --ultra-brute *
+upx-5.0.2 --lzma --ultra-brute *
