@@ -727,23 +727,15 @@ install_now(){
 	rm -rf /koolshare/bin/dns2socks
 	rm -rf /koolshare/bin/kcptun
 	rm -rf /koolshare/bin/chinadns-ng
-	rm -rf /koolshare/bin/speederv1
-	rm -rf /koolshare/bin/speederv2
-	rm -rf /koolshare/bin/udp2raw
-	rm -rf /koolshare/bin/tuic-client
 	rm -rf /koolshare/bin/xray
 	rm -rf /koolshare/bin/v2ray
-	rm -rf /koolshare/bin/v2ray-plugin
 	rm -rf /koolshare/bin/curl-fancyss
 	rm -rf /koolshare/bin/hysteria2
-	rm -rf /koolshare/bin/httping
 	rm -rf /koolshare/bin/haveged
 	rm -rf /koolshare/bin/naive
 	rm -rf /koolshare/bin/ipt2socks
 	rm -rf /koolshare/bin/dnsclient
-	rm -rf /koolshare/bin/dns2tcp
-	rm -rf /koolshare/bin/dns-ecs-forcer
-	rm -rf /koolshare/bin/uredir
+	rm -rf /koolshare/bin/smartdns
 	rm -rf /koolshare/res/icon-shadowsocks.png
 	rm -rf /koolshare/res/arrow-down.gif
 	rm -rf /koolshare/res/arrow-up.gif
@@ -754,12 +746,15 @@ install_now(){
 	rm -rf /koolshare/res/fancyss.css
 	find /koolshare/init.d/ -name "*shadowsocks.sh" | xargs rm -rf
 	find /koolshare/init.d/ -name "*socks5.sh" | xargs rm -rf
-
 	# optional file maybe exist should be removed, but no need remove on install/upgrade
-	# rm -rf /koolshare/bin/sslocal
+
 
 	# optional file maybe exist should be removed, remove on install
 	rm -rf /koolshare/bin/dig
+	rm -rf /koolshare/bin/speederv1
+	rm -rf /koolshare/bin/speederv2
+	rm -rf /koolshare/bin/udp2raw
+	rm -rf /koolshare/bin/tuic-client
 
 	# some file may exist in /data
 	if [ -d "/data" ];then
@@ -777,9 +772,14 @@ install_now(){
 	fi
 	
 	# legacy files should be removed
+	rm -rf /koolshare/bin/uredir
+	rm -rf /koolshare/bin/dns-ecs-forcer
+	rm -rf /koolshare/bin/dns2tcp
+	rm -rf /koolshare/bin/sslocal
+	rm -rf /koolshare/bin/httping
+	rm -rf /koolshare/bin/v2ray-plugin
 	rm -rf /koolshare/bin/trojan
 	rm -rf /koolshare/bin/haproxy
-	rm -rf /koolshare/bin/smartdns
 	rm -rf /koolshare/bin/dohclient
 	rm -rf /koolshare/bin/dohclient-cache
 	rm -rf /koolshare/bin/v2ctl

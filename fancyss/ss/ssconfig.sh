@@ -1781,17 +1781,28 @@ start_chinadns_ng(){
 			
 		EOF
 	fi
+	
 	# ads
+	# 广告域名列表压缩后761KB，先不启用此功能
+	if [ -f "/koolshare/ss/rules/adslist.gz" ]; then
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			# 广告过滤
+			group null
+			group-dnl /koolshare/ss/rules/adslist.gz
+
+		EOF
+	fi
+	
+	# block_list
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
-		# 广告过滤
+		# 黑名单域名（不解析）
 		group null
-		group-dnl /koolshare/ss/rules/adslist.gz
+		group-dnl /koolshare/ss/rules/block_list.txt
 
 	EOF
 
 	# defalut
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
-	
 		# 域名白名单
 		group white
 		group-dnl /tmp/white_list.txt
@@ -2132,17 +2143,6 @@ add_white_black() {
 	for wan_white_domain2 in "apple.com" "microsoft.com" "dns.msftncsi.com" "worldtimeapi.org"; do
 		echo "${wan_white_domain2}" >>/tmp/white_list.txt
 	done
-
-	# {block_list}
-	true >/tmp/block_list.txt
-	echo "adobestats.io" >>/tmp/block_list.txt
-	echo "adobe.io" >>/tmp/block_list.txt
-	echo "adobe.com" >>/tmp/block_list.txt
-	echo "cc-api-data.adobe.io" >>/tmp/block_list.txt
-	echo "adobelogin.com" >>/tmp/block_list.txt
-	echo "adobelogin.com.cdn.cloudflare.net" >>/tmp/block_list.txt
-	echo "adobegenuine.com" >>/tmp/block_list.txt
-	echo "gocart-web-prod-ue1-alb-1461435473.us-east-1.elb.amazonaws.com" >>/tmp/block_list.txt
 }
 
 create_dnsmasq_conf() {
@@ -4193,6 +4193,30 @@ start_trojan(){
 }
 
 start_naive(){
+	if [ -f "/koolshare/bin/naive" ];then
+		chmod +x /koolshare/bin/naive
+		local ret=$(run /koolshare/bin/naive --version 2>&1)
+		if [ -z "${ret}" ];then
+			echo_date "检测到/koolshare/bin/目录下存在naive文件，但是无法运行！"
+			echo_date "请确保你下载了正确的二进制文件！"
+			close_in_five flag
+		fi
+	else
+		local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+		echo_date ""
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date ""
+		echo_date "重要提醒！！"
+		echo_date ""
+		echo_date "检测到你需要使用naive！但是本插件默认没有提供相关的二进制文件！"
+		echo_date "请前往下面的链接下载naive二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
+		echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/naive"
+		echo_date ""
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date ""
+		close_in_five flag
+	fi
+	
 	echo_date "开启ipt2socks进程..."
 	run_bg ipt2socks -p 23456 -l 3333 -4 -R
 	detect_running_status2 ipt2socks 23456

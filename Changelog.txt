@@ -1,6 +1,21 @@
 fancyss Changelog
 ===========================================
-3.3.8 (202511066)
+3.3.9 (20251231)
+   - note	此版本对DNS的逻辑和相关代码进行了较大改动，现在不再份基础和进阶，默认使用chinadns-ng，同时支持smartdns
+   - update	chinadns-ng基于原作者的最新重构版，原生支持UDP/TCP/DoT协议，且在此基础上魔改了国外解析组socks5代理支持
+   - add	chinadns-ng方案预设三组配置：国内优先，国外优先，智能判断。
+       		分别对应chinadns-ng文档中的【gfwlist 分流】，【chnlist 分流】和【chnroute 分流】（https://github.com/zfl9/chinadns-ng）
+       		国内优先：gfwlist.txt (tag:gfw) 走可信上游，其他域名 (tag:chn) 走国内上游（优点：国内CDN效果好；缺点：国外非墙域名走国内DNS解析）
+       		国外优先：chnlist.txt (tag:chn) 走国内上游，其他域名 (tag:gfw) 走可信上游（优点：无DNS泄露；缺点：国内未收录域名走国外DNS解析）
+       		智能判断：chnlist (tag:chn)走国内上游，gfwlist (tag:gfw) 走可信上游，其他域名 (tag:none) 同时走国内和可信上游，根据 IP 测试结果决定最终响应（优点：综合解析效果最好；缺点：轻微DNS泄露）
+       		插件默认使用【智能判断】，有洁癖的可以使用国外优先模式，因为是纯域名分流，可以保证无DNS泄露
+   - update	添加smartdns支持，预设三组配置：国内优先，国外优先，智能判断，外加三组自定义配置
+       		通过对smartdns配置的调教，使其实现了chinadns-ng一样的分流解析，还可以在此基础上实现国内域名的解析ip优选。
+   - remove	移除了DNS中，dns2tcp和ecs的相关逻辑和代码
+   - remove	移除了dns2socks
+
+
+3.3.8 (20251106)
    - fix	此次仅修复一个web的小错误，同时同步下最新规则，建议更新
    - note	由于华硕最新固件内核原因，导致singbox插件开发受阻，fancyss最近将继续更新
        		1. 首先会将DNS逻辑进行一次较大的更新，比如更好的解析，比如做到DNS零泄露

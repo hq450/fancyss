@@ -14,6 +14,7 @@ LOCAL_NODES_BAK="$DIR/ss_nodes_bak.txt"
 NODES_SEQ=$(dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
 NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.*[[:space:]]//')
 SUB_MODE=$(dbus get ssr_subscribe_mode)
+[ -z "${SUB_MODE}" ] && SUB_MODE=2
 HY2_UP_SPEED=$(dbus get ss_basic_hy2_up_speed)
 HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
 HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)

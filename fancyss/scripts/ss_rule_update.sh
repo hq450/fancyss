@@ -6,7 +6,7 @@ source /koolshare/scripts/base.sh
 eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 RULE_FILE=/koolshare/ss/rules/rules.json.js
-URL_MAIN="https://raw.githubusercontent.com/hq450/fancyss/3.0/rules"
+URL_MAIN="https://raw.githubusercontent.com/hq450/fancyss/3.0/rules_ng"
 
 run(){
 	env -i PATH=${PATH} "$@"
@@ -21,8 +21,8 @@ start_update(){
 	fi
 	
 	# 2. 检测规则本地版本号
-	version_gfwlist_local=$(cat ${RULE_FILE} | run jq -r '.gfwlist_txt.date' | sed 's/[[:space:]]/_/g')
-	version_cdnlist_local=$(cat ${RULE_FILE} | run jq -r '.chnlist_txt.date' | sed 's/[[:space:]]/_/g')
+	version_gfwlist_local=$(cat ${RULE_FILE} | run jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
+	version_cdnlist_local=$(cat ${RULE_FILE} | run jq -r '.chnlist.date' | sed 's/[[:space:]]/_/g')
 	version_chnroute_local=$(cat ${RULE_FILE} | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
 	if [ -z ${version_gfwlist_local} -o -z ${version_chnroute_local} -o -z ${version_cdnlist_local} ];then
 		echo_date "没有找到规则版本号！退出！"
@@ -52,16 +52,16 @@ start_update(){
 	fi
 
 	# 6. 获取在线版本及其它信息
-	version_gfwlist_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist_txt.date' | sed 's/[[:space:]]/_/g')
-	version_cdnlist_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist_txt.date' | sed 's/[[:space:]]/_/g')
+	version_gfwlist_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
+	version_cdnlist_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist.date' | sed 's/[[:space:]]/_/g')
 	version_chnroute_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
 	
-	md5sum_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist_txt.md5')
-	md5sum_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist_txt.md5')
+	md5sum_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.md5')
+	md5sum_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist.md5')
 	md5sum_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.md5')
 
-	count_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist_txt.count')
-	count_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist_txt.count')
+	count_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.count')
+	count_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist.count')
 	count_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.count')
 	count_ip_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.count_ip')
 	
@@ -77,9 +77,9 @@ start_update(){
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始gfwlist文件"
 				local version_gfwlist_online_tmp="$(echo ${version_gfwlist_online} | sed 's/_/ /g')"
 				mv /tmp/gfwlist.txt /koolshare/ss/rules/gfwlist.txt
-				run jq --arg variable "${version_gfwlist_online_tmp}" '.gfwlist_txt.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_gfw_online}" '.gfwlist_txt.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_gfw_online}" '.gfwlist_txt.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${version_gfwlist_online_tmp}" '.gfwlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${md5sum_gfw_online}" '.gfwlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${count_gfw_online}" '.gfwlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
 				echo_date "【更新成功】你的gfwlist已经更新到最新！"
 			else
@@ -132,9 +132,9 @@ start_update(){
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始chnlist名单文件"
 				local version_chnroutelist_online_tmp="$(echo ${version_chnroutelist_online} | sed 's/_/ /g')"
 				mv /tmp/chnlist.txt /koolshare/ss/rules/chnlist.txt
-				run jq --arg variable "${version_chnroutelist_online_tmp}" '.chnlist_txt.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_chnlist_online}" '.chnlist_txt.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_chnlist_online}" '.chnlist_txt.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${version_chnroutelist_online_tmp}" '.chnlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${md5sum_chnlist_online}" '.chnlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${count_chnlist_online}" '.chnlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
 				echo_date "【更新成功】你的chnlist名单已经更新到最新！"
 			else
@@ -151,14 +151,14 @@ start_update(){
 	
 	echo_date "规则更新进程运行完毕！"
 	# write number
-	nvram set update_gfwlist="$(cat ${RULE_FILE} | run jq -r '.gfwlist_txt.date')"
+	nvram set update_gfwlist="$(cat ${RULE_FILE} | run jq -r '.gfwlist.date')"
 	nvram set update_chnroute="$(cat ${RULE_FILE} | run jq -r '.chnroute.date')"
-	nvram set update_chnlist="$(cat ${RULE_FILE} | run jq -r '.chnlist_txt.date')"
+	nvram set update_chnlist="$(cat ${RULE_FILE} | run jq -r '.chnlist.date')"
 	
-	nvram set gfwlist_numbers="$(cat ${RULE_FILE} | run jq -r '.gfwlist_txt.count')"
+	nvram set gfwlist_numbers="$(cat ${RULE_FILE} | run jq -r '.gfwlist.count')"
 	nvram set chnroute_numbers="$(cat ${RULE_FILE} | run jq -r '.chnroute.count')"
 	nvram set chnroute_ips="$(cat ${RULE_FILE} | run jq -r '.chnroute.count_ip')"
-	nvram set chnlist_numbers="$(cat ${RULE_FILE} | run jq -r '.chnlist_txt.count')"
+	nvram set chnlist_numbers="$(cat ${RULE_FILE} | run jq -r '.chnlist.count')"
 	#======================================================================
 	# reboot fancyss
 	if [ "${reboot}" == "1" ];then

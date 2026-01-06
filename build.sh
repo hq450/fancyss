@@ -8,17 +8,25 @@ HOME_URL=Module_shadowsocks.asp
 CURR_PATH="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 
 cp_rules(){
-	cp -rf ${CURR_PATH}/rules/gfwlist.conf ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/chnroute.txt ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/cdn.txt ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/cdn_test.txt ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/apple_china.txt ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/google_china.txt ${CURR_PATH}/fancyss/ss/rules/
-	cp -rf ${CURR_PATH}/rules/rules.json.js ${CURR_PATH}/fancyss/ss/rules/rules.json.js
+	local target=${CURR_PATH}/fancyss/ss/rules/
+	cp -rf ${CURR_PATH}/rules_ng/gfwlist.gz ${target}
+	cp -rf ${CURR_PATH}/rules_ng/chnlist.gz ${target}
+	cp -rf ${CURR_PATH}/rules_ng/adslist.gz ${target}
+	cp -rf ${CURR_PATH}/rules_ng/udplist.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/rotlist.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/white_list.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/black_list.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/block_list.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/apple_china.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/google_china.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/cdn_test.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/chnroute.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/chnroute6.txt ${target}
+	cp -rf ${CURR_PATH}/rules_ng/rules.json.js ${target}
 }
 
 sync_binary(){
-	BINS_REMOVE="v2ray-plugin kcptun v2ray naive"
+	BINS_REMOVE="v2ray-plugin kcptun naive ss_rust"
 	for BIN_REMOVE in $BINS_REMOVE;
 	do
 		echo ">>> remove old bin $BIN_REMOVE"
@@ -30,8 +38,9 @@ sync_binary(){
 		rm -rf ${CURR_PATH}/fancyss/bin-ipq32/${BIN_REMOVE}
 		rm -rf ${CURR_PATH}/fancyss/bin-ipq64/${BIN_REMOVE}
 	done
-	
-	BINS_COPY="xray ss_rust hysteria2"
+
+	# update to latest binary
+	BINS_COPY="xray v2ray ss_rust hysteria2"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
@@ -166,11 +175,13 @@ gen_folder(){
 		echo mtk > ./shadowsocks/.valid
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"ipq64\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
+	
 	# remove some binary because it's not default provide by install packages
 	find ./shadowsocks/bin -name "speederv1" | xargs rm -rf
 	find ./shadowsocks/bin -name "speederv2" | xargs rm -rf
 	find ./shadowsocks/bin -name "udp2raw" | xargs rm -rf
 	find ./shadowsocks/bin -name "tuic-client" | xargs rm -rf
+	find ./shadowsocks/bin -name "naive" | xargs rm -rf
 
 	# wirte type string
 	if [ "${release_type}" != "debug" ];then
@@ -205,7 +216,7 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/haveged
 		rm -rf ./shadowsocks/bin/hysteria2
 
-		if [ "${platform}" == "hnd" ];then
+		if [ "${platform}" == "hnd" -o "${platform}" == "ipq32" ];then
 			rm -rf ./shadowsocks/bin/websocketd
 		fi
 		# remove scripts
@@ -353,13 +364,13 @@ gen_folder(){
 	else
 		mv -f ./shadowsocks/res/icon-shadowsocks_debug.png ./shadowsocks/res/icon-shadowsocks.png
 	fi
-	# when develop in other branch
-	# master/fancyss_hnd
-	# local CURRENT_BRANCH=$(git branch | head -n1 |awk '{print $2}')
-	# if [ "${CURRENT_BRANCH}" != "master" ];then
-	# 	sed -i "s/master\/fancyss_hnd/${CURRENT_BRANCH}\/fancyss_hnd/g" ./shadowsocks/webs/Module_shadowsocks.asp
-	# 	sed -i "s/master\/fancyss_hnd/${CURRENT_BRANCH}\/fancyss_hnd/g" ./shadowsocks/res/ss-menu.js
-	# fi
+
+	# 有些功能还没准备好，先去掉
+	# 1. 广告过滤规则
+	rm -rf ./shadowsocks/bin/smartdns
+	rm -rf ./shadowsocks/ss/rules/adslist.gz
+	rm -rf ./shadowsocks/ss/rules/smartdns_smrt*
+	sed -i '/fancyss_todo/d' ./shadowsocks/webs/Module_shadowsocks.asp
 }
 
 build_pkg() {

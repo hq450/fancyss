@@ -1,4 +1,10 @@
-[{
+// chinadns-ng preset DNS server list (for web UI).
+// Exposes:
+// - const china_dnsData
+// - const trust_dnsData
+//
+// Note: keep this file loadable via <script src="/res/dns_servers.json.js">.
+const dns_servers_data = [{
 	"阿里公共DNS": [
 		{"addr": "223.5.5.5", "net": "ipv4", "type": 3},
 		{"addr": "223.6.6.6", "net": "ipv4", "type": 3},
@@ -185,4 +191,7 @@
 		{"addr": "2001:b000:168::1", "net": "ipv6", "type": 3},
 		{"addr": "2001:b000:168::2", "net": "ipv6", "type": 3}
 	]
-}]
+}];
+
+const china_dnsData = dns_servers_data[0];
+const trust_dnsData = dns_servers_data[1];

@@ -14,17 +14,17 @@
   },
   "chnroute": {
     "name": "chnroute.txt",
-    "date": "2026-01-06 01:28",
-    "md5": "200fc82ffffbc6c2dd12036ded5bdc98",
-    "count": "8226",
-    "count_ip": "358494012",
+    "date": "2026-01-06 23:50",
+    "md5": "25d766f0bab11701a07584ed4e131546",
+    "count": "8228",
+    "count_ip": "358495548",
     "source": "merged"
   },
   "chnroute6": {
     "name": "chnroute6.txt",
-    "date": "2026-01-06 00:57",
-    "md5": "790feec82fdc369ad218a3a2926a5510",
-    "count": "2038",
+    "date": "2026-01-06 23:50",
+    "md5": "4f2e1c2ca4ccc880c3addeab503caba3",
+    "count": "2039",
     "source": "apnic"
   },
   "adslist": {
@@ -61,9 +61,9 @@
   },
   "block_list": {
     "name": "block_list.txt",
-    "date": "2026-01-06 00:57",
-    "md5": "d41d8cd98f00b204e9800998ecf8427e",
-    "count": "0"
+    "date": "2026-01-06 23:21",
+    "md5": "a98186b603e45e546122dc1c29ab0310",
+    "count": "898"
   },
   "apple_china": {
     "name": "apple_china.txt",
