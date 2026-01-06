@@ -1785,7 +1785,7 @@ start_chinadns_ng(){
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 广告过滤
 		group null
-		group-dnl /koolshare/ss/rules/ads_domains.gz
+		group-dnl /koolshare/ss/rules/adslist.gz
 
 	EOF
 
@@ -1812,7 +1812,7 @@ start_chinadns_ng(){
 
 		# 控制路由器内部哪些域名需要走代理
 		group router
-		group-dnl /koolshare/ss/rules/router.txt
+		group-dnl /koolshare/ss/rules/rotlist.txt
 		group-upstream ${FDNS_LINE}
 		group-ipset router,router6
 		
