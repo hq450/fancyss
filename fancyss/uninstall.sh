@@ -20,8 +20,6 @@ rm -rf /koolshare/webs/Module_shadowsocks*
 rm -rf /koolshare/bin/rss-tunnel
 rm -rf /koolshare/bin/rss-local
 rm -rf /koolshare/bin/obfs-local
-rm -rf /koolshare/bin/haproxy
-rm -rf /koolshare/bin/dns2socks
 rm -rf /koolshare/bin/kcptun
 rm -rf /koolshare/bin/chinadns-ng
 rm -rf /koolshare/bin/smartdns
@@ -32,18 +30,13 @@ rm -rf /koolshare/bin/trojan
 rm -rf /koolshare/bin/tuic-client
 rm -rf /koolshare/bin/xray
 rm -rf /koolshare/bin/v2ray
-rm -rf /koolshare/bin/v2ray-plugin
 rm -rf /koolshare/bin/curl-fancyss
 rm -rf /koolshare/bin/hysteria2
 rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/bin/naive
 rm -rf /koolshare/bin/ipt2socks
 rm -rf /koolshare/bin/dnsclient
-rm -rf /koolshare/bin/dohclient
-rm -rf /koolshare/bin/dohclient-cache
-rm -rf /koolshare/bin/dns2tcp
-rm -rf /koolshare/bin/dns-ecs-forcer
-rm -rf /koolshare/bin/uredir
+
 # 如果系统里有jq，删掉/koolshare/bin/jq
 if [ -n /usr/bin/jq ];then
 	rm -rf /koolshare/bin/jq >/dev/null 2>&1
@@ -81,6 +74,14 @@ rm -rf /koolshare/bin/sslocal
 rm -rf /koolshare/bin/dig
 
 # legacy file should be removed for sure
+rm -rf /koolshare/bin/v2ray-plugin
+rm -rf /koolshare/bin/haproxy
+rm -rf /koolshare/bin/dohclient
+rm -rf /koolshare/bin/dohclient-cache
+rm -rf /koolshare/bin/dns2socks
+rm -rf /koolshare/bin/dns2tcp
+rm -rf /koolshare/bin/dns-ecs-forcer
+rm -rf /koolshare/bin/uredir
 rm -rf /koolshare/bin/v2ctl
 rm -rf /koolshare/bin/dnsmasq
 rm -rf /koolshare/bin/Pcap_DNSProxy

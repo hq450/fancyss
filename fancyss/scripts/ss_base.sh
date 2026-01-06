@@ -44,7 +44,7 @@ unset MINOR
 unset SHLVL
 unset TERM
 
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
 
 # ss_basic_type
 # 0	ss
@@ -162,30 +162,13 @@ fi
 # v2ray/xray使用自带dns
 ss_basic_dns_flag="0"
 DNSF_PORT=1055
-if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "1" ];then
+if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "1" ];then
 	# 新dns方案  chinadns-ng，udp 方案
 	ss_basic_dns_flag="1"
 fi
-if [ "${ss_basic_advdns}" == "1" -a "${ss_dns_plan}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "2" ];then
+if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "2" ];then
 	# 新dns方案 chinadns-ng，tcp 方案，dns2socks，socks5 23456 needed
 	ss_basic_dns_flag="2"
-fi
-if [ "${ss_basic_advdns}" != "1" -a "${ss_foreign_dns}" == "7" ]; then
-	# 旧dns方案，v2ray/xray原生dns，非socks5 + dns2socks 方案
-	ss_basic_dns_flag="1"
-	DNSF_PORT=7913
-fi
-
-if [ "${ss_basic_advdns}" != "1" -a "${ss_foreign_dns}" == "4" ]; then
-	# 旧dns方案，ss-tunnel，非socks5 + dns2socks 方案
-	if [ "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" -o "${ss_basic_type}" == "6" ];then
-		# v2ray xray trojan naive 不支持ss-tunnel，会自动切换到dns2socks，所以默认应该开启socks5
-		ss_basic_dns_flag="2"
-		DNSF_PORT=7913
-	else
-		ss_basic_dns_flag="1"
-		DNSF_PORT=7913
-	fi
 fi
 
 #---------------------------
@@ -213,7 +196,7 @@ number_test(){
 }
 
 cmd() {
-	# echo_date "$*" 2>&1
+	echo_date "$@"
 	# env -i PATH=${PATH} "$@" 2>/dev/null
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
@@ -256,7 +239,7 @@ __valid_ip_silent() {
 }
 
 __valid_ip46() {
-	# 验证是否为ipv4或者ipv6地址，是则正确返回，不是返回空值
+	# 验证是否为ipv4或者ipv6地址，ipv4返回0，ipv6返回1
 	local format_4=$(echo "$1" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}$")
 	local format_6=$(echo "$1" | grep -Eo '^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*')
 	if [ -n "${format_4}" -a -z "${format_6}" ]; then
@@ -284,10 +267,51 @@ __valid_port() {
 	fi
 }
 
+close_in_five() {
+	# 5秒关闭功能是为了让用户注意到关闭过程，从而及时得知错误信息
+	# 插件在运行过程中不能使用此功能，不然插件被关闭了，无法进行故障转移功能
+	# 在某些条件无法达成时使用5s关闭功能，比如系统配置为中继模式，jffs2_scripts未开启
+	# 节点挂掉等其它情况，不建议使用，不然影响故障转移功能
+	local flag=$1
+	echo_date "插件将在5秒后自动关闭！！"
+	local i=5
+	while [ $i -ge 0 ]; do
+		sleep 1
+		echo_date $i
+		let i--
+	done
+	if [ -z "${flag}" ];then
+		# 彻底关闭插件
+		dbus set ss_basic_enable="0"
+		ss_basic_status=1
+		disable_ss >/dev/null
+		echo_date "科学上网插件已完全关闭！！"
+	else
+		# 关闭插件，但是开关保留开启，状态检测保持开启
+		ss_basic_status=1
+		disable_ss ${flag} >/dev/null
+		# set ss_basic_wait=1，because ss_status.sh need to show something else
+		dbus set ss_basic_wait=1
+		# set ss_basic_status=1，because some scripts still running in background
+		dbus set ss_basic_status=1
+		if [ "$ss_failover_enable" == "1" ]; then
+			echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
+			echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
+			run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+		fi
+		echo_date "科学上网插件已关闭！！"
+	fi
+	echo_date "======================= 梅林固件 - 【科学上网】 ========================"
+	unset_lock
+	exit
+}
+
 detect_running_status(){
-	[ "${ss_basic_noruncheck}" == "1" ] && return
+	# detect process by binary name and PIDFILE content
 	local BINNAME=$1
 	local PIDFILE=$2
+	local FORCE=$3
+	[ "${ss_basic_noruncheck}" == "1" -a -z "${FORCE}" ] && return
 	local PID1
 	local PID2
 	local i=40
@@ -320,11 +344,12 @@ detect_running_status(){
 }
 
 detect_running_status2(){
-	[ "${ss_basic_noruncheck}" == "1" ] && return
 	# detect process by binary name and key word
 	local BINNAME=$1
 	local KEY=$2
 	local SLIENT=$3
+	local FORCE=$4
+	[ "${ss_basic_noruncheck}" == "1" -a -z "${FORCE}" ] && return
 	local i=100
 	local DPID
  	until [ -n "${DPID}" ]; do
@@ -340,6 +365,36 @@ detect_running_status2(){
 	done
 	if [ -z "${SLIENT}" ];then
 		echo_date "$1启动成功，pid：${DPID}"
+	fi
+}
+
+detect_running_status3(){
+	# detect process by netstat
+	local BINNAME=$1
+	local PORT=$2
+	local VERBOSE=$3
+	local FORCE=$4
+	[ "${ss_basic_noruncheck}" == "1" -a -z "${FORCE}" ] && return
+	local i=50
+	local RET
+ 	until [ -n "${RET}" ]; do
+ 		# wait for 0.1s
+		usleep 100000
+		i=$(($i - 1))
+		RET=$(netstat -nlp 2>/dev/null|grep -Ew "${PORT}"|grep -Eo "${BINNAME}"|head -n1)
+		if [ "$i" -lt 1 ]; then
+			echo_date "$1进程启动失败，请检查你的配置！"
+			#return 1
+			close_in_five flag
+		fi
+	done
+	if [ "${VERBOSE}" == "1" ];then
+		local _pid=$(pidof ${BINNAME})
+		if [ -n "${_pid}" ];then
+			echo_date "$1启动成功，pid：${_pid}"
+		else
+			echo_date "$1启动成功"
+		fi
 	fi
 }
 
@@ -372,3 +427,18 @@ kill_used_port(){
 		done
 	fi
 }
+
+set_default() {
+	local var_name="$1"
+	local default_value="$2"
+	
+	# 使用间接变量引用获取变量的值
+	eval "current_value=\$$var_name"
+	
+	# 如果该变量为空，则赋值并更新 dbus
+	if [ -z "$current_value" ]; then
+		eval "$var_name=\$default_value"
+		dbus set "$var_name=$default_value"
+	fi
+}
+	

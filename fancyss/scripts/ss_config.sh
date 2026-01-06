@@ -90,7 +90,7 @@ start)
 	set_lock
 	true > /tmp/upload/ss_log.txt
 	pre_start
-	start_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	start_fancyss 2>&1 | tee -a /tmp/upload/ss_log.txt
 	unset_lock
 	;;
 start_by_ws)
@@ -104,6 +104,7 @@ stop)
 	true > /tmp/upload/ss_log.txt
 	pre_stop
 	stop_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	rm -rf ${LOCK_FILE}
 	;;
 test)
 	sleep 100
@@ -132,6 +133,7 @@ stop)
 	http_response "$1"
 	pre_stop
 	stop_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	rm -rf ${LOCK_FILE}
 	;;
 test)
 	sleep 100

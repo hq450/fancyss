@@ -67,7 +67,7 @@ var refreshRate;
 var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_tuic = "# 填入tuic client json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的relay部分的配置正确！！！" 	//fancyss-full
-var option_modes = [["1", "gfwlist模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"]];
+var option_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"], ["7", "xray分流模式"]];
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305", "plain", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305" ];
 var option_protocals = [ "origin", "verify_simple", "verify_sha1", "auth_sha1", "auth_sha1_v2", "auth_sha1_v4", "auth_aes128_md5", "auth_aes128_sha1", "auth_chain_a", "auth_chain_b", "auth_chain_c", "auth_chain_d", "auth_chain_e", "auth_chain_f" ];
 var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
@@ -358,11 +358,208 @@ function save() {
 	var node_sel = E("ssconf_basic_node").value;
 	submit_flag="1";
 	dbus["ssconf_basic_node"] = node_sel;
-	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+	E("ss_state2").innerHTML = "国外连接 - " + "Waiting....";
+	E("ss_state3").innerHTML = "国内连接 - " + "Waiting....";
 	// key define
-	var params_input = ["ss_failover_s1", "ss_failover_s2_1", "ss_failover_s2_2", "ss_failover_s3_1", "ss_failover_s3_2", "ss_failover_s4_1", "ss_failover_s4_2", "ss_failover_s4_3", "ss_failover_s5", "ss_basic_interval", "ss_basic_row", "ss_dns_plan", "ss_basic_chng_china_1_prot", "ss_basic_chng_china_1_udp", "ss_basic_chng_china_1_udp_user", "ss_basic_chng_china_1_tcp", "ss_basic_chng_china_1_tcp_user", "ss_basic_chng_china_2_prot", "ss_basic_chng_china_2_udp", "ss_basic_chng_china_2_udp_user", "ss_basic_chng_china_2_tcp", "ss_basic_chng_china_2_tcp_user", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt", "ss_basic_chng_trust_1_opt_udp_val", "ss_basic_chng_trust_1_opt_udp_val_user", "ss_basic_chng_trust_1_opt_tcp_val", "ss_basic_chng_trust_1_opt_tcp_val_user", "ss_basic_chng_trust_2_opt", "ss_basic_chng_trust_2_opt_udp", "ss_basic_chng_trust_2_opt_tcp", "ss_basic_chng_repeat_times", "ss_china_dns", "ss_china_dns_user", "ss_foreign_dns", "ss_dns2socks_user", "ss_sstunnel_user", "ss_direct_user", "ss_basic_kcp_lserver", "ss_basic_kcp_lport", "ss_basic_kcp_server", "ss_basic_kcp_port", "ss_basic_kcp_parameter", "ss_basic_rule_update", "ss_basic_rule_update_time", "ssr_subscribe_mode", "ss_basic_online_links_goss", "ss_basic_node_update", "ss_basic_node_update_day", "ss_basic_node_update_hr", "ss_basic_exclude", "ss_basic_include", "ss_acl_default_port", "ss_acl_default_mode", "ss_basic_kcp_method", "ss_basic_kcp_password", "ss_basic_kcp_mode", "ss_basic_kcp_encrypt", "ss_basic_kcp_mtu", "ss_basic_kcp_sndwnd", "ss_basic_kcp_rcvwnd", "ss_basic_kcp_conn", "ss_basic_kcp_extra", "ss_basic_udp_software", "ss_basic_udp_node", "ss_basic_udpv1_lserver", "ss_basic_udpv1_lport", "ss_basic_udpv1_rserver", "ss_basic_udpv1_rport", "ss_basic_udpv1_password", "ss_basic_udpv1_mode", "ss_basic_udpv1_duplicate_nu", "ss_basic_udpv1_duplicate_time", "ss_basic_udpv1_jitter", "ss_basic_udpv1_report", "ss_basic_udpv1_drop", "ss_basic_udpv2_lserver", "ss_basic_udpv2_lport", "ss_basic_udpv2_rserver", "ss_basic_udpv2_rport", "ss_basic_udpv2_password", "ss_basic_udpv2_fec", "ss_basic_udpv2_timeout", "ss_basic_udpv2_mode", "ss_basic_udpv2_report", "ss_basic_udpv2_mtu", "ss_basic_udpv2_jitter", "ss_basic_udpv2_interval", "ss_basic_udpv2_drop", "ss_basic_udpv2_other", "ss_basic_udp2raw_lserver", "ss_basic_udp2raw_lport", "ss_basic_udp2raw_rserver", "ss_basic_udp2raw_rport", "ss_basic_udp2raw_password", "ss_basic_udp2raw_rawmode", "ss_basic_udp2raw_ciphermode", "ss_basic_udp2raw_authmode", "ss_basic_udp2raw_lowerlevel", "ss_basic_udp2raw_other", "ss_basic_udp_upstream_mtu", "ss_basic_udp_upstream_mtu_value", "ss_reboot_check", "ss_basic_week", "ss_basic_day", "ss_basic_inter_min", "ss_basic_inter_hour", "ss_basic_inter_day", "ss_basic_inter_pre", "ss_basic_time_hour", "ss_basic_time_min", "ss_basic_tri_reboot_time", "ss_basic_server_resolv", "ss_basic_server_resolv_user", "ss_basic_wt_furl", "ss_basic_wt_curl", "ss_basic_lt_cru_opts", "ss_basic_lt_cru_time", "ss_basic_hy2_up_speed", "ss_basic_hy2_dl_speed", "ss_basic_hy2_tfo_switch"];
-	var params_check = ["ss_failover_enable", "ss_failover_c1", "ss_failover_c2", "ss_failover_c3", "ss_adv_sub", "ss_basic_tablet", "ss_basic_noserver", "ss_basic_dragable", "ss_basic_qrcode", "ss_basic_enable", "ss_basic_gfwlist_update", "ss_basic_tfo", "ss_basic_tnd", "ss_basic_score", "ss_basic_vcore", "ss_basic_xguard", "ss_basic_kcp_on", "ss_basic_udp_on", "ss_basic_tjai", "ss_basic_nonetcheck", "ss_basic_notimecheck", "ss_basic_nochnipcheck", "ss_basic_nofrnipcheck", "ss_basic_noruncheck", "ss_basic_nofdnscheck", "ss_basic_nocdnscheck", "ss_basic_olddns", "ss_basic_advdns", "ss_basic_chnroute_update", "ss_basic_cdn_update", "ss_basic_kcp_nocomp", "ss_basic_udp_boost_enable", "ss_basic_udpv1_disable_filter", "ss_basic_udpv2_disableobscure", "ss_basic_udpv2_disablechecksum", "ss_basic_udp2raw_boost_enable", "ss_basic_udp2raw_a", "ss_basic_udp2raw_keeprule", "ss_basic_dns_hijack", "ss_basic_chng_no_ipv6", "ss_basic_chng_act", "ss_basic_chng_gt", "ss_basic_chng_mc", "ss_basic_mcore", "ss_basic_chng_china_1_enable", "ss_basic_chng_china_2_enable", "ss_basic_chng_china_1_ecs", "ss_basic_chng_trust_1_enable", "ss_basic_chng_trust_2_enable", "ss_basic_chng_china_2_ecs", "ss_basic_chng_trust_1_ecs", "ss_basic_chng_trust_2_ecs", "ss_basic_proxy_newb", "ss_basic_udpoff", "ss_basic_udpall", "ss_basic_udpgpt"];
+	var params_input = [
+	  "ss_failover_s1",
+	  "ss_failover_s2_1",
+	  "ss_failover_s2_2",
+	  "ss_failover_s3_1",
+	  "ss_failover_s3_2",
+	  "ss_failover_s4_1",
+	  "ss_failover_s4_2",
+	  "ss_failover_s4_3",
+	  "ss_failover_s5",
+	  "ss_basic_interval",
+	  "ss_basic_row",
+	  "ss_basic_dns_plan",
+	  "ss_basic_chng_china_net_1_typ",
+	  "ss_basic_chng_china_udp_1_opt",
+	  "ss_basic_chng_china_udp_1_usr",
+	  "ss_basic_chng_china_tcp_1_opt",
+	  "ss_basic_chng_china_tcp_1_usr",
+	  "ss_basic_chng_china_dot_1_opt",
+	  "ss_basic_chng_china_dot_1_usr",
+	  "ss_basic_chng_china_net_2_typ",
+	  "ss_basic_chng_china_udp_2_opt",
+	  "ss_basic_chng_china_udp_2_usr",
+	  "ss_basic_chng_china_tcp_2_opt",
+	  "ss_basic_chng_china_tcp_2_usr",
+	  "ss_basic_chng_china_dot_2_opt",
+	  "ss_basic_chng_china_dot_2_usr",
+	  "ss_basic_chng_china_net_3_typ",
+	  "ss_basic_chng_china_udp_3_opt",
+	  "ss_basic_chng_china_udp_3_usr",
+	  "ss_basic_chng_china_tcp_3_opt",
+	  "ss_basic_chng_china_tcp_3_usr",
+	  "ss_basic_chng_china_dot_3_opt",
+	  "ss_basic_chng_china_dot_3_usr",
+	  "ss_basic_chng_trust_net_1_typ",
+	  "ss_basic_chng_trust_udp_1_opt",
+	  "ss_basic_chng_trust_udp_1_usr",
+	  "ss_basic_chng_trust_tcp_1_opt",
+	  "ss_basic_chng_trust_tcp_1_usr",
+	  "ss_basic_chng_trust_dot_1_opt",
+	  "ss_basic_chng_trust_dot_1_usr",
+	  "ss_basic_chng_trust_net_2_typ",
+	  "ss_basic_chng_trust_udp_2_opt",
+	  "ss_basic_chng_trust_udp_2_usr",
+	  "ss_basic_chng_trust_tcp_2_opt",
+	  "ss_basic_chng_trust_tcp_2_usr",
+	  "ss_basic_chng_trust_dot_2_opt",
+	  "ss_basic_chng_trust_dot_2_usr",
+	  "ss_basic_chng_trust_net_3_typ",
+	  "ss_basic_chng_trust_udp_3_opt",
+	  "ss_basic_chng_trust_udp_3_usr",
+	  "ss_basic_chng_trust_tcp_3_opt",
+	  "ss_basic_chng_trust_tcp_3_usr",
+	  "ss_basic_chng_trust_dot_3_opt",
+	  "ss_basic_chng_trust_dot_3_usr",
+	  "ss_basic_chng_dns_query_times",
+	  "ss_basic_chng",
+	  "ss_basic_smrt",
+	  "ss_basic_kcp_lserver",
+	  "ss_basic_kcp_lport",
+	  "ss_basic_kcp_server",
+	  "ss_basic_kcp_port",
+	  "ss_basic_kcp_parameter",
+	  "ss_basic_rule_update",
+	  "ss_basic_rule_update_time",
+	  "ssr_subscribe_mode",
+	  "ss_basic_online_links_goss",
+	  "ss_basic_node_update",
+	  "ss_basic_node_update_day",
+	  "ss_basic_node_update_hr",
+	  "ss_basic_exclude",
+	  "ss_basic_include",
+	  "ss_acl_default_port",
+	  "ss_acl_default_mode",
+	  "ss_basic_kcp_method",
+	  "ss_basic_kcp_password",
+	  "ss_basic_kcp_mode",
+	  "ss_basic_kcp_encrypt",
+	  "ss_basic_kcp_mtu",
+	  "ss_basic_kcp_sndwnd",
+	  "ss_basic_kcp_rcvwnd",
+	  "ss_basic_kcp_conn",
+	  "ss_basic_kcp_extra",
+	  "ss_basic_udp_software",
+	  "ss_basic_udp_node",
+	  "ss_basic_udpv1_lserver",
+	  "ss_basic_udpv1_lport",
+	  "ss_basic_udpv1_rserver",
+	  "ss_basic_udpv1_rport",
+	  "ss_basic_udpv1_password",
+	  "ss_basic_udpv1_mode",
+	  "ss_basic_udpv1_duplicate_nu",
+	  "ss_basic_udpv1_duplicate_time",
+	  "ss_basic_udpv1_jitter",
+	  "ss_basic_udpv1_report",
+	  "ss_basic_udpv1_drop",
+	  "ss_basic_udpv2_lserver",
+	  "ss_basic_udpv2_lport",
+	  "ss_basic_udpv2_rserver",
+	  "ss_basic_udpv2_rport",
+	  "ss_basic_udpv2_password",
+	  "ss_basic_udpv2_fec",
+	  "ss_basic_udpv2_timeout",
+	  "ss_basic_udpv2_mode",
+	  "ss_basic_udpv2_report",
+	  "ss_basic_udpv2_mtu",
+	  "ss_basic_udpv2_jitter",
+	  "ss_basic_udpv2_interval",
+	  "ss_basic_udpv2_drop",
+	  "ss_basic_udpv2_other",
+	  "ss_basic_udp2raw_lserver",
+	  "ss_basic_udp2raw_lport",
+	  "ss_basic_udp2raw_rserver",
+	  "ss_basic_udp2raw_rport",
+	  "ss_basic_udp2raw_password",
+	  "ss_basic_udp2raw_rawmode",
+	  "ss_basic_udp2raw_ciphermode",
+	  "ss_basic_udp2raw_authmode",
+	  "ss_basic_udp2raw_lowerlevel",
+	  "ss_basic_udp2raw_other",
+	  "ss_basic_udp_upstream_mtu",
+	  "ss_basic_udp_upstream_mtu_value",
+	  "ss_reboot_check",
+	  "ss_basic_week",
+	  "ss_basic_day",
+	  "ss_basic_inter_min",
+	  "ss_basic_inter_hour",
+	  "ss_basic_inter_day",
+	  "ss_basic_inter_pre",
+	  "ss_basic_time_hour",
+	  "ss_basic_time_min",
+	  "ss_basic_tri_reboot_time",
+	  "ss_basic_server_resolv",
+	  "ss_basic_server_resolv_user",
+	  "ss_basic_wt_furl",
+	  "ss_basic_wt_curl",
+	  "ss_basic_lt_cru_opts",
+	  "ss_basic_lt_cru_time",
+	  "ss_basic_hy2_up_speed",
+	  "ss_basic_hy2_dl_speed",
+	  "ss_basic_hy2_tfo_switch"
+	];
+	var params_check = [
+	  "ss_failover_enable",
+	  "ss_failover_c1",
+	  "ss_failover_c2",
+	  "ss_failover_c3",
+	  "ss_adv_sub",
+	  "ss_basic_tablet",
+	  "ss_basic_noserver",
+	  "ss_basic_dragable",
+	  "ss_basic_qrcode",
+	  "ss_basic_enable",
+	  "ss_basic_gfwlist_update",
+	  "ss_basic_tfo",
+	  "ss_basic_tnd",
+	  "ss_basic_score",
+	  "ss_basic_vcore",
+	  "ss_basic_xguard",
+	  "ss_basic_kcp_on",
+	  "ss_basic_udp_on",
+	  "ss_basic_tjai",
+	  "ss_basic_nonetcheck",
+	  "ss_basic_notimecheck",
+	  "ss_basic_nochnipcheck",
+	  "ss_basic_nofrnipcheck",
+	  "ss_basic_noruncheck",
+	  "ss_basic_nocdnscheck",
+	  "ss_basic_chnroute_update",
+	  "ss_basic_chnlist_update",
+	  "ss_basic_kcp_nocomp",
+	  "ss_basic_udp_boost_enable",
+	  "ss_basic_udpv1_disable_filter",
+	  "ss_basic_udpv2_disableobscure",
+	  "ss_basic_udpv2_disablechecksum",
+	  "ss_basic_udp2raw_boost_enable",
+	  "ss_basic_udp2raw_a",
+	  "ss_basic_udp2raw_keeprule",
+	  "ss_basic_add_ispdns",
+	  "ss_basic_dns_server",
+	  "ss_basic_dns_hijack",
+	  "ss_basic_mcore",
+	  "ss_basic_chng_china_dns_1_chk",
+	  "ss_basic_chng_china_dns_2_chk",
+	  "ss_basic_chng_china_dns_3_chk",
+	  "ss_basic_chng_trust_dns_1_chk",
+	  "ss_basic_chng_trust_dns_2_chk",
+	  "ss_basic_chng_trust_dns_3_chk",
+	  "ss_basic_chng_ipv6_drop_direc",
+	  "ss_basic_chng_ipv6_drop_proxy",
+	  "ss_basic_proxy_newb",
+	  //"ss_basic_proxy_ipv4",
+	  //"ss_basic_proxy_ipv6"
+	  //"ss_basic_chng_trust_tcp_socks",
+	  //"ss_basic_chng_trust_tcp_proxy",
+	  "ss_basic_udpoff",
+	  "ss_basic_udpall",
+	  "ss_basic_udpgpt"
+	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
 	//---------------------------------------------------------------
@@ -1244,151 +1441,122 @@ function verifyFields(r) {
 	refresh_acl_table();
 }
 function update_visibility() {
-	var a = E("ss_basic_rule_update").value == "1";
-	var b = E("ss_basic_node_update").value == "1";
-	var d = E("ss_basic_udp_upstream_mtu").value == "1";			//fancyss-full
-	var e = E("ss_china_dns").value == "12";
-	var f = E("ss_foreign_dns").value;
-	var g = E("ss_basic_tri_reboot_time").value;
-	var h_0 = E("ss_basic_server_resolv").value;
-	var j = E("ss_basic_chng_china_1_enable").checked;
-	var j0 = E("ss_basic_chng_china_1_prot").value;
-	var j1 = E("ss_basic_chng_china_1_udp").value == "96";
-	var j2 = E("ss_basic_chng_china_1_tcp").value == "97";
-	var j4 = E("ss_basic_chng_china_1_udp").value == "99";
-	var j5 = E("ss_basic_chng_china_1_tcp").value == "99";
-	var j6 = E("ss_basic_chng_china_1_udp").value;
-	var k = E("ss_basic_chng_china_2_enable").checked;
-	var k0 = E("ss_basic_chng_china_2_prot").value;
-	var k1 = E("ss_basic_chng_china_2_udp").value == "96";
-	var k2 = E("ss_basic_chng_china_2_tcp").value == "97";
-	var k4 = E("ss_basic_chng_china_2_udp").value == "99";
-	var k5 = E("ss_basic_chng_china_2_tcp").value == "99";
-	var l = E("ss_basic_chng_trust_1_enable").checked;
-	var l0 = E("ss_basic_chng_trust_1_opt").value;
-	var l1 = E("ss_basic_chng_trust_1_opt_udp_val").value;
-	var l2 = E("ss_basic_chng_trust_1_opt_tcp_val").value;
-	var m = E("ss_basic_chng_trust_2_enable").checked;
-	var m0 = E("ss_basic_chng_trust_2_opt").value;
+	var a  = E("ss_basic_rule_update").value == "1";
+	var b  = E("ss_basic_node_update").value == "1";
+	var c  = E("ss_basic_udp_upstream_mtu").value == "1";			//fancyss-full
+	var d  = E("ss_basic_tri_reboot_time").value;
+	var e = E("ss_basic_server_resolv").value;
+	var f = E("ss_basic_dig_opt").value;
+
 	showhide("ss_basic_rule_update_time", a);
 	showhide("update_choose", a);
 	showhide("ss_basic_node_update_day", b);
 	showhide("ss_basic_node_update_hr", b);
-	showhide("ss_basic_udp_upstream_mtu_value", d);											//fancyss-full
-	showhide("ss_china_dns_user", e);
-	showhide("ss_basic_server_resolv_user", h_0 == "99");
-	showhide("ss_dns2socks_user", (f == "3"));
-	showhide("ss_v2_note", (f == "7"));
-	showhide("ss_disable_aaaa", (f == "10"));
-	showhide("ss_disable_aaaa_note", (f == "10"));
-	showhide("ss_sstunnel_user", (f == "4"));												//fancyss-full
-	showhide("ss_sstunnel_user_note", (f == "4"));											//fancyss-full
-	showhide("ss_direct_user", (f == "8"));
-	showhide("ss_basic_tri_reboot_time_note", (g != "0"));
-	showhide("ss_basic_chng_china_1_prot", j);
-	showhide("ss_basic_chng_china_1_ecs", j);
-	showhide("ss_basic_chng_china_1_ecs_note", j);
-	showhide("ss_basic_chng_china_1_udp", (j && j0 == "1"));
-	showhide("ss_basic_chng_china_1_udp_user", (j && j0 == "1" && j4));
-	showhide("ss_basic_chng_china_1_tcp", (j && j0 == "2"));
-	showhide("ss_basic_chng_china_1_tcp_user", (j && j0 == "2" && j5));
-	var s = E("ss_basic_chng_no_ipv6").checked;
-	showhide("ss_basic_chng_left", s);
-	showhide("ss_basic_chng_xact", s);
-	showhide("ss_basic_chng_xgt", s);
-	showhide("ss_basic_chng_xmc", s);
-	showhide("ss_basic_chng_act", s);
-	showhide("ss_basic_chng_gt", s);
-	showhide("ss_basic_chng_mc", s);
-	showhide("ss_basic_chng_right", s);
+	showhide("ss_basic_udp_upstream_mtu_value", c);											//fancyss-full
+	showhide("ss_basic_tri_reboot_time_note", (d != "0"));
+	showhide("ss_basic_server_resolv_user", e == "99");
+	showhide("ss_basic_dig_opt_usr", f == "99");
+
+	// china-1
+	var i  = E("ss_basic_chng_china_dns_1_chk").checked;
+	var i0 = E("ss_basic_chng_china_net_1_typ").value;
+	var i1 = E("ss_basic_chng_china_udp_1_opt").value;
+	var i2 = E("ss_basic_chng_china_tcp_1_opt").value;
+	var i3 = E("ss_basic_chng_china_dot_1_opt").value;
+	showhide("ss_basic_chng_china_net_1_typ", i);
+	showhide("ss_basic_chng_china_udp_1_opt", (i && i0 == "udp"));
+	showhide("ss_basic_chng_china_udp_1_usr", (i && i0 == "udp" && i1 == "99"));
+	showhide("ss_basic_chng_china_tcp_1_opt", (i && i0 == "tcp"));
+	showhide("ss_basic_chng_china_tcp_1_usr", (i && i0 == "tcp" && i2 == "99"));
+	showhide("ss_basic_chng_china_dot_1_opt", (i && i0 == "dot"));
+	showhide("ss_basic_chng_china_dot_1_usr", (i && i0 == "dot" && i3 == "99"));
+	
+	// china-2
+	var j  = E("ss_basic_chng_china_dns_2_chk").checked;
+	var j0 = E("ss_basic_chng_china_net_2_typ").value;
+	var j1 = E("ss_basic_chng_china_udp_2_opt").value;
+	var j2 = E("ss_basic_chng_china_tcp_2_opt").value;
+	var j3 = E("ss_basic_chng_china_dot_2_opt").value;
+	showhide("ss_basic_chng_china_net_2_typ", j);
+	showhide("ss_basic_chng_china_udp_2_opt", (j && j0 == "udp"));
+	showhide("ss_basic_chng_china_udp_2_usr", (j && j0 == "udp" && j1 == "99"));
+	showhide("ss_basic_chng_china_tcp_2_opt", (j && j0 == "tcp"));
+	showhide("ss_basic_chng_china_tcp_2_usr", (j && j0 == "tcp" && j2 == "99"));
+	showhide("ss_basic_chng_china_dot_2_opt", (j && j0 == "dot"));
+	showhide("ss_basic_chng_china_dot_2_usr", (j && j0 == "dot" && j3 == "99"));
+	
+	// china-3
+	var k  = E("ss_basic_chng_china_dns_3_chk").checked;
+	var k0 = E("ss_basic_chng_china_net_3_typ").value;
+	var k1 = E("ss_basic_chng_china_udp_3_opt").value;
+	var k2 = E("ss_basic_chng_china_tcp_3_opt").value;
+	var k3 = E("ss_basic_chng_china_dot_3_opt").value;
+	showhide("ss_basic_chng_china_net_3_typ", k);
+	showhide("ss_basic_chng_china_udp_3_opt", (k && k0 == "udp"));
+	showhide("ss_basic_chng_china_udp_3_usr", (k && k0 == "udp" && k1 == "99"));
+	showhide("ss_basic_chng_china_tcp_3_opt", (k && k0 == "tcp"));
+	showhide("ss_basic_chng_china_tcp_3_usr", (k && k0 == "tcp" && k2 == "99"));
+	showhide("ss_basic_chng_china_dot_3_opt", (k && k0 == "dot"));
+	showhide("ss_basic_chng_china_dot_3_usr", (k && k0 == "dot" && k3 == "99"));
+
+	// trust-1
+	var l  = E("ss_basic_chng_trust_dns_1_chk").checked;
+	var l0 = E("ss_basic_chng_trust_net_1_typ").value;
+	var l1 = E("ss_basic_chng_trust_udp_1_opt").value;
+	var l2 = E("ss_basic_chng_trust_tcp_1_opt").value;
+	var l3 = E("ss_basic_chng_trust_dot_1_opt").value;
+	showhide("ss_basic_chng_trust_net_1_typ", l);
+	showhide("ss_basic_chng_trust_udp_1_opt", (l && l0 == "udp"));
+	showhide("ss_basic_chng_trust_udp_1_usr", (l && l0 == "udp" && l1 == "99"));
+	showhide("ss_basic_chng_trust_tcp_1_opt", (l && l0 == "tcp"));
+	showhide("ss_basic_chng_trust_tcp_1_usr", (l && l0 == "tcp" && l2 == "99"));
+	showhide("ss_basic_chng_trust_dot_1_opt", (l && l0 == "dot"));
+	showhide("ss_basic_chng_trust_dot_1_usr", (l && l0 == "dot" && l3 == "99"));
+
+	// trust-2
+	var m  = E("ss_basic_chng_trust_dns_2_chk").checked;
+	var m0 = E("ss_basic_chng_trust_net_2_typ").value;
+	var m1 = E("ss_basic_chng_trust_udp_2_opt").value;
+	var m2 = E("ss_basic_chng_trust_tcp_2_opt").value;
+	var m3 = E("ss_basic_chng_trust_dot_2_opt").value;
+	showhide("ss_basic_chng_trust_net_2_typ", m);
+	showhide("ss_basic_chng_trust_udp_2_opt", (m && m0 == "udp"));
+	showhide("ss_basic_chng_trust_udp_2_usr", (m && m0 == "udp" && m1 == "99"));
+	showhide("ss_basic_chng_trust_tcp_2_opt", (m && m0 == "tcp"));
+	showhide("ss_basic_chng_trust_tcp_2_usr", (m && m0 == "tcp" && m2 == "99"));
+	showhide("ss_basic_chng_trust_dot_2_opt", (m && m0 == "dot"));
+	showhide("ss_basic_chng_trust_dot_2_usr", (m && m0 == "dot" && m3 == "99"));
+
+	// trust-3
+	var n  = E("ss_basic_chng_trust_dns_3_chk").checked;
+	var n0 = E("ss_basic_chng_trust_net_3_typ").value;
+	var n1 = E("ss_basic_chng_trust_udp_3_opt").value;
+	var n2 = E("ss_basic_chng_trust_tcp_3_opt").value;
+	var n3 = E("ss_basic_chng_trust_dot_3_opt").value;
+	showhide("ss_basic_chng_trust_net_3_typ", n);
+	showhide("ss_basic_chng_trust_udp_3_opt", (n && n0 == "udp"));
+	showhide("ss_basic_chng_trust_udp_3_usr", (n && n0 == "udp" && n1 == "99"));
+	showhide("ss_basic_chng_trust_tcp_3_opt", (n && n0 == "tcp"));
+	showhide("ss_basic_chng_trust_tcp_3_usr", (n && n0 == "tcp" && n2 == "99"));
+	showhide("ss_basic_chng_trust_dot_3_opt", (n && n0 == "dot"));
+	showhide("ss_basic_chng_trust_dot_3_usr", (n && n0 == "dot" && n3 == "99"));
+
 	var t1 = E("ss_basic_lt_cru_opts").value == "1";
 	var t2 = E("ss_basic_lt_cru_opts").value == "2";
 	showhide("ss_basic_lt_cru_time", t1 || t2);
-	if (j == true){
-		if(j0 == "1" && j1){
-			$("#ss_basic_chng_china_1_ecs").hide();
-			$("#ss_basic_chng_china_1_ecs_note").hide();
-		}
-		if(j0 == "2" && j2){
-			$("#ss_basic_chng_china_1_ecs").hide();
-			$("#ss_basic_chng_china_1_ecs_note").hide();
-		}
-		if(j0 == "3" && j3){																//fancyss-full
-			$("#ss_basic_chng_china_1_ecs").hide();											//fancyss-full
-			$("#ss_basic_chng_china_1_ecs_note").hide();									//fancyss-full
-		}																					//fancyss-full
-	}
-	showhide("ss_basic_chng_china_2_prot", k);
-	showhide("ss_basic_chng_china_2_ecs", k);
-	showhide("ss_basic_chng_china_2_ecs_note", k);
-	showhide("ss_basic_chng_china_2_udp", (k && k0 == "1"));
-	showhide("ss_basic_chng_china_2_udp_user", (k && k0 == "1" && k4));
-	showhide("ss_basic_chng_china_2_tcp", (k && k0 == "2"));
-	showhide("ss_basic_chng_china_2_tcp_user", (k && k0 == "2" && k5));		
-	if (k == true){
-		if(k0 == "1" && k1){
-			$("#ss_basic_chng_china_2_ecs").hide();
-			$("#ss_basic_chng_china_2_ecs_note").hide();
-		}
-		if(k0 == "2" && k2){
-			$("#ss_basic_chng_china_2_ecs").hide();
-			$("#ss_basic_chng_china_2_ecs_note").hide();
-		}
-		if(k0 == "3" && k3){																//fancyss-full
-			$("#ss_basic_chng_china_2_ecs").hide();											//fancyss-full
-			$("#ss_basic_chng_china_2_ecs_note").hide();									//fancyss-full
-		}																					//fancyss-full
-	}
-	showhide("ss_basic_chng_trust_1_opt", l);
-	showhide("ss_basic_chng_trust_1_ecs", l);
-	showhide("ss_basic_chng_trust_1_ecs_note", l);
-	showhide("ss_basic_chng_trust_1_opt_udp_val", (l && l0 == "1"));
-	showhide("ss_basic_chng_trust_1_opt_udp_val_user", (l && l0 == "1" && l1 == "99"));
-	showhide("ss_basic_chng_trust_1_opt_tcp_val", (l && l0 == "2"));
-	showhide("ss_basic_chng_trust_1_opt_tcp_val_user", (l && l0 == "2" && l2 == "99"));
-	showhide("ss_basic_chng_trust_2_opt", m);
-	showhide("ss_basic_chng_trust_2_ecs", m);
-	showhide("ss_basic_chng_trust_2_ecs_note", m);
-	showhide("ss_basic_chng_trust_2_opt_udp", (m && m0 == "1"));
-	showhide("ss_basic_chng_trust_2_opt_tcp", (m && m0 == "2"));
-	//showhide("ss_basic_chng_direct_user_note", (m && (m0 == "3" || m0 == "4")));
-	if (m == true){
-		if( m0 == "3" && m3 == "97" ){
-			$("#ss_basic_chng_trust_2_ecs").hide();
-			$("#ss_basic_chng_trust_2_ecs_note").hide();
-		}
-	}
-	if (E("ss_basic_advdns").checked == true){
+
+	if (E("ss_basic_dns_plan").value == "1"){
 		$(".chng").show();
-		//$(".new_dns_main").show();
-		$(".old_dns").hide();
-	}else{
-		//$(".new_dns_main").hide();
-		$(".new_dns").hide();
-		$(".old_dns").show();
+		$(".smrt").hide();							
+	}else if(E("ss_basic_dns_plan").value == "2"){
+		$(".chng").hide();
+		$(".smrt").show();
+		$(".dohc").hide();
+	}else if(E("ss_basic_dns_plan").value == "3"){
+		$(".chng").hide();
+		$(".smrt").hide();
 	}
-
-	if(E("ss_basic_nochnipcheck").checked == true){
-		// chng chn1
-		E("ss_basic_chng_china_1_ecs").disabled = true;
-		$('#ss_basic_chng_china_1_ecs').attr("title", "因国内出口ip检查功能被关闭，因此无法使用此功能！")
-		$('#ss_basic_chng_china_1_ecs_note > font').attr("color", "#646464")
-		// chng chn2
-		E("ss_basic_chng_china_2_ecs").disabled = true;
-		$('#ss_basic_chng_china_2_ecs').attr("title", "因国内出口ip检查功能被关闭，因此无法使用此功能！")
-		$('#ss_basic_chng_china_2_ecs_note > font').attr("color", "#646464")		
-	}
-
-	if(E("ss_basic_nofrnipcheck").checked == true){
-		// chng chn1
-		E("ss_basic_chng_trust_1_ecs").disabled = true;
-		$('#ss_basic_chng_trust_1_ecs').attr("title", "因代理出口ip检查功能被关闭，因此无法使用此功能！")
-		$('#ss_basic_chng_trust_1_ecs_note > font').attr("color", "#646464")
-		// chng chn2
-		E("ss_basic_chng_trust_2_ecs").disabled = true;
-		$('#ss_basic_chng_trust_2_ecs').attr("title", "因代理出口ip检查功能被关闭，因此无法使用此功能！")
-		$('#ss_basic_chng_trust_2_ecs_note > font').attr("color", "#646464")		
-	}
+	showhide("ss_dnsmasq_cus", E("ss_basic_dns_server").checked == false);
 }
 
 function Add_profile() { //点击节点页面内添加节点动作
@@ -3052,7 +3220,6 @@ function refresh_html() {
 	html += '<div class="nodeTable" style="width: 750px; height: ' + nodeH + 'px; overflow: hidden;">'
 	html += '<div id="ss_node_list_table_main" style="width: 750px; height: ' + nodeH + 'px; overflow: hidden scroll; padding-right: 35px;">'
 	html += '<table id="ss_node_list_table" style="margin:-1px 0px 0px 0px;" width="750px" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="list_table">'
-	
 	for (var i = 0; i < ss_nodes.length; i++) {
 		var c = confs[ss_nodes[i]];
 	//for (var field in confs) {
@@ -3887,7 +4054,7 @@ function updatelist(arg) {
 	dbus_post["ss_basic_rule_update_time"] = E("ss_basic_rule_update_time").value;
 	dbus_post["ss_basic_gfwlist_update"] = E("ss_basic_gfwlist_update").checked ? '1' : '0';
 	dbus_post["ss_basic_chnroute_update"] = E("ss_basic_chnroute_update").checked ? '1' : '0';
-	dbus_post["ss_basic_cdn_update"] = E("ss_basic_cdn_update").checked ? '1' : '0';
+	dbus_post["ss_basic_chnlist_update"] = E("ss_basic_chnlist_update").checked ? '1' : '0';
 	push_data("ss_rule_update.sh", arg,  dbus_post);
 }
 function version_show() {
@@ -4054,16 +4221,25 @@ function toggle_func() {
 			tabSelect(3);
 			$('#apply_button').show();
 			$('#ss_failover_save').hide();
-			change_select_width('#ss_china_dns', '0');
-			change_select_width('#ss_foreign_dns', '0');
-			change_select_width('#ss_basic_chng_china_1_udp', '1');
-			change_select_width('#ss_basic_chng_china_1_tcp', '1');
-			change_select_width('#ss_basic_chng_china_2_udp', '1');
-			change_select_width('#ss_basic_chng_china_2_tcp', '1');
-			//change_select_width('#ss_basic_chng_trust_1_opt');
-			change_select_width('#ss_basic_chng_trust_1_opt_udp_val', '1');
-			change_select_width('#ss_basic_chng_trust_1_opt_tcp_val', '1');
-			//change_select_width('#ss_basic_chng_trust_2_opt');
+			change_select_width('#ss_basic_chng_china_udp_1_opt', '1');
+			change_select_width('#ss_basic_chng_china_tcp_1_opt', '1');
+			change_select_width('#ss_basic_chng_china_dot_1_opt', '1');
+			change_select_width('#ss_basic_chng_china_udp_2_opt', '1');
+			change_select_width('#ss_basic_chng_china_tcp_2_opt', '1');
+			change_select_width('#ss_basic_chng_china_dot_2_opt', '1');
+			change_select_width('#ss_basic_chng_china_udp_3_opt', '1');
+			change_select_width('#ss_basic_chng_china_tcp_3_opt', '1');
+			change_select_width('#ss_basic_chng_china_dot_3_opt', '1');
+			change_select_width('#ss_basic_chng_trust_udp_1_opt', '1');
+			change_select_width('#ss_basic_chng_trust_tcp_1_opt', '1');
+			change_select_width('#ss_basic_chng_trust_dot_1_opt', '1');
+			change_select_width('#ss_basic_chng_trust_udp_2_opt', '1');
+			change_select_width('#ss_basic_chng_trust_tcp_2_opt', '1');
+			change_select_width('#ss_basic_chng_trust_dot_2_opt', '1');
+			change_select_width('#ss_basic_chng_trust_udp_3_opt', '1');
+			change_select_width('#ss_basic_chng_trust_tcp_3_opt', '1');
+			change_select_width('#ss_basic_chng_trust_dot_3_opt', '1');
+			
 			change_select_width('#ss_basic_server_resolv');
 			change_select_width('#ss_basic_dig_opt');
 			update_visibility();
@@ -4170,8 +4346,8 @@ function change_select_width(o, p) {
 }
 
 function get_ss_status() {
-	E("ss_state2").innerHTML = "国外连接 - " + "Waiting...";
-	E("ss_state3").innerHTML = "国内连接 - " + "Waiting...";
+	E("ss_state2").innerHTML = "国外连接 - " + "Waiting..";
+	E("ss_state3").innerHTML = "国内连接 - " + "Waiting..";
 	if (db_ss['ss_basic_enable'] != "1") {
 		return false;
 	}
@@ -4476,16 +4652,17 @@ function dns_test(s) {
 		$("#log_dig").show();
 		$("#log_resv").hide();
 		dns_log["ss_basic_logname"] = "dns_cdn_china";
-		var note1 = '1. cdn china的域名清单来自：<a href="https://github.com/felixonmars/dnsmasq-china-list" target="_blank"><em><u>https://github.com/felixonmars/dnsmasq-china-list</u></em></a> 的accelerated-domains.china.conf，并经过fancyss项目整理。';
-		var note2 = '2. 由于cdn china清单较长，将每次随机选取100个域名进行测试！由于cdn china收录的域名条件位解析结果或者NS服务器在国内，所以很多域名解析到国外是正常的！';
+		var note1 = '1. chnlist的域名清单来自：<a href="https://github.com/felixonmars/dnsmasq-china-list" target="_blank"><em><u>https://github.com/felixonmars/dnsmasq-china-list</u></em></a> 的accelerated-domains.china.conf，并经过fancyss项目整理。';
+		var note2 = '2. 由于chnlist清单较长，将每次随机选取100个域名进行测试！由于chnlist收录的域名条件位解析结果或者NS服务器在国内，所以很多域名解析到国外是正常的！';
 	}
 	else if(s == 6){
 		$("#log_dig").hide();
 		$("#log_resv").show();
 		var note1 = '1. 本测试需要用到dig程序，因程序体积较大，fancyss默认不包含此程序，点击测试的时候会自动尝试下载该程序。';
 		var note2 = '1. 本测试仅针对DNS解析最终端，即本机dnsmasq 53端口的DNS服务器测试，每次测试前会自动清空dnsmasq缓存，以避免缓存影响。';
-		var note3 = '2. 用dig进行测试可以方便的知道在本插件选定的DNS方案下，域名解析的ipv4结果，解析结果是否带ECS等';
+		var note3 = '2. 用dig进行测试可以方便的知道在本插件选定的DNS方案下，域名解析的ipv4结果';
 		dbus_commit["ss_basic_dig_opt"] = E("ss_basic_dig_opt").value
+		dbus_commit["ss_basic_dig_opt_usr"] = E("ss_basic_dig_opt_usr").value
 	}
 	if(note1){
 		$("#dns_test_note_1").html('<i>&nbsp;&nbsp;' + note1 + '</i>');
@@ -5285,6 +5462,83 @@ function save_failover() {
 	}
 	push_data("ss_status_reset.sh", "", dbus_post);
 }
+function get_smartdns_conf(o) {
+	arg = "edit_smartdns_smrt_" + o;
+	var name = 'smartdns_smrt_' + o;
+	SMARTDNS_FLAG = o;
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params":[arg], "fields": dbus };
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			$.ajax({
+				url: '/_temp/' + name + '.conf',
+				type: 'GET',
+				cache:false,
+				dataType: 'text',
+				success: function(res) {
+					$('#smartdns_chnd_conf').val(res);
+					if (response.result == '11111111'){
+						E("smartdns_conf_note").innerHTML = "<i>当前为自定义smartdns配置，配置文件：</i><em>/koolshare/ss/rules/" + name + "_user.conf</em>";
+						E("smartdns_conf_area").innerHTML = "SmartDns配置文件（当前为自定义配置）"
+					}
+					if (response.result == '22222222'){
+						E("smartdns_conf_note").innerHTML = "<i>当前为默认smartdns配置，配置文件：</i><em>/koolshare/ss/rules/" + name + ".conf</em>";
+						E("smartdns_conf_area").innerHTML = "SmartDns配置文件（当前为默认配置）"
+					}
+				}
+			});
+		}
+	});
+}
+function edit_smartdns_conf(o){
+	var smat_config_idx=E("ss_basic_smrt").value
+	get_smartdns_conf(smat_config_idx);
+	$('#smartdns_chnd_conf').val("");
+	$("#smartdns_settings").fadeIn(200);
+}
+function close_smartdns_conf(){
+	$("#smartdns_settings").fadeOut(200);
+}
+function save_smartdns_conf(){
+	db_ss["ss_basic_action"] = "22";
+	dbus["ss_basic_smartdns_rule"] = Base64.encode(E("smartdns_chnd_conf").value);
+	push_data("ss_conf.sh", "save_smartdns_smrt_" + SMARTDNS_FLAG,  dbus);
+}
+function reset_smartdns_conf(){
+	db_ss["ss_basic_action"] = "23";
+	push_data("ss_conf.sh", "reset_smartdns_smrt_" + SMARTDNS_FLAG,  dbus);
+}
+function restart_smartdns() {
+	var dbus_post = {};
+	document.getElementById("loading_block3").innerHTML = "重启smartdns进程 ..."
+	$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重启中 ...</font></li>");
+	dbus_post["ss_basic_smrt"] = E("ss_basic_smrt").value;
+	dbus_post["ss_basic_dns_plan"] = E("ss_basic_dns_plan").value;
+	dbus_post["ss_basic_add_ispdns"] = E("ss_basic_add_ispdns").checked ? '1' : '0';
+	dbus_post["ss_basic_dns_server"] = E("ss_basic_dns_server").checked ? '1' : '0';
+	if(ws_flag == 1){
+		push_data_ws("ss_conf.sh", "restart_smrt",  dbus_post);
+	}else{
+		push_data("ss_conf.sh", "restart_smrt",  dbus_post);
+	}
+}
+function restart_chinadns() {
+	var dbus_post = {};
+	document.getElementById("loading_block3").innerHTML = "重启chinadns-ng进程 ..."
+	$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重启中 ...</font></li>");
+	dbus_post["ss_basic_dns_plan"] = E("ss_basic_dns_plan").value;
+	if(ws_flag == 1){
+		push_data_ws("ss_conf.sh", "restart_chng",  dbus_post);
+	}else{
+		push_data("ss_conf.sh", "restart_chng",  dbus_post);
+	}
+}
+
 </script>
 </head>
 <body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">
@@ -5331,6 +5585,8 @@ function save_failover() {
 											  "http://www.baidu.com",
 											  "http://www.sina.com",
 											  "http://www.weibo.com",
+											  "http://www.163.com",
+											  "http://connect.rom.miui.com/generate_204",
 											  "http://connectivitycheck.platform.hicloud.com/generate_204",
 											  "http://wifi.vivo.com.cn/generate_204",
 											  "http://www.apple.com/library/test/success.html",
@@ -5473,6 +5729,19 @@ function save_failover() {
 													<input class="button_gen" type="button" onclick="cleanCode();" value="返回">
 												</div>
 											</div>
+											<!-- this is the popup area for smartdns rules -->
+											<div id="smartdns_settings" style="box-shadow: 3px 3px 10px #000;margin-top: -65px;position: absolute;-webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius:10px;z-index: 10;background-color:#2B373B;margin-left: -215px;top: 240px;width:980px;return height:auto;box-shadow: 3px 3px 10px #000;background: rgba(0,0,0,0.85);display:none;">
+												<div class="user_title" id="smartdns_conf_area">SmartDns配置文件</div>
+												<div style="margin-left:15px" id="smartdns_conf_note"></div>
+												<div id="user_tr" style="margin: 10px 10px 10px 10px;width:98%;text-align:center;">
+													<textarea class="smartdns_textarea" cols="63" rows="30" wrap="off" id="smartdns_chnd_conf" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+												<div style="margin-top:5px;padding-bottom:10px;width:100%;text-align:center;">
+													<input id="edit_node_1" class="button_gen" type="button" onclick="save_smartdns_conf();" value="保存配置">	
+													<input id="edit_node_2" class="button_gen" type="button" onclick="reset_smartdns_conf();" value="恢复默认配置">	
+													<input id="edit_node_3" class="button_gen" type="button" onclick="close_smartdns_conf();" value="返回主界面">
+												</div>
+											</div>
 											<!-- end of the popouparea -->
 											<div id="ss_switch_show" style="margin:-1px 0px 0px 0px;">
 												<table style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" id="ss_switch_table">
@@ -5514,9 +5783,9 @@ function save_failover() {
 														<td>
 															<div style="display:table-cell;float: left;margin-left:0px;">
 																<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(0)">
-																	<span id="ss_state2">国外连接 - Waiting...</span>
+																	<span id="ss_state2">国外连接 - Waiting</span>
 																	<br/>
-																	<span id="ss_state3">国内连接 - Waiting...</span>
+																	<span id="ss_state3">国内连接 - Waiting</span>
 																</a>
 															</div>
 															<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 10.5px 0px;">
@@ -5623,7 +5892,7 @@ function save_failover() {
 																		{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
 																		{ title: 'flow (流控模式，没有请留空)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', options:option_xflow, style:'width:412px', value: ""},
 																		{ title: '<em>底层传输方式</em>', class:'xray_elem', th:'2'},
-																		{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"], style:'width:412px', value: "tcp"},
+																		{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "xhttp"], style:'width:412px', value: "tcp"},
 																		{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
 																		{ title: '* 伪装类型 (type)', rid:'xray_headtype_kcp_tr', id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
 																		{ title: '* quic伪装类型 (type)', rid:'xray_headtype_quic_tr', id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
@@ -5729,7 +5998,7 @@ function save_failover() {
 															{ title: '用户id (id)', id:'ss_basic_xray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
 															{ title: '加密 (encryption)', id:'ss_basic_xray_encryption', type:'text', hint:'55', maxlen:'50'},
 															{ title: 'flow (流控模式，没有请留空)', id:'ss_basic_xray_flow', type:'select', options:option_xflow},
-															{ title: '传输协议 (network)', id:'ss_basic_xray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc"]},
+															{ title: '传输协议 (network)', id:'ss_basic_xray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "xhttp"]},
 															{ title: '* tcp伪装类型 (type)', id:'ss_basic_xray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
 															{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
 															{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', type:'select', options:option_headquic},
@@ -5850,327 +6119,194 @@ function save_failover() {
 												</table>
 											</div>
 											<div id="tablet_3" style="display: none;">
+												<div id="ss_dns_table"></div>
 												<table id="table_dns" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 													<script type="text/javascript">
-														var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
-														var isp_dns_1=isp_dns_raw.split(" ")[0];
-														var isp_dns_2=isp_dns_raw.split(" ")[1];
-														validator.ipv4_addr(isp_dns_1)
-														var option_dnsp = [
-																		   ["1", "chinadns-ng"]
-																		  ];
-	
-														// 进阶DNS方案1 chinadns-ng国内:协议选择
-														option_dnsngc_prot = [
-																			  ["1", "udp"]
-																			 ,["2", "tcp"]
-																			];
-														// 进阶DNS方案1 chinadns-ng国内dns:udp 
-														var option_dnsngc_udp = [];
-														if(isp_dns_1 && isp_dns_2){
-															option_dnsngc_udp.push(["group", "运营商DNS"]);
-															option_dnsngc_udp.push(["1", "⚪" + isp_dns_1]);
-															option_dnsngc_udp.push(["2", "⚪" + isp_dns_2]);
-														}else if(isp_dns_1 && !isp_dns_2){
-															option_dnsngc_udp.push(["group", "运营商DNS"]);
-															option_dnsngc_udp.push(["1", isp_dns_1]);
-														}
-														option_dnsngc_udp.push(["group", "阿里公共DNS"]);
-														option_dnsngc_udp.push(["3", "🟠223.5.5.5"]);
-														option_dnsngc_udp.push(["4", "🟠223.6.6.6"]);
-														option_dnsngc_udp.push(["group", "DNSPod DNS"]);
-														option_dnsngc_udp.push(["5", "🟠119.29.29.29"]);
-														option_dnsngc_udp.push(["6", "🟠119.28.28.28"]);
-														option_dnsngc_udp.push(["group", "114 DNS"]);
-														option_dnsngc_udp.push(["7", "⚫114.114.114.114"]);
-														option_dnsngc_udp.push(["8", "⚫114.114.115.115"]);
-														option_dnsngc_udp.push(["group", "OneDNS"]);
-														option_dnsngc_udp.push(["9", "🟠117.50.11.11（拦截版）"]);
-														option_dnsngc_udp.push(["10", "🟠52.80.66.66（拦截版）"]);
-														option_dnsngc_udp.push(["11", "🟠117.50.10.10（纯净版）"]);
-														option_dnsngc_udp.push(["12", "🟠52.80.52.52（纯净版）"]);
-														option_dnsngc_udp.push(["13", "🟠117.50.60.30（家庭版）"]);
-														option_dnsngc_udp.push(["14", "🟠52.80.60.30（家庭版）"]);
-														option_dnsngc_udp.push(["group", "360安全DNS"]);
-														option_dnsngc_udp.push(["15", "🟠101.226.4.6（电信/铁通/移动）"]);
-														option_dnsngc_udp.push(["16", "🟠218.30.118.6（电信/铁通/移动）"]);
-														option_dnsngc_udp.push(["17", "🟠123.125.81.6（联通）"]);
-														option_dnsngc_udp.push(["18", "🟠140.207.198.6（联通）"]);
-														option_dnsngc_udp.push(["group", "cnnic DNS"]);
-														option_dnsngc_udp.push(["19", "⚫1.2.4.8"]);
-														option_dnsngc_udp.push(["20", "⚫210.2.4.8"]);
-														option_dnsngc_udp.push(["group", "百度DNS"]);
-														option_dnsngc_udp.push(["21", "🟠180.76.76.76"]);
-														option_dnsngc_udp.push(["group", "教育网DNS"]);
-														option_dnsngc_udp.push(["22", "🟠101.6.6.6:5353（清华大学）"]);
-														option_dnsngc_udp.push(["23", "⚫58.132.8.1（北京）"]);
-														option_dnsngc_udp.push(["24", "⚫101.7.8.9（北京）"]);
-														option_dnsngc_udp.push(["group", "自定义DNS"]);
-														option_dnsngc_udp.push(["99", "⚪自定义DNS (UDP)"]);
-														// 进阶DNS方案1 chinadns-ng国内tcp
-														option_dnsngc_tcp = [
-																			 ["group", "阿里公共DNS"],
-																			 ["3", "🟠223.5.5.5"],
-																			 ["4", "🟠223.6.6.6"],
-																			 ["group", "DNSPod DNS"],
-																			 //["5", "🟠119.29.29.29"],
-																			 ["6", "🟠119.28.28.28"],
-																			 ["group", "114 DNS"],
-																			 ["7", "⚫114.114.114.114"],
-																			 ["8", "⚫114.114.115.115"],
-																			 ["group", "OneDNS"],
-																			 ["10", "🟠52.80.66.66（拦截版）"],
-																			 ["12", "🟠52.80.52.52（纯净版）"],
-																			 ["group", "360安全DNS"],
-																			 ["16", "🟠218.30.118.6（电信/铁通/移动）"],
-																			 ["17", "🟠123.125.81.6（联通）"],
-																			 ["18", "🟠140.207.198.6（联通）"],
-																			 ["group", "教育网DNS"],
-																			 ["22", "🟠101.6.6.6:5353（清华大学）"],
-																			 ["group", "自定义DNS"],
-																			 ["99", "⚪自定义DNS (tcp)"]
-																			 ];
-														var option_dnsngf_1_opt = [
-																				   ["1", "udp"]
-																			 	  ,["2", "tcp"]
-																			 ];
-														var option_dnsngf_1_val_udp = [
-																			 		   ["group", "Google DNS"],
-																					   ["1", "🟠8.8.8.8"],
-																					   ["2", "🟠8.8.4.4"],
-																			 		   ["group", "Cloudflare DNS"],
-																					   ["3", "⚫1.1.1.1"],
-																					   ["4", "⚫1.0.0.1"],
-																			 		   ["group", "Quad9"],
-																					   ["5", "🟠9.9.9.11"],
-																					   ["6", "🟠149.112.112.11"],
-																			 		   ["group", "OpenDNS"],
-																					   ["7", "⚫208.67.222.222"],
-																					   ["8", "⚫208.67.220.220"],
-																			 		   ["group", "DNS.SB"],
-																					   ["9", "⚫185.222.222.222"],
-																					   ["10", "⚫45.11.45.11"],
-																			 		   ["group", "AdGuard"],
-																					   ["11", "🟡94.140.14.14"],
-																					   ["12", "🟡94.140.15.15"],
-																			 		   ["group", "quad101"],
-																					   ["13", "🟠101.101.101.101"],
-																					   ["14", "🟠101.102.103.104"],
-																			 		   ["group", "自定义DNS"],
-																					   ["99", "⚪自定义DNS（udp）"]
-																				  	  ];
-														var option_dnsngf_1_val_tcp = [
-																			 		   ["group", "Google DNS"],
-																					   ["1", "🟠8.8.8.8"],
-																					   ["2", "🟠8.8.4.4"],
-																			 		   ["group", "Cloudflare DNS"],
-																					   ["3", "⚫1.1.1.1"],
-																					   ["4", "⚫1.0.0.1"],
-																			 		   ["group", "Quad9"],
-																					   ["5", "🟠9.9.9.11"],
-																					   ["6", "🟠149.112.112.11"],
-																			 		   ["group", "OpenDNS"],
-																					   ["7", "⚫208.67.222.222"],
-																					   ["8", "⚫208.67.220.220"],
-																			 		   ["group", "DNS.SB"],
-																					   ["9", "⚫185.222.222.222"],
-																					   ["10", "⚫45.11.45.11"],
-																			 		   ["group", "AdGuard"],
-																					   ["11", "🟡94.140.14.14"],
-																					   ["12", "🟡94.140.15.15"],
-																			 		   ["group", "quad101"],
-																					   ["13", "🟠101.101.101.101"],
-																					   ["14", "🟠101.102.103.104"],
-																			 		   ["group", "自定义DNS"],
-																					   ["99", "⚪自定义DNS（tcp）"]
-																				  	  ];
-														// 进阶DNS方案1 chinadns-ng国外dns-2
-														var option_dnsngf_2_opt = [
-																			  	   ["1", "udp"]
-																			  	  ,["2", "tcp"]
-																				  ];
-														// 基础DNS方案：中国dns
-														var option_chndns = [];
-														if(isp_dns_1 && isp_dns_2){
-															option_chndns.push(["group", "运营商DNS"]);
-															option_chndns.push(["1", isp_dns_1]);
-															option_chndns.push(["2", isp_dns_2]);
-														}else if(isp_dns_1 && !isp_dns_2){
-															option_chndns.push(["group", "运营商DNS"]);
-															option_chndns.push(["1", isp_dns_1]);
-														}
-														option_chndns.push(["group", "阿里公共DNS"]);
-														option_chndns.push(["3", "223.5.5.5"]);
-														option_chndns.push(["4", "223.6.6.6"]);
-														option_chndns.push(["group", "DNSPod DNS"]);
-														option_chndns.push(["5", "119.29.29.29"]);
-														option_chndns.push(["6", "119.28.28.28"]);
-														option_chndns.push(["group", "114 DNS"]);
-														option_chndns.push(["7", "114.114.114.114"]);
-														option_chndns.push(["8", "114.114.115.115"]);
-														option_chndns.push(["group", "OneDNS"]);
-														option_chndns.push(["9", "117.50.11.11（拦截版）"]);
-														option_chndns.push(["10", "52.80.66.66（拦截版）"]);
-														option_chndns.push(["11", "117.50.10.10（纯净版）"]);
-														option_chndns.push(["12", "52.80.52.52（纯净版）"]);
-														option_chndns.push(["13", "117.50.60.30（家庭版）"]);
-														option_chndns.push(["14", "52.80.60.30（家庭版）"]);
-														option_chndns.push(["group", "360安全DNS"]);
-														option_chndns.push(["15", "101.226.4.6（电信/铁通/移动）"]);
-														option_chndns.push(["16", "218.30.118.6（电信/铁通/移动）"]);
-														option_chndns.push(["17", "123.125.81.6（联通）"]);
-														option_chndns.push(["18", "140.207.198.6（联通）"]);
-														option_chndns.push(["group", "cnnic DNS"]);
-														option_chndns.push(["19", "1.2.4.8"]);
-														option_chndns.push(["20", "210.2.4.8"]);
-														option_chndns.push(["group", "百度DNS"]);
-														option_chndns.push(["21", "180.76.76.76"]);
-														option_chndns.push(["group", "教育网DNS"]);
-														option_chndns.push(["22", "101.6.6.6:5353（清华大学）"]);
-														option_chndns.push(["23", "58.132.8.1（北京）"]);
-														option_chndns.push(["24", "101.7.8.9（北京）"]);
-														option_chndns.push(["group", "自定义DNS"]);
-														option_chndns.push(["99", "自定义DNS (UDP)"]);
-														// 基础DNS方案：外国dns
-														var option_dnsf = [["3", "🚀 dns2socks"],
-																		   ["4", "🚀 ss-tunnel"],										//fancyss-full
-																		   ["7", "🚀 v2ray/xray_dns"],
-																		   ["8", "🌏 直连（udp）"]
-																		  ];
+													option_dnsp = [
+																  ["1", "chinadns-ng"],
+																  ["2", "smartdns"]
+																  ];
 														// 节点域名解析DNS方案： udp选项
-														var option_resv = [
-																			   ["group", "自动选取"],
-																			   ["-1", "自动选取模式（国内组）"],
-																			   ["-2", "自动选取模式（仅国组）"],
-																			   ["0", "自动选取模式（国内组 + 国外组）"],
-																			   ["group", "国内DNS"],
-																			   ["1", "阿里DNS【223.5.5.5】"],
-																			   ["2", "DNSPod DNS【119.29.29.29】"],
-																			   ["3", "114DNS【114.114.114.114】"],
-																			   ["4", "OneDNS【52.80.66.66】"],
-																			   ["5", "360安全DNS 电信/铁通/移动【218.30.118.6】"],
-																			   ["6", "360安全DNS 联通【123.125.81.6】"],
-																			   ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
-																			   ["8", "百度DNS【180.76.76.76】"],
-																			   ["group", "国外DNS"],
-																			   ["11", "Google DNS【8.8.8.8】"],
-																			   ["12", "CloudFlare DNS【1.1.1.1】"],
-																			   ["13", "Quad9 Secured【9.9.9.11】"],
-																			   ["14", "OpenDNS【208.67.222.222】"],
-																			   ["15", "DNS.SB【185.222.222.222】"],
-																			   ["16", "AdGuard【94.140.14.14】"],
-																			   ["17", "Quad101【101.101.101.101】"],
-																			   ["18", "CleanBrowsing【185.228.168.9】"],
-																			   ["group", "自定义DNS"],
-																			   ["99", "自定义DNS (udp)"],
-																			  ];
-														var option_dig = [
-																		  ["group", "国内域名"],
-																		  ["www.baidu.com", "www.baidu.com"],
-																		  ["www.sina.com.cn", "www.sina.com.cn"],
-																		  ["www.sohu.com", "www.sohu.com"],
-																		  ["www.163.com", "www.163.com"],
-																		  ["www.qq.com", "www.qq.com"],
-																		  ["www.taobao.com", "www.taobao.com"],
-																		  ["www.jd.com", "www.jd.com"],
-																		  ["www.bilibili.com", "www.bilibili.com"],
-																		  ["www.bing.com", "www.bing.com"],
-																		  ["group", "国外域名"],
-																		  ["www.google.com", "www.google.com"],
-																		  ["www.google.com.hk", "www.google.com.hk"],
-																		  ["www.youtube.com", "www.youtube.com"],
-																		  ["www.facebook.com", "www.facebook.com"],
-																		  ["www.twitter.com", "www.twitter.com"],
-																		  ["www.wikipedia.org", "www.wikipedia.org"],
-																		  ["www.instagram.com", "www.instagram.com"],
-																		  ["www.netflix.com", "www.netflix.com"],
-																		  ["www.reddit.com", "www.reddit.com"],
-																		  ["www.github.com", "www.github.com"],
-																		 ];
-														var ph1 = "需端口号如：8.8.8.8:53"
-														var ph2 = "需端口号如：8.8.8.8#53"
+														option_server_resolve = [
+																			 ["group", "自动选取"],
+																			 ["-1", "自动选取模式（国内组）"],
+																			 ["-2", "自动选取模式（仅国组）"],
+																			 ["0", "自动选取模式（国内组 + 国外组）"],
+																			 ["group", "国内DNS"],
+																			 ["1", "阿里DNS【223.5.5.5】"],
+																			 ["2", "DNSPod DNS【119.29.29.29】"],
+																			 ["3", "114DNS【114.114.114.114】"],
+																			 ["4", "OneDNS【52.80.66.66】"],
+																			 ["5", "360安全DNS 电信/铁通/移动【218.30.118.6】"],
+																			 ["6", "360安全DNS 联通【123.125.81.6】"],
+																			 ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
+																			 ["8", "百度DNS【180.76.76.76】"],
+																			 ["group", "国外DNS"],
+																			 ["11", "Google DNS【8.8.8.8】"],
+																			 ["12", "CloudFlare DNS【1.1.1.1】"],
+																			 ["13", "Quad9 Secured【9.9.9.11】"],
+																			 ["14", "OpenDNS【208.67.222.222】"],
+																			 ["15", "DNS.SB【185.222.222.222】"],
+																			 ["16", "AdGuard【94.140.14.14】"],
+																			 ["17", "Quad101【101.101.101.101】"],
+																			 ["18", "CleanBrowsing【185.228.168.9】"],
+																			 ["group", "自定义DNS"],
+																			 ["99", "自定义DNS (udp)"]
+																			 ];
+														option_domain_for_dig = [
+																			 ["group", "国内域名"],
+																			 ["www.baidu.com", "www.baidu.com"],
+																			 ["www.sina.com.cn", "www.sina.com.cn"],
+																			 ["www.sohu.com", "www.sohu.com"],
+																			 ["www.163.com", "www.163.com"],
+																			 ["www.qq.com", "www.qq.com"],
+																			 ["www.taobao.com", "www.taobao.com"],
+																			 ["www.jd.com", "www.jd.com"],
+																			 ["www.bilibili.com", "www.bilibili.com"],
+																			 ["www.bing.com", "www.bing.com"],
+																			 ["group", "国外域名"],
+																			 ["www.google.com", "www.google.com"],
+																			 ["www.google.com.hk", "www.google.com.hk"],
+																			 ["www.youtube.com", "www.youtube.com"],
+																			 ["www.facebook.com", "www.facebook.com"],
+																			 ["www.twitter.com", "www.twitter.com"],
+																			 ["www.wikipedia.org", "www.wikipedia.org"],
+																			 ["www.instagram.com", "www.instagram.com"],
+																			 ["www.netflix.com", "www.netflix.com"],
+																			 ["www.reddit.com", "www.reddit.com"],
+																			 ["www.github.com", "www.github.com"],
+																			 ["group", "自定义域名"],
+																			 ["99", "自定义域名"]
+																			 ];
+														option_smrt = [
+																	   ["1", "1：【国内优先】"],
+																	   ["2", "2：【国外优先】"],
+																	   ["3", "3：【智能判断】"],
+																	   ["4", "4：【自定义配置1】"],
+																	   ["5", "5：【自定义配置2】"],
+																	   ["5", "5：【自定义配置3】"],
+																	  ];
+														option_chng = [
+																	   ["1", "1：【国内优先】"],
+																	   ["2", "2：【国外优先】"],
+																	   ["3", "3：【智能判断】"],
+																	  ];
+														var ph1 = "需端口号如：8.8.8.8:53";
 														var ph3 = "# 填入自定义的dnsmasq设置，一行一个&#10;# 例如hosts设置：&#10;address=/weibo.com/2.2.2.2&#10;# 防DNS劫持设置：&#10;bogus-nxdomain=220.250.64.18"
 														$('#table_dns').forms([
-															{ title: '<em>DNS方案设置</em>', thtd:1 , multi: [
-																{ id:'ss_basic_olddns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(136)"><font color="#ffcc00">基础</font></a>', value: 0},
-																{ id:'ss_basic_advdns', name:'ss_basic_advdns', func:'u', hint:'26', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(137)"><font color="#ffcc00">进阶</font></a>', value: 1},
-															]},
-															//{ title: '进阶DNS方案', class:'new_dns_main, suffix: 'chinadns-ng'},
 															// new_dns: chinadns-ng
-															{ title: '选择中国DNS-1 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
-																{ id: 'ss_basic_chng_china_1_enable', type:'checkbox', func:'u', value:true},
-																{ id: 'ss_basic_chng_china_1_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'1'},
-																{ id: 'ss_basic_chng_china_1_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:auto;', value:'1'},
-																{ id: 'ss_basic_chng_china_1_udp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
-																{ id: 'ss_basic_chng_china_1_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'1'},
-																{ id: 'ss_basic_chng_china_1_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+															{ title: '<em>DNS设置</em>', th:'2'},
+															{ title: '选择DNS主方案', class:'new_dns_main', multi: [
+																{ id: 'ss_basic_dns_plan', type:'select', func:'u', options:option_dnsp, style:'width:120px;', value:'1'},
+																{ suffix: '&nbsp;&nbsp;'}
+															]},
+															{ title: '&nbsp;&nbsp;*选择chinadns-ng配置', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng', type:'select', func:'u', options:option_chng, style:'width:209px;', value:'3'},
+															]},
+															{ title: '&nbsp;&nbsp;*中国DNS-1 <em>(直连) 🎯</em>', hint:'133', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng_china_dns_1_chk', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_china_net_1_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'udp'},
+																{ id: 'ss_basic_chng_china_udp_1_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_china_udp_1_usr', type:'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+																{ id: 'ss_basic_chng_china_tcp_1_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_china_tcp_1_usr', type:'text', style:'width:120px;', ph:'114.114.114.114', value:'114.114.114.114' },
+																{ id: 'ss_basic_chng_china_dot_1_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_china_dot_1_usr', type:'text', style:'width:180px;', ph:'dot.pub@1.12.12.21', value:'dot.pub@1.12.12.21' },
 																{ suffix:'&nbsp;&nbsp;'},
-																{ prefix: '<a id="ss_basic_chng_china_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_1_ecs', type: 'checkbox', value:true },
 															]},
-															{ title: '选择中国DNS-2 <em>(直连) 🌏</em>', hint:'133', class:'new_dns chng', multi: [
-																{ id: 'ss_basic_chng_china_2_enable', type:'checkbox', func:'u', value:true},
-																{ id: 'ss_basic_chng_china_2_prot', type:'select', func:'u', options:option_dnsngc_prot, style:'width:50px;', value:'2'},
-																{ id: 'ss_basic_chng_china_2_udp', type:'select', func:'u', options:option_dnsngc_udp, style:'width:200px;', value:'5'},
-																{ id: 'ss_basic_chng_china_2_udp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
-																{ id: 'ss_basic_chng_china_2_tcp', type:'select', func:'u', options:option_dnsngc_tcp, style:'width:200px;', value:'5'},
-																{ id: 'ss_basic_chng_china_2_tcp_user', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+															{ title: '&nbsp;&nbsp;*中国DNS-2 <em>(直连) 🎯</em>', hint:'133', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng_china_dns_2_chk', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_china_net_2_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'tcp'},
+																{ id: 'ss_basic_chng_china_udp_2_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_china_udp_2_usr', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+																{ id: 'ss_basic_chng_china_tcp_2_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_china_tcp_2_usr', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+																{ id: 'ss_basic_chng_china_dot_2_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_china_dot_2_usr', type: 'text', style:'width:180px;', ph:'dot.pub@1.12.12.21', value:'dot.pub@1.12.12.21' },
 																{ suffix:'&nbsp;&nbsp;'},
-																{ prefix: '<a id="ss_basic_chng_china_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(130)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_china_2_ecs', type: 'checkbox', value:true },
 															]},
-															{ title: '选择可信DNS-1 <font color="#FF0066">(代理) 🚀</font>', hint:'134', class:'new_dns chng', rid:'dns_plan_foreign_1', multi: [
-																{ id: 'ss_basic_chng_trust_1_enable', type:'checkbox', func:'u', value:true},
-																{ id: 'ss_basic_chng_trust_1_opt', type:'select', func:'u', options:option_dnsngf_1_opt, style:'width:50px;', value:'2'},
-																{ id: 'ss_basic_chng_trust_1_opt_udp_val', type:'select', func:'u', options:option_dnsngf_1_val_udp, style:'width:auto;', value:'1'},
-																{ id: 'ss_basic_chng_trust_1_opt_udp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
-																{ id: 'ss_basic_chng_trust_1_opt_tcp_val', type:'select', func:'u', options:option_dnsngf_1_val_tcp, style:'width:auto;', value:'1'},
-																{ id: 'ss_basic_chng_trust_1_opt_tcp_val_user', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
-																{ suffix: '&nbsp;&nbsp;'},
-																{ prefix: '<a id="ss_basic_chng_trust_1_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(131)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_1_ecs', type: 'checkbox', value:true },
+															{ title: '&nbsp;&nbsp;*中国DNS-3 <em>(直连) 🎯</em>', hint:'133', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng_china_dns_3_chk', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_china_net_3_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'dot'},
+																{ id: 'ss_basic_chng_china_udp_3_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_china_udp_3_usr', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+																{ id: 'ss_basic_chng_china_tcp_3_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_china_tcp_3_usr', type: 'text', style:'width:120px;', ph:'114.114.115.115', value:'114.114.115.115' },
+																{ id: 'ss_basic_chng_china_dot_3_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_china_dot_3_usr', type: 'text', style:'width:180px;', ph:'dot.pub@1.12.12.21', value:'dot.pub@1.12.12.21' },
+																{ suffix:'&nbsp;&nbsp;'},
 															]},
-															{ title: '选择可信DNS-2 <em>(直连) 🌏</em>', class:'new_dns chng', hint:'135', rid:'dns_plan_foreign_2', multi: [
-																{ id: 'ss_basic_chng_trust_2_enable', type:'checkbox', func:'u', value:false},
-																{ id: 'ss_basic_chng_trust_2_opt', type:'select', func:'u', options:option_dnsngf_2_opt, style:'width:50px;', value:'0'},
-																{ id: 'ss_basic_chng_trust_2_opt_udp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
-																{ id: 'ss_basic_chng_trust_2_opt_tcp', type: 'text', style:'width:120px;', value:'208.67.222.222:5353', ph:ph2 },
+															{ title: '&nbsp;&nbsp;*可信DNS-1 <font color="#FF0066">(代理) 🚀</font>', hint:'134', class:'new_dns chng', multi: [
+																{ id: 'ss_basic_chng_trust_dns_1_chk', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_trust_net_1_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'udp'},
+																{ id: 'ss_basic_chng_trust_udp_1_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_udp_1_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_tcp_1_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_tcp_1_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_dot_1_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_dot_1_usr', type: 'text', style:'width:180px;', value:'one.one.one.one@1.1.1.1', ph:'one.one.one.one@1.1.1.1' },
 																{ suffix: '&nbsp;&nbsp;'},
-																{ prefix: '<a id="ss_basic_chng_trust_2_ecs_note" class="hintstyle" href="javascript:void(0);" onclick="openssHint(132)"><font color="#ffcc00">&nbsp;<u>ECS</u></font></a>', id: 'ss_basic_chng_trust_2_ecs', type: 'checkbox', value:true },
-																//{ suffix: '<span id="ss_basic_chng_direct_user_note"><br />⚠️直连情况下可能存在DNS污染，请自行解决！</span>'},
+															]},
+															{ title: '&nbsp;&nbsp;*可信DNS-2 <font color="#FF0066">(代理) 🚀</font>', class:'new_dns chng', hint:'134', multi: [
+																{ id: 'ss_basic_chng_trust_dns_2_chk', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_trust_net_2_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'tcp'},
+																{ id: 'ss_basic_chng_trust_udp_2_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'3'},
+																{ id: 'ss_basic_chng_trust_udp_2_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_tcp_2_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_tcp_2_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_dot_2_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_trust_dot_2_usr', type: 'text', style:'width:180px;', value:'one.one.one.one@1.1.1.1', ph:'one.one.one.one@1.1.1.1' },
+																{ suffix: '&nbsp;&nbsp;'},
+															]},
+															{ title: '&nbsp;&nbsp;*可信DNS-3 <font color="#FF0066">(代理) 🚀</font>', class:'new_dns chng', hint:'134', multi: [
+																{ id: 'ss_basic_chng_trust_dns_3_chk', type:'checkbox', func:'u', value:true},
+																{ id: 'ss_basic_chng_trust_net_3_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'dot'},
+																{ id: 'ss_basic_chng_trust_udp_3_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'1'},
+																{ id: 'ss_basic_chng_trust_udp_3_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_tcp_3_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'3'},
+																{ id: 'ss_basic_chng_trust_tcp_3_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
+																{ id: 'ss_basic_chng_trust_dot_3_opt', type:'select', func:'u', options:[], style:'width:auto;', value:'5'},
+																{ id: 'ss_basic_chng_trust_dot_3_usr', type: 'text', style:'width:180px;', value:'one.one.one.one@1.1.1.1', ph:'one.one.one.one@1.1.1.1' },
+																{ suffix: '&nbsp;&nbsp;'},
 															]},	
-															//{ title: '丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', id:'ss_basic_chng_no_ipv6', type:'checkbox', value:true},
-															{ title: '丢弃AAAA记录（--no-ipv6）', class:'new_dns chng', hint:'145', id:'ss_basic_chng_x', multi: [
-																{ id:'ss_basic_chng_no_ipv6', type:'checkbox', func:'u', value: true},
-																{ suffix: '<a id="ss_basic_chng_left">&nbsp;&nbsp;&nbsp;&nbsp;【</a>' },
-																{ id:'ss_basic_chng_act', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xact" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">act</font></a>&nbsp;&nbsp;', value: 0},
-																{ id:'ss_basic_chng_gt', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xgt" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">gt</font></a>&nbsp;&nbsp;', value: 1},
-																{ id:'ss_basic_chng_mc', name:'ss_basic_chng_x', type:'radio', suffix: '<a id="ss_basic_chng_xmc" class="hintstyle" href="javascript:void(0);" onclick="openssHint(145)"><font color="#ffcc00">mt</font></a>', value: 0},
-																{ suffix: '<a id="ss_basic_chng_right">&nbsp;&nbsp;】</a>' },
+															{ title: '&nbsp;&nbsp;*过滤AAAA记录（--no-ipv6）', class:'new_dns chng', hint:'145', multi: [
+																{ id: 'ss_basic_chng_ipv6_drop_direc', type:'checkbox', func:'u', value:false},
+																{ suffix: '<a>过滤直连</a>' },
+																{ suffix: '&nbsp;&nbsp;'},
+																{ id: 'ss_basic_chng_ipv6_drop_proxy', type:'checkbox', func:'u', value:true},
+																{ suffix: '<a>过滤代理</a>' },
 															]},
-															{ title: '发送重复DNS查询包（--repeat-times）', class:'new_dns chng', id:'ss_basic_chng_repeat_times', type:'text', value: '2'},
-															// old_dns	
-															{ title: '选择中国DNS', class:'old_dns', multi: [
-																{ id: 'ss_china_dns', type:'select', func:'u', options:option_chndns, style:'width:auto;', value:'3'},
-																{ id: 'ss_china_dns_user', type: 'text', ph:'114.114.114.114' }
+															//{ title: '发送重复DNS查询包（--repeat-times）', class:'new_dns chng', id:'ss_basic_chng_dns_query_times', type:'text', value: '1'},
+															{ title: '&nbsp;&nbsp;*选择smartdns配置', class:'new_dns smrt', multi: [
+																{ id: 'ss_basic_smrt', type:'select', func:'u', options:option_smrt, style:'width:209px;', value:'1'},
+																{ suffix: '&nbsp;&nbsp;'},
+																{ suffix: '<a type="button" id="edit_smartdns_conf" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf()">编辑smartdns配置</a>'},
 															]},
-															{ title: '选择外国DNS（🌏直连 | 🚀代理） ', class:'old_dns', hint:'26', rid:'dns_plan_foreign', multi: [
-																{ id: 'ss_foreign_dns', type:'select', func:'u', options:option_dnsf, style:'width:auto;'},
-																{ id: 'ss_dns2socks_user', type: 'text', style: 'width:auto;', value:'8.8.8.8:53', ph:ph1 },
-																{ id: 'ss_sstunnel_user', type: 'text', value:'8.8.8.8:53', ph:ph1 },					//fancyss-full
-																{ id: 'ss_direct_user', type: 'text', value:'8.8.8.8#53', ph:ph2 },
-																{ prefix: '<span id="ss_sstunnel_user_note">&nbsp;&nbsp;仅SS/SSR模式下可用</span>'},	//fancyss-full
-																{ suffix: '<span id="ss_disable_aaaa_note">丢弃AAAA记录</span>', id: 'ss_disable_aaaa', type: 'checkbox', value:true },
-																{ suffix: '<span id="ss_v2_note"></span>' },
-															]},
+															{ title: '&nbsp;&nbsp;*追加ISP DNS', id:'ss_basic_add_ispdns', type:'checkbox', hint:'151', class:'new_dns smrt', value:true},
+															{ title: '&nbsp;&nbsp;*替换dnsmasq', id:'ss_basic_dns_server', type:'checkbox', hint:'105', func:'u', value:true},
+															{ title: '&nbsp;&nbsp;*重启chinadns-ng', rid: 'restart_chinadns', class:'new_dns chng', multi: [	
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_chinadns()">重启chinadns-ng</a>'},
+															]},	
+															{ title: '&nbsp;&nbsp;*重启smartdns', rid: 'restart_smartdns', class:'new_dns smrt', multi: [	
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_smartdns()">重启smartdns</a>'},
+															]},	
+															
 															{ title: '<em>其它DNS相关设置</em>', th:'2'},
+															//{ title: '可信DNS tcp解析设置', hint:'150', thtd:1 , multi: [
+															//	{ id:'ss_basic_chng_trust_tcp_socks', name:'ss_basic_chng_trust_tcp_mothod', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(151)"><font color="#ffcc00">通过socks5解析</font></a>', value: 0},
+															//	{ id:'ss_basic_chng_trust_tcp_proxy', name:'ss_basic_chng_trust_tcp_mothod', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(152)"><font color="#ffcc00">通过透明代理解析</font></a>', value: 1},
+															//]},
 															{ title: 'DNS重定向', id:'ss_basic_dns_hijack', type:'checkbox', hint:'106', value:true},
 															{ title: 'DNS解析测试', rid: 'ss_dns_test', multi: [
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(1)">测试cdn</a>&nbsp;&nbsp;'},
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(2)">测试apple china</a>&nbsp;&nbsp;'},
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(3)">测试google china</a>&nbsp;&nbsp;'},
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(4)">测试gfwlist</a>&nbsp;&nbsp;'},
-																//{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(5)">测试cdn-china</a>&nbsp;&nbsp;'},
+																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(5)">测试chnlist</a>&nbsp;&nbsp;'},
 															]},
 															{ title: 'DNS解析测试(dig)', rid: 'ss_dig_test', multi: [
-																{ id: 'ss_basic_dig_opt', type:'select', func:'u', options:option_dig, style:'width:240px;', value:'1'},
+																{ id: 'ss_basic_dig_opt', type:'select', func:'u', options:option_domain_for_dig, style:'width:240px;', value:'1'},
+																{ id: 'ss_basic_dig_opt_usr', type: 'text', style:'width:145px;', ph:'输入域名', value:''},
 																{ suffix: '&nbsp;&nbsp;' },
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(6)">dig</a>&nbsp;&nbsp;'},
 															]},
@@ -6179,11 +6315,409 @@ function save_failover() {
 															]},	
 															// server dns resolver
 															{ title: '节点域名解析DNS方案', hint:'107', multi: [
-																{ id: 'ss_basic_server_resolv', type:'select', func:'u', options:option_resv, style:'width:160px;', value:'-1'},
+																{ id: 'ss_basic_server_resolv', type:'select', func:'u', options:option_server_resolve, style:'width:160px;', value:'-1'},
 																{ id: 'ss_basic_server_resolv_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
 															]},
-															{ title: '自定义dnsmasq', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
+															{ title: '自定义dnsmasq', rid: 'ss_dnsmasq_cus', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
 														]);
+														const china_dnsData = {
+															"阿里公共DNS": [
+																{"addr": "223.5.5.5", "net": "ipv4", "type": 3},
+																{"addr": "223.6.6.6", "net": "ipv4", "type": 3},
+																{"addr": "2400:3200::1", "net": "ipv6", "type": 3},
+																{"addr": "2400:3200:baba::1", "net": "ipv6", "type": 3},
+																{"addr": "dns.alidns.com@223.5.5.5", "net": "ipv4", "type": 4},
+																{"addr": "dns.alidns.com@223.6.6.6", "net": "ipv4", "type": 4},
+																{"addr": "dns.alidns.com@2400:3200::1", "net": "ipv6", "type": 4},
+																{"addr": "dns.alidns.com@2400:3200:baba::1", "net": "ipv6", "type": 4}
+															],
+															"DNSPod DNS": [
+																{"addr": "119.29.29.29", "net": "ipv4", "type": 1},
+																{"addr": "119.28.28.28", "net": "ipv4", "type": 3},
+																{"addr": "2402:4e00::", "net": "ipv6", "type": 3},
+																{"addr": "2402:4e00:1::", "net": "ipv6", "type": 3},
+																{"addr": "dot.pub@120.53.53.53", "net": "ipv4", "type": 4},
+																{"addr": "dot.pub@1.12.12.21", "net": "ipv4", "type": 4}
+															],
+															"114 DNS": [
+																{"addr": "114.114.114.114", "net": "ipv4", "type": 3, "description": "纯净版"},
+																{"addr": "114.114.114.115", "net": "ipv4", "type": 3, "description": "纯净版"},
+																{"addr": "114.114.114.119", "net": "ipv6", "type": 3, "description": "安全版"},
+																{"addr": "114.114.115.119", "net": "ipv6", "type": 3, "description": "安全版"},
+																{"addr": "114.114.114.110", "net": "ipv6", "type": 3, "description": "家庭版"},
+																{"addr": "114.114.115.110", "net": "ipv6", "type": 3, "description": "家庭版"}
+															],
+															"360安全DNS": [
+																{"addr": "dot.360.cn@180.163.249.75", "net": "ipv4", "type": 4},
+																{"addr": "dot.360.cn@106.63.24.74", "net": "ipv4", "type": 4},
+																{"addr": "dot.360.cn@36.99.170.86", "net": "ipv4", "type": 4}
+															],
+															"OneDNS": [
+																{"addr": "52.80.66.66", "net": "ipv4", "type": 3, "description": "拦截版"},
+																{"addr": "117.50.22.22", "net": "ipv4", "type": 3, "description": "拦截版"},
+																{"addr": "2400:7fc0:849e:200::4", "net": "ipv6", "type": 3, "description": "拦截版"},
+																{"addr": "2400:7fc0:849e:200::4", "net": "ipv6", "type": 3, "description": "拦截版"},
+																{"addr": "117.50.10.10", "net": "ipv4", "type": 3, "description": "纯净版"},
+																{"addr": "52.80.52.52", "net": "ipv4", "type": 3, "description": "纯净版"},
+																{"addr": "2400:7fc0:849e:200::8", "net": "ipv6", "type": 3, "description": "纯净版"},
+																{"addr": "2404:c2c0:85d8:901::8", "net": "ipv6", "type": 3, "description": "纯净版"},
+																{"addr": "117.50.60.30", "net": "ipv4", "type": 3, "description": "家庭版"},
+																{"addr": "52.80.60.30", "net": "ipv4", "type": 3, "description": "家庭版"},
+																{"addr": "dot.onedns.net@106.75.177.177", "net": "ipv4", "type": 4, "description": "拦截版"},
+																{"addr": "dot.onedns.net@106.75.165.71", "net": "ipv4", "type": 4, "description": "纯净版"}
+															],
+															"CNNIC DNS": [
+																{"addr": "1.2.4.8", "net": "ipv4", "type": 3},
+																{"addr": "210.2.4.8", "net": "ipv4", "type": 3}
+															],
+															"百度DNS": [
+																{"addr": "180.76.76.76", "net": "ipv4", "type": 3}
+															],
+															"字节跳动DNS": [
+																{"addr": "180.184.1.1", "net": "ipv4", "type": 3},
+																{"addr": "180.184.2.2", "net": "ipv4", "type": 3}
+															],
+															"教育网DNS": [
+																{"addr": "159.226.8.6", "net": "ipv4", "type": 3, "description": "中国科技网"},
+																{"addr": "159.226.8.7", "net": "ipv4", "type": 3, "description": "中国科技网"},
+																{"addr": "2001:cc0::1", "net": "ipv6", "type": 3, "description": "中国科技网"},
+																{"addr": "101.6.6.6", "net": "ipv4", "type": 3, "description": "清华大学TUNA协会"},
+																{"addr": "2402:f000:1:416:101:6:6:6", "net": "ipv6", "type": 3, "description": "清华大学TUNA协会"},
+																{"addr": "58.132.8.1", "net": "ipv4", "type": 1, "description": "北京"},
+																{"addr": "101.7.8.9", "net": "ipv4", "type": 3, "description": "清华大学TUNA协会"}
+															],
+														};
+														const trust_dnsData = {
+															"Google DNS": [
+																{"addr": "8.8.8.8", "net": "ipv4", "type": 3},
+																{"addr": "8.8.4.4", "net": "ipv4", "type": 3},
+																{"addr": "2001:4860:4860::8888", "net": "ipv6", "type": 3},
+																{"addr": "2001:4860:4860::8844", "net": "ipv6", "type": 3},
+																{"addr": "dns.google.com@8.8.8.8", "net": "ipv4", "type": 4},
+																{"addr": "dns.google.com@8.8.4.4", "net": "ipv4", "type": 4}
+															],
+															"Cloudflare DNS": [
+																{"addr": "1.1.1.1", "net": "ipv4", "type": 3},
+																{"addr": "1.0.0.1", "net": "ipv4", "type": 3},
+																{"addr": "1.1.1.2", "net": "ipv4", "type": 3},
+																{"addr": "1.0.0.2", "net": "ipv4", "type": 3},
+																{"addr": "1.1.1.3", "net": "ipv4", "type": 3},
+																{"addr": "1.0.0.3", "net": "ipv4", "type": 3},
+																{"addr": "2606:4700:4700::1111", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1001", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1112", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1002", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1113", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1003", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1003", "net": "ipv6", "type": 3},
+																{"addr": "2606:4700:4700::1003", "net": "ipv6", "type": 3},
+																{"addr": "1dot1dot1dot1.cloudflare-dns.com@1.1.1.1", "net": "ipv4", "type": 4},
+																{"addr": "1dot1dot1dot1.cloudflare-dns.com@1.0.0.1", "net": "ipv4", "type": 4},
+																{"addr": "one.one.one.one@1.1.1.1", "net": "ipv4", "type": 4},
+																{"addr": "one.one.one.one@1.0.0.1", "net": "ipv4", "type": 4},
+																{"addr": "dns.cloudflare.com@104.16.132.229", "net": "ipv4", "type": 4},
+																{"addr": "dns.cloudflare.com@104.16.133.229", "net": "ipv4", "type": 4},
+																{"addr": "security.cloudflare-dns.com@1.1.1.2", "net": "ipv4", "description": "安全版", "type": 4},
+																{"addr": "security.cloudflare-dns.com@1.0.0.2", "net": "ipv4", "description": "安全版", "type": 4},
+																{"addr": "family.cloudflare-dns.com@1.1.1.3", "net": "ipv4", "description": "家庭版", "type": 4},
+																{"addr": "family.cloudflare-dns.com@1.0.0.3", "net": "ipv4", "description": "家庭版", "type": 4}
+															],
+															"Quad9": [
+																{"addr": "9.9.9.9", "net": "ipv4", "type": 3},
+																{"addr": "149.112.112.112", "net": "ipv4", "type": 3},
+																{"addr": "9.9.9.10", "net": "ipv4", "type": 3},
+																{"addr": "149.112.112.10", "net": "ipv4", "type": 3},
+																{"addr": "9.9.9.11", "net": "ipv4", "type": 3},
+																{"addr": "149.112.112.11", "net": "ipv4", "type": 3},
+																{"addr": "dns.quad9.net@149.112.112.112", "net": "ipv4", "type": 4},
+																{"addr": "dns.quad9.net@9.9.9.9", "net": "ipv4", "type": 4},
+																{"addr": "dns9.quad9.net@149.112.112.9", "net": "ipv4", "type": 4},
+																{"addr": "dns9.quad9.net@9.9.9.9", "net": "ipv4", "type": 4}
+															],
+															"Cisco OpenDNS/Cisco Umbrella": [
+																{"addr": "208.67.222.222", "description": "基础版", "net": "ipv4", "type": 3},
+																{"addr": "208.67.220.220", "description": "基础版", "net": "ipv4", "type": 3},
+																{"addr": "208.67.222.220", "description": "基础版", "net": "ipv4", "type": 3},
+																{"addr": "208.67.220.222", "description": "基础版", "net": "ipv4", "type": 3},
+																{"addr": "208.67.222.123", "description": "家庭盾版", "net": "ipv4", "type": 3},
+																{"addr": "208.67.220.123", "description": "家庭盾版", "net": "ipv4", "type": 3},
+																{"addr": "2620:119:35::35", "description": "基础版", "net": "ipv6", "type": 3},
+																{"addr": "2620:119:53::53", "description": "基础版", "net": "ipv6", "type": 3},
+																{"addr": "2620:119:35::123", "description": "家庭盾版", "net": "ipv6", "type": 3},
+																{"addr": "2620:119:53::123", "description": "家庭盾版", "net": "ipv6", "type": 3},
+																{"addr": "dns.opendns.com@208.67.220.220", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "dns.opendns.com@208.67.222.222", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "dns.umbrella.com@208.67.220.220", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "dns.umbrella.com@208.67.222.222", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "dns.sse.cisco.com@208.67.220.220", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "dns.sse.cisco.com@208.67.222.222", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "familyshield.opendns.com@208.67.222.123", "description": "家庭盾版", "net": "ipv4", "type": 4},
+																{"addr": "familyshield.opendns.com@208.67.222.123", "description": "家庭盾版", "net": "ipv4", "type": 4}
+															],
+															"DNS.SB": [
+																{"addr": "185.222.222.222", "net": "ipv4", "type": 3},
+																{"addr": "45.11.45.11", "net": "ipv4", "type": 3},
+																{"addr": "2a09::", "net": "ipv6", "type": 3},
+																{"addr": "2a11::", "net": "ipv6", "type": 3},
+																{"addr": "dot.sb@185.222.222.222", "net": "ipv4", "type": 4},
+																{"addr": "dns.sb@185.222.222.222", "net": "ipv4", "type": 4}
+															],
+															"AdGuard": [
+																{"addr": "94.140.14.14", "description": "拦截版", "net": "ipv4", "type": 3},
+																{"addr": "94.140.15.15", "description": "拦截版", "net": "ipv4", "type": 3},
+																{"addr": "94.140.14.140", "description": "基础版", "net": "ipv4", "type": 3},
+																{"addr": "94.140.14.141", "description": "基础版", "net": "ipv4", "type": 3},
+																{"addr": "94.140.14.15", "description": "家庭版", "net": "ipv4", "type": 3},
+																{"addr": "94.140.15.16", "description": "家庭版", "net": "ipv4", "type": 3},
+																{"addr": "2a10:50c0::ad1:ff", "description": "拦截版", "net": "ipv6", "type": 3},
+																{"addr": "2a10:50c0::ad2:ff", "description": "拦截版", "net": "ipv6", "type": 3},
+																{"addr": "2a10:50c0::1:ff", "description": "基础版", "net": "ipv6", "type": 3},
+																{"addr": "2a10:50c0::2:ff", "description": "基础版", "net": "ipv6", "type": 3},
+																{"addr": "2a10:50c0::bad1:ff", "description": "家庭版", "net": "ipv6", "type": 3},
+																{"addr": "2a10:50c0::bad2:ff", "description": "家庭版", "net": "ipv6", "type": 3},
+																{"addr": "dns.adguard-dns.com@94.140.15.1", "description": "拦截版", "net": "ipv4", "type": 4},
+																{"addr": "dns.adguard-dns.com@94.140.14.14", "description": "拦截版", "net": "ipv4", "type": 4},
+																{"addr": "unfiltered.adguard-dns.com@94.140.14.141", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "unfiltered.adguard-dns.com@94.140.14.140", "description": "基础版", "net": "ipv4", "type": 4},
+																{"addr": "family.adguard-dns.com@94.140.14.15", "description": "家庭版", "net": "ipv4", "type": 4},
+																{"addr": "family.adguard-dns.com@94.140.15.16", "description": "家庭版", "net": "ipv4", "type": 4}
+															],
+															"Level 3 Parent DNS": [
+																{"addr": "4.2.2.1", "net": "ipv4", "type": 3},
+																{"addr": "4.2.2.2", "net": "ipv4", "type": 3},
+																{"addr": "4.2.2.3", "net": "ipv4", "type": 3},
+																{"addr": "4.2.2.4", "net": "ipv4", "type": 3},
+																{"addr": "4.2.2.5", "net": "ipv4", "type": 3},
+																{"addr": "4.2.2.6", "net": "ipv4", "type": 3}
+															],
+															"Freenom World DNS": [
+																{"addr": "80.80.80.80", "net": "ipv4", "type": 3},
+																{"addr": "80.80.81.81", "net": "ipv4", "type": 3}
+															],
+															"TWNIC DNS Quad 101": [
+																{"addr": "101.101.101.101", "net": "ipv4", "type": 3},
+																{"addr": "101.102.103.104", "net": "ipv4", "type": 3},
+																{"addr": "2001:de4::101", "net": "ipv6", "type": 3},
+																{"addr": "2001:de4::102", "net": "ipv6", "type": 3},
+																{"addr": "dns.twnic.tw@101.101.101.101", "net": "ipv4", "type": 3}
+															],
+															"HiNet 中华电信 DNS": [
+																{"addr": "168.95.1.1", "net": "ipv4", "type": 3},
+																{"addr": "168.95.192.1", "net": "ipv4", "type": 3},
+																{"addr": "2001:b000:168::1", "net": "ipv6", "type": 3},
+																{"addr": "2001:b000:168::2", "net": "ipv6", "type": 3}
+															]
+														};
+
+														var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
+														var isp_dns_1=isp_dns_raw.split(" ")[0];
+														var isp_dns_2=isp_dns_raw.split(" ")[1];
+														validator.ipv4_addr(isp_dns_1);
+														if(isp_dns_1 && isp_dns_2){
+															var ispDNS = {
+																ipv4: [
+																	{ addr: isp_dns_1, description: "主用DNS" },
+																	{ addr: isp_dns_2, description: "备用DNS" }
+																]
+															};
+														}else if(isp_dns_1 && !isp_dns_2){
+															var ispDNS = {
+																ipv4: [
+																	{ addr: isp_dns_1, description: "主用DNS" }
+																]
+															};
+														
+														}else{
+															const ispDNS = {};
+														}
+														
+														const ispDnsSelectors = new Set([
+														  'ss_basic_chng_china_udp_1_opt',
+														  'ss_basic_chng_china_udp_2_opt',
+														  'ss_basic_chng_china_udp_3_opt'
+														]);
+														
+														function addISPdns(select, netType) {
+															// 获取对应的IP版本
+															const version = netType === 'all' ? 'ipv4' : netType; // 根据实际情况调整
+															
+															// 创建optgroup容器
+															const group = document.createElement('optgroup');
+															group.label = '运营商DNS';
+															
+															// 填充选项
+															(ispDNS[version] || []).forEach(server => {
+																const option = document.createElement('option');
+																option.value = server.addr;
+																option.textContent = `${server.addr}${server.description ? ` (${server.description})` : ''}`;
+																group.appendChild(option);
+															});
+														
+															// 插入到现有内容最前部
+															if (group.children.length > 0) {
+																select.insertBefore(group, select.firstChild);
+															}
+														}
+														
+														// 协议筛选器（类型统一为数字）
+														const protocolFilters = {
+															udp: type => [1, 3].includes(type),
+															tcp: type => [2, 3].includes(type),
+															dot: type => type === 4
+														};
+														
+														function buildOptions(dnsdata, protocol, netType) {
+															const fragment = document.createDocumentFragment();
+															
+															Object.entries(dnsdata).forEach(([provider, servers]) => {
+															const group = document.createElement('optgroup');
+															group.label = provider;
+															
+															servers.forEach(server => {
+																if (protocolFilters[protocol](server.type) && (netType === 'all' || server.net === netType)) {
+																	const option = document.createElement('option');
+																	
+																	option.value = server.addr;
+																	
+																	// 构建描述文本
+																	let desc = [
+																	  server.addr,
+																	  //server.net.toUpperCase(),
+																	  server.description
+																	  //server.type === 3 ? 'UDP+TCP' : '',
+																	  //server.type === 4 ? 'DoT' : ''
+																	].filter(Boolean).join(' - ');
+																	
+																	option.textContent = desc;
+																	group.appendChild(option);
+																}
+															});
+														
+															if (group.children.length > 0) {
+																fragment.appendChild(group);
+															}
+															});
+															return fragment;
+														}
+														
+														function addCustomDNS(select) {
+															// 创建自定义分组
+															const customGroup = document.createElement('optgroup');
+															customGroup.label = '自定义DNS';
+															
+															const customOption = document.createElement('option');
+															customOption.value = '99';
+															customOption.textContent = '自定义DNS';
+															
+															customGroup.appendChild(customOption);
+															select.appendChild(customGroup);
+														}
+														
+														function populateSelect(selectorId, dnsdata, protocol, netType) {
+															const select = document.getElementById(selectorId);
+															select.innerHTML = '';
+															
+															// 1. 插入运营商DNS（最顶部）
+															if (ispDnsSelectors.has(selectorId)) {
+																addISPdns(select, netType);
+															}
+															
+															// 2. 添加动态DNS选项
+															const dynamicGroups = buildOptions(dnsdata, protocol, netType);
+															select.appendChild(dynamicGroups);
+															
+															// 3. 添加自定义DNS（最底部）
+															addCustomDNS(select);
+														}
+														function setSelectDefault(selectorId, defaultValue) {
+															const select = document.getElementById(selectorId);
+															
+															// 方法1：直接设置value属性
+															select.value = defaultValue;
+															
+															// 方法2：遍历选项设置selected
+															Array.from(select.options).forEach(option => {
+															  option.selected = option.value === defaultValue;
+															});
+															
+															// 验证设置结果
+															if(select.value !== defaultValue) {
+															  console.warn(`默认值${defaultValue}不存在于选项中`);
+															}
+														}
+														// 初始化加载-china
+														if('<% nvram_get("ipv6_service"); %>' == "disabled" ){
+															populateSelect('ss_basic_chng_china_udp_1_opt', china_dnsData, 'udp', 'ipv4');
+															populateSelect('ss_basic_chng_china_udp_2_opt', china_dnsData, 'udp', 'ipv4');
+															populateSelect('ss_basic_chng_china_udp_3_opt', china_dnsData, 'udp', 'ipv4');
+															populateSelect('ss_basic_chng_china_tcp_1_opt', china_dnsData, 'tcp', 'ipv4');
+															populateSelect('ss_basic_chng_china_tcp_2_opt', china_dnsData, 'tcp', 'ipv4');
+															populateSelect('ss_basic_chng_china_tcp_3_opt', china_dnsData, 'tcp', 'ipv4');
+															populateSelect('ss_basic_chng_china_dot_1_opt', china_dnsData, 'dot', 'ipv4');
+															populateSelect('ss_basic_chng_china_dot_2_opt', china_dnsData, 'dot', 'ipv4');
+															populateSelect('ss_basic_chng_china_dot_3_opt', china_dnsData, 'dot', 'ipv4');
+														}else{
+															populateSelect('ss_basic_chng_china_udp_1_opt', china_dnsData, 'udp', 'all');
+															populateSelect('ss_basic_chng_china_udp_2_opt', china_dnsData, 'udp', 'all');
+															populateSelect('ss_basic_chng_china_udp_3_opt', china_dnsData, 'udp', 'all');
+															populateSelect('ss_basic_chng_china_tcp_1_opt', china_dnsData, 'tcp', 'all');
+															populateSelect('ss_basic_chng_china_tcp_2_opt', china_dnsData, 'tcp', 'all');
+															populateSelect('ss_basic_chng_china_tcp_3_opt', china_dnsData, 'tcp', 'all');
+															populateSelect('ss_basic_chng_china_dot_1_opt', china_dnsData, 'dot', 'all');
+															populateSelect('ss_basic_chng_china_dot_2_opt', china_dnsData, 'dot', 'all');
+															populateSelect('ss_basic_chng_china_dot_3_opt', china_dnsData, 'dot', 'all');
+														}
+
+														// 初始化加载-trust
+														if('<% nvram_get("ipv6_service"); %>' == "disabled" ){
+															populateSelect('ss_basic_chng_trust_udp_1_opt', trust_dnsData, 'udp', 'ipv4');
+															populateSelect('ss_basic_chng_trust_udp_2_opt', trust_dnsData, 'udp', 'ipv4');
+															populateSelect('ss_basic_chng_trust_udp_3_opt', trust_dnsData, 'udp', 'ipv4');
+															populateSelect('ss_basic_chng_trust_tcp_1_opt', trust_dnsData, 'tcp', 'ipv4');
+															populateSelect('ss_basic_chng_trust_tcp_2_opt', trust_dnsData, 'tcp', 'ipv4');
+															populateSelect('ss_basic_chng_trust_tcp_3_opt', trust_dnsData, 'tcp', 'ipv4');
+															populateSelect('ss_basic_chng_trust_dot_1_opt', trust_dnsData, 'dot', 'ipv4');
+															populateSelect('ss_basic_chng_trust_dot_2_opt', trust_dnsData, 'dot', 'ipv4');
+															populateSelect('ss_basic_chng_trust_dot_3_opt', trust_dnsData, 'dot', 'ipv4');
+														}else{
+															populateSelect('ss_basic_chng_trust_udp_1_opt', trust_dnsData, 'udp', 'all');
+															populateSelect('ss_basic_chng_trust_udp_2_opt', trust_dnsData, 'udp', 'all');
+															populateSelect('ss_basic_chng_trust_udp_3_opt', trust_dnsData, 'udp', 'all');
+															populateSelect('ss_basic_chng_trust_tcp_1_opt', trust_dnsData, 'tcp', 'all');
+															populateSelect('ss_basic_chng_trust_tcp_2_opt', trust_dnsData, 'tcp', 'all');
+															populateSelect('ss_basic_chng_trust_tcp_3_opt', trust_dnsData, 'tcp', 'all');
+															populateSelect('ss_basic_chng_trust_dot_1_opt', trust_dnsData, 'dot', 'all');
+															populateSelect('ss_basic_chng_trust_dot_2_opt', trust_dnsData, 'dot', 'all');
+															populateSelect('ss_basic_chng_trust_dot_3_opt', trust_dnsData, 'dot', 'all');
+														}
+
+														// set default - china
+														if(isp_dns_1){
+															setSelectDefault('ss_basic_chng_china_udp_1_opt', isp_dns_1);
+															setSelectDefault('ss_basic_chng_china_udp_2_opt', isp_dns_1);
+															setSelectDefault('ss_basic_chng_china_udp_3_opt', isp_dns_1);
+														}else{
+															setSelectDefault('ss_basic_chng_china_udp_1_opt', '223.5.5.5');
+															setSelectDefault('ss_basic_chng_china_udp_2_opt', '223.5.5.5');
+															setSelectDefault('ss_basic_chng_china_udp_3_opt', '223.5.5.5');
+														}
+														setSelectDefault('ss_basic_chng_china_tcp_1_opt', '119.28.28.28');
+														setSelectDefault('ss_basic_chng_china_tcp_2_opt', '119.28.28.28');
+														setSelectDefault('ss_basic_chng_china_tcp_3_opt', '119.28.28.28');
+														setSelectDefault('ss_basic_chng_china_dot_1_opt', 'dns.alidns.com@223.5.5.5');
+														setSelectDefault('ss_basic_chng_china_dot_2_opt', 'dns.alidns.com@223.5.5.5');
+														setSelectDefault('ss_basic_chng_china_dot_3_opt', 'dns.alidns.com@223.5.5.5');
+
+														// set default - trust
+														setSelectDefault('ss_basic_chng_trust_udp_1_opt', '1.1.1.1');
+														setSelectDefault('ss_basic_chng_trust_udp_2_opt', '1.1.1.1');
+														setSelectDefault('ss_basic_chng_trust_udp_3_opt', '1.1.1.1');
+														setSelectDefault('ss_basic_chng_trust_tcp_1_opt', '8.8.8.8');
+														setSelectDefault('ss_basic_chng_trust_tcp_2_opt', '8.8.8.8');
+														setSelectDefault('ss_basic_chng_trust_tcp_3_opt', '8.8.8.8');
+														setSelectDefault('ss_basic_chng_trust_dot_1_opt', 'dns.google.com@8.8.4.4');
+														setSelectDefault('ss_basic_chng_trust_dot_2_opt', 'dns.google.com@8.8.4.4');
+														setSelectDefault('ss_basic_chng_trust_dot_3_opt', 'dns.google.com@8.8.4.4');
 													</script>
 												</table>
 											</div>
@@ -6395,26 +6929,25 @@ function save_failover() {
 															}
 															return x1 + x2;
 														}
-														//var ipsn='<% nvram_get("chnroute_ips"); %>'
-														var gfwl = addCommas('<% nvram_get("ipset_numbers"); %>');
+														var gfwl = addCommas('<% nvram_get("gfwlist_numbers"); %>');
 														var chnl = addCommas('<% nvram_get("chnroute_numbers"); %>');
 														var chnn = addCommas('<% nvram_get("chnroute_ips"); %>');
-														var cdnn = addCommas('<% nvram_get("cdn_numbers"); %>');
+														var cdnn = addCommas('<% nvram_get("chnlist_numbers"); %>');
 														$('#table_rules').forms([
-															{ title: 'gfwlist域名数量', multi: [
+															{ title: 'gfwlist 域名数量（被墙域名）', multi: [
 																{ suffix: '<em>'+ gfwl +'</em>&nbsp;条，版本：' },
-																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf" target="_blank">' },
-																{ suffix: '<i><% nvram_get("update_ipset"); %></i></a>' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.txt" target="_blank">' },
+																{ suffix: '<i><% nvram_get("update_gfwlist"); %></i></a>' },
 															]},
-															{ title: '大陆白名单IP段数量', multi: [
+															{ title: 'chnlist 域名数量（大陆域名）', multi: [
+																{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/chnlist.txt" target="_blank">' },
+																{ suffix: '<i><% nvram_get("update_chnlist"); %></i></a>' },
+															]},
+															{ title: 'chnroute 大陆白名单IP段数量', multi: [
 																{ suffix: '<em>'+ chnl +'</em>&nbsp;行，包含 <em>' + chnn + '</em>&nbsp;个ip地址，版本：' },
 																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/chnroute.txt" target="_blank">' },
 																{ suffix: '<i><% nvram_get("update_chnroute"); %></i></a>' },
-															]},
-															{ title: '国内域名数量（cdn名单）', multi: [
-																{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
-																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/cdn.txt" target="_blank">' },
-																{ suffix: '<i><% nvram_get("update_cdn"); %></i></a>' },
 															]},
 															{ title: '规则定时更新任务', hint:'44', multi: [
 																{ id:'ss_basic_rule_update', type:'select', func:'u', style:'width:auto', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
@@ -6422,7 +6955,7 @@ function save_failover() {
 																{ suffix: '<a id="update_choose">' },
 																{ suffix: '<input type="checkbox" id="ss_basic_gfwlist_update" title="选择此项应用gfwlist.conf自动更新">gfwlist' },
 																{ suffix: '<input type="checkbox" id="ss_basic_chnroute_update" title="选择此项应用chnroute.txt自动更新">chnroute' },
-																{ suffix: '<input type="checkbox" id="ss_basic_cdn_update" title="选择此项应用cdn.txt自动更新">cdn</a>' },
+																{ suffix: '<input type="checkbox" id="ss_basic_chnlist_update" title="选择此项应用chnlist.txt自动更新">chnlist</a>' },
 																{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(1)">保存设置</a>' },
 															]},
 															{ title: '规则手动更新', multi: [
@@ -6590,6 +7123,13 @@ function save_failover() {
 															{ title: '节点管理页面设为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 															{ title: '节点管理页面隐藏服务器地址', id:'ss_basic_noserver', func:'v', type:'checkbox', value:false},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">代理行为</td></tr>'},
+															//{ title: '透明代理', hint:'146', multi: [
+															//	{ id: 'ss_basic_proxy_ipv4', type:'checkbox', func:'u', value:true},
+															//	{ suffix: '<a>ipv4</a>' },
+															//	{ suffix: '&nbsp;&nbsp;'},
+															//	{ id: 'ss_basic_proxy_ipv6', type:'checkbox', func:'u', value:true},
+															//	{ suffix: '<a>ipv6</a>' },
+															//]},
 															{ title: 'New Bing模式', id:'ss_basic_proxy_newb', hint:'149', type:'checkbox', value:true},
 															{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
 																{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(151)"><font color="#ffcc00">关闭</font></a>', value: 0},
@@ -6610,7 +7150,6 @@ function save_failover() {
 															{ title: '插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过时间一致性检测', id:'ss_basic_notimecheck', hint:'139', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过国内DNS可用性检测', id:'ss_basic_nocdnscheck', hint:'140', type:'checkbox', value:false},
-															{ title: '插件开启时 - 跳过可信DNS可用性检测', id:'ss_basic_nofdnscheck', hint:'141', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过国内出口ip检测', id:'ss_basic_nochnipcheck', hint:'142', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过代理出口ip检测', id:'ss_basic_nofrnipcheck', hint:'143', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过程序启动检测', id:'ss_basic_noruncheck', hint:'144', type:'checkbox', value:false},

@@ -143,7 +143,7 @@ resolv_test(){
 		;;
 	5|china)
 		RESULT_FILE=/tmp/upload/dns_cdn_china.txt
-		LISTS_FILE=$(cat /koolshare/ss/rules/cdn.txt | shuf -n 100)
+		LISTS_FILE=$(cat /koolshare/ss/rules/chnlist.txt | shuf -n 100)
 		;;
 	esac
 	true >${RESULT_FILE}
@@ -274,20 +274,20 @@ dig_test(){
 	# before test, we need to flush dnsmasq cache
 	killall -1 dnsmasq
 	local domain=$(dbus get ss_basic_dig_opt)
-	echo "运行命令：dig -4 ${domain}，请稍后..."
-	local ret=$(${DIG_BIN} -4 ${domain} 2>/dev/null)
+	echo "运行命令：dig ${domain}，请稍后..."
+	local ret=$(${DIG_BIN} ${domain} 2>/dev/null)
 	echo "--------------------------------------------------------------------------------------------------"
 	echo "${ret}"
 	echo "--------------------------------------------------------------------------------------------------"
 	local IPS=$(echo "${ret}" | grep -Ew "A" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 	if [ -n "${IPS}" ];then
-		local ECS_TAG=$(echo "${ret}" | grep -E "CLIENT-SUBNET" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
-		local RESULT_NU=$(echo "${IPS}"|wc -l)
-		if [ -n "${ECS_TAG}" ];then
-			echo "ECS支持：yes ✔️"
-		else
-			echo "ECS支持：no ❌"
-		fi
+		# local ECS_TAG=$(echo "${ret}" | grep -E "CLIENT-SUBNET" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+		# local RESULT_NU=$(echo "${IPS}"|wc -l)
+		# if [ -n "${ECS_TAG}" ];then
+		# 	echo "ECS支持：yes ✔️"
+		# else
+		# 	echo "ECS支持：no ❌"
+		# fi
 		echo "解析小结：共获得${RESULT_NU}条ipv4解析结果"
 		echo "──────────────────────────────"
 		echo "IP地址		IP属地"

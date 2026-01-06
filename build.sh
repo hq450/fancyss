@@ -18,7 +18,7 @@ cp_rules(){
 }
 
 sync_binary(){
-	BINS_REMOVE="v2ray-plugin kcptun"
+	BINS_REMOVE="v2ray-plugin kcptun v2ray naive"
 	for BIN_REMOVE in $BINS_REMOVE;
 	do
 		echo ">>> remove old bin $BIN_REMOVE"
@@ -31,7 +31,7 @@ sync_binary(){
 		rm -rf ${CURR_PATH}/fancyss/bin-ipq64/${BIN_REMOVE}
 	done
 	
-	BINS_COPY="v2ray xray naive ss_rust hysteria2"
+	BINS_COPY="xray ss_rust hysteria2"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
@@ -347,8 +347,12 @@ gen_folder(){
 
 		# remove empty line
 		sed -i '/^[[:space:]]*$/d' ./shadowsocks/webs/Module_shadowsocks.asp
-	fi
 
+		# icon
+		rm -rf ./shadowsocks/res/icon-shadowsocks_debug.png
+	else
+		mv -f ./shadowsocks/res/icon-shadowsocks_debug.png ./shadowsocks/res/icon-shadowsocks.png
+	fi
 	# when develop in other branch
 	# master/fancyss_hnd
 	# local CURRENT_BRANCH=$(git branch | head -n1 |awk '{print $2}')

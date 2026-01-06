@@ -68,8 +68,6 @@ unset PWD
 # ssconf_basic_port_
 # ssconf_basic_ss_obfs_
 # ssconf_basic_ss_obfs_host_
-# ssconf_basic_ss_v2ray_
-# ssconf_basic_ss_v2ray_opts_
 # ssconf_basic_rss_obfs_
 # ssconf_basic_rss_obfs_param_
 # ssconf_basic_rss_protocol_
@@ -627,7 +625,7 @@ add_ss_node(){
 	local urllink="$1"
 	local action="$2"
 	unset info_first string_nu decrypt_info server_raw encrypt_method password remarks server server_port 
-	unset plugin_support obfs_para plugin_prog ss_obfs ss_obfs_host ss_v2ray ss_v2_opts group
+	unset plugin_support obfs_para plugin_prog ss_obfs ss_obfs_host group
 	# 目前发现4种类型的节点：
 	# 1. ss://YWVzLTEyOC1nY206RkFOQ1lTU19QQVNT@fancyss.net:111/?group=ZmFuY3lzX3Rlc3Q=#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B91%0A
 	# 2. ss://2022-blake3-aes-256-gcm:czh9CYElDUxw9Y94bzTPjx2Q8URybABYROeiFwZ3o4U=@11.22.33.44:222#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B92%0A
@@ -690,26 +688,15 @@ add_ss_node(){
 	fi
 
 	password=$(echo ${password} | base64_encode | sed 's/[[:space:]]//g')
-	plugin_support=$(echo "${urllink}"|grep -Eo "plugin=")
-	if [ -n "${plugin_support}" ];then
+	ss_obfs="0"
+	ss_obfs_host=""
+	if [ -n $(echo "${urllink}"|grep -Eo "plugin=") ];then
 		obfs_para=$(echo "${urllink}" | sed -n 's/.\+plugin=\(\)/\1/p'|sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $1}'| urldecode)
 		plugin_prog=$(echo "${obfs_para}" | awk -F';' '{print $1}')
 		if [ "${plugin_prog}" == "obfs-local" -o "${plugin_prog}" == "simple-obfs" ];then
 			ss_obfs=$(echo "${obfs_para}" | awk -F';' '{print $2}'| awk -F'=' '{print $2}')
 			ss_obfs_host=$(echo "${obfs_para}" | awk -F';' '{print $3}'| awk -F'=' '{print $2}')
-			ss_v2ray="0"
-			ss_v2_opts=""
-		elif [ "${plugin_prog}" == "v2ray-plugin" ];then
-			ss_obfs="0"
-			ss_obfs_host=""
-			ss_v2ray="1"
-			ss_v2_opts=$(echo "${obfs_para}" | sed 's/v2ray-plugin;//g')
 		fi
-	else
-		ss_obfs="0"
-		ss_obfs_host=""
-		ss_v2ray="0"
-		ss_v2_opts=""
 	fi
 
 	# echo ------------------------
@@ -723,8 +710,6 @@ add_ss_node(){
 	# echo plugin_prog: ${plugin_prog}
 	# echo ss_obfs: ${ss_obfs}
 	# echo ss_obfs_host: ${ss_obfs_host}
-	# echo ss_v2ray: ${ss_v2ray}
-	# echo ss_v2_opts: ${ss_v2_opts}
 	# echo ------------------------
 
 	if [ -z "${server}" -o -z "${remarks}" -o -z "${server_port}" -o -z "${password}" -o -z "${encrypt_method}" ]; then
@@ -752,8 +737,6 @@ add_ss_node(){
 	json_add_string server "${server}"
 	json_add_string ss_obfs "${ss_obfs}"
 	json_add_string ss_obfs_host "${ss_obfs_host}"
-	json_add_string ss_v2ray "${ss_v2ray}"
-	json_add_string ss_v2ray_opts "${v2_plugin_opts}"
 	json_add_string type "0"
 
 	if [ "${action}" == "1" ];then
@@ -1133,7 +1116,7 @@ add_vless_node(){
 	x_fp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "fp=" | awk -F"=" '{print $2}')
 	x_pbk=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "pbk=" | awk -F"=" '{print $2}')
 	x_sid=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sid=" | awk -F"=" '{print $2}')
-	x_spx=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "spx=" | awk -F"=" '{print $2}')
+	x_spx=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "spx=" | awk -F"=" '{print $2}' | urldecode)
 	case ${x_type} in
 	tcp)
 		# tcp协议设置【tcp伪装类型 (type)】
@@ -1568,6 +1551,56 @@ dnsmasq_rule(){
 	fi
 }
 
+get_model(){
+	local ODMPID=$(nvram get odmpid)
+	local PRODUCTID=$(nvram get productid)
+	if [ -n "${ODMPID}" ];then
+		MODEL="${ODMPID}"
+	else
+		MODEL="${PRODUCTID}"
+	fi
+}
+
+get_fw_type() {
+	local KS_TAG=$(nvram get extendno|grep -Eo "kool.+")
+	if [ -d "/koolshare" ];then
+		if [ -n "${KS_TAG}" ];then
+			# 官改固件
+			FW_TYPE="AsusWRT"
+			FW_MOD="${KS_TAG}"
+		else
+			# 梅林改版固件
+			FW_TYPE="AsusWRT-Merlin"
+			FW_MOD="koolcenter"
+		fi
+	else
+		if [ "$(uname -o|grep Merlin)" ];then
+			# 梅林原版
+			FW_TYPE="AsusWRT-Merlin"
+			FW_MOD="unknown"
+		else
+			FW_TYPE="AsusWRT"
+			FW_MOD="unknown"
+		fi
+	fi
+}
+
+get_fw_ver(){
+	admin@GS7-CAF8:/tmp/home/root# nvram get buildno
+	102
+	admin@GS7-CAF8:/tmp/home/root# nvram get extendno
+	58273_koolcenter
+}
+
+get_ua(){
+	# UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+	# UA="AsusWRT-Merlin/koolcenter/RT-BE88U/102.6/fancyss/3.3.9/full"
+	# UA="AsusWRT/koolcenter/RT-BE88U/102.5/fancyss/3.3.9/lite"
+	# UA="系统名/改版方/机型/固件版本/fancyssv版本/fancyss类型"
+	get_fw_type
+	get_model
+}
+
 go_proxy(){
 	# 4. subscribe go through proxy or not
 	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
@@ -1600,21 +1633,22 @@ download_by_curl(){
 	fi
 
 	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
+	local UA="AsusWRT-Merlin/koolcenter/RT-BE88U/102.6/fancyss/3.3.9/full"
 	
 	echo_date "1️⃣使用curl下载订阅，第一次尝试下载..."
-	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 6 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 6 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 	
 	echo_date "2️⃣使用curl下载订阅失败，第二次尝试下载..."
-	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 10 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 10 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi
 
 	echo_date "3️⃣使用curl下载订阅失败，第三次尝试下载..."
-	run curl-fancyss -4sSk ${EXT_ARG} --connect-timeout 12 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 12 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
 	fi	

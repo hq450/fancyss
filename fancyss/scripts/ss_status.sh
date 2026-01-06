@@ -14,8 +14,8 @@ CHN_TEST_SITE=$(dbus get ss_basic_wt_curl)
 FRN_TEST_SITE=$(dbus get ss_basic_wt_furl)
 [ -z "${CHN_TEST_SITE}" ] && CHN_TEST_SITE="http://www.baidu.com"
 [ -z "${FRN_TEST_SITE}" ] && FRN_TEST_SITE="http://www.google.com.tw"
-SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic|hysteria")
-REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal|v2ray|xray|trojan|ipt2socks|hysteria")
+SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic|hysteria"|head -n1)
+REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal|v2ray|xray|trojan|ipt2socks|hysteria"|head -n1)
 
 run(){
 	env -i PATH=${PATH} "$@"
@@ -52,7 +52,12 @@ get_china_status(){
 }
 get_foreign_status(){
 	# get result by curl
-	if [ -n "${SOCKS5_OPEN}" -a "${REDIRC_OPEN}" ];then
+	# local dns_safe=$(cat /etc/dnsmasq.conf | grep -Eo "7913")
+	# local iptables_safe1=$(iptables -t nat -nvL OUTPUT | grep -Eo "router")
+	# local iptables_safe2=$(iptables -t mangle -nvL OUTPUT | grep -Eo "router")
+	# local ipset_safe=$(ipset -L router|grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}$"|head -n1)
+	# if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" -a -n "${dns_safe}" -a -n "${iptables_safe1}" -a -n "${iptables_safe2}" -a -n "${ipset_safe}" ];then
+	if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" ];then
 		# get foreign status through 23456 socks5 port (resolve test server domain in local)
 		local ret0=$(run curl-fancyss -o /dev/null -4sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 	else
@@ -92,35 +97,47 @@ prepare(){
 	# 1. exit when fancyss not enabled
 	local fancyss_enable=$(dbus get ss_basic_enable)
 	if [ "${fancyss_enable}" != "1" ];then
+		log1="国外链接 【${LOGTIME}】：等待..."
+		log2="国内链接 【${LOGTIME}】：等待..."
 		exit
 	fi
 	
 	# 2. exit when ssconfig.sh is running
 	local _ssconfig=$(ps | grep "ssconfig.sh" | grep -v grep)
 	if [ -n "${_ssconfig}" ];then
+		log1="国外链接 【${LOGTIME}】：等待..."
+		log2="国内链接 【${LOGTIME}】：等待..."
 		exit
 	fi
 
-	# 3. kill all other ss_status.sh process if exist
-	local current_pid=$$
-	local ss_status_pids=$(ps | grep -E "ss_status\.sh" | awk '{print $1}'| grep -v ${current_pid})
-	if [ -n "${ss_status_pids}" ];then
-		for ss_status_pid in ${ss_status_pids}
-		do
-			kill -9 ${ss_status_pid} >/dev/null 2>&1
-		done
-	fi
+	# # 3. kill all other ss_status.sh process if exist
+	# local current_pid=$$
+	# local ss_status_pids=$(ps | grep -E "ss_status\.sh" | awk '{print $1}'| grep -v ${current_pid})
+	# if [ -n "${ss_status_pids}" ];then
+	# 	for ss_status_pid in ${ss_status_pids}
+	# 	do
+	# 		kill -9 ${ss_status_pid} >/dev/null 2>&1
+	# 	done
+	# fi
 
-	# 4. killall curl-fancyss
-	killall curl-fancyss
-	local fancyss_pids=$(ps | grep "curl-fancyss" | grep -v "grep" | grep -E "${CHN_TEST_SITE}|${FRN_TEST_SITE}" | awk '{print $1}')
-	if [ -n "${fancyss_pids}" ];then
-		for fancyss_pid in ${fancyss_pids}
-		do
-			kill -9 ${fancyss_pid} >/dev/null 2>&1
-		done
-	fi
+	# # 4. killall curl-fancyss
+	# killall curl-fancyss
+	# local fancyss_pids=$(ps | grep "curl-fancyss" | grep -v "grep" | grep -E "${CHN_TEST_SITE}|${FRN_TEST_SITE}" | awk '{print $1}')
+	# if [ -n "${fancyss_pids}" ];then
+	# 	for fancyss_pid in ${fancyss_pids}
+	# 	do
+	# 		kill -9 ${fancyss_pid} >/dev/null 2>&1
+	# 	done
+	# fi
 }
+
+if [ -z "$1" -a -z "$2" ];then
+	prepare
+	get_china_status $1
+	get_foreign_status $1
+	echo "${log1}@@${log2}"
+	exit
+fi
 
 case $1 in
 	ws)
@@ -128,6 +145,7 @@ case $1 in
 			log1="国外链接 【${LOGTIME}】：等待..."
 			log2="国内链接 【${LOGTIME}】：等待..."
 		else
+			prepare
 			get_china_status $1
 			get_foreign_status $1
 		fi
@@ -135,6 +153,7 @@ case $1 in
 	;;
 	*)
 		if [ "${ss_failover_enable}" == "1" ];then
+			prepare
 			get_china_status $1
 			get_foreign_status $1
 			echo -e -n  "${log1}@@${log2}@@${HEART_STATUS}\n" >/tmp/upload/ss_status.txt
@@ -143,6 +162,7 @@ case $1 in
 				log1="国外链接 【${LOGTIME}】：等待..."
 				log2="国内链接 【${LOGTIME}】：等待..."
 			else
+				prepare
 				get_china_status $1
 				get_foreign_status $1
 			fi

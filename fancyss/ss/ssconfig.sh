@@ -258,38 +258,106 @@ check_time(){
 	fi
 }
 
-check_internet(){
+check_internet4(){
 	# 开启插件之前必须检查网络，如果网络不通，则插件不予开启
 	# 考虑到本插件可能的国外环境用户，最后添加8.8.8.8的检测
-	echo_date "科学上网插件开启前，需要进行网络连通性检测，请稍后..."
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="223.5.5.5"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	echo_date "➡️ ipv4网络连通性检测..."
+	if [ -z "${PING4_RET}" ];then
+		local PING4_SRC="223.5.5.5"
+		local PING4_RET=$(ping -c 1 -w 1 ${PING4_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
 	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="114.114.114.114"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	if [ -z "${PING4_RET}" ];then
+		local PING4_SRC="119.29.29.29"
+		local PING4_RET=$(ping -c 1 -w 1 ${PING4_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
 	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="119.29.29.29"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	if [ -z "${PING4_RET}" ];then
+		local PING4_SRC="114.114.114.114"
+		local PING4_RET=$(ping -c 1 -w 1 ${PING4_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
 	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="1.2.4.8"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	if [ -z "${PING4_RET}" ];then
+		local PING4_SRC="1.2.4.8"
+		local PING4_RET=$(ping -c 1 -w 1 ${PING4_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
 	fi
-	if [ -z "${PING_RET}" ];then
-		local PING_SRC="8.8.8.8"
-		local PING_RET=$(ping -4 -c 1 -w 1 ${PING_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	if [ -z "${PING4_RET}" ];then
+		local PING4_SRC="8.8.8.8"
+		local PING4_RET=$(ping -c 1 -w 1 ${PING4_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
 	fi
-	if [ -n "${PING_RET}" ];then
-		echo_date "检测到路由器可以正常访问公网，检测源：${PING_SRC}，延迟：${PING_RET}s，继续！"
+	if [ -n "${PING4_RET}" ];then
+		echo_date "✅️ 检测到路由器可以正常访问ipv4公网，检测源：${PING4_SRC}，延迟：${PING4_RET}s，继续！"
 	else
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "+                 检测到路由器无法正常访问公网！                     +"
+		echo_date "+               检测到路由器无法正常访问ipv4公网！                     +"
 		echo_date "+                 请配置好你的路由器网络后重试！                     +"
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		close_in_five flag
+	fi
+}
+
+check_internet6(){
+	# 开启插件之前必须检查网络，如果网络不通，则插件不予开启
+	# 考虑到本插件可能的国外环境用户，最后添加2001:de4::101和2001:4860:4860::8888的检测
+	echo_date "➡️ ipv6网络连通性检测..."
+	if [ -z "${PING6_RET}" ];then
+		local PING6_SRC="2400:3200::1"
+		local PING6_RET=$(ping -c 1 -w 1 ${PING6_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING6_RET}" ];then
+		local PING6_SRC="2402:4e00:: 2"
+		local PING6_RET=$(ping -c 1 -w 1 ${PING6_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING6_RET}" ];then
+		local PING6_SRC="2400:7fc0:849e:200::8"
+		local PING6_RET=$(ping -c 1 -w 1 ${PING6_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING6_RET}" ];then
+		local PING6_SRC="2001:de4::101"
+		local PING6_RET=$(ping -c 1 -w 1 ${PING6_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -z "${PING6_RET}" ];then
+		local PING6_SRC="2001:4860:4860::8888"
+		local PING6_RET=$(ping -c 1 -w 1 ${PING6_SRC} 2>/dev/null|tail -n1|awk -F '/' '{print $4}')
+	fi
+	if [ -n "${PING6_RET}" ];then
+		echo_date "✅️ 检测到路由器可以正常访问ipv6公网，检测源：${PING6_SRC}，延迟：${PING6_RET}s，继续！"
+		INTERNET6=1
+	else
+		#echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		#echo_date "+               检测到路由器无法正常访问ipv6公网！                     +"
+		#echo_date "+                 请配置好你的路由器网络后重试！                     +"
+		#echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		INTERNET6=0
+	fi
+}
+check_internet6_pre(){
+	# ipv6预检查
+	if [ $(nvram get ipv6_service) == "disabled" ];then
+		INTERNET6=0
+		return 1
+	fi
+
+	local ipv6_addr=$(ip addr|grep -A3 -E "eth0|ppp0"|grep "scope global"|grep "inet6"|awk '{print $2}'|awk -F"/" '{print $1}')
+	if [ -z ${ipv6_addr} ];then
+		INTERNET6=0
+		return 1
+	fi
+
+	INTERNET6=1
+	
+}
+
+check_internet(){
+	# 预先检查先ipv6开关和ip地址，用于后面的DNS解析过滤
+	check_internet6_pre
+	
+	if [ "${ss_basic_nonetcheck}" == "1" ];then
+		# 用户关闭了连通性检测
+		return 1
+	fi
+	
+	check_internet4
+
+	if [ "${INTERNET6}" == "1" ];then
+		check_internet6
 	fi
 }
 
@@ -405,6 +473,7 @@ check_chn_public_ip(){
 
 prepare_system() {
 	# prepare system
+	echo_date "🛠️ 一些准备工作，请稍后..."
 	
 	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
 	set_skin
@@ -434,15 +503,11 @@ prepare_system() {
 	fi
 
 	# 检查端口占用情况
-	# 3333 23456 7913 1051 1052 1055 1056 2055 2056 1091 1092 1093
+	# 3333 23456 7913 1051 1052 2055 2056 1091 1092 1093
 	kill_used_port
 
 	# 3. internet detect
-	if [ "${ss_basic_nonetcheck}" != "1" ];then
-		check_internet
-	#else
-		#echo_date "跳过路由器网络连通性检测..."
-	fi
+	check_internet
 
 	# 4. 检测路由器时间是否正确
 	if [ "${ss_basic_notimecheck}" != "1" ];then
@@ -522,8 +587,10 @@ prepare_system() {
 
 	if [ "${ss_basic_type}" == "0" ];then
 		if [ "${ss_basic_score}" == "1" ];then
+			SCORE_NAME=Xray
 			echo_date "ℹ️使用Xray-core运行ss协议节点..."
 		else
+			SCORE_NAME=shadowsocks-rust
 			echo_date "ℹ️使用shadowsocks-rust运行ss协议节点..."
 		fi
 	fi
@@ -535,11 +602,40 @@ prepare_system() {
 		dbus set ssconf_basic_mode_${ssconf_basic_node}="2"
 	fi
 
-	if [ "${ss_basic_type}" == "6" -a "${ss_basic_advdns}" == "1" -a "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "1" ]; then
+	if [ "${ss_basic_type}" == "6" -a "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "1" ]; then
 		echo_date "[可信DNS-1]: NaïveProxy不支持udp代理，将可信DNS-1自动切换为tcp协议！"
-		ss_basic_chng_trust_1_opt=2
-		dbus set ss_basic_chng_trust_1_opt=2
+		ss_basic_chng_trust_net_1_typ=2
+		dbus set ss_basic_chng_trust_net_1_typ=2
 	fi
+
+	# 把当前节点名写入文件，下次启动进行对比就知道是否更换了节点
+	if [ -f "/tmp/upload/fancyss_node_name.txt" ];then
+		last_node_name=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '1p' | base64_decode)
+		last_node_hash=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '2p')
+		last_node_indx=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '3p')
+	else
+		last_node_name=""
+		last_node_hash=""
+		last_node_indx=""
+	fi
+	curr_node_hash=$(echo "${ss_basic_name}" | md5sum | awk '{print $1}')
+
+	if [ "${curr_node_hash}" == "${last_node_hash}" ];then
+		echo_date "🟠继续使用节点：【${ss_basic_name}】"
+		_node_change_status="0"
+	else
+		if [ -n "${last_node_name}" ];then
+			echo_date "🟠切换节点：【${last_node_name}】 ---→ 【${ss_basic_name}】"
+			_node_change_status="1"
+		else
+			echo_date "🟠启用节点：【${ss_basic_name}】"
+			_node_change_status="2"
+		fi
+	fi
+	
+	echo "${ss_basic_name}" | base64_encode | sed 's/$/\n/' >/tmp/upload/fancyss_node_name.txt
+	echo "${curr_node_hash}" >>/tmp/upload/fancyss_node_name.txt
+	echo "${ss_basic_smrt}" >>/tmp/upload/fancyss_node_name.txt
 }
 
 get_lan_cidr() {
@@ -564,45 +660,6 @@ get_wan0_cidr() {
 	else
 		echo ""
 	fi
-}
-
-close_in_five() {
-	# 5秒关闭功能是为了让用户注意到关闭过程，从而及时得知错误信息
-	# 插件在运行过程中不能使用此功能，不然插件被关闭了，无法进行故障转移功能
-	# 在某些条件无法达成时使用5s关闭功能，比如系统配置为中继模式，jffs2_scripts未开启
-	# 节点挂掉等其它情况，不建议使用，不然影响故障转移功能
-	local flag=$1
-	echo_date "插件将在5秒后自动关闭！！"
-	local i=5
-	while [ $i -ge 0 ]; do
-		sleep 1
-		echo_date $i
-		let i--
-	done
-	if [ -z "${flag}" ];then
-		# 彻底关闭插件
-		dbus set ss_basic_enable="0"
-		ss_basic_status=1
-		disable_ss >/dev/null
-		echo_date "科学上网插件已完全关闭！！"
-	else
-		# 关闭插件，但是开关保留开启，状态检测保持开启
-		ss_basic_status=1
-		disable_ss ${flag} >/dev/null
-		# set ss_basic_wait=1，because ss_status.sh need to show something else
-		dbus set ss_basic_wait=1
-		# set ss_basic_status=1，because some scripts still running in background
-		dbus set ss_basic_status=1
-		if [ "$ss_failover_enable" == "1" ]; then
-			echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
-			echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
-			run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
-		fi
-		echo_date "科学上网插件已关闭！！"
-	fi
-	echo_date "======================= 梅林固件 - 【科学上网】 ========================"
-	unset_lock
-	exit
 }
 
 __get_type_full_name() {
@@ -644,7 +701,7 @@ __get_type_abbr_name() {
 		if [ "${ss_basic_score}" != "1" ];then
 			echo "ss-rust"
 		else
-			echo "ss"
+			echo "xray"
 		fi
 		;;
 	1)
@@ -896,25 +953,23 @@ remove_file(){
 }
 
 restore_conf() {
-	remove_file /jffs/configs/dnsmasq.d/gfwlist.conf 0
-	remove_file /jffs/configs/dnsmasq.d/cdn.conf $?
-	remove_file /jffs/configs/dnsmasq.d/gfwlist.conf $?
 	remove_file /jffs/configs/dnsmasq.d/custom.conf $?
-	remove_file /jffs/configs/dnsmasq.d/wblist.conf $?
-	remove_file /jffs/configs/dnsmasq.d
 	remove_file /jffs/configs/dnsmasq.d/ss_host.conf $?
 	remove_file /jffs/configs/dnsmasq.d/ss_server.conf $?
 	remove_file /jffs/configs/dnsmasq.d/ss_domain.conf
-	remove_file /jffs/configs/dnsmasq.conf.add $?
 	remove_file /jffs/scripts/dnsmasq.postconf $?
 	remove_file /jffs/scripts/dnsmasq-sdn.postconf $?
 	remove_file /tmp/custom.conf $?
-	remove_file /tmp/wblist.conf $?
 	remove_file /tmp/ss_host.conf $?
 	remove_file /tmp/gfwlist.txt $?
-	remove_file /tmp/gfwlist.conf $?
-	remove_file /tmp/cdn.txt $?
-	remove_file /tmp/cdn.conf $?
+	remove_file /tmp/chnlist.txt $?
+	remove_file /tmp/black_list.txt $?
+	remove_file /tmp/white_list.txt $?
+	remove_file /koolshare/ss/xray.json $?
+	remove_file /koolshare/ss/ss.json $?
+	remove_file /koolshare/ss/tuic.json $?
+	remove_file /koolshare/ss/hysteria2.yaml $?
+	remove_file /koolshare/ss/hysteria2.yaml $?
 	if [ "$?" != "0" ];then
 		echo_date "删除fancyss相关的名单配置文件..."
 	fi
@@ -964,22 +1019,16 @@ kill_process() {
 		killall ss-tunnel >/dev/null 2>&1
 	fi
 
-	local rsstunnel=$(pidof rss-tunnel)
-	if [ -n "$rsstunnel" ]; then
-		echo_date "关闭rss-tunnel进程..."
-		killall rss-tunnel >/dev/null 2>&1
-	fi
-
 	local chinadnsNG_process=$(pidof chinadns-ng)
 	if [ -n "$chinadnsNG_process" ]; then
 		echo_date "关闭chinadns-ng进程..."
 		killall chinadns-ng >/dev/null 2>&1
 	fi
 
-	local dns2socks_process=$(pidof dns2socks)
-	if [ -n "$dns2socks_process" ]; then
-		echo_date "关闭dns2socks进程..."
-		killall dns2socks >/dev/null 2>&1
+	local smartdns_process=$(pidof smartdns)
+	if [ -n "$smartdns_process" ]; then
+		echo_date "关闭smartdns进程..."
+		killall smartdns >/dev/null 2>&1
 	fi
 
 	local kcptun_process=$(pidof kcptun)
@@ -1018,31 +1067,11 @@ kill_process() {
 		echo_date "关闭haveged进程..."
 		killall -9 ${haveged_pid} >/dev/null 2>&1
 	fi
-		
-	# dns2tcp
-	local dns2tcp_pid=$(ps | grep "dns2tcp" | grep -v grep | awk '{print $1}')
-	if [ -n "${dns2tcp_pid}" ]; then
-		echo_date "关闭dns2tcp进程..."
-		killall dns2tcp >/dev/null 2>&1
-	fi
-		
-	# def
-	local def_pid=$(ps |grep "dns-ecs-forcer"| grep -v grep | awk '{print $1}')
-	if [ -n "${def_pid}" ]; then
-		echo_date "关闭dns-ecs-forcer进程..."
-		killall dns-ecs-forcer >/dev/null 2>&1
-	fi
 
 	local SOCAT_PID=$(ps | grep -E "socat" | grep -E "2055|2056" | awk '{print $1}')
 	if [ -n "${SOCAT_PID}" ];then
 		echo_date "关闭socat进程..."
 		kill -9 ${SOCAT_PID}
-	fi
-	
-	local UREDIR_PID=$(ps | grep "uredir" | grep -v grep | awk '{print $1}')
-	if [ -n "${UREDIR_PID}" ];then
-		echo_date "关闭uredir进程..."
-		killall uredir
 	fi
 
 	local IPT2SOCKS_PID=$(ps | grep "ipt2socks" | grep -v grep | awk '{print $1}')
@@ -1292,7 +1321,7 @@ get_proxy_server_ip(){
 			ss_real_server_ip="${ss_basic_server_ip}"
 			echo_date "检测到节点服务器的ip地址为：${ss_basic_server_ip}，是国外IP"
 		else
-			# ss服务器是国内ip （可能用了国内中转，那么用谷歌dns ip地址去作为国外edns标签）
+			# ss服务器是国内ip （可能用了国内中转）
 			ss_real_server_ip=""
 			echo_date "检测到代理服务器的ip地址为：${ss_basic_server_ip}，是国内IP，可能是国内中转节点！"
 		fi
@@ -1325,910 +1354,803 @@ start_ss_local() {
 	fi
 }
 
-start_dns2socks(){
-	local addr=$1
-	local port=$2
-	local edns=$3
-	
-	killall dns2socks >/dev/null 2>&1
+dbus_dset(){
+	# set key when value exist, delete when empty
+	if [ -n "$2" ];then
+		dbus set $1=$2
+	else
+		dbus remove $1
+	fi
+}
 
-	if [ "${ss_basic_nofrnipcheck}" != "1" ];then
-		if [ "${edns}" == "1" ];then
-			if [ -n "${ss_real_server_ip}" ];then
-				run_bg dns2socks /ef:${ss_real_server_ip}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
-			fi
+dbus_eset(){
+	# set key when value exist
+	if [ -n "$2" ];then
+		dbus set $1=$2
+	fi
+}
 
-			if [ -n "${REMOTE_IP_FRN}" ];then
-				run_bg dns2socks /ef:${REMOTE_IP_FRN}/24 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
-			fi
+start_dns_x(){
+	if [ "${ss_basic_dns_plan}" == "1" ];then
+		start_chinadns_ng
+	elif [ "${ss_basic_dns_plan}" == "2" ];then
+		echo_date "start smartdns"
+		start_smartdns ${ss_basic_smrt}
+	fi
+}
 
-			if [ -z "${ss_real_server_ip}" -a -z "${REMOTE_IP_FRN}" ];then
-				run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
-			fi
+start_smartdns(){
+	local idx=$1
+	local conf_name=smartdns_smrt_$idx
+	local save_path=/koolshare/ss/rules
+	local show_path=/tmp/upload
+	local conf_path=/tmp
+	local smartdns_conf
+	local ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+	local ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+
+	# remove previous file
+	rm -rf /tmp/smartdns_log.txt
+	rm -rf /tmp/smartdns_audit.txt
+
+	# do something with smartdns cache
+	if [ "${_node_change_status}" == "1" ];then
+		# 切换节点，上个节点使用的缓存备份进行保存
+		if [ -f "/tmp/smartdns_${last_node_indx}.cache" ];then
+			# 检测到上次节点使用的缓存，将其更名保留
+			echo_date "smartdns缓存：检测到上次节点【${last_node_name}】上次使用的缓存，备份以备下次切换回使用。"
+			mv /tmp/smartdns_${last_node_indx}.cache /tmp/smartdns_${last_node_indx}_${last_node_hash}.cache
+		fi
+
+		# 如果本节点之前使用过，则会留下备份，检测到则使用
+		if [ -f "/tmp/smartdns_${idx}_${curr_node_hash}.cache" ];then
+			echo_date "smartdns缓存：检测到节点【${ss_basic_name}】上次使用的缓存，加载到/tmp/smartdns_${idx}.cache..."
+			mv /tmp/smartdns_${idx}_${curr_node_hash}.cache /tmp/smartdns_${idx}.cache
 		else
-			run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
+			echo_date "smartdns缓存：没有检测到节点【${ss_basic_name}】上次使用的缓存"
 		fi
+	elif [ "${_node_change_status}" == "0" ];then
+		# 节点不变，可能换了配置文件，缓存也可能变化
+		if [ -f "/tmp/smartdns_${last_node_indx}.cache" ];then
+			echo_date "smartdns缓存：检测到节点未切换，保留smartdns缓存文件..."
+		else
+			echo_date "smartdns缓存：检测到节点未切换，新建smartdns缓存文件..."
+		fi
+	elif [ "${_node_change_status}" == "2" ];then
+		# 启用节点
+		# 检测下新节点是否有之前保存的缓存文件
+		if [ -f "/tmp/smartdns_${idx}_${curr_node_hash}.cache" ];then
+			echo_date "smartdns缓存：检测到节点【${ss_basic_name}】上次使用的缓存，加载到/tmp/smartdns_${idx}.cache...."
+			mv /tmp/smartdns_${idx}_${curr_node_hash}.cache /tmp/smartdns_${idx}.cache
+		else
+			echo_date "smartdns缓存：没有检测到节点【${ss_basic_name}】上次使用的缓存!"
+		fi
+	fi
+
+	# gen list for smartdns conf
+	cat /koolshare/ss/rules/chnroute.txt | sed 's/^/whitelist-ip /g' >/tmp/whitelist_ip.txt
+
+	# copy smartdns conf file
+	if [ -f ${save_path}/${conf_name}_user.conf ];then
+		local smartdns_conf=${conf_path}/${conf_name}_user.conf
+		echo_date "复制smartdns配置文件：${save_path}/${conf_name}_user.conf → ${conf_path}"
+		cp -rf ${save_path}/${conf_name}_user.conf ${smartdns_conf}
 	else
-		run_bg dns2socks 127.0.0.1:23456 "${addr}" 127.0.0.1:${port}
-	fi
-	detect_running_status2 dns2socks ${port}
-}
-
-start_ss_tunnel() {
-	local port=$1
-	if [ "${ss_basic_type}" == "1" ]; then
-		echo_date "开启ssr-tunnel，端口：$port，作为chinadns-ng的上游DNS..."
-		run_bg rss-tunnel -c ${CONFIG_FILE} -l ${port} -L $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) -u -f /var/run/sstunnel.pid
-	elif [ "${ss_basic_type}" == "0" ]; then
-		echo_date "开启ss-tunnel，端口：$port，作为chinadns-ng的上游DNS..."
-		if [ "${ss_basic_score}" != "1" ];then
-			# ss-rust run ss
-			run_bg sslocal ${ARG_RUST_TUNNEL} -f $(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}) ${ARG_OBFS} -u -d
-		fi
-	fi
-}
-
-start_dns(){
-	if [ "${ss_basic_advdns}" != "1" ];then
-		start_dns_old
-	else
-		start_dns_new
-	fi
-}
-
-start_dns_new(){
-	# chinadns-ng
-	local EXT=""
-	local CDNS=""
-	local FDNS=""
-	local CDNS_PORT=""
-	
-	# 通过域名解析获取代理服务器ip地址
-	# 对于中转机场，还需要在代理开启成功后再进行一次检测
-	get_proxy_server_ip
-
-	# 如果之前使用full版本，切换为lite后，某些dns选项没了
-	if [ -z "${ss_dns_plan}" -o "${ss_dns_plan}" != "1" ];then
-		ss_dns_plan="1"
-		dbus set ss_dns_plan="1"
+		echo_date "复制smartdns配置文件：${save_path}/${conf_name}.conf → ${conf_path}"
+		local smartdns_conf=${conf_path}/${conf_name}.conf
+		cp -rf ${save_path}/${conf_name}.conf ${smartdns_conf}
 	fi
 
-	start_ss_local
-
-	echo_date "----------------------- start dns -----------------------"
-	
-	# 1. 中国DNS至少选择一个
-	if [ "${ss_basic_chng_china_1_enable}" != "1" -a "${ss_basic_chng_china_2_enable}" != "1" ];then
-		echo_date "检测到中国DNS-1和中国DNS-2均未开启，chinadns-ng至少需要指定一个国内上游DNS！"
-		echo_date "自动开启中国DNS-1和中国DNS-2！"
-		ss_basic_chng_china_1_enable=1
-		dbus set ss_basic_chng_china_1_enable=1
-		ss_basic_chng_china_2_enable=1
-		dbus set ss_basic_chng_china_2_enable=1
+	# modify smartdns conf file
+	if [ "${ss_basic_dns_server}" == "1" ];then
+		echo_date "编辑smartdns配置文件：${smartdns_conf}，监听端口7913 → 53"
+		sed -i 's/7913/53/g' ${smartdns_conf}
 	fi
 
-	# 2. 中国DNS不能选择一样的
-	if [ "${ss_basic_chng_china_1_enable}" == "1" -a "${ss_basic_chng_china_2_enable}" == "1" ];then
-		if [ "${ss_basic_chng_china_1_prot}" == "1" -a "${ss_basic_chng_china_2_prot}" == "1" ];then
-			if [ "${ss_basic_chng_china_1_udp}" == "${ss_basic_chng_china_2_udp}" ];then
-				if [ "${ss_basic_chng_china_1_udp}" != "99" ];then
-					echo_date "检测到两个中国DNS值一样！，自动关闭第二个中国DNS！"
-					ss_basic_chng_china_2_enable=0
-					dbus set ss_basic_chng_china_2_enable=0
-				else
-					if [ "${ss_basic_chng_china_1_udp_user}" == "${ss_basic_chng_china_2_udp_user}" ];then
-						echo_date "检测到两个中国DNS值一样！，自动关闭第二个中国DNS！"
-						ss_basic_chng_china_2_enable=0
-						dbus set ss_basic_chng_china_2_enable=0
-					fi
-				fi
-			fi
-		fi
-		if [ "${ss_basic_chng_china_1_prot}" == "2" -a "${ss_basic_chng_china_2_prot}" == "2" ];then
-			if [ "${ss_basic_chng_china_1_tcp}" == "${ss_basic_chng_china_2_tcp}" ];then
-				if [ "${ss_basic_chng_china_1_tcp}" != "99" ];then
-					echo_date "检测到两个中国DNS值一样！，自动关闭第二个中国DNS！"
-					ss_basic_chng_china_2_enable=0
-					dbus set ss_basic_chng_china_2_enable=0
-				else
-					if [ "${ss_basic_chng_china_1_tcp_user}" == "${ss_basic_chng_china_2_tcp_user}" ];then
-						echo_date "检测到两个中国DNS值一样！，自动关闭第二个中国DNS！"
-						ss_basic_chng_china_2_enable=0
-						dbus set ss_basic_chng_china_2_enable=0
-					fi
-				fi
-			fi
-		fi
-	fi
-
-	# 3. 可信DNS至少选择一个
-	if [ "${ss_basic_chng_trust_1_enable}" != "1" -a "${ss_basic_chng_trust_2_enable}" != "1" ];then
-		echo_date "检测到可信DNS-1和可信DNS-2均未开启，chinadns-ng至少需要指定一个可信上游DNS！"
-		echo_date "自动开启可信DNS-1！"
-		ss_basic_chng_trust_1_enable="1"
-		dbus set ss_basic_chng_trust_1_enable="1"
-	fi
-
-	# 5. chinandns-ng的启动参数检查
-	if [ -n "${ss_basic_chng_repeat_times}" ];then
-		if [ $(number_test ${ss_basic_chng_repeat_times}) != "0" ];then
-			echo_date "chinadns-ng重复发包次数填写错误，自动更正为2！"
-			ss_basic_chng_repeat_times="2"
-			dbus set ss_basic_chng_repeat_times="2"
-		fi
-		if [ ${ss_basic_chng_repeat_times} -gt "3" ];then
-			echo_date "chinadns-ng重复发包次数填为${ss_basic_chng_repeat_times}！建议此处设置不超过3！继续！"
-		fi
-		local EXT="-p ${ss_basic_chng_repeat_times}"
-	fi
-
-	# 6. 生成chinadns-ng的国内DNS
-	if [ "${ss_basic_chng_china_1_enable}" == "1" ];then
-		if [ -z "${ss_basic_chng_china_1_prot}" ];then
-			ss_basic_chng_china_1_prot="1"
-			ss_basic_chng_china_1_ecs="1"
-			dbus set ss_basic_chng_china_1_prot="1"
-			dbus set ss_basic_chng_china_1_ecs="1"
-		fi
-	
-		if [ "${ss_basic_chng_china_1_prot}" == "1" ];then
-			# udp
-			if [ -z "${ss_basic_chng_china_1_udp}" ];then
-				# use isp dns defalut
-				ss_basic_chng_china_1_udp="1"
-				dbus set ss_basic_chng_china_1_udp="1"
-			fi
-			local CHINA_DNS_1=$(get_dns_china ${ss_basic_chng_china_1_udp} ${ss_basic_chng_china_1_udp_user})
-			local CHINA_POR_1=$(get_dns_china_port ${ss_basic_chng_china_1_udp} ${ss_basic_chng_china_1_udp_user})
-			if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
-				if [ -n "${REMOTE_IP_OUT}" ];then
-					echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-					local CDNS_1="127.0.0.1#2051"
-					run_bg dns-ecs-forcer -p 2051 -s ${CHINA_DNS_1}:${CHINA_POR_1} -e "${REMOTE_IP_OUT%.*}.0"
-					detect_running_status2 dns-ecs-forcer 2051 slient
-				else
-					if [ "${ss_basic_nochnipcheck}" == "1" ];then
-						echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
-					else
-						echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
-					fi
-					local CDNS_1="${CHINA_DNS_1}#${CHINA_POR_1}"
-				fi
-			else
-				echo_date "使用${CHINA_DNS_1}:${CHINA_POR_1}，udp协议，作为chinadns-ng的国内上游DNS"
-				local CDNS_1="${CHINA_DNS_1}#${CHINA_POR_1}"
-			fi
-		elif [ "${ss_basic_chng_china_1_prot}" == "2" ];then
-			# tcp
-			local CHINA_DNS_1=$(get_dns_china ${ss_basic_chng_china_1_tcp} ${ss_basic_chng_china_1_tcp_user})
-			local CHINA_POR_1=$(get_dns_china_port ${ss_basic_chng_china_1_tcp} ${ss_basic_chng_china_1_tcp_user})
-			if [ "${ss_basic_chng_china_1_ecs}" == "1" ];then
-				if [ -n "${REMOTE_IP_OUT}" ];then
-					# 将1051端口的UDP DNS请求，通过TCP转发到上游服务器
-					local CDNS_1="127.0.0.1#2051"
-					echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
-					run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
-					detect_running_status2 dns2tcp 1051 slient
-					# 把来自2051的dns请求加上ecs标签，转发给1051端口
-					echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-					run_bg dns-ecs-forcer -p 2051 -s 127.0.0.1:1051 -e "${REMOTE_IP_OUT%.*}.0"
-					detect_running_status2 dns-ecs-forcer 2051 slient
-				else
-					if [ "${ss_basic_nochnipcheck}" == "1" ];then
-						echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
-					else
-						echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-1的ecs功能，继续！"
-					fi
-					echo_date "开启dns2tcp，将中国DNS-1的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
-					local CDNS_1="127.0.0.1#1051"
-					run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
-					detect_running_status2 dns2tcp 1051 slient
-				fi
-			else
-				echo_date "开启dns2tcp，将中国DNS-1的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
-				local CDNS_1="127.0.0.1#1051"
-				run_bg dns2tcp -L"127.0.0.1#1051" -R"${CHINA_DNS_1}#${CHINA_POR_1}"
-				detect_running_status2 dns2tcp 1051 slient
-			fi
-		fi
-	fi
-
-	if [ "${ss_basic_chng_china_2_enable}" == "1" ];then
-		if [ -z "${ss_basic_chng_china_2_prot}" ];then
-			ss_basic_chng_china_2_prot="2"
-			dbus set ss_basic_chng_china_2_prot="2"
-		fi
-	
-		if [ "${ss_basic_chng_china_2_prot}" == "1" ];then
-			# udp
-			local CHINA_DNS_2=$(get_dns_china ${ss_basic_chng_china_2_udp} ${ss_basic_chng_china_2_udp_user})
-			local CHINA_POR_2=$(get_dns_china_port ${ss_basic_chng_china_2_udp} ${ss_basic_chng_china_1_udp_user})
-			if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
-				if [ -n "${REMOTE_IP_OUT}" ];then
-					echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-					local CDNS_2="127.0.0.1#2052"
-					run_bg dns-ecs-forcer -p 2052 -s ${CHINA_DNS_2}:${CHINA_POR_2} -e "${REMOTE_IP_OUT%.*}.0"
-					detect_running_status2 dns-ecs-forcer 2052 slient
-				else
-					if [ "${ss_basic_nochnipcheck}" == "1" ];then
-						echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
-					else
-						echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
-					fi
-					local CDNS_2="${CHINA_DNS_2}#${CHINA_POR_2}"
-				fi
-			else
-				echo_date "使用${CHINA_DNS_2}:${CHINA_POR_2}，udp协议，作为chinadns-ng的国内上游DNS"
-				local CDNS_2="${CHINA_DNS_2}#${CHINA_POR_2}"
-			fi
-		elif [ "${ss_basic_chng_china_2_prot}" == "2" ];then
-			# tcp
-			if [ -z "${ss_basic_chng_china_2_tcp}" ];then
-				# use isp dns defalut
-				ss_basic_chng_china_2_tcp="5"
-				ss_basic_chng_china_2_ecs="1"
-				dbus set ss_basic_chng_china_2_tcp="5"
-				dbus set ss_basic_chng_china_2_ecs="1"
-			fi
-			local CHINA_DNS_2=$(get_dns_china ${ss_basic_chng_china_2_tcp} ${ss_basic_chng_china_2_tcp_user})
-			local CHINA_POR_2=$(get_dns_china_port ${ss_basic_chng_china_2_tcp} ${ss_basic_chng_china_1_tcp_user})
-			if [ "${ss_basic_chng_china_2_ecs}" == "1" ];then
-				if [ -n "${REMOTE_IP_OUT}" ];then
-					local CDNS_2="127.0.0.1#2052"
-					# 将1052端口的UDP DNS请求，通过TCP转发到上游服务器
-					echo_date "开启dns2tcp，将dns-ecs-forcer的udp查询转换为tcp查询"
-					run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
-					detect_running_status2 dns2tcp 1052
-					# 把来自2052的dns请求加上ecs标签，转发给1052端口
-					echo_date "开启dns-ecs-forcer，将DNS查询带上ECS，作为chinadns-ng的国内上游DNS"
-					run_bg dns-ecs-forcer -p 2052 -s 127.0.0.1:1052 -e "${REMOTE_IP_OUT%.*}.0"
-					detect_running_status2 dns-ecs-forcer 2052
-				else
-					if [ "${ss_basic_nochnipcheck}" == "1" ];then
-						echo_date "因插件关闭了国内出口ip检测，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
-					else
-						echo_date "因未获取到国内出口ip，故无法开启chinadns-ng的国内DNS-2的ecs功能，继续！"
-					fi
-					echo_date "开启dns2tcp，将中国DNS-2的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
-					local CDNS_2="127.0.0.1#1052"
-					run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
-					detect_running_status2 dns2tcp 1052
-				fi
-			else
-				echo_date "开启dns2tcp，将中国DNS-2的udp查询转换为tcp查询，作为chinadns-ng的国内上游DNS"
-				local CDNS_2="127.0.0.1#1052"
-				run_bg dns2tcp -L"127.0.0.1#1052" -R"${CHINA_DNS_2}#${CHINA_POR_2}"
-				detect_running_status2 dns2tcp 1052
-			fi
-		fi
-	fi
-
-	if [ -n "${CDNS_1}" -a -n "${CDNS_2}" ];then
-		local CDNS="${CDNS_1},${CDNS_2}"
-	elif [ -n "${CDNS_1}" -a -z "${CDNS_2}" ];then
-		local CDNS="${CDNS_1}"
-	elif [ -z "${CDNS_1}" -a -n "${CDNS_2}" ];then
-		local CDNS="${CDNS_2}"
-	fi
-
-	# 7. 生成chinadns-ng的可信DNS -1 （代理）
-	if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
-		if [ -z "${ss_basic_chng_trust_1_opt}" ];then
-			# use dns2socks as default
-			ss_basic_chng_trust_1_opt="2"
-			dbus set ss_basic_chng_trust_1_opt="2"
+	if [ "${ss_basic_add_ispdns}" == "1" ];then
+		if [ -n "${ISP_DNS1}" ]; then
+			echo_date "编辑smartdns配置文件：${smartdns_conf}，追加ISP DNS: ${ISP_DNS1}"
+			sed -i "s/117.50.10.10/${ISP_DNS1}/g" ${smartdns_conf} 2>/dev/null
 		fi
 		
-		if [ "${ss_basic_chng_trust_1_opt}" == "1" ];then
-			# 7.1 udp
-	 		if [ "${ss_basic_type}" == "0" -o "${ss_basic_type}" == "1" ]; then
-	 			# ss/ssr 使用ss-tunnel或者ssr-tunnel
-				if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-					local FDNS1="127.0.0.1#2055"
-					if [ -n "${ss_real_server_ip}" ];then
-						echo_date "开启ss-tunnel + ecs，作为chinadns-ng的上游DNS..."
-						run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2055
-						start_ss_tunnel 1055
-					else
-						# 可能是中转服务器，没有确切的国外出口IP，此时先不开启ecs，等检测到国外出口IP后，再开启def
-						# 先使用socat或者uredir将2055端口的请求转发到1055去
-						if [ -z "$(which socat)" ];then
-							echo_date "开启uredir，用于端口转发：1055 → 2055"
-							uredir :2055 127.0.0.1:1055
-							detect_running_status2 uredir 2055
-						else
-							echo_date "开启socat，用于端口转发：1055 → 2055"
-							run_bg socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055
-							detect_running_status2 socat 2055
-						fi
-						start_ss_tunnel 1055
-					fi
-				else
-					echo_date "开启ss-tunnel，作为chinadns-ng的上游DNS-1..."
-					local FDNS1="127.0.0.1#1055"
-					start_ss_tunnel 1055
-				fi
-			elif [ "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" ]; then
-				# v2ray xray
-				if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-					echo_date "使用${VCORE_NAME}_dns作为chinadns-ng的上游DNS，并开启ECS..."
-					local FDNS1="127.0.0.1#2055"
-					if [ -n "${ss_real_server_ip}" ];then
-						echo_date "开启dns-ecs-forcer..."
-						run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2055
-					else
-						# 可能是中转服务器，没有确切的国外出口IP，此时先不开启ecs，等检测到国外出口IP后，再开启def
-						# 先使用socat或者uredir将2055端口的请求转发到1055去
-						if [ -z "$(which socat)" ];then
-							echo_date "开启uredir，用于端口转发：1055 → 2055"
-							uredir :2055 127.0.0.1:1055
-							detect_running_status2 uredir 2055
-						else
-							echo_date "开启socat，用于端口转发：1055 → 2055"
-							run_bg socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055
-							detect_running_status2 socat 2055
-						fi
-					fi
-				else
-					echo_date "使用${VCORE_NAME}_dns作为chinadns-ng的上游DNS..."
-					local FDNS1="127.0.0.1#1055"
-				fi
-			elif [ "${ss_basic_type}" == "5" ]; then
-				# trojan-xray
-				if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-					echo_date "使用${TCORE_NAME}_dns作为chinadns-ng的上游DNS，并开启ECS..."
-					local FDNS1="127.0.0.1#2055"
-					if [ -n "${ss_real_server_ip}" ];then
-						run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${ss_real_server_ip%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2055
-					else
-						# 可能是中转服务器，没有确切的国外出口IP，此时先不开启ecs，等检测到国外出口IP后，再开启def
-						# 先使用socat或者uredir将2055端口的请求转发到1055去
-						if [ -z "$(which socat)" ];then
-							echo_date "开启uredir，用于端口转发：1055 → 2055"
-							uredir :2055 127.0.0.1:1055
-							detect_running_status2 uredir 2055
-						else
-							echo_date "开启socat，用于端口转发：1055 → 2055"
-							run_bg socat -T5 UDP4-LISTEN:2055,fork,reuseaddr UDP4:127.0.0.1:1055
-							detect_running_status2 socat 2055
-						fi
-					fi
-				else
-					echo_date "使用${TCORE_NAME}_dns作为chinadns-ng的上游DNS..."
-					local FDNS1="127.0.0.1#1055"
-				fi
-			elif [ "${ss_basic_type}" == "6" -o "${ss_basic_type}" == "7" -o "${ss_basic_type}" == "8" ]; then
-				# naive, tuic, hysteria do not support udp dns
-				echo_date "⚠️$(__get_type_full_name ${ss_basic_type})下不支持代理udp查询dns，改用dns2socks！"
-				dbus set ss_basic_chng_trust_1_opt=2
-				ss_basic_chng_trust_1_opt=2
-			fi
-		fi
-		
-		if [ "${ss_basic_chng_trust_1_opt}" == "2" ];then
-			# 7.2 tcp
-			if [ -z "${ss_basic_chng_trust_1_opt_tcp_val}" ];then
-				ss_basic_chng_trust_1_opt_tcp_val="1"
-				ss_basic_chng_trust_1_ecs="1"
-				dbus set ss_basic_chng_trust_1_opt_tcp_val="1"
-				dbus set ss_basic_chng_trust_1_ecs="1"
-			fi
-		
-			echo_date "开启dns2socks，作为chinadns-ng的可信上游DNS-1"
-			if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-				local DNS2SOCKS_PORT="2055"
-			else
-				local DNS2SOCKS_PORT="1055"
-			fi
-			start_dns2socks $(get_dns_foreign ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}) ${DNS2SOCKS_PORT} ${ss_basic_chng_trust_1_ecs}
-			local FDNS1="127.0.0.1#${DNS2SOCKS_PORT}"
+		if [ -n "${ISP_DNS2}" ]; then
+			echo_date "编辑smartdns配置文件：${smartdns_conf}，追加ISP DNS: ${ISP_DNS2}"
+			sed -i "s/117.50.60.30/${ISP_DNS2}/g" ${smartdns_conf} 2>/dev/null
 		fi
 	fi
 
-	# 8. 生成chinadns-ng的可信DNS-2
-	if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
-		# 8.0 判断
-		if [ "${ss_basic_chng_trust_2_opt}" == "1" -a -z "${ss_basic_chng_trust_2_opt_udp}" ];then
-			echo_date "可信DNS-2自定义原生udp DNS服务器为空，关闭可信DNS-2！"
-			ss_basic_chng_trust_2_enable="0"
-			dbus set ss_basic_chng_trust_2_enable="0"
-		fi
-		if [ "${ss_basic_chng_trust_2_opt}" == "2" -a -z "${ss_basic_chng_trust_2_opt_tcp}" ];then
-			echo_date "可信DNS-2自定义原生udp DNS服务器为空，关闭可信DNS-2！"
-			ss_basic_chng_trust_2_enable="0"
-			dbus set ss_basic_chng_trust_2_enable="0"
-		fi
-	fi
-	
-	if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
-		# 8.1 原生udp
-		if [ "${ss_basic_chng_trust_2_opt}" == "1" ];then
-			local TARGET_IP=$(echo "${ss_basic_chng_trust_2_opt_udp}"|awk -F"#|:" '{print $1}')
-			local TARGET_IP=$(__valid_ip ${TARGET_IP})
-			local TARGET_PT=$(echo "${ss_basic_chng_trust_2_opt_udp}"|awk -F"#|:" '{print $2}')
-			local TARGET_PT=$(__valid_port ${TARGET_PT})
+	# start smartdns	
+	echo_date "启动smartdns，使用smartdns配置文件：${smartdns_conf}"
+	run_bg smartdns -c ${smartdns_conf}
+	detect_running_status3 "smartdns" "53|7913" "0" "force"
 
-			if [ -z "${TARGET_PT}" ];then
-				local TARGET_PT="53"
-			fi
-
-			if [ -n "${TARGET_IP}" ];then
-				UDP_TARGET=${TARGET_IP}:${TARGET_PT}
-				echo_date "使用原生UDP DNS服务器：${UDP_TARGET}作为可信DNS-2！"
-				if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-					if [ -n "${ss_real_server_ip}" ];then
-						# dns request: udp → dnsmasq:53 → chinadns-ng:7913 → def(ecs):2056 → DNS server:${TARGET_PT}
-						run_bg dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${ss_real_server_ip%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2056 slient
-						local FDNS2="127.0.0.1#2056"
-					else
-						# 可能是中转服务器，没有确切的国外出口IP，此时先使用socat将2056端口转发到DNS服务器，等待获取到国外出口IP后再用dns-ecs-forcer替代socat
-						# 如果没有socat就用uredir
-						if [ -z "$(which socat)" ];then
-							uredir :2056 ${UDP_TARGET}
-							detect_running_status2 uredir 2055
-						else
-							run_bg socat -T5 UDP4-LISTEN:2056,fork,reuseaddr UDP4:${UDP_TARGET}
-							detect_running_status2 socat 2055
-						fi
-						local FDNS2="127.0.0.1#2056"
-					fi
-				else
-					local FDNS2="${TARGET_IP}#${TARGET_PT}"
-				fi
-			else
-				echo_date "可信DNS-2自定义原生udp DNS服务器ip地址错误！关闭可信DNS-2"
-				ss_basic_chng_trust_2_enable="0"
-				dbus set ss_basic_chng_trust_2_enable="0"
-				dbus remove ss_basic_chng_trust_2_opt_udp
-			fi
-		fi
-
-		# 8.2 原生tcp
-		if [ "${ss_basic_chng_trust_2_opt}" == "2" ];then
-			local TARGET_IP=$(echo "${ss_basic_chng_trust_2_opt_tcp}"|awk -F"#|:" '{print $1}')
-			local TARGET_IP=$(__valid_ip ${TARGET_IP})
-			local TARGET_PT=$(echo "${ss_basic_chng_trust_2_opt_tcp}"|awk -F"#|:" '{print $2}')
-			local TARGET_PT=$(__valid_port ${TARGET_PT})
-
-			if [ -z "${TARGET_PT}" ];then
-				local TARGET_PT="53"
-			fi
-
-			if [ -n "${TARGET_IP}" ];then
-				TCP_TARGET=${TARGET_IP}:${TARGET_PT}
-				if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-					if [ -n "${ss_real_server_ip}" ];then
-						# dns request: udp → dnsmasq:53 → chinadns-ng:7913 → def(ecs):2056 → dns2tcp:1056 → DNS server:${TARGET_PT}
-						run_bg dns-ecs-forcer -p 2056 -s 127.0.0.1:1056 -e "${ss_real_server_ip%.*}.0"
-						detect_running_status2 dns-ecs-forcer 2056 slient
-					else
-						# 可能是中转服务器，没有确切的国外出口IP，此时先使用socat将2056端口转发到DNS服务器，等待获取到国外出口IP后再用dns-ecs-forcer替代socat
-						# 如果没有socat就用uredir
-						if [ -z "$(which socat)" ];then
-							echo_date "开启uredir，用于端口转发：1056 → 2056"
-							uredir :2056 127.0.0.1:1056
-							detect_running_status2 uredir 2056
-						else
-							echo_date "开启socat，用于端口转发：1056 → 2056"
-							run_bg socat -T5 UDP4-LISTEN:2056,fork,reuseaddr UDP4:127.0.0.1:1056
-							detect_running_status2 socat 2056
-						fi
-					fi
-					run_bg dns2tcp -L"127.0.0.1#1056" -R"${TARGET_IP}#${TARGET_PT}"
-					detect_running_status2 dns2tcp 1056 slient
-					
-					local FDNS2="127.0.0.1#2056"
-				else
-					run_bg dns2tcp -L"127.0.0.1#1056" -R"${TARGET_IP}#${TARGET_PT}"
-					detect_running_status2 dns2tcp 1056 slient
-					local FDNS2="127.0.0.1#1056"
-				fi
-			else
-				echo_date "可信DNS-2自定义原生tcp DNS服务器ip地址错误，关闭可信DNS-2！"
-				ss_basic_chng_trust_2_enable="0"
-				dbus set ss_basic_chng_trust_2_enable="0"
-				dbus remove ss_basic_chng_trust_2_opt_tcp
-			fi
-		fi
-	fi
-
-	if [ -n "${FDNS1}" -a -n "${FDNS2}" ];then
-		local FDNS="${FDNS1},${FDNS2}"
-	elif [ -n "${FDNS1}" -a -z "${FDNS2}" ];then
-		local FDNS="${FDNS1}"
-	elif [ -z "${FDNS1}" -a -n "${FDNS2}" ];then
-		local FDNS="${FDNS2}"
-	fi
-
-	# 9. start_chinadns-ng
-	echo_date "开启chinadns-ng，用于【国内所有网站 + 国外所有网站】的DNS解析..."
-
-	if [ "${ss_basic_chng_no_ipv6}" == "1" ];then
-		if [ "${ss_basic_chng_act}" != "1" -a "${ss_basic_chng_gt}" != "1" -a "${ss_basic_chng_mc}" != "1" ];then
-			ss_basic_chng_act="0"
-			ss_basic_chng_gt="1"
-			ss_basic_chng_mc="0"
-		fi
-		if [ "${ss_basic_chng_act}" == "1" ];then
-			local EXT="${EXT} -N act"
-		fi
-		if [ "${ss_basic_chng_gt}" == "1" ];then
-			local EXT="${EXT} -N gt"
-		fi
-		if [ "${ss_basic_chng_mc}" == "1" ];then
-			local EXT="${EXT} -N mc"
-		fi
-	fi
-	
-	if [ "${DNS_PLAN}" == "1" ];then
-		# match cdn.txt first, go to chn DNS;
-		# then match gfwlist.txt, go to trust DNS
-		# all domain have no match goes to chn DNS;
-		run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -d chn -M
-	elif [ "${DNS_PLAN}" == "2" ];then
-		# new (less dns leak, chn cdn depends on cdn.txt)
-		# match cdn.txt first, go to chn DNS;
-		# all domain have no match goes to trust DNS;
-		# run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -m /tmp/cdn.txt -d gfw
-		# ------
-		# use legacy
-		run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M
+	# detect process by binary name and key word
+	local caches=$(head /tmp/smartdns_log.txt 2>/dev/null | grep "load cache file" | awk '{print $(NF-1)}')
+	if [ -n "${caches}" ];then
+		echo_date "smartdns启动成功，成功加载缓存：${caches}条"
 	else
-		# legacy (better chn cdn)
-		# match cdn.txt first, go to chn DNS;
-		# then match gfwlist.txt, go to trust DNS
-		# all domain have no match goes to both chn DNS and trust DNS;
-		run_bg chinadns-ng ${EXT} -l 7913 -c ${CDNS} -t ${FDNS} -g /tmp/gfwlist.txt -m /tmp/cdn.txt -M
+		echo_date "smartdns启动成功!"
 	fi
+}
+
+start_chinadns_ng(){
+	# 0. set default var
+	local CDNS_LINE=""
+	local FDNS_LINE=""
+	local CHINA_DNS_1=""
+	local CHINA_DNS_2=""
+	local CHINA_DNS_3=""
+	local TRUST_DNS_1=""
+	local TRUST_DNS_2=""
+	local TRUST_DNS_3=""
+	local DNS_REPEATS=""
+
+	# 1. set default value incase of ssconfig.sh restart after upgrade form old verison below 3.3.8
+	set_default "ss_basic_chng_china_dns_1_chk" "1"
+	set_default "ss_basic_chng_china_dns_2_chk" "1"
+	set_default "ss_basic_chng_china_dns_3_chk" "1"
+	set_default "ss_basic_chng_china_net_1_typ" "udp"
+	set_default "ss_basic_chng_china_net_2_typ" "tcp"
+	set_default "ss_basic_chng_china_net_3_typ" "dot"
+
+	set_default "ss_basic_chng_china_udp_1_opt" "1"
+	set_default "ss_basic_chng_china_udp_1_usr" "114.114.114.114"
+	set_default "ss_basic_chng_china_udp_2_opt" "5"
+	set_default "ss_basic_chng_china_udp_2_usr" "114.114.115.115"
+	set_default "ss_basic_chng_china_udp_3_opt" "5"
+	set_default "ss_basic_chng_china_udp_3_usr" "114.114.115.115"
+	
+	set_default "ss_basic_chng_china_tcp_1_opt" "3"
+	set_default "ss_basic_chng_china_tcp_1_usr" "114.114.114.114"
+	set_default "ss_basic_chng_china_tcp_2_opt" "5"
+	set_default "ss_basic_chng_china_tcp_2_usr" "114.114.115.115"
+	set_default "ss_basic_chng_china_tcp_3_opt" "5"
+	set_default "ss_basic_chng_china_tcp_3_usr" "114.114.115.115"
+
+	
+	set_default "ss_basic_chng_trust_dns_1_chk" "1"
+	set_default "ss_basic_chng_trust_dns_2_chk" "1"
+	set_default "ss_basic_chng_trust_dns_3_chk" "1"
+	set_default "ss_basic_chng_trust_net_1_typ" "tcp"
+	set_default "ss_basic_chng_trust_net_2_typ" "tcp"
+	set_default "ss_basic_chng_trust_net_3_typ" "tls"
+	set_default "ss_basic_chng_trust_tcp_1_opt" "1.1.1.1"
+	set_default "ss_basic_chng_trust_tcp_1_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_tcp_2_opt" "8.8.8.8"
+	set_default "ss_basic_chng_trust_tcp_2_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_tcp_3_opt" "9.9.9.9"
+	set_default "ss_basic_chng_trust_tcp_3_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_udp_1_opt" "1.1.1.1"
+	set_default "ss_basic_chng_trust_udp_1_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_udp_2_opt" "8.8.8.8"
+	set_default "ss_basic_chng_trust_udp_2_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_udp_3_opt" "9.9.9.9"
+	set_default "ss_basic_chng_trust_udp_3_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_ipv6_drop_direc" "0"
+	set_default "ss_basic_chng_ipv6_drop_proxy" "1"
+	set_default "ss_basic_chng_dns_query_times" "1"
+
+	echo_date "----------------------- start chinadns-ng -----------------------"
+	echo_date "💾 生成chinadns-ng配置文件，用于国内外DNS分流..."
+
+	# 1. 避免用户乱设置给关掉，强制要求中国DNS不能三个都不选
+	if [ "${ss_basic_chng_china_dns_1_chk}" != "1" -a "${ss_basic_chng_china_dns_2_chk}" != "1" -a "${ss_basic_chng_china_dns_3_chk}" != "1" ];then
+		echo_date "⚠️ 检测到中国DNS-1、中国DNS-2和中国DNS-3均未开启，至少需要指定一个国内上游DNS！"
+		echo_date "⤴️ 自动开启中国DNS-1和中国DNS-2！"
+		ss_basic_chng_china_dns_1_chk=1
+		dbus set ss_basic_chng_china_dns_1_chk=1
+		ss_basic_chng_china_dns_2_chk=1
+		dbus set ss_basic_chng_china_dns_2_chk=1
+	fi
+
+	# 2. 避免用户乱设置给关掉，强制要求可信DNS不能三个都不选
+	if [ "${ss_basic_chng_trust_dns_1_chk}" != "1" -a "${ss_basic_chng_trust_dns_2_chk}" != "1" -a "${ss_basic_chng_trust_dns_3_chk}" != "1" ];then
+		echo_date "⚠️ 检测到可信DNS-1、可信DNS-2和可信DNS-3均未开启，至少需要指定一个可信上游DNS！"
+		echo_date "⤴️ 自动开启可信DNS-1和可信DNS-2！"
+		ss_basic_chng_trust_dns_1_chk="1"
+		dbus set ss_basic_chng_trust_dns_1_chk="1"
+		ss_basic_chng_trust_dns_2_chk="1"
+		dbus set ss_basic_chng_trust_dns_2_chk="1"
+	fi
+	
+	# 3. chinandns-ng的启动参数检查
+	if [ -n "${ss_basic_chng_dns_query_times}" ];then
+		if [ $(number_test ${ss_basic_chng_dns_query_times}) != "0" ];then
+			echo_date "⚠️ chinadns-ng重复发包次数填写错误，自动更正为1！"
+			ss_basic_chng_dns_query_times="1"
+			dbus set ss_basic_chng_dns_query_times="1"
+		fi
+		if [ ${ss_basic_chng_dns_query_times} -gt "3" ];then
+			echo_date "⚠️ chinadns-ng重复发包次数填为${ss_basic_chng_dns_query_times}！建议此处设置不超过3！继续！"
+		fi
+		local DNS_REPEATS="repeat-times ${ss_basic_chng_dns_query_times}"
+	fi
+
+	# 4. 生成chinadns-ng的国内DNS
+	# 中国DNS-1 (直连) 🌏
+	if [ "${ss_basic_chng_china_dns_1_chk}" == "1" ];then
+		local CDNS_1=$(get_dns china 1)
+		echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_1}"
+	fi
+
+	# 中国DNS-2 (直连) 🌏
+	if [ "${ss_basic_chng_china_dns_2_chk}" == "1" ];then
+		local CDNS_2=$(get_dns china 2)
+		echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_2}"
+	fi
+
+	# 中国DNS-3 (直连) 🌏
+	if [ "${ss_basic_chng_china_dns_3_chk}" == "1" ];then
+		local CDNS_3=$(get_dns china 3)
+		echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_3}"
+	fi
+
+	if [ "$CDNS_1" == "$CDNS_2" ] && [ "$CDNS_2" == "$CDNS_3" ]; then
+		# 三个变量都相同
+		if [ -n "$CDNS_1" ]; then
+			#三个变量都相同，且都是非空
+			echo_date "⚠️检测到三个中国DNS设置相同！请更改设置，本次仅使用第一个，关闭其余两个！"
+			dbus set ss_basic_chng_china_dns_2_chk=0
+			dbus set ss_basic_chng_china_dns_3_chk=0
+			unset CDNS_2
+			unset CDNS_3
+		fi
+	elif [ "$CDNS_1" == "$CDNS_2" ]; then
+		# 第1和第2变量相同，但与第3不同
+		if [ -n "$CDNS_1" ]; then
+			echo_date "⚠️ 检测到中国DNS-1和中国DNS-2设置相同，自动关闭中国DNS-2！"
+			dbus set ss_basic_chng_china_dns_2_chk=0
+			unset CDNS_2
+		fi
+	elif [ "$CDNS_1" == "$CDNS_3" ]; then
+		# 第1和第3变量相同，但与第2不同
+		if [ -n "$CDNS_1" ]; then
+			echo_date "⚠️ 检测到中国DNS-1和中国DNS-3设置相同，自动关闭中国DNS-3！"
+			dbus set ss_basic_chng_china_dns_3_chk=0
+			unset CDNS_3
+		fi
+	elif [ "$CDNS_2" == "$CDNS_3" ]; then
+		# 第2和第3变量相同，但与第1不同
+		if [ -n "$CDNS_2" ]; then
+			echo_date "⚠️ 检测到中国DNS-2和中国DNS-3设置相同，自动关闭中国DNS-3！"
+			dbus set ss_basic_chng_china_dns_3_chk=0
+			unset CDNS_3
+		fi
+	fi
+
+	# 5. 生成chinadns-ng的可信DNS
+	# 可信DNS-1 (代理) 🚀
+	if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" ];then
+		local FDNS_1=$(get_dns trust 1)
+		echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
+	fi
+
+	# 可信DNS-2 (代理) 🚀
+	if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" ];then
+		local FDNS_2=$(get_dns trust 2)
+		echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
+	fi
+
+	# 可信DNS-3 (代理) 🚀
+	if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" ];then
+		local FDNS_3=$(get_dns trust 3)
+		echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
+	fi
+
+	if [ "$FDNS_1" == "$FDNS_2" ] && [ "$FDNS_2" == "$FDNS_3" ]; then
+		# 三个变量都相同
+		if [ -n "$FDNS_1" ]; then
+			#三个变量都相同，且都是非空
+			echo_date "⚠️ 检测到三个可信DNS设置相同！请更改设置，本次仅使用第一个，关闭其余两个！"
+			dbus set ss_basic_chng_trust_dns_2_chk=0
+			dbus set ss_basic_chng_trust_dns_3_chk=0
+			unset FDNS_2
+			unset FDNS_3
+		fi
+	elif [ "$FDNS_1" == "$FDNS_2" ]; then
+		# 第1和第2变量相同，但与第3不同
+		if [ -n "$FDNS_1" ]; then
+			echo_date "⚠️ 检测到可信DNS-1和可信DNS-2设置相同，自动关闭可信DNS-2！"
+			dbus set ss_basic_chng_trust_dns_2_chk=0
+			unset FDNS_2
+		fi
+	elif [ "$FDNS_1" == "$FDNS_3" ]; then
+		# 第1和第3变量相同，但与第2不同
+		if [ -n "$FDNS_1" ]; then
+			echo_date "⚠️ 检测到可信DNS-1和可信DNS-3设置相同，自动关闭可信DNS-3！"
+			dbus set ss_basic_chng_trust_dns_3_chk=0
+			unset FDNS_3
+		fi
+	elif [ "$FDNS_2" == "$FDNS_3" ]; then
+		# 第2和第3变量相同，但与第1不同
+		if [ -n "$FDNS_2" ]; then
+			echo_date "⚠️ 检测到可信DNS-2和可信DNS-3设置相同，自动关闭可信DNS-3！"
+			dbus set ss_basic_chng_trust_dns_3_chk=0
+			unset FDNS_3
+		fi
+	fi
+
+	# [ -n "$CDNS_1" ] && echo_date "CDNS_1: $CDNS_1"
+	# [ -n "$CDNS_2" ] && echo_date "CDNS_2: $CDNS_2"
+	# [ -n "$CDNS_3" ] && echo_date "CDNS_3: $CDNS_3"
+	# [ -n "$FDNS_1" ] && echo_date "FDNS_1: $FDNS_1"
+	# [ -n "$FDNS_2" ] && echo_date "FDNS_2: $FDNS_2"
+	# [ -n "$FDNS_3" ] && echo_date "FDNS_3: $FDNS_3"
+
+
+	if [ -n "${CDNS_1}" -a -n "${CDNS_2}" -a -n "${CDNS_3}" ]; then
+		local CDNS_LINE=${CDNS_1},${CDNS_2},${CDNS_3}
+	elif [ -n "${CDNS_1}" -a -n "${CDNS_2}" -a -z "${CDNS_3}" ]; then
+		local CDNS_LINE=${CDNS_1},${CDNS_2}
+	elif [ -n "${CDNS_1}" -a -z "${CDNS_2}" -a -n "${CDNS_3}" ]; then
+		local CDNS_LINE=${CDNS_1},${CDNS_3}
+	elif [ -z "${CDNS_1}" -a -n "${CDNS_2}" -a -n "${CDNS_3}" ]; then
+		local CDNS_LINE=${CDNS_2},${CDNS_3}
+	elif [ -n "${CDNS_1}" -a -z "${CDNS_2}" -a -z "${CDNS_3}" ]; then
+		local CDNS_LINE=${CDNS_1}
+	elif [ -z "${CDNS_1}" -a -n "${CDNS_2}" -a -z "${CDNS_3}" ]; then
+		local CDNS_LINE=${CDNS_2}
+	elif [ -z "${CDNS_1}" -a -z "${CDNS_2}" -a -n "$CDN{}S_3" ]; then
+		local CDNS_LINE=${CDNS_3}
+	fi
+	
+	if [ -n "${FDNS_1}" -a -n "${FDNS_2}" -a -n "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_1},${FDNS_2},${FDNS_3}
+	elif [ -n "${FDNS_1}" -a -n "${FDNS_2}" -a -z "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_1},${FDNS_2}
+	elif [ -n "${FDNS_1}" -a -z "${FDNS_2}" -a -n "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_1},${FDNS_3}
+	elif [ -z "${FDNS_1}" -a -n "${FDNS_2}" -a -n "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_2},${FDNS_3}
+	elif [ -n "${FDNS_1}" -a -z "${FDNS_2}" -a -z "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_1}
+	elif [ -z "${FDNS_1}" -a -n "${FDNS_2}" -a -z "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_2}
+	elif [ -z "${FDNS_1}" -a -z "${FDNS_2}" -a -n "${FDNS_3}" ]; then
+		local FDNS_LINE=${FDNS_3}
+	fi
+
+	# 3. 给出警告，可信DNS里至少需要一个tcp/dot服务器（避免因全部使用udp服务器，而服务器不支持udp导致问题）
+	local F_RET=$(echo ${FDNS_LINE} | grep -E "tcp|tls")
+	if [ -z "${F_RET}" ];then
+		echo_date "⚠️ 警告：建议可信DNS里至少启用一个tcp/dot服务器，以避免代理节点不支持udp"
+	fi
+
+	if [ "${ss_basic_dns_server}" == "1" ];then
+		local chng_bind_port=53
+	else
+		local chng_bind_port=7913
+	fi
+	
+	# gen chinadns-ng conf
+	rm -rf /tmp/chinadns_ng.conf
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
+		# 监听地址和端口
+		bind-addr 0.0.0.0
+		bind-port ${chng_bind_port}
+
+		proxy-server socks5://127.0.0.1:23456
+		proxy-group gfw,black,udp,router
+	EOF
+
+	echo "# 国内上游" >>/tmp/chinadns_ng.conf
+	[ -n "$CDNS_1" ] && echo "china-dns $CDNS_1" >>/tmp/chinadns_ng.conf
+	[ -n "$CDNS_2" ] && echo "china-dns $CDNS_2" >>/tmp/chinadns_ng.conf
+	[ -n "$CDNS_3" ] && echo "china-dns $CDNS_3" >>/tmp/chinadns_ng.conf
+	echo "" >>/tmp/chinadns_ng.conf
+	echo "# 可信上游" >>/tmp/chinadns_ng.conf
+	[ -n "$FDNS_1" ] && echo "trust-dns $FDNS_1" >>/tmp/chinadns_ng.conf
+	[ -n "$FDNS_2" ] && echo "trust-dns $FDNS_2" >>/tmp/chinadns_ng.conf
+	[ -n "$FDNS_3" ] && echo "trust-dns $FDNS_3" >>/tmp/chinadns_ng.conf
+
+	if [ "${ss_basic_chng}" == "1" ];then
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			
+			# 国内优先：gfwlist黑名单模式
+			gfwlist-file /koolshare/ss/rules/gfwlist.gz
+			default-tag chn
+						
+			# 收集 tag:gfw 域名的 IP，用于走代理
+			add-taggfw-ip gfwlist,gfwlist6
+		EOF
+	elif [ "${ss_basic_chng}" == "2" ];then
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			
+			# 国外优先：chnlist白名单模式
+			chnlist-file /koolshare/ss/rules/chnlist.gz
+			default-tag gfw
+						
+			# 收集 tag:chn域名的 IP，用于不走代理
+			add-tagchn-ip chnlist,chnlist6
+		EOF
+	elif [ "${ss_basic_chng}" == "3" ];then
+		# 智能判断：chnroute模式
+		# 1. 先匹配chnlist.txt内域名，用国内上游解析，并将解析ip结果存于ipset:chnlist,chnlist6中，此部分流量走直连（即使解析到海外ip）
+		# 2. 再匹配gfwlist.txt内域名，用可信上游解析，并将解析ip结果存于ipset:gfwlist,gfwlist6中，此部分流量走代理（即使解析到大陆ip）
+		# 3. 其余域名请求，即chnlist和gfwlist均为匹配上的，同时用国内和可信上游解析，解析结果如果是大陆ip，则走直连，如果是海外ip则走代理
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			
+			# 智能判断：chnroute模式
+			chnlist-file /koolshare/ss/rules/chnlist.gz
+			gfwlist-file /koolshare/ss/rules/gfwlist.gz
+			chnlist-first
+			
+			# 收集 tag:chn、tag:gfw 域名的 IP
+			add-tagchn-ip chnlist,chnlist6
+			add-taggfw-ip gfwlist,gfwlist6
+			
+		EOF
+	fi
+	# ads
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
+		# 广告过滤
+		group null
+		group-dnl /koolshare/ss/rules/ads_domains.gz
+
+	EOF
+
+	# defalut
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
+	
+		# 域名白名单
+		group white
+		group-dnl /tmp/white_list.txt
+		group-upstream ${CDNS_LINE}
+		group-ipset white_list,white_list6
+
+		# 域名黑名单
+		group black
+		group-dnl /tmp/black_list.txt
+		group-upstream ${FDNS_LINE}
+		group-ipset black_list,black_list6
+
+		# 控制哪些域名需要走udp代理
+		group udp
+		group-dnl /koolshare/ss/rules/udplist.txt
+		group-upstream ${FDNS_LINE}
+		group-ipset udplist,udplist
+
+		# 控制路由器内部哪些域名需要走代理
+		group router
+		group-dnl /koolshare/ss/rules/router.txt
+		group-upstream ${FDNS_LINE}
+		group-ipset router,router6
+		
+		# 测试 tag:none 域名的 IP (针对国内上游)
+		ipset-name4 chnroute
+		ipset-name6 chnroute6
+		
+	EOF
+
+	if [ "${INTERNET6}" == "0" ];then
+		# 检测到系统未开启ipv6功能，默认关闭所有ipv6解析
+		dbus set ss_basic_internet6_flag=0
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			# ipv6请求行为：全部过滤
+			no-ipv6
+		EOF
+	else
+		dbus set ss_basic_internet6_flag=1
+		if [ "${ss_basic_chng_ipv6_drop_direc}" == "0" -a "${ss_basic_chng_ipv6_drop_proxy}" == "1" ];then
+			cat >>"/tmp/chinadns_ng.conf" <<-EOF
+				# ipv6请求行为，过滤代理域名
+				no-ipv6 tag:gfw,tag:router,tag:udp,tag:black,tag:none@ip:non_china
+			EOF
+		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "1" -a "${ss_basic_chng_ipv6_drop_proxy}" == "1" ];then
+			cat >>"/tmp/chinadns_ng.conf" <<-EOF
+				# ipv6请求行为：全部过滤
+				no-ipv6
+			EOF
+		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "0" -a "${ss_basic_chng_ipv6_drop_proxy}" == "0" ];then
+			cat >>"/tmp/chinadns_ng.conf" <<-EOF
+				# ipv6请求行为：全部直连域名
+				no-ipv6 tag:chn,tag:white,tag:none@ip:china
+			EOF
+		fi
+	fi
+
+	# for hosts file
+	cp -rf /tmp/etc/hosts /tmp/etc/chng_hosts
+	sed -i 's/\.[[:space:]]/ /g' /etc/chng_hosts
+	
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
+	
+		# 过滤dns
+		filter-qtype 64,65
+
+		# hosts
+		hosts /etc/chng_hosts
+		
+		# dns 缓存
+		cache 16384
+		cache-stale 86400
+		cache-refresh 20
+		cache-ignore asuscomm.com
+		
+		# verdict 缓存 (用于 tag:none 域名)
+		verdict-cache 8192
+		verdict-cache-db /tmp/chinadns_verdict_cache.db
+		
+		# dns重复发包
+		${DNS_REPEATS}
+		
+		# 详细日志
+		# verbose
+	EOF
+	echo_date "🆗 chinadns-ng配置文件生成完毕，位于/tmp/chinadns_ng.conf"
+
+	# 9. -ng
+	echo_date "⚡️ 开启chinadns-ng，用于所有域名的DNS解析..."
+
+
+	# start chinadns-ng2
+	rm -rf /tmp/chinadns@cache.db
+	rm -rf /tmp/chinadns@verdict-cache.db
+	rm -rf /tmp/chinadns_log.txt
+	#run_bg chinadns-ng -C /tmp/chinadns_ng.conf
+	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }
-
-start_dns_old() {
-	# 如果之前使用full版本，切换为lite后，某些dns选项没了
-	if [ -z "${ss_foreign_dns}" ];then
-		ss_foreign_dns="1"
-		dbus set ss_foreign_dns="1"
-	fi
-
-	# 回国模式下强制改国外DNS为直连方式
-	if [ "${ss_basic_mode}" == "6" ]; then
-		if [ "${ss_basic_advdns}" == "1" ]; then
-			echo_date "回国模式自动使用基础DNS设定"
-			dbus set ss_basic_advdns="0"
-			dbus set ss_basic_olddns="1"
-		fi
-		if [ "${ss_foreign_dns}" != "8" ]; then
-			echo_date "检测到当前为回国模式，dns解析方案强制更改为直连模式..."
-			ss_foreign_dns="8"
-			dbus set ss_foreign_dns="8"
-		fi
-	fi
-
-	# 从 3.2.3开始，插件要求所有代理都开启23456端口，用于状态检测
-	start_ss_local
-
-	# 3. Start DNS2SOCKS (default)
-	if [ "${ss_foreign_dns}" == "3" -o -z "${ss_foreign_dns}" ]; then
-		if [ -z "${ss_foreign_dns}" ]; then
-			dbus set ss_foreign_dns="3"
-		fi
-		[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
-		[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
-		start_dns2socks ${ss_dns2socks_user} 7913 0
-	fi
-
-	# 4. Start ss-tunnel
-	if [ "$ss_foreign_dns" == "4" ]; then
-		if [ "${ss_basic_type}" == "1" ]; then
-			[ "${DNS_PLAN}" == "1" ] && echo_date "开启ssr-tunnel，用于【国外gfwlist站点】的DNS解析..."
-			[ "${DNS_PLAN}" == "2" ] && echo_date "开启ssr-tunnel，用于【国外所有网站】的DNS解析..."
-			rss-tunnel -c $CONFIG_FILE -l 7913 -L $ss_sstunnel_user -u -f /var/run/sstunnel.pid >/dev/null 2>&1
-		elif [ "${ss_basic_type}" == "0" ]; then
-			[ "${DNS_PLAN}" == "1" ] && echo_date "开启ss-tunnel，用于【国外gfwlist站点】的DNS解析..."
-			[ "${DNS_PLAN}" == "2" ] && echo_date "开启ss-tunnel，用于【国外所有网站】的DNS解析..."
-			if [ "${ss_basic_score}" != "1" ];then
-				# ss-rust run ss
-				sslocal ${ARG_RUST_TUNNEL} -f ${ss_sstunnel_user} ${ARG_OBFS} -u -d >/dev/null 2>&1
-			else
-				echo_date "$(__get_type_full_name ${ss_basic_type})下不支持ss-tunnel，改用dns2socks！"
-				dbus set ss_foreign_dns=3
-				[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
-				[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
-				start_dns2socks ${ss_dns2socks_user} 7913 0
-				fi
-		elif [ "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" ]; then
-			echo_date "$(__get_type_full_name ${ss_basic_type})下不支持ss-tunnel，改用dns2socks！"
-			dbus set ss_foreign_dns=3
-			[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
-			[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
-			start_dns2socks ${ss_dns2socks_user} 7913 0
-		fi
-	fi
-
-	# 7. start v2ray dns
-	if [ "$ss_foreign_dns" == "7" ]; then
-		if [ "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" ]; then
-			return 0
-		elif [ "${ss_basic_type}" == "5" ]; then
-			return 0
-		elif [ "${ss_basic_type}" == "0" -a "${ss_basic_score}" == "1" ]; then
-			return 0
-		else
-			echo_date "$(__get_type_full_name ${ss_basic_type})下不支持${VCORE_NAME} dns，改用dns2socks！"
-			dbus set ss_foreign_dns=3
-			[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
-			[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
-			start_dns2socks ${ss_chinadnsng_user} 7913 0
-		fi
-	fi
-
-	# 8. direct
-	if [ "${ss_foreign_dns}" == "8" ]; then
-		if [ "${ss_basic_mode}" == "6" ]; then
-			echo_date "回国模式，国外DNS采用直连方案。"
-		else
-			echo_date "非回国模式，国外DNS直连解析不能使用，自动切换到dns2socks方案。"
-			dbus set ss_foreign_dns=3
-			[ "${DNS_PLAN}" == "1" ] && echo_date "开启dns2socks，用于【国外gfwlist站点】的DNS解析..."
-			[ "${DNS_PLAN}" == "2" ] && echo_date "开启dns2socks，用于【国外所有网站】的DNS解析..."
-			start_dns2socks ${ss_dns2socks_user} 7913 0
-		fi
-	fi
-}
-#--------------------------------------------------------------------------------------
 
 detect_domain() {
 	domain1=$(echo $1 | grep -E "^https://|^http://|/")
 	domain2=$(echo $1 | grep -E "\.")
 	if [ -n "${domain1}" -o -z "${domain2}" ]; then
+		# url
 		return 1
 	else
+		# domain
 		return 0
 	fi
 }
 
-get_dns_china(){
-	local DNS_OPT=$1
-	local DNS_OPT_USER=$2
-	if [ "${DNS_OPT}" == "0" ];then
-		CDN=""
-	fi
-	# 运营商DNS
-	if [ "${DNS_OPT}" == "1" ]; then
-		if [ -n "${ISP_DNS1}" ]; then
-			local CDN="${ISP_DNS1}"
-		else
-			local CDN="114.114.114.114"
-		fi
-	fi
-	if [ "${DNS_OPT}" == "2" ]; then
-		if [ -n "${ISP_DNS2}" ]; then
-			local CDN="${ISP_DNS2}"
-		else
-			local CDN="114.114.115.115"
-		fi
-	fi
-	# 阿里DNS
-	[ "${DNS_OPT}" == "3" ] && CDN="223.5.5.5"
-	[ "${DNS_OPT}" == "4" ] && CDN="223.6.6.6"
-	# DNSPod DNS
-	[ "${DNS_OPT}" == "5" ] && CDN="119.29.29.29"
-	[ "${DNS_OPT}" == "6" ] && CDN="119.28.28.28"
-	# 114 DNS
-	[ "${DNS_OPT}" == "7" ] && CDN="114.114.114.114"
-	[ "${DNS_OPT}" == "8" ] && CDN="114.114.115.115"
-	# OneDNS 拦截版 纯净版 家庭版
-	[ "${DNS_OPT}" == "9" ] && CDN="117.50.11.11"
-	[ "${DNS_OPT}" == "10" ] && CDN="52.80.66.66"
-	[ "${DNS_OPT}" == "11" ] && CDN="117.50.10.10"
-	[ "${DNS_OPT}" == "12" ] && CDN="52.80.52.52"
-	[ "${DNS_OPT}" == "13" ] && CDN="117.50.60.30"
-	[ "${DNS_OPT}" == "14" ] && CDN="52.80.60.30"		
-	# 360安全DNS 电信/铁通/移动
-	[ "${DNS_OPT}" == "15" ] && CDN="101.226.4.6"
-	[ "${DNS_OPT}" == "16" ] && CDN="218.30.118.6"
-	# cnnic DNS
-	[ "${DNS_OPT}" == "17" ] && CDN="1.2.4.8"
-	[ "${DNS_OPT}" == "18" ] && CDN="210.2.4.8"
-	# 360安全DNS 联通
-	[ "${DNS_OPT}" == "19" ] && CDN="123.125.81.6"
-	[ "${DNS_OPT}" == "20" ] && CDN="140.207.198.6"
-	# 百度DNS
-	[ "${DNS_OPT}" == "21" ] && CDN="180.76.76.76"
-	# 教育网DNS
-	[ "${DNS_OPT}" == "22" ] && CDN="101.6.6.6"
-	[ "${DNS_OPT}" == "23" ] && CDN="58.132.8.1"
-	[ "${DNS_OPT}" == "24" ] && CDN="101.7.8.9"
-	# user defined dns
-	if [ "${DNS_OPT}" == "99" ]; then
-		if [ -n "${DNS_OPT_USER}" ];then
-			local res_ip=$(echo "${DNS_OPT_USER}"|awk -F"#|:" '{print $1}')
-			local res_ip=$(__valid_ip ${res_ip})
-			if [ -n "${res_ip}" ];then
-				CDN="${res_ip}"
-			else
-				CDN="114.114.114.114"
-			fi
-		else
-			CDN="114.114.114.114"
-		fi
-	fi
-	echo ${CDN}
+is_domain(){
+	echo $1 | awk 'BEGIN {regex = "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"} $0 ~ regex { print }'
 }
 
-get_dns_china_port(){
-	local PORT_OPT=$1
-	local PORT_OPT_USER=$2
-	if [ "${PORT_OPT}" == "99" ];then
-		if [ -n "${PORT_OPT_USER}" ];then
-			local res_port=$(echo "${PORT_OPT_USER}"|awk -F"#|:" '{print $2}')
-			local res_port=$(__valid_port ${res_port})
-			if [ -n "${res_port}" ];then
-				echo ${res_port}
-			else
-				echo 53
-			fi
-		else
-			echo 53
-		fi
-	elif [ "${PORT_OPT}" == "22" ];then
-		echo 5353
+get_proxy_type(){
+	case "$1" in
+	udp)
+		echo "tproxy"
+		;;
+	tcp)
+		echo "redirect"
+		;;
+	dot)
+		echo "redirect"
+		;;
+	esac
+}
+
+get_dns(){
+	local type=$1
+	local numb=$2
+
+	local net=$(eval echo \$ss_basic_chng_${type}_net_${numb}_typ)
+	
+	local dns_opt=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_opt)
+	local dns_usr=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_usr)
+
+	if [ "${net}" == "dot" ];then
+		net=tls
+	fi
+	
+	if [ "${dns_opt}" == "99" ];then
+		echo "${net}://${dns_usr}"
 	else
-		echo 53
+		echo "${net}://${dns_opt}"
 	fi
 }
 
-get_dns_foreign(){
-	local DNS_OPT=$1
-	local DNS_OPT_USER=$2
-	local FDNS
-	# Google DNS
-	[ "${DNS_OPT}" == "1" ] && FDNS="8.8.8.8"
-	[ "${DNS_OPT}" == "2" ] && FDNS="8.8.4.4"
-	# cloudflare
-	[ "${DNS_OPT}" == "3" ] && FDNS="1.1.1.1"
-	[ "${DNS_OPT}" == "4" ] && FDNS="1.0.0.1"
-	# Quad9 DNS
-	[ "${DNS_OPT}" == "5" ] && FDNS="9.9.9.11"
-	[ "${DNS_OPT}" == "6" ] && FDNS="149.112.112.11"
-	# opendns
-	[ "${DNS_OPT}" == "7" ] && FDNS="208.67.222.222"
-	[ "${DNS_OPT}" == "8" ] && FDNS="208.67.220.220"
-	# DNS.SB
-	[ "${DNS_OPT}" == "9" ] && FDNS="185.222.222.222"
-	[ "${DNS_OPT}" == "10" ] && FDNS="45.11.45.11"
-	# adguard
-	[ "${DNS_OPT}" == "11" ] && FDNS="94.140.14.14"
-	[ "${DNS_OPT}" == "12" ] && FDNS="94.140.15.15"
-	# quad 101
-	[ "${DNS_OPT}" == "13" ] && FDNS="101.101.101.101"
-	[ "${DNS_OPT}" == "14" ] && FDNS="101.102.103.104"
-	# user defined dns
-	[ "${DNS_OPT}" == "99" ] && {
-		if [ -n "${DNS_OPT_USER}" ];then
-			local res_ip=$(echo "${DNS_OPT_USER}"|awk -F"#|:" '{print $1}')
-			local res_ip=$(__valid_ip ${res_ip})
-			if [ -n "${res_ip}" ];then
-				FDNS="${res_ip}"
-			else
-				FDNS="8.8.8.8"
-			fi
-		else
-			FDNS="8.8.8.8"
-		fi
-	}
-	echo ${FDNS}
-}
+add_white_black() {
+	# 白名单： 
+	# 1. ignlist	 (ipv4 + ipv6保留地址, host地址如: router.asuscomm.com)
+	# 2. chnlist	 (大陆域名，由网络整理，由fancyss更新推送)
+	# 3. chnlist_ext (大陆域名-扩展，由fancyss整理 + 推送)
+	# 4. chnroute   （ip/cidr, ，由网络整理，由fancyss更新推送）
+	# 4. white_list （doamin, user define）
+	# 5. white_list （ip/cidr, user define）
+	
+	# 黑名单： 
+	# 1. gfwlist	 (被墙域名，来自网络整理，由fancyss更新推送)
+	# 2. gfwlist_ext (被墙名单-扩展：包括ip、域名，由fancyss更新推送)
+	# 3. black_list （doamin, user define）
+	# 4. black_list （ip/cidr, user define）
+	# 5. udplist 	 (doamin，这些域名走udp代理，可由fancyss更新推送)
+	#
+	# 黑名单-机内
+	# 1. router		 (在nat output中单独处理，控制机内走tcp代理的名单)
+	# ----------------------------------------------------------------------
+	# 1.  gfw黑名单模式 ：
+	#     构想：{gfwlist}走代理，其他走直连
+	#     加黑：{gfwlist,black_list}走代理，其他走直连
+	#     加白：{white_list}走直连，{gfwlist,black_list}走代理，其他走直连（white black冲突的话，以white为优先）
+	#           {white_list}需要在{gfwlist}之前，不然不能达到{white_list}不走代理的目的
+	#	  问题：{ignlist}理论上不需要处理，但是{gfwlist,black_list}是有可能解析到127.0.0.1的，会导致出问题，所以还是需要处理下：
+	#     修正：{ignlist,white_list}走直连，{gfwlist,black_list}走代理，其他走直连
+	#      DNS：{white_list domain}走chinadns-ng dnl组1解析，添加解析到ipset：white_list，{white_list ip}直接加入到ipset：white_list
+	#           {black_list domain}走chinadns-ng dnl组2解析，添加解析到ipset：black_list，{black_list ip}直接加入到ipset：black_list
+	#
+	# 2.  大陆白名单模式（白名单优先模式，fancyss一直采用的方式）：
+	#     构想：{ignlist,chnlist,chnroute}走直连，其余走代理
+	#           先匹配白名单不走代理，再匹配黑名单走代理，目的先保证国内访问正常，再去翻墙。
+	#			但是如果某个域名的三级域名aaa.gfw.com被墙，二级域名gfw.com没有被墙
+	#			此时，gfw.com和aaa.gfw.com都会被{chnlist}匹配到，如果在iptables中，使用白名单优先模式，则都会走直连。
+	#     设计：{black_list}走代理，{ignlist,chnlist,chnroute,white_list}走直连，其余走代理
+	#	  问题：{ignlist}理论上在{black_list}之后，但是{black_list}是有可能解析到127.0.0.1，导致出问题，所以还是需要处理下：
+	#     修正：{ignlist}走直连，{black_list}走代理，{chnlist,chnroute,white_list}走直连，其余走代理
+	#           1. 修正后：如果不存在black_list，则与原设计一样
+	#           2. 修正后：如果不存在black_list和white_list，则与原构想一样
+	#
+	# 3.  大陆白名单模式（黑名单优先模式，ss-tproxy采用的方式）：
+	#     构想：{gfwlist}走代理，{ignlist,chnlist,chnroute}走直连，其余走代理
+	#           目的保证走代理的域名，比如aaa.gfw.com被墙，但是gfw.com没有被墙
+	#           此时aaa.gfw.com被{gfwlist}匹配后顺利走代理，gfw.com被{chnlist}匹配后不走代理
+	#     设计：{gfwlist,black_list}走代理，{ignlist,chnlist,chnroute,white_list}走直连，其余走代理
+	#	  问题：{ignlist}理论上在{gfwlist}之后，但是{gfwlist}是有可能解析到127.0.0.1，导致出问题，所以还是需要处理下：
+	#     修正：{ignlist}走直连，{gfwlist,black_list}走代理，{chnlist,chnroute,white_list}走直连，其余走代理
+	#
+	#     大陆白名单模式总结：
+	# 2   修正：{ignlist}走直连，{black_list}走代理，{chnlist,chnroute,white_list}走直连，其余走代理
+	# 3   修正：{ignlist}走直连，{gfwlist,black_list}走代理，{chnlist,chnroute,white_list}走直连，其余走代理
+	# 			修正两者差别仅仅在于3.1黑名单模式优先情况下多了gfwlist的一次匹配
+	# 			但是如果某个{white_list}域名存在于{gfwlist}中，则会导致用户白名单失效
+	#			而2.1白名单优先情况下不存在此问题，所以2.1效果最好
+	# 			
+	# 2.1 最终：SHADOWSOCKS链: 访问控制 ──┬─── SHADOWSOCKS_CHN链: {ignlist}走直连，{black_list}走代理，{chnlist,chnroute,white_list}走直连，其余走代理
+	# 			                          ├─── SHADOWSOCKS_GFW链: {ignlist,white_list}走直连，{gfwlist,black_list}走代理，其他走直连
+	#									  └─── SHADOWSOCKS_GLO链: {ignlist}走直连，其他走代理
+	#
+	# 			稍作调整，可以把{ignlist}全部调到前面
+	#
+	# 2.1 最终：SHADOWSOCKS链: {ignlist} -访问控制 ──┬─── SHADOWSOCKS_CHN链: {black_list}走代理，{chnlist,chnroute,white_list}走直连，其余走代理
+	# 			                          			 ├─── SHADOWSOCKS_GFW链: {white_list}走直连，{gfwlist,black_list}走代理，其他走直连
+	#									  			 ├─── SHADOWSOCKS_GLO链: {white_list}走直连，其他走代理
+	#									  			 └─── SHADOWSOCKS_HOM链: {black_list}走代理，{gfwlist,white_list}走直连，其他走代理
+	# 			
+	# note-1：大陆白名单模式时，{black_list domain}走chinadns-ng dnl组1解析，{black_list ip}直接加入到ipset，{white_list domain}走chinadns-ng dnl组2解析
+	# 4.  全局模式：{ignlist}走直连，其他走代理
+	# ----------------------------------------------------------------------
+	#
+	# 回国模式：
+	# 在国外访问大陆网站时，可能会出现ip区域限制等问题，导致无法正常使用大陆网络服务
+	# 此时可以使用"回国模式"，通过代理回到国内，摆脱ip区域限制等问题，原理与翻墙类似
+	# 1. 回国模式1 ：{black_list}走代理，{gfwlist,white_list}走直连，其他走代理
+	#    {gfwlist,white_list}用国外当地DNS解析，其他走可信DNS解析（为了cdn）
+	#	 {black_list}  dln1  可信DNS
+	#	 {white_list}  dln2  本地DNS
+	#	 {gfwlist} 	   gfw   本地DNS
+	#	 default tag   chn   可信DNS
+	# 2. 回国模式2 ：{white_list}走直连，{chnlist,black_list}走代理，其他走直连
+	#    {chnlist,black_list}可信度DNS解析（为了cdn），其余用国外当地DNS解析
+	#	 {white_list}  dln1  本地DNS
+	#	 {black_list}  dln2  可信DNS
+	#	 {chnlist} 	   chn   可信DNS
+	#	 default tag   gfw   本地DNS
 
-get_dns_foreign_port(){
-	local PORT_OPT=$1
-	local PORT_OPT_USER=$2
-	if [ "${PORT_OPT}" == "99" ];then
-		if [ -n "${PORT_OPT_USER}" ];then
-			local res_port=$(echo "${PORT_OPT_USER}"|awk -F"#|:" '{print $2}')
-			local res_port=$(__valid_port ${res_port})
-			if [ -n "${res_port}" ];then
-				echo ${res_port}
-			else
-				echo 53
-			fi
-		else
-			echo 53
-		fi
-	elif [ "${PORT_OPT}" == "6" ];then
-		echo 5353
-	else
-		echo 53
+	# remove 
+	rm -rf /tmp/black_list.txt
+	rm -rf /tmp/white_list.txt
+	rm -rf /tmp/chnlist.txt
+	rm -rf /tmp/gfwlist.txt
+
+	# copy gfwlist.txt & chnlist.txt to tmp
+	echo_date "创建/tmp/chnlist.txt 和 /tmp/gfwlist.txt！"
+	gzip -d -c /koolshare/ss/rules/chnlist.gz >/tmp/chnlist.txt
+	gzip -d -c /koolshare/ss/rules/gfwlist.gz >/tmp/gfwlist.txt
+	#cp -rf /koolshare/ss/rules/chnlist.txt /tmp/chnlist.txt
+	#cp -rf /koolshare/ss/rules/gfwlist.txt /tmp/gfwlist.txt
+	
+	# {router} foreign dns ip go proxy inside router
+	ipset -! add router 8.8.8.8 >/dev/null 2>&1
+	ipset -! add router 8.8.4.4 >/dev/null 2>&1
+	ipset -! add router 1.1.1.1 >/dev/null 2>&1
+	ipset -! add router 9.9.9.9 >/dev/null 2>&1
+	ipset -! add router 9.9.9.10 >/dev/null 2>&1
+	ipset -! add router 9.9.9.11 >/dev/null 2>&1
+	ipset -! add router 149.112.112.112 >/dev/null 2>&1
+	ipset -! add router 149.112.112.11 >/dev/null 2>&1
+	ipset -! add router 149.112.112.10 >/dev/null 2>&1
+
+	# {ignlist},ip: reserve ip
+	local ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 192.18.0.0/15 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29"
+	echo_date "应用ignlist"
+	for ip in ${ip_lan}
+	do
+		ipset -! add ignlist $ip >/dev/null 2>&1
+	done
+	
+	# {black_list}, telegram ip
+	if [ "${ss_basic_mode}" != "6" ]; then
+		ip_tg="149.154.0.0/16 91.108.4.0/22 91.108.56.0/24 109.239.140.0/24 67.198.55.0/24"
+		for ip in ${ip_tg}; do
+			ipset -! add black_list $ip >/dev/null 2>&1
+		done
 	fi
+
+	# {black_list}, black ip
+	if [ -n "${ss_wan_black_ip}" ]; then
+		ss_wan_black_ip=$(echo ${ss_wan_black_ip} | base64_decode | sed '/\#/d')
+		echo_date "应用IP/CIDR黑名单"
+		for ip in ${ss_wan_black_ip}; do
+			ipset -! add black_list ${ip} >/dev/null 2>&1
+		done
+	fi
+
+	# {black_list}, black domain
+	true >/tmp/black_list.txt
+	#if [ "${DNS_PLAN}" == "2" ];then
+		ss_black_domains="ip.sb api.skk.moe ip.skk.moe ipinfo.io ip-api.com us.ip111.cn"
+		echo_date "应用IP/CIDR黑名单"
+		for ss_black_domain in ${ss_black_domains}; do
+			echo ${ss_black_domain} >>/tmp/black_list.txt
+		done
+	#fi
+
+	# {black_list}, black domain
+	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
+	if [ "${ss_basic_proxy_newb}" == "1" ];then
+		#local wanblackdomains="${wanblackdomains} bing.com ipinfo.io ip.sb"
+		local wanblackdomains="${wanblackdomains} bing.com"
+	fi
+	if [ -n "${ss_wan_black_domain}" ]; then
+		echo_date "生成域名黑名单！"
+		for wan_black_domain in ${wanblackdomains}; do
+			if [ -n "$(is_domain ${wan_black_domain})" ]; then
+				echo ${wan_black_domain} >>/tmp/black_list.txt
+			fi
+		done
+	fi
+
+	# {white_list}, white ip
+	[ -n "${ss_basic_server_ip}" ] && SBSI="${ss_basic_server_ip}" || SBSI=""
+	[ -n "${ISP_DNS1}" ] && ISP_DNS_a="${ISP_DNS1}" || ISP_DNS_a=""
+	[ -n "${IFIP_DNS2}" ] && ISP_DNS_b="${ISP_DNS2}" || ISP_DNS_b=""
+	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+	ss_wan_white_ip=$(echo ${ss_wan_white_ip} | base64_decode | sed '/\#/d')
+	echo_date "应用IP/CIDR白名单"
+	for ip in ${ss_wan_white_ip} ${ALL_NODE_DOMAINS}
+	do
+		ipset -! add white_list $ip >/dev/null 2>&1
+	done
+
+	# {white_list}, white domain
+	true >/tmp/white_list.txt
+	echo_date "生成域名白名单！"
+	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+	local wanwhitedomains=$(echo ${ss_wan_white_domain} | base64_decode | sed '/^#/d' | grep "." | sort -u)
+	local ALL_WHITE_DOMAINS=$(echo ${wanwhitedomains} ${ALL_NODE_DOMAINS})
+	if [ -n "${ALL_WHITE_DOMAINS} " ]; then
+		for wan_white_domain in ${ALL_WHITE_DOMAINS}; do
+			if [ -n "$(is_domain ${wan_white_domain})" ]; then
+				echo ${wan_white_domain} >>/tmp/white_list.txt
+			fi
+		done
+	fi	
+
+	for wan_white_domain2 in "apple.com" "microsoft.com" "dns.msftncsi.com" "worldtimeapi.org"; do
+		echo "${wan_white_domain2}" >>/tmp/white_list.txt
+	done
+
+	# {block_list}
+	true >/tmp/block_list.txt
+	echo "adobestats.io" >>/tmp/block_list.txt
+	echo "adobe.io" >>/tmp/block_list.txt
+	echo "adobe.com" >>/tmp/block_list.txt
+	echo "cc-api-data.adobe.io" >>/tmp/block_list.txt
+	echo "adobelogin.com" >>/tmp/block_list.txt
+	echo "adobelogin.com.cdn.cloudflare.net" >>/tmp/block_list.txt
+	echo "adobegenuine.com" >>/tmp/block_list.txt
+	echo "gocart-web-prod-ue1-alb-1461435473.us-east-1.elb.amazonaws.com" >>/tmp/block_list.txt
 }
 
 create_dnsmasq_conf() {
 	# 0. delete pre settings
-	rm -rf /tmp/cdn.conf
 	rm -rf /tmp/custom.conf
-	rm -rf /tmp/wblist.conf
-	rm -rf /tmp/gfwlist.conf
 	rm -rf /jffs/configs/dnsmasq.d/custom.conf
-	rm -rf /jffs/configs/dnsmasq.d/wblist.conf
-	rm -rf /jffs/configs/dnsmasq.d/cdn.conf
-	rm -rf /jffs/configs/dnsmasq.d/gfwlist.conf
 	rm -rf /jffs/scripts/dnsmasq.postconf
 	rm -rf /jffs/scripts/dnsmasq-sdn.postconf
-
-	# copy gfwlist.conf to tmp
-	if [ "${ss_basic_mode}" == "6" ];then
-		cat /koolshare/ss/rules/gfwlist.conf | sed "s/127.0.0.1#7913/${ss_direct_user}/g" >>/tmp/gfwlist.conf
-	else
-		if [ "${ss_basic_advdns}" != "1" ]; then
-			cp -rf /koolshare/ss/rules/gfwlist.conf /tmp/gfwlist.conf
-		else
-			cp -rf /koolshare/ss/rules/gfwlist.conf /tmp/gfwlist.conf
-			sed -i '/^server=/d' /tmp/gfwlist.conf
-		fi
-	fi
-
-	# copy gfwlist.txt & cdn.txt to tmp
-	echo_date "创建/tmp/cdn.txt 和 /tmp/gfwlist.txt！"
-	rm -rf /tmp/cdn.txt
-	rm -rf /tmp/gfwlist.txt
-	cp -rf /koolshare/ss/rules/cdn.txt /tmp/cdn.txt
-	cat /koolshare/ss/rules/gfwlist.conf | sed '/^server=/d' | sed 's/ipset=\/.//g' | sed 's/\/gfwlist//g' >>/tmp/gfwlist.txt
-
-	# 1. define CDN value
-	if [ "${ss_basic_mode}" == "6" ];then
-		# 如果是回国模式，先检查下CDN是否定义正确
-		if [ "${ss_china_dns}" == "1" ];then
-			# 检测并更正ISPDNS1
-			if [ -n "${ISP_DNS1}" ];then
-				local FO=$(awk -F'[./]' -v ip=${ISP_DNS1} ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt)
-				if [ -n "${FO}" ];then
-					# 运营商DNS1:ISP_DNS1是中国IP
-					CDN="${ISP_DNS1}"
-				else
-					# 运营商DNS1:ISP_DNS1是国外IP或者局域网IP，直接都改为中国的
-					ss_china_dns="3"
-					dbus set ss_china_dns="3"
-				fi
-			else
-				ss_china_dns="3"
-				dbus set ss_china_dns="3"
-			fi
-		fi
-		if [ "${ss_china_dns}" == "2" ];then
-			# 检测并更正ISPDNS2
-			if [ -n "${ISP_DNS2}" ];then
-				local FO=$(awk -F'[./]' -v ip=${ISP_DNS2} ' {for (i=1;i<=int($NF/8);i++){a=a$i"."} if (index(ip, a)==1){split( ip, A, ".");b=int($NF/8);if (A[b+1]<($(NF+b-4)+2^(8-$NF%8))&&A[b+1]>=$(NF+b-4)) print ip,"belongs to",$0} a=""}' /koolshare/ss/rules/chnroute.txt)
-				if [ -n "${FO}" ];then
-					# 运营商DNS1:ISP_DNS2是中国IP
-					CDN="${ISP_DNS2}"
-				else
-					# 运营商DNS1:ISP_DNS2是国外IP或者局域网IP，直接都改为中国的
-					ss_china_dns="3"
-					dbus set ss_china_dns="3"
-				fi
-			else
-				ss_china_dns="3"
-				dbus set ss_china_dns="3"
-			fi
-		fi
-		DNSC_PORT=$(get_dns_china_port ${ss_china_dns})
-	else
-		# 出国代理模式下，CDN定义
-		if [ "${ss_basic_advdns}" != "1" ];then
-			# basic dns settings
-			CDN=$(get_dns_china ${ss_china_dns} ${ss_china_dns_user})
-			DNSC_PORT=$(get_dns_china_port ${ss_china_dns})
-		else
-			# advanced dns settings
-			CDN="127.0.0.1"
-			DNSC_PORT="7913"
-		fi
-	fi
 
 	# 2. custom dnsmasq settings by user
 	if [ -n "${ss_dnsmasq}" ]; then
@@ -2236,226 +2158,13 @@ create_dnsmasq_conf() {
 		echo "${ss_dnsmasq}" | base64_decode | sort -u >>/tmp/custom.conf
 	fi
 
-	# 3. sites need to go proxy inside router
-	if [ "${ss_basic_online_links_goss}" == "1" ];then
-		local NODES_DOMAINS=$(dbus get ss_online_links | base64_decode | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | grep -E "^http"|sed -e 's|^[^/]*//||' -e 's|/.*$||')
-	else
-		local NODES_DOMAINS=""
-	fi
-
-	if [ "${ss_basic_mode}" == "6" ]; then
-		# 回国模式下，/koolshare/ss/rules/router.txt里的域名可以直连，所以不需要走代理
-		local ROUTER_DOMAINS=""
-	else
-		local ROUTER_DOMAINS=$(cat /koolshare/ss/rules/router.txt)
-	fi
-
-	local ALL_ROUTER_DOMAIN="${NODES_DOMAINS} ${ROUTER_DOMAINS}"
-	if [ -n "${ALL_ROUTER_DOMAIN}" ];then
-		echo "# -------- for router itself --------" >>/tmp/wblist.conf
-		for ROUTER_DOMAIN in ${ALL_ROUTER_DOMAIN}
-		do
-			# 1. 域名解析部分
-			if [ "${ss_basic_advdns}" == "1" ];then
-				if [ "${ss_dns_plan}" == "1" -o "${ss_dns_plan}" == "2" ];then
-					# 需要走代理的域名，需要加入到chinadns-ng的黑名单中，以便用可信DNS进行解析
-					echo ${ROUTER_DOMAIN} >> /tmp/gfwlist.txt
-				fi
-			else
-				if [ "${DNS_PLAN}" == "1" ];then
-					if [ "${ss_basic_mode}" == "6" ];then
-						# 回国代理时：国内优先模式的时候，需要指定这些域名的解析为国内DNS
-						echo "${ROUTER_DOMAIN}" | sed "s/^/server=&\/./g" | sed "s/$/\/${CDN}#${DNSC_PORT}/g" >>/tmp/wblist.conf
-					else
-						# 出国代理时：国内优先模式的时候，需要指定这些域名的解析端口为7913
-						echo "${ROUTER_DOMAIN}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
-					fi
-				fi
-			fi
-			# 2. ipset 规则部分，解析出的ip必须进入名为router的ipset集中
-			echo "${ROUTER_DOMAIN}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/router/g" >>/tmp/wblist.conf
-		done
-	fi
-	
-	# 4.1 append udp black domain list for GPTmode, through proxy
-	local GPT_DOMAINS=$(cat /koolshare/ss/rules/udplist.txt)
-	if [ "${ss_basic_udpgpt}"  == "1" ];then
-		echo "# -------- for udp --------" >>/tmp/wblist.conf
-		for GPT_DOMAIN in ${GPT_DOMAINS}
-		do
-			echo "${GPT_DOMAIN}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
-			echo "${GPT_DOMAIN}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/chatgpt/g" >>/tmp/wblist.conf
-		done
-	fi
-
-	# 4.2 append black domain list, through proxy
-	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
-	if [ "${ss_basic_proxy_newb}" == "1" ];then
-		local wanblackdomains="${wanblackdomains} bing.com ipinfo.io ip.sb"
-	fi
-	if [ -n "${ss_wan_black_domain}" ]; then
-		echo_date "生成域名黑名单！"
-		echo "# -------- for black_domain --------" >>/tmp/wblist.conf
-		for wan_black_domain in ${wanblackdomains}; do
-			detect_domain "${wan_black_domain}"
-			if [ "$?" == "0" ]; then
-				# 1. 域名解析部分
-				if [ "${ss_basic_advdns}" == "1" ];then
-					if [ "${ss_dns_plan}" == "1" -o "${ss_dns_plan}" == "2" ];then
-						# 需要走代理的域名，需要加入到chinadns-ng的黑名单中，以便用可信DNS进行解析
-						echo ${wan_black_domain} >> /tmp/gfwlist.txt
-					fi
-				else
-					if [ "${DNS_PLAN}" == "1" ];then
-						if [ "${ss_basic_mode}" == "6" ];then
-							echo "${wan_black_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/${ss_direct_user}/g" >>/tmp/wblist.conf
-						else
-							echo "${wan_black_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
-						fi
-					fi
-				fi
-				# 2. ipset 规则部分，解析出的ip必须进入名为router的ipset集中
-				echo "${wan_black_domain}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/black_list/g" >>/tmp/wblist.conf
-			else
-				echo_date "！！检测到域名黑名单内的【${wan_black_domain}】不是域名格式！！此条将不会添加！！"
-			fi
-		done
-	fi
-	
-	# 5. append white domain list, not through proxy
-	# gfwlist模式
-	#    走代理的只有gfwlist名单内域名，所以不走代理就是希望其中一些域名不翻墙（且国内也访问不了），比如一些黄色网站，所以应该用国内DNS去解析
-	#    但是用国内域名去解析的话，比如google等有DNS投毒的网站，会导致出现DNS污染，用户如果再次删掉这个域名白名单，PC等系统内还是会有污染ip，导致一段时间内无法通过代理连接
-	#    如果用可信DNS去解析的话，得到的IP是无污染IP地址，国内同样无法访问。但是用户可能会很自信的在列表里加入一些国内域名，导致国内域名走了国外DNS解析！！！
-	#    1. 依靠dnsmasq分流的方案下，直接使用server=去指定域名需要的解析DNS即可
-	#    2. 依靠自身分流的方案，如chinadns-ng等，需要将指定域名添加进白名单即cdn.txt内，因为cdn.txt的优先级高于gfwlist
-	# 大陆白名单模式
-	#    走代理的除了cdn列表里的其它域名，假如有个国外域名用户希望能直连访问github，那么应该用国内DNS去解析，得到和不开插件一样的解析效果
-	#    1. 依靠dnsmasq分流的方案下，直接使用server=去指定域名需要的解析DNS即可
-	# 回国模式
-	#    走代理的除了gfw列表里其其它域名，加入有个国外用户想直连访问国内的新浪微博，那么应该用国外DNS去解析，得到和不开插件一样的解析效果
-	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -Ev "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
-	local wanwhitedomains=$(echo ${ss_wan_white_domain} | base64_decode | sed '/^#/d' | grep "." | sort -u)
-	local ALL_WHITE_DOMAINS=$(echo ${wanwhitedomains} ${ALL_NODE_DOMAINS})
-	if [ -n "${ALL_WHITE_DOMAINS} " ]; then
-		echo_date "生成域名白名单！"
-		echo "# -------- for white_domain --------" >>/tmp/wblist.conf
-		for wan_white_domain in ${ALL_WHITE_DOMAINS} ${ALL_NODE_DOMAINS}; do
-			detect_domain "${wan_white_domain}"
-			if [ "$?" == "0" ]; then
-				if [ "${ss_basic_advdns}" == "1" ];then
-					# chinadns-ng 用到cdn.txt
-					if [ "${ss_dns_plan}" == "1" -o "${ss_dns_plan}" == "2" ];then
-						# 域名白名单添加到cdn.txt，chinadns-ng需要白名单优先
-						# local DOMAIN_EXIST_1=$(cat /tmp/cdn.txt | /bin/grep -Ew "^${wan_white_domain}")
-						# if [ -z ${DOMAIN_EXIST_1} ];then
-						# 	echo "${wan_white_domain}" >> /tmp/cdn.txt
-						# else
-						# 	echo_date "检测到域名白名单内的【${wan_white_domain}】已经被cdn.txt收录，跳过添加！！"
-						# fi
-						# 应该从gfwlist中删除对应域名
-						echo "${wan_white_domain}" >> /tmp/cdn.txt
-						local DOMAIN_EXIST_2=$(cat /tmp/gfwlist.txt | /bin/grep -Ew "^${wan_white_domain}")
-						if [ -n ${DOMAIN_EXIST_2} ];then
-							cat /tmp/gfwlist.txt | /bin/grep -Evw "^${wan_white_domain}" | run sponge /tmp/gfwlist.txt
-						fi	
-					fi
-				else
-					if [ "${DNS_PLAN}" == "1" ];then
-						if [ "${ss_basic_mode}" == "6" ]; then
-							echo "${wan_white_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/${ss_direct_user}/g" >>/tmp/wblist.conf
-						else
-							# 从gfwlist中移除
-							local DOMAIN_EXIST_3=$(cat /tmp/gfwlist.conf | /bin/grep -Ew "/.${wan_white_domain}")
-							if [ -n "${DOMAIN_EXIST_3}" ];then
-								echo_date "域名白名单：从/tmp/gfwlist.conf移除域名：${wan_white_domain}"
-								cat /tmp/gfwlist.conf | /bin/grep -Evw "/.${wan_white_domain}" | run sponge /tmp/gfwlist.conf
-							fi
-							# 方案2，用国外DNS，如果站点只有DNS投毒，没有tcp阻断，可能导致国内能直接访问
-							# echo "${wan_white_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
-						fi
-					elif [ "${DNS_PLAN}" == "2" ];then
-						# 方案1，用国内DNS，存在污染，去除白名单后难以恢复
-						echo "${wan_white_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/${CDN}#${DNSC_PORT}/g" >>/tmp/wblist.conf
-						# 方案2，用国外DNS，如果站点只有DNS投毒，没有tcp阻断，可能导致国内能直接访问
-						# echo "${wan_white_domain}" | sed "s/^/server=&\/./g" | sed "s/$/\/127\.0\.0\.1#7913/g" >>/tmp/wblist.conf
-					fi
-				fi
-				echo "$wan_white_domain" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >>/tmp/wblist.conf
-			else
-				echo_date "检测到域名白名单内的【${wan_white_domain}】不是域名格式！！此条将不会添加！！"
-			fi
-		done
-	fi	
-
-	# 非回国模式下，apple 和 microsoft需要中国cdn；
-	# 另外：dns.msftncsi.com是asuswrt/merlin固件里，用以判断网络是否畅通的地址，固件后台会通过解析dns.msftncsi.com （nvram get dns_probe_content），并检查其解析结果是否和`nvram get dns_probe_content`匹配
-	# 此地址在非回国模式下用国内DNS解析，以免SS/SSR/V2RAY线路挂掉，导致一些走远端解析的情况下，无法获取到dns.msftncsi.com的解析结果，从而使得【网络地图】中网络显示断开。
-	if [ "${ss_basic_mode}" != "6" ]; then
-		echo "#for special site (Mandatory China DNS)" >>/tmp/wblist.conf
-		for wan_white_domain2 in "apple.com" "microsoft.com" "dns.msftncsi.com" "worldtimeapi.org"; do
-			echo "${wan_white_domain2}" | sed "s/^/server=&\/./g" | sed "s/$/\/${CDN}#${DNSC_PORT}/g" >>/tmp/wblist.conf
-			echo "${wan_white_domain2}" | sed "s/^/ipset=&\/./g" | sed "s/$/\/white_list/g" >>/tmp/wblist.conf
-		done
-	fi
-
-	# 此处决定何时使用cdn.txt
-	if [ "${ss_basic_advdns}" != "1" ]; then
-		if [ "${ss_basic_mode}" == "6" ]; then
-			# 回国模式中，因为国外DNS无论如何都不会污染的，所以采取的策略是直连就行，默认国内优先即可
-			echo_date "自动判断在回国模式中使用国内优先模式，不加载cdn.conf"
-		else
-			if [ "${ss_basic_mode}" == "1" -a -z "${chn_on}" -a -z "${all_on}" -o "${ss_basic_mode}" == "6" ]; then
-				# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
-				# 回国模式下自动判断使用国内优先
-				echo_date "自动判断使用国内优先模式，不加载cdn.conf"
-			else
-				# 其它情况，均使用国外优先模式，以下区分是否加载cdn.conf
-				echo_date "自动判断dns解析使用国外优先模式..."
-				echo_date "生成cdn加速列表到/tmp/cdn.conf，加速用的dns：${CDN}"
-				echo "#for china site CDN acclerate" >>/tmp/cdn.conf
-				cat /tmp/cdn.txt | sed "s/^/server=&\/./g" | sed "s/$/\/&$CDN#$DNSC_PORT/g" | sort | awk '{if ($0!=line) print;line=$0}' >>/tmp/cdn.conf
-			fi
-		fi
-	fi
-
 	#ln_conf
 	if [ -f /tmp/custom.conf ]; then
 		#echo_date 创建域自定义dnsmasq配置文件软链接到/jffs/configs/dnsmasq.d/custom.conf
 		ln -sf /tmp/custom.conf /jffs/configs/dnsmasq.d/custom.conf
 	fi
-	if [ -f /tmp/wblist.conf ]; then
-		#echo_date 创建域名黑/白名单软链接到/jffs/configs/dnsmasq.d/wblist.conf
-		ln -sf /tmp/wblist.conf /jffs/configs/dnsmasq.d/wblist.conf
-	fi
 
-	if [ -f /tmp/cdn.conf ]; then
-		#echo_date 创建cdn加速列表软链接/jffs/configs/dnsmasq.d/cdn.conf
-		ln -sf /tmp/cdn.conf /jffs/configs/dnsmasq.d/cdn.conf
-	fi
-
-	# 此处决定何时使用gfwlist.conf
-	if [ "${ss_basic_mode}" == "1" ]; then
-		echo_date "创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
-		ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
-	elif [ "${ss_basic_mode}" == "2" -o "${ss_basic_mode}" == "3" ]; then
-		if [ -n "${gfw_on}" ]; then
-			echo_date "创建gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
-			ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
-		fi
-	elif [ "${ss_basic_mode}" == "6" ]; then
-		# 回国模式下默认方案是国内优先，所以gfwlist里的网站不能由127.0.0.1#7913来解析了，应该是国外当地直连
-		if [ -n "$(echo ${ss_direct_user} | grep :)" ]; then
-			echo_date "国外直连dns设定格式错误，将自动更正为8.8.8.8#53."
-			ss_direct_user="8.8.8.8#53"
-			dbus set ss_direct_user="8.8.8.8#53"
-		fi
-		echo_date "创建回国模式专用gfwlist的软连接到/jffs/etc/dnsmasq.d/文件夹."
-		[ -z "${ss_direct_user}" ] && ss_direct_user="8.8.8.8#53"
-		ln -sf /tmp/gfwlist.conf /jffs/configs/dnsmasq.d/gfwlist.conf
-	fi
-
-	#echo_date 创建dnsmasq.postconf软连接到/jffs/scripts/文件夹.
+	# echo_date 创建dnsmasq.postconf软连接到/jffs/scripts/文件夹.
 	[ ! -L "/jffs/scripts/dnsmasq.postconf" ] && ln -sf /koolshare/ss/rules/dnsmasq.postconf /jffs/scripts/dnsmasq.postconf
 
 	VLAN_NU=$(ifconfig | grep -E "^br"|grep -v "br0"|wc -l)
@@ -2870,6 +2579,10 @@ start_ss_redir() {
 	echo_date "${BIN} 启动完毕！"
 
 	start_speeder
+
+	# start socks5，socks5端口默认提供，但目前监听在127.0.0.1，所有协议都需要开socks5端口，以前适用于dns tcp远程解析，未来用户开放给用户
+	# ss由sslocal启动，ssr由ssr-local启动
+	start_ss_local
 }
 
 fire_redir() {
@@ -2892,11 +2605,11 @@ fire_redir() {
 		echo_date "$BIN开启$THREAD线程支持."
 		local i=1
 		while [ $i -le $THREAD ]; do
-			cmd $1 $ARG_1 $ARG_2 $ARG_3 -f /var/run/ss_$i.pid
+			run_bg $1 $ARG_1 $ARG_2 $ARG_3 -f /var/run/ss_$i.pid
 			let i++
 		done
 	else
-		cmd $1 -f /var/run/ss.pid
+		run_bg $1 -f /var/run/ss.pid
 	fi
 }
 
@@ -3179,8 +2892,8 @@ creat_v2ray_json() {
 					"protocol": "dokodemo-door",
 					"port": ${DNSF_PORT},
 					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+						"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
+						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
 						"network": "udp",
 						"timeout": 0,
 						"followRedirect": false
@@ -3312,8 +3025,8 @@ creat_v2ray_json() {
 										\"protocol\": \"dokodemo-door\", 
 										\"port\": ${DNSF_PORT},
 										\"settings\": {
-											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})\",
-											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})\",
+											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
 											\"network\": \"udp\",
 											\"timeout\": 0,
 											\"followRedirect\": false
@@ -3538,7 +3251,7 @@ start_v2ray() {
 			cd /koolshare/bin
 			run_bg xray run -c ${V2RAY_CONFIG_FILE}
 		fi
-		detect_running_status xray
+		detect_running_status3 xray 23456 0 force
 	else
 		# v2ray start
 		echo_date "开启V2ray主进程..."
@@ -3583,8 +3296,8 @@ creat_xray_ss_json() {
 				"protocol": "dokodemo-door",
 				"port": ${DNSF_PORT},
 				"settings": {
-					"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+					"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
+					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
 					"network": "udp",
 					"timeout": 0,
 					"followRedirect": false
@@ -3943,6 +3656,11 @@ creat_xray_json() {
 				\"multiMode\": $(get_grpc_multimode ${ss_basic_xray_grpc_mode})
 				}"
 			;;
+		xhttp)
+			local xht="{
+				\"path\": $(get_value_empty $ss_basic_xray_network_path)
+				}"
+			;;
 		esac
 		# log area
 		cat >"${XRAY_CONFIG_TEMP}" <<-EOF
@@ -3962,8 +3680,8 @@ creat_xray_json() {
 					"protocol": "dokodemo-door",
 					"port": ${DNSF_PORT},
 					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+						"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
+						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
 						"network": "udp",
 						"timeout": 0,
 						"followRedirect": false
@@ -4053,6 +3771,7 @@ creat_xray_json() {
 						,"httpSettings": $h2
 						,"quicSettings": $qc
 						,"grpcSettings": $gr
+						,"xhttpSettings": $xht
 						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
 					},
 					"mux": {
@@ -4109,8 +3828,8 @@ creat_xray_json() {
 										\"protocol\": \"dokodemo-door\", 
 										\"port\": ${DNSF_PORT},
 										\"settings\": {
-											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})\",
-											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})\",
+											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
 											\"network\": \"udp\",
 											\"timeout\": 0,
 											\"followRedirect\": false
@@ -4304,7 +4023,7 @@ start_xray() {
 		cd /koolshare/bin
 		run_bg xray run -c $XRAY_CONFIG_FILE
 	fi
-	detect_running_status xray
+	detect_running_status3 xray 23456 0 force
 }
 
 creat_trojan_json(){
@@ -4342,8 +4061,8 @@ creat_trojan_json(){
 				"protocol": "dokodemo-door",
 				"port": ${DNSF_PORT},
 				"settings": {
-					"address": "$(get_dns_foreign ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user})",
-					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_udp_val} ${ss_basic_chng_trust_1_opt_udp_val_user}),
+					"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
+					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
 					"network": "udp",
 					"timeout": 0,
 					"followRedirect": false
@@ -4470,7 +4189,7 @@ start_trojan(){
 		cd /koolshare/bin
 		run_bg xray run -c $XRAY_CONFIG_FILE
 	fi
-	detect_running_status xray
+	detect_running_status3 xray 23456 0 force
 }
 
 start_naive(){
@@ -4637,7 +4356,8 @@ start_hysteria2(){
 	else
 		env -i PATH=${PATH} QUIC_GO_DISABLE_ECN=true hysteria2 -c /koolshare/ss/hysteria2.yaml >/dev/null 2>&1 &
 	fi
-	detect_running_status hysteria2
+	#detect_running_status hysteria2
+	detect_running_status3 hysteria2 23456 0 force
 }
 
 write_cron_job() {
@@ -4719,60 +4439,33 @@ load_tproxy() {
 		close_in_five
 	fi
 }
-flush_iptables() {
-	# flush NAT
-	local NAT_RULES=$(iptables -t nat -S | grep -E "SHADOWSOCKS|3333" | sort)
-	if [ -z "${NAT_RULES}" ];then
-		return 1
-	fi
-	echo_date "清除iptables nat规则..."
-	echo "${NAT_RULES}" | while read line
-	do
-		local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-		#echo "$TYPE" "$line"
-		if [ "${TYPE}" == "A" ];then
-			local CMD1=$(echo "$line" | sed 's/^-A/iptables -t nat -D/g')
-			cmd $CMD1
-		elif [ "${TYPE}" == "N" ];then
-			local CMD2=$(echo "$line" | sed 's/^-N/iptables -t nat -F/g')
-			cmd $CMD2
-			local CMD3=$(echo "$line" | sed 's/^-N/iptables -t nat -X/g')
-			cmd $CMD3
-		fi
-	done
 
-	# flush MANGLE
-	local MANGLE_RULES=$(iptables -t mangle -S | grep -E "SHADOWSOCKS|3333" | sort)
-	if [ -z "${MANGLE_RULES}" ];then
-		return 1
-	fi
-	echo_date "清除iptables mangle规则..."
-	echo "${MANGLE_RULES}" | while read line
-	do
-		local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-		#echo "$TYPE" "$line"
-		if [ "${TYPE}" == "A" ];then
-			local CMD1=$(echo "$line" | sed 's/^-A/iptables -t mangle -D/g')
-			cmd $CMD1
-		elif [ "${TYPE}" == "N" ];then
-			local CMD2=$(echo "$line" | sed 's/^-N/iptables -t mangle -F/g')
-			cmd $CMD2
-			local CMD3=$(echo "$line" | sed 's/^-N/iptables -t mangle -X/g')
-			cmd $CMD3
-		fi
-	done
-
-	flush_ipset
-}
 flush_ipset() {
 	# flush ipset
 	echo_date "清除ipset规则集..."
-	ipset -F chnroute >/dev/null 2>&1 && ipset -X chnroute >/dev/null 2>&1
+	ipset -F ignlist >/dev/null 2>&1 && ipset -X ignlist >/dev/null 2>&1
+	ipset -F ignlist6 >/dev/null 2>&1 && ipset -X ignlist6 >/dev/null 2>&1
+	
 	ipset -F white_list >/dev/null 2>&1 && ipset -X white_list >/dev/null 2>&1
+	ipset -F white_list6 >/dev/null 2>&1 && ipset -X white_list6 >/dev/null 2>&1
+	
 	ipset -F black_list >/dev/null 2>&1 && ipset -X black_list >/dev/null 2>&1
+	ipset -F black_list6 >/dev/null 2>&1 && ipset -X black_list6 >/dev/null 2>&1
+
+	ipset -F chnlist >/dev/null 2>&1 && ipset -X chnlist >/dev/null 2>&1
+	ipset -F chnlist6 >/dev/null 2>&1 && ipset -X chnlist6 >/dev/null 2>&1
+	
 	ipset -F gfwlist >/dev/null 2>&1 && ipset -X gfwlist >/dev/null 2>&1
-	ipset -F chatgpt >/dev/null 2>&1 && ipset -X chatgpt >/dev/null 2>&1
+	ipset -F gfwlist6 >/dev/null 2>&1 && ipset -X gfwlist6 >/dev/null 2>&1
+	
+	ipset -F udplist >/dev/null 2>&1 && ipset -X udplist >/dev/null 2>&1
+	ipset -F udplist6 >/dev/null 2>&1 && ipset -X udplist6 >/dev/null 2>&1
+	
 	ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
+	ipset -F router6 >/dev/null 2>&1 && ipset -X router6 >/dev/null 2>&1
+
+	ipset -F chnroute >/dev/null 2>&1 && ipset -X chnroute >/dev/null 2>&1
+	ipset -F chnroute6 >/dev/null 2>&1 && ipset -X chnroute6 >/dev/null 2>&1
 	#remove_redundant_rule
 	local ip_rule_exist=$(ip rule show | grep "lookup 310" | grep -c 310)
 	if [ -n "${ip_rule_exist}" ]; then
@@ -4791,44 +4484,42 @@ flush_ipset() {
 # creat ipset rules
 creat_ipset() {
 	echo_date "创建ipset名单"
+
+	# 保留地址，不走代理
+	ipset -! create ignlist nethash && ipset flush ignlist
+	ipset -! create ignlist6 nethash family inet6 && ipset flush ignlist6
+
+	# 用户白名单，不走代理
 	ipset -! create white_list nethash && ipset flush white_list
+	ipset -! create white_list6 nethash family inet6 && ipset flush white_list6
+	
+	# 用户黑名单，走代理
 	ipset -! create black_list nethash && ipset flush black_list
-	ipset -! create chatgpt nethash && ipset flush chatgpt
+	ipset -! create black_list6 nethash family inet6 && ipset flush black_list6
+
+	# 中国域名白名单，不走代理
+	ipset -! create chnlist nethash && ipset flush chnlist
+	ipset -! create chnlist6 nethash family inet6 && ipset flush chnlist6
+	
+	# 国外域名黑名单，走代理
 	ipset -! create gfwlist nethash && ipset flush gfwlist
+	ipset -! create gfwlist6 nethash family inet6 && ipset flush gfwlist6
+	
+	# 走代理的udp名单
+	ipset -! create udplist nethash && ipset flush udplist
+	ipset -! create udplist6 nethash family inet6 && ipset flush udplist6
+
+	# 路由器内部走代理名单
 	ipset -! create router nethash && ipset flush router
+	ipset -! create router6 nethash family inet6 && ipset flush router6
+	
+	# 大陆ip段名单
 	ipset -! create chnroute nethash && ipset flush chnroute
+	ipset -! create chnroute6 nethash family inet6 && ipset flush chnroute6
+
+	# 写入ip段到ip段名单
 	sed -e "s/^/add chnroute &/g" /koolshare/ss/rules/chnroute.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
-}
-
-add_white_black_ip() {
-	# black ip/cidr
-	if [ "${ss_basic_mode}" != "6" ]; then
-		ip_tg="149.154.0.0/16 91.108.4.0/22 91.108.56.0/24 109.239.140.0/24 67.198.55.0/24"
-		for ip in ${ip_tg}; do
-			ipset -! add black_list $ip >/dev/null 2>&1
-		done
-	fi
-
-	if [ -n "${ss_wan_black_ip}" ]; then
-		ss_wan_black_ip=$(echo ${ss_wan_black_ip} | base64_decode | sed '/\#/d')
-		echo_date "应用IP/CIDR黑名单"
-		for ip in ${ss_wan_black_ip}; do
-			ipset -! add black_list ${ip} >/dev/null 2>&1
-		done
-	fi
-
-	# white ip/cidr
-	[ -n "${ss_basic_server_ip}" ] && SBSI="${ss_basic_server_ip}" || SBSI=""
-	[ -n "${ISP_DNS1}" ] && ISP_DNS_a="${ISP_DNS1}" || ISP_DNS_a=""
-	[ -n "${IFIP_DNS2}" ] && ISP_DNS_b="${ISP_DNS2}" || ISP_DNS_b=""
-	local ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 192.18.0.0/15 224.0.0.0/4 240.0.0.0/4 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 117.50.11.11 117.50.22.22 180.76.76.76 119.29.29.29 ${ISP_DNS_a} ${ISP_DNS_b} ${SBSI} $(get_wan0_cidr)"
-	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
-	ss_wan_white_ip=$(echo ${ss_wan_white_ip} | base64_decode | sed '/\#/d')
-	echo_date "应用IP/CIDR白名单"
-	for ip in ${ss_wan_white_ip} ${ALL_NODE_DOMAINS} ${ip_lan}
-	do
-		ipset -! add white_list $ip >/dev/null 2>&1
-	done
+	sed -e "s/^/add chnroute6 &/g" /koolshare/ss/rules/chnroute6.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
 }
 
 get_action_chain() {
@@ -4936,7 +4627,10 @@ lan_acess_control() {
 
 		if [ "$ss_acl_default_port" == "all" ]; then
 			ss_acl_default_port=""
-			[ -z "$ss_acl_default_mode" ] && dbus set ss_acl_default_mode="$ss_basic_mode" && ss_acl_default_mode="$ss_basic_mode"
+			if [ -z "$ss_acl_default_mode" ];then
+				dbus set ss_acl_default_mode="$ss_basic_mode"
+				ss_acl_default_mode="$ss_basic_mode"
+			fi
 			echo_date "加载ACL规则：【剩余主机】【全部端口】模式为：$(get_mode_name $ss_acl_default_mode)"
 		else
 			echo_date "加载ACL规则：【剩余主机】【$ss_acl_default_port】模式为：$(get_mode_name $ss_acl_default_mode)"
@@ -4957,6 +4651,13 @@ lan_acess_control() {
 }
 
 dns_hijack_control() {
+	local type=$1
+	if [ "${type}" == "4" ];then
+		local iptab=iptables
+	elif [ "${type}" == "6" ];then
+		local iptab=ip6tables
+	fi
+	
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		for VLAN_INDEX in ${VLAN_INDEXS}
 		do
@@ -4979,8 +4680,69 @@ dns_hijack_control() {
 		done
 	fi
 }
+flush_iptables() {
+	# flush NAT
+	local NAT_RULES=$(iptables -t nat -S | grep -E "SHADOWSOCKS|3333" | sort)
+	if [ -z "${NAT_RULES}" ];then
+		return 1
+	fi
+	echo_date "清除iptables nat规则..."
+	echo "${NAT_RULES}" | while read line
+	do
+		local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+		#echo "$TYPE" "$line"
+		if [ "${TYPE}" == "A" ];then
+			local CMD1=$(echo "$line" | sed 's/^-A/iptables -t nat -D/g')
+			run_bg $CMD1
+		elif [ "${TYPE}" == "N" ];then
+			local CMD2=$(echo "$line" | sed 's/^-N/iptables -t nat -F/g')
+			run_bg $CMD2
+			local CMD3=$(echo "$line" | sed 's/^-N/iptables -t nat -X/g')
+			run_bg $CMD3
+		fi
+	done
 
-apply_nat_rules() {
+	# flush MANGLE
+	local MANGLE_RULES=$(iptables -t mangle -S | grep -E "SHADOWSOCKS|3333|0x7" | sort)
+	if [ -z "${MANGLE_RULES}" ];then
+		return 1
+	fi
+	echo_date "清除iptables mangle规则..."
+	echo "${MANGLE_RULES}" | while read line
+	do
+		local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+		#echo "$TYPE" "$line"
+		if [ "${TYPE}" == "A" ];then
+			local CMD1=$(echo "$line" | sed 's/^-A/iptables -t mangle -D/g')
+			run_bg $CMD1
+		elif [ "${TYPE}" == "N" ];then
+			local CMD2=$(echo "$line" | sed 's/^-N/iptables -t mangle -F/g')
+			run_bg $CMD2
+			local CMD3=$(echo "$line" | sed 's/^-N/iptables -t mangle -X/g')
+			run_bg $CMD3
+		fi
+	done
+
+	flush_ipset
+}
+load_iptables() {
+	local nat_ready=$(ip6tables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
+	i=300
+	until [ -n "$nat_ready" ]; do
+		i=$(($i - 1))
+		if [ "$i" -lt 1 ]; then
+			echo_date "错误：不能正确加载nat规则!"
+			close_in_five
+		fi
+		usleep 100000
+		local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
+	done
+	# creat_ipset
+	# add_white_black
+	_start_iptables
+}
+
+_start_iptables() {
 	#----------------------BASIC RULES---------------------
 	echo_date "写入iptables规则到nat表中..."
 	local VLAN_INDEXS=$(ifconfig | grep -E "^br" | awk '{print $1}' | sed 's/^br//g')
@@ -4999,97 +4761,141 @@ apply_nat_rules() {
 	iptables -t nat -N SHADOWSOCKS_EXT
 	
 	# IP/cidr/白域名 白名单控制（不go proxy）
-	iptables -t nat -A SHADOWSOCKS -p tcp -m set --match-set white_list dst -j RETURN
-	iptables -t nat -A SHADOWSOCKS_EXT -p tcp -m set --match-set white_list dst -j RETURN
+	iptables -t nat -A SHADOWSOCKS -p tcp -m set --match-set ignlist dst -j RETURN
+	iptables -t nat -A SHADOWSOCKS_EXT -p tcp -m set --match-set ignlist dst -j RETURN
 	
 	#-----------------------FOR GLOABLE---------------------
-	# 创建gfwlist模式nat rule
+	# 创建全局模式 nat rule
 	iptables -t nat -N SHADOWSOCKS_GLO
-	# IP黑名单控制-gfwlist（go proxy）
+	# {white_list} 直连
+	iptables -t nat -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 代理
 	iptables -t nat -A SHADOWSOCKS_GLO -p tcp -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR GFWLIST---------------------
-	# 创建gfwlist模式nat rule
+	# 创建gfwlist模式 nat rule
 	iptables -t nat -N SHADOWSOCKS_GFW
-	# IP/CIDR/黑域名 黑名单控制（go proxy）
+	# {white_list} 直连
+	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set white_list dst -j RETURN	
+	# {black_list} 代理
 	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# IP黑名单控制-gfwlist（go proxy）
+	# {gfwlist} 代理
 	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR CHNMODE---------------------
 	# 创建大陆白名单模式nat rule
 	iptables -t nat -N SHADOWSOCKS_CHN
-	# IP/CIDR/域名 黑名单控制（go proxy）
+	# {black_list} 代理
 	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（go proxy）
-	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 3333
+	# {chnlist} 直连
+	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set chnlist dst -j RETURN
+	# {chnroute} 直连
+	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set chnroute dst -j RETURN
+	# {white_list} 直连
+	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 代理
+	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR GAMEMODE---------------------
 	# 创建游戏模式nat rule
 	iptables -t nat -N SHADOWSOCKS_GAM
-	# IP/CIDR/域名 黑名单控制（go proxy）
+	# {black_list} 代理
 	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（go proxy）
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 3333
+	# {chnlist} 直连
+	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set chnlist dst -j RETURN
+	# {chnroute} 直连
+	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set chnroute dst -j RETURN
+	# {white_list} 直连
+	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 代理
+	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR HOMEMODE---------------------
 	# 创建回国模式nat rule
 	iptables -t nat -N SHADOWSOCKS_HOM
-	# IP/CIDR/域名 黑名单控制（go proxy）
+	# {black_list} 代理
 	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（go proxy）
-	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set chnroute dst -j REDIRECT --to-ports 3333
+	# {gfwlist} 直连
+	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j RETURN
+	# {white_list} 直连
+	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set white_list dst -j RETURN
 
+	#-----------------------FOR TPROXY---------------------
 	load_tproxy
-	ip rule add fwmark 0x07 table 310
-	ip route add local 0.0.0.0/0 dev lo table 310
+	if [ -z "$(ip rule show table 310 2>/dev/null)" ];then
+		ip rule add fwmark 0x07 table 310
+	fi
+	
+	if [ -z "$(ip route show table 310 2>/dev/null)" ];then
+		ip route add local 0.0.0.0/0 dev lo table 310
+	fi
+
 	# 创建游戏模式udp rule
 	iptables -t mangle -N SHADOWSOCKS
+
 	# IP/cidr/白域名 白名单控制（不go proxy）
-	iptables -t mangle -A SHADOWSOCKS -p udp -m set --match-set white_list dst -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
 
 	# 创建GPT模式udp rule
 	iptables -t mangle -N SHADOWSOCKS_GPT
-	# IP/CIDR/域名 黑名单控制（go proxy）
-	# iptables -t mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# ipset黑名单控制-chatgpt（go proxy）
-	iptables -t mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set chatgpt dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# {udplist} 代理
+	iptables -t mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建gfw模式udp rule
 	iptables -t mangle -N SHADOWSOCKS_GFW
-	# IP/CIDR/域名 黑名单控制（go proxy）
+	# {white_list} 直连
+	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN	
+	# {black_list} 代理
 	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# ipset黑名单控制-gfwlist（go proxy）
+	# {gfwlist} 代理
 	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-
+	
 	# 创建白名单模式udp rule
 	iptables -t mangle -N SHADOWSOCKS_CHN
-	# IP/CIDR/域名 黑名单控制（go proxy）
+	# {black_list} 代理
 	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# cidr黑名单控制-chnroute（go proxy）
-	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# {chnlist} 直连
+	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set chnlist dst -j RETURN
+	# {chnroute} 直连
+	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set chnroute dst -j RETURN
+	# {white_list} 直连
+	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 代理
+	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建游戏模式udp rule
 	iptables -t mangle -N SHADOWSOCKS_GAM
-	# IP/CIDR/域名 黑名单控制（go proxy）
+	# {black_list} 代理
 	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# cidr黑名单控制-chnroute（go proxy）
-	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# {chnlist} 直连
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set chnlist dst -j RETURN
+	# {chnroute} 直连
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set chnroute dst -j RETURN
+	# {white_list} 直连
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 代理
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建glo模式udp rule
 	iptables -t mangle -N SHADOWSOCKS_GLO
-	# IP/CIDR/域名 黑名单控制（go proxy）
-	iptables -t mangle -A SHADOWSOCKS_GLO -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# cidr黑名单控制-chnroute（go proxy）
-	iptables -t mangle -A SHADOWSOCKS_GLO -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# {white_list} 直连
+	iptables -t mangle -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 代理
+	iptables -t mangle -A SHADOWSOCKS_GLO -p tcp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	#-------------------------------------------------------
 	# 局域网黑名单（不go proxy）/局域网黑名单（go proxy）
-	lan_acess_control
+	lan_acess_control $1
 	# DNS 劫持
-	dns_hijack_control
+	dns_hijack_control $1
 	#-----------------------FOR ROUTER---------------------
 	# router itself
-	[ "$ss_basic_mode" != "6" ] && iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
+	if [ "$ss_basic_mode" != "6" ];then
+		iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
+
+		# make sure these match go proxy inside router
+		# iptables -t mangle -A OUTPUT -p udp -m set --match-set router dst -j MARK --set-mark 0x07
+		iptables -t mangle -A OUTPUT -p udp -m set --match-set router dst -m udp --dport 53 -j MARK --set-mark 0x7/0xffffffff
+	fi
 	iptables -t nat -A OUTPUT -p tcp -m mark --mark "$ip_prefix_hex" -j SHADOWSOCKS_EXT
 
 	# 把最后剩余流量重定向到相应模式的nat表中对应的主模式的链
@@ -5188,13 +4994,13 @@ load_module() {
 
 # write number into nvram with no commit
 write_numbers() {
-	nvram set update_ipset="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.date')"
+	nvram set update_gfwlist="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist_txt.date')"
+	nvram set update_chnlist="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnlist_txt.date')"
 	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.date')"
-	nvram set update_cdn="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.cdn_china.date')"
-	nvram set ipset_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.count')"
+	nvram set gfwlist_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist_txt.count')"
 	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count')"
 	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count_ip')"
-	nvram set cdn_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.cdn_china.count')"
+	nvram set chnlist_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnlist_txt.count')"
 }
 
 remove_ss_reboot_job() {
@@ -5256,23 +5062,6 @@ set_ss_trigger_job() {
 	fi
 }
 
-load_nat() {
-	local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
-	i=300
-	until [ -n "$nat_ready" ]; do
-		i=$(($i - 1))
-		if [ "$i" -lt 1 ]; then
-			echo_date "错误：不能正确加载nat规则!"
-			close_in_five
-		fi
-		usleep 100000
-		local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
-	done
-	#creat_ipset
-	add_white_black_ip
-	apply_nat_rules
-}
-
 ss_post_start() {
 	# 在SS插件启动成功后触发脚本
 	local i
@@ -5326,7 +5115,7 @@ detect_ip(){
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
 		#echo_date "检测国外ip地址，检测地址：${SUBJECT}"
-		local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "sslocal|v2ray|xray|naive|tuic|hysteria2")
+		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "sslocal|v2ray|xray|naive|tuic|hysteria2")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local IP=$(run curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
@@ -5338,89 +5127,40 @@ detect_ip(){
 	echo ${IP}
 }
 
-check_chng_fdns(){
-	local FDNS_OK_FLAG_1=0
-	if [ "${ss_basic_chng_trust_1_enable}" == "1" ];then
-		if [ "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-			local TPORT=2055
-		else
-			local TPORT=1055
-		fi
-		echo_date "检测进阶chinadns-ng方案可信DNS-1（端口：${TPORT}）是否正常工作..."
-		# 国外dns检测，超时时间设置久一点
-		local DETECT_SERVER_IP_1=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		local DETECT_SERVER_IP_1=$(__valid_ip ${DETECT_SERVER_IP_1})
-		if [ -n "${DETECT_SERVER_IP_1}" ]; then
-			echo_date "可信DNS-1 ${TPORT}端口DNS服务工作正常！"
-			local FDNS_OK_FLAG_1=1
-		else
-			echo_date "可信DNS-1 ${TPORT}端口DNS服务工作异常，无法解析域名！可能是以下原因："
-			echo_date "---------------------------------------------------------"
-			echo_date "1. [大概率原因]：节点代理已经失效，请尝试更新订阅、更换可用节点"
-			echo_date "2. [中概率原因]：国外DNS解析出现问题，请尝试更换其它的DNS方案"
-			echo_date "3. [小概率原因]：节点延迟/丢包较高，请尝试更换低延迟/高质量节点"
-			echo_date "---------------------------------------------------------"
-			echo_date "如果插件启动完毕后国外不通，请检查可信DNS-1的配置！继续！"
-			#echo_date "为了避免因代理失效对本地非代理网络也造成影响！将会关闭代理相关进程..."
-			#close_in_five flag
-		fi
-	fi
-
-	local FDNS_OK_FLAG_2=0
-	if [ "${ss_basic_chng_trust_2_enable}" == "1" ];then
-		if [ "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-			local TPORT=2056
-		else
-			local TPORT=1056
-		fi
-
-		echo_date "检测进阶chinadns-ng方案可信DNS-2（端口：${TPORT}）是否正常工作..."
-		# 国外dns检测，超时时间设置久一点
-		local DETECT_SERVER_IP_2=$(run dnsclient -p ${TPORT} -t 5 -i 2 @127.0.0.1 dns.msftncsi.com 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		local DETECT_SERVER_IP_2=$(__valid_ip ${DETECT_SERVER_IP_2})
-		if [ -n "${DETECT_SERVER_IP_2}" ]; then
-			echo_date "可信DNS-2 ${TPORT}端口DNS服务工作正常！"
-			local FDNS_OK_FLAG_2=1
-		else
-			echo_date "可信DNS-2 ${TPORT}端口DNS服务工作异常，无法解析域名！"
-			echo_date "如果插件启动完毕后国外不通，请检查可信DNS-2的配置！继续！"
-		fi
-	fi
-
-	# if [ "${FDNS_OK_FLAG_1}" == "0" -a "${FDNS_OK_FLAG_2}" == "0" ];then
-	# 	# 国外DNS不通，则
-	# 	close_in_five flag
-	# fi
-}
-
 check_chn_dns(){
 	#echo_date "检测进阶chinadns-ng方案中的中国DNS是否正常工作..."
 	echo_date "检测中国域名是否正常解析..."
+
+	if [ "${ss_basic_dns_server}" == "1" ];then
+		local chk_port=53
+	else
+		local chk_port=7913
+	fi
 	
 	# 1. 检测5个国内域名的DNS解析
 	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 		local CHN_RESOLV_DOMAIN="www.baidu.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 	fi
 
 	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 		local CHN_RESOLV_DOMAIN="www.taobao.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 	fi
 
 	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 		local CHN_RESOLV_DOMAIN="www.sina.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 	fi
 
 	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 		local CHN_RESOLV_DOMAIN="www.jd.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 	fi
 
 	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
 		local CHN_RESOLV_DOMAIN="www.qq.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p 7913 -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
 	fi
 	
 	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
@@ -5437,6 +5177,14 @@ check_chn_dns(){
 
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
+
+	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "sslocal|v2ray|xray|naive|tuic|hysteria2")
+	if [ -n "${SOCKS5_OPEN}" ];then
+		echo_date "检测方式1：socks5"
+	else
+		echo_date "检测方式2：透明代理"
+	fi
+	
 	if [ -z "${REMOTE_IP_FRN}" ];then
 		REMOTE_IP_FRN_SRC="http://ip.sb"
 		REMOTE_IP_FRN=$(detect_ip "${REMOTE_IP_FRN_SRC}" 5 1)
@@ -5483,7 +5231,7 @@ check_frn_public_ip(){
 	
 	# 检测节点解析结果
 	if [ -n "${ss_basic_server_ip}" ];then
-		[ -z "${ss_basic_server_orig}" ] && 
+		#[ -z "${ss_basic_server_orig}" ] && 
 		ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
 		if [ "$?" != "0" ]; then
 			# 国外ip
@@ -5499,24 +5247,16 @@ check_frn_public_ip(){
 finish_start(){
 	# something else need to do
 
-	if [ "${ss_basic_nocdnscheck}" != "1" -o "${ss_basic_nofdnscheck}" != "1" -o "${ss_basic_nofrnipcheck}" != "1" ];then
+	if [ "${ss_basic_nocdnscheck}" != "1" -o "${ss_basic_nofrnipcheck}" != "1" ];then
 		echo_date "---------------------------------------------------------"
 		echo_date "所有服务和规则加载完毕，运行一些检测..."
 	fi
 
-	if [ "${ss_basic_advdns}" == "1" ];then
-		# 1. 检测国内域名解析是否正常
-		if [ "${ss_basic_nocdnscheck}" != "1" ];then
-			check_chn_dns
-		else
-			echo_date "跳过国内DNS可用性检测..."
-		fi
-		# 2. 如果dns经过代理，那么检测dns服务是否畅通
-		if [ "${ss_basic_nofdnscheck}" != "1" ];then
-			check_chng_fdns
-		else
-			echo_date "跳过chinadns-ng可信DNS的可用性检测..."
-		fi
+	# 1. 检测国内域名解析是否正常
+	if [ "${ss_basic_nocdnscheck}" != "1" ];then
+		check_chn_dns
+	else
+		echo_date "跳过国内DNS可用性检测..."
 	fi
 	
 	# 3. get foreign ip
@@ -5524,101 +5264,6 @@ finish_start(){
 		check_frn_public_ip
 	else
 		echo_date "跳过代理出口ip检测..."
-	fi
-
-	# 4. ecs不开启
-	# 4.1 用户没使用chinadns-ng
-	if [ "${ss_basic_advdns}" != "1" ];then
-		return 1
-	fi
-	
-	# 4.2 用户没开国外ecs，不启用ecs
-	if [ "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-		local _ECS_FRN_1=1
-	fi
-	if [ "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-		local _ECS_FRN_2=1
-	fi
-
-	if [ "${_ECS_FRN_1}" != "1" -a "${_ECS_FRN_1}" != "1" ];then
-		echo_date "不启用ecs，原因：可信DNS ECS功能未开启！"
-		return 1
-	fi
-
-	# 4.3 用户主动跳过国外出口检查，不启用ecs
-	if [ "${ss_basic_nofrnipcheck}" == "1" ];then
-		echo_date "不启用ecs，原因：已设置跳过代理出口ip检测！"
-		return 1
-	fi
-
-	# 4.4 用户国外出口是ipv6地址，不启用
-	__valid_ip46 ${REMOTE_IP_FRN}
-	if [ "$?" == "1" ]; then
-		# ipv6
-		echo_date "不启用ecs，原因：代理出口ip地址为ipv6，不支持！！"
-		return 1
-	elif [ "$?" == "2" ]; then
-		echo_date "不启用ecs，原因：未检测到代理出口ip地址！！"
-		return 1
-	fi
-
-	# ECS开启：
-	# new dns plan: chinadns-ng, trust-1，udp + ecs
-	if [ "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "1" -a "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
-			ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
-			if [ "$?" != "0" ]; then
-				local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2055 | awk '{print $1}')
-				if [ -n "${TMP_PID}" ];then
-					kill -9 ${TMP_PID}
-				fi
-				local DEF_PID=$(ps | grep "dns-ecs-forcer" | grep 2055 | awk '{print $1}')
-				if [ -n "${DEF_PID}" ];then
-					kill -9 ${DEF_PID}
-				fi
-				echo_date "开启dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-				run_bg dns-ecs-forcer -p 2055 -s 127.0.0.1:1055 -e "${REMOTE_IP_FRN%.*}.0"
-				detect_running_status2 dns-ecs-forcer 2055
-			fi
-		fi
-	fi
-
-	# new dns plan: chinadns-ng, trust-1，tcp + ecs
-	if [ "${ss_basic_chng_trust_1_enable}" == "1" -a "${ss_basic_chng_trust_1_opt}" == "2" -a "${ss_basic_chng_trust_1_ecs}" == "1" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" ];then
-			ipset test chnroute ${REMOTE_IP_FRN} >/dev/null 2>&1
-			if [ "$?" != "0" ]; then
-				# 最新版本dns2socks 本身就支持ecs，无需dns-ecs-forcer
-				echo_date "重启dns2socks，开启EDNS支持，使用CLIENT-SUBNET: ${REMOTE_IP_FRN}/32"
-				start_dns2socks $(get_dns_foreign ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}):$(get_dns_foreign_port ${ss_basic_chng_trust_1_opt_tcp_val} ${ss_basic_chng_trust_1_opt_tcp_val_user}) 2055 1
-			fi
-		fi
-	fi
-	
-	# new dns plan: chinadns-ng, trust-2，原生udp + ecs
-	if [ "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "1" -a "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" -a -n "${UDP_TARGET}" ];then
-			echo_date "启动dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-			local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2056 | awk '{print $1}')
-			if [ -n "${TMP_PID}" ];then
-				kill -9 ${TMP_PID}
-			fi		
-			run_bg dns-ecs-forcer -p 2056 -s ${UDP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
-			detect_running_status2 dns-ecs-forcer 2056 slient
-		fi
-	fi
-	
-	# new dns plan: chinadns-ng, trust-2，原生tcp + ecs
-	if [ "${ss_basic_chng_trust_2_enable}" == "1" -a "${ss_basic_chng_trust_2_opt}" == "2" -a "${ss_basic_chng_trust_2_ecs}" == "1" ];then
-		if [ "${ss_real_server_ip}" != "${REMOTE_IP_FRN}" -a -n "${TCP_TARGET}" ];then
-			echo_date "启动dns-ecs-forcer，填入ECS标签：${REMOTE_IP_FRN%.*}.0"
-			local TMP_PID=$(ps | grep -E "socat|uredir" | grep 2056 | awk '{print $1}')
-			if [ -n "${TMP_PID}" ];then
-				kill -9 ${TMP_PID}
-			fi		
-			run_bg dns-ecs-forcer -p 2056 -s ${TCP_TARGET} -e "${REMOTE_IP_FRN%.*}.0"
-			detect_running_status2 dns-ecs-forcer 2056 slient
-		fi
 	fi
 }
 
@@ -5652,8 +5297,10 @@ disable_ss() {
 	remove_ss_reboot_job
 	restore_conf
 	restart_dnsmasq
-	flush_iptables
+	flush_iptables 4
+	flush_iptables 6
 	kill_cron_job
+	rm -rf /tmp/upload/fancyss_node_name.txt
 	dbus set ss_basic_status="0"
 	echo_date ------------------------ 【科学上网】已关闭 ----------------------------
 }
@@ -5670,7 +5317,8 @@ apply_ss() {
 		remove_ss_reboot_job
 		restore_conf
 		restart_dnsmasq
-		flush_iptables
+		flush_iptables 4
+		flush_iptables 6
 		kill_cron_job
 	fi
 	# pre-start
@@ -5682,6 +5330,7 @@ apply_ss() {
 	load_module
 	creat_ipset
 	create_dnsmasq_conf
+	add_white_black
 	# 生成代理主程序配置
 	[ "${ss_basic_type}" == "0" -a "${ss_basic_score}" != "1" ] && creat_ss_json
 	[ "${ss_basic_type}" == "0" -a "${ss_basic_score}" == "1" ] && creat_xray_ss_json
@@ -5700,9 +5349,11 @@ apply_ss() {
 	[ "${ss_basic_type}" == "7" ] && start_tuic
 	[ "${ss_basic_type}" == "8" ] && start_hysteria2
 	start_kcp
-	start_dns
-	load_nat
+	get_proxy_server_ip
 	restart_dnsmasq
+	start_dns_x
+	load_iptables
+	#restart_dnsmasq
 	auto_start
 	write_cron_job
 	set_ss_reboot_job
@@ -5792,7 +5443,8 @@ restart)
 	;;
 flush_nat)
 	set_lock
-	flush_iptables
+	flush_iptables 4
+	flush_iptables 6
 	unset_lock
 	;;
 start_nat)
@@ -5800,5 +5452,8 @@ start_nat)
 	[ "$ss_basic_enable" == "1" ] && apply_ss
 	#get_status >> /tmp/upload/test.txt
 	unset_lock
+	;;
+restart_chinadns_ng)
+	start_chinadns_ng
 	;;
 esac

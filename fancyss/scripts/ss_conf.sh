@@ -2,8 +2,8 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 
-source /koolshare/scripts/base.sh
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+source /koolshare/scripts/ss_base.sh
+#alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 LOG_FILE=/tmp/upload/ss_log.txt
 
 backup_conf(){
@@ -42,21 +42,24 @@ backup_tar(){
 	cp /koolshare/bin/obfs-local ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/rss-local ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/rss-redir ${TARGET_FOLDER}/bin/
-	cp /koolshare/bin/dns2socks ${TARGET_FOLDER}/bin/
+	#cp /koolshare/bin/dns2socks ${TARGET_FOLDER}/bin/
+	if [ -x "/koolshare/bin/dns_cache_mgr" ];then
+		cp /koolshare/bin/dns_cache_mgr ${TARGET_FOLDER}/bin/
+	fi
 	cp /koolshare/bin/chinadns-ng ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/sponge ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/jq ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/xray ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/curl-fancyss ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/dnsclient ${TARGET_FOLDER}/bin/
-	if [ -x "/koolshare/bin/sslocal" ];then
+	if [ -f "/koolshare/bin/sslocal" ];then
 		cp /koolshare/bin/sslocal ${TARGET_FOLDER}/bin/
 	fi
-	cp /koolshare/bin/dns2tcp ${TARGET_FOLDER}/bin/
-	cp /koolshare/bin/dns-ecs-forcer ${TARGET_FOLDER}/bin/
-	if [ -x "/koolshare/bin/uredir" ];then
-		cp /koolshare/bin/uredir ${TARGET_FOLDER}/bin/
-	fi
+	#cp /koolshare/bin/dns2tcp ${TARGET_FOLDER}/bin/
+	#cp /koolshare/bin/dns-ecs-forcer ${TARGET_FOLDER}/bin/
+	#if [ -x "/koolshare/bin/uredir" ];then
+	#	cp /koolshare/bin/uredir ${TARGET_FOLDER}/bin/
+	#fi
 	if [ -x "/koolshare/bin/websocketd" ];then
 		cp /koolshare/bin/websocketd ${TARGET_FOLDER}/bin/
 	fi
@@ -64,19 +67,19 @@ backup_tar(){
 		cp /koolshare/bin/dohclient ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/dohclient-cache ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/smartdns ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/haproxy ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/kcptun ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/speeder* ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/udp2raw ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/trojan ${TARGET_FOLDER}/bin/
+		#cp /koolshare/bin/haproxy ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/kcptun" ] && cp /koolshare/bin/kcptun ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/speederv1" ] && cp /koolshare/bin/speederv1 ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/speederv2" ] && cp /koolshare/bin/speederv2 ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/udp2raw" ] && cp /koolshare/bin/udp2raw ${TARGET_FOLDER}/bin/
+		#cp /koolshare/bin/trojan ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/v2ray ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/v2ray-plugin ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/haveged ${TARGET_FOLDER}/bin/
+		#cp /koolshare/bin/v2ray-plugin ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/haveged" ] && cp /koolshare/bin/haveged ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/ipt2socks ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/naive ${TARGET_FOLDER}/bin/
-		if [ -f "/koolshare/bin/tuic-client" ];then
-			cp /koolshare/bin/tuic-client ${TARGET_FOLDER}/bin/
-		fi
+		cp /koolshare/bin/tuic-client ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/tuic-client" ] && cp /koolshare/bin/tuic-client ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/hysteria2 ${TARGET_FOLDER}/bin/
 	fi
 	cp /koolshare/webs/Module_shadowsocks*.asp ${TARGET_FOLDER}/webs/
@@ -93,6 +96,8 @@ backup_tar(){
 	cp /koolshare/res/fancyss.css ${TARGET_FOLDER}/res/
 	cp -r /koolshare/ss ${TARGET_FOLDER}/
 	rm -rf ${TARGET_FOLDER}/ss/*.json
+	rm -rf ${TARGET_FOLDER}/ss/*.conf
+	rm -rf ${TARGET_FOLDER}/ss/*.yaml
 	# arch
 	echo ${pkg_arch} > ${TARGET_FOLDER}/.valid
 	tar -czv -f /tmp/shadowsocks.tar.gz shadowsocks/
@@ -127,52 +132,6 @@ remove_now(){
 	# default values
 	eval $(dbus export ss)
 	local PKG_TYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	# 3.0.4：国内DNS默认使用运营商DNS
-	[ -z "${ss_china_dns}" ] && dbus set ss_china_dns="1"
-	# 3.0.4 从老版本升级到3.0.4，原部分方案需要切换到进阶方案，因为这些方案已经不存在
-	if [ -z "${ss_basic_advdns}" -a -z "${ss_basic_olddns}" ];then
-		# 全新安装的 3.0.4+，或者从3.0.3及其以下版本升级而来
-		if [ -z "${ss_foreign_dns}" ];then
-			# 全新安装的 3.0.4
-			dbus set ss_basic_advdns="1"
-			dbus set ss_basic_olddns="0"
-		else
-			# 从3.0.3及其以下版本升级而来
-			# 因为一些dns选项已经不存在，所以更改一下
-			if [ "${ss_foreign_dns}" == "2" -o "${ss_foreign_dns}" == "5" -o "${ss_foreign_dns}" == "10" -o "${ss_foreign_dns}" == "1" -o "${ss_foreign_dns}" == "6" ];then
-				# 原chinands2、chinadns1、chinadns-ng、cdns、https_dns_proxy已经不存在, 更改为进阶DNS设定：chinadns-ng
-				dbus set ss_basic_advdns="1"
-				dbus set ss_basic_olddns="0"
-			elif [ "${ss_foreign_dns}" == "4" -o "${ss_foreign_dns}" == "9" ];then
-				if [ "${PKG_TYPE}" == "lite" ];then
-					# ss-tunnel、SmartDNS方案在lite版本中不存在
-					dbus set ss_basic_advdns="1"
-					dbus set ss_basic_olddns="0"
-				else
-					# ss-tunnel、SmartDNS方案在full版本中存在
-					dbus set ss_basic_advdns="0"
-					dbus set ss_basic_olddns="1"
-				fi
-			else
-				# dns2socks, v2ray/xray_dns, 直连这些在full和lite版中都在
-				dbus set ss_basic_advdns="0"
-				dbus set ss_basic_olddns="1"
-			fi
-		fi
-	elif [ -z "${ss_basic_advdns}" -a -n "${ss_basic_olddns}" ];then
-		# 不正确，ss_basic_advdns和ss_basic_olddns必须值相反
-		[ "${ss_basic_olddns}" == "0" ] && dbus set ss_basic_advdns="1"
-		[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
-	elif [ -n "${ss_basic_advdns}" -a -z "${ss_basic_olddns}" ];then
-		# 不正确，ss_basic_advdns和ss_basic_olddns必须值相反
-		[ "${ss_basic_advdns}" == "0" ] && dbus set ss_basic_olddns="1"
-		[ "${ss_basic_advdns}" == "1" ] && dbus set ss_basic_olddns="0"
-	elif [ -n "${ss_basic_advdns}" -a -n "${ss_basic_olddns}" ];then
-		if [ "${ss_basic_advdns}" == "${ss_basic_olddns}" ];then
-			[ "${ss_basic_olddns}" == "0" ] && dbus set ss_basic_advdns="1"
-			[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
-		fi
-	fi
 
 	[ -z "${ss_basic_proxy_newb}" ] && dbus set ss_basic_proxy_newb=1
 	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=0
@@ -183,7 +142,6 @@ remove_now(){
 	[ -z "${ss_basic_nocdnscheck}" ] && dbus set ss_basic_nocdnscheck=1
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
 	
-	[ "${ss_disable_aaaa}" != "1" ] && dbus set ss_basic_chng_no_ipv6=1
 	[ -z "${ss_basic_chng_xact}" ] && dbus set ss_basic_chng_xact=0
 	[ -z "${ss_basic_chng_xgt}" ] && dbus set ss_basic_chng_xgt=1
 	[ -z "${ss_basic_chng_xmc}" ] && dbus set ss_basic_chng_xmc=0
@@ -427,6 +385,175 @@ restart_dnsmasq(){
 	echo_date "dnsmasq重启成功，pid: ${DPID}"
 }
 
+restart_chinadnsng(){
+	echo_date "重启chinadns-ng..."
+	killall chinadns-ng >/dev/null 2>&1
+	sh /koolshare/ss/ssconfig.sh restart_chinadns_ng
+	echo XU6J03M6
+}
+
+start_smartdns(){
+	local idx=$1
+	local conf_name=smartdns_smrt_$idx
+	local save_path=/koolshare/ss/rules
+	local show_path=/tmp/upload
+	local conf_path=/tmp
+	local smartdns_conf
+	local ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+	local ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+
+	# remove previous file
+	rm -rf /tmp/smartdns_log.txt
+	rm -rf /tmp/smartdns_audit.txt
+
+	# gen list for smartdns conf
+	cat /koolshare/ss/rules/chnroute.txt | sed 's/^/whitelist-ip /g' >/tmp/whitelist_ip.txt
+
+	# copy smartdns conf file
+	if [ -f ${save_path}/${conf_name}_user.conf ];then
+		local smartdns_conf=${conf_path}/${conf_name}_user.conf
+		echo_date "复制smartdns配置文件：${save_path}/${conf_name}_user.conf → ${conf_path}"
+		cp -rf ${save_path}/${conf_name}_user.conf ${smartdns_conf}
+	else
+		echo_date "复制smartdns配置文件：${save_path}/${conf_name}.conf → ${conf_path}"
+		local smartdns_conf=${conf_path}/${conf_name}.conf
+		cp -rf ${save_path}/${conf_name}.conf ${smartdns_conf}
+	fi
+
+	# modify smartdns conf file
+	if [ "${ss_basic_dns_server}" == "1" ];then
+		echo_date "编辑smartdns配置文件：${smartdns_conf}，监听端口7913 → 53，以替换dnsmasq！"
+		sed -i 's/7913/53/g' ${smartdns_conf}
+	fi
+
+	if [ "${ss_basic_add_ispdns}" == "1" ];then
+		if [ -n "${ISP_DNS1}" ]; then
+			echo_date "编辑smartdns配置文件：${smartdns_conf}，追加ISP DNS: ${ISP_DNS1}"
+			sed -i "s/117.50.10.10/${ISP_DNS1}/g" ${smartdns_conf} 2>/dev/null
+		fi
+		
+		if [ -n "${ISP_DNS2}" ]; then
+			echo_date "编辑smartdns配置文件：${smartdns_conf}，追加ISP DNS: ${ISP_DNS2}"
+			sed -i "s/117.50.60.30/${ISP_DNS2}/g" ${smartdns_conf} 2>/dev/null
+		fi
+	fi
+
+	# start smartdns	
+	echo_date "启动smartdns，使用smartdns配置文件：${smartdns_conf}"
+	run_bg smartdns -c ${smartdns_conf}
+	detect_running_status3 "smartdns" "53|7913" "0" "force"
+
+	# detect process by binary name and key word
+	local caches=$(head /tmp/smartdns_log.txt 2>/dev/null | grep "load cache file" | awk '{print $(NF-1)}')
+	if [ -n "${caches}" ];then
+		echo_date "smartdns启动成功，成功加载缓存：${caches}条"
+	else
+		echo_date "smartdns启动成功!"
+	fi
+}
+
+restart_smartdns(){
+	local CHNG_PID=$(pidof chinadns-ng)
+	if [ -n "${CHNG_PID}" ];then
+		echo_date "当前chinadns-ng正常运行中，pid: ${CHNG_PID}，准备关闭！"
+		kill ${CHNG_PID}
+	fi
+
+	
+	local OLD_PID=$(pidof smartdns)
+	if [ -n "${OLD_PID}" ];then
+		echo_date "当前smartdns正常运行中，pid: ${OLD_PID}，准备重启！"
+		kill ${OLD_PID}
+	else
+		echo_date "尝试启动smartdns！"
+	fi
+
+	start_smartdns ${ss_basic_smrt}
+
+	# sleep 1
+	# if [ -f "/tmp/smartdns_log.txt" ];then
+	# 	echo_date "--------------------------------------------------------"
+	# 	echo_date "smartdns 启动日志如下:"
+	# 	cat /tmp/smartdns_log.txt | awk -F "] " '{print $NF}'
+	# fi
+	# run end
+	echo XU6J03M6
+}
+# 1. ----------------------------------------------------
+edit_smartdns_conf(){
+	local flag=$1
+	local idx=$2
+	local temp_path=/tmp
+	local save_path=/koolshare/ss/rules
+	local show_path=/tmp/upload
+	local conf_name=smartdns_smrt_$idx
+	local user_conf=${conf_name}_user
+	local ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+	local ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+
+	if [ "${flag}" == "edit" ];then
+	
+		if [ -f "${save_path}/${user_conf}.conf" ];then
+			cp -f ${save_path}/${user_conf}.conf ${show_path}/${conf_name}.conf
+			http_response "11111111" >/dev/null
+		else
+			cp -f ${save_path}/${conf_name}.conf ${show_path}/${conf_name}.conf
+			http_response "22222222" >/dev/null
+		fi
+	fi
+
+	if [ "${flag}" == "save" ];then
+		http_response "$ID" >/dev/null
+		local conf_rule=$(dbus get ss_basic_smartdns_rule)
+		if [ -n "${conf_rule}" ];then
+			echo ${conf_rule} | base64_decode | sed 's/\\n/\n/g' > ${temp_path}/${user_conf}.conf
+			local md5sum_default=$(md5sum ${save_path}/${conf_name}.conf | awk '{print $1}')
+			local md5sum_usernew=$(md5sum ${temp_path}/${user_conf}.conf | awk '{print $1}')
+			if [ -f "${save_path}/${user_conf}.conf" ];then
+				local md5sum_userold=$(md5sum ${save_path}/${user_conf}.conf | awk '{print $1}')
+				if [ "${md5sum_userold}" == "${md5sum_usernew}" ];then
+					rm -rf ${temp_path}/${user_conf}.conf
+					echo_date "配置文件相较于之前的自定义配置无变化，不保存！"
+				else
+					echo_date "保存新配置到${save_path}/${user_conf}.conf"
+					mv -f ${temp_path}/${user_conf}.conf ${save_path}/${user_conf}.conf
+					cp -f ${save_path}/${user_conf}.conf ${show_path}/${conf_name}.conf
+					dbus remove ss_basic_smartdns_rule
+					echo_date "保存成功！请重启科学上网插件，使用新配置！"
+				fi
+			else
+				if [ "${md5sum_default}" == "${md5sum_usernew}" ];then
+					rm -rf ${temp_path}/${user_conf}.conf
+					rm -rf ${save_path}/${user_conf}.conf
+					echo_date "配置文件相较于默认配置无变化，不保存为自定义配置，继续使用默认配置！"
+				else
+					echo_date "保存新配置到${save_path}/${user_conf}.conf"
+					mv ${temp_path}/${user_conf}.conf ${save_path}/${user_conf}.conf
+					cp -f ${save_path}/${user_conf}.conf ${show_path}/${conf_name}.conf
+					dbus remove ss_basic_smartdns_rule
+					echo_date "保存成功！请重启科学上网插件，使用新配置！"
+				fi
+			fi
+		else
+			echo_date "检测到新配置为空，不保存！"
+		fi
+		echo XU6J03M6 >> ${LOG_FILE}
+	fi
+
+	if [ "${flag}" == "reset" ];then
+		http_response "$ID" >/dev/null
+		if [ -f "${save_path}/${user_conf}.conf" ];then
+			echo_date "切换到smartdns默认配置！"
+			rm -f ${save_path}/${user_conf}.conf
+			cp -f ${save_path}/${conf_name}.conf ${show_path}/${conf_name}.conf
+			echo_date "切换成功！请重启科学上网插件，以使用默认配置！"
+		else
+			echo_date "当前使用的即为默认配置，无需恢复，退出！"
+		fi
+		echo XU6J03M6 >> ${LOG_FILE}
+	fi
+}
+
 download_resv_log(){
 	rm -rf /tmp/files
 	rm -rf /koolshare/webs/files
@@ -446,7 +573,28 @@ download_dig_log(){
 	sed -i '/XU6J03M6/d' /tmp/files/dns_dig_result.txt
 }
 
-case $2 in
+if [ -n "$1" -a -z "$2" ];then
+	# run by ws
+	act=$1
+	ws_flag=1
+elif [ -n "$1" -a -n "$2" ];then
+	# run by httpd
+	act=$2
+	ws_flag=0
+elif [ -z "$1" -a -z "$2" ];then
+	echo_date "缺少运行参数！"
+	exit
+fi
+
+if [ -z "$1" -a -z "$2" ];then
+	prepare
+	get_china_status $1
+	get_foreign_status $1
+	echo "${log1}@@${log2}"
+	exit
+fi
+
+case $act in
 1)
 	true > ${LOG_FILE}
 	backup_conf
@@ -501,5 +649,29 @@ case $2 in
 	true > ${LOG_FILE}
 	download_dig_log
 	http_response "$1"
+	;;
+restart_smrt)
+	true > ${LOG_FILE}
+	[ "${ws_flag}" == "0" ] && http_response "$1"
+	restart_smartdns | tee -a ${LOG_FILE}
+	;;
+restart_chng)
+	true > ${LOG_FILE}
+	[ "${ws_flag}" == "0" ] && http_response "$1"
+	restart_chinadnsng | tee -a ${LOG_FILE}
+	;;
+edit_smartdns_smrt_*)
+	order=${2##*_}
+	edit_smartdns_conf edit ${order} >> ${LOG_FILE}
+	;;
+save_smartdns_smrt_*)
+	order=${2##*_}
+	true > ${LOG_FILE}
+	edit_smartdns_conf save ${order} >> ${LOG_FILE}
+	;;
+reset_smartdns_smrt_*)
+	order=${2##*_}
+	true > ${LOG_FILE}
+	edit_smartdns_conf reset ${order} >> ${LOG_FILE}
 	;;
 esac

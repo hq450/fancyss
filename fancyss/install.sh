@@ -973,52 +973,6 @@ install_now(){
 	# default values
 	eval $(dbus export ss)
 	local PKG_TYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	# 3.0.4：国内DNS默认使用运营商DNS
-	[ -z "${ss_china_dns}" ] && dbus set ss_china_dns="1"
-	# 3.0.4 从老版本升级到3.0.4，原部分方案需要切换到进阶方案，因为这些方案已经不存在
-	if [ -z "${ss_basic_advdns}" -a -z "${ss_basic_olddns}" ];then
-		# 全新安装的 3.0.4+，或者从3.0.3及其以下版本升级而来
-		if [ -z "${ss_foreign_dns}" ];then
-			# 全新安装的 3.0.4
-			dbus set ss_basic_advdns="1"
-			dbus set ss_basic_olddns="0"
-		else
-			# 从3.0.3及其以下版本升级而来
-			# 因为一些dns选项已经不存在，所以更改一下
-			if [ "${ss_foreign_dns}" == "2" -o "${ss_foreign_dns}" == "5" -o "${ss_foreign_dns}" == "10" -o "${ss_foreign_dns}" == "1" -o "${ss_foreign_dns}" == "6" ];then
-				# 原chinands2、chinadns1、chinadns-ng、cdns、https_dns_proxy已经不存在, 更改为进阶DNS设定：chinadns-ng
-				dbus set ss_basic_advdns="1"
-				dbus set ss_basic_olddns="0"
-			elif [ "${ss_foreign_dns}" == "4" -o "${ss_foreign_dns}" == "9" ];then
-				if [ "${PKG_TYPE}" == "lite" ];then
-					# ss-tunnel、SmartDNS方案在lite版本中不存在
-					dbus set ss_basic_advdns="1"
-					dbus set ss_basic_olddns="0"
-				else
-					# ss-tunnel、SmartDNS方案在full版本中存在
-					dbus set ss_basic_advdns="0"
-					dbus set ss_basic_olddns="1"
-				fi
-			else
-				# dns2socks, v2ray/xray_dns, 直连这些在full和lite版中都在
-				dbus set ss_basic_advdns="0"
-				dbus set ss_basic_olddns="1"
-			fi
-		fi
-	elif [ -z "${ss_basic_advdns}" -a -n "${ss_basic_olddns}" ];then
-		# 不正确，ss_basic_advdns和ss_basic_olddns必须值相反
-		[ "${ss_basic_olddns}" == "0" ] && dbus set ss_basic_advdns="1"
-		[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
-	elif [ -n "${ss_basic_advdns}" -a -z "${ss_basic_olddns}" ];then
-		# 不正确，ss_basic_advdns和ss_basic_olddns必须值相反
-		[ "${ss_basic_advdns}" == "0" ] && dbus set ss_basic_olddns="1"
-		[ "${ss_basic_advdns}" == "1" ] && dbus set ss_basic_olddns="0"
-	elif [ -n "${ss_basic_advdns}" -a -n "${ss_basic_olddns}" ];then
-		if [ "${ss_basic_advdns}" == "${ss_basic_olddns}" ];then
-			[ "${ss_basic_olddns}" == "0" ] && dbus set ss_basic_advdns="1"
-			[ "${ss_basic_olddns}" == "1" ] && dbus set ss_basic_advdns="0"
-		fi
-	fi
 
 	[ -z "${ss_basic_proxy_newb}" ] && dbus set ss_basic_proxy_newb=1
 	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=0
@@ -1030,7 +984,6 @@ install_now(){
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
 	[ -z "${ss_basic_noruncheck}" ] && dbus set ss_basic_noruncheck=1
 	
-	[ "${ss_disable_aaaa}" != "1" ] && dbus set ss_basic_chng_no_ipv6=1
 	[ -z "${ss_basic_chng_xact}" ] && dbus set ss_basic_chng_xact=0
 	[ -z "${ss_basic_chng_xgt}" ] && dbus set ss_basic_chng_xgt=1
 	[ -z "${ss_basic_chng_xmc}" ] && dbus set ss_basic_chng_xmc=0

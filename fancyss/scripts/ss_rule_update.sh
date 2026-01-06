@@ -14,17 +14,17 @@ run(){
 
 start_update(){
 	# 1. 检测规则版本号文件
-	if [ ! -f ${RULE_FILE} ];then
+	if [ ! -f "${RULE_FILE}" ];then
 		echo_date "没有找到规则版本号文件: rules.json.js！请尝试覆盖安装插件解决！退出！"
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 		exit
 	fi
 	
 	# 2. 检测规则本地版本号
-	version_gfw_local=$(cat ${RULE_FILE} | run jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
-	version_chn_local=$(cat ${RULE_FILE} | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
-	version_cdn_local=$(cat ${RULE_FILE} | run jq -r '.cdn_china.date' | sed 's/[[:space:]]/_/g')
-	if [ -z ${version_gfw_local} -o -z ${version_chn_local} -o -z ${version_cdn_local} -o ];then
+	version_gfwlist_local=$(cat ${RULE_FILE} | run jq -r '.gfwlist_txt.date' | sed 's/[[:space:]]/_/g')
+	version_cdnlist_local=$(cat ${RULE_FILE} | run jq -r '.chnlist_txt.date' | sed 's/[[:space:]]/_/g')
+	version_chnroute_local=$(cat ${RULE_FILE} | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
+	if [ -z ${version_gfwlist_local} -o -z ${version_chnroute_local} -o -z ${version_cdnlist_local} ];then
 		echo_date "没有找到规则版本号！退出！"
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 		exit
@@ -52,34 +52,34 @@ start_update(){
 	fi
 
 	# 6. 获取在线版本及其它信息
-	version_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
-	version_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
-	version_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.cdn_china.date' | sed 's/[[:space:]]/_/g')
+	version_gfwlist_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist_txt.date' | sed 's/[[:space:]]/_/g')
+	version_cdnlist_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist_txt.date' | sed 's/[[:space:]]/_/g')
+	version_chnroute_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
 	
-	md5sum_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.md5')
+	md5sum_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist_txt.md5')
+	md5sum_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist_txt.md5')
 	md5sum_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.md5')
-	md5sum_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.cdn_china.md5')
 
-	count_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.count')
+	count_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist_txt.count')
+	count_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist_txt.count')
 	count_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.count')
 	count_ip_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.count_ip')
-	count_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.cdn_china.count')
 	
 	# update gfwlist
 	if [ "${ss_basic_gfwlist_update}" == "1" ];then
 		echo_date "--------------------------------------------------------------------"
-		if [ "${version_gfw_local}" != "${version_gfw_online}" ];then
+		if [ "${version_gfwlist_local}" != "${version_gfwlist_online}" -o "${force_update}" == "1" ];then
 			echo_date "检测到新版本gfwlist，开始更新..."
 			echo_date "下载gfwlist到临时文件..."
-			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/gfwlist.conf > /tmp/gfwlist.conf
-			md5sum_gfwlist_local=$(md5sum /tmp/gfwlist.conf | awk '{print $1}')
+			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/gfwlist.txt > /tmp/gfwlist.txt
+			md5sum_gfwlist_local=$(md5sum /tmp/gfwlist.txt | awk '{print $1}')
 			if [ "${md5sum_gfwlist_local}" == "${md5sum_gfw_online}" ];then
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始gfwlist文件"
-				local version_gfw_online_tmp="$(echo ${version_gfw_online} | sed 's/_/ /g')"
-				mv /tmp/gfwlist.conf /koolshare/ss/rules/gfwlist.conf
-				run jq --arg variable "${version_gfw_online_tmp}" '.gfwlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_gfw_online}" '.gfwlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_gfw_online}" '.gfwlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				local version_gfwlist_online_tmp="$(echo ${version_gfwlist_online} | sed 's/_/ /g')"
+				mv /tmp/gfwlist.txt /koolshare/ss/rules/gfwlist.txt
+				run jq --arg variable "${version_gfwlist_online_tmp}" '.gfwlist_txt.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${md5sum_gfw_online}" '.gfwlist_txt.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${count_gfw_online}" '.gfwlist_txt.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
 				echo_date "【更新成功】你的gfwlist已经更新到最新！"
 			else
@@ -95,16 +95,16 @@ start_update(){
 	# update chnroute
 	if [ "${ss_basic_chnroute_update}" == "1" ];then
 		echo_date "--------------------------------------------------------------------"
-		if [ "${version_chn_local}" != "${version_chn_online}" ];then
+		if [ "${version_chnroute_local}" != "${version_chnroute_online}" -o "${force_update}" == "1" ];then
 			echo_date "检测到新版本chnroute，开始更新..."
 			echo_date "下载chnroute到临时文件..."
 			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/chnroute.txt > /tmp/chnroute.txt
 			md5sum_chnroute_local=$(md5sum /tmp/chnroute.txt | awk '{print $1}')
 			if [ "${md5sum_chnroute_local}" == "${md5sum_chn_online}" ];then
 				echo_date "下载完成，校验通过，将临时文件覆盖到原始chnroute文件"
-				local version_chn_online_tmp="$(echo ${version_chn_online} | sed 's/_/ /g')"
+				local version_chnroute_online_tmp="$(echo ${version_chnroute_online} | sed 's/_/ /g')"
 				mv /tmp/chnroute.txt /koolshare/ss/rules/chnroute.txt
-				run jq --arg variable "${version_chn_online_tmp}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${version_chnroute_online_tmp}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				run jq --arg variable "${md5sum_chn_online}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				run jq --arg variable "${count_chn_online}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				run jq --arg variable "${count_ip_chn_online}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
@@ -120,45 +120,45 @@ start_update(){
 		echo_date "你并没有勾选chnroute更新！"
 	fi
 	
-	# update cdn file
-	if [ "$ss_basic_cdn_update" == "1" ];then
+	# update chnlist file
+	if [ "$ss_basic_chnlist_update" == "1" ];then
 		echo_date "--------------------------------------------------------------------"
-		if [ "${version_cdn_local}" != "${version_cdn_online}" ];then
-			echo_date "检测到新版本cdn名单，开始更新..."
-			echo_date "下载cdn名单到临时文件..."
-			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/cdn.txt > /tmp/cdn.txt
-			md5sum_cdn_local=$(md5sum /tmp/cdn.txt | awk '{print $1}')
-			if [ "${md5sum_cdn_local}" == "${md5sum_cdn_online}" ];then
-				echo_date "下载完成，校验通过，将临时文件覆盖到原始cdn名单文件"
-				local version_cdn_online_tmp="$(echo ${version_cdn_online} | sed 's/_/ /g')"
-				mv /tmp/cdn.txt /koolshare/ss/rules/cdn.txt
-				run jq --arg variable "${version_cdn_online_tmp}" '.cdn_china.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_cdn_online}" '.cdn_china.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_cdn_online}" '.cdn_china.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+		if [ "${version_chnroutelist_local}" != "${version_chnroutelist_online}" -o "${force_update}" == "1" ];then
+			echo_date "检测到新版本chnlist名单，开始更新..."
+			echo_date "下载chnlist名单到临时文件..."
+			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/chnlist.txt > /tmp/chnlist.txt
+			md5sum_chnlist_local=$(md5sum /tmp/chnlist.txt | awk '{print $1}')
+			if [ "${md5sum_chnlist_local}" == "${md5sum_chnlist_online}" ];then
+				echo_date "下载完成，校验通过，将临时文件覆盖到原始chnlist名单文件"
+				local version_chnroutelist_online_tmp="$(echo ${version_chnroutelist_online} | sed 's/_/ /g')"
+				mv /tmp/chnlist.txt /koolshare/ss/rules/chnlist.txt
+				run jq --arg variable "${version_chnroutelist_online_tmp}" '.chnlist_txt.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${md5sum_chnlist_online}" '.chnlist_txt.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
+				run jq --arg variable "${count_chnlist_online}" '.chnlist_txt.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
 				reboot="1"
-				echo_date "【更新成功】你的cdn名单已经更新到最新！"
+				echo_date "【更新成功】你的chnlist名单已经更新到最新！"
 			else
 				echo_date "下载完成，但是校验没有通过！"
 			fi
 		else
-			echo_date "检测到cdn名单本地版本号和在线版本号相同，不进行更新!"
+			echo_date "检测到chnlist名单本地版本号和在线版本号相同，不进行更新!"
 		fi
 	else
-		echo_date "你并没有勾选cdn名单更新！"
+		echo_date "你并没有勾选chnlist名单更新！"
 	fi
 	echo_date " --------------------------------------------------------------------"
 	rm -rf /tmp/rules.json.js
 	
 	echo_date "规则更新进程运行完毕！"
 	# write number
-	nvram set update_ipset="$(cat ${RULE_FILE} | run jq -r '.gfwlist.date')"
+	nvram set update_gfwlist="$(cat ${RULE_FILE} | run jq -r '.gfwlist_txt.date')"
 	nvram set update_chnroute="$(cat ${RULE_FILE} | run jq -r '.chnroute.date')"
-	nvram set update_cdn="$(cat ${RULE_FILE} | run jq -r '.cdn_china.date')"
+	nvram set update_chnlist="$(cat ${RULE_FILE} | run jq -r '.chnlist_txt.date')"
 	
-	nvram set ipset_numbers="$(cat ${RULE_FILE} | run jq -r '.gfwlist.count')"
+	nvram set gfwlist_numbers="$(cat ${RULE_FILE} | run jq -r '.gfwlist_txt.count')"
 	nvram set chnroute_numbers="$(cat ${RULE_FILE} | run jq -r '.chnroute.count')"
 	nvram set chnroute_ips="$(cat ${RULE_FILE} | run jq -r '.chnroute.count_ip')"
-	nvram set cdn_numbers="$(cat ${RULE_FILE} | run jq -r '.cdn_china.count')"
+	nvram set chnlist_numbers="$(cat ${RULE_FILE} | run jq -r '.chnlist_txt.count')"
 	#======================================================================
 	# reboot fancyss
 	if [ "${reboot}" == "1" ];then
@@ -179,11 +179,26 @@ change_cru(){
 	fi
 }
 
-if [ -z "$2" ];then
-	#this is for autoupdate
+case $1 in
+force)
+	ss_basic_gfwlist_update=1
+	ss_basic_chnroute_update=1
+	ss_basic_chnlist_update=1
+	force_update=1
+	start_update
+	;;
+update)
+	ss_basic_gfwlist_update=1
+	ss_basic_chnroute_update=1
+	ss_basic_chnlist_update=1
+	force_update=0
+	start_update
+	;;
+*)
 	change_cru
 	start_update
-fi
+	;;
+esac
 
 case $2 in
 1)
@@ -197,7 +212,8 @@ case $2 in
 	http_response "$1"
 	ss_basic_gfwlist_update=1
 	ss_basic_chnroute_update=1
-	ss_basic_cdn_update=1
+	ss_basic_chnlist_update=1
+	force_update=0
 	change_cru > /tmp/upload/ss_log.txt
 	start_update >> /tmp/upload/ss_log.txt
 	echo XU6J03M6 >> /tmp/upload/ss_log.txt
