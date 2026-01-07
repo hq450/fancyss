@@ -40,16 +40,20 @@ sync_binary(){
 	done
 
 	# update to latest binary
-	BINS_COPY="xray v2ray ss_rust hysteria2"
+	BINS_COPY="xray v2ray hysteria2"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
 		if [ "${BIN}" == "v2ray" ];then
-			local VERSION_FLAG="latest_v5.txt"
+			local VERSION_FLAG="latest_v5_vmess_v4_min.txt"
 		fi
 
 		if [ "${BIN}" == "xray" ];then
-			local VERSION_FLAG="latest_2.txt"
+			local VERSION_FLAG="fancyss_min.txt"
+		fi
+
+		if [ "${BIN}" == "hysteria2" ];then
+			local VERSION_FLAG="latest_mini2.txt"
 		fi
 
 		if [ "${BIN}" == "ss_rust" ];then
@@ -191,15 +195,9 @@ gen_folder(){
 		sed -i 's/var PKG_TYPE=\"full\"/var PKG_TYPE=\"lite\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	
-	# if [ "${pkgtype}" == "lite" -a "${platform}" == "hnd" ];then
-	# 	# for small jffs router: RT-AX56U_V2 and RT-AX57, use smaller version of XRAY 1.8.3
-	# 	cp ./binaries/xray/v1.8.3/xray_armv7 ./shadowsocks/bin/xray
-	# fi
-
-	
 	if [ "${pkgtype}" == "full" ];then
 		# remove marked comment
-		# rm -rf ./shadowsocks/bin/sslocal
+		rm -rf ./shadowsocks/bin/sslocal
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_proc_status.sh
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_conf.sh
 		echo ".show-btn5, .show-btn6{display: inline; !important}" >> ./shadowsocks/res/shadowsocks.css

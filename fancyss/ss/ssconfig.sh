@@ -555,15 +555,45 @@ prepare_system() {
 	XRAY_CONFIG_TEMP="/tmp/xray_tmp.json"
 	XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 
+	# 当使用v2ray的时候，要看看用户用的什么出站协议和传输协议
+	# 为了控制二进制体积，v2ray被裁剪构建了，只支持vmess出站协议，且vmess里还不支持最新的一些比如httpupgrade, meek等协议
 	if [ "${ss_basic_type}" == "3" ];then
 		if [ "${ss_basic_vcore}" == "1" ];then
+			echo_date "ℹ️使用Xray-core替换V2ray-core..."
 			VCORE_NAME=Xray
 			V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
 			V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
 		else
-			VCORE_NAME=V2ray
-			V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
-			V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
+			if [ "${ss_basic_v2ray_use_json}" == "1" ];then
+				local _ret_vmess=$(echo "$ss_basic_v2ray_json" | base64_decode | grep protocol | grep -Eo "vmess")
+				if [ -z "${_ret_vmess}" ];then
+					# 如果用户自定义v2ray json用了vmess以外的协议，则切换到xray-core
+					echo_date "ℹ️检测到你使用v2ray运行非vmess协议，但本插件v2ray仅支持vmess..."
+					echo_date "ℹ️使用Xray-core替换V2ray-core..."
+					VCORE_NAME=Xray
+					V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
+					V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
+				else
+					# 如果用户自定义v2ray json用了vmess协议，但是传输层用了被拆件掉的协议，仍然切换为xray-core
+					local _ret_trans=$(echo "$ss_basic_v2ray_json" | base64_decode | grep network | grep -Eo "httpupgrade")
+					if [ -n "${_ret_trans}" ];then
+						echo_date "ℹ️v2ray不支持当前传输协议，可能是因为该协议被裁剪了..."
+						echo_date "ℹ️使用Xray-core替换V2ray-core..."
+						VCORE_NAME=Xray
+						V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
+						V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
+					else
+						echo_date "ℹ️使用V2ray-core..."
+						VCORE_NAME=V2ray
+						V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
+						V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
+					
+					fi
+				fi
+			#else
+				# 非json摸下默认的是vmess协议，只需要判断传输层协议是否支持
+				# 不过前端表单中给出的应该都是支持的，所以不需要担心
+			fi
 		fi
 	fi
 
@@ -571,15 +601,6 @@ prepare_system() {
 	TCORE_NAME=Xray
 	TROJAN_CONFIG_TEMP="/tmp/xray_tmp.json"
 	TROJAN_CONFIG_FILE="/koolshare/ss/xray.json"
-
-	# 12. info
-	if [ "${ss_basic_type}" == "3" ];then
-		if [ "${ss_basic_vcore}" == "1" ];then
-			echo_date "ℹ️使用Xray-core替换V2ray-core..."
-		else
-			echo_date "ℹ️使用V2ray-core..."
-		fi
-	fi
 
 	if [ "${ss_basic_type}" == "5" ];then
 		echo_date "ℹ️使用Xray-core运行trojan协议节点..."

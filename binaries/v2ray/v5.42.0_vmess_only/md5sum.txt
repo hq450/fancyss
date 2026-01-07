@@ -1,0 +1,3 @@
+adf8856e82b7aa96e0d4f225f783f8b9  v2ray_arm64
+cc67ece5aac31c708cdb2e6ab74335a0  v2ray_armv5
+0327c4f9048e5a7199f88dfdaddbe474  v2ray_armv7
