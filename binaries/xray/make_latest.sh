@@ -150,6 +150,9 @@ import (
 
 	// JSON config only (trim off YAML/TOML).
 	_ "github.com/xtls/xray-core/main/json"
+
+	// Load config from file or http(s); required for `-config=...`.
+	_ "github.com/xtls/xray-core/main/confloader/external"
 )
 EOF
 
