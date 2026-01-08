@@ -59,7 +59,7 @@ get_foreign_status(){
 	# if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" -a -n "${dns_safe}" -a -n "${iptables_safe1}" -a -n "${iptables_safe2}" -a -n "${ipset_safe}" ];then
 	if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" ];then
 		# get foreign status through 23456 socks5 port (resolve test server domain in local)
-		local ret0=$(run curl-fancyss -o /dev/null -4sk -I -x socks5h://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
+		local ret0=$(run curl-fancyss -o /dev/null -4sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 	else
 		log1='国外链接 【'${LOGTIME}'】 <font color='#FF0000'>X</font>'
 		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"

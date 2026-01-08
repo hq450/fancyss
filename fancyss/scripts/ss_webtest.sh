@@ -1043,6 +1043,7 @@ creat_v2ray_json() {
 		local h2="null"
 		local qc="null"
 		local gr="null"
+		local htup="null"
 		local tls="null"
 		
 		local v2ray_network_host=$(dbus get ssconf_basic_v2ray_network_host_${nu} | sed 's/,/", "/g')
@@ -1175,6 +1176,12 @@ creat_v2ray_json() {
 				\"multiMode\": $(get_grpc_multimode ${v2ray_grpc_mode})
 				}"
 			;;
+		httpupgrade)
+			local htup="{
+				\"path\": $(get_value_empty $ss_basic_v2ray_network_path)
+				,\"host\": $(get_value_empty $ss_basic_v2ray_network_host)
+				}"
+			;;
 		esac
 
 		local v2ray_port=$(dbus get ssconf_basic_port_${nu})
@@ -1216,6 +1223,7 @@ creat_v2ray_json() {
 						,"httpSettings": $h2
 						,"quicSettings": $qc
 						,"grpcSettings": $gr
+						,"httpupgradeSettings": $htup
 					},
 					"mux": {"enabled": false}
 				}
@@ -1416,7 +1424,9 @@ creat_xray_json() {
 		local tls="null"
 		local xtls="null"
 		local reali="null"
-
+		local xht="null"
+		local htup="null"
+		
 		local xray_network_host=$(dbus get ssconf_basic_xray_network_host_${nu} | sed 's/,/", "/g')
 		local xray_network_path=$(dbus get ssconf_basic_xray_network_path_${nu})
 		# sni is sni
@@ -1438,6 +1448,7 @@ creat_xray_json() {
 		[ -z "${xray_fingerprint}" ] && xray_fingerprint="chrome"
 		local xray_network_security="none"
 		local xray_network_security=$(dbus get ssconf_basic_xray_network_security_${nu})
+		local xray_xhttp_mode=$(dbus get ssconf_basic_xray_xhttp_mode_${nu})
 
 		if [ "${xray_network_security}" == "tls" -o "${xray_network_security}" == "xtls" ];then
 			local xray_network_security_ai=$(dbus get ssconf_basic_xray_network_security_ai_${nu})
@@ -1577,6 +1588,19 @@ creat_xray_json() {
 				\"multiMode\": $(get_grpc_multimode ${xray_grpc_mode})
 				}"
 			;;
+		httpupgrade)
+			local htup="{
+				\"path\": $(get_value_empty ${xray_network_path})
+				,\"host\": $(get_value_empty ${xray_network_host})
+				}"
+			;;
+		xhttp)
+			local xht="{
+				\"path\": $(get_value_empty ${xray_network_path})
+				,\"host\": $(get_value_empty ${xray_network_host})
+				,\"mode\": \"${xray_xhttp_mode}\"
+				}"
+			;;
 		esac
 
 		local xray_port=$(dbus get ssconf_basic_port_${nu})
@@ -1623,6 +1647,8 @@ creat_xray_json() {
 						,"httpSettings": $h2
 						,"quicSettings": $qc
 						,"grpcSettings": $gr
+						,"httpupgradeSettings": $htup
+						,"xhttpSettings": $xht
 						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
 					},
 					"mux": {"enabled": false}

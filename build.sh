@@ -366,7 +366,7 @@ gen_folder(){
 	# 有些功能还没准备好，先去掉
 	# 1. 广告过滤规则
 	# rm -rf ./shadowsocks/bin/smartdns
-	# rm -rf ./shadowsocks/ss/rules/adslist.gz
+	rm -rf ./shadowsocks/ss/rules/adslist.gz
 	# rm -rf ./shadowsocks/ss/rules/smartdns_smrt*
 	# sed -i '/fancyss_todo/d' ./shadowsocks/webs/Module_shadowsocks.asp
 }
