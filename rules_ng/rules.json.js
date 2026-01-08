@@ -1,8 +1,8 @@
 {
   "gfwlist": {
     "name": "gfwlist.gz",
-    "date": "2026-01-06 07:35",
-    "md5": "57f48b89e92d1b260732915c96d7121b",
+    "date": "2026-01-08 21:49",
+    "md5": "c09744273f237a905231ef88b81f57b3",
     "count": "7180"
   },
   "chnlist": {
@@ -29,9 +29,9 @@
   },
   "adslist": {
     "name": "adslist.gz",
-    "date": "2026-01-06 10:22",
-    "md5": "0efee989783f71bc41feef2d729b7f20",
-    "count": "106491",
+    "date": "2026-01-08 21:49",
+    "md5": "d066c7406cbb3966b7e1d5d39a5e15db",
+    "count": "107016",
     "source": "anti-ad",
     "url": "https://anti-ad.net/domains.txt"
   },
@@ -43,9 +43,9 @@
   },
   "rotlist": {
     "name": "rotlist.txt",
-    "date": "2026-01-06 00:57",
-    "md5": "d41d8cd98f00b204e9800998ecf8427e",
-    "count": "0"
+    "date": "2026-01-08 16:19",
+    "md5": "de470f08c946f80269b2b524efc93ce5",
+    "count": "28"
   },
   "white_list": {
     "name": "white_list.txt",
