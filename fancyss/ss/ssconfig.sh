@@ -1877,7 +1877,7 @@ start_chinadns_ng(){
 				# ipv6请求行为：全部过滤
 				no-ipv6
 			EOF
-		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "0" -a "${ss_basic_chng_ipv6_drop_proxy}" == "0" ];then
+		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "1" -a "${ss_basic_chng_ipv6_drop_proxy}" == "0" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
 				# ipv6请求行为：全部直连域名
 				no-ipv6 tag:chn,tag:white,tag:none@ip:china
