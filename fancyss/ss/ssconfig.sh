@@ -164,7 +164,7 @@ test_xray_conf(){
 	#uset _test_ret
 	local conf=$1
 	echo_date "测试xray配置文件..."
-	local test_ret=$(run xray run -test -c=$conf 2>&1)
+	local test_ret=$(run xray run -config=$conf -test 2>&1)
 	local ret_1=$(echo "$test_ret" | grep "Configuration OK.")
 	local ret_2=$(echo "$test_ret" | grep "does not support fingerprint")
 	#local ret_2=$(echo $test_ret | grep "Old version of XTLS does not support fingerprint")
@@ -587,12 +587,15 @@ prepare_system() {
 						VCORE_NAME=V2ray
 						V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
 						V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
-					
 					fi
 				fi
-			#else
+			else
 				# 非json摸下默认的是vmess协议，只需要判断传输层协议是否支持
 				# 不过前端表单中给出的应该都是支持的，所以不需要担心
+				echo_date "ℹ️使用V2ray-core..."
+				VCORE_NAME=V2ray
+				V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
+				V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
 			fi
 		fi
 	fi
@@ -2700,7 +2703,6 @@ get_host() {
 	fi
 }
 
-
 get_value_null(){
 	if [ -n "$1" ]; then
 		echo \"$1\"
@@ -3496,6 +3498,8 @@ creat_xray_json() {
 		local tls="null"
 		local xtls="null"
 		local reali="null"
+		local xht="null"
+		local htup="null"
 
 		if [ -z "$ss_basic_xray_network_security" ];then
 			local ss_basic_xray_network_security="none"
@@ -3680,6 +3684,14 @@ creat_xray_json() {
 		xhttp)
 			local xht="{
 				\"path\": $(get_value_empty $ss_basic_xray_network_path)
+				,\"host\": $(get_value_empty $ss_basic_xray_network_host)
+				,\"mode\": \"${ss_basic_xray_xhttp_mode}\"
+				}"
+			;;
+		httpupgrade)
+			local htup="{
+				\"path\": $(get_value_empty $ss_basic_xray_network_path)
+				,\"host\": $(get_value_empty $ss_basic_xray_network_host)
 				}"
 			;;
 		esac
@@ -3792,6 +3804,7 @@ creat_xray_json() {
 						,"httpSettings": $h2
 						,"quicSettings": $qc
 						,"grpcSettings": $gr
+						,"httpupgradeSettings": $htup
 						,"xhttpSettings": $xht
 						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
 					},
@@ -5156,15 +5169,15 @@ detect_ip(){
 	if [ "${METHOD}" == "0" ];then
 		# 检测国内ip
 		#echo_date "检测国内ip地址，检测地址：${SUBJECT}"
-		local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+		local IP=$(run5 curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
 		#echo_date "检测国外ip地址，检测地址：${SUBJECT}"
 		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "sslocal|v2ray|xray|naive|tuic|hysteria2")
 		if [ -n "${SOCKS5_OPEN}" ];then
-			local IP=$(run curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
+			local IP=$(run5 curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
-			local IP=$(run curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
+			local IP=$(run5 curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		fi
 	fi
 

@@ -111,6 +111,7 @@ unset PWD
 # ssconf_basic_xray_kcp_seed
 # ssconf_basic_xray_headtype_quic_
 # ssconf_basic_xray_grpc_mode_
+# ssconf_basic_xray_xhttp_mode_
 # ssconf_basic_xray_network_path_
 # ssconf_basic_xray_network_host_
 # ssconf_basic_xray_network_security_
@@ -657,7 +658,8 @@ add_ss_node(){
 				server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
 			fi
 			encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
-			password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+			#password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+			password=$(echo "${decrypt_info}" | sed 's/^[^:]*://')
 		fi
 	else
 		# first string not base64
@@ -1181,6 +1183,16 @@ add_vless_node(){
 			x_path="${x_serviceName}"
 		fi
 		;;
+	xhttp)
+		# xhttp
+		x_headtype_tcp=""
+		x_headtype_kcp=""
+		x_headtype_quic=""
+		x_xhttp_mode=${x_mode}
+		if [ -z "${x_host}" ];then
+			x_host="${x_server}"
+		fi
+		;;
 	esac
 
 	# host is not needed in kcp and grpc
@@ -1251,6 +1263,7 @@ add_vless_node(){
 	# echo x_headtype_kcp: ${x_headtype_kcp}
 	# echo x_headtype_quic: ${x_headtype_quic}
 	# echo x_grpc_mode: ${x_grpc_mode}
+	# echo x_xhttp_mode: ${x_xhttp_mode}
 	# echo alpn: ${x_alpn}
 	# echo ------------
 	
@@ -1290,6 +1303,7 @@ add_vless_node(){
 	json_add_string xray_fingerprint "${x_fp}"
 	json_add_string xray_flow "${x_flow}"
 	json_add_string xray_grpc_mode "${x_grpc_mode}"
+	json_add_string xray_xhttp_mode "${x_xhttp_mode}"
 	json_add_string xray_headtype_kcp "${x_headtype_kcp}"
 	json_add_string xray_headtype_quic "${x_headtype_quic}"
 	json_add_string xray_headtype_tcp "${x_headtype_tcp}"

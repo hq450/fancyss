@@ -45,11 +45,11 @@ sync_binary(){
 	do
 		local VERSION_FLAG="latest.txt"
 		if [ "${BIN}" == "v2ray" ];then
-			local VERSION_FLAG="latest_v5_vmess_v4_min.txt"
+			local VERSION_FLAG="latest_v5.txt"
 		fi
 
 		if [ "${BIN}" == "xray" ];then
-			local VERSION_FLAG="fancyss_min.txt"
+			local VERSION_FLAG="latest_2.txt"
 		fi
 
 		if [ "${BIN}" == "hysteria2" ];then
@@ -365,10 +365,10 @@ gen_folder(){
 
 	# 有些功能还没准备好，先去掉
 	# 1. 广告过滤规则
-	rm -rf ./shadowsocks/bin/smartdns
-	rm -rf ./shadowsocks/ss/rules/adslist.gz
-	rm -rf ./shadowsocks/ss/rules/smartdns_smrt*
-	sed -i '/fancyss_todo/d' ./shadowsocks/webs/Module_shadowsocks.asp
+	# rm -rf ./shadowsocks/bin/smartdns
+	# rm -rf ./shadowsocks/ss/rules/adslist.gz
+	# rm -rf ./shadowsocks/ss/rules/smartdns_smrt*
+	# sed -i '/fancyss_todo/d' ./shadowsocks/webs/Module_shadowsocks.asp
 }
 
 build_pkg() {

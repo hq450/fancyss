@@ -1,2 +1,0 @@
-63efd917afd46f81bd9b86b13ecc6b8a  sslocal_armv5
-309efa92d450fb237884f119d8eb1243  sslocal_armv7

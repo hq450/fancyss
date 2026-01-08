@@ -1,4 +1,4 @@
-fancyss Changelog
+ fancyss Changelog
 ===========================================
 3.3.9 (20251231)
    - note	此版本对DNS的逻辑和相关代码进行了较大改动，现在不再份基础和进阶，默认使用chinadns-ng，同时支持smartdns
@@ -11,10 +11,19 @@ fancyss Changelog
        		插件默认使用【智能判断】，有洁癖的可以使用国外优先模式，因为是纯域名分流，可以保证无DNS泄露
    - update	添加smartdns支持，预设三组配置：国内优先，国外优先，智能判断，外加三组自定义配置
        		通过对smartdns配置的调教，使其实现了chinadns-ng一样的分流解析，还可以在此基础上实现国内域名的解析ip优选。
-   - remove	移除了DNS中，dns2tcp和ecs的相关逻辑和代码
-   - remove	移除了dns2socks
-
-
+   - remove	移除了DNS中，dns2tcp和ecs的相关逻辑和二进制文件
+   - remove	移除了dns2socks，因为现在chinadns-ng魔改版自带tcp dns和socks5代理支持支持
+   - update	xray 二进制更新到最新:25.12.8
+   - add	xray vless配置新增httpypgrade传输协议支持
+   - add	xray vless配置新增xhttp传输协议支持（暂不支持配置extra json实现上下行分离，暂不支持配置抗量子密钥对，需要的请使用json配置）
+   - add	xray 订阅支持httpypgrade和xhttp
+   - fix	修复部分机场SS2022加密节点订阅由于密码解析错误导致节点不可用的问题
+   - update	v2ray 二进制更新到最新:5.42.0
+   - add	xray vmess配置新增httpypgrade传输协议支持
+   - update	hysteria2二进制更新到最新:v2.6.5，现在hy2二进制由本项目裁剪构建，以缩小体积
+   - update	websocketd二进制移除不需要的功能后拆件构建，减小了约2.3MB体积
+   - remove	移除了shadowsocks-rust，现在ss节点默认用xray运行
+   
 3.3.8 (20251106)
    - fix	此次仅修复一个web的小错误，同时同步下最新规则，建议更新
    - note	由于华硕最新固件内核原因，导致singbox插件开发受阻，fancyss最近将继续更新

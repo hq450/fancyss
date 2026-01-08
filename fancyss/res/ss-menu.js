@@ -742,33 +742,6 @@ function openssHint(itemNum, flag) {
 		statusmenu += "<br /><br /><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置xray支持的所有传出协议，包括vmess、vless、socks、shadowsocks、trojan等协议，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
 		_caption = "使用json配置";
-	} else if (itemNum == 28) {
-		width = "750px";
-		statusmenu = "<b>如果客户端json配置文件内没有此项，此处请留空！</b>"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>1:传输协议tcp + 伪装类型http：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → headers → Host】位置"
-		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>2:传输协议ws：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → wsSettings → headers → Host】位置"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>3:传输协议h2：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → httpSettings → host】位置"
-		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>4:传输协议quic：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → quicSettings → security】位置"
-		statusmenu += "<br />&nbsp;&nbsp;如有多个域名，请用英文逗号隔开，如：www.baidu.com,www.sina.com.cn"
-		_caption = "伪装域名 (host)";
-	} else if (itemNum == 29) {
-		width = "750px";
-		statusmenu = "<b>如果客户端json配置文件内没有此项，此处请留空！</b><br /><br />path的设定应该和服务器端保持一致，值应该和你nginx或者candy的配置内的一致！"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>1:[tcp + http] path：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → header → request → path】位置"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>2:ws path：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → wsSettings → path】位置"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>3:h2 path：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → httpSettings → path】位置"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>4:quic path：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;此参数在客户端json配置文件的【outbound/outbounds → streamSettings → quicSettings → key】位置"
-		_caption = "路径 (path)";
 	} else if (itemNum == 31) {
 		width = "400px";
 		statusmenu = "<b>此处控制开启或者关闭多路复用 (Mux)</b>"

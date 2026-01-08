@@ -202,9 +202,10 @@ main(){
 		# exit loop when fancyss not enabled
 		[ "$(dbus get ss_basic_enable)" != "1" ] && exit
 		
-		if [ "$(ps|grep ssconfig.sh|grep -v grep)" -o "$(ps|grep ss_v2ray.sh|grep -v grep)" ];then
-			# wait until ssconfig.sh or ss_v2ray.sh finished running
-			continue
+		if [ "$(ps|grep ssconfig.sh|grep -v grep)" ];then
+			# wait until ssconfig.sh finished running
+			echo ${LOGTIME1} ssconfig.sh running "[$(dbus get ssconf_basic_name_${CURRENT})]" >> $LOGFILE_F
+			#continue
 		else
 			# kill the last status script if exist
 			killall curl >/dev/null 2>&1

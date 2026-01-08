@@ -394,18 +394,42 @@ type v4TCPSettings struct {
 	AcceptProxyProtocol bool `json:"acceptProxyProtocol"`
 }
 
+type v4StringList []string
+
+func (s *v4StringList) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 || bytes.Equal(b, []byte("null")) {
+		*s = nil
+		return nil
+	}
+	if b[0] == '"' {
+		var v string
+		if err := json.Unmarshal(b, &v); err != nil {
+			return err
+		}
+		*s = v4StringList{v}
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal(b, &arr); err == nil {
+		*s = v4StringList(arr)
+		return nil
+	}
+	return errors.New("expected string or []string")
+}
+
 type v4HTTPRequest struct {
 	Version string              `json:"version"`
 	Method  string              `json:"method"`
-	Path    []string            `json:"path"`
-	Headers map[string][]string `json:"headers"`
+	Path    v4StringList        `json:"path"`
+	Headers map[string]v4StringList `json:"headers"`
 }
 
 type v4HTTPResponse struct {
 	Version string              `json:"version"`
 	Status  string              `json:"status"`
 	Reason  string              `json:"reason"`
-	Headers map[string][]string `json:"headers"`
+	Headers map[string]v4StringList `json:"headers"`
 }
 
 type v4KCPSettings struct {
@@ -427,7 +451,7 @@ type v4WSSettings struct {
 }
 
 type v4HTTPSettings struct {
-	Host []string `json:"host"`
+	Host v4StringList `json:"host"`
 	Path string   `json:"path"`
 }
 
@@ -711,7 +735,7 @@ func buildStream(s v4StreamConfig) (*internet.StreamConfig, error) {
 			_ = (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(s.SecuritySettings, tlsMsg)
 		}
 		cfg.SecuritySettings = append(cfg.SecuritySettings, cserial.ToTypedMessage(tlsMsg))
-		cfg.SecurityType = "tls"
+		cfg.SecurityType = cserial.GetMessageType(tlsMsg)
 	}
 
 	switch protocolName {
@@ -797,7 +821,9 @@ func buildStream(s v4StreamConfig) (*internet.StreamConfig, error) {
 
 func buildTCP(raw json.RawMessage) (*tcp.Config, error) {
 	var s v4TCPSettings
-	_ = json.Unmarshal(raw, &s)
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
 	cfg := &tcp.Config{AcceptProxyProtocol: s.AcceptProxyProtocol}
 	switch strings.ToLower(strings.TrimSpace(s.Header.Type)) {
 	case "", "none":
@@ -928,7 +954,9 @@ func buildWS(raw json.RawMessage) (*websocket.Config, error) {
 
 func buildH2(raw json.RawMessage) (*http.Config, error) {
 	var s v4HTTPSettings
-	_ = json.Unmarshal(raw, &s)
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
 	return &http.Config{Host: append([]string(nil), s.Host...), Path: s.Path}, nil
 }
 
@@ -1161,18 +1189,42 @@ type v4TCPSettings struct {
 	AcceptProxyProtocol bool `json:"acceptProxyProtocol"`
 }
 
+type v4StringList []string
+
+func (s *v4StringList) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 || bytes.Equal(b, []byte("null")) {
+		*s = nil
+		return nil
+	}
+	if b[0] == '"' {
+		var v string
+		if err := json.Unmarshal(b, &v); err != nil {
+			return err
+		}
+		*s = v4StringList{v}
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal(b, &arr); err == nil {
+		*s = v4StringList(arr)
+		return nil
+	}
+	return errors.New("expected string or []string")
+}
+
 type v4HTTPRequest struct {
 	Version string              `json:"version"`
 	Method  string              `json:"method"`
-	Path    []string            `json:"path"`
-	Headers map[string][]string `json:"headers"`
+	Path    v4StringList        `json:"path"`
+	Headers map[string]v4StringList `json:"headers"`
 }
 
 type v4HTTPResponse struct {
 	Version string              `json:"version"`
 	Status  string              `json:"status"`
 	Reason  string              `json:"reason"`
-	Headers map[string][]string `json:"headers"`
+	Headers map[string]v4StringList `json:"headers"`
 }
 
 type v4KCPSettings struct {
@@ -1194,7 +1246,7 @@ type v4WSSettings struct {
 }
 
 type v4HTTPSettings struct {
-	Host []string `json:"host"`
+	Host v4StringList `json:"host"`
 	Path string   `json:"path"`
 }
 
@@ -1470,7 +1522,7 @@ func buildStream(s v4StreamConfig) (*internet.StreamConfig, error) {
 			tlsMsg.NextProtocol = append([]string(nil), ts.ALPN...)
 		}
 		cfg.SecuritySettings = append(cfg.SecuritySettings, cserial.ToTypedMessage(tlsMsg))
-		cfg.SecurityType = "tls"
+		cfg.SecurityType = cserial.GetMessageType(tlsMsg)
 	}
 
 	switch protocolName {
@@ -1554,7 +1606,9 @@ func buildStream(s v4StreamConfig) (*internet.StreamConfig, error) {
 
 func buildTCP(raw json.RawMessage) (*tcp.Config, error) {
 	var s v4TCPSettings
-	_ = json.Unmarshal(raw, &s)
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
 	cfg := &tcp.Config{AcceptProxyProtocol: s.AcceptProxyProtocol}
 	switch strings.ToLower(strings.TrimSpace(s.Header.Type)) {
 	case "", "none":
@@ -1685,7 +1739,9 @@ func buildWS(raw json.RawMessage) (*websocket.Config, error) {
 
 func buildH2(raw json.RawMessage) (*http.Config, error) {
 	var s v4HTTPSettings
-	_ = json.Unmarshal(raw, &s)
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
 	return &http.Config{Host: append([]string(nil), s.Host...), Path: s.Path}, nil
 }
 
