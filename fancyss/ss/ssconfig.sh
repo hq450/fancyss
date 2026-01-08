@@ -989,6 +989,7 @@ restore_conf() {
 	remove_file /tmp/chnlist.txt $?
 	remove_file /tmp/black_list.txt $?
 	remove_file /tmp/white_list.txt $?
+	remove_file /tmp/block_list.txt $?
 	remove_file /koolshare/ss/xray.json $?
 	remove_file /koolshare/ss/ss.json $?
 	remove_file /koolshare/ss/tuic.json $?
@@ -1821,7 +1822,7 @@ start_chinadns_ng(){
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 黑名单域名（不解析）
 		group null
-		group-dnl /koolshare/ss/rules/block_list.txt
+		group-dnl /tmp/block_list.txt
 
 	EOF
 
@@ -2067,6 +2068,7 @@ add_white_black() {
 	# remove 
 	rm -rf /tmp/black_list.txt
 	rm -rf /tmp/white_list.txt
+	rm -rf /tmp/block_list.txt
 	rm -rf /tmp/chnlist.txt
 	rm -rf /tmp/gfwlist.txt
 
@@ -2167,6 +2169,9 @@ add_white_black() {
 	for wan_white_domain2 in "apple.com" "microsoft.com" "dns.msftncsi.com" "worldtimeapi.org"; do
 		echo "${wan_white_domain2}" >>/tmp/white_list.txt
 	done
+
+	# {block_list}
+	cp -rf /koolshare/ss/rules/block_list.txt /tmp
 }
 
 create_dnsmasq_conf() {
