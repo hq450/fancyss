@@ -6143,6 +6143,7 @@ function restart_chinadns() {
 													<script type="text/javascript">
 													option_dnsp = [
 																  ["1", "chinadns-ng"]
+																  ,["2", "smartdns"]
 																  ];
 														// 节点域名解析DNS方案： udp选项
 														option_server_resolve = [
