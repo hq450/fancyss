@@ -81,7 +81,7 @@ var option_xhttpmode = ["auto", "packet-up", "stream-up", "stream-one"];
 var option_bol = [["0", "false"], ["1", "true"]];
 var option_xflow = [["", "none"], ["xtls-rprx-vision", "xtls-rprx-vision"], ["xtls-rprx-origin", "xtls-rprx-origin"], ["xtls-rprx-origin-udp443", "xtls-rprx-origin-udp443"], ["xtls-rprx-direct", "xtls-rprx-direct"], ["xtls-rprx-direct-udp443", "xtls-rprx-direct-udp443"], ["xtls-rprx-splice", "xtls-rprx-splice"], ["xtls-rprx-splice-udp443", "xtls-rprx-splice-udp443"]];
 var option_fingerprint = ["chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized", ""];
-var option_naive_prot = ["https", "quic"];
+var option_naive_prot = ["https", "quic"];						//fancyss-full
 var option_hy2_obfs = [["0", "停用"], ["1", "salamander"]];		//fancyss-full
 var stop_scroll = 0;
 var close_latency_flag = 0;
@@ -319,21 +319,21 @@ function refresh_options() {
 			//naive
 			option0.append($("<option>", {																					//fancyss-full
 				value: field,																								//fancyss-full
-				text: "【Naïve】" + group_tag + c.name			//fancyss-full
+				text: "【Naïve】" + group_tag + c.name																		//fancyss-full
 			}));																											//fancyss-full
 		}																													//fancyss-full
 		else if(c.type == "7"){																								//fancyss-full
 			//tuic																											//fancyss-full
 			option0.append($("<option>", {																					//fancyss-full
 				value: field,																								//fancyss-full
-				text: "【tuic】" + group_tag + c.name				//fancyss-full
+				text: "【tuic】" + group_tag + c.name																		//fancyss-full
 			}));																											//fancyss-full
 		}																													//fancyss-full
 		else if(c.type == "8"){																								//fancyss-full
 			//hysteria2
 			option0.append($("<option>", {																					//fancyss-full
 				value: field,																								//fancyss-full
-				text: "【hysteria2】" + group_tag + c.name	//fancyss-full
+				text: "【hysteria2】" + group_tag + c.name																	//fancyss-full
 			}));																											//fancyss-full
 		}																													//fancyss-full
 	}
@@ -421,11 +421,11 @@ function save() {
 	  "ss_basic_chng_dns_query_times",
 	  "ss_basic_chng",
 	  "ss_basic_smrt",
-	  "ss_basic_kcp_lserver",
-	  "ss_basic_kcp_lport",
-	  "ss_basic_kcp_server",
-	  "ss_basic_kcp_port",
-	  "ss_basic_kcp_parameter",
+	  "ss_basic_kcp_lserver",			//fancyss-full
+	  "ss_basic_kcp_lport",				//fancyss-full
+	  "ss_basic_kcp_server",			//fancyss-full
+	  "ss_basic_kcp_port",				//fancyss-full
+	  "ss_basic_kcp_parameter",			//fancyss-full
 	  "ss_basic_rule_update",
 	  "ss_basic_rule_update_time",
 	  "ssr_subscribe_mode",
@@ -437,54 +437,54 @@ function save() {
 	  "ss_basic_include",
 	  "ss_acl_default_port",
 	  "ss_acl_default_mode",
-	  "ss_basic_kcp_method",
-	  "ss_basic_kcp_password",
-	  "ss_basic_kcp_mode",
-	  "ss_basic_kcp_encrypt",
-	  "ss_basic_kcp_mtu",
-	  "ss_basic_kcp_sndwnd",
-	  "ss_basic_kcp_rcvwnd",
-	  "ss_basic_kcp_conn",
-	  "ss_basic_kcp_extra",
-	  "ss_basic_udp_software",
-	  "ss_basic_udp_node",
-	  "ss_basic_udpv1_lserver",
-	  "ss_basic_udpv1_lport",
-	  "ss_basic_udpv1_rserver",
-	  "ss_basic_udpv1_rport",
-	  "ss_basic_udpv1_password",
-	  "ss_basic_udpv1_mode",
-	  "ss_basic_udpv1_duplicate_nu",
-	  "ss_basic_udpv1_duplicate_time",
-	  "ss_basic_udpv1_jitter",
-	  "ss_basic_udpv1_report",
-	  "ss_basic_udpv1_drop",
-	  "ss_basic_udpv2_lserver",
-	  "ss_basic_udpv2_lport",
-	  "ss_basic_udpv2_rserver",
-	  "ss_basic_udpv2_rport",
-	  "ss_basic_udpv2_password",
-	  "ss_basic_udpv2_fec",
-	  "ss_basic_udpv2_timeout",
-	  "ss_basic_udpv2_mode",
-	  "ss_basic_udpv2_report",
-	  "ss_basic_udpv2_mtu",
-	  "ss_basic_udpv2_jitter",
-	  "ss_basic_udpv2_interval",
-	  "ss_basic_udpv2_drop",
-	  "ss_basic_udpv2_other",
-	  "ss_basic_udp2raw_lserver",
-	  "ss_basic_udp2raw_lport",
-	  "ss_basic_udp2raw_rserver",
-	  "ss_basic_udp2raw_rport",
-	  "ss_basic_udp2raw_password",
-	  "ss_basic_udp2raw_rawmode",
-	  "ss_basic_udp2raw_ciphermode",
-	  "ss_basic_udp2raw_authmode",
-	  "ss_basic_udp2raw_lowerlevel",
-	  "ss_basic_udp2raw_other",
-	  "ss_basic_udp_upstream_mtu",
-	  "ss_basic_udp_upstream_mtu_value",
+	  "ss_basic_kcp_method",     	     //fancyss-full
+	  "ss_basic_kcp_password",     	     //fancyss-full
+	  "ss_basic_kcp_mode",     		     //fancyss-full
+	  "ss_basic_kcp_encrypt",     	     //fancyss-full
+	  "ss_basic_kcp_mtu",     		     //fancyss-full
+	  "ss_basic_kcp_sndwnd",     	     //fancyss-full
+	  "ss_basic_kcp_rcvwnd",     	     //fancyss-full
+	  "ss_basic_kcp_conn",     		     //fancyss-full
+	  "ss_basic_kcp_extra",     	     //fancyss-full
+	  "ss_basic_udp_software",     	     //fancyss-full
+	  "ss_basic_udp_node",     	 	     //fancyss-full
+	  "ss_basic_udpv1_lserver",     	 //fancyss-full
+	  "ss_basic_udpv1_lport",     		 //fancyss-full
+	  "ss_basic_udpv1_rserver",     	 //fancyss-full
+	  "ss_basic_udpv1_rport",     		 //fancyss-full
+	  "ss_basic_udpv1_password",     	 //fancyss-full
+	  "ss_basic_udpv1_mode",     		 //fancyss-full
+	  "ss_basic_udpv1_duplicate_nu",     //fancyss-full
+	  "ss_basic_udpv1_duplicate_time",   //fancyss-full
+	  "ss_basic_udpv1_jitter",     		 //fancyss-full
+	  "ss_basic_udpv1_report",     		 //fancyss-full
+	  "ss_basic_udpv1_drop",     		 //fancyss-full
+	  "ss_basic_udpv2_lserver",     	 //fancyss-full
+	  "ss_basic_udpv2_lport",     		 //fancyss-full
+	  "ss_basic_udpv2_rserver",     	 //fancyss-full
+	  "ss_basic_udpv2_rport",     		 //fancyss-full
+	  "ss_basic_udpv2_password",     	 //fancyss-full
+	  "ss_basic_udpv2_fec",     		 //fancyss-full
+	  "ss_basic_udpv2_timeout",     	 //fancyss-full
+	  "ss_basic_udpv2_mode",     		 //fancyss-full
+	  "ss_basic_udpv2_report",     		 //fancyss-full
+	  "ss_basic_udpv2_mtu",     		 //fancyss-full
+	  "ss_basic_udpv2_jitter",     		 //fancyss-full
+	  "ss_basic_udpv2_interval",     	 //fancyss-full
+	  "ss_basic_udpv2_drop",     		 //fancyss-full
+	  "ss_basic_udpv2_other",     		 //fancyss-full
+	  "ss_basic_udp2raw_lserver",     	 //fancyss-full
+	  "ss_basic_udp2raw_lport",     	 //fancyss-full
+	  "ss_basic_udp2raw_rserver",     	 //fancyss-full
+	  "ss_basic_udp2raw_rport",     	 //fancyss-full
+	  "ss_basic_udp2raw_password",     	 //fancyss-full
+	  "ss_basic_udp2raw_rawmode",     	 //fancyss-full
+	  "ss_basic_udp2raw_ciphermode",     //fancyss-full
+	  "ss_basic_udp2raw_authmode",     	 //fancyss-full
+	  "ss_basic_udp2raw_lowerlevel",     //fancyss-full
+	  "ss_basic_udp2raw_other",     	 //fancyss-full
+	  "ss_basic_udp_upstream_mtu",     	 //fancyss-full
+	  "ss_basic_udp_upstream_mtu_value", //fancyss-full
 	  "ss_reboot_check",
 	  "ss_basic_week",
 	  "ss_basic_day",
@@ -501,9 +501,9 @@ function save() {
 	  "ss_basic_wt_curl",
 	  "ss_basic_lt_cru_opts",
 	  "ss_basic_lt_cru_time",
-	  "ss_basic_hy2_up_speed",
-	  "ss_basic_hy2_dl_speed",
-	  "ss_basic_hy2_tfo_switch"
+	  "ss_basic_hy2_up_speed",		 //fancyss-full
+	  "ss_basic_hy2_dl_speed",		 //fancyss-full
+	  "ss_basic_hy2_tfo_switch" 	 //fancyss-full
 	];
 	var params_check = [
 	  "ss_failover_enable",
@@ -519,11 +519,11 @@ function save() {
 	  "ss_basic_gfwlist_update",
 	  "ss_basic_tfo",
 	  "ss_basic_tnd",
-	  "ss_basic_score",
-	  "ss_basic_vcore",
+	  "ss_basic_score",					//fancyss-full
+	  "ss_basic_vcore",					//fancyss-full
 	  "ss_basic_xguard",
-	  "ss_basic_kcp_on",
-	  "ss_basic_udp_on",
+	  "ss_basic_kcp_on",				//fancyss-full
+	  "ss_basic_udp_on",				//fancyss-full
 	  "ss_basic_tjai",
 	  "ss_basic_nonetcheck",
 	  "ss_basic_notimecheck",
@@ -533,14 +533,14 @@ function save() {
 	  "ss_basic_nocdnscheck",
 	  "ss_basic_chnroute_update",
 	  "ss_basic_chnlist_update",
-	  "ss_basic_kcp_nocomp",
-	  "ss_basic_udp_boost_enable",
-	  "ss_basic_udpv1_disable_filter",
-	  "ss_basic_udpv2_disableobscure",
-	  "ss_basic_udpv2_disablechecksum",
-	  "ss_basic_udp2raw_boost_enable",
-	  "ss_basic_udp2raw_a",
-	  "ss_basic_udp2raw_keeprule",
+	  "ss_basic_kcp_nocomp",     		     //fancyss-full
+	  "ss_basic_udp_boost_enable",       	 //fancyss-full
+	  "ss_basic_udpv1_disable_filter",       //fancyss-full
+	  "ss_basic_udpv2_disableobscure",     	 //fancyss-full
+	  "ss_basic_udpv2_disablechecksum",      //fancyss-full
+	  "ss_basic_udp2raw_boost_enable",    	 //fancyss-full
+	  "ss_basic_udp2raw_a",     			 //fancyss-full
+	  "ss_basic_udp2raw_keeprule",    		 //fancyss-full
 	  "ss_basic_add_ispdns",
 	  "ss_basic_dns_server",
 	  "ss_basic_dns_hijack",
@@ -556,8 +556,6 @@ function save() {
 	  "ss_basic_proxy_newb",
 	  //"ss_basic_proxy_ipv4",
 	  //"ss_basic_proxy_ipv6"
-	  //"ss_basic_chng_trust_tcp_socks",
-	  //"ss_basic_chng_trust_tcp_proxy",
 	  "ss_basic_udpoff",
 	  "ss_basic_udpall",
 	  "ss_basic_udpgpt"
@@ -1404,7 +1402,7 @@ function verifyFields(r) {
 	// node sub pannel
 	if(E("ss_adv_sub").checked == false){
 		$("#ssr_subscribe_mode").parent().parent().hide();
-		$("#ss_basic_hy2_up_speed").parent().parent().hide();
+		$("#ss_basic_hy2_up_speed").parent().parent().hide();		//fancyss-full
 		$("#ss_basic_online_links_goss").parent().parent().hide();
 		$("#ss_basic_node_update").parent().parent().hide();
 		$("#ss_basic_exclude").parent().parent().hide();
@@ -1413,7 +1411,7 @@ function verifyFields(r) {
 		$("#ss_sub_save_only").hide();
 	}else{
 		$("#ssr_subscribe_mode").parent().parent().show();
-		$("#ss_basic_hy2_up_speed").parent().parent().show();
+		$("#ss_basic_hy2_up_speed").parent().parent().show();		//fancyss-full
 		$("#ss_basic_online_links_goss").parent().parent().show();
 		$("#ss_basic_node_update").parent().parent().show();
 		$("#ss_basic_exclude").parent().parent().show();
@@ -1450,6 +1448,7 @@ function verifyFields(r) {
 			push_data("dummy_script.sh", "", dbus_post, "1");
 		}
 	}
+	//fancyss_full_1
 	if ( $(r).attr("id") == "ss_basic_udp_on" ) {
 		var dbus_post = {};
 		dbus_post["ss_basic_udp_on"] = E("ss_basic_udp_on").checked ? '1' : '0';
@@ -1459,6 +1458,7 @@ function verifyFields(r) {
 			push_data("dummy_script.sh", "", dbus_post, "1");
 		}
 	}
+	//fancyss_full_2
 	refresh_acl_table();
 }
 function update_visibility() {
@@ -6311,10 +6311,6 @@ function restart_chinadns() {
 															]},	
 															
 															{ title: '<em>其它DNS相关设置</em>', th:'2'},
-															//{ title: '可信DNS tcp解析设置', hint:'150', thtd:1 , multi: [
-															//	{ id:'ss_basic_chng_trust_tcp_socks', name:'ss_basic_chng_trust_tcp_mothod', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(151)"><font color="#ffcc00">通过socks5解析</font></a>', value: 0},
-															//	{ id:'ss_basic_chng_trust_tcp_proxy', name:'ss_basic_chng_trust_tcp_mothod', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(152)"><font color="#ffcc00">通过透明代理解析</font></a>', value: 1},
-															//]},
 															{ title: 'DNS重定向', id:'ss_basic_dns_hijack', type:'checkbox', hint:'106', value:true},
 															{ title: 'DNS解析测试', rid: 'ss_dns_test', multi: [
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="dns_test(1)">测试cdn</a>&nbsp;&nbsp;'},

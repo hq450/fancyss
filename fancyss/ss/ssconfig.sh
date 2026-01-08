@@ -1396,6 +1396,9 @@ dbus_eset(){
 }
 
 start_dns_x(){
+	set_default "ss_basic_dns_plan" "1"
+	set_default "ss_basic_dns_server" "1"
+	
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		start_chinadns_ng
 	elif [ "${ss_basic_dns_plan}" == "2" ];then
@@ -1509,6 +1512,7 @@ start_chinadns_ng(){
 	local TRUST_DNS_2=""
 	local TRUST_DNS_3=""
 	local DNS_REPEATS=""
+	local ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
 
 	# 1. set default value incase of ssconfig.sh restart after upgrade form old verison below 3.3.8
 	set_default "ss_basic_chng_china_dns_1_chk" "1"
@@ -1518,20 +1522,30 @@ start_chinadns_ng(){
 	set_default "ss_basic_chng_china_net_2_typ" "tcp"
 	set_default "ss_basic_chng_china_net_3_typ" "dot"
 
-	set_default "ss_basic_chng_china_udp_1_opt" "1"
+	if [ -n "${ISP_DNS1}" ]; then
+		set_default "ss_basic_chng_china_udp_1_opt" "${ISP_DNS1}"
+	else
+		set_default "ss_basic_chng_china_udp_1_opt" "223.5.5.5"
+	fi
 	set_default "ss_basic_chng_china_udp_1_usr" "114.114.114.114"
-	set_default "ss_basic_chng_china_udp_2_opt" "5"
+	set_default "ss_basic_chng_china_udp_2_opt" "223.5.5.5"
 	set_default "ss_basic_chng_china_udp_2_usr" "114.114.115.115"
-	set_default "ss_basic_chng_china_udp_3_opt" "5"
+	set_default "ss_basic_chng_china_udp_3_opt" "223.5.5.5"
 	set_default "ss_basic_chng_china_udp_3_usr" "114.114.115.115"
 	
-	set_default "ss_basic_chng_china_tcp_1_opt" "3"
+	set_default "ss_basic_chng_china_tcp_1_opt" "119.28.28.28"
 	set_default "ss_basic_chng_china_tcp_1_usr" "114.114.114.114"
-	set_default "ss_basic_chng_china_tcp_2_opt" "5"
+	set_default "ss_basic_chng_china_tcp_2_opt" "119.28.28.28"
 	set_default "ss_basic_chng_china_tcp_2_usr" "114.114.115.115"
-	set_default "ss_basic_chng_china_tcp_3_opt" "5"
+	set_default "ss_basic_chng_china_tcp_3_opt" "119.28.28.28"
 	set_default "ss_basic_chng_china_tcp_3_usr" "114.114.115.115"
 
+	set_default "ss_basic_chng_china_dot_1_opt" "dns.alidns.com@223.5.5.5"
+	set_default "ss_basic_chng_china_dot_1_usr" "114.114.114.114"
+	set_default "ss_basic_chng_china_dot_2_opt" "dns.alidns.com@223.5.5.5"
+	set_default "ss_basic_chng_china_dot_2_usr" "114.114.115.115"
+	set_default "ss_basic_chng_china_dot_3_opt" "dns.alidns.com@223.5.5.5"
+	set_default "ss_basic_chng_china_dot_3_usr" "114.114.115.115"
 	
 	set_default "ss_basic_chng_trust_dns_1_chk" "1"
 	set_default "ss_basic_chng_trust_dns_2_chk" "1"
@@ -1539,18 +1553,28 @@ start_chinadns_ng(){
 	set_default "ss_basic_chng_trust_net_1_typ" "tcp"
 	set_default "ss_basic_chng_trust_net_2_typ" "tcp"
 	set_default "ss_basic_chng_trust_net_3_typ" "tls"
-	set_default "ss_basic_chng_trust_tcp_1_opt" "1.1.1.1"
-	set_default "ss_basic_chng_trust_tcp_1_usr" "8.8.8.8:53"
-	set_default "ss_basic_chng_trust_tcp_2_opt" "8.8.8.8"
-	set_default "ss_basic_chng_trust_tcp_2_usr" "8.8.8.8:53"
-	set_default "ss_basic_chng_trust_tcp_3_opt" "9.9.9.9"
-	set_default "ss_basic_chng_trust_tcp_3_usr" "8.8.8.8:53"
+
 	set_default "ss_basic_chng_trust_udp_1_opt" "1.1.1.1"
 	set_default "ss_basic_chng_trust_udp_1_usr" "8.8.8.8:53"
 	set_default "ss_basic_chng_trust_udp_2_opt" "8.8.8.8"
 	set_default "ss_basic_chng_trust_udp_2_usr" "8.8.8.8:53"
 	set_default "ss_basic_chng_trust_udp_3_opt" "9.9.9.9"
 	set_default "ss_basic_chng_trust_udp_3_usr" "8.8.8.8:53"
+	
+	set_default "ss_basic_chng_trust_tcp_1_opt" "1.1.1.1"
+	set_default "ss_basic_chng_trust_tcp_1_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_tcp_2_opt" "8.8.8.8"
+	set_default "ss_basic_chng_trust_tcp_2_usr" "8.8.8.8:53"
+	set_default "ss_basic_chng_trust_tcp_3_opt" "9.9.9.9"
+	set_default "ss_basic_chng_trust_tcp_3_usr" "8.8.8.8:53"
+
+	set_default "ss_basic_chng_trust_dot_1_opt" "dns.google.com@8.8.8.8"
+	set_default "ss_basic_chng_trust_dot_1_usr" "dns.google.com@8.8.8.8"
+	set_default "ss_basic_chng_trust_dot_2_opt" "dns.google.com@8.8.8.8"
+	set_default "ss_basic_chng_trust_dot_2_usr" "dns.google.com@8.8.8.8"
+	set_default "ss_basic_chng_trust_dot_3_opt" "dns.google.com@8.8.8.8"
+	set_default "ss_basic_chng_trust_dot_3_usr" "dns.google.com@8.8.8.8"
+
 	set_default "ss_basic_chng_ipv6_drop_direc" "0"
 	set_default "ss_basic_chng_ipv6_drop_proxy" "1"
 	set_default "ss_basic_chng_dns_query_times" "1"
