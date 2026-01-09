@@ -4558,8 +4558,6 @@ _start_iptables() {
 	fi
 }
 
-# -----------------------------------nat part end--------------------------------------------------------
-
 restart_dnsmasq() {
 	# 当dnsmasq处于自然状态下，不需要重启dnsmasq
 	# if [ "${ss_basic_status}" == "0" -a "${ss_basic_enable}" == "0" ];then
@@ -4730,54 +4728,6 @@ detect_ip(){
 	echo ${IP}
 }
 
-check_chn_dns(){
-	#echo_date "检测进阶chinadns-ng方案中的中国DNS是否正常工作..."
-	echo_date "检测中国域名是否正常解析..."
-
-	if [ "${ss_basic_dns_server}" == "1" ];then
-		local chk_port=53
-	else
-		local chk_port=7913
-	fi
-	
-	# 1. 检测5个国内域名的DNS解析
-	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-		local CHN_RESOLV_DOMAIN="www.baidu.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-	fi
-
-	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-		local CHN_RESOLV_DOMAIN="www.taobao.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-	fi
-
-	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-		local CHN_RESOLV_DOMAIN="www.sina.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-	fi
-
-	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-		local CHN_RESOLV_DOMAIN="www.jd.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-	fi
-
-	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-		local CHN_RESOLV_DOMAIN="www.qq.com"
-		local CHN_RESOLV_IPADDR=$(run dnsclient -p ${chk_port} -t 3 -i 1 @127.0.0.1 ${CHN_RESOLV_DOMAIN} 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-	fi
-	
-	if [ -z "${CHN_RESOLV_IPADDR}" ]; then
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "国内DNS工作异常，无法正常解析国内域名！请检查你的国内DNS设置..."
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		###close_in_five flag
-	fi
-	
-	if [ -n "${CHN_RESOLV_IPADDR}" ]; then
-		echo_date "中国DNS工作正常！检测源：${CHN_RESOLV_DOMAIN}，解析结果：${CHN_RESOLV_IPADDR}"
-	fi
-}
-
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 
@@ -4848,22 +4798,10 @@ check_frn_public_ip(){
 }
 
 finish_start(){
-	# something else need to do
-
-	if [ "${ss_basic_nocdnscheck}" != "1" -o "${ss_basic_nofrnipcheck}" != "1" ];then
+	# get foreign ip
+	if [ "${ss_basic_nofrnipcheck}" != "1" ];then
 		echo_date "---------------------------------------------------------"
 		echo_date "所有服务和规则加载完毕，运行一些检测..."
-	fi
-
-	# 1. 检测国内域名解析是否正常
-	if [ "${ss_basic_nocdnscheck}" != "1" ];then
-		check_chn_dns
-	else
-		echo_date "跳过国内DNS可用性检测..."
-	fi
-	
-	# 3. get foreign ip
-	if [ "${ss_basic_nofrnipcheck}" != "1" ];then
 		check_frn_public_ip
 	else
 		echo_date "跳过代理出口ip检测..."

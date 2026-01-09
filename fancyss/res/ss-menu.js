@@ -1111,11 +1111,6 @@ function openssHint(itemNum, flag) {
 		statusmenu = "此功能可能会导致系统提示时间未同步，如遇到此情况也建议勾选本选项<br /><br />";
 		statusmenu += "如果能保证你的路由器本地时间准确，或者你使用的协议对时间没有要求，那么在插件开启时跳过时间一致性检测！";
 		_caption = "跳过时间一致性检测";
-	} else if (itemNum == 140) {
-		width = "450px";
-		statusmenu = "fancyss运行需要国内DNS畅通，如果不通，fancyss将无法正常运行<br /><br />";
-		statusmenu += "如果能保证你的国内DNS稳定畅通，那么在可以插件开启时跳过国内DNS可用性检测！";
-		_caption = "跳过国内DNS可用性检测";
 	} else if (itemNum == 141) {
 		width = "450px";
 		statusmenu = "此可信DNS检测仅仅针对使用进阶DNS设定中的chinadns-ng<br /><br />";
