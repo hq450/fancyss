@@ -2796,29 +2796,9 @@ start_v2ray() {
 	fi
 	if [ "${ss_basic_vcore}" == "1" ];then
 		# xray start
-		if [ "${ss_basic_xguard}" == "1" ];then
-			echo_date "开启Xray主进程 + Xray守护..."
-			# use perp to start xray
-			mkdir -p /koolshare/perp/xray/
-			cat >/koolshare/perp/xray/rc.main <<-EOF
-				#!/bin/sh
-				source /koolshare/scripts/base.sh
-				CMD="xray run -c /koolshare/ss/xray.json"
-				
-				exec 2>&1
-				exec \$CMD
-				
-			EOF
-			chmod +x /koolshare/perp/xray/rc.main
-			chmod +t /koolshare/perp/xray/
-			sync
-			perpctl A xray >/dev/null 2>&1
-			perpctl u xray >/dev/null 2>&1
-		else
-			echo_date "开启Xray主进程..."
-			cd /koolshare/bin
-			run_bg xray run -c ${V2RAY_CONFIG_FILE}
-		fi
+		echo_date "开启Xray主进程..."
+		cd /koolshare/bin
+		run_bg xray run -c ${V2RAY_CONFIG_FILE}
 		detect_running_status3 xray 23456 0 force
 	else
 		# v2ray start
@@ -3579,29 +3559,9 @@ start_xray() {
 		fi
 	fi
 	# xray start
-	if [ "${ss_basic_xguard}" == "1" ];then
-		echo_date "开启Xray主进程 + Xray守护..."
-		# use perp to start xray
-		mkdir -p /koolshare/perp/xray/
-		cat >/koolshare/perp/xray/rc.main <<-EOF
-			#!/bin/sh
-			source /koolshare/scripts/base.sh
-			CMD="xray run -c /koolshare/ss/xray.json"
-			
-			exec 2>&1
-			exec \$CMD
-			
-		EOF
-		chmod +x /koolshare/perp/xray/rc.main
-		chmod +t /koolshare/perp/xray/
-		sync
-		perpctl A xray >/dev/null 2>&1
-		perpctl u xray >/dev/null 2>&1
-	else
-		echo_date "开启Xray主进程..."
-		cd /koolshare/bin
-		run_bg xray run -c $XRAY_CONFIG_FILE
-	fi
+	echo_date "开启Xray主进程..."
+	cd /koolshare/bin
+	run_bg xray run -c $XRAY_CONFIG_FILE
 	detect_running_status3 xray 23456 0 force
 }
 
@@ -3745,29 +3705,9 @@ start_trojan(){
 			echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 		fi
 	fi
-	if [ "${ss_basic_xguard}" == "1" ];then
-		echo_date "开启Xray主进程 + Xray守护，用以运行trojan协议节点..."
-		# use perp to start xray
-		mkdir -p /koolshare/perp/xray/
-		cat >/koolshare/perp/xray/rc.main <<-EOF
-			#!/bin/sh
-			source /koolshare/scripts/base.sh
-			CMD="xray run -c /koolshare/ss/xray.json"
-			
-			exec 2>&1
-			exec \$CMD
-			
-		EOF
-		chmod +x /koolshare/perp/xray/rc.main
-		chmod +t /koolshare/perp/xray/
-		sync
-		perpctl A xray >/dev/null 2>&1
-		perpctl u xray >/dev/null 2>&1
-	else
-		echo_date "开启Xray主进程，用以运行trojan协议节点..."
-		cd /koolshare/bin
-		run_bg xray run -c $XRAY_CONFIG_FILE
-	fi
+	echo_date "开启Xray主进程，用以运行trojan协议节点..."
+	cd /koolshare/bin
+	run_bg xray run -c $XRAY_CONFIG_FILE
 	detect_running_status3 xray 23456 0 force
 }
 

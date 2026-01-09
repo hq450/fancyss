@@ -928,9 +928,6 @@ function openssHint(itemNum, flag) {
 	} else if (itemNum == 114) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/XTLS/Xray-core' target='_blank'><u><font color='#00F'>Xray-core</font></u></a> 是 v2ray-core 的超集，含更好的整体性能和 XTLS 等一系列增强，且完全兼容 v2ray-core 的功能及配置。<br /><br />1. 你可以用Xray-core跑所有的vmess和vless节点<br />2. 使用Xray-core你还可以配置VLESS-TCP + XTLS节点，这点V2ray无法做到。<br />3. 如果你的vmess节点不工作，也可以尝试使用Xray核心。"
 		_caption = "说明";
-	} else if (itemNum == 115) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一般来说你用不到这个选项，但是如果你的xray进程不稳定，你可以尝试开启此功能，此功能使用perp实时守护进程！。"
-		_caption = "说明";
 	} else if (itemNum == 116) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！<br />&nbsp;&nbsp;&nbsp;&nbsp;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：<br />-------------------------------------------------<br />🚀魅影极速<br />https://subserver.maying.io/xxx<br /><br />🛩️nextitally<br />https://naixisubs.com/downloadConfig/xxx<br />-------------------------------------------------"
 		_caption = "订阅地址管理";
