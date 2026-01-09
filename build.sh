@@ -56,20 +56,14 @@ sync_binary(){
 			local VERSION_FLAG="latest_mini2.txt"
 		fi
 
-		if [ "${BIN}" == "ss_rust" ];then
-			local REAL_BIN="sslocal"
-		else
-			local REAL_BIN="${BIN}"
-		fi
-	
 		local version=$(cat ${CURR_PATH}/binaries/${BIN}/${VERSION_FLAG})
 		echo ">>> start to copy latest ${BIN}, version: ${version}"
-		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_arm64 ${CURR_PATH}/fancyss/bin-mtk/${REAL_BIN}
-		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/${REAL_BIN}
-		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv7 ${CURR_PATH}/fancyss/bin-ipq32/${REAL_BIN}
-		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv7 ${CURR_PATH}/fancyss/bin-hnd/${REAL_BIN}
-		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv7 ${CURR_PATH}/fancyss/bin-qca/${REAL_BIN}
-		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${REAL_BIN}_armv5 ${CURR_PATH}/fancyss/bin-arm/${REAL_BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_arm64 ${CURR_PATH}/fancyss/bin-mtk/${BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/${BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv7 ${CURR_PATH}/fancyss/bin-ipq32/${BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv7 ${CURR_PATH}/fancyss/bin-hnd/${BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv7 ${CURR_PATH}/fancyss/bin-qca/${BIN}
+		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv5 ${CURR_PATH}/fancyss/bin-arm/${BIN}
 	done
 }
 
@@ -159,7 +153,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/jq
 		rm -rf ./shadowsocks/bin/curl-fancyss
 		# bd4 jffs2 space to small, use xray run ss
-		rm -rf ./shadowsocks/bin/sslocal
 		echo ipq32 > ./shadowsocks/.valid
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"ipq32\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
@@ -181,9 +174,6 @@ gen_folder(){
 	fi
 	
 	# remove some binary because it's not default provide by install packages
-	find ./shadowsocks/bin -name "speederv1" | xargs rm -rf
-	find ./shadowsocks/bin -name "speederv2" | xargs rm -rf
-	find ./shadowsocks/bin -name "udp2raw" | xargs rm -rf
 	find ./shadowsocks/bin -name "tuic-client" | xargs rm -rf
 	find ./shadowsocks/bin -name "naive" | xargs rm -rf
 
@@ -197,17 +187,11 @@ gen_folder(){
 	
 	if [ "${pkgtype}" == "full" ];then
 		# remove marked comment
-		rm -rf ./shadowsocks/bin/sslocal
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_proc_status.sh
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_conf.sh
-		echo ".show-btn5, .show-btn6{display: inline; !important}" >> ./shadowsocks/res/shadowsocks.css
 	elif [ "${pkgtype}" == "lite" ];then
 		# remove binaries
-		rm -rf ./shadowsocks/bin/sslocal
 		rm -rf ./shadowsocks/bin/v2ray
-		rm -rf ./shadowsocks/bin/speederv1
-		rm -rf ./shadowsocks/bin/speederv2
-		rm -rf ./shadowsocks/bin/udp2raw
 		rm -rf ./shadowsocks/bin/naive
 		rm -rf ./shadowsocks/bin/tuic-client
 		rm -rf ./shadowsocks/bin/ipt2socks
@@ -219,7 +203,6 @@ gen_folder(){
 		fi
 		# remove scripts
 		rm -rf ./shadowsocks/scripts/ss_v2ray.sh
-		rm -rf ./shadowsocks/scripts/ss_rust_update.sh
 		rm -rf ./shadowsocks/scripts/ss_udp_status.sh
 		# remove rules
 		rm -rf ./shadowsocks/ss/rules/chn.acl
@@ -246,14 +229,6 @@ gen_folder(){
 		sed -i 's/\,\s\"naive_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"tuic_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_vcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_tcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_score\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_rust\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_kcp_on\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_udp_on\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_v2ray\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_v2ray_opts\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"use_kcp\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		# hysteria2
 		sed -i 's/\,\s\"ss_basic_hy2_up_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_hy2_dl_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
