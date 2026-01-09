@@ -348,15 +348,6 @@ GET_PROG_STAT(){
 		fi
 	fi
 		
-	if [ "${ss_basic_use_kcp}" == "1" ]; then
-		local KCPTUN=$(pidof kcptun)
-		if [ -n "${KCPTUN}" ];then
-			echo "kcptun		运行中🟢		kcp加速		${KCPTUN}"
-		else
-			echo "kcptun		未运行🔴"
-		fi
-	fi
-
 	if [ "${ss_basic_server}" == "127.0.0.1" ]; then
 		local HAPROXY=$(pidof haproxy)
 		if [ -n "${HAPROXY}" ];then
@@ -388,9 +379,6 @@ ECHO_VERSION(){
 	if [ -x "/koolshare/bin/v2ray" ];then
 		local v2_info_all=$(run v2ray version|head -n1)
 		echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			https://github.com/v2fly/v2ray-core"
-	fi
-	if [ -x "/koolshare/bin/kcptun" ];then
-		echo "kcptun			$(run kcptun -v | awk '{print $NF}')		https://github.com/xtaci/kcptun"
 	fi
 	if [ -x "/koolshare/bin/naive" ];then
 		echo "naive			$(run naive --version|awk '{print $NF}')		https://github.com/klzgrad/naiveproxy"

@@ -925,9 +925,6 @@ function openssHint(itemNum, flag) {
 	} else if (itemNum == 111) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能支持SS/SSR/V2ray/Xray订阅，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
 		_caption = "[包括]关键词：";
-	} else if (itemNum == 113) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;新订阅方式，成功获取远程节点后，先一次性删除本地订阅节点，然后再一次性写入远程节点。<br /><br /><b>优点：</b>因一次性写入，不需要做交叉对比，所以订阅速度快，且节点不会乱序。<br /><br /><b>缺点：</b>订阅信息较少，不知道订阅前后是否有节点变化！"
-		_caption = "快速订阅";
 	} else if (itemNum == 114) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;<a href='https://github.com/XTLS/Xray-core' target='_blank'><u><font color='#00F'>Xray-core</font></u></a> 是 v2ray-core 的超集，含更好的整体性能和 XTLS 等一系列增强，且完全兼容 v2ray-core 的功能及配置。<br /><br />1. 你可以用Xray-core跑所有的vmess和vless节点<br />2. 使用Xray-core你还可以配置VLESS-TCP + XTLS节点，这点V2ray无法做到。<br />3. 如果你的vmess节点不工作，也可以尝试使用Xray核心。"
 		_caption = "说明";

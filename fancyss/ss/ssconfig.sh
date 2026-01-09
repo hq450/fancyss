@@ -10,7 +10,7 @@ export PATH=${NEW_PATH}
 THREAD=$(grep -c '^processor' /proc/cpuinfo)
 dbus set ss_basic_version_local=$(cat /koolshare/ss/version)
 LOG_FILE=/tmp/upload/ss_log.txt
-CONFIG_FILE=/koolshare/ss/ss.json
+CONFIG_FILE=/koolshare/ss/ssr.json
 LOCK_FILE=/var/lock/koolss.lock
 DNSC_PORT=53
 ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
@@ -610,13 +610,8 @@ prepare_system() {
 	fi
 
 	if [ "${ss_basic_type}" == "0" ];then
-		if [ "${ss_basic_score}" == "1" ];then
-			SCORE_NAME=Xray
-			echo_date "ℹ️使用Xray-core运行ss协议节点..."
-		else
-			SCORE_NAME=shadowsocks-rust
-			echo_date "ℹ️使用shadowsocks-rust运行ss协议节点..."
-		fi
+		SCORE_NAME=Xray
+		echo_date "ℹ️使用Xray-core运行ss协议节点..."
 	fi
 
 	if [ "${ss_basic_type}" == "6" -a "${ss_basic_mode}" == "3" ];then
@@ -689,11 +684,7 @@ get_wan0_cidr() {
 __get_type_full_name() {
 	case "$1" in
 	0)
-		if [ "${ss_basic_score}" != "1" ];then
-			echo "shadowsocks-rust"
-		else
-			echo "xray"
-		fi
+		echo "xray"
 		;;
 	1)
 		echo "shadowsocksR-libev"
@@ -722,11 +713,7 @@ __get_type_full_name() {
 __get_type_abbr_name() {
 	case "${ss_basic_type}" in
 	0)
-		if [ "${ss_basic_score}" != "1" ];then
-			echo "ss-rust"
-		else
-			echo "xray"
-		fi
+		echo "xray"
 		;;
 	1)
 		echo "ssr"
@@ -991,7 +978,7 @@ restore_conf() {
 	remove_file /tmp/white_list.txt $?
 	remove_file /tmp/block_list.txt $?
 	remove_file /koolshare/ss/xray.json $?
-	remove_file /koolshare/ss/ss.json $?
+	remove_file /koolshare/ss/ssr.json $?
 	remove_file /koolshare/ss/tuic.json $?
 	remove_file /koolshare/ss/hysteria2.yaml $?
 	remove_file /koolshare/ss/hysteria2.yaml $?
@@ -1032,12 +1019,6 @@ kill_process() {
 		kill $ssrlocal >/dev/null 2>&1
 	fi
 
-	local ssrustlocal=$(pidof sslocal)
-	if [ -n "$ssrustlocal" ]; then
-		echo_date "关闭sslocal进程..."
-		kill $ssrustlocal >/dev/null 2>&1
-	fi
-
 	local sstunnel=$(pidof ss-tunnel)
 	if [ -n "$sstunnel" ]; then
 		echo_date "关闭进程..."
@@ -1054,36 +1035,6 @@ kill_process() {
 	if [ -n "$smartdns_process" ]; then
 		echo_date "关闭smartdns进程..."
 		killall smartdns >/dev/null 2>&1
-	fi
-
-	local kcptun_process=$(pidof kcptun)
-	if [ -n "$kcptun_process" ]; then
-		echo_date "关闭kcp协议进程..."
-		killall kcptun >/dev/null 2>&1
-	fi
-
-	local haproxy_process=$(pidof haproxy)
-	if [ -n "$haproxy_process" ]; then
-		echo_date "关闭haproxy进程..."
-		killall haproxy >/dev/null 2>&1
-	fi
-
-	local speederv1_process=$(pidof speederv1)
-	if [ -n "$speederv1_process" ]; then
-		echo_date "关闭speederv1进程..."
-		killall speederv1 >/dev/null 2>&1
-	fi
-
-	local speederv2_process=$(pidof speederv2)
-	if [ -n "$speederv2_process" ]; then
-		echo_date "关闭speederv2进程..."
-		killall speederv2 >/dev/null 2>&1
-	fi
-
-	local ud2raw_process=$(pidof udp2raw)
-	if [ -n "$ud2raw_process" ]; then
-		echo_date "关闭ud2raw进程..."
-		killall udp2raw >/dev/null 2>&1
 	fi
 
 	# only close haveged form fancyss, not haveged from system
@@ -1254,31 +1205,7 @@ ss_arg() {
 	fi
 }
 # create shadowsocks config file...
-creat_ss_json() {
-	if [ "${ss_basic_type}" == "0" -a "${ss_basic_score}" != "1" ]; then
-		#echo_date "ℹ️使用shadowsocks-rust运行ss协议..."
-		if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
-			RUST_ARG_1="--fast-open"
-			echo_date ss-rust开启tcp fast open支持.
-			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-		else
-			RUST_ARG_1=""
-		fi
-
-		if [ "${ss_basic_tnd}" == "1" ]; then
-			echo_date ss-rust开启TCP_NODELAY支持.
-			RUST_ARG_2="--no-delay"
-		else
-			RUST_ARG_2=""
-		fi
-
-		ARG_RUST_REDIR="--protocol redir -b 0.0.0.0:3333 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-		ARG_RUST_REDIR_NS="--protocol redir -b 0.0.0.0:3333 -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-		ARG_RUST_SOCKS="-b 127.0.0.1:23456 -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-		ARG_RUST_TUNNEL="--protocol tunnel -b 0.0.0.0:${DNSF_PORT} -s ${ss_basic_server}:${ss_basic_port} -m ${ss_basic_method} -k ${ss_basic_password} ${RUST_ARG_1} ${RUST_ARG_2}"
-		return 0
-	fi
-	
+creat_ssr_json() {
 	if [ -z "${WEB_ACTION}" ]; then
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
@@ -1291,44 +1218,22 @@ creat_ss_json() {
 	else
 		echo_date "创建$(__get_type_abbr_name)配置文件到${CONFIG_FILE}"
 	fi
-	
-	if [ "${ss_basic_type}" == "0" ]; then
-		cat >${CONFIG_FILE} <<-EOF
-			{
-			    "server":"${ss_basic_server}",
-			    "server_port":${ss_basic_port},
-			    "local_address":"0.0.0.0",
-			    "local_port":3333,
-			    "password":"${ss_basic_password}",
-			    "timeout":600,
-			    "method":"$ss_basic_method"
-			}
-		EOF
-	elif [ "${ss_basic_type}" == "1" ]; then
-		cat >${CONFIG_FILE} <<-EOF
-			{
-			    "server":"${ss_basic_server}",
-			    "server_port":${ss_basic_port},
-			    "local_address":"0.0.0.0",
-			    "local_port":3333,
-			    "password":"${ss_basic_password}",
-			    "timeout":600,
-			    "protocol":"$ss_basic_rss_protocol",
-			    "protocol_param":"$ss_basic_rss_protocol_param",
-			    "obfs":"$ss_basic_rss_obfs",
-			    "obfs_param":"$ss_basic_rss_obfs_param",
-			    "method":"$ss_basic_method"
-			}
-		EOF
-	fi
 
-	if [ "$ss_basic_udp2raw_boost_enable" == "1" -o "$ss_basic_udp_boost_enable" == "1" ]; then
-		if [ "$ss_basic_udp_upstream_mtu" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" ]; then
-			echo_date "设定MTU为 ${ss_basic_udp_upstream_mtu_value}"
-			cat /koolshare/ss/ss.json | run jq --argjson MTU ${ss_basic_udp_upstream_mtu_value} '. + {MTU: $MTU}' >/koolshare/ss/ss_tmp.json
-			mv /koolshare/ss/ss_tmp.json /koolshare/ss/ss.json
-		fi
-	fi
+	cat >${CONFIG_FILE} <<-EOF
+		{
+		    "server":"${ss_basic_server}",
+		    "server_port":${ss_basic_port},
+		    "local_address":"0.0.0.0",
+		    "local_port":3333,
+		    "password":"${ss_basic_password}",
+		    "timeout":600,
+		    "protocol":"$ss_basic_rss_protocol",
+		    "protocol_param":"$ss_basic_rss_protocol_param",
+		    "obfs":"$ss_basic_rss_obfs",
+		    "obfs_param":"$ss_basic_rss_obfs_param",
+		    "method":"$ss_basic_method"
+		}
+	EOF
 }
 
 get_proxy_server_ip(){
@@ -1356,27 +1261,14 @@ get_proxy_server_ip(){
 	fi
 }
 
-start_ss_local() {
+start_ssr_local() {
 	if [ -n "$(ps|grep rss-local|grep 23456)" ];then
 		return
 	fi
 
-	if [ -n "$(ps|grep sslocal|grep 23456)" ];then
-		return
-	fi
-	
-	if [ "${ss_basic_type}" == "1" ]; then
-		echo_date "开启ssr-local，提供socks5代理端口：23456"
-		run_bg rss-local -b 127.0.0.1 -l 23456 -c ${CONFIG_FILE} -u -f /var/run/sslocal1.pid
-		detect_running_status rss-local "/var/run/sslocal1.pid"
-	elif [ "${ss_basic_type}" == "0" ]; then
-		if [ "${ss_basic_score}" != "1" ];then
-			# ss-rust run ss
-			echo_date "开启sslocal (shadowsocks-rust)，提供socks5代理端口：23456"
-			run_bg sslocal ${ARG_RUST_SOCKS} ${ARG_OBFS} -d
-			detect_running_status sslocal
-		fi
-	fi
+	echo_date "开启ssr-local，提供socks5代理端口：23456"
+	run_bg rss-local -b 127.0.0.1 -l 23456 -c ${CONFIG_FILE} -u -f /var/run/ssrlocal.pid
+	detect_running_status rss-local "/var/run/ssrlocal.pid"
 }
 
 dbus_dset(){
@@ -2255,438 +2147,38 @@ auto_start() {
 	[ ! -L "/koolshare/init.d/N99shadowsocks.sh" ] && ln -sf /koolshare/ss/ssconfig.sh /koolshare/init.d/N99shadowsocks.sh
 }
 
-start_kcp() {
-	# Start kcp
-	if [ "$ss_basic_use_kcp" == "1" ]; then
-		echo_date "启动KCP协议进程，为了更好的体验，建议在路由器上创建虚拟内存."
-
-		# 从3.3.2开始，kcptun二进制不在默认提供，需要用户自行下载
-		if [ -f "/koolshare/bin/kcptun" ];then
-			chmod +x /koolshare/bin/kcptun
-			local ret=$(run /koolshare/bin/kcptun --help 2>&1 | grep kcptun)
-			if [ -z "${ret}" ];then
-				echo_date "检测到/koolshare/bin/目录下存在kcptun文件，但是无法运行！"
-				echo_date "请确保你下载了正确的二进制文件！"
-				close_in_five flag
-			fi
-		else
-			echo_date ""
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date ""
-			echo_date "重要提醒！！"
-			echo_date ""
-			echo_date "检测到你需要使用kcptun！但是本插件默认没有提供相关的二进制文件！"
-			echo_date "请前往下面的链接下载kcptun二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
-			echo_date "下载地址：https://github.com/hq450/fancyss/tree/3.0/binaries/kcptun"
-			echo_date ""
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date ""
-			close_in_five flag
-		fi
-
-		export GOGC=30
-		[ -z "$ss_basic_kcp_server" ] && ss_basic_kcp_server="${ss_basic_server}"
-		if [ "$ss_basic_kcp_method" == "1" ]; then
-			[ -n "$ss_basic_kcp_encrypt" ] && KCP_CRYPT="--crypt $ss_basic_kcp_encrypt"
-			[ -n "$ss_basic_kcp_password" ] && KCP_KEY="--key $ss_basic_kcp_password" || KCP_KEY=""
-			[ -n "$ss_basic_kcp_sndwnd" ] && KCP_SNDWND="--sndwnd $ss_basic_kcp_sndwnd" || KCP_SNDWND=""
-			[ -n "$ss_basic_kcp_rcvwnd" ] && KCP_RNDWND="--rcvwnd $ss_basic_kcp_rcvwnd" || KCP_RNDWND=""
-			[ -n "$ss_basic_kcp_mtu" ] && KCP_MTU="--mtu $ss_basic_kcp_mtu" || KCP_MTU=""
-			[ -n "$ss_basic_kcp_conn" ] && KCP_CONN="--conn $ss_basic_kcp_conn" || KCP_CONN=""
-			[ "$ss_basic_kcp_nocomp" == "1" ] && COMP="--nocomp" || COMP=""
-			[ -n "$ss_basic_kcp_mode" ] && KCP_MODE="--mode $ss_basic_kcp_mode" || KCP_MODE=""
-
-			start-stop-daemon -S -q -b -m \
-				-p /tmp/var/kcp.pid \
-				-x /koolshare/bin/kcptun \
-				-- -l 127.0.0.1:1091 \
-				-r $ss_basic_kcp_server:$ss_basic_kcp_port \
-				$KCP_CRYPT $KCP_KEY $KCP_SNDWND $KCP_RNDWND $KCP_MTU $KCP_CONN $COMP $KCP_MODE $ss_basic_kcp_extra
-		else
-			start-stop-daemon -S -q -b -m \
-				-p /tmp/var/kcp.pid \
-				-x /koolshare/bin/kcptun \
-				-- -l 127.0.0.1:1091 \
-				-r $ss_basic_kcp_server:$ss_basic_kcp_port \
-				$ss_basic_kcp_parameter
-		fi
-	fi
-}
-
-start_speeder() {
-	#只有游戏模式下或者访问控制中有游戏模式主机，且udp加速节点和当前使用节点一致
-	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1092" ]; then
-		echo_date "检测到你配置了KCP与UDPspeeder串联."
-		SPEED_KCP=1
-	fi
-
-	if [ "$ss_basic_use_kcp" == "1" -a "$ss_basic_kcp_server" == "127.0.0.1" -a "$ss_basic_kcp_port" == "1093" ]; then
-		echo_date "检测到你配置了KCP与UDP2raw串联."
-		SPEED_KCP=2
-	fi
-
-	if [ "$mangle" == "1" -a "$ss_basic_udp_node" == "$ssconf_basic_node" -o "$SPEED_KCP" == "1" -o "$SPEED_KCP" == "2" ]; then
-		#开启udpspeeder
-		if [ "$ss_basic_udp_boost_enable" == "1" ]; then
-			if [ "$ss_basic_udp_software" == "1" ]; then
-				# 从3.3.3开始，speederv1二进制不在默认提供，需要用户自行下载
-				if [ -f "/koolshare/bin/speederv1" ];then
-					chmod +x /koolshare/bin/speederv1
-					local ret=$(run /koolshare/bin/speederv1 --help 2>&1)
-					if [ -z "${ret}" ];then
-						echo_date "检测到/koolshare/bin/目录下存在speederv1文件，但是无法运行！"
-						echo_date "请确保你下载了正确的二进制文件！"
-						close_in_five flag
-					fi
-				else
-					local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-					echo_date ""
-					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-					echo_date ""
-					echo_date "重要提醒！！"
-					echo_date ""
-					echo_date "检测到你需要使用speederv1！但是本插件默认没有提供相关的二进制文件！"
-					echo_date "请前往下面的链接下载speederv1二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
-					echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/speederv1"
-					echo_date ""
-					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-					echo_date ""
-					close_in_five flag
-				fi
-				
-				echo_date "开启UDPspeederV1进程."
-				[ -z "$ss_basic_udpv1_rserver" ] && ss_basic_udpv1_rserver="${ss_basic_server}_ip"
-				[ -n "$ss_basic_udpv1_duplicate_time" ] && duplicate_time="-t $ss_basic_udpv1_duplicate_time" || duplicate_time=""
-				[ -n "$ss_basic_udpv1_jitter" ] && jitter="-j $ss_basic_udpv1_jitter" || jitter=""
-				[ -n "$ss_basic_udpv1_report" ] && report="--report $ss_basic_udpv1_report" || report=""
-				[ -n "$ss_basic_udpv1_drop" ] && drop="--random-drop $ss_basic_udpv1_drop" || drop=""
-				[ -n "$ss_basic_udpv1_duplicate_nu" ] && duplicate="-d $ss_basic_udpv1_duplicate_nu" || duplicate=""
-				[ -n "$ss_basic_udpv1_password" ] && key1="-k $ss_basic_udpv1_password" || key1=""
-				[ "$ss_basic_udpv1_disable_filter" == "1" ] && filter="--disable-filter" || filter=""
-
-				if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
-					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
-					run_bg speederv1 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key1 $ss_basic_udpv1_password \
-						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu
-					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
-				else
-					run_bg speederv1 -c -l 0.0.0.0:1092 -r $ss_basic_udpv1_rserver:$ss_basic_udpv1_rport $key1 \
-						$duplicate_time $jitter $report $drop $filter $duplicate $ss_basic_udpv1_duplicate_nu
-				fi
-			elif [ "$ss_basic_udp_software" == "2" ]; then
-				# 从3.3.3开始，speederv2二进制不在默认提供，需要用户自行下载
-				if [ -f "/koolshare/bin/speederv2" ];then
-					chmod +x /koolshare/bin/speederv2
-					local ret=$(run /koolshare/bin/speederv2 --help 2>&1)
-					if [ -z "${ret}" ];then
-						echo_date "检测到/koolshare/bin/目录下存在speederv2文件，但是无法运行！"
-						echo_date "请确保你下载了正确的二进制文件！"
-						close_in_five flag
-					fi
-				else
-					local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-					echo_date ""
-					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-					echo_date ""
-					echo_date "重要提醒！！"
-					echo_date ""
-					echo_date "检测到你需要使用speederv2！但是本插件默认没有提供相关的二进制文件！"
-					echo_date "请前往下面的链接下载speederv2二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
-					echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/speederv2"
-					echo_date ""
-					echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-					echo_date ""
-					close_in_five flag
-				fi
-			
-				echo_date "开启UDPspeederV2进程."
-				[ -z "$ss_basic_udpv2_rserver" ] && ss_basic_udpv2_rserver="${ss_basic_server}_ip"
-				[ "$ss_basic_udpv2_disableobscure" == "1" ] && disable_obscure="--disable-obscure" || disable_obscure=""
-				[ "$ss_basic_udpv2_disablechecksum" == "1" ] && disable_checksum="--disable-checksum" || disable_checksum=""
-				[ -n "$ss_basic_udpv2_timeout" ] && timeout="--timeout $ss_basic_udpv2_timeout" || timeout=""
-				[ -n "$ss_basic_udpv2_mode" ] && mode="--mode $ss_basic_udpv2_mode" || mode=""
-				[ -n "$ss_basic_udpv2_report" ] && report="--report $ss_basic_udpv2_report" || report=""
-				[ -n "$ss_basic_udpv2_mtu" ] && mtu="--mtu $ss_basic_udpv2_mtu" || mtu=""
-				[ -n "$ss_basic_udpv2_jitter" ] && jitter="--jitter $ss_basic_udpv2_jitter" || jitter=""
-				[ -n "$ss_basic_udpv2_interval" ] && interval="-interval $ss_basic_udpv2_interval" || interval=""
-				[ -n "$ss_basic_udpv2_drop" ] && drop="-random-drop $ss_basic_udpv2_drop" || drop=""
-				[ -n "$ss_basic_udpv2_password" ] && key2="-k $ss_basic_udpv2_password" || key2=""
-				[ -n "$ss_basic_udpv2_fec" ] && fec="-f $ss_basic_udpv2_fec" || fec=""
-
-				if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
-					#串联：如果两者都开启了，则把udpspeeder的流udp量转发给udp2raw
-					run_bg speederv2 -c -l 0.0.0.0:1092 -r 127.0.0.1:1093 $key2 \
-						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file
-					#如果只开启了udpspeeder，则把udpspeeder的流udp量转发给服务器
-				else
-					run_bg speederv2 -c -l 0.0.0.0:1092 -r $ss_basic_udpv2_rserver:$ss_basic_udpv2_rport $key2 \
-						$fec $timeout $mode $report $mtu $jitter $interval $drop $disable_obscure $disable_checksum $ss_basic_udpv2_other --fifo /tmp/fifo.file
-				fi
-			fi
-		fi
-		#开启udp2raw
-		if [ "$ss_basic_udp2raw_boost_enable" == "1" ]; then
-			# 从3.3.3开始，udp2raw二进制不在默认提供，需要用户自行下载
-			if [ -f "/koolshare/bin/udp2raw" ];then
-				chmod +x /koolshare/bin/udp2raw
-				local ret=$(run /koolshare/bin/udp2raw --help 2>&1)
-				if [ -z "${ret}" ];then
-					echo_date "检测到/koolshare/bin/目录下存在udp2raw文件，但是无法运行！"
-					echo_date "请确保你下载了正确的二进制文件！"
-					close_in_five flag
-				fi
-			else
-				local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-				echo_date ""
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				echo_date ""
-				echo_date "重要提醒！！"
-				echo_date ""
-				echo_date "检测到你需要使用udp2raw！但是本插件默认没有提供相关的二进制文件！"
-				echo_date "请前往下面的链接下载udp2raw二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
-				echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/udp2raw"
-				echo_date ""
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				echo_date ""
-				close_in_five flag
-			fi
-		
-			echo_date "开启UDP2raw进程."
-			[ -z "$ss_basic_udp2raw_rserver" ] && ss_basic_udp2raw_rserver="${ss_basic_server}_ip"
-			[ "$ss_basic_udp2raw_a" == "1" ] && UD2RAW_EX1="-a" || UD2RAW_EX1=""
-			[ "$ss_basic_udp2raw_keeprule" == "1" ] && UD2RAW_EX2="--keep-rule" || UD2RAW_EX2=""
-			[ -n "$ss_basic_udp2raw_lowerlevel" ] && UD2RAW_LOW="--lower-level $ss_basic_udp2raw_lowerlevel" || UD2RAW_LOW=""
-			[ -n "$ss_basic_udp2raw_password" ] && key3="-k $ss_basic_udp2raw_password" || key3=""
-
-			run_bg udp2raw -c -l 0.0.0.0:1093 -r $ss_basic_udp2raw_rserver:$ss_basic_udp2raw_rport $key3 $UD2RAW_EX1 $UD2RAW_EX2 \
-				--raw-mode $ss_basic_udp2raw_rawmode --cipher-mode $ss_basic_udp2raw_ciphermode --auth-mode $ss_basic_udp2raw_authmode \
-				$UD2RAW_LOW $ss_basic_udp2raw_other
-		fi
-	#else
-	#	echo_date "-------→ udpspeeder未开启！"
-	fi
-}
-
-start_ss_redir() {
-	if [ "${ss_basic_type}" == "1" ]; then
-		echo_date "开启ssr-redir进程，用于透明代理."
-		BIN=rss-redir
-		ARG_OBFS=""
-	elif [ "${ss_basic_type}" == "0" ]; then
-		if [ "${ss_basic_score}" != "1" ];then
-			# ss-rust run ss
-			echo_date "开启shadowsocks-rust的sslocal进程，用于透明代理."
-			BIN=sslocal
-		#else
-			# xray run ss
-			# todo
-		fi
-	fi
-
-	if [ "${ss_basic_udp_boost_enable}" == "1" ]; then
-		#只要udpspeeder开启，不管udp2raw是否开启，均设置为1092,
-		SPEED_PORT=1092
+start_ssr_redir() {
+	echo_date "开启ssr-redir进程，用于透明代理."
+	BIN=rss-redir
+	ARG_OBFS=""
+	if [ "${mangle}" == "1" ]; then
+		# tcp udp go ss
+		echo_date "${BIN}的 tcp 走${BIN}."
+		echo_date "${BIN}的 udp 走${BIN}."
+		fire_redir "rss-redir -c ${CONFIG_FILE} -u"
 	else
-		# 如果只开了udp2raw，则需要把udp转发到1093
-		SPEED_PORT=1093
-	fi
-
-	if [ "${ss_basic_udp2raw_boost_enable}" == "1" -o "${ss_basic_udp_boost_enable}" == "1" ]; then
-		#udp2raw开启，udpspeeder未开启则ss-redir的udp流量应该转发到1093
-		SPEED_UDP=1
-	fi
-
-	if [ "${ss_basic_use_kcp}" == "1" -a "${ss_basic_kcp_server}" == "127.0.0.1" -a "${ss_basic_kcp_port}" == "1092" ]; then
-		SPEED_KCP=1
-	fi
-
-	if [ "${ss_basic_use_kcp}" == "1" -a "${ss_basic_kcp_server}" == "127.0.0.1" -a "${ss_basic_kcp_port}" == "1093" ]; then
-		SPEED_KCP=2
-	fi
-	# Start redir
-	if [ "${ss_basic_use_kcp}" == "1" ]; then
-		if [ "${mangle}" == "1" ]; then
-			if [ "${SPEED_UDP}" == "1" -a "${ss_basic_udp_node}" == "${ssconf_basic_node}" ]; then
-				# tcp go kcp
-				if [ "${SPEED_KCP}" == "1" ]; then
-					echo_date "${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpspeeder"
-				elif [ "${SPEED_KCP}" == "2" ]; then
-					echo_date "${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpraw"
-				else
-					echo_date "${BIN}的 tcp 走kcptun."
-				fi
-				if [ "${ss_basic_type}" == "1" ]; then
-					run rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
-				else
-					if [ "${ss_basic_score}" != "1" ];then
-						# ss-rust run ss
-						run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-					#else
-						# xray run ss
-						# todo ...
-					fi
-				fi
-				# udp go udpspeeder
-				[ "${ss_basic_udp2raw_boost_enable}" == "1" -a "${ss_basic_udp_boost_enable}" == "1" ] && echo_date "${BIN}的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw"
-				[ "${ss_basic_udp2raw_boost_enable}" == "1" -a "${ss_basic_udp_boost_enable}" != "1" ] && echo_date "${BIN}的 udp 走udpraw."
-				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "${ss_basic_udp_boost_enable}" == "1" ] && echo_date "${BIN}的 udp 走udpspeeder."
-				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date "${BIN}的 udp 走${BIN}."
-				if [ "${ss_basic_type}" == "1" ]; then
-					run rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
-				else
-					if [ "${ss_basic_score}" != "1" ];then
-						# ss-rust run ss
-						run sslocal -s "127.0.0.1:${SPEED_PORT}" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
-					#else
-						# xray run ss
-						# todo
-					fi
-				fi
-			else
-				# tcp go kcp, udp go ss
-				if [ "${SPEED_KCP}" == "1" ]; then
-					echo_date "${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpspeeder"
-				elif [ "${SPEED_KCP}" == "2" ]; then
-					echo_date "${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpraw"
-				else
-					echo_date "${BIN}的 tcp 走kcptun."
-				fi
-				
-				if [ "${ss_basic_type}" == "1" ]; then
-					run rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
-					run rss-redir -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
-				else
-					if [ "${ss_basic_score}" != "1" ];then
-						# ss-rust run ss
-						run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-						run sslocal ${ARG_RUST_REDIR} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
-					#else
-						# xray run ss
-						# todo
-					fi
-				fi
-			fi
-		else
-			# tcp only go kcp
-			if [ "${SPEED_KCP}" == "1" ]; then
-				echo_date "${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpspeeder"
-			elif [ "${SPEED_KCP}" == "2" ]; then
-				echo_date "${BIN}的 tcp 走kcptun, kcptun的 udp 走 udpraw"
-			else
-				echo_date "${BIN}的 tcp 走kcptun."
-			fi
-			echo_date "${BIN}的 udp 未开启."
-			if [ "${ss_basic_type}" == "1" ]; then
-				run rss-redir -s 127.0.0.1 -p 1091 -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
-			else
-				if [ "${ss_basic_score}" != "1" ];then
-					# ss-rust run ss
-					run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-				#else
-					# xray run ss
-					# todo
-				fi
-			fi
-		fi
-	else
-		if [ "${mangle}" == "1" ]; then
-			if [ "${SPEED_UDP}" == "1" -a "${ss_basic_udp_node}" == "${ssconf_basic_node}" ]; then
-				# tcp go ss
-				echo_date "${BIN}的 tcp 走${BIN}."
-				if [ "${ss_basic_type}" == "1" ]; then
-					run rss-redir -c ${CONFIG_FILE} -f /var/run/shadowsocks.pid >/dev/null 2>&1
-				else
-					if [ "${ss_basic_score}" != "1" ];then
-						# ss-rust run ss
-						run sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-					#else
-						# xray run ss
-						# todo
-					fi
-				fi
-				# udp go udpspeeder
-				[ "${ss_basic_udp2raw_boost_enable}" == "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date "${BIN}的 udp 走udpspeeder, udpspeeder的 udp 走 udpraw"
-				[ "${ss_basic_udp2raw_boost_enable}" == "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date "${BIN}的 udp 走udpraw."
-				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "$ss_basic_udp_boost_enable" == "1" ] && echo_date "${BIN}的 udp 走udpspeeder."
-				[ "${ss_basic_udp2raw_boost_enable}" != "1" -a "$ss_basic_udp_boost_enable" != "1" ] && echo_date "${BIN}的 udp 走${BIN}."
-
-				if [ "${ss_basic_type}" == "1" ]; then
-					run rss-redir -s 127.0.0.1 -p ${SPEED_PORT} -c ${CONFIG_FILE} -U -f /var/run/shadowsocks.pid >/dev/null 2>&1
-				else
-					if [ "${ss_basic_score}" != "1" ];then
-						# ss-rust run ss
-						run sslocal -s "127.0.0.1:1091" ${ARG_RUST_REDIR_NS} --udp-redir "tproxy" ${ARG_OBFS} -u -d >/dev/null 2>&1
-					#else
-						# xray run ss
-						# todo
-					fi
-				fi
-			else
-				# tcp udp go ss
-				echo_date "${BIN}的 tcp 走${BIN}."
-				echo_date "${BIN}的 udp 走${BIN}."
-				if [ "${ss_basic_type}" == "1" ]; then
-					fire_redir "rss-redir -c ${CONFIG_FILE} -u"
-				else
-					if [ "${ss_basic_score}" != "1" ];then
-						# ss-rust run ss
-						run sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" --udp-redir "tproxy" ${ARG_OBFS} -U -d >/dev/null 2>&1
-					#else
-						# xray run ss
-						# todo
-					fi
-				fi
-			fi
-		else
-			# tcp only go ss
-			echo_date "${BIN}的 tcp 走${BIN}."
-			echo_date "${BIN}的 udp 未开启."
-			if [ "${ss_basic_type}" == "1" ]; then
-				fire_redir "rss-redir -c ${CONFIG_FILE}"
-			else
-				if [ "${ss_basic_score}" != "1" ];then
-					run sslocal ${ARG_RUST_REDIR} --tcp-redir "redirect" ${ARG_OBFS} -d >/dev/null 2>&1
-				#else
-					# xray run ss
-					# todo
-				fi
-			fi
-		fi
+		# tcp only go ss
+		echo_date "${BIN}的 tcp 走${BIN}."
+		echo_date "${BIN}的 udp 未开启."
+		fire_redir "rss-redir -c ${CONFIG_FILE}"
 	fi
 	echo_date "${BIN} 启动完毕！"
 
-	start_speeder
-
 	# start socks5，socks5端口默认提供，但目前监听在127.0.0.1，所有协议都需要开socks5端口，以前适用于dns tcp远程解析，未来用户开放给用户
-	# ss由sslocal启动，ssr由ssr-local启动
-	start_ss_local
+	start_ssr_local
 }
 
 fire_redir() {
 	local ARG_1 ARG_2 ARG_3
-	if [ "${ss_basic_type}" == "0" -a "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ];then
-		local ARG_1="--reuse-port"
-	fi
-	if [ "${ss_basic_type}" == "0" -a "$ss_basic_tfo" == "1" -a "${LINUX_VER}" != "26" ]; then
-		local ARG_2="--fast-open"
-		echo_date "$BIN开启tcp fast open支持."
-		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	fi
-
-	if [ "${ss_basic_type}" == "0" -a "$ss_basic_tnd" == "1" ]; then
-		echo_date "$BIN开启TCP_NODELAY支持."
-		local ARG_3="--no-delay"
-	fi
-
 	if [ "$ss_basic_mcore" == "1" -a "${LINUX_VER}" != "26" ]; then
 		echo_date "$BIN开启$THREAD线程支持."
 		local i=1
 		while [ $i -le $THREAD ]; do
-			run_bg $1 $ARG_1 $ARG_2 $ARG_3 -f /var/run/ss_$i.pid
+			run_bg $1 $ARG_1 $ARG_2 $ARG_3 -f /var/run/ssr_$i.pid
 			let i++
 		done
 	else
-		run_bg $1 -f /var/run/ss.pid
+		run_bg $1 -f /var/run/ssr.pid
 	fi
 }
 
@@ -5226,7 +4718,7 @@ detect_ip(){
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
 		#echo_date "检测国外ip地址，检测地址：${SUBJECT}"
-		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "sslocal|v2ray|xray|naive|tuic|hysteria2")
+		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|hysteria2")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local IP=$(run5 curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
@@ -5289,7 +4781,7 @@ check_chn_dns(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 
-	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "sslocal|v2ray|xray|naive|tuic|hysteria2")
+	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|hysteria2")
 	if [ -n "${SOCKS5_OPEN}" ];then
 		echo_date "检测方式1：socks5"
 	else
@@ -5443,23 +4935,20 @@ apply_ss() {
 	create_dnsmasq_conf
 	add_white_black
 	# 生成代理主程序配置
-	[ "${ss_basic_type}" == "0" -a "${ss_basic_score}" != "1" ] && creat_ss_json
-	[ "${ss_basic_type}" == "0" -a "${ss_basic_score}" == "1" ] && creat_xray_ss_json
-	[ "${ss_basic_type}" == "1" ] && creat_ss_json
+	[ "${ss_basic_type}" == "0" ] && creat_xray_ss_json
+	[ "${ss_basic_type}" == "1" ] && creat_ssr_json
 	[ "${ss_basic_type}" == "3" ] && creat_v2ray_json
 	[ "${ss_basic_type}" == "4" ] && creat_xray_json
 	[ "${ss_basic_type}" == "5" ] && creat_trojan_json
 	# 开启代理主程序
-	[ "${ss_basic_type}" == "0" -a "${ss_basic_score}" != "1" ] && start_ss_redir
-	[ "${ss_basic_type}" == "0" -a "${ss_basic_score}" == "1" ] && start_xray
-	[ "${ss_basic_type}" == "1" ] && start_ss_redir
+	[ "${ss_basic_type}" == "0" ] && start_xray
+	[ "${ss_basic_type}" == "1" ] && start_ssr_redir
 	[ "${ss_basic_type}" == "3" ] && start_v2ray
 	[ "${ss_basic_type}" == "4" ] && start_xray
 	[ "${ss_basic_type}" == "5" ] && start_trojan
 	[ "${ss_basic_type}" == "6" ] && start_naive
 	[ "${ss_basic_type}" == "7" ] && start_tuic
 	[ "${ss_basic_type}" == "8" ] && start_hysteria2
-	start_kcp
 	get_proxy_server_ip
 	restart_dnsmasq
 	start_dns_x

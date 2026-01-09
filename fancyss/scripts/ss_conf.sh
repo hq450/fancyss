@@ -42,7 +42,7 @@ backup_tar(){
 	cp /koolshare/bin/obfs-local ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/rss-local ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/rss-redir ${TARGET_FOLDER}/bin/
-	#cp /koolshare/bin/dns2socks ${TARGET_FOLDER}/bin/
+	cp /koolshare/bin/smartdns ${TARGET_FOLDER}/bin/
 	if [ -x "/koolshare/bin/dns_cache_mgr" ];then
 		cp /koolshare/bin/dns_cache_mgr ${TARGET_FOLDER}/bin/
 	fi
@@ -55,26 +55,14 @@ backup_tar(){
 	if [ -f "/koolshare/bin/sslocal" ];then
 		cp /koolshare/bin/sslocal ${TARGET_FOLDER}/bin/
 	fi
-	#cp /koolshare/bin/dns2tcp ${TARGET_FOLDER}/bin/
-	#cp /koolshare/bin/dns-ecs-forcer ${TARGET_FOLDER}/bin/
-	#if [ -x "/koolshare/bin/uredir" ];then
-	#	cp /koolshare/bin/uredir ${TARGET_FOLDER}/bin/
-	#fi
 	if [ -x "/koolshare/bin/websocketd" ];then
 		cp /koolshare/bin/websocketd ${TARGET_FOLDER}/bin/
 	fi
 	if [ "${pkg_type}" != "lite" ];then
 		cp /koolshare/bin/dohclient ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/dohclient-cache ${TARGET_FOLDER}/bin/
-		cp /koolshare/bin/smartdns ${TARGET_FOLDER}/bin/
-		#cp /koolshare/bin/haproxy ${TARGET_FOLDER}/bin/
-		[ -f "/koolshare/bin/kcptun" ] && cp /koolshare/bin/kcptun ${TARGET_FOLDER}/bin/
-		[ -f "/koolshare/bin/speederv1" ] && cp /koolshare/bin/speederv1 ${TARGET_FOLDER}/bin/
-		[ -f "/koolshare/bin/speederv2" ] && cp /koolshare/bin/speederv2 ${TARGET_FOLDER}/bin/
-		[ -f "/koolshare/bin/udp2raw" ] && cp /koolshare/bin/udp2raw ${TARGET_FOLDER}/bin/
-		#cp /koolshare/bin/trojan ${TARGET_FOLDER}/bin/
+		#cp /koolshare/bin/smartdns ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/v2ray ${TARGET_FOLDER}/bin/
-		#cp /koolshare/bin/v2ray-plugin ${TARGET_FOLDER}/bin/
 		[ -f "/koolshare/bin/haveged" ] && cp /koolshare/bin/haveged ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/ipt2socks ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/naive ${TARGET_FOLDER}/bin/
@@ -142,16 +130,12 @@ remove_now(){
 	[ -z "${ss_basic_nocdnscheck}" ] && dbus set ss_basic_nocdnscheck=1
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
 	
-	[ -z "${ss_basic_chng_xact}" ] && dbus set ss_basic_chng_xact=0
-	[ -z "${ss_basic_chng_xgt}" ] && dbus set ss_basic_chng_xgt=1
-	[ -z "${ss_basic_chng_xmc}" ] && dbus set ss_basic_chng_xmc=0
-	
 	# others
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
-	[ -z "$(dbus get ss_basic_wt_furl)" ] && dbus set ss_basic_wt_furl="http://www.google.com.tw"
-	[ -z "$(dbus get ss_basic_wt_curl)" ] && dbus set ss_basic_wt_curl="http://www.baidu.com"
+	[ -z "$(dbus get ss_basic_wt_furl)" ] && dbus set ss_basic_wt_furl="http://www.gstatic.com/generate_204"
+	[ -z "$(dbus get ss_basic_wt_curl)" ] && dbus set ss_basic_wt_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
 	# fancyss_arm 默认关闭延迟测试
 	PKG_ARCH=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' | sed 's/"//g')
@@ -178,151 +162,33 @@ remove_now(){
 }
 
 remove_silent(){
-	echo_date 先清除已有的参数...
+	echo_date "先清除已有的参数..."
 	confs=$(dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign")
 	for conf in $confs
 	do
-		echo_date 移除$conf
+		echo_date "移除$conf"
 		dbus remove $conf
 	done
-	echo_date 设置一些默认参数...
+	echo_date "设置一些默认参数..."
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	echo_date "--------------------"
 }
 
 restore_sh(){
-	echo_date 检测到科学上网备份文件...
-	echo_date 开始恢复配置...
+	echo_date "检测到科学上网备份文件..."
+	echo_date "开始恢复配置..."
 	chmod +x /tmp/upload/ssconf_backup.sh
 	sh /tmp/upload/ssconf_backup.sh
 	dbus set ss_basic_enable="0"
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
-	echo_date 配置恢复成功！
-}
-
-restore_json(){
-	echo_date 检测到ss json配置文件...
-	ss_format=$(echo $confs|grep "obfs")
-	cat /tmp/ssconf_backup.json | jq --tab . > /tmp/ssconf_backup_formated.json
-	if [ -z "$ss_format" ];then
-		# SS json
-		echo_date 检测到shadowsocks json配置文件...
-		servers=$(cat /tmp/ssconf_backup_formated.json |grep -w server|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		ports=$(cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		passwords=$(cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		methods=$(cat /tmp/ssconf_backup_formated.json |grep -w method|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		remarks=$(cat /tmp/ssconf_backup_formated.json |grep -w remarks|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		
-		echo_date 开始导入配置...导入json配置不会覆盖原有配置.
-		last_node=$(dbus list ssconf_basic_server|cut -d "=" -f 1| cut -d "_" -f 4| sort -nr|head -n 1)
-		if [ ! -z "$last_node" ];then
-			k=$(expr $last_node + 1)
-		else
-			k=1
-		fi
-		min=1
-		max=$(cat /tmp/ssconf_backup_formated.json |grep -wc server)
-		while [ $min -le $max ]
-		do
-		    echo_date "==============="
-		    echo_date import node $min
-		    echo_date $k
-		    
-		    server=$(echo $servers | awk "{print $"$min"}")
-			port=$(echo $ports | awk "{print $"$min"}")
-			password=$(echo $passwords | awk "{print $"$min"}")
-			method=$(echo $methods | awk "{print $"$min"}")
-			remark=$(echo $remarks | awk "{print $"$min"}")
-			
-			echo_date $server
-			echo_date $port
-			echo_date $password
-			echo_date $method
-			echo_date $remark
-			
-			dbus set ssconf_basic_server_"$k"="$server"
-			dbus set ssconf_basic_port_"$k"="$port"
-			dbus set ssconf_basic_password_"$k"=$(echo "$password" | base64_encode)
-			dbus set ssconf_basic_method_"$k"="$method"
-			dbus set ssconf_basic_name_"$k"="$remark"
-			dbus set ssconf_basic_use_rss_"$k"=0
-			dbus set ssconf_basic_mode_"$k"=2
-		    min=$(expr $min + 1)
-		    k=$(expr $k + 1)
-		done
-		echo_date 导入配置成功！
-	else
-		# SSR json
-		echo_date 检测到ssr json配置文件...
-		servers=$(cat /tmp/ssconf_backup_formated.json |grep -w server|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		ports=$(cat /tmp/ssconf_backup_formated.json |grep -w server_port|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		passwords=$(cat /tmp/ssconf_backup_formated.json |grep -w password|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		methods=$(cat /tmp/ssconf_backup_formated.json |grep -w method|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		remarks=$(cat /tmp/ssconf_backup_formated.json |grep -w remarks|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		obfs=$(cat /tmp/ssconf_backup_formated.json |grep -w obfs|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		obfsparam=$(cat /tmp/ssconf_backup_formated.json |grep -w obfsparam|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		protocol=$(cat /tmp/ssconf_backup_formated.json |grep -w protocol|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|cut -d ":" -f 2)
-		protocolparam=$(cat /tmp/ssconf_backup_formated.json |grep -w protocolparam|sed 's/"//g'|sed 's/,//g'|sed 's/\s//g'|sed 's/protocolparam://g')
-		
-		echo_date 开始导入配置...导入json配置不会覆盖原有配置.
-		last_node=$(dbus list ssconf_basic_server|cut -d "=" -f 1| cut -d "_" -f 4| sort -nr|head -n 1)
-		if [ ! -z "$last_node" ];then
-			k=$(expr $last_node + 1)
-		else
-			k=1
-		fi
-		min=1
-		max=$(cat /tmp/ssconf_backup_formated.json |grep -wc server)
-		while [ $min -le $max ]
-		do
-		    echo_date "==============="
-		    echo_date import node $min
-		    echo_date $k
-		    
-		    server=$(echo $servers | awk "{print $"$min"}")
-			port=$(echo $ports | awk "{print $"$min"}")
-			password=$(echo $passwords | awk "{print $"$min"}")
-			method=$(echo $methods | awk "{print $"$min"}")
-			remark=$(echo $remarks | awk "{print $"$min"}")
-			obf=$(echo $obfs | awk "{print $"$min"}")
-			obfspara=$(echo $obfsparam | awk "{print $"$min"}")
-			protoco=$(echo $protocol | awk "{print $"$min"}")
-			protocolpara=$(echo $protocolparam | awk "{print $"$min"}")
-			
-			echo_date $server
-			echo_date $port
-			echo_date $password
-			echo_date $method
-			echo_date $remark
-			echo_date $obf
-			echo_date $obfspara
-			echo_date $protoco
-			echo_date $protocolpara
-			
-			dbus set ssconf_basic_server_"$k"="$server"
-			dbus set ssconf_basic_port_"$k"="$port"
-			dbus set ssconf_basic_password_"$k"=$(echo "$password" | base64_encode)
-			dbus set ssconf_basic_method_"$k"="$method"
-			dbus set ssconf_basic_name_"$k"="$remark"
-			dbus set ssconf_basic_rss_obfs_"$k"="$obf"
-			dbus set ssconf_basic_rss_obfs_param_"$k"="$obfspara"
-			dbus set ssconf_basic_rss_protocol_"$k"="$protoco"
-			dbus set ssconf_basic_rss_protocol_para_"$k"="$protocolpara"
-			dbus set ssconf_basic_use_rss_"$k"=1
-			dbus set ssconf_basic_mode_"$k"=2
-		    min=$(expr $min + 1)
-		    k=$(expr $k + 1)
-		done
-		echo_date 导入配置成功！
-	fi
+	echo_date "配置恢复成功！"
 }
 
 restore_now(){
 	[ -f "/tmp/upload/ssconf_backup.sh" ] && restore_sh
-	[ -f "/tmp/upload/ssconf_backup.json" ] && restore_json
-	echo_date 一点点清理工作...
+	echo_date "一点点清理工作..."
 	rm -rf /tmp/ss_conf_*
-	echo_date 完成！
+	echo_date "完成！"
 }
 
 reomve_ping(){

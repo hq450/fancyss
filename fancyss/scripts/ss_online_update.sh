@@ -1530,7 +1530,7 @@ add_hy2_node(){
 get_fancyss_running_status(){
 	local STATUS_1=$(dbus get ss_basic_enable 2>/dev/null)
 	local STATUS_2=$(iptables --t nat -S|grep SHADOWSOCKS|grep -w "3333" 2>/dev/null)
-	local STATUS_3=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -E "ss-redir|sslocal|v2ray|koolgame|xray|ipt2socks")
+	local STATUS_3=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -E "v2ray|koolgame|xray|ipt2socks")
 	local STATUS_4=$(netstat -nlp 2>/dev/null|grep -w "7913")
 	# 当插件状态为开启，iptables状态正常，透明端口进程正常，DNS端口正常，DNS配置文件正常
 	if [ "${STATUS_1}" == "1" -a -n "${STATUS_2}" -a -n "${STATUS_3}" -a -n "${STATUS_4}" -a -f "/jffs/configs/dnsmasq.d/wblist.conf" ];then
@@ -1634,7 +1634,7 @@ go_proxy(){
 
 download_by_curl(){
 	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
-		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|naive|tuic")
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."

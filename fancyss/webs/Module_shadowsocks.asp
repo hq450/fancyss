@@ -226,7 +226,7 @@ function conf2obj(obj, action) {
 function ssconf_node2obj(node_sel) {
 	obj_node = {};
 	var p = "ssconf_basic";
-	var params_tt_0 = ["ss_obfs", "use_kcp", "v2ray_use_json", "v2ray_network_security_ai", "v2ray_mux_enable", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "hy2_ai", "hy2_tfo"];
+	var params_tt_0 = ["ss_obfs", "v2ray_use_json", "v2ray_network_security_ai", "v2ray_mux_enable", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "hy2_ai", "hy2_tfo"];
 	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_json", "tuic_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni"];
 	for (var i = 0; i < params_tt_0.length; i++) {
 		obj_node["ss_basic_" + params_tt_0[i]] = db_ss[p + "_" + params_tt_0[i] + "_" + node_sel] || "0";
@@ -253,26 +253,14 @@ function ss_node_sel() {
 function refresh_options() {
 	if (node_max == 0) return false;
 	var option0 = $("#ssconf_basic_node");
-	var option2 = $("#ss_basic_udp_node");
 	var option3 = $("#ss_failover_s4_3");
 	
 	option0.find('option').remove().end();
-	option2.find('option').remove().end();
 	option3.find('option').remove().end();
-	
+
 	for (var field in confs) {
 		var c = confs[field];
-		if(c["type"] == "3" && c["v2ray_use_json"] == "1"){
-			continue;
-		}else if(c["type"] == "4" && c["xray_use_json"] == "1"){
-			continue;
-		}else{
-			option2.append('<option value="' + field + '">' + c["name"] + '</option>');
-		}
-	}
-	for (var field in confs) {
 		option3.append('<option value="' + field + '">' + c["name"] + '</option>');
-		var c = confs[field];
 		if (c.group) {
 			var real_group = c.group.split("_")[0];
 			var group_tag = real_group + " - ";
@@ -338,7 +326,6 @@ function refresh_options() {
 		}																													//fancyss-full
 	}
 	option0.val(db_ss["ssconf_basic_node"]||"1");
-	option2.val(db_ss["ss_basic_udp_node"]||"1");
 	option3.val((db_ss["ss_failover_s4_3"])||"1");
 	// refresh node dns resolv option
 	if (db_ss["ss_basic_server_resolv"] <= "0"){
@@ -354,7 +341,7 @@ function refresh_options() {
 	for (var i = 10; i <= 27; i++) {
 		$("#ss_basic_row").append('<option value="' + i + '">' + i + '</option>');
 	}
-	E("ss_basic_row").value = db_ss["ss_basic_row"]||18;
+	E("ss_basic_row").value = db_ss["ss_basic_row"]||15;
 }
 function save() {
 	var node_sel = E("ssconf_basic_node").value;
@@ -421,11 +408,6 @@ function save() {
 	  //"ss_basic_chng_dns_query_times",
 	  "ss_basic_chng",
 	  "ss_basic_smrt",
-	  "ss_basic_kcp_lserver",			//fancyss-full
-	  "ss_basic_kcp_lport",				//fancyss-full
-	  "ss_basic_kcp_server",			//fancyss-full
-	  "ss_basic_kcp_port",				//fancyss-full
-	  "ss_basic_kcp_parameter",			//fancyss-full
 	  "ss_basic_rule_update",
 	  "ss_basic_rule_update_time",
 	  "ssr_subscribe_mode",
@@ -437,54 +419,6 @@ function save() {
 	  "ss_basic_include",
 	  "ss_acl_default_port",
 	  "ss_acl_default_mode",
-	  "ss_basic_kcp_method",     	     //fancyss-full
-	  "ss_basic_kcp_password",     	     //fancyss-full
-	  "ss_basic_kcp_mode",     		     //fancyss-full
-	  "ss_basic_kcp_encrypt",     	     //fancyss-full
-	  "ss_basic_kcp_mtu",     		     //fancyss-full
-	  "ss_basic_kcp_sndwnd",     	     //fancyss-full
-	  "ss_basic_kcp_rcvwnd",     	     //fancyss-full
-	  "ss_basic_kcp_conn",     		     //fancyss-full
-	  "ss_basic_kcp_extra",     	     //fancyss-full
-	  "ss_basic_udp_software",     	     //fancyss-full
-	  "ss_basic_udp_node",     	 	     //fancyss-full
-	  "ss_basic_udpv1_lserver",     	 //fancyss-full
-	  "ss_basic_udpv1_lport",     		 //fancyss-full
-	  "ss_basic_udpv1_rserver",     	 //fancyss-full
-	  "ss_basic_udpv1_rport",     		 //fancyss-full
-	  "ss_basic_udpv1_password",     	 //fancyss-full
-	  "ss_basic_udpv1_mode",     		 //fancyss-full
-	  "ss_basic_udpv1_duplicate_nu",     //fancyss-full
-	  "ss_basic_udpv1_duplicate_time",   //fancyss-full
-	  "ss_basic_udpv1_jitter",     		 //fancyss-full
-	  "ss_basic_udpv1_report",     		 //fancyss-full
-	  "ss_basic_udpv1_drop",     		 //fancyss-full
-	  "ss_basic_udpv2_lserver",     	 //fancyss-full
-	  "ss_basic_udpv2_lport",     		 //fancyss-full
-	  "ss_basic_udpv2_rserver",     	 //fancyss-full
-	  "ss_basic_udpv2_rport",     		 //fancyss-full
-	  "ss_basic_udpv2_password",     	 //fancyss-full
-	  "ss_basic_udpv2_fec",     		 //fancyss-full
-	  "ss_basic_udpv2_timeout",     	 //fancyss-full
-	  "ss_basic_udpv2_mode",     		 //fancyss-full
-	  "ss_basic_udpv2_report",     		 //fancyss-full
-	  "ss_basic_udpv2_mtu",     		 //fancyss-full
-	  "ss_basic_udpv2_jitter",     		 //fancyss-full
-	  "ss_basic_udpv2_interval",     	 //fancyss-full
-	  "ss_basic_udpv2_drop",     		 //fancyss-full
-	  "ss_basic_udpv2_other",     		 //fancyss-full
-	  "ss_basic_udp2raw_lserver",     	 //fancyss-full
-	  "ss_basic_udp2raw_lport",     	 //fancyss-full
-	  "ss_basic_udp2raw_rserver",     	 //fancyss-full
-	  "ss_basic_udp2raw_rport",     	 //fancyss-full
-	  "ss_basic_udp2raw_password",     	 //fancyss-full
-	  "ss_basic_udp2raw_rawmode",     	 //fancyss-full
-	  "ss_basic_udp2raw_ciphermode",     //fancyss-full
-	  "ss_basic_udp2raw_authmode",     	 //fancyss-full
-	  "ss_basic_udp2raw_lowerlevel",     //fancyss-full
-	  "ss_basic_udp2raw_other",     	 //fancyss-full
-	  "ss_basic_udp_upstream_mtu",     	 //fancyss-full
-	  "ss_basic_udp_upstream_mtu_value", //fancyss-full
 	  "ss_reboot_check",
 	  "ss_basic_week",
 	  "ss_basic_day",
@@ -518,12 +452,8 @@ function save() {
 	  "ss_basic_enable",
 	  "ss_basic_gfwlist_update",
 	  "ss_basic_tfo",
-	  "ss_basic_tnd",
-	  "ss_basic_score",					//fancyss-full
 	  "ss_basic_vcore",					//fancyss-full
 	  "ss_basic_xguard",
-	  "ss_basic_kcp_on",				//fancyss-full
-	  "ss_basic_udp_on",				//fancyss-full
 	  "ss_basic_tjai",
 	  "ss_basic_nonetcheck",
 	  "ss_basic_notimecheck",
@@ -533,14 +463,6 @@ function save() {
 	  "ss_basic_nocdnscheck",
 	  "ss_basic_chnroute_update",
 	  "ss_basic_chnlist_update",
-	  "ss_basic_kcp_nocomp",     		     //fancyss-full
-	  "ss_basic_udp_boost_enable",       	 //fancyss-full
-	  "ss_basic_udpv1_disable_filter",       //fancyss-full
-	  "ss_basic_udpv2_disableobscure",     	 //fancyss-full
-	  "ss_basic_udpv2_disablechecksum",      //fancyss-full
-	  "ss_basic_udp2raw_boost_enable",    	 //fancyss-full
-	  "ss_basic_udp2raw_a",     			 //fancyss-full
-	  "ss_basic_udp2raw_keeprule",    		 //fancyss-full
 	  "ss_basic_add_ispdns",
 	  "ss_basic_dns_hijack",
 	  "ss_basic_mcore",
@@ -595,7 +517,6 @@ function save() {
 	if (db_ss["ssconf_basic_type_" + node_sel] =="0" ){
 		var params_ssi_1 = ["mode", "server", "port", "method", "ss_obfs_host"];
 		var params_ssi_2 = ["ss_obfs"];
-		var params_ssc_1 = ["use_kcp"]; //fancyss-full
 		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 		for (var i = 0; i < params_ssi_1.length; i++) {
 			dbus["ssconf_basic_" + params_ssi_1[i] + "_" + node_sel] = E("ss_basic_" + params_ssi_1[i]).value;
@@ -609,23 +530,14 @@ function save() {
 				}
 			}
 		}
-		for (var i = 0; i < params_ssc_1.length; i++) {																			 //fancyss-full
-			dbus["ssconf_basic_" + params_ssc_1[i] + "_" + node_sel] = E("ss_basic_" + params_ssc_1[i]).checked ? '1' : '';		 //fancyss-full
-		}																														 //fancyss-full
 	}
 	// ssr
 	if (db_ss["ssconf_basic_type_" + node_sel] =="1" ){
 		var params_sri_1 = ["mode", "server", "port", "method", "rss_obfs", "rss_protocol", "rss_obfs_param", "rss_protocol_param"];
-		var params_src_1 = ["use_kcp"];																							 //fancyss-full
 		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 		for (var i = 0; i < params_sri_1.length; i++) {
 			dbus["ssconf_basic_" + params_sri_1[i] + "_" + node_sel] = E("ss_basic_" + params_sri_1[i]).value;
 		}
-		for (var i = 0; i < params_src_1.length; i++) {																			 //fancyss-full
-			if (E("ss_basic_" + params_src_1[i]).checked ? '1' : '0' != "0"){													 //fancyss-full
-				dbus["ssconf_basic_" + params_src_1[i] + "_" + node_sel] = E("ss_basic_" + params_src_1[i]).checked ? '1' : '';	 //fancyss-full
-			}																													 //fancyss-full
-		}																														 //fancyss-full
 	}
 	//v2ray
 	if (db_ss["ssconf_basic_type_" + node_sel] =="3" ){
@@ -954,18 +866,6 @@ function push_data(script, arg, obj, flag){
 	});
 }
 function verifyFields(r) {
-	if (PKG_TYPE == "full"){
-		if (E("ss_basic_kcp_on").checked == false){
-			$("#show_btn5").remove();
-		}else{
-			$("#show_btn5").show();
-		}
-		if (E("ss_basic_udp_on").checked == false){
-			$("#show_btn6").remove();
-		}else{
-			$("#show_btn6").show();
-		}
-	}
 	var node_sel = E("ssconf_basic_node").value;
 	var ss_on = false;
 	var ssr_on = false;
@@ -1345,39 +1245,6 @@ function verifyFields(r) {
 	}
 	//fancyss_hy2_2
 	//fancyss_full_1
-	//kcp pannel
-	var kcp_trs = ["ss_basic_kcp_password_tr", "ss_basic_kcp_mode_tr", "ss_basic_kcp_encrypt_tr", "ss_basic_kcp_mtu_tr", "ss_basic_kcp_sndwnd_tr", "ss_basic_kcp_rcvwnd_tr", "ss_basic_kcp_conn_tr", "ss_basic_kcp_nocomp_tr", "ss_basic_kcp_extra_tr"]
-	if(E("ss_basic_kcp_method").value == "1"){
-		E("ss_basic_kcp_parameter_tr").style.display = "none";
-		for ( var i = 0; i < kcp_trs.length; i++){
-			E(kcp_trs[i]).style.display = "";
-		}
-	}else{
-		E("ss_basic_kcp_parameter_tr").style.display = "";
-		for ( var i = 0; i < kcp_trs.length; i++){
-			E(kcp_trs[i]).style.display = "none";
-		}
-	}
-	//udp pannel
-	if($('.sub-btn1').hasClass("active2")){
-		$(".speeder").show();
-		if (E("ss_basic_udp_software").value == "1"){
-			$(".speederv1").show();
-			$(".speederv2").hide();
-			$(".udp2raw").hide();
-		}
-		if (E("ss_basic_udp_software").value == "2"){
-			$(".speederv1").hide();
-			$(".speederv2").show();
-			$(".udp2raw").hide();
-		}
-	}else if($('.sub-btn2').hasClass("active2")){
-		$(".udp2raw").show();
-		$(".speeder").hide();
-		$(".speederv1").hide();
-		$(".speederv2").hide();
-	}
-	//fancyss_full_2
 	// 插件重启功能
 	var Ti = E("ss_reboot_check").value;
 	var In = E("ss_basic_inter_pre").value;
@@ -1439,32 +1306,12 @@ function verifyFields(r) {
 			push_data("dummy_script.sh", "", dbus_post, "2");
 		}
 	}
-	if ( $(r).attr("id") == "ss_basic_kcp_on" ) {
-		var dbus_post = {};
-		dbus_post["ss_basic_kcp_on"] = E("ss_basic_kcp_on").checked ? '1' : '0';
-		if(ws_flag == 1){
-			push_data_ws("ss_dummy.sh", "", dbus_post, "1");
-		}else{
-			push_data("dummy_script.sh", "", dbus_post, "1");
-		}
-	}
-	//fancyss_full_1
-	if ( $(r).attr("id") == "ss_basic_udp_on" ) {
-		var dbus_post = {};
-		dbus_post["ss_basic_udp_on"] = E("ss_basic_udp_on").checked ? '1' : '0';
-		if(ws_flag == 1){
-			push_data_ws("ss_dummy.sh", "", dbus_post, "1");
-		}else{
-			push_data("dummy_script.sh", "", dbus_post, "1");
-		}
-	}
 	//fancyss_full_2
 	refresh_acl_table();
 }
 function update_visibility() {
 	var a  = E("ss_basic_rule_update").value == "1";
 	var b  = E("ss_basic_node_update").value == "1";
-	var c  = E("ss_basic_udp_upstream_mtu").value == "1";			//fancyss-full
 	var d  = E("ss_basic_tri_reboot_time").value;
 	var e = E("ss_basic_server_resolv").value;
 	var f = E("ss_basic_dig_opt").value;
@@ -1473,7 +1320,6 @@ function update_visibility() {
 	showhide("update_choose", a);
 	showhide("ss_basic_node_update_day", b);
 	showhide("ss_basic_node_update_hr", b);
-	showhide("ss_basic_udp_upstream_mtu_value", c);											//fancyss-full
 	showhide("ss_basic_tri_reboot_time_note", (d != "0"));
 	showhide("ss_basic_server_resolv_user", e == "99");
 	showhide("ss_basic_dig_opt_usr", f == "99");
@@ -2563,7 +2409,7 @@ function remove_conf_table(o) {
 	//console.log("删除第", id, "个节点！！！")
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "use_lb", "latency", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_ai", "hy2_tfo"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_ai", "hy2_tfo"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -3004,7 +2850,7 @@ function generate_node_info() {
 		}
 		
 		//兼容部分，这些值是空的话需要填为0
-		var params_sp = ["use_kcp", "use_lb", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
+		var params_sp = ["v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
 		for (var i = 0; i < params_sp.length; i++) {
 			if (typeof db_ss[p + "_" + params_sp[i] + "_" + idx] == "undefined") {
 				obj[params_sp[i]] = '0';
@@ -3455,7 +3301,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "use_kcp", "ss_obfs", "ss_obfs_host", "use_lb", "latency", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_ai", "hy2_tfo"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "lbmode", "weight", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_ai", "hy2_tfo"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -4272,25 +4118,6 @@ function toggle_func() {
 			autoTextarea(E("ss_wan_black_ip"), 0, 400);
 			autoTextarea(E("ss_wan_black_domain"), 0, 400);
 		});
-	//fancyss_full_1
-	$(".show-btn5").click(
-		function() {
-			tabSelect(5);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			verifyFields();
-			autoTextarea(E("ss_basic_kcp_parameter"), 0, 100);
-		});
-	$(".show-btn6").click(
-		function() {
-			tabSelect(6);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			update_visibility();
-			verifyFields();
-			get_udp_status();
-		});
-	//fancyss_full_2
 	$(".show-btn7").click(
 		function() {
 			tabSelect(7);
@@ -4603,26 +4430,6 @@ function get_ss_status_back_httpd() {
 	}
 	setTimeout("get_ss_status_back_httpd();", time_wait);
 }
-//fancyss_full_1
-function get_udp_status(){
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_udp_status.sh", "params":[], "fields": ""};
-	$.ajax({
-		type: "POST",
-		cache:false,
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		success: function(response){
-			E("udp_status").innerHTML = response.result;
-			setTimeout("get_udp_status();", 10000);
-		},
-		error: function(){
-			setTimeout("get_udp_status();", 2000);
-		}
-	});
-}
-//fancyss_full_2
 function close_dns_status() {
 	$("#dns_status_div").hide(200);
 	STATUS_FLAG = 0;
@@ -5400,47 +5207,27 @@ function v2ray_binary_update(){																												//fancyss-full
 function xray_binary_update(){
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "15";
-	note = "<li>v1.7.5：security支持TLS和XTLS，不支持REALITY，选此会将Xray二进制切换到此版本！</li>";
-	note += "<li>v1.8.X：security支持TLS和REALITY，不支持XTLS，选此会将Xray二进制更新到1.8.x最新版本！</li>";
-	note += "<li>切换/更新文件将从github上下载，请确保当前代理工作正常，不然将无法下载或下载及其缓慢！</li>";
-	note += "<li>更多信息，请查看<a style='color:#22ab39;' href='https://github.com/XTLS/Xray-core/releases' target='_blank'>Xray releases页面</a>。</li>";
+	note = "<li style='line-height:32px'>xray二进制来自于fancyss项目编译压缩：<a style='color:#22ab39;' href='https://github.com/hq450/fancyss/tree/3.0/binaries/xray' target='_blank'>https://github.com/hq450/fancyss/tree/3.0/binaries/xray</a></li>";
+	note += "<li style='line-height:32px'>你也可以自行下载Xray-core官方<a style='color:#22ab39;' href='https://github.com/XTLS/Xray-core/releases' target='_blank'>release</a>的二进制文件，替换路由器内/koolshare/bin/xray文件</li>";
+	note += "<li style='line-height:32px'>因二进制更新/升级导致代理无法工作的，请检查你的配置是否兼容新版本程序！</li>";
 	layer.open({
 		type: 0,
 		skin: 'layui-layer-lan',
 		shade: 0.8,
-		title: '请选择你需要的Xray版本！',
+		title: 'Xray程序更新！',
 		time: 0,
 		area: '670px',
 		offset: '350px',
 		btnAlign: 'c',
 		maxmin: true,
 		content: note,
-		btn: ['v1.7.5', 'v1.8.x'],
+		btn: ['开始更新'],
 		btn1: function() {
-			push_data("ss_xray.sh", 1, dbus_post);
-			layer.closeAll();
-		},
-		btn2: function() {
 			push_data("ss_xray.sh", 2, dbus_post);
+			layer.closeAll();
 		}
 	});
 }
-function ssrust_binary_update(){																					//fancyss-full
-	var dbus_post = {};																								//fancyss-full
-	db_ss["ss_basic_action"] = "20";																				//fancyss-full
-	layer.confirm('<li>点击确定将开始shadowsocks-rust二进制下载，请确保你的路由器jffs空间容量足够！</li>', {	//fancyss-full
-		shade: 0.8,																								//fancyss-full
-	}, function(index) {																						//fancyss-full
-		$("#log_content3").attr("rows", "20");																	//fancyss-full
-		push_data("ss_rust_update.sh", 1, dbus_post);															//fancyss-full
-		layer.close(index);																						//fancyss-full
-		return true;																							//fancyss-full
-		//save_online_nodes(action);																			//fancyss-full
-	}, function(index) {																						//fancyss-full
-		layer.close(index);																						//fancyss-full
-		return false;																							//fancyss-full
-	});																											//fancyss-full
-}																													//fancyss-full
 function set_cron(action) {
 	var dbus_post = {};
 	if(action == 1){
@@ -5832,8 +5619,6 @@ function restart_chinadns() {
 															<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="故障转移" />
 															<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="DNS设定" />
 															<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="黑白名单" />
-															<input id="show_btn5" class="show-btn5" style="cursor:pointer" type="button" value="KCP加速" />		<!--fancyss-full-->
-															<input id="show_btn6" class="show-btn6" style="cursor:pointer" type="button" value="UDP加速"/>		<!--fancyss-full-->
 															<input id="show_btn7" class="show-btn7" style="cursor:pointer" type="button" value="更新管理" />
 															<input id="show_btn8" class="show-btn8" style="cursor:pointer" type="button" value="访问控制" />
 															<input id="show_btn9" class="show-btn9" style="cursor:pointer" type="button" value="附加功能" />
@@ -6046,7 +5831,7 @@ function restart_chinadns() {
 															{ title: '* spiderX', id:'ss_basic_xray_spiderx', type:'text', ph:'没有请留空'},
 															{ title: 'xray json', id:'ss_basic_xray_json', type:'textarea', rows:'36', ph:ph_xray},
 															{ title: '其它', rid:'v2ray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},	//fancyss-full
-															{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新/切换xray程序</a>'},
+															{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
 															//trojan
 															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
 															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai_tr', multi: [
@@ -6572,175 +6357,6 @@ function restart_chinadns() {
 													</script>
 												</table>
 											</div>
-											<!--fancyss_full_1-->
-											<div id="tablet_5" style="display: none;">
-												<table id="table_kcp" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-													<script type="text/javascript">
-														var option_kcpm = [ "manual", "normal", "fast", "fast2", "fast3" ];
-														var option_kcpe = [ "aes", "aes-128", "aes-192", "salsa20", "blowfish", "twofish", "cast5", "3des", "tea", "xtea", "xor", "none"];
-														var ph1 = "请将速度模式为manual的参数和其它参数依次填写进来";
-														var ph2 = "# 填入你的kcptun运行参数，每个参数用空格隔开，格式如下：&#10;--crypt salsa20 --key mjy211 --sndwnd 1024 --rcvwnd 1024 --mtu 1300 --nocomp --mode fast2";
-														$('#table_kcp').forms([
-															{ title: 'KCP加速开关', id:'ss_basic_use_kcp', type:'checkbox', func:'v', value:false},
-															{ title: 'KCP参数配置方式', id:'ss_basic_kcp_method', type:'select', func:'v', options:[["1", "选择模式"], ["2", "输入模式"]], value:'2'},
-															{ title: 'kcp本地监听地址：端口 （-l）', multi: [
-																{ id: 'ss_basic_kcp_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_kcp_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1091'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(90)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: 'kcp服务器地址：端口 （-r）', multi: [
-																{ id: 'ss_basic_kcp_server', type: 'text', maxlen:'200', style:'width:120px;'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_kcp_port', type: 'text', maxlen:'200', style:'width:44px;'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(91)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '密码 (--key)', rid:'ss_basic_kcp_password_tr', id:'ss_basic_kcp_password', type:'password', maxlen:'200', peekaboo:'1'},
-															{ title: '速度模式 (--mode)', rid:'ss_basic_kcp_mode_tr', id:'ss_basic_kcp_mode', type:'select', options:option_kcpm, value:'fast2'},
-															{ title: '加密方式 (--crypt)', rid:'ss_basic_kcp_encrypt_tr', id:'ss_basic_kcp_encrypt', type:'select', options:option_kcpe, value:'aes-192'},
-															{ title: 'MTU (--mtu)', rid:'ss_basic_kcp_mtu_tr', id:'ss_basic_kcp_mtu', type:'text', maxlen:'200'},
-															{ title: '发送窗口 (--sndwnd)', rid:'ss_basic_kcp_sndwnd_tr', id:'ss_basic_kcp_sndwnd', type:'text', maxlen:'200'},
-															{ title: '接收窗口 (--rcvwnd)', rid:'ss_basic_kcp_rcvwnd_tr', id:'ss_basic_kcp_rcvwnd', type:'text', maxlen:'200'},
-															{ title: '链接数 (--conn)', rid:'ss_basic_kcp_conn_tr', id:'ss_basic_kcp_conn', type:'text', maxlen:'200'},
-															{ title: '关闭数据压缩 (--nocomp)', rid:'ss_basic_kcp_nocomp_tr', id:'ss_basic_kcp_nocomp', type:'checkbox', value:false},
-															{ title: '其它配置项', rid:'ss_basic_kcp_extra_tr', id:'ss_basic_kcp_extra', type:'text', maxlen:'200', style:'width:95%', ph:ph1},
-															{ title: 'KCP参数', rid:'ss_basic_kcp_parameter_tr', id:'ss_basic_kcp_parameter', type:'textarea', rows:'4', ph:ph2},
-														]);
-													</script>
-												</table>
-											</div>
-											<div id="tablet_6" style="display: none;">
-												<table id="table_udp_main" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-													<script type="text/javascript">
-														$('#table_udp_main').forms([
-															{ title: '加速节点选择', multi: [
-																{ id: 'ss_basic_udp_node', type: 'select', options:[]},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(97)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '设置ss/ssr-redir MTU', multi: [
-																{ id: 'ss_basic_udp_upstream_mtu', type: 'select', func:'u', options:[["0", "不设定"], ["1", "手动指定"]]},
-																{ id: 'ss_basic_udp_upstream_mtu_value', type: 'text', value:'1200', style:'width:40px;'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(98)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '帮助信息', multi: [
-																{ suffix: '<ul><li>你可以只开启UDPspeeder加速udp，或者只开启UDP2raw将udp转为tcp；</li>' },
-																{ suffix: '<li>你也可以将UDPspeeder和UDP2raw都开启，并配置它们串联工作；</li><li>帮助文档：' },
-																{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/blob/master/doc/README.zh-cn.v1.md"><em><u>UDPspeederV1</u></em></a>&nbsp;&nbsp;' },
-																{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/blob/master/doc/README.zh-cn.md"><em><u>UDPspeederV2</u></em></a>&nbsp;&nbsp;' },
-																{ suffix: '<a type="button" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/udp2raw-tunnel/blob/master/doc/README.zh-cn.md"><em><u>udp2raw-tunnel</u></em></a>' },
-																{ suffix: '</li></ul>' },
-															]},
-															{ title: 'UDPspeeder运行状态', suffix: '<span id="udp_status">获取中...</span>'},
-														]);
-													</script>
-												</table>
-												<div id="sub_tablets">
-													<table style="margin:10px 0px 0px 0px;border-collapse:collapse" width="100%" height="37px">
-														<tr width="235px">
-															<td colspan="4" cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#000">
-																<input id="sub_btn1" class="sub-btn1 active2" style="cursor:pointer" type="button" value="UDPspeeder" />
-																<input id="sub_btn2" class="sub-btn2" style="cursor:pointer" type="button" value="UDP2raw-tunnel" />
-															</td>
-														</tr>
-													</table>
-												</div>
-												<table id="table_udp" style="margin:-1px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-													<script type="text/javascript">
-														$('#table_udp').forms([
-															//speeder
-															{ title: '<em>UDPspeeder 设置</em>', th:'2', class:'speeder'},
-															{ title: 'UDPspeeder开关', id:'ss_basic_udp_boost_enable', type:'checkbox', class:'speeder', value:false},
-															{ title: 'UDPspeeder版本', class:'speeder', multi: [
-																{ id: 'ss_basic_udp_software', type: 'select', func:'v', style:'width:132px', options:[["1", "UDPspeederV1"], ["2", "UDPspeederV2"]]},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(104)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															//speederv1
-															{ title: '<em>UDPspeederV1 参数设置</em>', th:'2', class:'speederv1'},
-															{ title: '* 本地监听地址：端口 （-l）', class:'speederv1', multi: [
-																{ id: 'ss_basic_udpv1_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_udpv1_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 服务器地址：端口 （-r）', class:'speederv1', multi: [
-																{ id: 'ss_basic_udpv1_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_udpv1_rport', type: 'text', maxlen:'200', style:'width:44px;'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(100)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 密码 (--key)', id:'ss_basic_udpv1_password', type:'password', maxlen:'200', class:'speederv1', style:'width:120px', peekaboo:'1'},
-															{ title: '以下为包发送选项，两端设置可以不同, 只影响本地包发送。', th:'2', class:'speederv1'},
-															{ title: '* 冗余包数量 （-d）', id:'ss_basic_udpv1_duplicate_nu', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值。</a>'},
-															{ title: '* 冗余包发送延迟 （-t）', id:'ss_basic_udpv1_duplicate_time', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认值20（2ms），留空则使用默认值</a>'},
-															{ title: '* 原始数据抖动延迟 （-j）', id:'ss_basic_udpv1_jitter', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值</a>'},
-															{ title: '* 数据发送和接受报告 （--report）', id:'ss_basic_udpv1_report', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>单位：s，留空则不使用。</a>'},
-															{ title: '* 随机丢包 （--random-drop）', id:'ss_basic_udpv1_drop', type:'text', style:'width:120px', class:'speederv1', maxlen:'200', suffix:'&nbsp;<a>单位：0.01%，留空则不使用。</a>'},
-															{ title: '以下为包接收选项，两端设置可以不同，只影响本地包接受。', th:'2', class:'speederv1'},
-															{ title: '* 关闭重复包过滤器 （--disable-filter）', id:'ss_basic_udpv1_disable_filter', type:'checkbox', class:'speederv1', value:false},
-															//speederv2
-															{ title: '<em>UDPspeederV2 参数设置</em>', th:'2', class:'speederv2'},
-															{ title: '* 本地监听地址：端口 （-l）', class:'speederv2', multi: [
-																{ id: 'ss_basic_udpv2_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_udpv2_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1092'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(99)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 服务器地址：端口 （-r）', class:'speederv2', multi: [
-																{ id: 'ss_basic_udpv2_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_udpv2_rport', type: 'text', maxlen:'200', style:'width:44px;'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(100)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 密码 (--key)', id:'ss_basic_udpv2_password', type:'password', maxlen:'200', class:'speederv2', style:'width:120px', peekaboo:'1'},
-															{ title: '以下为包发送选项，两端设置可以不同, 只影响本地包发送。', th:'2', class:'speederv2'},
-															{ title: '* fec参数 （-f）', class:'speederv2', multi: [
-																{ id: 'ss_basic_udpv2_fec', type: 'text', maxlen:'200', style:'width:120px;'},
-																{ suffix: '&nbsp;<a>必填，x:y，每x个包额外发送y个包。</a>' },
-																{ suffix: '&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" target="_blank" href="https://github.com/wangyu-/UDPspeeder/wiki/%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C">fec使用经验</a>' },
-															]},
-															{ title: '* timeout参数 （--timeout）', id:'ss_basic_udpv2_timeout', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认8，留空则使用默认值。</a>'},
-															{ title: '* mode参数 （--mode）', id:'ss_basic_udpv2_mode', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>默认0，留空则使用默认值。</a>'},
-															{ title: '* 数据发送和接受报告 （--report）', id:'ss_basic_udpv2_report', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：s，留空则不使用。</a>'},
-															{ title: '* mtu参数 （--mtu）', id:'ss_basic_udpv2_mtu', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>默认1250，留空则使用默认值。</a>'},
-															{ title: '* 原始数据抖动延迟 （-j,--jitter）', id:'ss_basic_udpv2_jitter', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认0，留空则使用默认值。</a>'},
-															{ title: '* 时间窗口 （-i,--interval）', id:'ss_basic_udpv2_interval', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：ms，默认0，留空则使用默认值。</a>'},
-															{ title: '* 随机丢包 （--random-drop）', id:'ss_basic_udpv2_drop', type:'text', style:'width:120px', class:'speederv2', maxlen:'200', suffix:'&nbsp;<a>单位：0.01%，默认0，留空则使用默认值。</a>'},
-															{ title: '以下服务器和客户端设置必须一致！', th:'2', class:'speederv2'},
-															{ title: '* 关闭数据包随机填充（--disable-obscure）', id:'ss_basic_udpv2_disableobscure', type:'checkbox', class:'speederv2', value:false, suffix:'&nbsp;<a>关闭可节省一点带宽和cpu。</a>'},
-															{ title: '* 关闭数据包验证（--disable-checksum）', id:'ss_basic_udpv2_disablechecksum', type:'checkbox', class:'speederv2', value:false, suffix:'&nbsp;<a>关闭可节省一点带宽和cpu。</a>'},
-															{ title: '其它参数', th:'2', class:'speederv2'},
-															{ title: '* 其它参数', id:'ss_basic_udpv2_other', type:'text', style:'width:95%', class:'speederv2', maxlen:'200', suffix:'<br />&nbsp;<a>其它高级参数，请手动输入，如 -q1 等。</a>'},
-															//udp2raw
-															{ title: '<em>UDP2raw 设置</em>', th:'2', class:'udp2raw'},
-															{ title: 'UDP2raw开关', id:'ss_basic_udp2raw_boost_enable', type:'checkbox', class:'udp2raw', value:false},
-															{ title: '<em>UDP2raw 参数设置</em>', th:'2', class:'udp2raw'},
-															{ title: '* 本地监听地址：端口 （-l）', class:'udp2raw', multi: [
-																{ id: 'ss_basic_udp2raw_lserver', type: 'text', maxlen:'200', style:'width:120px;', attrib:'readonly', value:'0.0.0.0'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_udp2raw_lport', type: 'text', maxlen:'200', style:'width:44px;', attrib:'readonly', value:'1093'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(101)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 服务器地址：端口 （-r）', class:'udp2raw', multi: [
-																{ id: 'ss_basic_udp2raw_rserver', type: 'text', maxlen:'200', style:'width:120px;'},
-																{ suffix: '&nbsp;:&nbsp;' },
-																{ id: 'ss_basic_udp2raw_rport', type: 'text', maxlen:'200', style:'width:44px;'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(102)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 密码 (--key)', id:'ss_basic_udp2raw_password', type:'password', maxlen:'200', class:'udp2raw', style:'width:120px', peekaboo:'1'},
-															{ title: '* 模式（--raw-mode）', id:'ss_basic_udp2raw_rawmode', type:'select', style:'width:132px', class:'udp2raw', options:["faketcp", "udp", "icmp"], value:'faketcp', suffix:'&nbsp;<a>默认:faketcp</a>'},
-															{ title: '* 加密模式 （--cipher-mode）', id:'ss_basic_udp2raw_ciphermode', type:'select', style:'width:132px', class:'udp2raw', options:["aes128cbc", "aes128cfb", "xor", "none"], value:'aes128cbc', suffix:'&nbsp;<a>默认:aes128cbc</a>'},
-															{ title: '* 校验模式 （--auth-mode）', id:'ss_basic_udp2raw_authmode', type:'select', style:'width:132px', class:'udp2raw', options:["md5", "hmac_sha1", "crc32", "icmp", "simple", "none"], value:'md5', suffix:'&nbsp;<a>默认:md5</a>'},
-															{ title: '* 自动添加/删除iptables（-a,--auto-rule）', id:'ss_basic_udp2raw_a', type:'checkbox', class:'udp2raw', value:true, suffix:'<a>建议请勾选此选项</a>'},
-															{ title: '* 定期检查iptables（--keep-rule）', id:'ss_basic_udp2raw_keeprule', type:'checkbox', class:'udp2raw', value:true, suffix:'<a>建议请勾选此选项</a>'},
-															{ title: '* 绕过本地iptables（--lower-level）', class:'udp2raw', multi: [
-																{ id: 'ss_basic_udp2raw_lowerlevel', type: 'text', maxlen:'200', style:'width:120px;'},
-																{ suffix: '&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(103)"><font color="#ffcc00"><u>帮助</u></font></a>' },
-															]},
-															{ title: '* 其它参数', id:'ss_basic_udp2raw_other', type:'text', style:'width:95%', class:'udp2raw', maxlen:'200', suffix:'<br />&nbsp;<a>其它未列出来的参数，请手动输入，如 --force-sock-buf --seq-mode 1 等。</a>'},
-														]);
-													</script>
-												</table>
-											</div>
 											<!--fancyss_full_2-->
 											<div id="tablet_7" style="display: none;">
 												<table id="table_rules" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable" >
@@ -6798,8 +6414,7 @@ function restart_chinadns() {
 															]},
 															{ title: '二进制更新', multi: [
 																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>&nbsp;'},//fancyss-full
-																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新/切换xray程序</a>&nbsp;'},
-																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="ssrust_binary_update(2)">更新ss-rust程序</a>'},//fancyss-full
+																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>&nbsp;'},
 															]},
 														]);
 													</script>
@@ -6875,7 +6490,6 @@ function restart_chinadns() {
 													<div><i>1&nbsp;&nbsp;默认状态下，所有局域网的主机都会走当前节点的模式（主模式），相当于即不启用局域网访问控制。</i></div>
 													<div><i>2&nbsp;&nbsp;当你设置默认规则为不通过代理，添加了主机走大陆白名单模式，则只有添加的主机才会走代理(大陆白名单模式)。</i></div>
 													<div><i>3&nbsp;&nbsp;当你设置默认规则为正在使用节点的模式，除了添加的主机才会走相应的模式，未添加的主机会走默认规则的模式。</i></div>
-													<div><i>4&nbsp;&nbsp;如果为使用的节点配置了KCP协议，或者负载均衡，因为它们不支持udp，所以不能控制主机走游戏模式。</i></div>
 													<div><i>5&nbsp;&nbsp;如果需要自定义端口范围，适用英文逗号和冒号，参考格式：80,443,5566:6677,7777:8888</i></div>
 												</div>
 											</div>
@@ -6974,13 +6588,9 @@ function restart_chinadns() {
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
-															{ title: 'ss协议开启TCP_NODELAY', id:'ss_basic_tnd', type:'checkbox', value:false},
-															{ title: '用Xray核心运行ss协议', id:'ss_basic_score', hint:'113', type:'checkbox', value:false},									//fancyss-full
 															{ title: '用Xray核心运行V2ray节点', id:'ss_basic_vcore', hint:'114', type:'checkbox', value:false},									//fancyss-full
 															{ title: 'Xray启用进程守护', id:'ss_basic_xguard', hint:'115', type:'checkbox', value:false},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
-															{ title: '开启kcp加速功能', id:'ss_basic_kcp_on', type:'checkbox', value:false, func:'v'},											//fancyss-full
-															{ title: '开启udp加速功能', id:'ss_basic_udp_on', type:'checkbox', value:false, func:'v'},											//fancyss-full
 															{ title: '所有trojan节点强制允许不安全', id:'ss_basic_tjai', hint:'120', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过时间一致性检测', id:'ss_basic_notimecheck', hint:'139', type:'checkbox', value:false},

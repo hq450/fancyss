@@ -60,7 +60,7 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
 
 cur_node=$(dbus get ssconf_basic_node)
 base_1="name type mode server port method password ss_obfs ss_obfs_host ss_v2ray ss_v2ray_opts rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_xhttp_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_prot xray_alterid xray_json tuic_json"
-base_2="use_kcp v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_tfo naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_ai hy2_tfo"
+base_2="v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_tfo naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_ai hy2_tfo"
 for config in ${base_1} ${base_2}
 do
 	key_1=$(dbus get ssconf_basic_${config}_${cur_node})
@@ -146,19 +146,11 @@ if [ ! -x "/koolshare/bin/v2ray" ];then
 	ss_basic_vcore=1
 fi
 
-if [ ! -x "/koolshare/bin/sslocal" ];then
-	# 没有sslocal二进制，ss节点由xray来运行
-	ss_basic_score=1
-fi
-
 # trojan 全局允许不安全
 if [ "${ss_basic_type}" == "5" -a "${ss_basic_tjai}" == "1" ];then
 	ss_basic_trojan_ai=1
 	#eval ss_basic_trojan_ai_${cur_node}=1
 fi
-
-# ss_basic_dns_flag="1"    使用代理的udp
-# ss_basic_dns_flag="2"    使用代理的socks
 
 # v2ray/xray使用自带dns
 ss_basic_dns_flag="0"

@@ -210,21 +210,11 @@ start_xray() {
 }
 
 case $2 in
-1)
-	true > /tmp/upload/ss_log.txt
-	http_response "$1"
-	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
-	echo_date "                xray程序更新(Shell by sadog)" | tee -a /tmp/upload/ss_log.txt
-	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
-	get_latest_version latest | tee -a /tmp/upload/ss_log.txt 2>&1
-	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
-	echo XU6J03M6 | tee -a /tmp/upload/ss_log.txt
-	;;
 2)
 	true > /tmp/upload/ss_log.txt
 	http_response "$1"
 	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
-	echo_date "                xray程序更新(Shell by sadog)" | tee -a /tmp/upload/ss_log.txt
+	echo_date "                xray程序更新" | tee -a /tmp/upload/ss_log.txt
 	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
 	get_latest_version latest_2 | tee -a /tmp/upload/ss_log.txt 2>&1
 	echo_date "===================================================================" | tee -a /tmp/upload/ss_log.txt
