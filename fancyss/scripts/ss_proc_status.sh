@@ -382,22 +382,12 @@ ECHO_VERSION(){
 	echo "2️⃣插件主要二进制程序版本："
 	echo "--------------------------------------------------------------------------------------------------------"
 	echo "程序			版本			备注"
-	if [ -x "/koolshare/bin/sslocal" ];then
-		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
-		if [ -n "${SSRUST_VER}" ];then
-			echo "sslocal			${SSRUST_VER}			https://github.com/shadowsocks/shadowsocks-rust"
-		fi
+	if [ -x "/koolshare/bin/xray" ];then
+		echo "xray			$(run xray -version|head -n1|awk '{print $2}')			https://github.com/XTLS/Xray-core"
 	fi
-	echo "obfs-local		$(run obfs-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/simple-obfs"
-	echo "ssr-redir		$(run rss-redir -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
-	echo "ssr-local		$(run rss-local -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
-	echo "chinadns-ng		$(run chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
 	if [ -x "/koolshare/bin/v2ray" ];then
 		local v2_info_all=$(run v2ray version|head -n1)
 		echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			https://github.com/v2fly/v2ray-core"
-	fi
-	if [ -x "/koolshare/bin/xray" ];then
-		echo "xray			$(run xray -version|head -n1|awk '{print $2}')		https://github.com/XTLS/Xray-core"
 	fi
 	if [ -x "/koolshare/bin/kcptun" ];then
 		echo "kcptun			$(run kcptun -v | awk '{print $NF}')		https://github.com/xtaci/kcptun"
@@ -410,6 +400,21 @@ ECHO_VERSION(){
 	fi
 	if [ -x "/koolshare/bin/hysteria2" ];then
 		echo "hysteria2		$(run hysteria2 version|grep Version|head -n1|awk '{print $2}')			https://github.com/apernet/hysteria"
+	fi
+	if [ -x "/koolshare/bin/sslocal" ];then
+		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
+		if [ -n "${SSRUST_VER}" ];then
+			echo "sslocal			${SSRUST_VER}			https://github.com/shadowsocks/shadowsocks-rust"
+		fi
+	fi
+	echo "obfs-local		$(run obfs-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/simple-obfs"
+	echo "ssr-redir		$(run rss-redir -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
+	echo "ssr-local		$(run rss-local -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
+	if [ -x "/koolshare/bin/chinadns-ng" ];then
+		echo "chinadns-ng		$(run chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
+	fi
+	if [ -x "/koolshare/bin/smartdns" ];then
+		echo "smartdns		$(run smartdns -v|awk '{print $2}')	https://github.com/pymumu/smartdns"
 	fi
 	echo --------------------------------------------------------------------------------------------------------
 }
@@ -488,9 +493,9 @@ check_status() {
 	local CURR_WHTI=$(echo ${ss_wan_white_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | sed 's/^[[:space:]]//g' | grep -Ec "^http")
 	local CURR_NODE=$(dbus list ssconf | grep "_name_" | wc -l)
-	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.gfwlist_txt.date')
+	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.gfwlist.date')
 	local CHNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnroute.date')
-	local CDNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnlist_txt.date')
+	local CDNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnlist.date')
 
 	echo "🟠 路由型号：$(GET_MODEL)"
 	echo "🟠 固件类型：$(GET_FW_TYPE)"

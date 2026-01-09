@@ -386,8 +386,19 @@ restart_dnsmasq(){
 }
 
 restart_chinadnsng(){
-	echo_date "重启chinadns-ng..."
-	killall chinadns-ng >/dev/null 2>&1
+	local CHNG_PID=$(pidof chinadns-ng)
+	if [ -n "${CHNG_PID}" ];then
+		echo_date "当前chinadns-ng正常运行中，pid: ${CHNG_PID}，准备重启！"
+		kill ${CHNG_PID}
+	fi
+	
+	local OLD_PID=$(pidof smartdns)
+	if [ -n "${OLD_PID}" ];then
+		echo_date "当前smartdns正常运行中，pid: ${OLD_PID}，准备关闭！"
+		kill ${OLD_PID}
+	else
+		echo_date "尝试启动chinadns-ng...！"
+	fi
 	sh /koolshare/ss/ssconfig.sh restart_chinadns_ng
 	echo XU6J03M6
 }
@@ -458,7 +469,6 @@ restart_smartdns(){
 		echo_date "当前chinadns-ng正常运行中，pid: ${CHNG_PID}，准备关闭！"
 		kill ${CHNG_PID}
 	fi
-
 	
 	local OLD_PID=$(pidof smartdns)
 	if [ -n "${OLD_PID}" ];then
@@ -650,15 +660,15 @@ case $act in
 	download_dig_log
 	http_response "$1"
 	;;
-restart_smrt)
-	true > ${LOG_FILE}
-	[ "${ws_flag}" == "0" ] && http_response "$1"
-	restart_smartdns | tee -a ${LOG_FILE}
-	;;
 restart_chng)
 	true > ${LOG_FILE}
 	[ "${ws_flag}" == "0" ] && http_response "$1"
 	restart_chinadnsng | tee -a ${LOG_FILE}
+	;;
+restart_smrt)
+	true > ${LOG_FILE}
+	[ "${ws_flag}" == "0" ] && http_response "$1"
+	restart_smartdns | tee -a ${LOG_FILE}
 	;;
 edit_smartdns_smrt_*)
 	order=${2##*_}

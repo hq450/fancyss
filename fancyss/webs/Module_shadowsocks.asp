@@ -418,7 +418,7 @@ function save() {
 	  "ss_basic_chng_trust_tcp_3_usr",
 	  "ss_basic_chng_trust_dot_3_opt",
 	  "ss_basic_chng_trust_dot_3_usr",
-	  "ss_basic_chng_dns_query_times",
+	  //"ss_basic_chng_dns_query_times",
 	  "ss_basic_chng",
 	  "ss_basic_smrt",
 	  "ss_basic_kcp_lserver",			//fancyss-full
@@ -542,7 +542,6 @@ function save() {
 	  "ss_basic_udp2raw_a",     			 //fancyss-full
 	  "ss_basic_udp2raw_keeprule",    		 //fancyss-full
 	  "ss_basic_add_ispdns",
-	  "ss_basic_dns_server",
 	  "ss_basic_dns_hijack",
 	  "ss_basic_mcore",
 	  "ss_basic_chng_china_dns_1_chk",
@@ -553,6 +552,7 @@ function save() {
 	  "ss_basic_chng_trust_dns_3_chk",
 	  "ss_basic_chng_ipv6_drop_direc",
 	  "ss_basic_chng_ipv6_drop_proxy",
+	  "ss_basic_dns_server",
 	  "ss_basic_proxy_newb",
 	  //"ss_basic_proxy_ipv4",
 	  //"ss_basic_proxy_ipv6"
@@ -5534,8 +5534,8 @@ function restart_smartdns() {
 	var dbus_post = {};
 	document.getElementById("loading_block3").innerHTML = "重启smartdns进程 ..."
 	$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重启中 ...</font></li>");
-	dbus_post["ss_basic_smrt"] = E("ss_basic_smrt").value;
 	dbus_post["ss_basic_dns_plan"] = E("ss_basic_dns_plan").value;
+	dbus_post["ss_basic_smrt"] = E("ss_basic_smrt").value;
 	dbus_post["ss_basic_add_ispdns"] = E("ss_basic_add_ispdns").checked ? '1' : '0';
 	dbus_post["ss_basic_dns_server"] = E("ss_basic_dns_server").checked ? '1' : '0';
 	if(ws_flag == 1){
@@ -5548,7 +5548,14 @@ function restart_chinadns() {
 	var dbus_post = {};
 	document.getElementById("loading_block3").innerHTML = "重启chinadns-ng进程 ..."
 	$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，重启中 ...</font></li>");
-	dbus_post["ss_basic_dns_plan"] = E("ss_basic_dns_plan").value;
+	var chng_params_input = ["ss_basic_dns_plan", "ss_basic_chng", "ss_basic_chng_china_net_1_typ", "ss_basic_chng_china_udp_1_opt", "ss_basic_chng_china_udp_1_usr", "ss_basic_chng_china_tcp_1_opt", "ss_basic_chng_china_tcp_1_usr", "ss_basic_chng_china_dot_1_opt", "ss_basic_chng_china_dot_1_usr", "ss_basic_chng_china_net_2_typ", "ss_basic_chng_china_udp_2_opt", "ss_basic_chng_china_udp_2_usr", "ss_basic_chng_china_tcp_2_opt", "ss_basic_chng_china_tcp_2_usr", "ss_basic_chng_china_dot_2_opt", "ss_basic_chng_china_dot_2_usr", "ss_basic_chng_china_net_3_typ", "ss_basic_chng_china_udp_3_opt", "ss_basic_chng_china_udp_3_usr", "ss_basic_chng_china_tcp_3_opt", "ss_basic_chng_china_tcp_3_usr", "ss_basic_chng_china_dot_3_opt", "ss_basic_chng_china_dot_3_usr", "ss_basic_chng_trust_net_1_typ", "ss_basic_chng_trust_udp_1_opt", "ss_basic_chng_trust_udp_1_usr", "ss_basic_chng_trust_tcp_1_opt", "ss_basic_chng_trust_tcp_1_usr", "ss_basic_chng_trust_dot_1_opt", "ss_basic_chng_trust_dot_1_usr", "ss_basic_chng_trust_net_2_typ", "ss_basic_chng_trust_udp_2_opt", "ss_basic_chng_trust_udp_2_usr", "ss_basic_chng_trust_tcp_2_opt", "ss_basic_chng_trust_tcp_2_usr", "ss_basic_chng_trust_dot_2_opt", "ss_basic_chng_trust_dot_2_usr", "ss_basic_chng_trust_net_3_typ", "ss_basic_chng_trust_udp_3_opt", "ss_basic_chng_trust_udp_3_usr", "ss_basic_chng_trust_tcp_3_opt", "ss_basic_chng_trust_tcp_3_usr", "ss_basic_chng_trust_dot_3_opt", "ss_basic_chng_trust_dot_3_usr"];
+	for (var i = 0; i < chng_params_input.length; i++) {
+		dbus_post[chng_params_input[i]] = E(chng_params_input[i]).value;
+	}
+	var chng_params_check = ["ss_basic_chng_china_dns_1_chk", "ss_basic_chng_china_dns_2_chk", "ss_basic_chng_china_dns_3_chk", "ss_basic_chng_trust_dns_1_chk", "ss_basic_chng_trust_dns_2_chk","ss_basic_chng_trust_dns_3_chk", "ss_basic_chng_ipv6_drop_direc", "ss_basic_chng_ipv6_drop_proxy", "ss_basic_dns_server"];
+	for (var i = 0; i < chng_params_check.length; i++) {
+		dbus_post[chng_params_check[i]] = E(chng_params_check[i]).checked ? '1' : '0';;
+	}
 	if(ws_flag == 1){
 		push_data_ws("ss_conf.sh", "restart_chng",  dbus_post);
 	}else{

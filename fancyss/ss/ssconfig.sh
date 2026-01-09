@@ -1619,19 +1619,31 @@ start_chinadns_ng(){
 	# 中国DNS-1 (直连) 🌏
 	if [ "${ss_basic_chng_china_dns_1_chk}" == "1" ];then
 		local CDNS_1=$(get_dns china 1)
-		echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_1}"
+		if [ "${ss_basic_dns_server}" == "1" ];then
+			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_1}"
+		else
+			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_1}"
+		fi
 	fi
 
 	# 中国DNS-2 (直连) 🌏
 	if [ "${ss_basic_chng_china_dns_2_chk}" == "1" ];then
 		local CDNS_2=$(get_dns china 2)
-		echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_2}"
+		if [ "${ss_basic_dns_server}" == "1" ];then
+			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_2}"
+		else
+			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_2}"
+		fi
 	fi
 
 	# 中国DNS-3 (直连) 🌏
 	if [ "${ss_basic_chng_china_dns_3_chk}" == "1" ];then
 		local CDNS_3=$(get_dns china 3)
-		echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_3}"
+		if [ "${ss_basic_dns_server}" == "1" ];then
+			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_3}"
+		else
+			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_3}"
+		fi
 	fi
 
 	if [ "$CDNS_1" == "$CDNS_2" ] && [ "$CDNS_2" == "$CDNS_3" ]; then
@@ -1671,19 +1683,31 @@ start_chinadns_ng(){
 	# 可信DNS-1 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" ];then
 		local FDNS_1=$(get_dns trust 1)
-		echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
+		if [ "${ss_basic_dns_server}" == "1" ];then
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
+		else
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
+		fi
 	fi
 
 	# 可信DNS-2 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" ];then
 		local FDNS_2=$(get_dns trust 2)
-		echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
+		if [ "${ss_basic_dns_server}" == "1" ];then
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
+		else
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
+		fi
 	fi
 
 	# 可信DNS-3 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" ];then
 		local FDNS_3=$(get_dns trust 3)
-		echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
+		if [ "${ss_basic_dns_server}" == "1" ];then
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
+		else
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
+		fi
 	fi
 
 	if [ "$FDNS_1" == "$FDNS_2" ] && [ "$FDNS_2" == "$FDNS_3" ]; then
@@ -1975,10 +1999,10 @@ get_proxy_type(){
 		echo "tproxy"
 		;;
 	tcp)
-		echo "redirect"
+		echo "socks5"
 		;;
 	dot)
-		echo "redirect"
+		echo "socks5"
 		;;
 	esac
 }
