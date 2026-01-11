@@ -555,6 +555,9 @@ prepare_system() {
 	XRAY_CONFIG_TEMP="/tmp/xray_tmp.json"
 	XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 
+	# 目前选填框支持的协议都可以跑，但是用户json定义的协议有些不支持，需要检测一下
+
+	
 	# 当使用v2ray的时候，要看看用户用的什么出站协议和传输协议
 	# 为了控制二进制体积，v2ray被裁剪构建了，只支持vmess出站协议，且vmess里还不支持最新的一些比如httpupgrade, meek等协议
 	if [ "${ss_basic_type}" == "3" ];then

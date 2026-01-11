@@ -1601,19 +1601,27 @@ get_fw_type() {
 }
 
 get_fw_ver(){
-	admin@GS7-CAF8:/tmp/home/root# nvram get buildno
-	102
-	admin@GS7-CAF8:/tmp/home/root# nvram get extendno
-	58273_koolcenter
+	local _buildno=$(nvram get buildno)
+	local _extendno=$(nvram get extendno)
+	if [ -n "${_buildno}" -a -n "${_extendno}" ];then
+		fw_version="$(nvram get buildno)_$(nvram get extendno)"
+	else
+		fw_version="unknown"
+	fi
 }
 
 get_ua(){
 	# UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
-	# UA="AsusWRT-Merlin/koolcenter/RT-BE88U/102.6/fancyss/3.3.9/full"
-	# UA="AsusWRT/koolcenter/RT-BE88U/102.5/fancyss/3.3.9/lite"
-	# UA="系统名/改版方/机型/固件版本/fancyssv版本/fancyss类型"
+	# UA="AsusWRT-Merlin/koolcenter/RT-BE88U/102.6/fancyss/hndv8/full/3.3.9"
+	# UA="AsusWRT/koolcenter/RT-BE88U/102.5/fancyss/mtk/lite/3.3.9
+	# UA="系统名/改版方/机型/固件版本/fancyss/fancyss平台类型/fancyss类型/fancyss版本"
 	get_fw_type
 	get_model
+	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_vers=$(dbus get ss_basic_version_local)
+	UA="${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}"
 }
 
 go_proxy(){
@@ -1648,9 +1656,10 @@ download_by_curl(){
 	fi
 
 	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
-	local UA="AsusWRT-Merlin/koolcenter/RT-BE88U/102.6/fancyss/3.3.9/full"
+	get_ua
 	
 	echo_date "1️⃣使用curl下载订阅，第一次尝试下载..."
+	echo_date curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 6 "${url_encode}"
 	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 6 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
 		return 0
@@ -1682,25 +1691,32 @@ download_by_wget(){
 	fi
 	
 	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
+
+	# use ua
+	get_ua
 	
 	echo_date "1️⃣使用wget下载订阅，第一次尝试下载..."
 	wget -4 -t 1 -T 10 --dns-timeout=5 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
+		dnsmasq_rule remove
 		return 0
 	fi
 
 	echo_date "2️⃣使用wget下载订阅，第二次尝试下载..."
 	wget -4 -t 1 -T 15 --dns-timeout=10 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
+		dnsmasq_rule remove
 		return 0
 	fi	
 	
 	echo_date "3️⃣使用wget下载订阅，第三次尝试下载..."
 	wget -4 -t 1 -T 20 --dns-timeout=15 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 	if [ "$?" == "0" ]; then
+		dnsmasq_rule remove
 		return 0
 	fi
 
+	dnsmasq_rule remove
 	return 1
 }
 

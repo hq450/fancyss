@@ -6127,9 +6127,21 @@ function restart_chinadns() {
 															]);
 															// chinadns-ng preset DNS servers moved to /res/dns_servers.json.js
 
-															var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
-															var isp_dns_1=isp_dns_raw.split(" ")[0];
-															var isp_dns_2=isp_dns_raw.split(" ")[1];
+														var isp_dns_raw='<% nvram_get("wan0_dns"); %>';
+														if(!isp_dns_raw){
+															var isp_dns_raw='<% nvram_get("wan0_dns_r"); %>';
+														}
+														if(!isp_dns_raw){
+															var isp_dns_raw='<% nvram_get("wan_dns"); %>';
+														}
+														if(!isp_dns_raw){
+															var isp_dns_raw='<% nvram_get("wan0_xdns"); %>';
+														}
+														if(!isp_dns_raw){
+															var isp_dns_raw="223.5.5.5 223.6.6.6";
+														}
+														var isp_dns_1=isp_dns_raw.split(" ")[0];
+														var isp_dns_2=isp_dns_raw.split(" ")[1];
 														validator.ipv4_addr(isp_dns_1);
 														if(isp_dns_1 && isp_dns_2){
 															var ispDNS = {
@@ -6144,17 +6156,18 @@ function restart_chinadns() {
 																	{ addr: isp_dns_1, description: "主用DNS" }
 																]
 															};
-														
 														}else{
-															const ispDNS = {};
+															var ispDNS = {
+																ipv4: [
+																	{ addr: "223.5.5.5", description: "备用DNS" }
+																]
+															};
 														}
-														
 														const ispDnsSelectors = new Set([
 														  'ss_basic_chng_china_udp_1_opt',
 														  'ss_basic_chng_china_udp_2_opt',
 														  'ss_basic_chng_china_udp_3_opt'
 														]);
-														
 														function addISPdns(select, netType) {
 															// 获取对应的IP版本
 															const version = netType === 'all' ? 'ipv4' : netType; // 根据实际情况调整
