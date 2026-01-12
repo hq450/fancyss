@@ -675,56 +675,11 @@ function openssHint(itemNum, flag) {
 		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;提供给国外的朋友，通过在中间服务器翻回来，以享受一些视频、音乐等网络服务。<br />"
 		statusmenu += "<b><font color='#669900'>提示：</font></b>回国模式选择外国DNS只能使用直连~<br />"
 		_caption = "模式说明";
-	} else if (itemNum == 6) {
-		statusmenu = "此处选择你希望UDP的通道。<br />很多游戏都走udp的初衷就是加速udp连接。<br />如果你到vps的udp链接较快，可以选择udp in udp，如果你的运营商封锁了udp，可以选择udp in tcp。";
-		_caption = "游戏模式V2 UDP通道";
-	} else if (itemNum == 7) {
-		statusmenu = "请注意：本设置<b>不是v2ray使用shadowsocks协议！</b>";
-		statusmenu += "而是基于v2ray的<a href='https://www.v2ray.com/chapter_02/05_transport.html' target='_blank'><u><font color='#00F'>传输配置</font></u></a>作为SS的混淆方式。";
-		statusmenu += "<br />因为v2ray-plugin与simple-obfs同为Shadowsocks <a href='https://github.com/shadowsocks/shadowsocks-org/wiki/Plugin' target='_blank'><font color='#00F'><u>SIP003插件</u></font></a>的实现，";
-		statusmenu += "所以打开v2ray-plugin会<b>忽略原混淆(obfs)</b>的设置。";
-		statusmenu += "<br />关于这个插件的信息以及参数(opts)，请查看仓库：<a href='https://github.com/shadowsocks/v2ray-plugin' target='_blank'><u><font color='#00F'>v2ray-plugin</font></u></a>";
-		_caption = "v2ray-plugin设置";
-	if (itemNum == 10) {
-		statusmenu = "如果发现开关不能开启，那么请检查<a href='Advanced_System_Content.asp'><u><font color='#00F'>系统管理 -- 系统设置</font></u></a>页面内Enable JFFS custom scripts and configs是否开启。";
-		_caption = "服务器说明";
-	}
 	} else if (itemNum == 11) {
 		statusmenu = "如果不知道如何填写，请一定留空，不然可能带来副作用！"
 		statusmenu += "<br /><br />请参考<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(8)'><font color='#00F'>协议插件（protocol）</font></a>和<a class='hintstyle' href='javascript:void(0);' onclick='openssHint(9)'><font color='#00F'>混淆插件 (obfs)</font></a>内说明。"
 		statusmenu += "<br /><br />更多信息，请参考<a href='https://github.com/koolshare/shadowsocks-rss/blob/master/ssr.md' target='_blank'><u><font color='#00F'>ShadowsocksR 协议插件文档</font></u></a>"
 		_caption = "自定义参数 (obfs_param)";
-	} else if (itemNum == 13) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;SSR表示shadowwocksR-libev，相比较原版shadowwocksR-libev，其提供了强大的协议混淆插件，让你避开gfw的侦测。"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;虽然你在节点编辑界面能够指定使用SS的类型，不过这里还是提供了勾选使用SSR的选项，是为了方便一些服务器端是兼容原版协议的用户，快速切换SS账号类型而设定。";
-		_caption = "使用SSR";
-	} else if (itemNum == 15) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;点击右侧的铅笔图标，进入节点界面，在节点界面，你可以进行节点的添加，修改，删除，应用，检查节点ping，和web访问性等操作。"
-		_caption = "选择节点";
-	} else if (itemNum == 16) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处不同模式会显示不同的图标，如果你是从2.0以前的老版本升级过来的，可能有些节点不会显示图标，只需要编辑一下节点，选择好模式，然后保存即可显示。"
-		_caption = "模式";
-	} else if (itemNum == 17) {
-		statusmenu = "节点名称支持中文，支持空格。"
-		_caption = "节点名称";
-	} else if (itemNum == 18) {
-		statusmenu = "优先建议使用ip地址"
-		_caption = "服务器地址";
-	} else if (itemNum == 19) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;ping/丢包功能用于检测你的路由器到ss服务器的ping值和丢包；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;比如一些游戏线路对ping值和丢包有要求，可以选择ping值较低，丢包较少的节点；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;一些奇葩的运营商可能会禁ping，一些SS服务器也会禁止ping，此处检测就会failed，所以遇到这种情况不必惊恐。"
-		_caption = "ping/丢包";
-	} else if (itemNum == 21) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;编辑节点功能能帮助你快速的更改ss某个节点的设置，比如服务商更换IP地址之后，可以快速更改；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;编辑节点目前只支持相同类型节点的编辑，比如不能将ss节点编辑为ssr节点，如果你的ssr节点是兼容原版协议的，建议你在主面板用使用ssr勾选框来进行更改。"
-		_caption = "编辑节点";
-	} else if (itemNum == 22) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;删除节点功能能快速的删除某个特定的节点，为了方便快速删除，删除节点点击后生效，不会有是否确认弹出。"
-		_caption = "编辑节点";
-	} else if (itemNum == 23) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;点击使用节点能快速的将该节点填入主面板，但是你需要在主面板点击提交，才能使用该节点。<br />不同的颜色代表了不同的节点类型，SS：蓝色；SSR；粉色，V2：绿色"
-		_caption = "使用节点";
 	} else if (itemNum == 24) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;导出功能可以将ss所有的设置全部导出，包括节点信息，dns设定，黑白名单设定等；"
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;恢复配置功能可以使用之前导出的文件，也可以使用标准的json格式节点文件。"
@@ -736,12 +691,6 @@ function openssHint(itemNum, flag) {
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置v2ray支持的所有传出协议，包括vmess、vless、socks，shadowsocks等，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
 		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;如果使用Xray作为核心【附加功能处启用】，v2ray json配置方式还可以配置仅xray支持的协议，比如vless-tcp + xtls。"
 		_caption = "使用json配置";
-	}  else if (itemNum == 25) {
-		statusmenu = "<br /><font color='#CC0066'><b>1:不勾选（自动生成json）：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式只支持vless作为传出协议，不支持socks、shadowsocks、vmess、trojan；提交后会根据你的配置自动生成xray的json配置，配置文件在/koolshare/ss/xray.json。"
-		statusmenu += "<br /><br /><font color='#CC0066'><b>3:勾选（自定义json）：</b></font>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;此方式支持配置xray支持的所有传出协议，包括vmess、vless、socks、shadowsocks、trojan等协议，插件会取你的json的outbound/outbounds部分，并自动配置透明代理和socks传进协议，以便在路由器上工作。"
-		_caption = "使用json配置";
 	} else if (itemNum == 31) {
 		width = "400px";
 		statusmenu = "<b>此处控制开启或者关闭多路复用 (Mux)</b>"
@@ -752,13 +701,6 @@ function openssHint(itemNum, flag) {
 		statusmenu = "<b>控制Mux并发连接数，默认值：8，如果客户端json配置文件没有请留空</b>"
 		statusmenu += "<br /><br />此参数在客户端json配置文件的【outbound/outbounds → mux → concurrency】位置，如果没有，请留空"
 		_caption = "Mux并发连接数";
-	} else if (itemNum == 33) {
-		statusmenu = "填入需要强制用国内DNS解析的域名，一行一个，格式如下：。"
-		statusmenu += "<br />注意：不支持通配符！"
-		statusmenu += "<br /><br />koolshare.cn"
-		statusmenu += "<br />baidu.com"
-		statusmenu += "<br /><br />需要注意的是，这里要填写的一定是网站的一级域名，比如taobao.com才是正确的，www.taobao.com，http://www.taobao.com/这些格式都是错误的！"
-		_caption = "自定义需要CDN加速网站";
 	} else if (itemNum == 34) {
 		statusmenu = "填入自定义的dnsmasq设置，一行一个，格式如下：。"
 		statusmenu += "<br /><br />#例如hosts设置："
@@ -768,13 +710,21 @@ function openssHint(itemNum, flag) {
 		statusmenu += "<br /><br />#指定config设置"
 		statusmenu += "<br />conf-file=/jffs/mydnsmasq.conf"
 		statusmenu += "<br /><br />如果填入了错误的格式，可能导致dnsmasq启动失败！"
-		statusmenu += "<br /><br />如果填入的信息里带有英文逗号的，也会导致dnsmasq启动失败！"
-		_caption = "自定义dnsamsq";
-	} else if (itemNum == 35) {
-		width = "750px";
-		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → network】位置"
-		_caption = "传输协议 (network)";
-	} else if (itemNum == 36) {
+			statusmenu += "<br /><br />如果填入的信息里带有英文逗号的，也会导致dnsmasq启动失败！"
+			_caption = "自定义dnsamsq";
+		} else if (itemNum == 29) {
+			width = "750px";
+			statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings】位置，常见如下："
+			statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;1) ws: 【wsSettings → path】"
+			statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;2) h2: 【httpSettings → path】"
+			statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;3) httpupgrade: 【httpupgradeSettings → path】（部分核心/版本可能命名不同）"
+			statusmenu += "<br /><br />没有请留空，一般以 / 开头，例如：/ray 或 /";
+			_caption = "路径 (path)";
+		} else if (itemNum == 35) {
+			width = "750px";
+			statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → network】位置"
+			_caption = "传输协议 (network)";
+		} else if (itemNum == 36) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tcpSettings → header → type】位置，如果没有此参数，则为不伪装"
 		_caption = "tcp伪装类型 (type)";
@@ -813,12 +763,6 @@ function openssHint(itemNum, flag) {
 		statusmenu = "shadowsocks规则更新包括了gfwlist模式中用到的<a href='https://github.com/hq450/fancyss/blob/master/rules/gfwlist.conf' target='_blank'><font color='#00F'><u>gfwlist</u></font></a>，在大陆白名单模式和游戏模式中用到的<a href='https://github.com/hq450/fancyss/blob/master/rules/chnroute.txt' target='_blank'><u><font color='#00F'>chnroute</font></u></a>和<a href='https://github.com/hq450/fancyss/blob/master/rules/chnlist.txt' target='_blank'><u><font color='#00F'>国内cdn名单</font></u></a>"
 		statusmenu += "<br />建议更新时间在凌晨闲时进行，以避免更新时重启ss服务器造成网络访问问题。"
 		_caption = "shadowsocks规则自动更新";
-	} else if (itemNum == 45) {
-		statusmenu = "通过局域网客户端控制功能，你能定义在当前模式下某个局域网地址是否走SS。"
-		_caption = "局域网客户端控制";
-	} else if (itemNum == 46) {
-		statusmenu = "一些用户的网络拨号可能比较滞后，为了保证SS在路由器开机后能正常启动，可以通过此功能，为ss的启动增加开机延迟。"
-		_caption = "开机启动延迟";
 	} else if (itemNum == 47) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → security】位置"
@@ -831,14 +775,6 @@ function openssHint(itemNum, flag) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → users → id】位置<br /><br />"
 		_caption = "用户id (id)";
-	} else if (itemNum == 50) {
-		width = "750px";
-		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → port】位置"
-		_caption = "端口（port）";
-	} else if (itemNum == 51) {
-		width = "750px";
-		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → settings → vnext → address】位置"
-		_caption = "地址（address）";
 	} else if (itemNum == 54) {
 		statusmenu = "更多信息，请参考<a href='https://breakwa11.blogspot.jp/2017/01/shadowsocksr-mu.html' target='_blank'><u><font color='#00F'>ShadowsocksR 协议参数文档</font></u></a>"
 		_caption = "协议参数（protocol）";
@@ -854,43 +790,6 @@ function openssHint(itemNum, flag) {
 		width = "750px";
 		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tlsSettings】位置<br /><br />设置为false表示安全，true表示不安全。很多机场没有配置tls证书的，需要设置为true才能使得节点正常工作<br />"
 		_caption = "加密（encryption）";
-	} else if (itemNum == 90) {
-		statusmenu = "此处设定为预设不可更改。<br />&nbsp;&nbsp;&nbsp;&nbsp;1. 单开KCPTUN的情况下，ss-redir的TCP流量都会转发到此；<br />&nbsp;&nbsp;&nbsp;&nbsp;2. KCPTUN和UDP2raw串联的模式下，ss-redir的TCP流量才会转发到UDP2raw；"
-		_caption = "说明：";
-	} else if (itemNum == 91) {
-		width = "600px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;1. <b>单独加速：</b>此处配置为服务器ip+服务器端口(或者留空+服务器端口)，KCPTUN的UDP流量会转发给服务器；<br />&nbsp;&nbsp;&nbsp;&nbsp;2.  <b>串联1：</b>此处配置为127.0.0.1:1092（即UDPspeeder监听端口）时，可配置kcptun和UDPspeeder串联，KCPTUN的UDP流量会转发给UDPspeeder，然后转为tcp，并转发给服务器的UDP2raw。同时你需要在服务器端配置KCPTUN和UDP2raw的串联。<br />&nbsp;&nbsp;&nbsp;&nbsp;2.  <b>串联3：</b>此处配置为127.0.0.1:1093（即UDP2raw监听端口）时，可配置kcptun和udp2raw串联，KCPTUN的UDP流量会转发给UDP2raw，然后转为tcp，并转发给服务器的UDP2raw。同时你需要在服务器端配置KCPTUN和UDP2raw的串联。"
-		_caption = "说明：";
-	} else if (itemNum == 97) {
-		width = "600px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;UDPspeeder(V1/V2)针对udp传输进行优化，能加速udp，降低udp的丢包，特别适合游戏。<br />&nbsp;&nbsp;&nbsp;&nbsp;UDP2raw可以将udp协议转为tcp，这对一些对udp有限制或者qos的情况特别好用，UDP2raw不是一个udp加速工具，如果需要udp加速，还需要配合UDPspeeder(V1/V2)串联使用。<br />&nbsp;&nbsp;&nbsp;&nbsp;正确开启的姿势是需要在服务器端配置UDPspeeder(V1/V2)/UDP2raw的服务器端程序，然后在路由器下，需要以下条件才能正常开启：<b><br />1. 当前正在使用游戏模式或者访问控制主机中有游戏模式主机；<br />2. 此处加速的节点和正在使用的节点一致；<br />3. 正确配置并开启UDPspeeder(V1/V2)或UDP2raw，或者两者都开启（串联模式）。</b>	 "
-		_caption = "说明：";
-	} else if (itemNum == 98) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处设定的MTU值将用于ss-redir/ssr-redir。<br />&nbsp;&nbsp;&nbsp;&nbsp;因为UDPspeeder(V1/V2)和UDP2raw对上游软件的MTU有要求，此处方便高级用户对其进行设定，以达到更好的UDP加速效果。不知道如何设定的请选择不设定，以免造成不必要的问题<br />&nbsp;&nbsp;&nbsp;&nbsp;此处的设定只有在UDPspeeder(V1/V2)/UDP2raw开启或者两者都开启的情况下才会生效。"
-		_caption = "说明：";
-	} else if (itemNum == 99) {
-		statusmenu = "此处设定为预设不可更改。<br />&nbsp;&nbsp;&nbsp;&nbsp;1. 单开UDPspeeder(V1/V2)模式或者UDPspeeder(V1/V2)和UDP2raw双开（串联模式下），ss-redir的UDP流量都会转发到此；<br />&nbsp;&nbsp;&nbsp;&nbsp;2. 只有UDPepeeder未开启且UDP2raw开启的情况下，ss-redir的UDP流量才会转发到UDP2raw；"
-		_caption = "说明：";
-	} else if (itemNum == 100) {
-		width = "600px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;1.单开UDPspeeder(V1/V2)模式下，ss-redir的udp流量经过UDPspeeder(V1/V2)加速后的UDP流量会转发到服务器，此处应按填写服务器的ip和服务器端UDPspeeder(V1/V2)的监听端口；<br />&nbsp;&nbsp;&nbsp;&nbsp;2.UDPspeeder(V1/V2)和UDP2raw双开（串联模式下），ss-redir的udp流量经过UDPspeeder(V1/V2)加速后的UDP流量会先转发给本地的UDP2raw程序，然后由UDP2raw和服务器的UDP2raw之间利用TCP（faketcp模式）协议进行通讯，然后服务器的UDP2raw收到TCP（faketcp模式）后还原为UDPspeeder(V1/V2)加速后的流量转发给服务器的UDPspeeder(V1/V2)，然后服务器的UDPspeeder(V1/V2)将此流量继续还原为ss-redir的UDP流量，转发给服务器的ss服务器程序。 所以路由器下UDPspeeder(V1/V2)和UDP2raw的串联也需要服务器端UDPspeeder(V1/V2)和UDP2raw的串联。"
-		_caption = "说明：";
-	} else if (itemNum == 101) {
-		width = "600px";
-		statusmenu = "此处设定为预设不可更改。<br />&nbsp;&nbsp;&nbsp;&nbsp;1.单开UDP2raw模式下，ss-redir的UDP流量会转发到此；<br />&nbsp;&nbsp;&nbsp;&nbsp;2.UDPspeeder(V1/V2)和UDP2raw双开（串联模式下），ss-redir的UDP流量会转发到UDPspeeder(V1/V2)，经过UDPspeeder(V1/V2)加速后的udp流量流量会转发到此（即转发到UDP2raw），形成UDPspeeder(V1/V2)和UDP2raw的串联。"
-		_caption = "说明";
-	} else if (itemNum == 102) {
-		width = "600px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;1.单开udp2raw模式下，ss-redir的udp流量经过udp2raw转换为tcp后的流量会转发此处设置的到服务器端口，此处应按填写服务器的ip和服务器端UDPspeeder(V1/V2)的监听端口；<br />&nbsp;&nbsp;&nbsp;&nbsp;2.在UDPspeeder(V1/V2)和UDP2raw双开（串联模式下），ss-redir的udp流量经过UDPspeeder(V1/V2)加速后的UDP流量，经过udp2raw转换为tcp后的流量会转发此处设置的到服务器端口，此处应按填写服务器的ip和服务器端UDPspeeder(V1/V2)的监听端口；"
-		_caption = "说明：";
-	} else if (itemNum == 103) {
-		width = "600px";
-		statusmenu = "梅林固件推荐使用auto.<br />&nbsp;&nbsp;&nbsp;&nbsp;大部分udp2raw不能连通的情况都是设置了不兼容的iptables造成的。--lower-level选项允许绕过本地iptables。<br />&nbsp;&nbsp;&nbsp;&nbsp;虽然作者推荐merlin固件使用auto，但是merlin固件在某些拨号网络下可能无法通过--lower-level auto自动获取参数，而导致udp2raw启动失败，此时可以手动填写此处或者留空（实测留空也是可以工作的）"
-		_caption = "说明：";
-	} else if (itemNum == 104) {
-		width = "600px";
-		statusmenu = "<br />&nbsp;&nbsp;&nbsp;&nbsp;UDPspeeder有两个版本，V2是V1的升级版本，只有V2版才支持FEC；V1和V2版都支持多倍发包，V2通过配置FEC比例就能达到V1的多倍发包效果。<br />如果你只需要多倍发包，可以直接用V1版，V1版配置更简单，占用内存更小，而且经过了几个月的考验，很稳定。V2版在梅林固件下的消耗更高一些。"
-		_caption = "说明：";
 	} else if (itemNum == 151) {
 		width = "600px";
 		statusmenu = "<b>追加ISP DNS：</b><br /><br />"
@@ -931,99 +830,8 @@ function openssHint(itemNum, flag) {
 	} else if (itemNum == 116) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！<br />&nbsp;&nbsp;&nbsp;&nbsp;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：<br />-------------------------------------------------<br />🚀魅影极速<br />https://subserver.maying.io/xxx<br /><br />🛩️nextitally<br />https://naixisubs.com/downloadConfig/xxx<br />-------------------------------------------------"
 		_caption = "订阅地址管理";
-	} else if (itemNum == 117) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;使用此方式添加节点不会和已有节点进行对比，多次使用相同链接会让相同节点被添加多次，请注意！";
-		_caption = "通过ss/ssr/vmess/vless链接添加节点";
-	} else if (itemNum == 118) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;勾选此选项将会用shadowsocks-rust替换shadowsocks-libev！";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意1：</b>fancyss插件包默认不提供shadowsocks-rust的二进制文件，所以你需要点击右侧按钮下载shadowsocks-rust二进制文件！";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>注意2：</b>shadowsocks-rust支持的加密方式如下：plain, none, aes-128-gcm, aes-256-gcm, chacha20-ietf-poly1305, 2022-blake3-aes-128-gcm, 2022-blake3-aes-256-gcm, 2022-blake3-chacha20-poly1305";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;如果你使用的节点不是这些加密方式，那改节点肯定会出现工作异常！";
-		_caption = "用shadowsocks-rust替代shadowsocks-libev";
-	} else if (itemNum == 119) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;Xray-core是支持trojan协议的，所以trojan节点不仅可以用trojan程序来运行，还能用Xray核心来运行";
-		_caption = "说明";
 	} else if (itemNum == 120) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些trojan机场节点需要允许不安全才能正常工作，但是其节点订阅却没有指定允许不安全，此时可以开启此处，开启后会强制所有trojan节点允许不安全";
-		_caption = "说明";
-	} else if (itemNum == 121) {
-		width = "650px";
-		statusmenu = "&nbsp;&nbsp;自动选取模式下会随机请求列表里的某个DNS服务器，如果解析成功，下次解析将默认使用该服务器。";
-		statusmenu += "<br /><br />&nbsp;&nbsp;如果解析失败或超时（2s），则会自动切换域名列表里的下一个DNS服务器！直到解析成功，或者将列表里的所有DNS使用一轮！当然你也可指定一个DNS，或者自定义一个支持udp协议查询的DNS用于节点域名的解析";
-		statusmenu += "<br /><br />&nbsp;&nbsp;目前用于节点域名解析的DNS列表包含了国内外主流DNS服务器，如下：";
-		statusmenu += "<br />";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;运营商DNS-1（空则使用223.5.5.5）";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;运营商DNS-2（空则使用运营商DNS-1）";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;阿里DNS【223.5.5.5】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;阿里DNS【223.6.6.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;114DNS【114.114.114.114】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;114DNS【114.114.115.115】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;cnnic DNS【1.2.4.8】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;cnnic DNS【210.2.4.8】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;OneDNS【117.50.11.11】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;OneDNS【52.80.66.66】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNSPod DNS【119.29.29.29】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNSPod DNS【119.28.28.28】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;百度DNS【180.76.76.76】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 电信/铁通/移动【101.226.4.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 电信/铁通/移动【218.30.118.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 联通【123.125.81.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 联通【140.207.198.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;google DNS【8.8.8.8】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;google DNS【8.8.4.4】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;IBM DNS【9.9.9.9】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;CloudFlare DNS【1.1.1.1】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;CloudFlare DNS【1.0.0.1】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;OpenDNS【208.67.222.222:5353】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;OpenDNS【208.67.222.220】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNS.SB【45.11.45.11】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;quad101 【101.101.101.101】";
-		_caption = "说明";
-	}else if (itemNum == 123) {
-		width = "650px";
-		statusmenu = "ECS，即edns-client-subnet，<a href='https://taoshu.in/dns/edns-client-subnet.html' target='_blank'><u><font color='#00F'>ECS简介</font></u></a><br /><br />";
-		statusmenu += "&nbsp;&nbsp;勾选此ECS开关后，国内的DNS查询将会附加ECS标签，服务器会根据ECS标签里的网段信息，返回较近的解析IP地址，所以此处开启ECS后，国内的DNS查询CDN效果理论上会更好！<br /><br />";
-		statusmenu += "&nbsp;&nbsp;为了在DNS查询时附件上ECS信息，插件开启过程中会检测本机的国内公网出口IPV4地址，并用此地址作为ECS信息。为了避免用户准确的IP地址信息隐私泄露，插件默认情况下会将ip地址最后一位处理为0，同时使用24作为掩码来规避此情况。比如你的代理服务器出口IP地址为：1.1.1.1，那么查询时候会处理成：1.1.1.0/24，这对于DNS查询要求的地理信息精度已经完全够用，事实上，一部分支持ECS的DNS服务器强制要求掩码不能超过24。<br /><br />";
-		statusmenu += "本插件使用了明显的标志符号标注了各个DNS服务器对ECS的支持情况，具体如下（具体支持情况请使用<font color='#F00'>【DNS解析测试(dig)】</font>功能检测）：<br />";
-		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
-		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
-		_caption = "ECS说明：";
-	}else if (itemNum == 125) {
-		width = "650px";
-		statusmenu = "ECS，即edns-client-subnet，<a href='https://taoshu.in/dns/edns-client-subnet.html' target='_blank'><u><font color='#00F'>ECS简介</font></u></a><br /><br />";
-		statusmenu += "&nbsp;&nbsp;勾选此ECS开关后，国外的DNS查询将会附加ECS标签，DNS服务器会根据ECS标签里的网段信息返回较近的解析IP地址，所以此处开启ECS后，国外的DNS查询CDN效果理论上会更好！<br /><br />";
-		statusmenu += "&nbsp;&nbsp;为了在DNS查询时附件上ECS信息，插件开启过程中会检测本机的国外出口公网IPV4地址（检测代理服务器出口地址），并用此地址作为ECS信息。为了避免用户准确的IP地址信息隐私泄露，插件默认情况下会将ip地址最后一位处理为0，同时使用24作为掩码来规避此情况。比如你的代理服务器出口IP地址为：1.1.1.1，那么查询时候会处理成：1.1.1.0/24，这对于DNS查询要求的地理信息精度已经完全够用，事实上，一部分支持ECS的DNS服务器强制要求掩码不能超过24。<br /><br />";
-		statusmenu += "&nbsp;&nbsp;成功开启ECS后，你可以使用本插件的<font color='#F00'>【DNS解析测试(dig)】</font>功能来查询国外域名，如果上游DNS支持ECS，且ECS开启成功则返回的查询结果中会带有ECS信息，比如返回的CLIENT-SUBNET字段会带有国外出口公网IPV4网段信息。<br /><br />";
-		statusmenu += "<font color='#CC0066'>注意：</font>如果代理服务器出口地址检测失败，国外DNS的ECS将会强制关闭，即使ECS开关处于勾选状态！<br /><br />";
-		statusmenu += "本插件使用了明显的标志符号标注了各个DNS服务器对ECS的支持情况，具体如下：<br />";
-		statusmenu += "🟠 代表该DNS服务器支持ECS，域名查询结果都会正常返回ECS标签；<br />";
-		statusmenu += "⚫ 代表该DNS服务器不支持ECS，域名查询结果不会有ECS标签返回；<br />";
-		statusmenu += "🟡 代表该DNS服务器对部分域名查询支持ECS，部分域名查询不支持ECS，比如AdGuard；<br />";
-		_caption = "ECS说明：";
-	}else if (itemNum == 129) {
-		width = "650px";
-		statusmenu = "&nbsp;&nbsp;自动选取模式下会随机请求列表里的某个DNS服务器，如果解析成功，下次解析将默认使用该服务器。";
-		statusmenu += "<br /><br />&nbsp;&nbsp;如果解析失败或超时（2s），则会自动切换域名列表里的下一个DNS服务器！直到解析成功，或者将列表里的所有DNS使用一轮！当然你也可指定一个DNS，或者自定义一个支持tcp协议查询的DNS用于节点域名的解析";
-		statusmenu += "<br /><br />&nbsp;&nbsp;目前用于节点域名解析的DNS列表包含了国内外主流支持tcp解析的DNS服务器，如下：";
-		statusmenu += "<br />";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;阿里DNS【223.5.5.5】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;阿里DNS【223.6.6.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;114DNS【114.114.114.114】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;114DNS【114.114.115.115】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNSPod DNS【119.29.29.29】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNSPod DNS【119.28.28.28】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 电信/铁通/移动【218.30.118.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 联通【123.125.81.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;360DNS 联通【140.207.198.6】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;google DNS【8.8.8.8】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;google DNS【8.8.4.4】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;IBM DNS【9.9.9.9】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;CloudFlare DNS【1.1.1.1】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;CloudFlare DNS【1.0.0.1】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;OpenDNS【208.67.222.222:5353】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;OpenDNS【208.67.222.220】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;DNS.SB【45.11.45.11】";
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;quad101 【101.101.101.101】";
 		_caption = "说明";
 	} else if (itemNum == 133) {
 		// 中国DNS-1
@@ -1083,33 +891,11 @@ function openssHint(itemNum, flag) {
 		statusmenu += "4️⃣为避免udp协议DNS不可用，建议至少设置一组tcp/dot协议的DNS作为可信DNS！！<br />";
 		statusmenu += "</div>";
 		_caption = "说明：";
-	} else if (itemNum == 136) {
-		width = "690px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;基础DNS方案由fancyss 3.0.3及其以前版本的DNS方案演变继承而来，其主要特点如下：<br /><br />";
-		statusmenu += "<div style='padding-left:16px;padding-right:16px'>";
-		statusmenu += "1️⃣在基础DNS方案下，由dnsmasq负责DNS解析的国内外分流，具体如下：<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶gfwlist模式：由外国DNS负责解析gfwlist内的域名，其余由中国DNS解析，即国内优先模式；<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶大陆白名单/游戏模式：由中国DNS负责解析cdn名单内的域名，其余由外国DNS解析，即国外优先模式；<br />";
-		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;🔶全局模式：下全部域名由外国DNS解析。<br /><br />";
-		statusmenu += "2️⃣因为dnsmasq分流需要加载较多规则，特别是大陆白名单和游戏模式下，需要用到包含了6万多条域名的cdn名单，且dnsmasq对名单的匹配是遍历的方式，所以dnsmasq进程需要消耗更多的cpu算力，这对一些性能较差的路由器来说不是特别友好。<br /><br />";
-		statusmenu += "3️⃣在基础DNS方案下，推荐的中国DNS方案为：运营商DNS；推荐的外国DNS解析方案为：dns2socks。<br /><br />";
-		statusmenu += "</div>";
-		_caption = "基础DNS方案说明：";
-	} else if (itemNum == 137) {
-		width = "690px";
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;进阶DNS方案使用chinadns-ng的分流方案，有更好的DNS分流和更低的dnsmasq负载，且开放了更多的设置选项，此方案下由gfwlist和cdn名单配合大陆ip网段实现DNS分流，具体见<a href='https://github.com/zfl9/chinadns-ng#工作原理' target='_blank'><u><font color='#00F'>chinadns-ng工作原理</font></u></a>；<br /><br />";
-		_caption = "进阶DNS方案说明：";
 	} else if (itemNum == 138) {
 		width = "450px";
 		statusmenu = "fancyss运行需要网络畅通，如果本地网络不通，fancyss将无法正常运行<br /><br />";
 		statusmenu += "如果能保证你的路由器本地网络稳定性，那么在插件开启时跳过网络可用性检测！";
 		_caption = "跳过网络可用性检测";
-	} else if (itemNum == 141) {
-		width = "450px";
-		statusmenu = "此可信DNS检测仅仅针对使用进阶DNS设定中的chinadns-ng<br /><br />";
-		statusmenu += "如果可信DNS不通，那么将会无法访问代理网站；当然，如果节点本身由问题，也可能导致可信DNS不通";
-		statusmenu += "勾选后将不会对可信DNS的可用性进行检测！";
-		_caption = "跳过可信DNS可用性检测";
 	} else if (itemNum == 142) {
 		width = "450px";
 		statusmenu = "在插件开启初期（尚未开启代理程序和应用任何分流规则的时候），插件会对路由器网络的国内出口ip进行检测<br /><br />";

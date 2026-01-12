@@ -4465,7 +4465,7 @@ function dns_test(s) {
 		$("#log_dig").show();
 		$("#log_resv").hide();
 		dns_log["ss_basic_logname"] = "dns_gfwlist";
-		var note1 = '1. gfwlist的域名清单来自：<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf" target="_blank"><em><u>https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.conf</u></em></a>，收录了常见的被gfw屏蔽的域名。';
+		var note1 = '1. gfwlist的域名清单来自：<a href="https://github.com/hq450/fancyss/blob/3.0/rules_ng/gfwlist.gz" target="_blank"><em><u>https://github.com/hq450/fancyss/blob/3.0/rules_ng/gfwlist.gz</u></em></a>，收录了常见的被gfw屏蔽的域名。';
 		var note2 = '2. 由于gfwlist清单较长，将每次随机选取100个域名进行测试！理想情况下，解析结果应该全部是海外IP地址，没有大陆IP地址！';
 		var note3 = '3. 解析结果和速度可能受节点、DNS方案、上游DNS缓存等因素影响，本测试也无法判断解析结果正确性！所以测试结果仅供参考！';
 	}
@@ -6397,17 +6397,17 @@ function restart_chinadns() {
 														$('#table_rules').forms([
 															{ title: 'gfwlist 域名数量（被墙域名）', multi: [
 																{ suffix: '<em>'+ gfwl +'</em>&nbsp;条，版本：' },
-																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/gfwlist.txt" target="_blank">' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules_ng/gfwlist.gz" target="_blank">' },
 																{ suffix: '<i><% nvram_get("update_gfwlist"); %></i></a>' },
 															]},
 															{ title: 'chnlist 域名数量（大陆域名）', multi: [
 																{ suffix: '<em>'+ cdnn +'</em>&nbsp;条，版本：' },
-																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/chnlist.txt" target="_blank">' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules_ng/chnlist.gz" target="_blank">' },
 																{ suffix: '<i><% nvram_get("update_chnlist"); %></i></a>' },
 															]},
 															{ title: 'chnroute 大陆白名单IP段数量', multi: [
 																{ suffix: '<em>'+ chnl +'</em>&nbsp;行，包含 <em>' + chnn + '</em>&nbsp;个ip地址，版本：' },
-																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules/chnroute.txt" target="_blank">' },
+																{ suffix: '<a href="https://github.com/hq450/fancyss/blob/3.0/rules_ng/chnroute.txt" target="_blank">' },
 																{ suffix: '<i><% nvram_get("update_chnroute"); %></i></a>' },
 															]},
 															{ title: '规则定时更新任务', hint:'44', multi: [
@@ -6589,12 +6589,12 @@ function restart_chinadns() {
 															//	{ id: 'ss_basic_proxy_ipv6', type:'checkbox', func:'u', value:true},
 															//	{ suffix: '<a>ipv6</a>' },
 															//]},
-															{ title: 'New Bing模式', id:'ss_basic_proxy_newb', hint:'149', type:'checkbox', value:true},
-															{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
-																{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(151)"><font color="#ffcc00">关闭</font></a>', value: 0},
-																{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(152)"><font color="#ffcc00">开启</font></a>', value: 1},
-																{ id:'ss_basic_udpgpt', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(153)"><font color="#ffcc00">仅chatgpt</font></a>', value: 2},
-															]},
+																{ title: 'New Bing模式', id:'ss_basic_proxy_newb', hint:'149', type:'checkbox', value:true},
+																{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
+																	{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">关闭</font></a>', value: 0},
+																	{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">开启</font></a>', value: 1},
+																	{ id:'ss_basic_udpgpt', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">仅chatgpt</font></a>', value: 2},
+																]},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd

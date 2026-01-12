@@ -4105,41 +4105,53 @@ flush_ipset() {
 creat_ipset() {
 	echo_date "创建ipset名单"
 
-	# 保留地址，不走代理
-	ipset -! create ignlist nethash && ipset flush ignlist
-	ipset -! create ignlist6 nethash family inet6 && ipset flush ignlist6
+	# 使用ipset restore批量创建/清空并导入网段，减少大量 ipset 子进程调用，加快启动速度
+	{
+		echo "create ignlist nethash -exist"
+		echo "flush ignlist"
+		echo "create ignlist6 nethash family inet6 -exist"
+		echo "flush ignlist6"
 
-	# 用户白名单，不走代理
-	ipset -! create white_list nethash && ipset flush white_list
-	ipset -! create white_list6 nethash family inet6 && ipset flush white_list6
-	
-	# 用户黑名单，走代理
-	ipset -! create black_list nethash && ipset flush black_list
-	ipset -! create black_list6 nethash family inet6 && ipset flush black_list6
+		echo "create white_list nethash -exist"
+		echo "flush white_list"
+		echo "create white_list6 nethash family inet6 -exist"
+		echo "flush white_list6"
 
-	# 中国域名白名单，不走代理
-	ipset -! create chnlist nethash && ipset flush chnlist
-	ipset -! create chnlist6 nethash family inet6 && ipset flush chnlist6
-	
-	# 国外域名黑名单，走代理
-	ipset -! create gfwlist nethash && ipset flush gfwlist
-	ipset -! create gfwlist6 nethash family inet6 && ipset flush gfwlist6
-	
-	# 走代理的udp名单
-	ipset -! create udplist nethash && ipset flush udplist
-	ipset -! create udplist6 nethash family inet6 && ipset flush udplist6
+		echo "create black_list nethash -exist"
+		echo "flush black_list"
+		echo "create black_list6 nethash family inet6 -exist"
+		echo "flush black_list6"
 
-	# 路由器内部走代理名单
-	ipset -! create router nethash && ipset flush router
-	ipset -! create router6 nethash family inet6 && ipset flush router6
-	
-	# 大陆ip段名单
-	ipset -! create chnroute nethash && ipset flush chnroute
-	ipset -! create chnroute6 nethash family inet6 && ipset flush chnroute6
+		echo "create chnlist nethash -exist"
+		echo "flush chnlist"
+		echo "create chnlist6 nethash family inet6 -exist"
+		echo "flush chnlist6"
 
-	# 写入ip段到ip段名单
-	sed -e "s/^/add chnroute &/g" /koolshare/ss/rules/chnroute.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
-	sed -e "s/^/add chnroute6 &/g" /koolshare/ss/rules/chnroute6.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
+		echo "create gfwlist nethash -exist"
+		echo "flush gfwlist"
+		echo "create gfwlist6 nethash family inet6 -exist"
+		echo "flush gfwlist6"
+
+		echo "create udplist nethash -exist"
+		echo "flush udplist"
+		echo "create udplist6 nethash family inet6 -exist"
+		echo "flush udplist6"
+
+		echo "create router nethash -exist"
+		echo "flush router"
+		echo "create router6 nethash family inet6 -exist"
+		echo "flush router6"
+
+		echo "create chnroute nethash -exist"
+		echo "flush chnroute"
+		sed -e "s/^/add chnroute &/g" /koolshare/ss/rules/chnroute.txt
+
+		echo "create chnroute6 nethash family inet6 -exist"
+		echo "flush chnroute6"
+		sed -e "s/^/add chnroute6 &/g" /koolshare/ss/rules/chnroute6.txt
+
+		echo "COMMIT"
+	} | ipset -R
 }
 
 get_action_chain() {
@@ -4839,7 +4851,7 @@ check_status() {
 	run_bg dnsclient -t 5 -i 2 @127.0.0.1 stun.syncthing.net
 }
 
-disable_ss() {
+	disable_ss() {
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	# if [ "${ss_basic_status}" == "0" ];then
 	# 	return
@@ -4853,17 +4865,16 @@ disable_ss() {
 	kill_process
 	remove_ss_trigger_job
 	remove_ss_reboot_job
-	restore_conf
-	restart_dnsmasq
-	flush_iptables 4
-	flush_iptables 6
-	kill_cron_job
-	rm -rf /tmp/upload/fancyss_node_name.txt
-	dbus set ss_basic_status="0"
-	echo_date ------------------------ 【科学上网】已关闭 ----------------------------
-}
+		restore_conf
+		restart_dnsmasq
+		flush_iptables
+		kill_cron_job
+		rm -rf /tmp/upload/fancyss_node_name.txt
+		dbus set ss_basic_status="0"
+		echo_date ------------------------ 【科学上网】已关闭 ----------------------------
+	}
 
-apply_ss() {
+	apply_ss() {
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	if [ "${ss_basic_status}" == "1" ];then
@@ -4872,13 +4883,12 @@ apply_ss() {
 		stop_status
 		kill_process
 		remove_ss_trigger_job
-		remove_ss_reboot_job
-		restore_conf
-		restart_dnsmasq
-		flush_iptables 4
-		flush_iptables 6
-		kill_cron_job
-	fi
+			remove_ss_reboot_job
+			restore_conf
+			restart_dnsmasq
+			flush_iptables
+			kill_cron_job
+		fi
 	# pre-start
 	echo_date ------------------------- 启动【科学上网】 -----------------------------
 	# start
@@ -4996,12 +5006,11 @@ restart)
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	unset_lock
 	;;
-flush_nat)
-	set_lock
-	flush_iptables 4
-	flush_iptables 6
-	unset_lock
-	;;
+	flush_nat)
+		set_lock
+		flush_iptables
+		unset_lock
+		;;
 start_nat)
 	set_lock
 	[ "$ss_basic_enable" == "1" ] && apply_ss
