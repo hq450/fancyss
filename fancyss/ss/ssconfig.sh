@@ -184,7 +184,7 @@ test_xray_conf(){
 }
 
 check_time(){
-	# 因为部分代理协议要求本地时间和服务器时间一致才能工作，所以检测下路由器时间是否设置正确
+	# 因为vmess代理协议要求本地时间和服务器时间一致才能工作，所以检测下路由器时间是否设置正确
 	# 时间检测优先从worldtimeapi.org获取，如果获取成功，能同时得到公网出口ipv4地址
 	# 如果所有检测方式用光了还无法获取时间，说明可能是DNS无法获取到解析通造成的
 	echo_date "检测路由器本地时间是否正确..."
@@ -510,12 +510,25 @@ prepare_system() {
 	check_internet
 
 	# 4. 检测路由器时间是否正确
-	if [ "${ss_basic_notimecheck}" != "1" ];then
-		check_time
-	#else
-		#echo_date "跳过路由器本地时间检测..."
+	if [ "${ss_basic_type}" == "3" ];then
+		if [ "${ss_basic_v2ray_use_json}" == "0" ];then
+			check_time
+		elif [ "${ss_basic_v2ray_use_json}" == "1" ];then
+			local _ret_vmess=$(echo "$ss_basic_v2ray_json" | base64_decode | grep protocol | grep -Eo "vmess")
+			if [ -n "${_ret_vmess}" ];then
+				check_time
+			fi
+		fi
 	fi
 
+	if [ "${ss_basic_type}" == "4" ];then
+		if [ "${ss_basic_xray_use_json}" == "1" ];then
+			local _ret_vmess=$(echo "$ss_basic_xray_json" | base64_decode | grep protocol | grep -Eo "vmess")
+			if [ -n "${_ret_vmess}" ];then
+				check_time
+			fi
+		fi
+	fi
 	# 检测路由器公网出口IPV4地址
 	if [ "${ss_basic_nochnipcheck}" != "1" ];then
 		check_chn_public_ip

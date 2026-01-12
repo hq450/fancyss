@@ -455,7 +455,6 @@ function save() {
 	  "ss_basic_vcore",					//fancyss-full
 	  "ss_basic_tjai",
 	  "ss_basic_nonetcheck",
-	  "ss_basic_notimecheck",
 	  "ss_basic_nochnipcheck",
 	  "ss_basic_nofrnipcheck",
 	  "ss_basic_noruncheck",
@@ -6603,7 +6602,6 @@ function restart_chinadns() {
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
 															{ title: '所有trojan节点强制允许不安全', id:'ss_basic_tjai', hint:'120', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
-															{ title: '插件开启时 - 跳过时间一致性检测', id:'ss_basic_notimecheck', hint:'139', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过国内出口ip检测', id:'ss_basic_nochnipcheck', hint:'142', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过代理出口ip检测', id:'ss_basic_nofrnipcheck', hint:'143', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过程序启动检测', id:'ss_basic_noruncheck', hint:'144', type:'checkbox', value:false},

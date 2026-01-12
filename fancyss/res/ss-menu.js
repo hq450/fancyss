@@ -1104,13 +1104,6 @@ function openssHint(itemNum, flag) {
 		statusmenu = "fancyss运行需要网络畅通，如果本地网络不通，fancyss将无法正常运行<br /><br />";
 		statusmenu += "如果能保证你的路由器本地网络稳定性，那么在插件开启时跳过网络可用性检测！";
 		_caption = "跳过网络可用性检测";
-	} else if (itemNum == 139) {
-		width = "450px";
-		statusmenu = "因部分代理协议要求本地时间和服务器时间一致才能正常工作，比如vmess协议等<br /><br />";
-		statusmenu = "如果插件检测到你本地时间和实际时间相差大于60秒，插件会帮忙自动校正时间<br /><br />";
-		statusmenu = "此功能可能会导致系统提示时间未同步，如遇到此情况也建议勾选本选项<br /><br />";
-		statusmenu += "如果能保证你的路由器本地时间准确，或者你使用的协议对时间没有要求，那么在插件开启时跳过时间一致性检测！";
-		_caption = "跳过时间一致性检测";
 	} else if (itemNum == 141) {
 		width = "450px";
 		statusmenu = "此可信DNS检测仅仅针对使用进阶DNS设定中的chinadns-ng<br /><br />";
