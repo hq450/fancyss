@@ -88,9 +88,9 @@ get_time(){
 	timeValue=$(echo $nistTime | cut -d' ' -f6-6)
 	timeZoneValue=$(echo $nistTime | cut -d' ' -f7-7)
 	#echo $dateString
-	case $monthValue in
-		"Jan")
-			monthValue="01"
+		case $monthValue in
+			"Jan")
+				monthValue="01"
 			;;
 		"Feb")
 			monthValue="02"
@@ -122,12 +122,13 @@ get_time(){
 		"Nov")
 			monthValue="11"
 			;;
-		"Dec")
-			monthValue="12"
-			;;
-		*)
-		    continue
-	esac
+			"Dec")
+				monthValue="12"
+				;;
+			*)
+				return 1
+				;;
+		esac
 	local UTCTIME="$yearValue.$monthValue.$dateValue-$timeValue"
 	local SERVER_TIMESTAMP=$(date +%s --utc ${UTCTIME})
 	if [ -n "${debug}" ];then

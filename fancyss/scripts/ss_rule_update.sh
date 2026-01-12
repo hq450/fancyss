@@ -19,13 +19,9 @@ start_update(){
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 		exit
 	fi
-	
-	# 2. 检测规则本地版本号
-	version_gfwlist_local=$(cat ${RULE_FILE} | run jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
-	version_cdnlist_local=$(cat ${RULE_FILE} | run jq -r '.chnlist.date' | sed 's/[[:space:]]/_/g')
-	version_chnroute_local=$(cat ${RULE_FILE} | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
-	if [ -z ${version_gfwlist_local} -o -z ${version_chnroute_local} -o -z ${version_cdnlist_local} ];then
-		echo_date "没有找到规则版本号！退出！"
+	run jq --tab . "${RULE_FILE}" >/dev/null 2>&1
+	if [ "$?" != "0" ];then
+		echo_date "本地规则版本号文件解析失败：${RULE_FILE}！请尝试覆盖安装插件解决！退出！"
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 		exit
 	fi
@@ -50,102 +46,121 @@ start_update(){
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
 		exit
 	fi
+	run jq --tab . /tmp/rules.json.js >/dev/null 2>&1
+	if [ "$?" != "0" ];then
+		echo_date "在线规则版本号文件解析失败：${URL_MAIN}/rules.json.js！退出！"
+		rm -rf /tmp/rules.json.js
+		echo XU6J03M6 >> /tmp/upload/ss_log.txt
+		exit
+	fi
 
-	# 6. 获取在线版本及其它信息
-	version_gfwlist_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.date' | sed 's/[[:space:]]/_/g')
-	version_cdnlist_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist.date' | sed 's/[[:space:]]/_/g')
-	version_chnroute_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.date' | sed 's/[[:space:]]/_/g')
-	
-	md5sum_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.md5')
-	md5sum_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist.md5')
-	md5sum_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.md5')
 
-	count_gfw_online=$(cat /tmp/rules.json.js | run jq -r '.gfwlist.count')
-	count_cdn_online=$(cat /tmp/rules.json.js | run jq -r '.chnlist.count')
-	count_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.count')
-	count_ip_chn_online=$(cat /tmp/rules.json.js | run jq -r '.chnroute.count_ip')
-	
-	# update gfwlist
-	if [ "${ss_basic_gfwlist_update}" == "1" ];then
-		echo_date "--------------------------------------------------------------------"
-		if [ "${version_gfwlist_local}" != "${version_gfwlist_online}" -o "${force_update}" == "1" ];then
-			echo_date "检测到新版本gfwlist，开始更新..."
-			echo_date "下载gfwlist到临时文件..."
-			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/gfwlist.txt > /tmp/gfwlist.txt
-			md5sum_gfwlist_local=$(md5sum /tmp/gfwlist.txt | awk '{print $1}')
-			if [ "${md5sum_gfwlist_local}" == "${md5sum_gfw_online}" ];then
-				echo_date "下载完成，校验通过，将临时文件覆盖到原始gfwlist文件"
-				local version_gfwlist_online_tmp="$(echo ${version_gfwlist_online} | sed 's/_/ /g')"
-				mv /tmp/gfwlist.txt /koolshare/ss/rules/gfwlist.txt
-				run jq --arg variable "${version_gfwlist_online_tmp}" '.gfwlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_gfw_online}" '.gfwlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_gfw_online}" '.gfwlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				reboot="1"
-				echo_date "【更新成功】你的gfwlist已经更新到最新！"
-			else
-				echo_date "下载完成，但是校验没有通过！"
-			fi
-		else
-			echo_date "检测到gfwlist本地版本号和在线版本号相同，不进行更新!"
+	update_rule() {
+		# $1: key in rules.json.js
+		# $2: enabled (1/0)
+		local key="$1"
+		local enabled="$2"
+
+		local online_name online_md5 online_date_cmp online_obj
+		local local_date_cmp local_md5
+		local tmp_file dst_file tmp_md5
+
+		if [ "${enabled}" != "1" ]; then
+			echo_date "你并没有勾选${key}更新！"
+			return 0
 		fi
-	else
-		echo_date "你并没有勾选gfwlist更新！"
-	fi
-	
-	# update chnroute
-	if [ "${ss_basic_chnroute_update}" == "1" ];then
-		echo_date "--------------------------------------------------------------------"
-		if [ "${version_chnroute_local}" != "${version_chnroute_online}" -o "${force_update}" == "1" ];then
-			echo_date "检测到新版本chnroute，开始更新..."
-			echo_date "下载chnroute到临时文件..."
-			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/chnroute.txt > /tmp/chnroute.txt
-			md5sum_chnroute_local=$(md5sum /tmp/chnroute.txt | awk '{print $1}')
-			if [ "${md5sum_chnroute_local}" == "${md5sum_chn_online}" ];then
-				echo_date "下载完成，校验通过，将临时文件覆盖到原始chnroute文件"
-				local version_chnroute_online_tmp="$(echo ${version_chnroute_online} | sed 's/_/ /g')"
-				mv /tmp/chnroute.txt /koolshare/ss/rules/chnroute.txt
-				run jq --arg variable "${version_chnroute_online_tmp}" '.chnroute.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_chn_online}" '.chnroute.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_chn_online}" '.chnroute.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_ip_chn_online}" '.chnroute.count_ip = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				reboot="1"
-				echo_date "【更新成功】你的chnroute已经更新到最新！"
-			else
-				echo_date "下载完成，但是校验没有通过！"
-			fi
-		else
-			echo_date "检测到chnroute本地版本号和在线版本号相同，不进行更新!"
+
+		online_name="$(cat /tmp/rules.json.js | run jq -r ".${key}.name")"
+		online_md5="$(cat /tmp/rules.json.js | run jq -r ".${key}.md5")"
+		online_date_cmp="$(cat /tmp/rules.json.js | run jq -r ".${key}.date" | sed 's/[[:space:]]/_/g')"
+
+		if [ -z "${online_name}" ] || [ "${online_name}" = "null" ]; then
+			echo_date "在线版本文件缺少字段：.${key}.name，跳过！"
+			return 1
 		fi
-	else
-		echo_date "你并没有勾选chnroute更新！"
-	fi
-	
-	# update chnlist file
-	if [ "$ss_basic_chnlist_update" == "1" ];then
-		echo_date "--------------------------------------------------------------------"
-		if [ "${version_chnroutelist_local}" != "${version_chnroutelist_online}" -o "${force_update}" == "1" ];then
-			echo_date "检测到新版本chnlist名单，开始更新..."
-			echo_date "下载chnlist名单到临时文件..."
-			wget -4 --no-check-certificate --timeout=8 -qO - ${URL_MAIN}/chnlist.txt > /tmp/chnlist.txt
-			md5sum_chnlist_local=$(md5sum /tmp/chnlist.txt | awk '{print $1}')
-			if [ "${md5sum_chnlist_local}" == "${md5sum_chnlist_online}" ];then
-				echo_date "下载完成，校验通过，将临时文件覆盖到原始chnlist名单文件"
-				local version_chnroutelist_online_tmp="$(echo ${version_chnroutelist_online} | sed 's/_/ /g')"
-				mv /tmp/chnlist.txt /koolshare/ss/rules/chnlist.txt
-				run jq --arg variable "${version_chnroutelist_online_tmp}" '.chnlist.date = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${md5sum_chnlist_online}" '.chnlist.md5 = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				run jq --arg variable "${count_chnlist_online}" '.chnlist.count = $variable' ${RULE_FILE} | sponge ${RULE_FILE}
-				reboot="1"
-				echo_date "【更新成功】你的chnlist名单已经更新到最新！"
-			else
-				echo_date "下载完成，但是校验没有通过！"
-			fi
-		else
-			echo_date "检测到chnlist名单本地版本号和在线版本号相同，不进行更新!"
+		if [ -z "${online_md5}" ] || [ "${online_md5}" = "null" ]; then
+			echo_date "在线版本文件缺少字段：.${key}.md5，跳过！"
+			return 1
 		fi
-	else
-		echo_date "你并没有勾选chnlist名单更新！"
-	fi
+		if [ -z "${online_date_cmp}" ] || [ "${online_date_cmp}" = "null" ]; then
+			echo_date "在线版本文件缺少字段：.${key}.date，跳过！"
+			return 1
+		fi
+
+		local_date_cmp="$(cat ${RULE_FILE} | run jq -r ".${key}.date" | sed 's/[[:space:]]/_/g')"
+		local_md5="$(cat ${RULE_FILE} | run jq -r ".${key}.md5")"
+		if [ -z "${local_date_cmp}" ] || [ "${local_date_cmp}" = "null" ]; then
+			local_date_cmp="0"
+		fi
+		if [ -z "${local_md5}" ] || [ "${local_md5}" = "null" ]; then
+			local_md5="0"
+		fi
+
+		echo_date "--------------------------------------------------------------------"
+		if [ "${local_date_cmp}" = "${online_date_cmp}" ] && [ "${force_update}" != "1" ]; then
+			echo_date "检测到${key}本地版本号和在线版本号相同，不进行更新!"
+			return 0
+		fi
+
+		echo_date "检测到新版本${key}，开始更新..."
+		echo_date "下载${online_name}到临时文件..."
+
+		tmp_file="${rule_down_dir}/${online_name}"
+		dst_file="${rule_save_dir}/${online_name}"
+		rm -rf "${tmp_file}"
+
+		wget -4 --no-check-certificate --timeout=8 -qO - "${URL_MAIN}/${online_name}" > "${tmp_file}"
+		if [ "$?" != "0" ] || [ ! -s "${tmp_file}" ]; then
+			echo_date "${online_name}下载失败！"
+			rm -rf "${tmp_file}"
+			return 1
+		fi
+
+		tmp_md5="$(md5sum "${tmp_file}" | awk '{print $1}')"
+		if [ "${tmp_md5}" != "${online_md5}" ]; then
+			echo_date "下载完成，但校验未通过！本地md5：${tmp_md5}，在线md5：${online_md5}"
+			rm -rf "${tmp_file}"
+			return 1
+		fi
+
+		echo_date "下载完成，校验通过，覆盖到：${dst_file}"
+		mv "${tmp_file}" "${dst_file}"
+
+		online_obj="$(cat /tmp/rules.json.js | run jq -c ".${key}")"
+		if [ -n "${online_obj}" ] && [ "${online_obj}" != "null" ]; then
+			local tmp_rule_json="${rule_down_dir}/rules.${key}.json.js"
+			rm -rf "${tmp_rule_json}"
+			run jq --argjson obj "${online_obj}" ".${key} = \$obj" "${RULE_FILE}" > "${tmp_rule_json}"
+			if [ "$?" != "0" ] || [ ! -s "${tmp_rule_json}" ]; then
+				echo_date "更新规则版本号文件失败：${RULE_FILE}（.${key}）"
+				rm -rf "${tmp_rule_json}"
+				return 1
+			fi
+			mv "${tmp_rule_json}" "${RULE_FILE}"
+		fi
+
+		reboot="1"
+		echo_date "【更新成功】你的${key}已经更新到最新！"
+		return 0
+	}
+
+	# 用户可选更新项（UI上有勾选项）
+	update_rule "gfwlist" "${ss_basic_gfwlist_update}"
+	update_rule "chnroute" "${ss_basic_chnroute_update}"
+	update_rule "chnlist" "${ss_basic_chnlist_update}"
+
+	# 必要/常用规则：无UI开关，默认跟随规则更新
+	update_rule "chnroute6" "1"
+	update_rule "adslist" "1"
+	update_rule "udplist" "1"
+	update_rule "rotlist" "1"
+	update_rule "white_list" "1"
+	update_rule "black_list" "1"
+	update_rule "block_list" "1"
+	update_rule "apple_china" "1"
+	update_rule "google_china" "1"
+	update_rule "cdn_test" "1"
+
 	echo_date " --------------------------------------------------------------------"
 	rm -rf /tmp/rules.json.js
 	
