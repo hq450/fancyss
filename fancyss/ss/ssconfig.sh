@@ -2468,69 +2468,30 @@ creat_v2ray_json() {
 				"loglevel": "none"
 			},
 		EOF
-		# inbounds area (7913 for dns resolve)
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			echo_date "配置${VCORE_NAME} dns，用于dns解析..."
-			cat >>"${V2RAY_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-					"protocol": "dokodemo-door",
-					"port": ${DNSF_PORT},
+		# inbounds area (23456 for socks5)
+		cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
+			"inbounds": [
+				{
+					"port": 23456,
+					"listen": "127.0.0.1",
+					"protocol": "socks",
 					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-					{
-						"port": 23456,
-						"listen": "127.0.0.1",
-						"protocol": "socks",
-						"settings": {
-							"auth": "noauth",
-							"udp": true,
-							"ip": "127.0.0.1"
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+						"auth": "noauth",
+						"udp": true,
+						"ip": "127.0.0.1"
 					}
-				],
-			EOF
-		else
-			# inbounds area (23456 for socks5)
-			cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
-				"inbounds": [
-					{
-						"port": 23456,
-						"listen": "127.0.0.1",
-						"protocol": "socks",
-						"settings": {
-							"auth": "noauth",
-							"udp": true,
-							"ip": "127.0.0.1"
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+				},
+				{
+					"listen": "0.0.0.0",
+					"port": 3333,
+					"protocol": "dokodemo-door",
+					"settings": {
+						"network": "tcp,udp",
+						"followRedirect": true
 					}
-				],
-			EOF
-		fi
+				}
+			],
+		EOF
 		# outbounds area
 		cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
 			"outbounds": [
@@ -2598,80 +2559,36 @@ creat_v2ray_json() {
 		if [ "$OBS" != "null" ]; then
 			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
+		local TEMPLATE="{
+							\"log\": {
+								\"access\": \"none\",
+								\"error\": \"none\",
+								\"loglevel\": \"none\"
+							},
+							\"inbounds\": [
+								{
+									\"port\": 23456,
+									\"listen\": \"127.0.0.1\",
+									\"protocol\": \"socks\",
+									\"settings\": {
+										\"auth\": \"noauth\",
+										\"udp\": true,
+										\"ip\": \"127.0.0.1\",
+										\"clients\": null
+									},
+									\"streamSettings\": null
 								},
-								\"inbounds\": [
-									{
-										\"protocol\": \"dokodemo-door\", 
-										\"port\": ${DNSF_PORT},
-										\"settings\": {
-											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})\",
-											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
-											\"network\": \"udp\",
-											\"timeout\": 0,
-											\"followRedirect\": false
-										}
-									},
-									{
-										\"port\": 23456,
-										\"listen\": \"127.0.0.1\",
-										\"protocol\": \"socks\",
-										\"settings\": {
-											\"auth\": \"noauth\",
-											\"udp\": true,
-											\"ip\": \"127.0.0.1\",
-											\"clients\": null
-										},
-										\"streamSettings\": null
-									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
+								{
+									\"listen\": \"0.0.0.0\",
+									\"port\": 3333,
+									\"protocol\": \"dokodemo-door\",
+									\"settings\": {
+										\"network\": \"tcp,udp\",
+										\"followRedirect\": true
 									}
-								]
-							}"
-		else
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
-								},
-								\"inbounds\": [
-									{
-										\"port\": 23456,
-										\"listen\": \"127.0.0.1\",
-										\"protocol\": \"socks\",
-										\"settings\": {
-											\"auth\": \"noauth\",
-											\"udp\": true,
-											\"ip\": \"127.0.0.1\",
-											\"clients\": null
-										},
-										\"streamSettings\": null
-									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
-									}
-								]
-							}"
-		fi
+								}
+							]
+						}"
 		echo_date "解析${VCORE_NAME}配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
 		echo_date "${VCORE_NAME}配置文件写入成功到$V2RAY_CONFIG_FILE"
@@ -2872,69 +2789,30 @@ creat_xray_ss_json() {
 		},
 	EOF
 	
-	if [ "${ss_basic_dns_flag}" == "1" ]; then
-		# inbounds area (7913 for dns resolve)
-		echo_date "配置xray dns，用于dns解析..."
-		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
-			"inbounds": [
-				{
-				"protocol": "dokodemo-door",
-				"port": ${DNSF_PORT},
+	# inbounds area (23456 for socks5)
+	cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+		"inbounds": [
+			{
+				"port": 23456,
+				"listen": "127.0.0.1",
+				"protocol": "socks",
 				"settings": {
-					"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
-					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
-					"network": "udp",
-					"timeout": 0,
-					"followRedirect": false
-					}
-				},
-				{
-					"port": 23456,
-					"listen": "127.0.0.1",
-					"protocol": "socks",
-					"settings": {
-						"auth": "noauth",
-						"udp": true,
-						"ip": "127.0.0.1"
-					}
-				},
-				{
-					"listen": "0.0.0.0",
-					"port": 3333,
-					"protocol": "dokodemo-door",
-					"settings": {
-						"network": "tcp,udp",
-						"followRedirect": true
-					}
+					"auth": "noauth",
+					"udp": true,
+					"ip": "127.0.0.1"
 				}
-			],
-		EOF
-	else
-		# inbounds area (23456 for socks5)
-		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
-			"inbounds": [
-				{
-					"port": 23456,
-					"listen": "127.0.0.1",
-					"protocol": "socks",
-					"settings": {
-						"auth": "noauth",
-						"udp": true,
-						"ip": "127.0.0.1"
-					}
-				},
-				{
-					"listen": "0.0.0.0",
-					"port": 3333,
-					"protocol": "dokodemo-door",
-					"settings": {
-						"network": "tcp,udp",
-						"followRedirect": true
-					}
+			},
+			{
+				"listen": "0.0.0.0",
+				"port": 3333,
+				"protocol": "dokodemo-door",
+				"settings": {
+					"network": "tcp,udp",
+					"followRedirect": true
 				}
-			],
-		EOF
-	fi
+			}
+		],
+	EOF
 	# outbounds area
 	if [ "${ss_basic_ss_obfs}" == "http" -o "${ss_basic_ss_obfs}" == "tls" ]; then
 		# start obfs-local first
@@ -3266,69 +3144,31 @@ creat_xray_json() {
 				"loglevel": "none"
 			},
 		EOF
-		# inbounds area (7913 for dns resolve)
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			echo_date "配置xray dns，用于dns解析..."
-			cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-					"protocol": "dokodemo-door",
-					"port": ${DNSF_PORT},
+		# inbounds area (23456 for socks5)
+		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+			"inbounds": [
+				{
+					"port": 23456,
+					"listen": "127.0.0.1",
+					"protocol": "socks",
 					"settings": {
-						"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
-						"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-					{
-						"port": 23456,
-						"listen": "127.0.0.1",
-						"protocol": "socks",
-						"settings": {
-							"auth": "noauth",
-							"udp": true,
-							"ip": "127.0.0.1"
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+						"auth": "noauth",
+						"udp": true,
+						"ip": "127.0.0.1"
 					}
-				],
-			EOF
-		else
-			# inbounds area (23456 for socks5)
-			cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
-				"inbounds": [
-					{
-						"port": 23456,
-						"listen": "127.0.0.1",
-						"protocol": "socks",
-						"settings": {
-							"auth": "noauth",
-							"udp": true,
-							"ip": "127.0.0.1"
-						}
-					},
-					{
-						"listen": "0.0.0.0",
-						"port": 3333,
-						"protocol": "dokodemo-door",
-						"settings": {
-							"network": "tcp,udp",
-							"followRedirect": true
-						}
+				},
+				{
+					"listen": "0.0.0.0",
+					"port": 3333,
+					"protocol": "dokodemo-door",
+					"settings": {
+						"network": "tcp,udp",
+						"followRedirect": true
 					}
-				],
-			EOF
-		fi
+				}
+			],
+		EOF
+		
 		# outbounds area
 		[ -z "${ss_basic_xray_alterid}" ] && ss_basic_xray_alterid="0"
 		[ -z "${ss_basic_xray_prot}" ] && ss_basic_xray_prot="vless"
@@ -3412,80 +3252,37 @@ creat_xray_json() {
 		if [ "$OBS" != "null" ]; then
 			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
-		if [ "${ss_basic_dns_flag}" == "1" ]; then
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
+		local TEMPLATE="{
+							\"log\": {
+								\"access\": \"none\",
+								\"error\": \"none\",
+								\"loglevel\": \"none\"
+							},
+							\"inbounds\": [
+								{
+									\"port\": 23456,
+									\"listen\": \"127.0.0.1\",
+									\"protocol\": \"socks\",
+									\"settings\": {
+										\"auth\": \"noauth\",
+										\"udp\": true,
+										\"ip\": \"127.0.0.1\",
+										\"clients\": null
+									},
+									\"streamSettings\": null
 								},
-								\"inbounds\": [
-									{
-										\"protocol\": \"dokodemo-door\", 
-										\"port\": ${DNSF_PORT},
-										\"settings\": {
-											\"address\": \"$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})\",
-											\"port\": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
-											\"network\": \"udp\",
-											\"timeout\": 0,
-											\"followRedirect\": false
-										}
-									},
-									{
-										\"port\": 23456,
-										\"listen\": \"127.0.0.1\",
-										\"protocol\": \"socks\",
-										\"settings\": {
-											\"auth\": \"noauth\",
-											\"udp\": true,
-											\"ip\": \"127.0.0.1\",
-											\"clients\": null
-										},
-										\"streamSettings\": null
-									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
+								{
+									\"listen\": \"0.0.0.0\",
+									\"port\": 3333,
+									\"protocol\": \"dokodemo-door\",
+									\"settings\": {
+										\"network\": \"tcp,udp\",
+										\"followRedirect\": true
 									}
-								]
-							}"
-		else
-			local TEMPLATE="{
-								\"log\": {
-									\"access\": \"none\",
-									\"error\": \"none\",
-									\"loglevel\": \"none\"
-								},
-								\"inbounds\": [
-									{
-										\"port\": 23456,
-										\"listen\": \"127.0.0.1\",
-										\"protocol\": \"socks\",
-										\"settings\": {
-											\"auth\": \"noauth\",
-											\"udp\": true,
-											\"ip\": \"127.0.0.1\",
-											\"clients\": null
-										},
-										\"streamSettings\": null
-									},
-									{
-										\"listen\": \"0.0.0.0\",
-										\"port\": 3333,
-										\"protocol\": \"dokodemo-door\",
-										\"settings\": {
-											\"network\": \"tcp,udp\",
-											\"followRedirect\": true
-										}
-									}
-								]
-							}"
-		fi
+								}
+							]
+						}"
+		
 		echo_date "解析Xray配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${XRAY_CONFIG_FILE}"
 		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
@@ -3649,68 +3446,31 @@ creat_trojan_json(){
 			"loglevel": "none"
 		},
 	EOF
-	if [ "${ss_basic_dns_flag}" == "1" ]; then
-		echo_date "配置${TCORE_NAME} dns，用于dns解析..."
-		cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
-			"inbounds": [
-				{
-				"protocol": "dokodemo-door",
-				"port": ${DNSF_PORT},
+	# inbounds area (23456 for socks5)
+	cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
+		"inbounds": [
+			{
+				"port": 23456,
+				"listen": "127.0.0.1",
+				"protocol": "socks",
 				"settings": {
-					"address": "$(get_dns_foreign ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr})",
-					"port": $(get_dns_foreign_port ${ss_basic_chng_trust_udp_1_opt} ${ss_basic_chng_trust_udp_1_usr}),
-					"network": "udp",
-					"timeout": 0,
-					"followRedirect": false
-					}
-				},
-				{
-					"port": 23456,
-					"listen": "127.0.0.1",
-					"protocol": "socks",
-					"settings": {
-						"auth": "noauth",
-						"udp": true,
-						"ip": "127.0.0.1"
-					}
-				},
-				{
-					"listen": "0.0.0.0",
-					"port": 3333,
-					"protocol": "dokodemo-door",
-					"settings": {
-						"network": "tcp,udp",
-						"followRedirect": true
-					}
+					"auth": "noauth",
+					"udp": true,
+					"ip": "127.0.0.1"
 				}
-			],
-		EOF
-	else
-		# inbounds area (23456 for socks5)
-		cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
-			"inbounds": [
-				{
-					"port": 23456,
-					"listen": "127.0.0.1",
-					"protocol": "socks",
-					"settings": {
-						"auth": "noauth",
-						"udp": true,
-						"ip": "127.0.0.1"
-					}
-				},
-				{
-					"listen": "0.0.0.0",
-					"port": 3333,
-					"protocol": "dokodemo-door",
-					"settings": {
-						"network": "tcp,udp",
-						"followRedirect": true
-					}
+			},
+			{
+				"listen": "0.0.0.0",
+				"port": 3333,
+				"protocol": "dokodemo-door",
+				"settings": {
+					"network": "tcp,udp",
+					"followRedirect": true
 				}
-			],
-		EOF
-	fi
+			}
+		],
+	EOF
+	
 	# outbounds area
 	cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
 		"outbounds": [

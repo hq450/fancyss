@@ -1636,7 +1636,7 @@ get_fw_ver(){
 get_ua(){
 	# UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
 	# UA="AsusWRT-Merlin/koolcenter/RT-BE88U/102.6/fancyss/hndv8/full/3.3.9"
-	# UA="AsusWRT/koolcenter/RT-BE88U/102.5/fancyss/mtk/lite/3.3.9
+	# UA="AsusWRT/koolcenter/RT-BE88U/102.5/fancyss/mtk/lite/3.3.9"
 	# UA="系统名/改版方/机型/固件版本/fancyss/fancyss平台类型/fancyss类型/fancyss版本"
 	get_fw_type
 	get_model

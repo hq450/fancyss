@@ -152,27 +152,6 @@ if [ "${ss_basic_type}" == "5" -a "${ss_basic_tjai}" == "1" ];then
 	#eval ss_basic_trojan_ai_${cur_node}=1
 fi
 
-# v2ray/xray使用自带dns
-ss_basic_dns_flag="0"
-DNSF_PORT=1055
-if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "1" ];then
-	# 新dns方案  chinadns-ng，udp 方案
-	ss_basic_dns_flag="1"
-fi
-if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "2" ];then
-	# 新dns方案 chinadns-ng，tcp 方案，dns2socks，socks5 23456 needed
-	ss_basic_dns_flag="2"
-fi
-
-#---------------------------
-# 20230609，119.29.29.29的tcp解析有问题，如果用户选这个，强制更换到119.28.28.28
-if [ "${ss_basic_chng_china_1_tcp}" == "5" ];then
-	ss_basic_chng_china_1_tcp="6"
-fi
-if [ "${ss_basic_chng_china_2_tcp}" == "5" ];then
-	ss_basic_chng_china_2_tcp="6"
-fi
-
 [ -z "$(dbus get ss_basic_wt_furl)" ] && ss_basic_wt_furl="http://www.google.com.tw"
 [ -z "$(dbus get ss_basic_wt_curl)" ] && ss_basic_wt_curl="http://www.baidu.com"
 
@@ -450,4 +429,3 @@ set_default() {
 		dbus set "$var_name=$default_value"
 	fi
 }
-	
