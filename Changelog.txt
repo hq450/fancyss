@@ -1,7 +1,10 @@
  fancyss Changelog
 ===========================================
-3.4.0 (to be release)
-   - remove	移除旧版本中xray/v2ray dns的废弃代码
+3.4.1 (to be release)
+
+3.4.0 (20260114)
+   - remove	移除旧版本中无用的xray/v2ray dns废弃代码
+   - fix	修复在线升级后chinadns-ng因可信DNS-3默认值错误导致chinadns-ng启动失败的问题
 
 3.3.9 (20260113)
    - note	此版本对DNS的逻辑和相关代码进行了较大改动，现在不再份基础和进阶，默认使用chinadns-ng，同时支持smartdns
