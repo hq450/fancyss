@@ -19,6 +19,8 @@ HY2_UP_SPEED=$(dbus get ss_basic_hy2_up_speed)
 HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
 HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)
 CURR_NODE=$(dbus get ssconf_basic_node)
+SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
+[ -z "${SUB_BY_PROXY}" ] && SUB_BY_PROXY=0
 KEY_WORDS_1=$(dbus get ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(dbus get ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
@@ -215,6 +217,22 @@ run(){
 	env -i PATH=${PATH} "$@"
 }
 
+run5(){
+	if [ -x "/usr/bin/timeout" ]; then
+		env -i PATH=${PATH} /usr/bin/timeout -t 5 -s kill "$@" 2>/dev/null
+	else
+		env -i PATH=${PATH} "$@"
+	fi
+}
+
+run2(){
+	if [ -x "/usr/bin/timeout" ]; then
+		env -i PATH=${PATH} /usr/bin/timeout -t 2 -s kill "$@" 2>/dev/null
+	else
+		env -i PATH=${PATH} "$@"
+	fi
+}
+
 json_init(){
 	#true >/tmp/node_data.txt
 	NODE_DATA="{"
@@ -228,18 +246,6 @@ json_add_string(){
 
 json_write_object(){
 	echo $NODE_DATA | sed '$ s/,$/}/g' >>$1
-}
-
-__valid_ip() {
-	# 验证是否为ipv4或者ipv6地址，是则正确返回，不是返回空值
-	local format_4=$(echo "$1" | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}$")
-	if [ -n "${format_4}" ]; then
-		echo "${format_4}"
-		return 0
-	else
-		echo ""
-		return 1
-	fi
 }
 
 dec64(){
@@ -294,7 +300,7 @@ json2skipd(){
 	#echo dbus save ssconf >>$DIR/${file_name}.sh
 	chmod +x $DIR/${file_name}.sh
 	sh $DIR/${file_name}.sh
-	echo_date "🆗节点信息写入成功！"
+	echo_date "😀节点信息写入成功！"
 	sync
 }
 
@@ -391,7 +397,7 @@ remove_null(){
 		# 没有订阅节点，不进行检查
 		return
 	fi
-	local online_sub_urls=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d'| sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
+	local online_sub_urls=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d'| sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
 	for online_sub_url in ${online_sub_urls}
 	do
 		local sublink_hash=$(echo ${online_sub_url} | sed 's/%20/ /g' | md5sum | awk '{print $1}')
@@ -422,7 +428,7 @@ clear_nodes(){
 	sh $DIR/ss_nodes_remove.sh
 	sync
 	[ -n "${CURR_NODE}" ] && dbus set ssconf_basic_node=$CURR_NODE
-	echo_date "🆗准备完成！"
+	echo_date "😀准备完成！"
 }
 
 get_type_name() {
@@ -566,7 +572,7 @@ check_nodes(){
 		NODES_SEQ=$(dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
 		NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.*[[:space:]]//')
 	else
-		echo_date "🆗节点顺序正确，节点配置信息OK！"
+		echo_date "😀节点顺序正确，节点配置信息OK！"
 	fi
 }
 
@@ -648,7 +654,8 @@ add_ss_node(){
 				server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
 			fi
 			encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
-			password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+			#password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
+			password=$(echo "${decrypt_info}" | sed 's/^[^:]*://')
 		elif [ "${string_nu}" -gt "2" ];then
 			# method:passwor are base64
 			decrypt_info=$(dec64 "${info_first}")
@@ -703,6 +710,7 @@ add_ss_node(){
 	fi
 
 	# echo ------------------------
+	# echo urllink: ${urllink}
 	# echo info_first: ${info_first}
 	# echo decrypt_info: ${decrypt_info}
 	# echo remarks: ${remarks}
@@ -716,7 +724,12 @@ add_ss_node(){
 	# echo ------------------------
 
 	if [ -z "${server}" -o -z "${remarks}" -o -z "${server_port}" -o -z "${password}" -o -z "${encrypt_method}" ]; then
-		echo_date "🔴SS节点：检测到一个错误节点，跳过！"
+		local _shadowtls=$(echo "${urllink}" | grep -Eo "shadow-tls")
+		if [ -n "${_shadowtls}" ]; then
+			echo_date "🔴SS节点：这是一个shadow-tls节点，不支持，跳过！"
+		else
+			echo_date "🔴SS节点：检测到一个错误节点，跳过！"
+		fi
 		return 1
 	fi
 
@@ -1542,28 +1555,38 @@ get_domain_name(){
 	echo "$1" | sed -e 's|^[^/]*//||' -e 's|/.*$||' | awk -F ":" '{print $1}'
 }
 
-dnsmasq_rule(){
-	# better way todo: resolve first and add ip to ipset:router mannuly
+proxy_rule(){
+	# wget don't support socks proxy, use this mothod to use current proxy
 	local ACTION="$1"
 	local DOMAIN="$2"
-	local DNSF_PORT=7913
-	local DOMAIN_FILE=/jffs/configs/dnsmasq.d/ss_domain.conf
-	if [ "${ACTION}" == "add" ];then
-		if [ ! -f ${DOMAIN_FILE} -o "$(grep -c ${DOMAIN} ${DOMAIN_FILE} 2>/dev/null)" != "2" ];then
-			echo_date "✅添加域名：${DOMAIN} 到本机走代理名单..."
-			rm -rf ${DOMAIN_FILE}
-			echo "server=/${DOMAIN}/127.0.0.1#$DNSF_PORT" >>${DOMAIN_FILE}
-			echo "ipset=/${DOMAIN}/router" >>${DOMAIN_FILE}
-			sync
-			service restart_dnsmasq >/dev/null 2>&1
+	case "${ACTION}" in
+	add)
+		rm -rf /tmp/fancyss_sublink_ips.txt
+		run5 dnsclient -p 53 -t 2 -i 1 @223.5.5.5 ${DOMAIN} 2>/dev/null | grep -E "^IP" | awk '{print $2}' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}$" >/tmp/fancyss_sublink_ips.txt
+		if [ -f "/tmp/fancyss_sublink_ips.txt" ];then
+			while read SUB_IP
+			do
+				#echo_date "add ${SUB_IP} to ipset: router"
+				ipset -! add router ${SUB_IP}
+			done </tmp/fancyss_sublink_ips.txt
+			return 0
+		else
+			return 1
 		fi
-	elif [ "${ACTION}" == "remove" ];then
-		if [ -f ${DOMAIN_FILE} ];then
-			rm -rf ${DOMAIN_FILE}
-			sync
-			service restart_dnsmasq >/dev/null 2>&1
+		;;
+	del)
+		if [ -f "/tmp/fancyss_sublink_ips.txt" ];then
+			while read SUB_IP
+			do
+				#echo_date "del ${SUB_IP} to ipset: router"
+				ipset -! del router ${SUB_IP}
+			done </tmp/fancyss_sublink_ips.txt
+			return 0
+		else
+			return 1
 		fi
-	fi
+		;;
+	esac
 }
 
 get_model(){
@@ -1617,119 +1640,112 @@ get_ua(){
 	# UA="系统名/改版方/机型/固件版本/fancyss/fancyss平台类型/fancyss类型/fancyss版本"
 	get_fw_type
 	get_model
+	get_fw_ver
 	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_vers=$(dbus get ss_basic_version_local)
-	UA="${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}"
-}
-
-go_proxy(){
-	# 4. subscribe go through proxy or not
-	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
-		if [ "$(get_fancyss_running_status)" == "1" ];then
-			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			dnsmasq_rule add "${DOMAIN_NAME}"
-		else
-			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，改用常规网络下载..."
-			dnsmasq_rule remove
-		fi
-	else
-		echo_date "⬇️使用常规网络下载..."
-		dnsmasq_rule remove
-	fi
+	echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}"
 }
 
 download_by_curl(){
-	if [ "$(dbus get ss_basic_online_links_goss)" == "1" ]; then
-		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|naive|tuic")
+	local url_encode=$(echo "$1")
+	UA=$(get_ua)
+	echo_date "⬇️使用curl下载订阅..."
+	echo_date "🪧使用UA：$UA"
+	if [ "${SUB_BY_PROXY}" == "0" ]; then
+		# 先直连下载
+		echo_date "➡️通过本地网络直连下载订阅..."
+		run5 curl-fancyss -4sSk -L --user-agent $UA --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		if [ "$?" == "0" ]; then
+			return 0
+		fi
+
+		# 下载失败，使用代理下载
+		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|hysteria2")
+		if [ -n "${SOCKS5_OPEN}" ];then
+			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			run5 curl-fancyss -4sSk -L --user-agent $UA -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			return $?
+		else
+			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，结束curl订阅下载！"
+			return 1
+		fi
+	elif [ "${SUB_BY_PROXY}" == "1" ]; then
+		# 代理下载
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			run5 curl-fancyss -4sSk -L --user-agent $UA -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			return $?
 		else
 			local EXT_ARG=""
 			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，改用常规网络下载..."
+			return 1
 		fi
-	else
+	elif [ "${SUB_BY_PROXY}" == "2" ]; then
+		# 直连下载
 		echo_date "⬇️使用常规网络下载..."
-		dnsmasq_rule remove
+		run5 curl-fancyss -4sSk -L --user-agent $UA --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		return $?
 	fi
-
-	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
-	get_ua
-	
-	echo_date "1️⃣使用curl下载订阅，第一次尝试下载..."
-	echo_date curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 6 "${url_encode}"
-	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 6 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" == "0" ]; then
-		return 0
-	fi
-	
-	echo_date "2️⃣使用curl下载订阅失败，第二次尝试下载..."
-	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 10 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" == "0" ]; then
-		return 0
-	fi
-
-	echo_date "3️⃣使用curl下载订阅失败，第三次尝试下载..."
-	run curl-fancyss -4sSk --user-agent $UA ${EXT_ARG} --connect-timeout 12 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" == "0" ]; then
-		return 0
-	fi	
-
-	return 1
 }
 
 download_by_wget(){
-	# if go proxy or not
-	go_proxy
-	
+	local url_encode=$(echo "$1")
+	UA=$(get_ua)
+
 	if [ -n $(echo $1 | grep -E "^https") ]; then
 		local EXT_OPT="--no-check-certificate"
 	else
 		local EXT_OPT=""
 	fi
 	
-	local url_encode=$(echo "$1" | sed 's/[[:space:]]/%20/g')
-
-	# use ua
-	get_ua
+	if [ ! -f "/root/.wget-hsts" ]; then 
+		touch /root/.wget-hsts
+		chmod 644 /root/.wget-hsts
+	fi
 	
-	echo_date "1️⃣使用wget下载订阅，第一次尝试下载..."
-	wget -4 -t 1 -T 10 --dns-timeout=5 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" == "0" ]; then
-		dnsmasq_rule remove
-		return 0
+	echo_date "⬇️使用wget下载订阅..."
+	echo_date "🪧使用UA：$UA"
+	if [ "${SUB_BY_PROXY}" == "0" ]; then
+		# 先直连下载
+		echo_date "➡️通过本地网络直连下载订阅..."
+		run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		if [ "$?" == "0" ]; then
+			return 0
+		fi
+		
+		# 下载失败，使用代理下载
+		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
+		proxy_rule add "${DOMAIN_NAME}"
+		if [ "$?" == "0" ];then
+			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		else
+			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
+			return 1
+		fi
+		proxy_rule del "${DOMAIN_NAME}"
+	elif [ "${SUB_BY_PROXY}" == "1" ]; then
+		# 代理下载
+		proxy_rule add "${DOMAIN_NAME}"
+		if [ "$?" == "0" ];then
+			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		else
+			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
+			return 1
+		fi
+		proxy_rule del "${DOMAIN_NAME}"
+	elif [ "${SUB_BY_PROXY}" == "2" ]; then
+		# 直连下载
+		echo_date "⬇️使用常规网络下载..."
+		run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		return $?
 	fi
-
-	echo_date "2️⃣使用wget下载订阅，第二次尝试下载..."
-	wget -4 -t 1 -T 15 --dns-timeout=10 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" == "0" ]; then
-		dnsmasq_rule remove
-		return 0
-	fi	
-	
-	echo_date "3️⃣使用wget下载订阅，第三次尝试下载..."
-	wget -4 -t 1 -T 20 --dns-timeout=15 -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" == "0" ]; then
-		dnsmasq_rule remove
-		return 0
-	fi
-
-	dnsmasq_rule remove
-	return 1
-}
-
-download_by_aria2(){
-	go_proxy
-	echo_date "⬇️使用aria2c下载订阅..."
-	rm -rf ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-	/koolshare/aria2/aria2c --check-certificate=false --quiet=true -d $DIR -o ssr_subscribe_file.txt $1
-	if [ "$?" == "0" ]; then
-		return 0
-	fi
-
-	return 1
 }
 
 get_online_rule_now(){
@@ -1762,7 +1778,7 @@ get_online_rule_now(){
 	echo_date "📁准备下载订阅链接到本地临时文件，请稍等..."
 	download_by_curl "${SUB_LINK}"
 	if [ "$?" == "0" ]; then
-		echo_date "🆗下载成功，继续检测下载内容..."
+		echo_date "😀下载成功，继续检测下载内容..."
 
 		#可能有跳转
 		local jump=$(grep -Eo "Redirecting|301" ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt)
@@ -1803,22 +1819,14 @@ get_online_rule_now(){
 			return 1
 		fi
 	else
-		echo_date "⚠️使用curl下载订阅失败，尝试更换wget进行下载..."
+		echo_date "⚠️使用curl下载订阅失败！"
 		rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		download_by_wget "${SUB_LINK}"
 
 		#返回错误
 		if [ "$?" != "0" ]; then
-			if [ -x "/koolshare/aria2/aria2c" ];then
-				download_by_aria2 "${SUB_LINK}"
-				if [ "$?" != "0" ]; then
-					echo_date "⬇️使用aria2c下载订阅失败！请检查你的网络！"
-					return 1
-				fi
-			else
-				echo_date "⚠️更换wget下载订阅失败！"
-				return 1
-			fi
+			echo_date "⚠️wget下载订阅失败！"
+			return 1
 		fi
 
 		#下载为空...
@@ -1846,7 +1854,7 @@ get_online_rule_now(){
 		fi
 	fi
 	
-	echo_date "🆗下载内容检测完成！"
+	echo_date "😀下载内容检测完成！"
 	echo_date "🔍开始解析节点信息..."
 
 	# 8. 解析订阅原始文本
@@ -1865,7 +1873,7 @@ get_online_rule_now(){
 	fi
 	echo "" >> ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	local NODE_NU_RAW=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -c "://")
-	echo_date "🆗初步解析成功！共获得${NODE_NU_RAW}个节点！"
+	echo_date "😀初步解析成功！共获得${NODE_NU_RAW}个节点！"
 
 	# 11. 检测 ss ssr vmess
 	NODE_FORMAT1=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^ss://")
@@ -2014,7 +2022,7 @@ start_online_update(){
 			echo_date "🈳订阅地址输入框为空，请输入订阅链接后重试！"
 			exit_sub
 		fi
-		local online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | wc -l)
+		local online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | wc -l)
 		if [ "${online_url_nu}" == "0" ];then
 			echo_date "🈳未发现任何有效的订阅地址，请检查你的订阅链接！"
 			exit_sub
@@ -2043,10 +2051,10 @@ start_online_update(){
 	
 	# 7. 下载/解析订阅节点
 	sub_count=0
-	online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | wc -l)
+	online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | wc -l)
 	until [ "${sub_count}" == "${online_url_nu}" ]; do
 		let sub_count+=1
-		url=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -E "^http" | sed -n "$sub_count p")
+		url=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed -n "$sub_count p" | sed 's/[[:space:]]/%20/g')
 		[ -z "${url}" ] && continue
 		echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
 		[ "${online_url_nu}" -gt "1" ] && echo_date "📢开始第【${sub_count}】个订阅！订阅链接如下："
@@ -2187,7 +2195,7 @@ case $SH_ARG in
 	true > $LOG_FILE
 	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	local_groups=$(dbus list ssconf_basic_group_ | cut -d "=" -f2 | sort -u | wc -l)
-	online_group=$(dbus get ss_online_links | base64 -d | awk '{print $1}' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]&//g' | grep -Ec "^http")
+	online_group=$(dbus get ss_online_links | base64 -d | awk '{print $1}' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -Ec "^http")
 	echo_date "保存订阅节点成功！" | tee -a $LOG_FILE
 	echo_date "现共有 $online_group 组订阅来源" | tee -a $LOG_FILE
 	echo_date "当前节点列表内已经订阅了 $local_groups 组..." | tee -a $LOG_FILE

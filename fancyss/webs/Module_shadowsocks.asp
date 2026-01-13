@@ -283,24 +283,24 @@ function refresh_options() {
 			}));
 		}
 		else if(c.type == "3"){
-			//v2ray
+			//vmess
 			option0.append($("<option>", {
 				value: field,
-				text: "【V2ray】" + group_tag + c.name
+				text: c.use_json == "1" ? "【json】" + group_tag + c.name : "【Vmess】" + group_tag + c.name
 			}));
 		}
 		else if(c.type == "4"){
-			//xray
+			//vless
 			option0.append($("<option>", {
 				value: field,
-				text: "【Xray】" + group_tag + c.name
+				text: c.use_json == "1" ? "【json】" + group_tag + c.name : "【Vless】" + group_tag + c.name
 			}));
 		}
 		else if(c.type == "5"){
 			//trojan
 			option0.append($("<option>", {
 				value: field,
-				text: "【trojan】" + group_tag + c.name
+				text: "【Trojan】" + group_tag + c.name
 			}));
 		}
 		else if(c.type == "6"){																								//fancyss-full							
@@ -314,7 +314,7 @@ function refresh_options() {
 			//tuic																											//fancyss-full
 			option0.append($("<option>", {																					//fancyss-full
 				value: field,																								//fancyss-full
-				text: "【tuic】" + group_tag + c.name																		//fancyss-full
+				text: "【Tuic】" + group_tag + c.name																		//fancyss-full
 			}));																											//fancyss-full
 		}																													//fancyss-full
 		else if(c.type == "8"){																								//fancyss-full
@@ -411,7 +411,7 @@ function save() {
 	  "ss_basic_rule_update",
 	  "ss_basic_rule_update_time",
 	  "ssr_subscribe_mode",
-	  "ss_basic_online_links_goss",
+	  "ss_basic_online_links_proxy",
 	  "ss_basic_node_update",
 	  "ss_basic_node_update_day",
 	  "ss_basic_node_update_hr",
@@ -1267,7 +1267,7 @@ function verifyFields(r) {
 	if(E("ss_adv_sub").checked == false){
 		$("#ssr_subscribe_mode").parent().parent().hide();
 		$("#ss_basic_hy2_up_speed").parent().parent().hide();		//fancyss-full
-		$("#ss_basic_online_links_goss").parent().parent().hide();
+		$("#ss_basic_online_links_proxy").parent().parent().hide();
 		$("#ss_basic_node_update").parent().parent().hide();
 		$("#ss_basic_exclude").parent().parent().hide();
 		$("#ss_basic_include").parent().parent().hide();
@@ -1276,7 +1276,7 @@ function verifyFields(r) {
 	}else{
 		$("#ssr_subscribe_mode").parent().parent().show();
 		$("#ss_basic_hy2_up_speed").parent().parent().show();		//fancyss-full
-		$("#ss_basic_online_links_goss").parent().parent().show();
+		$("#ss_basic_online_links_proxy").parent().parent().show();
 		$("#ss_basic_node_update").parent().parent().show();
 		$("#ss_basic_exclude").parent().parent().show();
 		$("#ss_basic_include").parent().parent().show();
@@ -5167,7 +5167,7 @@ function save_online_nodes(action) {
 	if (action == "2"||action == "3"){
 		dbus_post["ss_online_links"] = Base64.encode(E("ss_online_links").value);
 		dbus_post["ssr_subscribe_mode"] = E("ssr_subscribe_mode").value;
-		dbus_post["ss_basic_online_links_goss"] = E("ss_basic_online_links_goss").value;
+		dbus_post["ss_basic_online_links_proxy"] = E("ss_basic_online_links_proxy").value;
 		dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
 		dbus_post["ss_basic_node_update_day"] = E("ss_basic_node_update_day").value;
 		dbus_post["ss_basic_node_update_hr"] = E("ss_basic_node_update_hr").value;
@@ -6461,7 +6461,7 @@ function restart_chinadns() {
 																{ suffix: 'tcp fast open:' },																	//fancyss-full
 																{ id:'ss_basic_hy2_tfo_switch', type:'select', style:'width:auto', options:option_hy2_tfo, value:'2'}, //fancyss-full
 															]},																									//fancyss-full
-															{ title: '下载订阅时走ss/ssr/v2ray/v2ray代理网络', id:'ss_basic_online_links_goss', type:'select', style:'width:auto', options:[["0", "不走代理"], ["1", "走代理"]], value:'0'},
+															{ title: '下载订阅时走代理网络', id:'ss_basic_online_links_proxy', type:'select', style:'width:auto', options:[["0", "自动判断"], ["1", "走代理"], ["2", "不走代理"]], value:'0'},
 															{ title: '订阅计划任务', multi: [
 																{ id:'ss_basic_node_update', type:'select', style:'width:auto', func:'u', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
 																{ id:'ss_basic_node_update_day', type:'select', style:'width:auto', options:option_noded, value:'6'},

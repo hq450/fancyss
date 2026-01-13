@@ -249,7 +249,7 @@ test_nodes(){
 			test_07_sr $file_name $node_type
 			;;
 		03)
-			test_08_vr $file_name $node_type
+			test_09_xr $file_name $node_type
 			;;
 		04)
 			test_09_xr $file_name $node_type
@@ -696,11 +696,11 @@ test_08_vr(){
 
 	# alisa binary
 	killall wt-v2ray >/dev/null 2>&1
-	if [ -x "/koolshare/bin/v2ray" ];then
-		ln -sf /koolshare/bin/v2ray ${TMP2}/wt-v2ray
-	else
+	#if [ -x "/koolshare/bin/v2ray" ];then
+	#	ln -sf /koolshare/bin/v2ray ${TMP2}/wt-v2ray
+	#else
 		ln -sf /koolshare/bin/xray ${TMP2}/wt-v2ray
-	fi
+	#fi
 
 	# gen all v2ray conf
 	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
@@ -760,6 +760,7 @@ test_08_vr(){
 
 test_09_xr(){
 	local file=$1
+	local _node_type=$2
 
 	# alisa binary
 	killall wt-xray >/dev/null 2>&1
@@ -768,14 +769,25 @@ test_09_xr(){
 	rm -rf ${TMP2}/conf/*
 
 	# gen all xray conf
-	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-		for nu in $nus; do
-			{
-				creat_xray_json ${nu}
-			} &
+	if [ "${_node_type}" == "03" ];then
+		cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
+			for nu in $nus; do
+				{
+					creat_v2ray_json ${nu}
+				} &
+			done
+			wait
 		done
-		wait
-	done
+	elif [ "${_node_type}" == "04" ];then
+		cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
+			for nu in $nus; do
+				{
+					creat_xray_json ${nu}
+				} &
+			done
+			wait
+		done
+	fi
 
 	# merge all xray json
 	mkdir -p ${TMP2}/json
@@ -1875,11 +1887,9 @@ curl_test(){
 	
 	# test multiple time and get the best one
 	# echo ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} >> ${TMP2}/curl_test_log.txt
-	local ret=$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	usleep 250000
-	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	usleep 250000
-	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=$(run5 ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=${ret}@$(run5 ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=${ret}@$(run5 ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
 	local ret=$(echo ${ret} | sed 's/@/\n/g' | sort -n | sed -n '1p')
 	local _match=$(echo "${ret}"|grep -E "\|")
 	if [ -z ${_match} ];then

@@ -1399,7 +1399,7 @@ start_smartdns(){
 	# start smartdns	
 	echo_date "启动smartdns，使用smartdns配置文件：${smartdns_conf}"
 	run_bg smartdns -c ${smartdns_conf}
-	detect_running_status3 "smartdns" "53|7913" "0" "force"
+	detect_running_status3 "smartdns" "53|7913" "0"
 
 	# detect process by binary name and key word
 	local caches=$(head /tmp/smartdns_log.txt 2>/dev/null | grep "load cache file" | awk '{print $(NF-1)}')
@@ -2836,7 +2836,7 @@ start_v2ray() {
 			cd /koolshare/bin
 			run_bg xray run -c ${V2RAY_CONFIG_FILE}
 		fi
-		detect_running_status3 xray 23456 0 force
+		detect_running_status3 xray 23456 0
 	else
 		# v2ray start
 		echo_date "开启V2ray主进程..."
@@ -3619,7 +3619,7 @@ start_xray() {
 		cd /koolshare/bin
 		run_bg xray run -c $XRAY_CONFIG_FILE
 	fi
-	detect_running_status3 xray 23456 0 force
+	detect_running_status3 xray 23456 0
 }
 
 creat_trojan_json(){
@@ -3785,7 +3785,7 @@ start_trojan(){
 		cd /koolshare/bin
 		run_bg xray run -c $XRAY_CONFIG_FILE
 	fi
-	detect_running_status3 xray 23456 0 force
+	detect_running_status3 xray 23456 0
 }
 
 start_naive(){
@@ -3977,7 +3977,7 @@ start_hysteria2(){
 		env -i PATH=${PATH} QUIC_GO_DISABLE_ECN=true hysteria2 -c /koolshare/ss/hysteria2.yaml >/dev/null 2>&1 &
 	fi
 	#detect_running_status hysteria2
-	detect_running_status3 hysteria2 23456 0 force
+	detect_running_status3 hysteria2 23456 0
 }
 
 write_cron_job() {
@@ -4760,7 +4760,7 @@ detect_ip(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 
-	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|hysteria2")
+	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eo "v2ray|xray|naive|tuic|hysteria2" | head -n1)
 	if [ -n "${SOCKS5_OPEN}" ];then
 		echo_date "检测方式1：socks5"
 	else

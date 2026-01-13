@@ -200,7 +200,15 @@ run(){
 
 run5(){
 	if [ -x "/usr/bin/timeout" ]; then
-		env -i PATH=${PATH} /usr/bin/timeout -t 5 "$@"
+		env -i PATH=${PATH} /usr/bin/timeout -t 5 -s kill "$@"
+	else
+		env -i PATH=${PATH} "$@"
+	fi
+}
+
+run2(){
+	if [ -x "/usr/bin/timeout" ]; then
+		env -i PATH=${PATH} /usr/bin/timeout -t 2 -s kill "$@"
 	else
 		env -i PATH=${PATH} "$@"
 	fi
