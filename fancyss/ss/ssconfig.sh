@@ -1461,7 +1461,7 @@ start_chinadns_ng(){
 	set_default "ss_basic_chng_trust_dns_3_chk" "1"
 	set_default "ss_basic_chng_trust_net_1_typ" "tcp"
 	set_default "ss_basic_chng_trust_net_2_typ" "tcp"
-	set_default "ss_basic_chng_trust_net_3_typ" "tls"
+	set_default "ss_basic_chng_trust_net_3_typ" "dot"
 
 	set_default "ss_basic_chng_trust_udp_1_opt" "1.1.1.1"
 	set_default "ss_basic_chng_trust_udp_1_usr" "8.8.8.8:53"
