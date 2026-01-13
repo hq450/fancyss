@@ -90,21 +90,18 @@
 
 fancyss 3.0支持hnd、hnd_v8、qca、arm、mtk 、ipq32、ipq64七个平台，每个平台又有full版本和lite版本
 
-full版本为全功能版本，支持SS、 SSR、V2ray、 Xray、Trojan、NaïveProxy、TuicV5、Hysteria2 八种客户端，安装包体积较大
+full版本为全功能版本，支持SS、 SSR、Vmess、 Vless、Trojan、NaïveProxy、TuicV5、Hysteria2 八种协议，安装包体积较大
 
 1. full版本虽然支持tuic，但因作者已放弃项目，所以默认不自带tuic二进制
-2. full版本虽然支持kcptun，但不提供kcptun二进制，如果使用kcptun加速，会提示下载二进制
-3. full版本默认不提供udp2raw和udpspeeder二进制，如需要使用，会提示下载二进制
+2. full版本虽然支持naiveproxy，但不提供kcptun二进制，如果使用naiveproxy，会提示下载二进制
 
-lite版本为精简版本，支持SS、 SSR、 V2ray、 Xray、 Trojan 五种客户端，安装包小巧，以下为lite版本精简内容：
+lite版本为精简版本，支持SS、 SSR、 Vmess、 Vless、 Trojan 五种协议，安装包小巧，以下为lite版本精简内容：
 
 1. lite版本移除了NaïveProxy支持及其相关二进制文件：naive、ipt2socks
-3. lite版本移除了UDP加速功能及其二进制文件：speederv1、speederv2、udp2raw
-4. lite版本移除了KCP加速功能及其二进制文件：kcptun
-6. lite版本移除了直连解析的DNS方案及其二进制：chinadns1、chinadns2、https_dns_proxy
-7. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
-8. lite版本移除了shadowsocks-rust替换shadowsocks-libev功能，默认由shadowsocks-libev运行ss协议
-9. lite版本移除了socks5页面及其脚本及其acl规则文件
+2. lite版本移除了tuic支持
+3. lite版本移除了hysteria2支持
+4. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
+5. lite版本移除了v2ray二进制，默认用xray替代v2ray
 
 如果是不折腾以上被精简功能的用户，完全可以使用体积更小的lite版本
 
