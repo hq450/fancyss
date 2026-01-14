@@ -1,6 +1,15 @@
  fancyss Changelog
 ===========================================
-3.4.1 (to be release)
+3.4.2 (to be release)
+
+3.4.1 (20260114)
+   - fix	修复GFW黑名单模式下google相关域名无法访问的问题
+   - fix	修复lite版本fancyss无法编辑节点的问题
+   - fix	修复lite版本fancyss会订阅到hysteris2节点的问题
+   - fix	修复chinadns-ng未监听在本地ipv6网络的问题
+   - upate	修复部分机型因不支持timeout导致一些网络请求时间过长的问题
+   - upate	现在使用DNS方案[国内优先]和[国外优先]，会自动和代理模式匹配
+   - remove	移除一些shadowsocks-libev的历史遗留代码
 
 3.4.0 (20260114)
    - remove	移除旧版本中无用的xray/v2ray dns废弃代码
