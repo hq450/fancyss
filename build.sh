@@ -229,6 +229,16 @@ gen_folder(){
 		sed -i 's/\,\s\"naive_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"tuic_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_vcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_ai\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_server\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_port\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_pass\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_up\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_dl\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_obfs\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_obfs_pass\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/\,\s\"hy2_sni\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		# hysteria2
 		sed -i 's/\,\s\"ss_basic_hy2_up_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_hy2_dl_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp

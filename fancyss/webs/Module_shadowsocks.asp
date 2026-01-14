@@ -2476,6 +2476,7 @@ function edit_conf_table(o) {
 		if(c[params1_check[i]]){
 			E("ss_node_table_" + params1_check[i]).checked = c[params1_check[i]] == "1";
 		}else{
+			console.log(params1_check[i])
 			E("ss_node_table_" + params1_check[i]).checked = false;
 		}
 	}

@@ -1905,6 +1905,7 @@ get_online_rule_now(){
 	[ "${NODE_NU_TJ}" -gt "0" ] && echo_date "🟡trojan节点：${NODE_NU_TJ}个"
 	[ "${NODE_NU_H2}" -gt "0" ] && echo_date "🟤hysteria2节点：${NODE_NU_H2}个"
 	echo_date "-------------------------------------------------------------------"
+	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 
 	# 12. 开始解析并写入节点
 	while read node; do
@@ -1934,7 +1935,11 @@ get_online_rule_now(){
 			add_trojan_node "${node_info}" 1
 			;;
 		hysteria2)
-			add_hy2_node "${node_info}" 1
+			if [ "${pkg_type}" == "full" ];then
+				add_hy2_node "${node_info}" 1
+			else
+				echo_date "⛔Lite版本插件不支持${node_type}格式的节点，跳过！"
+			fi
 			;;
 		*)
 			if [ -n "${node_type}" ];then
