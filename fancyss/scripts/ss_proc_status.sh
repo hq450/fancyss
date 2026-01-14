@@ -64,11 +64,7 @@ GET_FW_VER(){
 GET_PROXY_TOOL(){
 	case "${ss_basic_type}" in
 	0)
-		if [ "${ss_basic_score}" != "1" ];then
-			echo "shadowsocks-rust"
-		else
-			echo "xray"
-		fi
+		echo "xray-core"
 		;;
 	1)
 		echo "shadowsocksR"
@@ -93,7 +89,7 @@ GET_PROXY_TOOL(){
 		echo "tuic"
 		;;
 	8)
-		echo "hysteria2"
+		echo "xray-core"
 		;;
 	esac
 }
@@ -208,27 +204,17 @@ GET_PROG_STAT(){
 	# proxy core program
 	if [ "${ss_basic_type}" == "0" ]; then
 		# ss
-		if [ "${ss_basic_score}" != "1" ]; then
-			local SS_RUST=$(ps | grep "sslocal" | grep "3333" | awk '{print $1}')
-			if [ -n "${SS_RUST}" ]; then
-				echo "sslocal		运行中🟢		透明代理		${SS_RUST}"
+		local XRAY=$(pidof xray)
+		if [ -n "${XRAY}" ];then
+			local xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
+			if [ -n "${xray_time}" ];then
+				echo "Xray		运行中🟢		透明代理		${XRAY}	工作时长: ${xray_time}"
 			else
-				echo "sslocal	未运行🔴		透明代理"
+				echo "Xray		运行中🟢		透明代理		${XRAY}"
 			fi
 		else
-			local XRAY=$(pidof xray)
-			if [ -n "${XRAY}" ];then
-				local xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
-				if [ -n "${xray_time}" ];then
-					echo "Xray		运行中🟢		透明代理		${XRAY}	工作时长: ${xray_time}"
-				else
-					echo "Xray		运行中🟢		透明代理		${XRAY}"
-				fi
-			else
-				echo "Xray	未运行🔴"
-			fi
+			echo "Xray	未运行🔴"
 		fi
-
 		local OBFS_SWITCH=$(dbus get ssconf_basic_ss_obfs_${ssconf_basic_node})
 		if [ -n "${OBFS_SWITCH}" -a "${OBFS_SWITCH}" != "0" ]; then
 			local SIMPLEOBFS=$(pidof obfs-local)
@@ -236,16 +222,6 @@ GET_PROG_STAT(){
 				echo "obfs-local	运行中🟢		混淆插件		${SIMPLEOBFS}"
 			else
 				echo "obfs-local	未运行🔴		混淆插件"
-			fi
-		fi
-		
-		local V2PL_SWITCH=$(dbus get ssconf_basic_ss_v2ray_${ssconf_basic_node})
-		if [ -n "${V2PL_SWITCH}" -a "${V2PL_SWITCH}" != "0" ]; then
-			local SS_V2RAY=$(pidof v2ray-plugin)
-			if [ -n "${SS_V2RAY}" ]; then
-				echo "v2ray-plugin	运行中🟢		混淆插件		${SS_V2RAY}"
-			else
-				echo "v2ray-plugin	未运行🔴		混淆插件"
 			fi
 		fi
 	elif [ "${ss_basic_type}" == "1" ]; then
@@ -278,7 +254,7 @@ GET_PROG_STAT(){
 				echo "v2ray		未运行🔴		透明代理"
 			fi
 		fi
-	elif [ "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" ]; then
+	elif [ "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" -o "${ss_basic_type}" == "8" ]; then
 		# xray
 		local XRAY=$(pidof xray)
 		if [ -n "${XRAY}" ];then
@@ -319,14 +295,6 @@ GET_PROG_STAT(){
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
-	elif [ "${ss_basic_type}" == "8" ]; then
-		# tuic
-		local HY2=$(pidof hysteria2)
-		if [ -n "${HY2}" ]; then
-			echo "hysteria2	运行中🟢		透明代理		${HY2}"
-		else
-			echo "hysteria2	未运行🔴		透明代理"
-		fi
 	fi
 
 	# DNS program
@@ -348,15 +316,6 @@ GET_PROG_STAT(){
 		fi
 	fi
 		
-	if [ "${ss_basic_server}" == "127.0.0.1" ]; then
-		local HAPROXY=$(pidof haproxy)
-		if [ -n "${HAPROXY}" ];then
-			echo "haproxy		运行中🟢		负载均衡		${HAPROXY}"
-		else
-			echo "haproxy		未运行🔴"
-		fi
-	fi
-	
 	if [ "${ss_basic_dns_server}" != "1" ];then
 		local DMQ=$(pidof dnsmasq)
 		if [ -n "${DMQ}" ];then
@@ -385,9 +344,6 @@ ECHO_VERSION(){
 	fi
 	if [ -x "/koolshare/bin/tuic-client" ];then
 		echo "tuic-client		$(run tuic-client -v|awk '{print $NF}')			https://github.com/EAimTY/tuic"
-	fi
-	if [ -x "/koolshare/bin/hysteria2" ];then
-		echo "hysteria2		$(run hysteria2 version|grep Version|head -n1|awk '{print $2}')			https://github.com/apernet/hysteria"
 	fi
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)

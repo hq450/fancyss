@@ -23,15 +23,6 @@ export PATH=${base_dir}/go/bin:$PATH
 go version
 echo "-----------------------------------------------------------------"
 
-# get upx
-if [ ! -x ${base_dir}/upx ];then
-	[ ! -f "upx-${UPX_VERSION}-amd64_linux.tar.xz" ] && wget https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz
-	tar xf upx-${UPX_VERSION}-amd64_linux.tar.xz
-	cp ${base_dir}/upx-${UPX_VERSION}-amd64_linux/upx ${base_dir}/
-fi
-${base_dir}/upx -V
-echo "-----------------------------------------------------------------"
-
 # get Xray-core
 if [ ! -d ${base_dir}/Xray-core ];then
 	echo "Clone v2fly/Xray-core repo..."
@@ -721,9 +712,13 @@ compress_binary(){
 	echo "-----------------------------------------------------------------"
 	ls -l ${base_dir}/${OUTTAG}/*
 	echo "-----------------------------------------------------------------"
-	${base_dir}/upx --lzma --ultra-brute ${base_dir}/${OUTTAG}/*
+	upx-5.0.2 --lzma --ultra-brute ${base_dir}/${OUTTAG}/xray_arm64
+	upx-5.0.2 --lzma --ultra-brute ${base_dir}/${OUTTAG}/xray_armv7
+	upx-4.2.4 --lzma --ultra-brute ${base_dir}/${OUTTAG}/xray_armv5
 
-	${base_dir}/upx -t ${base_dir}/${OUTTAG}/*
+	upx-5.0.2 -t ${base_dir}/${OUTTAG}/xray_arm64
+	upx-5.0.2 -t ${base_dir}/${OUTTAG}/xray_armv7
+	upx-4.2.4 -t ${base_dir}/${OUTTAG}/xray_armv5
 
 	cd ${base_dir}/${OUTTAG}/
 	md5sum * >md5sum.txt

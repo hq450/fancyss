@@ -1538,7 +1538,7 @@ add_hy2_node(){
 
 	hy2_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
 	hy2_obfs=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "obfs" | grep -v "obfs-password" | awk -F"=" '{print $2}')
-	if [ -z "${hy2_obfs}" ];then
+	if [ -z "${hy2_obfs}" -o "${hy2_obfs}" == "none" ];then
 		hy2_obfs="0"
 	fi
 	if [ "${hy2_obfs}" == "salamander" ];then
@@ -1745,7 +1745,7 @@ download_by_curl(){
 
 		# 下载失败，使用代理下载
 		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
-		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|hysteria2")
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
 			run5 curl-fancyss -4sSk -L --user-agent $UA -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
@@ -2017,11 +2017,7 @@ get_online_rule_now(){
 			add_trojan_node "${node_info}" 1
 			;;
 		hysteria2)
-			if [ "${pkg_type}" == "full" ];then
-				add_hy2_node "${node_info}" 1
-			else
-				echo_date "⛔Lite版本插件不支持${node_type}格式的节点，跳过！"
-			fi
+			add_hy2_node "${node_info}" 1
 			;;
 		*)
 			if [ -n "${node_type}" ];then

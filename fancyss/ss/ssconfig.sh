@@ -618,12 +618,17 @@ prepare_system() {
 	fi
 
 	# 11. set tcore (trojan core) name
-	TCORE_NAME=Xray
-	TROJAN_CONFIG_TEMP="/tmp/xray_tmp.json"
-	TROJAN_CONFIG_FILE="/koolshare/ss/xray.json"
-
 	if [ "${ss_basic_type}" == "5" ];then
 		echo_date "ℹ️使用Xray-core运行trojan协议节点..."
+		TROJAN_CONFIG_TEMP="/tmp/xray_tmp.json"
+		TROJAN_CONFIG_FILE="/koolshare/ss/xray.json"
+	fi
+
+	# 11. set hy2 core name
+	if [ "${ss_basic_type}" == "8" ];then
+		echo_date "ℹ️使用Xray-core运行hysteia2协议节点..."
+		HY2_CONFIG_TEMP="/tmp/xray_tmp.json"
+		HY2_CONFIG_FILE="/koolshare/ss/xray.json"
 	fi
 
 	if [ "${ss_basic_type}" == "0" ];then
@@ -696,35 +701,6 @@ get_wan0_cidr() {
 	else
 		echo ""
 	fi
-}
-
-__get_type_full_name() {
-	case "$1" in
-	0)
-		echo "xray"
-		;;
-	1)
-		echo "shadowsocksR-libev"
-		;;
-	3)
-		echo "${VCORE_NAME}"
-		;;
-	4)
-		echo "Xray"
-		;;
-	5)
-		echo "Trojan"
-		;;
-	6)
-		echo "NaïvePoroxy"
-		;;
-	7)
-		echo "tuic"
-		;;
-	8)
-		echo "hysteria2"
-		;;
-	esac
 }
 
 __get_type_abbr_name() {
@@ -995,10 +971,9 @@ restore_conf() {
 	remove_file /tmp/white_list.txt $?
 	remove_file /tmp/block_list.txt $?
 	remove_file /koolshare/ss/xray.json $?
+	remove_file /koolshare/ss/v2ray.json $?
 	remove_file /koolshare/ss/ssr.json $?
 	remove_file /koolshare/ss/tuic.json $?
-	remove_file /koolshare/ss/hysteria2.yaml $?
-	remove_file /koolshare/ss/hysteria2.yaml $?
 	if [ "$?" != "0" ];then
 		echo_date "删除fancyss相关的名单配置文件..."
 	fi
@@ -1083,12 +1058,6 @@ kill_process() {
 	if [ -n "${TUIC_PID}" ];then
 		echo_date "关闭tuic-client进程..."
 		killall tuic-client
-	fi
-
-	local HY2_PID=$(ps | grep "hysteria2" | grep -v grep | awk '{print $1}')
-	if [ -n "${HY2_PID}" ];then
-		echo_date "关闭hysteria2进程..."
-		killall hysteria2
 	fi
 
 	local OBFSLOCAL_PID=$(ps | grep "obfs-local" | grep -v grep | awk '{print $1}')
@@ -2246,6 +2215,14 @@ get_value_null(){
 	fi
 }
 
+get_value_speed(){
+	if [ -n "$1" ]; then
+		echo \"${1}mbps\"
+	else
+		echo null
+	fi
+}
+
 get_value_empty(){
 	if [ -n "$1" ]; then
 		echo \"$1\"
@@ -2703,29 +2680,9 @@ start_v2ray() {
 	fi
 	if [ "${ss_basic_vcore}" == "1" ];then
 		# xray start
-		if [ "${ss_basic_xguard}" == "1" ];then
-			echo_date "开启Xray主进程 + Xray守护..."
-			# use perp to start xray
-			mkdir -p /koolshare/perp/xray/
-			cat >/koolshare/perp/xray/rc.main <<-EOF
-				#!/bin/sh
-				source /koolshare/scripts/base.sh
-				CMD="xray run -c /koolshare/ss/xray.json"
-				
-				exec 2>&1
-				exec \$CMD
-				
-			EOF
-			chmod +x /koolshare/perp/xray/rc.main
-			chmod +t /koolshare/perp/xray/
-			sync
-			perpctl A xray >/dev/null 2>&1
-			perpctl u xray >/dev/null 2>&1
-		else
-			echo_date "开启Xray主进程..."
-			cd /koolshare/bin
-			run_bg xray run -c ${V2RAY_CONFIG_FILE}
-		fi
+		echo_date "开启Xray主进程..."
+		cd /koolshare/bin
+		run_bg xray run -c ${V2RAY_CONFIG_FILE}
 		detect_running_status3 xray 23456 0
 	else
 		# v2ray start
@@ -3209,7 +3166,6 @@ creat_xray_json() {
 		fi
 		run jq --tab . ${XRAY_CONFIG_TEMP} >${XRAY_CONFIG_FILE}
 		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
-
 	else
 		echo_date "使用自定义的Xray json配置文件..."
 		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_TEMP"
@@ -3366,29 +3322,9 @@ start_xray() {
 		fi
 	fi
 	# xray start
-	if [ "${ss_basic_xguard}" == "1" ];then
-		echo_date "开启Xray主进程 + Xray守护..."
-		# use perp to start xray
-		mkdir -p /koolshare/perp/xray/
-		cat >/koolshare/perp/xray/rc.main <<-EOF
-			#!/bin/sh
-			source /koolshare/scripts/base.sh
-			CMD="xray run -c /koolshare/ss/xray.json"
-			
-			exec 2>&1
-			exec \$CMD
-			
-		EOF
-		chmod +x /koolshare/perp/xray/rc.main
-		chmod +t /koolshare/perp/xray/
-		sync
-		perpctl A xray >/dev/null 2>&1
-		perpctl u xray >/dev/null 2>&1
-	else
-		echo_date "开启Xray主进程..."
-		cd /koolshare/bin
-		run_bg xray run -c $XRAY_CONFIG_FILE
-	fi
+	echo_date "开启Xray主进程..."
+	cd /koolshare/bin
+	run_bg xray run -c $XRAY_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
 
@@ -3462,12 +3398,12 @@ creat_trojan_json(){
 					"tlsSettings": {
 						"serverName": $(get_value_null ${ss_basic_trojan_sni}),
 						"allowInsecure": $(get_function_switch ${ss_basic_trojan_ai})
-    				}
-    				,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
-    			}
-  			}
-  		]
-  		}
+					}
+					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
+				}
+			}
+		]
+		}
 	EOF
 	echo_date "解析xray的trojan配置文件..."
 	if [ "${LINUX_VER}" == "26" ]; then
@@ -3489,37 +3425,169 @@ start_trojan(){
 	# tfo
 	if [ "${LINUX_VER}" != "26" ]; then
 		if [ "${ss_basic_trojan_tfo}" == "1" ]; then
-			echo_date ${TCORE_NAME}开启tcp fast open支持.
+			echo_date Trojan协议开启tcp fast open支持.
 			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 		else
 			echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 		fi
 	fi
-	if [ "${ss_basic_xguard}" == "1" ];then
-		echo_date "开启Xray主进程 + Xray守护，用以运行trojan协议节点..."
-		# use perp to start xray
-		mkdir -p /koolshare/perp/xray/
-		cat >/koolshare/perp/xray/rc.main <<-EOF
-			#!/bin/sh
-			source /koolshare/scripts/base.sh
-			CMD="xray run -c /koolshare/ss/xray.json"
-			
-			exec 2>&1
-			exec \$CMD
-			
-		EOF
-		chmod +x /koolshare/perp/xray/rc.main
-		chmod +t /koolshare/perp/xray/
-		sync
-		perpctl A xray >/dev/null 2>&1
-		perpctl u xray >/dev/null 2>&1
-	else
-		echo_date "开启Xray主进程，用以运行trojan协议节点..."
-		cd /koolshare/bin
-		run_bg xray run -c $XRAY_CONFIG_FILE
-	fi
+
+	echo_date "开启Xray主进程，用以运行trojan协议节点..."
+	cd /koolshare/bin
+	run_bg xray run -c $XRAY_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
+
+creat_hy2_json(){
+	# do not create json file on start
+	if [ -z "${WEB_ACTION}" ]; then
+		if [ -n "${WAN_ACTION}" ]; then
+			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+			return 0
+		fi
+		if [ -n "${NAT_ACTION}" ]; then
+			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+			return 0
+		fi
+	else
+		echo_date "创建xray的trojan配置文件到${TROJAN_CONFIG_FILE}"
+	fi
+
+	# hysteria2协议由xray来运行
+	rm -rf "${HY2_CONFIG_TEMP}"
+	rm -rf "${HY2_CONFIG_FILE}"
+	
+	# log area
+	cat >"${HY2_CONFIG_TEMP}" <<-EOF
+		{
+		"log": {
+			"access": "none",
+			"error": "/tmp/xray_log.txt",
+			"loglevel": "debug"
+		},
+	EOF
+	
+	# inbounds area (23456 for socks5)
+	cat >>"$HY2_CONFIG_TEMP" <<-EOF
+		"inbounds": [
+			{
+				"port": 23456,
+				"listen": "127.0.0.1",
+				"protocol": "socks",
+				"settings": {
+					"auth": "noauth",
+					"udp": true,
+					"ip": "127.0.0.1"
+				}
+			},
+			{
+				"listen": "0.0.0.0",
+				"port": 3333,
+				"protocol": "dokodemo-door",
+				"settings": {
+					"network": "tcp,udp",
+					"followRedirect": true
+				}
+			}
+		],
+	EOF
+
+	if [ -z "${ss_basic_hy2_sni}" ];then
+		__valid_ip_silent "${ss_basic_hy2_server}"
+		if [ "$?" != "0" ];then
+			# not ip, should be a domain
+			ss_basic_hy2_sni=${ss_basic_hy2_server}
+		else
+			ss_basic_hy2_sni=""
+		fi
+	else
+		ss_basic_hy2_sni="${ss_basic_hy2_sni}"
+	fi
+	
+	# outbounds area
+	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
+		"outbounds": [
+			{
+				"protocol": "hysteria",
+				"settings": {
+					"version": 2,
+					"address": "${ss_basic_server}",
+					"port": ${ss_basic_hy2_port}
+				},
+				"streamSettings": {
+					"network": "hysteria",
+					"hysteriaSettings": {
+						"version": 2,
+						"auth": $(get_value_null ${ss_basic_hy2_pass})
+						,"up": $(get_value_speed ${ss_basic_hy2_up})
+						,"down": $(get_value_speed ${ss_basic_hy2_dl})
+						,"auth": $(get_value_null ${ss_basic_hy2_pass})
+						,"udphop": {
+							"port": "",
+							"interval": 30
+						}
+					}
+					,"security": "tls"
+					,"tlsSettings": {
+						"serverName": "${ss_basic_hy2_sni}"
+						,"allowInsecure": $(get_function_switch ${ss_basic_hy2_ai})
+						,"alpn": ["h3"]
+					}
+					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_hy2_tfo})}
+	EOF
+
+	if [ "${ss_basic_hy2_obfs}" == "1" -a -n "${ss_basic_hy2_obfs_pass}" ];then
+		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
+						
+						,"udpmasks": [
+						{
+							"type": "salamander",
+							"settings": {
+								"password": "${ss_basic_hy2_obfs_pass}"
+							}
+						}]
+		EOF
+	fi
+					
+	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
+				}
+			}
+		]
+		}
+	EOF
+	echo_date "解析xray的hysteria2配置文件..."
+	if [ "${LINUX_VER}" == "26" ]; then
+		sed -i '/tcpFastOpen/d' ${HY2_CONFIG_TEMP} 2>/dev/null
+	fi
+	run jq --tab . ${HY2_CONFIG_TEMP} >/tmp/hy2_para_tmp.txt 2>&1
+	if [ "$?" != "0" ];then
+		echo_date "json配置解析错误，错误信息如下："
+		echo_date $(cat /tmp/hy2_para_tmp.txt) 
+		echo_date "请更正你的错误然后重试！！"
+		#rm -rf /tmp/hy2_para_tmp.txt
+		close_in_five flag
+	fi
+	run jq --tab . ${HY2_CONFIG_TEMP} >${HY2_CONFIG_FILE}
+	echo_date "解析成功！xray的hysteria2配置文件成功写入到${HY2_CONFIG_FILE}"
+}
+
+start_hy2(){
+	# tfo
+	if [ "${LINUX_VER}" != "26" ]; then
+		if [ "${ss_basic_hy2_tfo}" == "1" ]; then
+			echo_date "hysteria2协议开启tcp fast open支持"
+			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+		else
+			echo 1 >/proc/sys/net/ipv4/tcp_fastopen
+		fi
+	fi
+
+	echo_date "开启Xray主进程，用以运行hysteria2协议节点..."
+	cd /koolshare/bin
+	run_bg xray run -c $XRAY_CONFIG_FILE
+	detect_running_status3 xray 23456 0
+}
+
 
 start_naive(){
 	if [ -f "/koolshare/bin/naive" ];then
@@ -3638,79 +3706,6 @@ start_tuic(){
 	echo_date "开启tuic-client主进程..."
 	run_bg tuic-client -c /koolshare/ss/tuic.json
 	detect_running_status tuic-client
-}
-
-start_hysteria2(){
-	rm -rf /koolshare/ss/hysteria2.yaml 2>/dev/null
-
-	echo_date "生成hysteria2配置文件..."
-	if [ -z "${ss_basic_hy2_sni}" ];then
-		__valid_ip_silent "${ss_basic_hy2_server}"
-		if [ "$?" != "0" ];then
-			# not ip, should be a domain
-			ss_basic_hy2_sni=${ss_basic_hy2_server}
-		else
-			ss_basic_hy2_sni=""
-		fi
-	else
-		ss_basic_hy2_sni="${ss_basic_hy2_sni}"
-	fi
-	cat >> /koolshare/ss/hysteria2.yaml <<-EOF
-		server: ${ss_basic_server}:${ss_basic_hy2_port}
-		
-		auth: ${ss_basic_hy2_pass}
-
-		tls:
-		  sni: ${ss_basic_hy2_sni}
-		  insecure: $(get_function_switch ${ss_basic_hy2_ai})
-		
-		fastOpen: $(get_function_switch ${ss_basic_hy2_tfo})
-		
-	EOF
-	
-	if [ -n "${ss_basic_hy2_up}" -o -n "${ss_basic_hy2_dl}" ];then
-		cat >> /koolshare/ss/hysteria2.yaml <<-EOF
-			bandwidth: 
-			  up: ${ss_basic_hy2_up} mbps
-			  down: ${ss_basic_hy2_dl} mbps
-			
-		EOF
-	fi
-
-	if [ "${ss_basic_hy2_obfs}" == "1" -a -n "${ss_basic_hy2_obfs_pass}" ];then
-		cat >> /koolshare/ss/hysteria2.yaml <<-EOF
-			obfs:
-			  type: salamander
-			  salamander:
-			    password: ${ss_basic_hy2_obfs_pass}
-			
-		EOF
-	fi
-
-	cat >> /koolshare/ss/hysteria2.yaml <<-EOF
-		transport:
-		  udp:
-		    hopInterval: 30s
-		
-		socks5:
-		  listen: 127.0.0.1:23456
-		
-		tcpRedirect:
-		  listen: :3333
-		
-		udpTProxy:
-		  listen: :3333
-		  timeout: 20s
-	EOF
-
-	echo_date "开启hysteria2进程..."
-	if [ "${LINUX_VER}" == "419" -o "${LINUX_VER}" == "54" ];then
-		run_bg hysteria2 -c /koolshare/ss/hysteria2.yaml
-	else
-		env -i PATH=${PATH} QUIC_GO_DISABLE_ECN=true hysteria2 -c /koolshare/ss/hysteria2.yaml >/dev/null 2>&1 &
-	fi
-	#detect_running_status hysteria2
-	detect_running_status3 hysteria2 23456 0
 }
 
 write_cron_job() {
@@ -4486,7 +4481,7 @@ detect_ip(){
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
 		#echo_date "检测国外ip地址，检测地址：${SUBJECT}"
-		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|hysteria2")
+		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local IP=$(run5 curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
@@ -4501,7 +4496,7 @@ detect_ip(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 
-	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eo "v2ray|xray|naive|tuic|hysteria2" | head -n1)
+	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eo "v2ray|xray|naive|tuic" | head -n1)
 	if [ -n "${SOCKS5_OPEN}" ];then
 		echo_date "检测方式1：socks5"
 	else
@@ -4592,7 +4587,7 @@ check_status() {
 	run_bg dnsclient -t 5 -i 2 @127.0.0.1 stun.syncthing.net
 }
 
-	disable_ss() {
+disable_ss() {
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	# if [ "${ss_basic_status}" == "0" ];then
 	# 	return
@@ -4606,16 +4601,16 @@ check_status() {
 	kill_process
 	remove_ss_trigger_job
 	remove_ss_reboot_job
-		restore_conf
-		restart_dnsmasq
-		flush_iptables
-		kill_cron_job
-		rm -rf /tmp/upload/fancyss_node_name.txt
-		dbus set ss_basic_status="0"
-		echo_date ------------------------ 【科学上网】已关闭 ----------------------------
-	}
+	restore_conf
+	restart_dnsmasq
+	flush_iptables
+	kill_cron_job
+	rm -rf /tmp/upload/fancyss_node_name.txt
+	dbus set ss_basic_status="0"
+	echo_date ------------------------ 【科学上网】已关闭 ----------------------------
+}
 
-	apply_ss() {
+apply_ss() {
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	if [ "${ss_basic_status}" == "1" ];then
@@ -4624,12 +4619,12 @@ check_status() {
 		stop_status
 		kill_process
 		remove_ss_trigger_job
-			remove_ss_reboot_job
-			restore_conf
-			restart_dnsmasq
-			flush_iptables
-			kill_cron_job
-		fi
+		remove_ss_reboot_job
+		restore_conf
+		restart_dnsmasq
+		flush_iptables
+		kill_cron_job
+	fi
 	# pre-start
 	echo_date ------------------------- 启动【科学上网】 -----------------------------
 	# start
@@ -4645,6 +4640,7 @@ check_status() {
 	[ "${ss_basic_type}" == "3" ] && creat_v2ray_json
 	[ "${ss_basic_type}" == "4" ] && creat_xray_json
 	[ "${ss_basic_type}" == "5" ] && creat_trojan_json
+	[ "${ss_basic_type}" == "8" ] && creat_hy2_json
 	# 开启代理主程序
 	[ "${ss_basic_type}" == "0" ] && start_xray
 	[ "${ss_basic_type}" == "1" ] && start_ssr_redir
@@ -4653,7 +4649,7 @@ check_status() {
 	[ "${ss_basic_type}" == "5" ] && start_trojan
 	[ "${ss_basic_type}" == "6" ] && start_naive
 	[ "${ss_basic_type}" == "7" ] && start_tuic
-	[ "${ss_basic_type}" == "8" ] && start_hysteria2
+	[ "${ss_basic_type}" == "8" ] && start_hy2
 	get_proxy_server_ip
 	restart_dnsmasq
 	start_dns_x
@@ -4746,7 +4742,7 @@ restart)
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	unset_lock
 	;;
-	flush_nat)
+flush_nat)
 		set_lock
 		flush_iptables
 		unset_lock

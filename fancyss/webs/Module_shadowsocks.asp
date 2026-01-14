@@ -82,7 +82,7 @@ var option_bol = [["0", "false"], ["1", "true"]];
 var option_xflow = [["", "none"], ["xtls-rprx-vision", "xtls-rprx-vision"], ["xtls-rprx-origin", "xtls-rprx-origin"], ["xtls-rprx-origin-udp443", "xtls-rprx-origin-udp443"], ["xtls-rprx-direct", "xtls-rprx-direct"], ["xtls-rprx-direct-udp443", "xtls-rprx-direct-udp443"], ["xtls-rprx-splice", "xtls-rprx-splice"], ["xtls-rprx-splice-udp443", "xtls-rprx-splice-udp443"]];
 var option_fingerprint = ["chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized", ""];
 var option_naive_prot = ["https", "quic"];						//fancyss-full
-var option_hy2_obfs = [["0", "停用"], ["1", "salamander"]];		//fancyss-full
+var option_hy2_obfs = [["0", "停用"], ["1", "salamander"]];
 var stop_scroll = 0;
 var close_latency_flag = 0;
 var stopFlag = 1;
@@ -435,9 +435,9 @@ function save() {
 	  "ss_basic_wt_curl",
 	  "ss_basic_lt_cru_opts",
 	  "ss_basic_lt_cru_time",
-	  "ss_basic_hy2_up_speed",		 //fancyss-full
-	  "ss_basic_hy2_dl_speed",		 //fancyss-full
-	  "ss_basic_hy2_tfo_switch" 	 //fancyss-full
+	  "ss_basic_hy2_up_speed",
+	  "ss_basic_hy2_dl_speed",
+	  "ss_basic_hy2_tfo_switch"
 	];
 	var params_check = [
 	  "ss_failover_enable",
@@ -743,6 +743,7 @@ function save() {
 			return false;
 		}
 	}
+	// fancyss_full_2
 	// hysteria2
 	if (db_ss["ssconf_basic_type_" + node_sel] =="8" ){
 		var params_hy2_1 = ["mode", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni"];
@@ -752,7 +753,6 @@ function save() {
 		dbus["ssconf_basic_hy2_ai_" + node_sel] = E("ss_basic_hy2_ai").checked ? '1' : '';
 		dbus["ssconf_basic_hy2_tfo_" + node_sel] = E("ss_basic_hy2_tfo").checked ? '1' : '';
 	}
-	// fancyss_full_2
 	// show different title when subscribe
 	if(E("ss_basic_enable").checked){
 		var sel_mode = E("ss_basic_mode").value;
@@ -871,7 +871,7 @@ function verifyFields(r) {
 	var trojan_on = false;
 	var naive_on = false;	//fancyss-full
 	var tuic_on = false;	//fancyss-full
-	var hy2_on = false;		//fancyss-full
+	var hy2_on = false;
 	var node_type = db_ss["ssconf_basic_type_" + node_sel] || "0";
 	if (node_type == "0") {
 		// ss
@@ -882,7 +882,7 @@ function verifyFields(r) {
 		var trojan_on = false;
 		var naive_on = false;	//fancyss-full
 		var tuic_on = false;	//fancyss-full
-		var hy2_on = false;		//fancyss-full
+		var hy2_on = false;
 	}
 	else if (node_type == "1") {
 		// ssr
@@ -893,7 +893,7 @@ function verifyFields(r) {
 		var trojan_on = false;
 		var naive_on = false;	//fancyss-full
 		var tuic_on = false;	//fancyss-full
-		var hy2_on = false;		//fancyss-full
+		var hy2_on = false;
 	}
 	else if (node_type == "3") {
 		// v2ray
@@ -904,7 +904,7 @@ function verifyFields(r) {
 		var trojan_on = false;
 		var naive_on = false;	//fancyss-full
 		var tuic_on = false;	//fancyss-full
-		var hy2_on = false;		//fancyss-full
+		var hy2_on = false;
 	}
 	else if (node_type == "4") {
 		// xray
@@ -915,7 +915,7 @@ function verifyFields(r) {
 		var trojan_on = false;
 		var naive_on = false;	//fancyss-full
 		var tuic_on = false;	//fancyss-full
-		var hy2_on = false;		//fancyss-full
+		var hy2_on = false;
 	}
 	else if (node_type == "5") {
 		// trojan
@@ -953,7 +953,6 @@ function verifyFields(r) {
 		var hy2_on = false;
 	}
 	//fancyss_tuic_2
-	//fancyss_hy2_1
 	else if (node_type == "8") {
 		var ss_on = false;
 		var ssr_on = false;
@@ -964,7 +963,6 @@ function verifyFields(r) {
 		var tuic_on = false;
 		var hy2_on = true;
 	}
-	//fancyss_hy2_2
 	var v_json_on = E("ss_basic_v2ray_use_json").checked == true;
 	var v_json_off = E("ss_basic_v2ray_use_json").checked == false;
 	var v_http_on = E("ss_basic_v2ray_network").value == "tcp" && E("ss_basic_v2ray_headtype_tcp").value == "http";
@@ -1068,16 +1066,16 @@ function verifyFields(r) {
 	//tuic
 	elem.display(elem.parentElem('ss_basic_tuic_json', 'tr'), tuic_on);			//fancyss-full
 	//hy2
-	elem.display(elem.parentElem('ss_basic_hy2_server', 'tr'), hy2_on);			//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_port', 'tr'), hy2_on);			//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_pass', 'tr'), hy2_on);			//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_up', 'tr'), hy2_on);				//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_dl', 'tr'), hy2_on);				//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_obfs', 'tr'), hy2_on);			//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_obfs_pass', 'tr'), hy2_on && E("ss_basic_hy2_obfs").value != "0");		//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_sni', 'tr'), hy2_on);			//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_ai', 'tr'), hy2_on);				//fancyss-full
-	elem.display(elem.parentElem('ss_basic_hy2_tfo', 'tr'), hy2_on);			//fancyss-full
+	elem.display(elem.parentElem('ss_basic_hy2_server', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_port', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_pass', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_up', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_dl', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_obfs', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_obfs_pass', 'tr'), hy2_on && E("ss_basic_hy2_obfs").value != "0");
+	elem.display(elem.parentElem('ss_basic_hy2_sni', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_ai', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_tfo', 'tr'), hy2_on);
 	if (E("ss_basic_tjai").checked == true){
 		E("ss_basic_trojan_ai").disabled = true;
 		E("ss_basic_trojan_ai_note").innerHTML = "已全局跳过证书验证";
@@ -1236,11 +1234,9 @@ function verifyFields(r) {
 			}
 		}
 	}
-	//fancyss_hy2_1
 	if (save_flag == "hysteria2") {
 		showhide("hy2_obfs_pass_tr", $("#ss_node_table_hy2_obfs").val() != "0");
 	}
-	//fancyss_hy2_2
 	//fancyss_full_1
 	// 插件重启功能
 	var Ti = E("ss_reboot_check").value;
@@ -1266,7 +1262,7 @@ function verifyFields(r) {
 	// node sub pannel
 	if(E("ss_adv_sub").checked == false){
 		$("#ssr_subscribe_mode").parent().parent().hide();
-		$("#ss_basic_hy2_up_speed").parent().parent().hide();		//fancyss-full
+		$("#ss_basic_hy2_up_speed").parent().parent().hide();
 		$("#ss_basic_online_links_proxy").parent().parent().hide();
 		$("#ss_basic_node_update").parent().parent().hide();
 		$("#ss_basic_exclude").parent().parent().hide();
@@ -1275,7 +1271,7 @@ function verifyFields(r) {
 		$("#ss_sub_save_only").hide();
 	}else{
 		$("#ssr_subscribe_mode").parent().parent().show();
-		$("#ss_basic_hy2_up_speed").parent().parent().show();		//fancyss-full
+		$("#ss_basic_hy2_up_speed").parent().parent().show();
 		$("#ss_basic_online_links_proxy").parent().parent().show();
 		$("#ss_basic_node_update").parent().parent().show();
 		$("#ss_basic_exclude").parent().parent().show();
@@ -1449,8 +1445,8 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("ss_node_table_trojan_ai").checked = false;
 	E("ss_node_table_trojan_sni").value = "";
 	E("ss_node_table_trojan_tfo").checked = false;
-	E("ss_node_table_hy2_tfo").checked = false;			//fancyss-full
-	E("ss_node_table_hy2_ai").checked = true;			//fancyss-full
+	E("ss_node_table_hy2_tfo").checked = false;
+	E("ss_node_table_hy2_ai").checked = true;
 	E("ssTitle").style.display = "";
 	E("ssrTitle").style.display = "";
 	E("vmessTitle").style.display = "";
@@ -1458,7 +1454,7 @@ function Add_profile() { //点击节点页面内添加节点动作
 	E("trojanTitle").style.display = "";
 	E("naiveTitle").style.display = "";		//fancyss-full
 	E("tuicTitle").style.display = "";		//fancyss-full
-	E("hy2Title").style.display = "";		//fancyss-full
+	E("hy2Title").style.display = "";
 	E("add_node").style.display = "";
 	E("edit_node").style.display = "none";
 	E("continue_add").style.display = "";
@@ -1487,7 +1483,7 @@ function tabclickhandler(_type) {
 	E('trojanTitle').className = "vpnClientTitle_td_unclick";
 	E('naiveTitle').className = "vpnClientTitle_td_unclick";	//fancyss-full
 	E('tuicTitle').className = "vpnClientTitle_td_unclick";		//fancyss-full
-	E('hy2Title').className = "vpnClientTitle_td_unclick";		//fancyss-full
+	E('hy2Title').className = "vpnClientTitle_td_unclick";
 	if (_type == 0) {
 		save_flag = "shadowsocks";
 		E('ssTitle').className = "vpnClientTitle_td_click";
@@ -1556,7 +1552,7 @@ function tabclickhandler(_type) {
 		E("naive_user_tr").style.display = "none";		//fancyss-full
 		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();							//fancyss-full
+		$(".hy2_elem").hide();
 		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
 		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
 	}
@@ -1629,7 +1625,7 @@ function tabclickhandler(_type) {
 		E("naive_user_tr").style.display = "none";		//fancyss-full
 		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();							//fancyss-full
+		$(".hy2_elem").hide();
 	}
 	else if (_type == 3) {
 		save_flag = "v2ray";
@@ -1697,7 +1693,7 @@ function tabclickhandler(_type) {
 		E("naive_user_tr").style.display = "none";		//fancyss-full
 		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();							//fancyss-full
+		$(".hy2_elem").hide();
 		if(E("ss_node_table_v2ray_use_json").checked){
 			E('ss_server_support_tr').style.display = "none";
 			E('ss_port_support_tr').style.display = "none";
@@ -1833,7 +1829,7 @@ function tabclickhandler(_type) {
 		E("naive_user_tr").style.display = "none";		//fancyss-full
 		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();							//fancyss-full
+		$(".hy2_elem").hide();
 		if(E("ss_node_table_xray_use_json").checked){
 			E('ss_server_support_tr').style.display = "none";
 			E('ss_port_support_tr').style.display = "none";
@@ -1987,7 +1983,7 @@ function tabclickhandler(_type) {
 		E("naive_user_tr").style.display = "none";		//fancyss-full
 		E("naive_pass_tr").style.display = "none";		//fancyss-full
 		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();							//fancyss-full
+		$(".hy2_elem").hide();
 	}
 	//fancyss_naive_1
 	else if (_type == 6) {
@@ -2133,7 +2129,6 @@ function tabclickhandler(_type) {
 		$(".hy2_elem").hide();
 	}
 	//fancyss_tuic_2
-	//fancyss_hy2_1
 	else if (_type == 8) {
 		save_flag = "hysteria2";
 		E('hy2Title').className = "vpnClientTitle_td_click";
@@ -2205,7 +2200,6 @@ function tabclickhandler(_type) {
 		$(".hy2_elem").show();
 		showhide("hy2_obfs_pass_tr", E("ss_node_table_hy2_obfs").value == "1");
 	}
-	//fancyss_hy2_2
 	return save_flag;
 }
 function add_ss_node_conf(flag) {
@@ -2338,7 +2332,6 @@ function add_ss_node_conf(flag) {
 		ns[p + "_type_" + node_max] = "7";
 	}
 	//fancyss_tuic_2
-	//fancyss_hy2_1
 	else if (flag == 'hysteria2') {
 		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni"]; //hy2
 		for (var i = 0; i < params8.length; i++) {
@@ -2348,7 +2341,6 @@ function add_ss_node_conf(flag) {
 		ns[p + "_hy2_tfo_" + node_max] = E("ss_node_table_hy2_tfo").checked ? '1' : '';
 		ns[p + "_type_" + node_max] = "8";
 	}
-	//fancyss_hy2_2
 	//push data to add new node
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
@@ -2497,7 +2489,7 @@ function edit_conf_table(o) {
 		E("trojanTitle").style.display = "none";
 		E("naiveTitle").style.display = "none";		//fancyss-full
 		E("tuicTitle").style.display = "none";		//fancyss-full
-		E("hy2Title").style.display = "none";		//fancyss-full
+		E("hy2Title").style.display = "none";
 		$("#ssTitle").html("编辑ss节点");
 		tabclickhandler(0);		
 	}
@@ -2509,7 +2501,7 @@ function edit_conf_table(o) {
 		E("trojanTitle").style.display = "none";
 		E("naiveTitle").style.display = "none";		//fancyss-full
 		E("tuicTitle").style.display = "none";		//fancyss-full
-		E("hy2Title").style.display = "none";		//fancyss-full
+		E("hy2Title").style.display = "none";
 		$("#ssrTitle").html("编辑SSR节点");
 		tabclickhandler(1);		
 	}
@@ -2521,7 +2513,7 @@ function edit_conf_table(o) {
 		E("trojanTitle").style.display = "none";
 		E("naiveTitle").style.display = "none";		//fancyss-full
 		E("tuicTitle").style.display = "none";		//fancyss-full
-		E("hy2Title").style.display = "none";		//fancyss-full
+		E("hy2Title").style.display = "none";
 		$("#vmessTitle").html("编辑V2Ray账号");
 		tabclickhandler(3);
 	}
@@ -2533,7 +2525,7 @@ function edit_conf_table(o) {
 		E("trojanTitle").style.display = "none";
 		E("naiveTitle").style.display = "none";		//fancyss-full
 		E("tuicTitle").style.display = "none";		//fancyss-full
-		E("hy2Title").style.display = "none";		//fancyss-full
+		E("hy2Title").style.display = "none";
 		$("#vlessTitle").html("编辑Xray账号");
 		tabclickhandler(4);
 	}
@@ -2545,7 +2537,7 @@ function edit_conf_table(o) {
 		E("trojanTitle").style.display = "";
 		E("naiveTitle").style.display = "none";		//fancyss-full
 		E("tuicTitle").style.display = "none";		//fancyss-full
-		E("hy2Title").style.display = "none";		//fancyss-full
+		E("hy2Title").style.display = "none";
 		$("#trojanTitle").html("编辑trojan账号");
 		tabclickhandler(5);
 	}
@@ -2577,7 +2569,6 @@ function edit_conf_table(o) {
 		tabclickhandler(7);
 	}
 	//fancyss_tuic_2
-	//fancyss_hy2_1
 	else if(c["type"] == "8"){
 		E("ssTitle").style.display = "none";
 		E("ssrTitle").style.display = "none";
@@ -2590,7 +2581,6 @@ function edit_conf_table(o) {
 		$("#hy2Title").html("编辑hysteria2账号");
 		tabclickhandler(8);
 	}
-	//fancyss_hy2_2
 	show_add_node_panel();
 	$("#cancel_Btn").css("margin-left", "10px");
 	$('#add_fancyss_node_title').html("修改节点");
@@ -2723,7 +2713,6 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_type_" + edit_id] = "7";
 	}
 	//fancyss_tuic_2
-	//fancyss_hy2_1
 	else if (flag == 'hysteria2') {
 		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni"]; //hy2
 		for (var i = 0; i < params8.length; i++) {
@@ -2733,7 +2722,6 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_hy2_tfo_" + edit_id] = E("ss_node_table_hy2_tfo").checked ? "1" : "";
 		ns[p + "_type_" + edit_id] = "8";
 	}
-	//fancyss_hy2_2
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
 	$.ajax({
@@ -2772,14 +2760,14 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_naive_user").value = "";		//fancyss-full
 			E("ss_node_table_naive_pass").value = "";		//fancyss-full
 			E("ss_node_table_tuic_json").value = "";		//fancyss-full
-			E("ss_node_table_hy2_server").value = "";		//fancyss-full
-			E("ss_node_table_hy2_port").value = "";			//fancyss-full
-			E("ss_node_table_hy2_pass").value = "";			//fancyss-full
-			E("ss_node_table_hy2_tfo").value = "";			//fancyss-full
-			E("ss_node_table_hy2_obfs").value = "0";		//fancyss-full
-			E("ss_node_table_hy2_obfs_pass").value = "";	//fancyss-full
-			E("ss_node_table_hy2_sni").value = "";			//fancyss-full
-			E("ss_node_table_hy2_ai").checked = true;		//fancyss-full
+			E("ss_node_table_hy2_server").value = "";
+			E("ss_node_table_hy2_port").value = "";
+			E("ss_node_table_hy2_pass").value = "";
+			E("ss_node_table_hy2_tfo").value = "";
+			E("ss_node_table_hy2_obfs").value = "0";
+			E("ss_node_table_hy2_obfs_pass").value = "";
+			E("ss_node_table_hy2_sni").value = "";
+			E("ss_node_table_hy2_ai").checked = true;
 			// refresh panel
 			refresh_node_panel();
 		}
@@ -3112,17 +3100,22 @@ function refresh_html() {
 		html += '</td>';
 		if(noserver != "1"){
 			//server
-			if(c["type"] == 6){																						//fancyss-full
+			if(c["type"] == 8)
+			{
+				html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';
+				html += '<div style="display: none;" class="shadow2"></div>';
+				html += '<div class="server">' + c["hy2_server"] + '</div>';
+				html += '</td>';
+			}
+			else if(c["type"] == 6)																					//fancyss-full
+			{																										//fancyss-full
 				html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';	//fancyss-full
 				html += '<div style="display: none;" class="shadow2"></div>';										//fancyss-full
 				html += '<div class="server">' + c["naive_server"] + '</div>';										//fancyss-full
 				html += '</td>';																					//fancyss-full
-			}else if(c["type"] == 8){																				//fancyss-full
-				html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';	//fancyss-full
-				html += '<div style="display: none;" class="shadow2"></div>';										//fancyss-full
-				html += '<div class="server">' + c["hy2_server"] + '</div>';										//fancyss-full
-				html += '</td>';																					//fancyss-full
-			}else{ 																									//fancyss-full
+			}																										//fancyss-full
+			else
+			{
 				if(E("ss_basic_qrcode").checked){
 					html += '<td style="width:' + width[3] + ';cursor:pointer" class="node_server" id="server_' + c["node"] + '" title="' + c["server"] + '" onclick="makeQRcode(this)">';
 				}else{
@@ -3131,7 +3124,7 @@ function refresh_html() {
 				html += '<div style="display: none;" class="shadow2"></div>';
 				html += '<div class="server">' + c["server"] + '</div>';
 				html += '</td>';
-			}																										//fancyss-full
+			}
 		}
 		//节点类型
 		html +='<td style="width:' + width[4] + ';">';
@@ -3170,9 +3163,9 @@ function refresh_html() {
 			case '7' :														//fancyss-full
 				html +='tuic';												//fancyss-full
 				break;														//fancyss-full
-			case '8' :														//fancyss-full
-				html +='hy2';											//fancyss-full
-				break;														//fancyss-full
+			case '8' :
+				html +='hy2';
+				break;
 		}
 		
 		html +='</td>';
@@ -5175,9 +5168,9 @@ function save_online_nodes(action) {
 		dbus_post["ss_basic_exclude"] = E("ss_basic_exclude").value.replace(pattern,"") || "";
 		dbus_post["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 		dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
-		dbus_post["ss_basic_hy2_up_speed"] = E("ss_basic_hy2_up_speed").value;			//fancyss-full
-		dbus_post["ss_basic_hy2_dl_speed"] = E("ss_basic_hy2_dl_speed").value;			//fancyss-full
-		dbus_post["ss_basic_hy2_tfo_switch"] = E("ss_basic_hy2_tfo_switch").value;		//fancyss-full
+		dbus_post["ss_basic_hy2_up_speed"] = E("ss_basic_hy2_up_speed").value;
+		dbus_post["ss_basic_hy2_dl_speed"] = E("ss_basic_hy2_dl_speed").value;
+		dbus_post["ss_basic_hy2_tfo_switch"] = E("ss_basic_hy2_tfo_switch").value;
 	}
 
 	if(ws_flag == 1){
@@ -5468,7 +5461,7 @@ function restart_chinadns() {
 														、<a href="https://github.com/klzgrad/naiveproxy" target="_blank"><em><u>NaïveProxy</u></em></a>	<!--fancyss-full-->
 														、<a href="https://github.com/EAimTY/tuic" target="_blank"><em><u>tuic</u></em></a>    				<!--fancyss-full-->
 														、<a href="https://github.com/apernet/hysteria" target="_blank"><em><u>Hysteria2</u></em></a>    	<!--fancyss-full-->
-														八种客户端的科学上网工具。
+														八种协议的科学上网工具。
 														<a href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw" target="_blank"><em>Telegram交流群</em></a>
 													</li>
 												</ul>
@@ -5640,7 +5633,7 @@ function restart_chinadns() {
 														  			<td width="12.5%" align="center" id="trojanTitle" onclick="tabclickhandler(5);">Trojan节点</td>
 														  			<td width="12.5%" align="center" id="naiveTitle" onclick="tabclickhandler(6);">Naïve节点</td>		<!--fancyss-full-->
 														  			<td width="12.5%" align="center" id="tuicTitle" onclick="tabclickhandler(7);">tuic节点</td>		<!--fancyss-full-->
-														  			<td width="12.5%" align="center" id="hy2Title" onclick="tabclickhandler(8);">hysteria2节点</td>	<!--fancyss-full-->
+														  			<td width="12.5%" align="center" id="hy2Title" onclick="tabclickhandler(8);">hysteria2节点</td>
 																	</tr>
 																</table>
 															</div>
@@ -5735,16 +5728,16 @@ function restart_chinadns() {
 																		// tuic
 																		{ title: 'tuic client json', rid:'tuic_json_tr', id:'ss_node_table_tuic_json', type:'textarea', rows:'18', ph:ph_tuic, style:'width:400px'},												//fancyss-full
 																		// hy2
-																		{ title: '服务器', rid:'hy2_server_tr', id:'ss_node_table_hy2_server', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},															//fancyss-full
-																		{ title: '端口', rid:'hy2_port_tr', id:'ss_node_table_hy2_port', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: "443"},													//fancyss-full
-																		{ title: '认证密码', rid:'hy2_pass_tr', id:'ss_node_table_hy2_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},															//fancyss-full
-																		{ title: '最大上行（Mbps）', rid:'hy2_up_tr', id:'ss_node_table_hy2_up', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},											//fancyss-full
-																		{ title: '最大下行（Mbps）', rid:'hy2_dl_tr', id:'ss_node_table_hy2_dl', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},											//fancyss-full
-																		{ title: 'tcp fast open', rid:'hy2_tfo_tr', id:'ss_node_table_hy2_tfo', type:'checkbox', class:'hy2_elem', value: "false"},																				//fancyss-full
-																		{ title: '混淆类型', rid:'hy2_obfs_tr', id:'ss_node_table_hy2_obfs', type:'select', class:'hy2_elem', func:'v', options:option_hy2_obfs, maxlen:'300', style:'width:412px', value: "0"},			//fancyss-full
-																		{ title: '混淆密码', rid:'hy2_obfs_pass_tr', id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},													//fancyss-full
-																		{ title: 'SNI（域名）', rid:'hy2_sni_tr', id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},															//fancyss-full
-																		{ title: '允许不安全', rid:'hy2_ai_tr', id:'ss_node_table_hy2_ai', type:'checkbox', class:'hy2_elem', value: "false"},																				//fancyss-full
+																		{ title: '服务器', rid:'hy2_server_tr', id:'ss_node_table_hy2_server', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: '端口', rid:'hy2_port_tr', id:'ss_node_table_hy2_port', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: "443"},
+																		{ title: '认证密码', rid:'hy2_pass_tr', id:'ss_node_table_hy2_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: '最大上行（Mbps）', rid:'hy2_up_tr', id:'ss_node_table_hy2_up', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},
+																		{ title: '最大下行（Mbps）', rid:'hy2_dl_tr', id:'ss_node_table_hy2_dl', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},
+																		{ title: 'tcp fast open', rid:'hy2_tfo_tr', id:'ss_node_table_hy2_tfo', type:'checkbox', class:'hy2_elem', value: "false"},
+																		{ title: '混淆类型', rid:'hy2_obfs_tr', id:'ss_node_table_hy2_obfs', type:'select', class:'hy2_elem', func:'v', options:option_hy2_obfs, maxlen:'300', style:'width:412px', value: "0"},
+																		{ title: '混淆密码', rid:'hy2_obfs_pass_tr', id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: 'SNI（域名）', rid:'hy2_sni_tr', id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: '允许不安全', rid:'hy2_ai_tr', id:'ss_node_table_hy2_ai', type:'checkbox', class:'hy2_elem', value: "false"},
 																	]);
 																</script>
 																</table>

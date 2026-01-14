@@ -40,7 +40,7 @@ sync_binary(){
 	done
 
 	# update to latest binary
-	BINS_COPY="xray v2ray hysteria2"
+	BINS_COPY="xray v2ray"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
@@ -50,10 +50,6 @@ sync_binary(){
 
 		if [ "${BIN}" == "xray" ];then
 			local VERSION_FLAG="latest_2.txt"
-		fi
-
-		if [ "${BIN}" == "hysteria2" ];then
-			local VERSION_FLAG="latest_mini2.txt"
 		fi
 
 		local version=$(cat ${CURR_PATH}/binaries/${BIN}/${VERSION_FLAG})
@@ -122,8 +118,8 @@ gen_folder(){
 		mv ./shadowsocks/bin-arm ./shadowsocks/bin
 		echo arm > ./shadowsocks/.valid
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_mcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i '/ss_basic_mcore/d' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i '/ss_basic_tfo/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"arm\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "mtk" ];then
@@ -196,7 +192,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/tuic-client
 		rm -rf ./shadowsocks/bin/ipt2socks
 		rm -rf ./shadowsocks/bin/haveged
-		rm -rf ./shadowsocks/bin/hysteria2
 
 		if [ "${platform}" == "hnd" -o "${platform}" == "ipq32" ];then
 			rm -rf ./shadowsocks/bin/websocketd
@@ -218,7 +213,6 @@ gen_folder(){
 		sed -i '/fancyss_full_1/,/fancyss_full_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_naive_1/,/fancyss_naive_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_tuic_1/,/fancyss_tuic_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i '/fancyss_hy2_1/,/fancyss_hy2_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		# remove strings from page
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
@@ -229,28 +223,13 @@ gen_folder(){
 		sed -i 's/\,\s\"naive_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"tuic_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_vcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_ai\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_tfo\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_server\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_port\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_pass\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_up\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_dl\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_obfs\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_obfs_pass\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"hy2_sni\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		# hysteria2
-		sed -i 's/\,\s\"ss_basic_hy2_up_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_hy2_dl_speed\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"ss_basic_hy2_tfo_switch\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		# modify words
 		# trojan 用xray运行，所以trojan多核心功能删除
 		sed -i 's/ss\/ssr\/trojan/ss\/ssr/g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/八种客户端/五种客户端/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/八种协议/六种协议/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/科学上网工具/科学上网、游戏加速工具/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/14\.286/20/g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\s\&\&\s\!\snaive_on//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/八种客户端/五种客户端/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/shadowsocks_2/shadowsocks_lite_2/g' ./shadowsocks/res/ss-menu.js
 		sed -i 's/config\.json\.js/config_lite\.json\.js/g' ./shadowsocks/res/ss-menu.js
 	fi

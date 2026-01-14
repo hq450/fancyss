@@ -1,3 +1,3 @@
 d23ceab141c13183abf2a6128880769a  xray_arm64
-a75ae069ab1962e68495d09265d1f0f2  xray_armv5
+3fdf87aad2384947ecaa4f84495ab8aa  xray_armv5
 5daa9dd333713f2fa48a3340092b12b8  xray_armv7
