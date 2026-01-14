@@ -177,20 +177,102 @@ run(){
 	env -i PATH=${PATH} "$@"
 }
 
-run5(){
-	if [ -x "/usr/bin/timeout" ]; then
-		env -i PATH=${PATH} /usr/bin/timeout -t 5 -s kill "$@"
-	else
-		env -i PATH=${PATH} "$@"
+__timeout_init() {
+	# Determine best available timeout implementation:
+	# 1) system timeout (GNU/coreutils or BusyBox applet)
+	# 2) busybox timeout applet (no symlink)
+	# 3) shell fallback (sleep + kill + wait)
+	__TIMEOUT_CMD=""
+	__TIMEOUT_STYLE=""
+
+	if command -v timeout >/dev/null 2>&1; then
+		__TIMEOUT_CMD="timeout"
+	elif command -v busybox >/dev/null 2>&1; then
+		# Some firmwares ship timeout applet without /bin/timeout symlink
+		if busybox timeout --help >/dev/null 2>&1; then
+			__TIMEOUT_CMD="busybox timeout"
+		fi
+	fi
+
+	if [ -n "${__TIMEOUT_CMD}" ]; then
+		# Prefer GNU/coreutils style: timeout DURATION CMD...
+		# BusyBox (newer) is compatible; older BusyBox uses: timeout -t SECONDS -s SIG CMD...
+		if env -i PATH=${PATH} ${__TIMEOUT_CMD} 1 sh -c ":" >/dev/null 2>&1; then
+			__TIMEOUT_STYLE="gnu"
+		elif env -i PATH=${PATH} ${__TIMEOUT_CMD} -t 1 -s KILL sh -c ":" >/dev/null 2>&1; then
+			__TIMEOUT_STYLE="bb"
+		else
+			__TIMEOUT_CMD=""
+			__TIMEOUT_STYLE=""
+		fi
 	fi
 }
 
-run2(){
-	if [ -x "/usr/bin/timeout" ]; then
-		env -i PATH=${PATH} /usr/bin/timeout -t 2 -s kill "$@"
-	else
-		env -i PATH=${PATH} "$@"
+__timeout_run() {
+	# Usage: __timeout_run <seconds> <cmd...>
+	# Returns 124 on timeout (GNU timeout convention).
+	local _t="$1"
+	shift
+
+	[ -z "${1}" ] && return 127
+
+	if [ -z "${__TIMEOUT_STYLE}" -a -z "${__TIMEOUT_CMD}" ]; then
+		__timeout_init
 	fi
+
+	if [ -n "${__TIMEOUT_CMD}" -a "${__TIMEOUT_STYLE}" = "gnu" ]; then
+		env -i PATH=${PATH} ${__TIMEOUT_CMD} "${_t}" "$@"
+		return $?
+	elif [ -n "${__TIMEOUT_CMD}" -a "${__TIMEOUT_STYLE}" = "bb" ]; then
+		env -i PATH=${PATH} ${__TIMEOUT_CMD} -t "${_t}" -s KILL "$@"
+		return $?
+	fi
+
+	# Shell fallback: run command in background, kill it if still running after _t seconds.
+	# Try to isolate process group via setsid when available.
+	local _cmd_pid _timer_pid _rc _timer_rc _kill_target
+	if command -v setsid >/dev/null 2>&1; then
+		env -i PATH=${PATH} setsid "$@" &
+		_cmd_pid=$!
+		_kill_target="-${_cmd_pid}"
+	else
+		env -i PATH=${PATH} "$@" &
+		_cmd_pid=$!
+		_kill_target="${_cmd_pid}"
+	fi
+
+	(
+		sleep "${_t}"
+		if kill -0 "${_cmd_pid}" >/dev/null 2>&1; then
+			kill -TERM ${_kill_target} >/dev/null 2>&1
+			sleep 1
+			kill -KILL ${_kill_target} >/dev/null 2>&1
+			exit 124
+		fi
+		exit 0
+	) &
+	_timer_pid=$!
+
+	wait "${_cmd_pid}"
+	_rc=$?
+
+	# Stop timer early if command finished before timeout.
+	if kill -0 "${_timer_pid}" >/dev/null 2>&1; then
+		kill "${_timer_pid}" >/dev/null 2>&1
+	fi
+	wait "${_timer_pid}" >/dev/null 2>&1
+	_timer_rc=$?
+
+	[ "${_timer_rc}" = "124" ] && return 124
+	return "${_rc}"
+}
+
+run5(){
+	__timeout_run 5 "$@"
+}
+
+run2(){
+	__timeout_run 2 "$@"
 }
 
 run_bg(){
