@@ -141,11 +141,6 @@ fi
 
 ss_basic_server_orig=${ss_basic_server}
 
-if [ ! -x "/koolshare/bin/v2ray" ];then
-	# 没有v2ray二进制，v2ray节点由xray来运行
-	ss_basic_vcore=1
-fi
-
 # trojan 全局允许不安全
 if [ "${ss_basic_type}" == "5" -a "${ss_basic_tjai}" == "1" ];then
 	ss_basic_trojan_ai=1

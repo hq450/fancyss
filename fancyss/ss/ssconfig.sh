@@ -510,7 +510,7 @@ prepare_system() {
 	# 3. internet detect
 	check_internet
 
-	# 4. 检测路由器时间是否正确
+	# 4. 检测路由器时间是否正确，只有vmess协议节点需要检测时间正确否
 	if [ "${ss_basic_type}" == "3" ];then
 		if [ "${ss_basic_v2ray_use_json}" == "0" ];then
 			check_time
@@ -530,12 +530,12 @@ prepare_system() {
 			fi
 		fi
 	fi
+	
 	# 检测路由器公网出口IPV4地址
 	if [ "${ss_basic_nochnipcheck}" != "1" ];then
 		check_chn_public_ip
-	#else
-		#echo_date "跳过国内公网出口ip检测..."
 	fi
+	
 	# 6. set_ulimit
 	ulimit -n 16384
 
@@ -565,56 +565,22 @@ prepare_system() {
 		nvram commit
 	fi
 
-	# 10. set vcore (v2ray_core) name
-	XRAY_CONFIG_TEMP="/tmp/xray_tmp.json"
-	XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 
-	# 目前选填框支持的协议都可以跑，但是用户json定义的协议有些不支持，需要检测一下
+	if [ "${ss_basic_type}" == "0" ];then
+		echo_date "ℹ️使用Xray-core运行ss协议节点..."
+	fi
 
 	
-	# 当使用v2ray的时候，要看看用户用的什么出站协议和传输协议
-	# 为了控制二进制体积，v2ray被裁剪构建了，只支持vmess出站协议，且vmess里还不支持最新的一些比如httpupgrade, meek等协议
 	if [ "${ss_basic_type}" == "3" ];then
-		if [ "${ss_basic_vcore}" == "1" ];then
-			echo_date "ℹ️使用Xray-core替换V2ray-core..."
-			VCORE_NAME=Xray
-			V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
-			V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
-		else
-			if [ "${ss_basic_v2ray_use_json}" == "1" ];then
-				local _ret_vmess=$(echo "$ss_basic_v2ray_json" | base64_decode | grep protocol | grep -Eo "vmess")
-				if [ -z "${_ret_vmess}" ];then
-					# 如果用户自定义v2ray json用了vmess以外的协议，则切换到xray-core
-					echo_date "ℹ️检测到你使用v2ray运行非vmess协议，但本插件v2ray仅支持vmess..."
-					echo_date "ℹ️使用Xray-core替换V2ray-core..."
-					VCORE_NAME=Xray
-					V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
-					V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
-				else
-					# 如果用户自定义v2ray json用了vmess协议，但是传输层用了被拆件掉的协议，仍然切换为xray-core
-					local _ret_trans=$(echo "$ss_basic_v2ray_json" | base64_decode | grep network | grep -Eo "httpupgrade")
-					if [ -n "${_ret_trans}" ];then
-						echo_date "ℹ️v2ray不支持当前传输协议，可能是因为该协议被裁剪了..."
-						echo_date "ℹ️使用Xray-core替换V2ray-core..."
-						VCORE_NAME=Xray
-						V2RAY_CONFIG_TEMP="/tmp/xray_tmp.json"
-						V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
-					else
-						echo_date "ℹ️使用V2ray-core..."
-						VCORE_NAME=V2ray
-						V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
-						V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
-					fi
-				fi
-			else
-				# 非json摸下默认的是vmess协议，只需要判断传输层协议是否支持
-				# 不过前端表单中给出的应该都是支持的，所以不需要担心
-				echo_date "ℹ️使用V2ray-core..."
-				VCORE_NAME=V2ray
-				V2RAY_CONFIG_TEMP="/tmp/v2ray_tmp.json"
-				V2RAY_CONFIG_FILE="/koolshare/ss/v2ray.json"
-			fi
-		fi
+		echo_date "ℹ️使用Xray-core替换V2ray-core..."
+		VCORE_NAME=Xray
+		VMESS_CONFIG_TEMP="/tmp/xray_tmp.json"
+		VMESS_CONFIG_FILE="/koolshare/ss/xray.json"
+	fi
+
+	if [ "${ss_basic_type}" == "4" ];then
+		VLESS_CONFIG_TEMP="/tmp/xray_tmp.json"
+		VLESS_CONFIG_FILE="/koolshare/ss/xray.json"
 	fi
 
 	# 11. set tcore (trojan core) name
@@ -631,11 +597,6 @@ prepare_system() {
 		HY2_CONFIG_FILE="/koolshare/ss/xray.json"
 	fi
 
-	if [ "${ss_basic_type}" == "0" ];then
-		SCORE_NAME=Xray
-		echo_date "ℹ️使用Xray-core运行ss协议节点..."
-	fi
-
 	if [ "${ss_basic_type}" == "6" -a "${ss_basic_mode}" == "3" ];then
 		echo_date "NaïveProxy不支持udp代理，因此不支持游戏模式，自动切换为大陆白名单模式！"
 		ss_basic_mode="2"
@@ -643,10 +604,10 @@ prepare_system() {
 		dbus set ssconf_basic_mode_${ssconf_basic_node}="2"
 	fi
 
-	if [ "${ss_basic_type}" == "6" -a "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "1" ]; then
+	if [ "${ss_basic_type}" == "6" -a "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "udp" ]; then
 		echo_date "[可信DNS-1]: NaïveProxy不支持udp代理，将可信DNS-1自动切换为tcp协议！"
-		ss_basic_chng_trust_net_1_typ=2
-		dbus set ss_basic_chng_trust_net_1_typ=2
+		ss_basic_chng_trust_net_1_typ="tcp"
+		dbus set ss_basic_chng_trust_net_1_typ="tcp"
 	fi
 
 	# 把当前节点名写入文件，下次启动进行对比就知道是否更换了节点
@@ -706,16 +667,16 @@ get_wan0_cidr() {
 __get_type_abbr_name() {
 	case "${ss_basic_type}" in
 	0)
-		echo "xray"
+		echo "SS"
 		;;
 	1)
-		echo "ssr"
+		echo "SSR"
 		;;
 	3)
-		echo "${VCORE_NAME}"
+		echo "Vless"
 		;;
 	4)
-		echo "Xray"
+		echo "Vmess"
 		;;
 	5)
 		echo "Trojan"
@@ -724,10 +685,10 @@ __get_type_abbr_name() {
 		echo "Naïve"
 		;;
 	7)
-		echo "tuic"
+		echo "Tuic"
 		;;
 	8)
-		echo "hysteria2"
+		echo "Hysteria2"
 		;;
 	esac
 }
@@ -2231,7 +2192,7 @@ get_value_empty(){
 	fi
 }
 
-creat_v2ray_json() {
+creat_vmess_json() {
 	if [ -z "{WEB_ACTION}" ]; then
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
@@ -2242,13 +2203,13 @@ creat_v2ray_json() {
 			return 0
 		fi
 	else
-		echo_date "创建$(__get_type_abbr_name)配置文件到${V2RAY_CONFIG_FILE}"
+		echo_date "创建$(__get_type_abbr_name)配置文件到${VMESS_CONFIG_FILE}"
 	fi
 	
-	rm -rf "${V2RAY_CONFIG_TEMP}"
-	rm -rf "${V2RAY_CONFIG_FILE}"
+	rm -rf "${VMESS_CONFIG_TEMP}"
+	rm -rf "${VMESS_CONFIG_FILE}"
 	if [ "${ss_basic_v2ray_use_json}" != "1" ]; then
-		echo_date 生成${VCORE_NAME}配置文件...
+		echo_date 生成vmess协议配置文件...
 		local tcp="null"
 		local kcp="null"
 		local ws="null"
@@ -2410,7 +2371,7 @@ creat_v2ray_json() {
 			;;
 		esac
 		# log area
-		cat >"${V2RAY_CONFIG_TEMP}" <<-EOF
+		cat >"${VMESS_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
 				"access": "none",
@@ -2419,7 +2380,7 @@ creat_v2ray_json() {
 			},
 		EOF
 		# inbounds area (23456 for socks5)
-		cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
+		cat >>"$VMESS_CONFIG_TEMP" <<-EOF
 			"inbounds": [
 				{
 					"port": 23456,
@@ -2443,7 +2404,7 @@ creat_v2ray_json() {
 			],
 		EOF
 		# outbounds area
-		cat >>"$V2RAY_CONFIG_TEMP" <<-EOF
+		cat >>"$VMESS_CONFIG_TEMP" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
@@ -2482,9 +2443,9 @@ creat_v2ray_json() {
 			]
 			}
 		EOF
-		echo_date 解析${VCORE_NAME}配置文件...
-		sed -i '/null/d' ${V2RAY_CONFIG_TEMP} 2>/dev/null
-		run jq --tab . ${V2RAY_CONFIG_TEMP} >/tmp/jq_para_tmp.txt 2>&1
+		echo_date "解析vmess协议配置文件..."
+		sed -i '/null/d' ${VMESS_CONFIG_TEMP} 2>/dev/null
+		run jq --tab . ${VMESS_CONFIG_TEMP} >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -2492,22 +2453,22 @@ creat_v2ray_json() {
 			rm -rf /tmp/jq_para_tmp.txt
 			close_in_five flag
 		fi
-		run jq --tab . $V2RAY_CONFIG_TEMP >"$V2RAY_CONFIG_FILE"
-		echo_date ${VCORE_NAME}配置文件写入成功到"$V2RAY_CONFIG_FILE"
+		run jq --tab . $VMESS_CONFIG_TEMP >"${VMESS_CONFIG_FILE}"
+		echo_date "$vmess协议配置文件写入成功到${VMESS_CONFIG_FILE}"
 	else
 		echo_date "使用自定义的${VCORE_NAME} json配置文件..."
-		echo "$ss_basic_v2ray_json" | base64_decode >"$V2RAY_CONFIG_TEMP"
-		local OB=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbound)
-		local OBS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbounds)
+		echo "$ss_basic_v2ray_json" | base64_decode >"$VMESS_CONFIG_TEMP"
+		local OB=$(cat "$VMESS_CONFIG_TEMP" | run jq .outbound)
+		local OBS=$(cat "$VMESS_CONFIG_TEMP" | run jq .outbounds)
 
 		# 兼容旧格式：outbound
 		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbound)
+			OUTBOUNDS=$(cat "$VMESS_CONFIG_TEMP" | run jq .outbound)
 		fi
 		
 		# 新格式：outbound[]
 		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat "$V2RAY_CONFIG_TEMP" | run jq .outbounds[0])
+			OUTBOUNDS=$(cat "$VMESS_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
 		local TEMPLATE="{
 							\"log\": {
@@ -2540,8 +2501,8 @@ creat_v2ray_json() {
 							]
 						}"
 		echo_date "解析${VCORE_NAME}配置文件..."
-		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$V2RAY_CONFIG_FILE"
-		echo_date "${VCORE_NAME}配置文件写入成功到$V2RAY_CONFIG_FILE"
+		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$VMESS_CONFIG_FILE"
+		echo_date "${VCORE_NAME}配置文件写入成功到$VMESS_CONFIG_FILE"
 
 		# 检查v2ray json是否配置了xtls，如果是，则自动切换为xray
 		if [ -f "/koolshare/ss/v2ray.json" ];then
@@ -2551,21 +2512,21 @@ creat_v2ray_json() {
 				ss_basic_vcore=1
 				VCORE_NAME=Xray
 				mv /koolshare/ss/v2ray.json /koolshare/ss/xray.json 
-				V2RAY_CONFIG_FILE="/koolshare/ss/xray.json"
+				VMESS_CONFIG_FILE="/koolshare/ss/xray.json"
 			fi
 		fi
 
 		# 检测用户json的服务器ip地址
-		v2ray_protocal=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].protocol)
+		v2ray_protocal=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].protocol)
 		case $v2ray_protocal in
 		vmess|vless)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].settings.vnext[0].address)
+			v2ray_server=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
+			v2ray_server=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		shadowsocks)
-			v2ray_server=$(cat "$V2RAY_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
+			v2ray_server=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			v2ray_server=""
@@ -2622,7 +2583,7 @@ creat_v2ray_json() {
 	if [ "${ss_basic_vcore}" == "1" ];then
 		# test v2ray Configuration generated from user json then run by xray
 		echo_date "测试${VCORE_NAME}配置文件...."
-		test_xray_conf $V2RAY_CONFIG_FILE
+		test_xray_conf $VMESS_CONFIG_FILE
 		case $? in
 		0)
 			echo_date "测试结果：${_test_ret}"
@@ -2631,8 +2592,8 @@ creat_v2ray_json() {
 		2)
 			echo_date "测试结果：${_test_ret}"
 			echo_date "${VCORE_NAME}配置文件没有通过测试，尝试删除fingerprint配置后重试！"
-			run jq 'del(.. | .fingerprint?)' $V2RAY_CONFIG_FILE | run sponge $V2RAY_CONFIG_FILE
-			test_xray_conf $V2RAY_CONFIG_FILE
+			run jq 'del(.. | .fingerprint?)' $VMESS_CONFIG_FILE | run sponge $VMESS_CONFIG_FILE
+			test_xray_conf $VMESS_CONFIG_FILE
 			case $? in
 			0)
 				echo_date "测试结果：${_test_ret}"
@@ -2641,8 +2602,8 @@ creat_v2ray_json() {
 			*)
 				echo_date "测试结果：${_test_ret}"
 				echo_date "${VCORE_NAME}配置文件没有通过测试，请检查设置!!!"
-				rm -rf "$V2RAY_CONFIG_TEMP"
-				rm -rf "$V2RAY_CONFIG_FILE"
+				rm -rf "$VMESS_CONFIG_TEMP"
+				rm -rf "$VMESS_CONFIG_FILE"
 				close_in_five flag
 				;;
 			esac
@@ -2650,23 +2611,23 @@ creat_v2ray_json() {
 		*)
 			echo_date "测试结果：${_test_ret}"
 			echo_date "${VCORE_NAME}配置文件没有通过测试，请检查设置!!!"
-			rm -rf "$V2RAY_CONFIG_TEMP"
-			rm -rf "$V2RAY_CONFIG_FILE"
+			rm -rf "$VMESS_CONFIG_TEMP"
+			rm -rf "$VMESS_CONFIG_FILE"
 			close_in_five flag
 			;;
 		esac
 	else
 		echo_date "测试${VCORE_NAME}配置文件...."
 		cd /koolshare/bin
-		#result=$(v2ray -test -config="$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
-		result=$(run v2ray test -c "$V2RAY_CONFIG_FILE" | grep "Configuration OK.")
+		#result=$(v2ray -test -config="$VMESS_CONFIG_FILE" | grep "Configuration OK.")
+		result=$(run v2ray test -c "$VMESS_CONFIG_FILE" | grep "Configuration OK.")
 		if [ -n "$result" ]; then
 			echo_date $result
 			echo_date "${VCORE_NAME}配置文件通过测试!!!"
 		else
 			echo_date "${VCORE_NAME}配置文件没有通过测试，请检查设置!!!"
-			rm -rf "$V2RAY_CONFIG_TEMP"
-			rm -rf "$V2RAY_CONFIG_FILE"
+			rm -rf "$VMESS_CONFIG_TEMP"
+			rm -rf "$VMESS_CONFIG_FILE"
 			close_in_five flag
 		fi
 	fi
@@ -2682,15 +2643,15 @@ start_v2ray() {
 		# xray start
 		echo_date "开启Xray主进程..."
 		cd /koolshare/bin
-		run_bg xray run -c ${V2RAY_CONFIG_FILE}
+		run_bg xray run -c ${VMESS_CONFIG_FILE}
 		detect_running_status3 xray 23456 0
 	else
 		# v2ray start
 		echo_date "开启V2ray主进程..."
 		cd /koolshare/bin
-		#run_bg v2ray --config=${V2RAY_CONFIG_FILE}
-		run_bg v2ray run -c ${V2RAY_CONFIG_FILE}
-		detect_running_status2 v2ray ${V2RAY_CONFIG_FILE}
+		#run_bg v2ray --config=${VMESS_CONFIG_FILE}
+		run_bg v2ray run -c ${VMESS_CONFIG_FILE}
+		detect_running_status2 v2ray ${VMESS_CONFIG_FILE}
 	fi
 }
 
@@ -2706,11 +2667,11 @@ creat_xray_ss_json() {
 			return 0
 		fi
 	else
-		echo_date "创建$(__get_type_abbr_name)节点配置文件到${XRAY_CONFIG_FILE}"
+		echo_date "创建$(__get_type_abbr_name)节点配置文件到${VLESS_CONFIG_FILE}"
 	fi
 
 	# log area
-	cat >"${XRAY_CONFIG_TEMP}" <<-EOF
+	cat >"${VLESS_CONFIG_TEMP}" <<-EOF
 		{
 		"log": {
 			"access": "none",
@@ -2720,7 +2681,7 @@ creat_xray_ss_json() {
 	EOF
 	
 	# inbounds area (23456 for socks5)
-	cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+	cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 		"inbounds": [
 			{
 				"port": 23456,
@@ -2763,7 +2724,7 @@ creat_xray_ss_json() {
 		fi
 		detect_running_status obfs-local /var/run/obfs_local.pid
 		# gen xray outbound
-		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
@@ -2793,7 +2754,7 @@ creat_xray_ss_json() {
 		EOF
 	else
 		# gen xray outbound
-		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
@@ -2824,11 +2785,11 @@ creat_xray_ss_json() {
 	fi
 	
 	echo_date "解析Xray配置文件..."
-	sed -i '/null/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+	sed -i '/null/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 	if [ "${LINUX_VER}" == "26" ]; then
-		sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		sed -i '/tcpFastOpen/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 	fi
-	run jq --tab . $XRAY_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
+	run jq --tab . $VLESS_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
 	if [ "$?" != "0" ];then
 		echo_date "json配置解析错误，错误信息如下："
 		echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -2836,11 +2797,11 @@ creat_xray_ss_json() {
 		rm -rf /tmp/jq_para_tmp.txt
 		close_in_five flag
 	fi
-	run jq --tab . ${XRAY_CONFIG_TEMP} >${XRAY_CONFIG_FILE}
-	echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
+	run jq --tab . ${VLESS_CONFIG_TEMP} >${VLESS_CONFIG_FILE}
+	echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
 }
 
-creat_xray_json() {
+creat_vless_json() {
 	if [ -z "{WEB_ACTION}" ]; then
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
@@ -2851,12 +2812,12 @@ creat_xray_json() {
 			return 0
 		fi
 	else
-		echo_date "创建$(__get_type_abbr_name)节点配置文件到${XRAY_CONFIG_FILE}"
+		echo_date "创建$(__get_type_abbr_name)节点配置文件到${VLESS_CONFIG_FILE}"
 	fi
 
 	local tmp xray_server_ip
-	rm -rf "${XRAY_CONFIG_TEMP}"
-	rm -rf "${XRAY_CONFIG_FILE}"
+	rm -rf "${VLESS_CONFIG_TEMP}"
+	rm -rf "${VLESS_CONFIG_FILE}"
 	if [ "${ss_basic_xray_use_json}" != "1" ]; then
 		echo_date "生成Xray配置文件..."
 		local tcp="null"
@@ -3066,7 +3027,7 @@ creat_xray_json() {
 			;;
 		esac
 		# log area
-		cat >"${XRAY_CONFIG_TEMP}" <<-EOF
+		cat >"${VLESS_CONFIG_TEMP}" <<-EOF
 			{
 			"log": {
 				"access": "none",
@@ -3075,7 +3036,7 @@ creat_xray_json() {
 			},
 		EOF
 		# inbounds area (23456 for socks5)
-		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 			"inbounds": [
 				{
 					"port": 23456,
@@ -3102,7 +3063,7 @@ creat_xray_json() {
 		# outbounds area
 		[ -z "${ss_basic_xray_alterid}" ] && ss_basic_xray_alterid="0"
 		[ -z "${ss_basic_xray_prot}" ] && ss_basic_xray_prot="vless"
-		cat >>"${XRAY_CONFIG_TEMP}" <<-EOF
+		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
 				{
 					"tag": "proxy",
@@ -3149,14 +3110,14 @@ creat_xray_json() {
 			}
 		EOF
 		echo_date "解析Xray配置文件..."
-		sed -i '/null/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+		sed -i '/null/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 		if [ "${ss_basic_xray_prot}" == "vless" ];then
-			sed -i '/alterId/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+			sed -i '/alterId/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 		fi
 		if [ "${LINUX_VER}" == "26" ]; then
-			sed -i '/tcpFastOpen/d' ${XRAY_CONFIG_TEMP} 2>/dev/null
+			sed -i '/tcpFastOpen/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 		fi
-		run jq --tab . $XRAY_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
+		run jq --tab . $VLESS_CONFIG_TEMP >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
 			echo_date $(cat /tmp/jq_para_tmp.txt) 
@@ -3164,22 +3125,22 @@ creat_xray_json() {
 			rm -rf /tmp/jq_para_tmp.txt
 			close_in_five flag
 		fi
-		run jq --tab . ${XRAY_CONFIG_TEMP} >${XRAY_CONFIG_FILE}
-		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
+		run jq --tab . ${VLESS_CONFIG_TEMP} >${VLESS_CONFIG_FILE}
+		echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
 	else
 		echo_date "使用自定义的Xray json配置文件..."
-		echo "$ss_basic_xray_json" | base64_decode >"$XRAY_CONFIG_TEMP"
-		local OB=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbound)
-		local OBS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbounds)
+		echo "$ss_basic_xray_json" | base64_decode >"$VLESS_CONFIG_TEMP"
+		local OB=$(cat "$VLESS_CONFIG_TEMP" | run jq .outbound)
+		local OBS=$(cat "$VLESS_CONFIG_TEMP" | run jq .outbounds)
 
 		# 兼容旧格式：outbound
 		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbound)
+			OUTBOUNDS=$(cat "$VLESS_CONFIG_TEMP" | run jq .outbound)
 		fi
 		
 		# 新格式：outbound[]
 		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat "$XRAY_CONFIG_TEMP" | run jq .outbounds[0])
+			OUTBOUNDS=$(cat "$VLESS_CONFIG_TEMP" | run jq .outbounds[0])
 		fi
 		local TEMPLATE="{
 							\"log\": {
@@ -3213,17 +3174,17 @@ creat_xray_json() {
 						}"
 		
 		echo_date "解析Xray配置文件..."
-		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${XRAY_CONFIG_FILE}"
-		echo_date "Xray配置文件写入成功到${XRAY_CONFIG_FILE}"
+		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${VLESS_CONFIG_FILE}"
+		echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
 
 		# 检测用户json的服务器ip地址
-		xray_protocal=$(cat "${XRAY_CONFIG_FILE}" | run jq -r .outbounds[0].protocol)
+		xray_protocal=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].protocol)
 		case ${xray_protocal} in
 		vmess|vless)
-			xray_server=$(cat "${XRAY_CONFIG_FILE}" | run jq -r .outbounds[0].settings.vnext[0].address)
+			xray_server=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].settings.vnext[0].address)
 			;;
 		socks|shadowsocks|trojan)
-			xray_server=$(cat "${XRAY_CONFIG_FILE}" | run jq -r .outbounds[0].settings.servers[0].address)
+			xray_server=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].settings.servers[0].address)
 			;;
 		*)
 			xray_server=""
@@ -3276,7 +3237,7 @@ creat_xray_json() {
 	fi
 	
 	# test xray Configuration run by xray
-	test_xray_conf $XRAY_CONFIG_FILE
+	test_xray_conf $VLESS_CONFIG_FILE
 	case $? in
 	0)
 		echo_date "测试结果：${_test_ret}"
@@ -3285,8 +3246,8 @@ creat_xray_json() {
 	2)
 		#echo_date "测试结果：${_test_ret}"
 		echo_date "Xray配置文件没有通过测试，尝试删除fingerprint配置后重试！"
-		run jq 'del(.. | .fingerprint?)' $XRAY_CONFIG_FILE | run sponge $XRAY_CONFIG_FILE
-		test_xray_conf $XRAY_CONFIG_FILE
+		run jq 'del(.. | .fingerprint?)' $VLESS_CONFIG_FILE | run sponge $VLESS_CONFIG_FILE
+		test_xray_conf $VLESS_CONFIG_FILE
 		case $? in
 		0)
 			echo_date "测试结果：${_test_ret}"
@@ -3295,8 +3256,8 @@ creat_xray_json() {
 		*)
 			echo_date "测试结果：${_test_ret}"
 			echo_date "Xray配置文件没有通过测试，请检查设置!!!"
-			rm -rf "$XRAY_CONFIG_TEMP"
-			rm -rf "$XRAY_CONFIG_FILE"
+			rm -rf "$VLESS_CONFIG_TEMP"
+			rm -rf "$VLESS_CONFIG_FILE"
 			close_in_five flag
 			;;
 		esac
@@ -3304,8 +3265,8 @@ creat_xray_json() {
 	*)
 		echo_date "测试结果：${_test_ret}"
 		echo_date "Xray配置文件没有通过测试，请检查设置!!!"
-		rm -rf "$XRAY_CONFIG_TEMP"
-		rm -rf "$XRAY_CONFIG_FILE"
+		rm -rf "$VLESS_CONFIG_TEMP"
+		rm -rf "$VLESS_CONFIG_FILE"
 		close_in_five flag
 		;;
 	esac
@@ -3324,7 +3285,7 @@ start_xray() {
 	# xray start
 	echo_date "开启Xray主进程..."
 	cd /koolshare/bin
-	run_bg xray run -c $XRAY_CONFIG_FILE
+	run_bg xray run -c $VLESS_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
 
@@ -3434,7 +3395,7 @@ start_trojan(){
 
 	echo_date "开启Xray主进程，用以运行trojan协议节点..."
 	cd /koolshare/bin
-	run_bg xray run -c $XRAY_CONFIG_FILE
+	run_bg xray run -c $VLESS_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
 
@@ -3584,7 +3545,7 @@ start_hy2(){
 
 	echo_date "开启Xray主进程，用以运行hysteria2协议节点..."
 	cd /koolshare/bin
-	run_bg xray run -c $XRAY_CONFIG_FILE
+	run_bg xray run -c $VLESS_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
 
@@ -4637,8 +4598,8 @@ apply_ss() {
 	# 生成代理主程序配置
 	[ "${ss_basic_type}" == "0" ] && creat_xray_ss_json
 	[ "${ss_basic_type}" == "1" ] && creat_ssr_json
-	[ "${ss_basic_type}" == "3" ] && creat_v2ray_json
-	[ "${ss_basic_type}" == "4" ] && creat_xray_json
+	[ "${ss_basic_type}" == "3" ] && creat_vmess_json
+	[ "${ss_basic_type}" == "4" ] && creat_vless_json
 	[ "${ss_basic_type}" == "5" ] && creat_trojan_json
 	[ "${ss_basic_type}" == "8" ] && creat_hy2_json
 	# 开启代理主程序

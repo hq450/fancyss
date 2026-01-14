@@ -1,6 +1,11 @@
  fancyss Changelog
 ===========================================
 3.4.3 (to be release)
+   - note	全面拥抱xray-core，现在在出站协议上，v2ray仅独有vlite出站（还需要配置目前没几个人用的V5 json）
+       		其它的vmess、vless、trojan、shadowsocks、socks、http、freedom、blackhole、dns、hysteria2，xray都有，xray还独有wireguard
+       		底层传输上，xray还独有splithttp（xhttp实现，底层实现对应splithttp）和reality，其它底层传输虽有差异，但xray-core都有
+       		因此虽然xray-core现在无法做到v2ray的超集，但是多数情况下都能替代v2ray使用！
+       		所以，本插件现阶段会全面拥抱xray，删除v2ray二进制还可以节约6MB多空间！这为未来可能上singbox内核做好了准备！
 
 3.4.2 (20260115)
    - note	此版本的一个已知问题，hy2节点落地延迟测试会失败（后面会针对落地延迟测试集中修改，这次先不改了，改了也是临时版本）

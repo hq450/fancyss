@@ -728,7 +728,6 @@ install_now(){
 	rm -rf /koolshare/bin/kcptun
 	rm -rf /koolshare/bin/chinadns-ng
 	rm -rf /koolshare/bin/xray
-	rm -rf /koolshare/bin/v2ray
 	rm -rf /koolshare/bin/curl-fancyss
 	rm -rf /koolshare/bin/hysteria2
 	rm -rf /koolshare/bin/haveged
@@ -772,6 +771,7 @@ install_now(){
 	fi
 	
 	# legacy files should be removed
+	rm -rf /koolshare/bin/v2ray
 	rm -rf /koolshare/bin/uredir
 	rm -rf /koolshare/bin/dns-ecs-forcer
 	rm -rf /koolshare/bin/dns2tcp
@@ -1014,12 +1014,6 @@ install_now(){
 	else
 		dbus set ss_basic_score=0
 		ss_basic_score=0
-	fi
-	# lite
-	if [ ! -x "/koolshare/bin/v2ray" ];then
-		dbus set ss_basic_vcore=1
-	else
-		dbus set ss_basic_vcore=0
 	fi
 
 	# dbus value

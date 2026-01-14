@@ -26,27 +26,24 @@ cp_rules(){
 }
 
 sync_binary(){
-	BINS_REMOVE="v2ray-plugin kcptun naive ss_rust"
-	for BIN_REMOVE in $BINS_REMOVE;
-	do
-		echo ">>> remove old bin $BIN_REMOVE"
-		rm -rf ${CURR_PATH}/fancyss/bin-mtk/${BIN_REMOVE}
-		rm -rf ${CURR_PATH}/fancyss/bin-hnd_v8/${BIN_REMOVE}
-		rm -rf ${CURR_PATH}/fancyss/bin-hnd/${BIN_REMOVE}
-		rm -rf ${CURR_PATH}/fancyss/bin-qca/${BIN_REMOVE}
-		rm -rf ${CURR_PATH}/fancyss/bin-arm/${BIN_REMOVE}
-		rm -rf ${CURR_PATH}/fancyss/bin-ipq32/${BIN_REMOVE}
-		rm -rf ${CURR_PATH}/fancyss/bin-ipq64/${BIN_REMOVE}
-	done
+	# BINS_REMOVE="naive"
+	# for BIN_REMOVE in $BINS_REMOVE;
+	# do
+	# 	echo ">>> remove old bin $BIN_REMOVE"
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-mtk/${BIN_REMOVE}
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-hnd_v8/${BIN_REMOVE}
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-hnd/${BIN_REMOVE}
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-qca/${BIN_REMOVE}
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-arm/${BIN_REMOVE}
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-ipq32/${BIN_REMOVE}
+	# 	rm -rf ${CURR_PATH}/fancyss/bin-ipq64/${BIN_REMOVE}
+	# done
 
 	# update to latest binary
-	BINS_COPY="xray v2ray"
+	BINS_COPY="xray naive"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
-		if [ "${BIN}" == "v2ray" ];then
-			local VERSION_FLAG="latest_v5.txt"
-		fi
 
 		if [ "${BIN}" == "xray" ];then
 			local VERSION_FLAG="latest_2.txt"
@@ -170,8 +167,8 @@ gen_folder(){
 	fi
 	
 	# remove some binary because it's not default provide by install packages
-	find ./shadowsocks/bin -name "tuic-client" | xargs rm -rf
-	find ./shadowsocks/bin -name "naive" | xargs rm -rf
+	# find ./shadowsocks/bin -name "tuic-client" | xargs rm -rf
+	# find ./shadowsocks/bin -name "naive" | xargs rm -rf
 
 	# wirte type string
 	if [ "${release_type}" != "debug" ];then
@@ -187,7 +184,6 @@ gen_folder(){
 		sed -i 's/#@//g' ./shadowsocks/scripts/ss_conf.sh
 	elif [ "${pkgtype}" == "lite" ];then
 		# remove binaries
-		rm -rf ./shadowsocks/bin/v2ray
 		rm -rf ./shadowsocks/bin/naive
 		rm -rf ./shadowsocks/bin/tuic-client
 		rm -rf ./shadowsocks/bin/ipt2socks
@@ -198,7 +194,6 @@ gen_folder(){
 		fi
 		# remove scripts
 		rm -rf ./shadowsocks/scripts/ss_v2ray.sh
-		rm -rf ./shadowsocks/scripts/ss_udp_status.sh
 		# remove rules
 		rm -rf ./shadowsocks/ss/rules/chn.acl
 		rm -rf ./shadowsocks/ss/rules/gfwlist.acl
