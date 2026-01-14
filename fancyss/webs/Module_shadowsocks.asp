@@ -6426,7 +6426,7 @@ function restart_chinadns() {
 												<table id="table_subscribe" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 													<script type="text/javascript">
 														var option_noded = [["0", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["7", "周日"]];
-														var option_hy2_tfo = [["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]];							//fancyss-full
+														var option_hy2_tfo = [["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]];
 														var option_nodeh = [];
 														for (var i = 0; i < 24; i++){
 															var _tmp = [];
