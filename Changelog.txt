@@ -1,7 +1,18 @@
  fancyss Changelog
 ===========================================
-3.4.2 (to be release)
+3.4.3 (to be release)
 
+3.4.2 (20260115)
+   - note	此版本的一个已知问题，hy2节点落地延迟测试会失败（后面会针对落地延迟测试集中修改，这次先不改了，改了也是临时版本）
+   - fix	修复fancyss_arm_lite 页面bug无法提交保存的问题
+   - fix	修复fancyss_arm [full|lite] xray chinadns-ng smartdns无法运行得问题
+   - upate	xray二进制更新到 26.1.13
+   - uadd	现在所有lite版fancyss支持hysteria2协议了！(插件包体积几乎不变)
+   - upate	由于新版xray支持hyseria2入栈，现在hysteria2节点由xray运行
+   - upate	移除hyseria2二进制，插件包进一步缩小！
+   - fix	修复hysteria2节点订阅时，混淆类型可能无值的情况
+   - upate	详细状态页面生成脚本移除一些历史遗留代码
+   
 3.4.1 (20260114)
    - fix	修复GFW黑名单模式下google相关域名无法访问的问题
    - fix	修复lite版本fancyss无法编辑节点的问题
