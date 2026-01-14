@@ -1154,73 +1154,6 @@ resolv_server_ip() {
 	fi
 }
 
-ss_arg() {
-	if [ "${ss_basic_type}" != "0" ];then
-		return
-	fi
-
-	if [ "${ss_basic_type}" == "0" -a "${ss_basic_score}" == "1" ];then
-		return
-	fi
-
-	if [ "${ss_basic_ss_v2ray}" == "1" ]; then
-		if [ "${ss_basic_ss_obfs}" == "http" -o "${ss_basic_ss_obfs}" == "tls" ]; then
-			echo_date "检测到你同时开启了obfs-local和v2ray-plugin！。"
-			echo_date "ss协议只能支持开启一个混淆插件！"
-			echo_date "请更正设置后重试！"
-			close_in_five flag
-		fi
-
-		# 从3.3.2开始，v2ray-plugin不在默认提供，需要用户自行下载
-		if [ -f "/koolshare/bin/v2ray-plugin" ];then
-			chmod +x /koolshare/bin/v2ray-plugin
-			local ret=$(run /koolshare/bin/v2ray-plugin -version 2>&1)
-			if [ -z "${ret}" ];then
-				echo_date "检测到/koolshare/bin/目录下存在v2ray-plugin文件，但是无法运行！"
-				echo_date "请确保你下载了正确的二进制文件！"
-				close_in_five flag
-			fi
-		else
-			echo_date ""
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date ""
-			echo_date "重要提醒！！"
-			echo_date ""
-			echo_date "检测到你的ss节点使用了v2ray-plugin混淆插件！但是本插件默认没有提供相关的二进制文件！"
-			echo_date "请前往下面的链接下载v2ray-plugin，并将其放置在路由器的/koolshare/bin目录后重启插件！"
-			echo_date "下载地址：https://github.com/hq450/fancyss/tree/3.0/binaries/v2ray-plugin"
-			echo_date ""
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date ""
-			close_in_five flag
-		fi
-		
-		if [ -n "${ss_basic_ss_v2ray_opts}" ];then
-			ARG_OBFS="--plugin v2ray-plugin --plugin-opts ${ss_basic_ss_v2ray_opts}"
-		else
-			ARG_OBFS="--plugin v2ray-plugin"
-		fi
-		echo_date "检测到开启了v2ray-plugin。"
-	else
-		if [ "${ss_basic_ss_obfs}" == "http" ]; then
-			echo_date "检测到开启了simple-obfs。"
-			if [ -n "${ss_basic_ss_obfs_host}" ]; then
-				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http;obfs-host=${ss_basic_ss_obfs_host}"
-			else
-				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=http"
-			fi
-		elif [ "${ss_basic_ss_obfs}" == "tls" ]; then
-			echo_date "检测到开启了simple-obfs。"
-			if [ -n "${ss_basic_ss_obfs_host}" ]; then
-				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls;obfs-host=${ss_basic_ss_obfs_host}"
-			else
-				ARG_OBFS="--plugin obfs-local --plugin-opts obfs=tls"
-			fi
-		else
-			ARG_OBFS=""
-		fi
-	fi
-}
 # create shadowsocks config file...
 creat_ssr_json() {
 	if [ -z "${WEB_ACTION}" ]; then
@@ -1307,10 +1240,43 @@ dbus_eset(){
 start_dns_x(){
 	set_default "ss_basic_dns_plan" "1"
 	set_default "ss_basic_dns_server" "1"
-	
 	if [ "${ss_basic_dns_plan}" == "1" ];then
+		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
+		if [ "$ss_basic_mode" == "1" ];then
+			if [ "${ss_basic_chng}" == "2" ];then
+				echo_date "⚠️警告：当前代理模式GFW黑名单与当前DNS模式：[国外优先]不匹配！"
+				echo_date "🔁建议使用：[国内优先/智能判断]，本次自动将当前DNS模式改为：[国内优先]！"
+				ss_basic_chng="1"
+				dbus set ss_basic_chng="1"
+			fi
+		elif [ "$ss_basic_mode" == "2" -o "$ss_basic_mode" == "3" ];then
+			if [ "${ss_basic_chng}" == "1" ];then
+				echo_date "⚠️警告：当前代理模式与当前DNS模式：[国内优先]不匹配！"
+				echo_date "🔁建议使用：[国外优先/智能判断]，本次自动将当前DNS模式改为：[国外优先]！"
+				ss_basic_chng="2"
+				dbus set ss_basic_chng="2"
+			fi
+		fi
+	
 		start_chinadns_ng
 	elif [ "${ss_basic_dns_plan}" == "2" ];then
+		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
+		if [ "$ss_basic_mode" == "1" ];then
+			if [ "${ss_basic_smrt}" == "2" ];then
+				echo_date "⚠️警告：当前代理模式GFW黑名单与当前DNS模式：[国外优先]不匹配！"
+				echo_date "🔁建议使用：[国内优先/智能判断]，本次自动将当前DNS模式改为：[国内优先]！"
+				ss_basic_smrt="1"
+				dbus set ss_basic_smrt="1"
+			fi
+		elif [ "$ss_basic_mode" == "2" -o "$ss_basic_mode" == "3" ];then
+			if [ "${ss_basic_smrt}" == "1" ];then
+				echo_date "⚠️警告：当前代理模式与当前DNS模式：[国内优先]不匹配！"
+				echo_date "🔁建议使用：[国外优先/智能判断]，本次自动将当前DNS模式改为：[国外优先]！"
+				ss_basic_smrt="2"
+				dbus set ss_basic_smrt="2"
+			fi
+		fi
+	
 		echo_date "start smartdns"
 		start_smartdns ${ss_basic_smrt}
 	fi
@@ -1708,11 +1674,12 @@ start_chinadns_ng(){
 	rm -rf /tmp/chinadns_ng.conf
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 监听地址和端口
-		bind-addr 0.0.0.0
+		bind-addr ::
 		bind-port ${chng_bind_port}
 
 		proxy-server socks5://127.0.0.1:23456
 		proxy-group gfw,black,udp,router
+		
 	EOF
 
 	echo "# 国内上游" >>/tmp/chinadns_ng.conf
@@ -1724,7 +1691,7 @@ start_chinadns_ng(){
 	[ -n "$FDNS_1" ] && echo "trust-dns $FDNS_1" >>/tmp/chinadns_ng.conf
 	[ -n "$FDNS_2" ] && echo "trust-dns $FDNS_2" >>/tmp/chinadns_ng.conf
 	[ -n "$FDNS_3" ] && echo "trust-dns $FDNS_3" >>/tmp/chinadns_ng.conf
-
+		
 	if [ "${ss_basic_chng}" == "1" ];then
 		cat >>"/tmp/chinadns_ng.conf" <<-EOF
 			
@@ -1734,6 +1701,7 @@ start_chinadns_ng(){
 						
 			# 收集 tag:gfw 域名的 IP，用于走代理
 			add-taggfw-ip gfwlist,gfwlist6
+			
 		EOF
 	elif [ "${ss_basic_chng}" == "2" ];then
 		cat >>"/tmp/chinadns_ng.conf" <<-EOF
@@ -1744,6 +1712,7 @@ start_chinadns_ng(){
 						
 			# 收集 tag:chn域名的 IP，用于不走代理
 			add-tagchn-ip chnlist,chnlist6
+			
 		EOF
 	elif [ "${ss_basic_chng}" == "3" ];then
 		# 智能判断：chnroute模式
@@ -1764,24 +1733,7 @@ start_chinadns_ng(){
 		EOF
 	fi
 	
-	# ads
-	# 广告域名列表压缩后761KB，先不启用此功能
-	if [ -f "/koolshare/ss/rules/adslist.gz" ]; then
-		cat >>"/tmp/chinadns_ng.conf" <<-EOF
-			# 广告过滤
-			group null
-			group-dnl /koolshare/ss/rules/adslist.gz
 
-		EOF
-	fi
-	
-	# block_list
-	cat >>"/tmp/chinadns_ng.conf" <<-EOF
-		# 黑名单域名（不解析）
-		group null
-		group-dnl /tmp/block_list.txt
-
-	EOF
 
 	# defalut
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
@@ -1801,7 +1753,7 @@ start_chinadns_ng(){
 		group udp
 		group-dnl /koolshare/ss/rules/udplist.txt
 		group-upstream ${FDNS_LINE}
-		group-ipset udplist,udplist
+		group-ipset udplist,udplist6
 
 		# 控制路由器内部哪些域名需要走代理
 		group router
@@ -1809,12 +1761,35 @@ start_chinadns_ng(){
 		group-upstream ${FDNS_LINE}
 		group-ipset router,router6
 		
+	EOF
+
+	# block_list
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
+		# 黑名单域名（不解析）
+		group null
+	EOF
+	
+	# ads, 广告域名列表压缩后761KB，先不启用此功能
+	if [ -f "/koolshare/ss/rules/adslist.gz" ]; then
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			group-dnl /tmp/block_list.txt,/koolshare/ss/rules/adslist.gz
+			
+		EOF
+	else
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			group-dnl /tmp/block_list.txt
+			
+		EOF
+	fi
+
+	# 未匹配域名判决
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 测试 tag:none 域名的 IP (针对国内上游)
 		ipset-name4 chnroute
 		ipset-name6 chnroute6
 		
 	EOF
-
+	
 	if [ "${INTERNET6}" == "0" ];then
 		# 检测到系统未开启ipv6功能，默认关闭所有ipv6解析
 		dbus set ss_basic_internet6_flag=0
@@ -2074,13 +2049,11 @@ add_white_black() {
 
 	# {black_list}, black domain
 	true >/tmp/black_list.txt
-	#if [ "${DNS_PLAN}" == "2" ];then
-		ss_black_domains="ip.sb api.skk.moe ip.skk.moe ipinfo.io ip-api.com us.ip111.cn"
-		echo_date "应用IP/CIDR黑名单"
-		for ss_black_domain in ${ss_black_domains}; do
-			echo ${ss_black_domain} >>/tmp/black_list.txt
-		done
-	#fi
+	ss_black_domains="ip.sb api.skk.moe ip.skk.moe ipinfo.io ip-api.com us.ip111.cn"
+	echo_date "应用IP/CIDR黑名单"
+	for ss_black_domain in ${ss_black_domains}; do
+		echo ${ss_black_domain} >>/tmp/black_list.txt
+	done
 
 	# {black_list}, black domain
 	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
@@ -4173,6 +4146,10 @@ _start_iptables() {
 	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 	# {gfwlist} 代理
 	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
+	# {rotlist} 代理
+	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
+	# {udplist} 代理
+	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set udplist dst -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR CHNMODE---------------------
 	# 创建大陆白名单模式nat rule
@@ -4208,9 +4185,9 @@ _start_iptables() {
 	# {black_list} 代理
 	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 	# {gfwlist} 直连
-	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j RETURN
+	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set gfwlist dst -j RETURN
 	# {white_list} 直连
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set white_list dst -j RETURN
+	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set white_list dst -j RETURN
 
 	#-----------------------FOR TPROXY---------------------
 	load_tproxy
@@ -4241,7 +4218,11 @@ _start_iptables() {
 	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {gfwlist} 代理
 	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	
+	# {rotlist} 代理
+	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set router dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	# {udplist} 代理
+	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+
 	# 创建白名单模式udp rule
 	iptables -t mangle -N SHADOWSOCKS_CHN
 	# {black_list} 代理
@@ -4654,7 +4635,6 @@ check_status() {
 	# start
 	prepare_system
 	resolv_server_ip
-	ss_arg
 	load_module
 	creat_ipset
 	create_dnsmasq_conf
