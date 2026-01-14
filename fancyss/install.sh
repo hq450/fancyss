@@ -546,7 +546,7 @@ full2lite(){
 	# 当从full版本切换到lite版本的时候，需要将naive，tuic，hysteria2节点进行备份后，从节点列表里删除相应节点
 	# 1. 将所有不支持的节点数据储存到备份文件
 	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >/tmp/fancyss_kv.txt
-	NODES_INFO=$(cat /tmp/fancyss_kv.txt | sed -n 's/type_\([0-9]\+=[678]\)/\1/p' | sort -n)
+	NODES_INFO=$(cat /tmp/fancyss_kv.txt | sed -n 's/type_\([0-9]\+=[67]\)/\1/p' | sort -n)
 	if [ -n "${NODES_IN2FO}" ];then
 		mkdir -p /koolshare/configs/fanyss
 		for NODE_INFO in ${NODES_INFO}
