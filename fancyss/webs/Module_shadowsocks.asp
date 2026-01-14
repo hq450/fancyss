@@ -317,13 +317,13 @@ function refresh_options() {
 				text: "【Tuic】" + group_tag + c.name																		//fancyss-full
 			}));																											//fancyss-full
 		}																													//fancyss-full
-		else if(c.type == "8"){																								//fancyss-full
+		else if(c.type == "8"){
 			//hysteria2
-			option0.append($("<option>", {																					//fancyss-full
-				value: field,																								//fancyss-full
-				text: "【hysteria2】" + group_tag + c.name																	//fancyss-full
-			}));																											//fancyss-full
-		}																													//fancyss-full
+			option0.append($("<option>", {
+				value: field,
+				text: "【hysteria2】" + group_tag + c.name
+			}));
+		}
 	}
 	option0.val(db_ss["ssconf_basic_node"]||"1");
 	option3.val((db_ss["ss_failover_s4_3"])||"1");
@@ -5460,7 +5460,7 @@ function restart_chinadns() {
 														、<a href="https://github.com/trojan-gfw/trojan" target="_blank"><em><u>Trojan</u></em></a>
 														、<a href="https://github.com/klzgrad/naiveproxy" target="_blank"><em><u>NaïveProxy</u></em></a>	<!--fancyss-full-->
 														、<a href="https://github.com/EAimTY/tuic" target="_blank"><em><u>tuic</u></em></a>    				<!--fancyss-full-->
-														、<a href="https://github.com/apernet/hysteria" target="_blank"><em><u>Hysteria2</u></em></a>    	<!--fancyss-full-->
+														、<a href="https://github.com/apernet/hysteria" target="_blank"><em><u>Hysteria2</u></em></a>
 														八种协议的科学上网工具。
 														<a href="https://t.me/joinchat/AAAAAEC7pgV9vPdPcJ4dJw" target="_blank"><em>Telegram交流群</em></a>
 													</li>
@@ -5840,16 +5840,16 @@ function restart_chinadns() {
 															//tuic
 															{ title: 'tuic json', id:'ss_basic_tuic_json', type:'textarea', rows:'18', ph:ph_tuic},																					//fancyss-full
 															//hysteria2
-															{ title: '服务器', id:'ss_basic_hy2_server', type:'text', maxlen:'300'},																								//fancyss-full
-															{ title: '端口', id:'ss_basic_hy2_port', type:'text', maxlen:'300'},																									//fancyss-full
-															{ title: '认证密码', id:'ss_basic_hy2_pass', type:'text', maxlen:'300'},																								//fancyss-full
-															{ title: '最大上行（Mbps）', id:'ss_basic_hy2_up', type:'text', maxlen:'300'},																							//fancyss-full
-															{ title: '最大下行（Mbps）', id:'ss_basic_hy2_dl', type:'text', maxlen:'300'},																							//fancyss-full
-															{ title: 'tcp fast open', id:'ss_basic_hy2_tfo', type:'checkbox'},																										//fancyss-full
-															{ title: '混淆类型', id:'ss_basic_hy2_obfs', type:'select', func:'v', options:option_hy2_obfs, maxlen:'300', value: "0"},												//fancyss-full
-															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', type:'text', maxlen:'300'},																							//fancyss-full
-															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', type:'text'},																											//fancyss-full
-															{ title: '允许不安全', id:'ss_basic_hy2_ai', type:'checkbox'},																											//fancyss-full
+															{ title: '服务器', id:'ss_basic_hy2_server', type:'text', maxlen:'300'},
+															{ title: '端口', id:'ss_basic_hy2_port', type:'text', maxlen:'300'},
+															{ title: '认证密码', id:'ss_basic_hy2_pass', type:'text', maxlen:'300'},
+															{ title: '最大上行（Mbps）', id:'ss_basic_hy2_up', type:'text', maxlen:'300'},
+															{ title: '最大下行（Mbps）', id:'ss_basic_hy2_dl', type:'text', maxlen:'300'},
+															{ title: 'tcp fast open', id:'ss_basic_hy2_tfo', type:'checkbox'},
+															{ title: '混淆类型', id:'ss_basic_hy2_obfs', type:'select', func:'v', options:option_hy2_obfs, maxlen:'300', value: "0"},
+															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', type:'text', maxlen:'300'},
+															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', type:'text'},
+															{ title: '允许不安全', id:'ss_basic_hy2_ai', type:'checkbox'},
 														]);
 													</script>
 												</table>
@@ -6445,16 +6445,16 @@ function restart_chinadns() {
 																{ suffix: '<span id="ss_sub_ads"></span>' },
 															]},
 															{ title: '订阅节点模式设定', id:'ssr_subscribe_mode', type:'select', style:'width:auto', options:option_modes, value:'2'},
-															{ title: 'hysteria2订阅设置', multi: [																//fancyss-full
-																{ suffix: '上行速度:' },																		//fancyss-full
-																{ id: 'ss_basic_hy2_up_speed', type: 'text', maxlen:'200', style:'width:30px;', value:''},		//fancyss-full
-																{ suffix: 'Mbps，&nbsp;&nbsp;' },																//fancyss-full
-																{ suffix: '下行速度:' },																		//fancyss-full
-																{ id: 'ss_basic_hy2_dl_speed', type: 'text', maxlen:'200', style:'width:30px;', value:''},		//fancyss-full
-																{ suffix: 'Mbps，&nbsp;&nbsp;' },																//fancyss-full
-																{ suffix: 'tcp fast open:' },																	//fancyss-full
-																{ id:'ss_basic_hy2_tfo_switch', type:'select', style:'width:auto', options:option_hy2_tfo, value:'2'}, //fancyss-full
-															]},																									//fancyss-full
+															{ title: 'hysteria2订阅设置', multi: [
+																{ suffix: '上行速度:' },
+																{ id: 'ss_basic_hy2_up_speed', type: 'text', maxlen:'200', style:'width:30px;', value:''},
+																{ suffix: 'Mbps，&nbsp;&nbsp;' },
+																{ suffix: '下行速度:' },
+																{ id: 'ss_basic_hy2_dl_speed', type: 'text', maxlen:'200', style:'width:30px;', value:''},
+																{ suffix: 'Mbps，&nbsp;&nbsp;' },
+																{ suffix: 'tcp fast open:' },
+																{ id:'ss_basic_hy2_tfo_switch', type:'select', style:'width:auto', options:option_hy2_tfo, value:'2'},
+															]},
 															{ title: '下载订阅时走代理网络', id:'ss_basic_online_links_proxy', type:'select', style:'width:auto', options:[["0", "自动判断"], ["1", "走代理"], ["2", "不走代理"]], value:'0'},
 															{ title: '订阅计划任务', multi: [
 																{ id:'ss_basic_node_update', type:'select', style:'width:auto', func:'u', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
