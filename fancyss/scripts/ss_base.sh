@@ -164,12 +164,20 @@ number_test(){
 
 cmd() {
 	echo_date "$@"
-	# env -i PATH=${PATH} "$@" 2>/dev/null
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
 run(){
 	env -i PATH=${PATH} "$@"
+}
+
+run_loud(){
+	echo_date "$@"
+	"$@"
+}
+
+run_bg(){
+	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
 __timeout_init() {
@@ -268,10 +276,6 @@ run5(){
 
 run2(){
 	__timeout_run 2 "$@"
-}
-
-run_bg(){
-	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
 __valid_ip() {

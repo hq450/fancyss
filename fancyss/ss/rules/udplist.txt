@@ -44,3 +44,5 @@ bingapistatistics.com
 bingsandbox.com
 bingvisualsearch.com
 bingworld.com
+nextcloud.com
+am.i.mullvad.net

@@ -1,11 +1,25 @@
  fancyss Changelog
 ===========================================
-3.4.3 (to be release)
+3.4.4 (to be release)
+
+3.4.3 (20260115)
    - note	全面拥抱xray-core，现在在出站协议上，v2ray仅独有vlite出站（还需要配置目前没几个人用的V5 json）
        		其它的vmess、vless、trojan、shadowsocks、socks、http、freedom、blackhole、dns、hysteria2，xray都有，xray还独有wireguard
-       		底层传输上，xray还独有splithttp（xhttp实现，底层实现对应splithttp）和reality，其它底层传输虽有差异，但xray-core都有
-       		因此虽然xray-core现在无法做到v2ray的超集，但是多数情况下都能替代v2ray使用！
+       		底层传输上，xray还独有splithttp（xhttp实现，底层实现对应splithttp）和reality，其它底层传输虽有差异，但xray-core基本都有
+       		因此虽然xray-core现在无法做到完全的v2ray的超集，但是绝大多数多数情况下都能替代v2ray使用！
        		所以，本插件现阶段会全面拥抱xray，删除v2ray二进制还可以节约6MB多空间！这为未来可能上singbox内核做好了准备！
+   - remove	移除v2ray二进制，现在vmess出站协议节点默认由xray来运行
+   - add	由于移除v2ray二进制，full版本插件包和lite版本已经相差无几，因此full版本将tuic-client和naive二进制请回
+   - update	更新自编译xray二进制到最新commit id：a384be0
+   - update	更新naive二进制，进一步缩小armv5和armv7版本的体积
+   - fix	修复某些协议下，重启路由器后插件启动异常代理无法工作的问题	
+   - fix	修复udp代理控制中，仅chatgpt失效的问题
+   - fix	修复hysteria2因json配置日志导致/tmp生成大量日志占用空间的问题
+   - fix	修复因chinadns-ng/smartdns替换dnsmasq后，路由重启后客户端可能无法获取ip地址的问题
+   - fix	修复iptables规则加载/删除报错的问题
+   - fix	修复有时路由器因内核模块加载问题导致插件启动失败
+   - update	优化路由器因防火墙重启插件重载速度
+   - update	更新规则到最新
 
 3.4.2 (20260115)
    - note	此版本的一个已知问题，hy2节点落地延迟测试会失败（后面会针对落地延迟测试集中修改，这次先不改了，改了也是临时版本）

@@ -503,6 +503,11 @@ prepare_system() {
 		fi
 	fi
 
+	# 3. use different xtables libdir
+	if [ -d "/tmp/.xt" ];then
+		export XTABLES_LIBDIR=/tmp/.xt
+	fi
+	
 	# 检查端口占用情况
 	# 3333 23456 7913 1051 1052 2055 2056 1091 1092 1093
 	kill_used_port
@@ -906,37 +911,32 @@ __resolve_server_domain() {
 }
 
 # ================================= ss stop ===============================
-remove_file(){
-	local rfile=$1
-	local count=$2
-	if [ -f ${rfile} -o -L ${rfile} ];then
-		#echo_date "移除：${rfile}"
-		rm -rf $1
-		count=$((${count} + 1))
-	fi
-	return ${count}
-}
 
 restore_conf() {
-	remove_file /jffs/configs/dnsmasq.d/custom.conf $?
-	remove_file /jffs/configs/dnsmasq.d/ss_host.conf $?
-	remove_file /jffs/configs/dnsmasq.d/ss_server.conf $?
-	remove_file /jffs/configs/dnsmasq.d/ss_domain.conf
-	remove_file /jffs/scripts/dnsmasq.postconf $?
-	remove_file /jffs/scripts/dnsmasq-sdn.postconf $?
-	remove_file /tmp/custom.conf $?
-	remove_file /tmp/ss_host.conf $?
-	remove_file /tmp/gfwlist.txt $?
-	remove_file /tmp/chnlist.txt $?
-	remove_file /tmp/black_list.txt $?
-	remove_file /tmp/white_list.txt $?
-	remove_file /tmp/block_list.txt $?
-	remove_file /koolshare/ss/xray.json $?
-	remove_file /koolshare/ss/v2ray.json $?
-	remove_file /koolshare/ss/ssr.json $?
-	remove_file /koolshare/ss/tuic.json $?
-	if [ "$?" != "0" ];then
-		echo_date "删除fancyss相关的名单配置文件..."
+	echo_date "删除fancyss相关的名单配置文件..."
+	rm -f /jffs/configs/dnsmasq.d/custom.conf
+	rm -f /jffs/configs/dnsmasq.d/ss_host.conf
+	rm -f /jffs/configs/dnsmasq.d/ss_server.conf
+	rm -f /jffs/configs/dnsmasq.d/ss_domain.conf
+	rm -f /jffs/scripts/dnsmasq.postconf
+	rm -f /jffs/scripts/dnsmasq-sdn.postconf
+	rm -f /tmp/custom.conf
+	rm -f /tmp/ss_host.conf
+	rm -f /tmp/gfwlist.txt
+	rm -f /tmp/chnlist.txt
+	rm -f /tmp/black_list.txt
+	rm -f /tmp/white_list.txt
+	rm -f /tmp/block_list.txt
+
+	if [ -z "${WEB_ACTION}" ]; then
+		if [ -n "${WAN_ACTION}" ]; then
+			return 0
+		fi
+	else
+		rm -f /koolshare/ss/xray.json
+		rm -f /koolshare/ss/v2ray.json
+		rm -f /koolshare/ss/ssr.json
+		rm -f /koolshare/ss/tuic.json
 	fi
 }
 
@@ -1089,10 +1089,6 @@ creat_ssr_json() {
 	if [ -z "${WEB_ACTION}" ]; then
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
-			return 0
-		fi
-		if [ -n "${NAT_ACTION}" ]; then
-			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 			return 0
 		fi
 	else
@@ -2198,10 +2194,6 @@ creat_vmess_json() {
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 			return 0
 		fi
-		if [ -n "${NAT_ACTION}" ]; then
-			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
-			return 0
-		fi
 	else
 		echo_date "创建$(__get_type_abbr_name)配置文件到${VMESS_CONFIG_FILE}"
 	fi
@@ -2644,7 +2636,7 @@ start_v2ray() {
 		echo_date "开启Xray主进程..."
 		cd /koolshare/bin
 		run_bg xray run -c ${VMESS_CONFIG_FILE}
-		detect_running_status3 xray 23456 0
+		detect_running_status3 xray 23456 0 force
 	else
 		# v2ray start
 		echo_date "开启V2ray主进程..."
@@ -2660,10 +2652,6 @@ creat_xray_ss_json() {
 		# 非web提交
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
-			return 0
-		fi
-		if [ -n "${NAT_ACTION}" ]; then
-			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 			return 0
 		fi
 	else
@@ -2805,10 +2793,6 @@ creat_vless_json() {
 	if [ -z "{WEB_ACTION}" ]; then
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
-			return 0
-		fi
-		if [ -n "${NAT_ACTION}" ]; then
-			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 			return 0
 		fi
 	else
@@ -3286,7 +3270,7 @@ start_xray() {
 	echo_date "开启Xray主进程..."
 	cd /koolshare/bin
 	run_bg xray run -c $VLESS_CONFIG_FILE
-	detect_running_status3 xray 23456 0
+	detect_running_status3 xray 23456 0 force
 }
 
 creat_trojan_json(){
@@ -3294,10 +3278,6 @@ creat_trojan_json(){
 	if [ -z "${WEB_ACTION}" ]; then
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
-			return 0
-		fi
-		if [ -n "${NAT_ACTION}" ]; then
-			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 			return 0
 		fi
 	else
@@ -3396,7 +3376,7 @@ start_trojan(){
 	echo_date "开启Xray主进程，用以运行trojan协议节点..."
 	cd /koolshare/bin
 	run_bg xray run -c $TROJAN_CONFIG_FILE
-	detect_running_status3 xray 23456 0
+	detect_running_status3 xray 23456 0 force
 }
 
 creat_hy2_json(){
@@ -3406,12 +3386,8 @@ creat_hy2_json(){
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
 			return 0
 		fi
-		if [ -n "${NAT_ACTION}" ]; then
-			echo_date "检测到防火墙重启触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
-			return 0
-		fi
 	else
-		echo_date "创建xray的trojan配置文件到${TROJAN_CONFIG_FILE}"
+		echo_date "创建xray的hysteria2配置文件到${HY2_CONFIG_FILE}"
 	fi
 
 	# hysteria2协议由xray来运行
@@ -3423,8 +3399,8 @@ creat_hy2_json(){
 		{
 		"log": {
 			"access": "none",
-			"error": "/tmp/xray_log.txt",
-			"loglevel": "debug"
+			"error": "none",
+			"loglevel": "none"
 		},
 	EOF
 	
@@ -3546,7 +3522,7 @@ start_hy2(){
 	echo_date "开启Xray主进程，用以运行hysteria2协议节点..."
 	cd /koolshare/bin
 	run_bg xray run -c $HY2_CONFIG_FILE
-	detect_running_status3 xray 23456 0
+	detect_running_status3 xray 23456 0 force
 }
 
 
@@ -3721,32 +3697,16 @@ kill_cron_job() {
 #--------------------------------------nat part begin------------------------------------------------
 load_tproxy() {
 	MODULES="xt_TPROXY xt_socket xt_comment"
-	OS=$(uname -r)
-	# load Kernel Modules
-	echo_date "加载TPROXY模块，用于udp转发..."
-	checkmoduleisloaded() {
-		if lsmod | grep $MODULE &>/dev/null; then return 0; else return 1; fi
-	}
-
-	for MODULE in $MODULES; do
-		if ! checkmoduleisloaded; then
-			#insmod /lib/modules/${OS}/kernel/net/netfilter/${MODULE}.ko
+	for MODULE in ${MODULES}
+	do
+		lsmod | grep ${MODULE} &>/dev/null
+		if [ "$?" != "0" ]; then
+			echo_date "加载${MODULE}模块..."
 			modprobe ${MODULE}.ko
+		else
+			echo_date "${MODULE}模块已加载..."
 		fi
 	done
-
-	modules_loaded=0
-
-	for MODULE in $MODULES; do
-		if checkmoduleisloaded; then
-			modules_loaded=$((j++))
-		fi
-	done
-
-	if [ $modules_loaded -ne 2 ]; then
-		echo "One or more modules are missing, only $((modules_loaded + 1)) are loaded. Can't start."
-		close_in_five
-	fi
 }
 
 flush_ipset() {
@@ -4001,7 +3961,13 @@ dns_hijack_control() {
 		done
 	fi
 }
+
 flush_iptables() {
+	# use different xtables libdir
+	if [ -d "/tmp/.xt" ];then
+		export XTABLES_LIBDIR=/tmp/.xt
+	fi
+	
 	# flush NAT
 	local NAT_RULES=$(iptables -t nat -S | grep -E "SHADOWSOCKS|3333" | sort)
 	if [ -z "${NAT_RULES}" ];then
@@ -4044,10 +4010,10 @@ flush_iptables() {
 		fi
 	done
 
-	flush_ipset
 }
 load_iptables() {
-	local nat_ready=$(ip6tables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
+	#local nat_ready=$(ip6tables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
+	local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
 	i=300
 	until [ -n "$nat_ready" ]; do
 		i=$(($i - 1))
@@ -4063,87 +4029,117 @@ load_iptables() {
 	_start_iptables
 }
 
+ensure_chain() {
+	table="$1"
+	chain="$2"
+	if ! iptables -t "$table" -L "$chain" >/dev/null 2>&1; then
+		iptables -t "$table" -N "$chain"
+	fi
+}
+
+append_if_not_exists() {
+	table="$1"
+	shift
+	# 剩余参数为完整规则，例如：-A CHAIN ... -j ...
+	# 先构造对应的 -C 检查：把 -A 改为 -C
+	# 注意：iptables -C 格式为：iptables -t table -C chain rule-spec
+	# 因此需要拆出链名和去掉 -A
+	set -- "$@"
+	if [ "$1" = "-A" ]; then
+		chain="$2"
+		# 去掉前两个参数 "-A chain"
+		shift 2
+		if ! iptables -t "$table" -C "$chain" "$@" >/dev/null 2>&1; then
+		  iptables -t "$table" -A "$chain" "$@"
+		fi
+	else
+		echo "append_if_not_exists 需要以 -A 开头的参数" >&2
+		return 1
+	fi
+}
+
 _start_iptables() {
 	#----------------------BASIC RULES---------------------
 	echo_date "写入iptables规则到nat表中..."
 	local VLAN_INDEXS=$(ifconfig | grep -E "^br" | awk '{print $1}' | sed 's/^br//g')
 
 	# 创建SHADOWSOCKS nat rule
-	iptables -t nat -N SHADOWSOCKS
+	ensure_chain nat SHADOWSOCKS 
 
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		for VLAN_INDEX in $VLAN_INDEXS
 		do
-			iptables -t nat -N SHADOWSOCKS_DNS_${VLAN_INDEX}
+			# iptables -t nat -N SHADOWSOCKS_DNS_${VLAN_INDEX}
+			ensure_chain nat SHADOWSOCKS_DNS_${VLAN_INDEX} 
 		done
 	fi
 	
 	# 扩展
-	iptables -t nat -N SHADOWSOCKS_EXT
+	ensure_chain nat SHADOWSOCKS_EXT 
 	
 	# IP/cidr/白域名 白名单控制（不go proxy）
-	iptables -t nat -A SHADOWSOCKS -p tcp -m set --match-set ignlist dst -j RETURN
-	iptables -t nat -A SHADOWSOCKS_EXT -p tcp -m set --match-set ignlist dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS -p tcp -m set --match-set ignlist dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp -m set --match-set ignlist dst -j RETURN
 	
 	#-----------------------FOR GLOABLE---------------------
 	# 创建全局模式 nat rule
-	iptables -t nat -N SHADOWSOCKS_GLO
+	ensure_chain nat SHADOWSOCKS_GLO 
 	# {white_list} 直连
-	iptables -t nat -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
-	iptables -t nat -A SHADOWSOCKS_GLO -p tcp -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GLO -p tcp -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR GFWLIST---------------------
 	# 创建gfwlist模式 nat rule
-	iptables -t nat -N SHADOWSOCKS_GFW
+	ensure_chain nat SHADOWSOCKS_GFW 
 	# {white_list} 直连
-	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set white_list dst -j RETURN	
+	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set white_list dst -j RETURN	
 	# {black_list} 代理
-	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 	# {gfwlist} 代理
-	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
 	# {rotlist} 代理
-	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
 	# {udplist} 代理
-	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set udplist dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set udplist dst -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR CHNMODE---------------------
 	# 创建大陆白名单模式nat rule
-	iptables -t nat -N SHADOWSOCKS_CHN
+	ensure_chain nat SHADOWSOCKS_CHN 
 	# {black_list} 代理
-	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 	# {chnlist} 直连
-	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set chnlist dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set chnlist dst -j RETURN
 	# {chnroute} 直连
-	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set chnroute dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set chnroute dst -j RETURN
 	# {white_list} 直连
-	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_CHN -p tcp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
-	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_CHN -p tcp -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR GAMEMODE---------------------
 	# 创建游戏模式nat rule
-	iptables -t nat -N SHADOWSOCKS_GAM
+	ensure_chain nat SHADOWSOCKS_GAM 
 	# {black_list} 代理
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 	# {chnlist} 直连
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set chnlist dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set chnlist dst -j RETURN
 	# {chnroute} 直连
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set chnroute dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set chnroute dst -j RETURN
 	# {white_list} 直连
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_GAM -p tcp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
-	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_GAM -p tcp -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR HOMEMODE---------------------
 	# 创建回国模式nat rule
-	iptables -t nat -N SHADOWSOCKS_HOM
+	ensure_chain nat SHADOWSOCKS_HOM 
 	# {black_list} 代理
-	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
+	append_if_not_exists nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
 	# {gfwlist} 直连
-	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set gfwlist dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set gfwlist dst -j RETURN
 	# {white_list} 直连
-	iptables -t nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists nat -A SHADOWSOCKS_HOM -p tcp -m set --match-set white_list dst -j RETURN
 
 	#-----------------------FOR TPROXY---------------------
 	load_tproxy
@@ -4156,61 +4152,61 @@ _start_iptables() {
 	fi
 
 	# 创建游戏模式udp rule
-	iptables -t mangle -N SHADOWSOCKS
+	ensure_chain mangle SHADOWSOCKS 
 
 	# IP/cidr/白域名 白名单控制（不go proxy）
-	iptables -t mangle -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
 
 	# 创建GPT模式udp rule
-	iptables -t mangle -N SHADOWSOCKS_GPT
+	ensure_chain mangle SHADOWSOCKS_GPT 
 	# {udplist} 代理
-	iptables -t mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建gfw模式udp rule
-	iptables -t mangle -N SHADOWSOCKS_GFW
+	ensure_chain mangle SHADOWSOCKS_GFW 
 	# {white_list} 直连
-	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN	
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN	
 	# {black_list} 代理
-	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {gfwlist} 代理
-	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {rotlist} 代理
-	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set router dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set router dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {udplist} 代理
-	iptables -t mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建白名单模式udp rule
-	iptables -t mangle -N SHADOWSOCKS_CHN
+	ensure_chain mangle SHADOWSOCKS_CHN 
 	# {black_list} 代理
-	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {chnlist} 直连
-	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set chnlist dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set chnlist dst -j RETURN
 	# {chnroute} 直连
-	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set chnroute dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set chnroute dst -j RETURN
 	# {white_list} 直连
-	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
-	iptables -t mangle -A SHADOWSOCKS_CHN -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建游戏模式udp rule
-	iptables -t mangle -N SHADOWSOCKS_GAM
+	ensure_chain mangle SHADOWSOCKS_GAM 
 	# {black_list} 代理
-	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {chnlist} 直连
-	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set chnlist dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set chnlist dst -j RETURN
 	# {chnroute} 直连
-	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set chnroute dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set chnroute dst -j RETURN
 	# {white_list} 直连
-	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
-	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建glo模式udp rule
-	iptables -t mangle -N SHADOWSOCKS_GLO
+	ensure_chain mangle SHADOWSOCKS_GLO 
 	# {white_list} 直连
-	iptables -t mangle -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
+	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
-	iptables -t mangle -A SHADOWSOCKS_GLO -p tcp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p tcp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	#-------------------------------------------------------
 	# 局域网黑名单（不go proxy）/局域网黑名单（go proxy）
 	lan_acess_control $1
@@ -4219,38 +4215,38 @@ _start_iptables() {
 	#-----------------------FOR ROUTER---------------------
 	# router itself
 	if [ "$ss_basic_mode" != "6" ];then
-		iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
+		append_if_not_exists nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
 
 		# make sure these match go proxy inside router
-		# iptables -t mangle -A OUTPUT -p udp -m set --match-set router dst -j MARK --set-mark 0x07
-		iptables -t mangle -A OUTPUT -p udp -m set --match-set router dst -m udp --dport 53 -j MARK --set-mark 0x7/0xffffffff
+		# append_if_not_exists mangle -A OUTPUT -p udp -m set --match-set router dst -j MARK --set-mark 0x07
+		append_if_not_exists mangle -A OUTPUT -p udp -m set --match-set router dst -m udp --dport 53 -j MARK --set-mark 0x7/0xffffffff
 	fi
-	iptables -t nat -A OUTPUT -p tcp -m mark --mark "$ip_prefix_hex" -j SHADOWSOCKS_EXT
+	append_if_not_exists nat -A OUTPUT -p tcp -m mark --mark "$ip_prefix_hex" -j SHADOWSOCKS_EXT
 
 	# 把最后剩余流量重定向到相应模式的nat表中对应的主模式的链
-	iptables -t nat -A SHADOWSOCKS -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	append_if_not_exists nat -A SHADOWSOCKS -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 	
-	iptables -t nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 
 	if [ "$ss_basic_mode" == "3" ];then
 		# 如果是主模式游戏模式，则把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM链
 		if [ "$ss_acl_default_mode" == "3" ];then
-			iptables -t mangle -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GAM
+			append_if_not_exists mangle -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GAM
 		else
-			iptables -t mangle -A SHADOWSOCKS -p udp -j RETURN
+			append_if_not_exists mangle -A SHADOWSOCKS -p udp -j RETURN
 		fi
 	else
 		# 如果主模式不是游戏模式，则不需要把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM，不然会造成其他模式主机的udp也走游戏模式
 		if [ "$ss_basic_udpoff" == "1" ];then
-			iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+			append_if_not_exists mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
 		fi
 		
 		if [ "$ss_basic_udpall" == "1" ];then
-			iptables -t mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+			append_if_not_exists mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 		fi
 
 		if [ "$ss_basic_udpgpt" == "1" ];then
-			iptables -t mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j SHADOWSOCKS_GPT
+			append_if_not_exists mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j SHADOWSOCKS_GPT
 		fi
 	fi
 	
@@ -4260,13 +4256,13 @@ _start_iptables() {
 	INSET_NU=$(expr "${KP_NU}" + 1)
 	iptables -t nat -I PREROUTING "${INSET_NU}" -p tcp -j SHADOWSOCKS
 	
-	[ "${mangle}" != "0" ] && iptables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS
+	[ "${mangle}" != "0" ] && append_if_not_exists mangle -A PREROUTING -p udp -j SHADOWSOCKS
 
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		echo_date "开启DNS劫持功能功能，防止DNS污染..."
 		#INSET_NU_DNS=$(expr "${INSET_NU}" + 1)
 		local INSET_NU_DNS=$((${INSET_NU} + 1))
-		#iptables -t nat -I PREROUTING "$INSET_NU_DNS" -p udp ! -s ${lan_ipaddr} --dport 53 -j SHADOWSOCKS_DNS
+		#append_if_not_exists nat -I PREROUTING "$INSET_NU_DNS" -p udp ! -s ${lan_ipaddr} --dport 53 -j SHADOWSOCKS_DNS
 		for VLAN_INDEX in ${VLAN_INDEXS}
 		do
 			iptables -t nat -I PREROUTING "${INSET_NU_DNS}" -i br${VLAN_INDEX} -p udp -m udp --dport 53 -j SHADOWSOCKS_DNS_${VLAN_INDEX}
@@ -4285,11 +4281,6 @@ _start_iptables() {
 }
 
 restart_dnsmasq() {
-	# 当dnsmasq处于自然状态下，不需要重启dnsmasq
-	# if [ "${ss_basic_status}" == "0" -a "${ss_basic_enable}" == "0" ];then
-	# 	return 0
-	# fi
-	
 	# 如果是梅林固件，需要将 【Tool - Other Settings  - Advanced Tweaks and Hacks - Wan: Use local caching DNS server as system resolver (default: No)】此处设置为【是】
 	# 这将确保固件自身的DNS解析使用127.0.0.1，而不是上游的DNS。否则插件的状态检测将无法解析谷歌，导致状态检测失败。
 	local DLC=$(nvram get dns_local_cache)
@@ -4418,15 +4409,12 @@ ss_pre_stop() {
 }
 
 stop_status() {
-	local flag=$1
-	if [ -z "${flag}" ];then
-		kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
-		kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
-		killall curl >/dev/null 2>&1
-		killall curl-fancyss >/dev/null 2>&1
-		killall httping >/dev/null 2>&1
-		rm -rf /tmp/upload/ss_status.txt
-	fi
+	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
+	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
+	killall curl >/dev/null 2>&1
+	killall curl-fancyss >/dev/null 2>&1
+	killall httping >/dev/null 2>&1
+	rm -rf /tmp/upload/ss_status.txt
 }
 
 detect_ip(){
@@ -4529,8 +4517,6 @@ finish_start(){
 		echo_date "---------------------------------------------------------"
 		echo_date "所有服务和规则加载完毕，运行一些检测..."
 		check_frn_public_ip
-	else
-		echo_date "跳过代理出口ip检测..."
 	fi
 }
 
@@ -4550,21 +4536,19 @@ check_status() {
 
 disable_ss() {
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
-	# if [ "${ss_basic_status}" == "0" ];then
-	# 	return
-	# fi
 	echo_date
 	echo_date ------------------------- 关闭【科学上网】 -----------------------------
 	ss_pre_stop
 	set_skin
 	dbus remove ss_basic_server_ip
-	stop_status $1
+	stop_status
 	kill_process
 	remove_ss_trigger_job
 	remove_ss_reboot_job
 	restore_conf
 	restart_dnsmasq
 	flush_iptables
+	flush_ipset
 	kill_cron_job
 	rm -rf /tmp/upload/fancyss_node_name.txt
 	dbus set ss_basic_status="0"
@@ -4584,6 +4568,7 @@ apply_ss() {
 		restore_conf
 		restart_dnsmasq
 		flush_iptables
+		flush_ipset
 		kill_cron_job
 	fi
 	# pre-start
@@ -4660,6 +4645,18 @@ get_status() {
 	iptables -nvL SHADOWSOCKS_GLO -t nat
 }
 
+apply_ss_by_nat() {
+	# 1. 开机的时候会触发，此时其它组件都没有准备，需要开启
+	# 2. 防火墙重启，重新拨号等会触发，此时其它组件都是ok的，只需要重启iptables
+	echo_date ======================= 梅林固件 - 【科学上网】 ========================
+	echo_date
+	echo_date "restart by nat!"
+	flush_iptables
+	load_iptables
+	echo_date
+	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
+}
+
 start_ws(){
 	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket" ];then
 		if [ -z "$(pidof websocketd)" ];then
@@ -4672,10 +4669,12 @@ start_ws(){
 
 case $ACTION in
 start)
+	# start on wan-start
 	set_lock
 	if [ "$ss_basic_enable" == "1" ]; then
-		logger "[软件中心]: 启动科学上网插件！"
-		apply_ss >>"$LOG_FILE"
+		logger "[软件中心]: wan-start启动科学上网插件！"
+		apply_ss 2>&1 | tee -a "$LOG_FILE" | tee -a "/tmp/upload/ss_wan_log.txt"
+		echo XU6J03M6 | tee -a "$LOG_FILE"
 		start_ws
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
@@ -4693,6 +4692,7 @@ stop)
 	unset_lock
 	;;
 restart)
+	# start/restart by web or user
 	set_lock
 	apply_ss
 	start_ws
@@ -4708,11 +4708,19 @@ flush_nat)
 		unset_lock
 		;;
 start_nat)
+	# start on nat-start
+	SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
+	if [ -z "${SOCKS5_OPEN}" ];then
+		# 代理程序没有运行，可能是刚开机，不继续
+		return 0
+	fi
 	set_lock
-		if [ "$ss_basic_enable" == "1" ]; then
-			logger "[软件中心]: nat-start触发fancyss重启！"
-			apply_ss
-		fi
+	if [ "$ss_basic_enable" == "1" ]; then
+		logger "[软件中心]: nat-start触发fancyss重启！"
+		true >"$LOG_FILE"
+		apply_ss_by_nat 2>&1 | tee -a "$LOG_FILE" | tee -a "/tmp/upload/ss_nat_log.txt"
+		echo XU6J03M6 | tee -a "$LOG_FILE"
+	fi
 	unset_lock
 	;;
 restart_chinadns_ng)

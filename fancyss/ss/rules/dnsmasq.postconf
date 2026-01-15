@@ -18,20 +18,17 @@ perpare(){
 	# add config
 	[ -z "$(cat ${CONFIG}|grep conf-dir=)" ] && echo "conf-dir=/jffs/configs/dnsmasq.d" >>${CONFIG}
 }
-	
-use_frn_plan(){
-	pc_replace "cache-size=1500" "cache-size=9999" ${CONFIG}
-	pc_insert "no-poll" "server=127.0.0.1#7913" ${CONFIG}
-	pc_insert "no-poll" "no-resolv" ${CONFIG}
-}
 
-close_dnsmasq_server(){
-	[ "${ss_basic_dns_server}" != "1" ] && return
-	sed -i '1i\port=0' ${CONFIG}
-	pc_insert "dhcp-option" "dhcp-option=option:dns-server,0.0.0.0" ${CONFIG}
+fancyss_mod(){
+	if [ "$(dbus get ss_basic_dns_server)" == "1" ];then
+		sed -i '1i\port=0' ${CONFIG}
+		pc_insert "dhcp-option" "dhcp-option=option:dns-server,0.0.0.0" ${CONFIG}
+	else
+		pc_replace "cache-size=1500" "cache-size=9999" ${CONFIG}
+		pc_insert "no-poll" "server=127.0.0.1#7913" ${CONFIG}
+		pc_insert "no-poll" "no-resolv" ${CONFIG}
+	fi
 }
-
 
 perpare
-use_frn_plan
-close_dnsmasq_server
+fancyss_mod

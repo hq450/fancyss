@@ -7,23 +7,23 @@
   },
   "chnlist": {
     "name": "chnlist.gz",
-    "date": "2026-01-13 00:12",
-    "md5": "e9a84b18c51f752f11b7dd00783c3c36",
-    "count": "114353",
+    "date": "2026-01-15 23:48",
+    "md5": "32a8b3efe92877142bfc336dc8b608b0",
+    "count": "114215",
     "note": "merged from dnsmasq-china-list"
   },
   "chnroute": {
     "name": "chnroute.txt",
-    "date": "2026-01-06 23:50",
-    "md5": "25d766f0bab11701a07584ed4e131546",
+    "date": "2026-01-15 23:49",
+    "md5": "b883d3acccf803eb93d55ab66d665905",
     "count": "8228",
-    "count_ip": "358495548",
+    "count_ip": "358495292",
     "source": "merged"
   },
   "chnroute6": {
     "name": "chnroute6.txt",
-    "date": "2026-01-06 23:50",
-    "md5": "4f2e1c2ca4ccc880c3addeab503caba3",
+    "date": "2026-01-15 23:49",
+    "md5": "c0b53eebb05f82b3c76a0f99ed3f6cc7",
     "count": "2039",
     "source": "apnic"
   },
@@ -37,9 +37,9 @@
   },
   "udplist": {
     "name": "udplist.txt",
-    "date": "2026-01-06 07:47",
-    "md5": "0c06bd073a5d0ef749e781cf25862eaf",
-    "count": "46"
+    "date": "2026-01-15 23:45",
+    "md5": "922a52c0f0a2ba1e7732e8a7c32aaec0",
+    "count": "48"
   },
   "rotlist": {
     "name": "rotlist.txt",

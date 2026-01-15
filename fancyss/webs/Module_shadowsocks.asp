@@ -452,7 +452,6 @@ function save() {
 	  "ss_basic_enable",
 	  "ss_basic_gfwlist_update",
 	  "ss_basic_tfo",
-	  "ss_basic_vcore",					//fancyss-full
 	  "ss_basic_tjai",
 	  "ss_basic_nonetcheck",
 	  "ss_basic_nochnipcheck",
@@ -6592,7 +6591,6 @@ function restart_chinadns() {
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
-															{ title: '用Xray核心运行V2ray节点', id:'ss_basic_vcore', hint:'114', type:'checkbox', value:false},									//fancyss-full
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
 															{ title: '所有trojan节点强制允许不安全', id:'ss_basic_tjai', hint:'120', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
