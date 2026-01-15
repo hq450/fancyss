@@ -3395,7 +3395,7 @@ start_trojan(){
 
 	echo_date "开启Xray主进程，用以运行trojan协议节点..."
 	cd /koolshare/bin
-	run_bg xray run -c $VLESS_CONFIG_FILE
+	run_bg xray run -c $TROJAN_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
 
@@ -3545,7 +3545,7 @@ start_hy2(){
 
 	echo_date "开启Xray主进程，用以运行hysteria2协议节点..."
 	cd /koolshare/bin
-	run_bg xray run -c $VLESS_CONFIG_FILE
+	run_bg xray run -c $HY2_CONFIG_FILE
 	detect_running_status3 xray 23456 0
 }
 
@@ -4676,7 +4676,6 @@ start)
 	if [ "$ss_basic_enable" == "1" ]; then
 		logger "[软件中心]: 启动科学上网插件！"
 		apply_ss >>"$LOG_FILE"
-		#get_status >> /tmp/upload/test.txt
 		start_ws
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
@@ -4710,8 +4709,10 @@ flush_nat)
 		;;
 start_nat)
 	set_lock
-	[ "$ss_basic_enable" == "1" ] && apply_ss
-	#get_status >> /tmp/upload/test.txt
+		if [ "$ss_basic_enable" == "1" ]; then
+			logger "[软件中心]: nat-start触发fancyss重启！"
+			apply_ss
+		fi
 	unset_lock
 	;;
 restart_chinadns_ng)
