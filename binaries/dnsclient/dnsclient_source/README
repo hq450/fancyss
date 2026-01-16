@@ -1,0 +1,17 @@
+This is a simple DNS client written for a networking course. Run "make" to build the application.
+
+Usage: ./dnsclient [-t <timeout>] [-i <max-retries>] [-p <port>] [-4|-6|-46|-64] [-q|--ip-only] [-ns|-mx] @<server> <name>
+
+-t <timeout>       the max time to wait in seconds for a server to respond
+-i <max-retries>   the number of times to retry a request after a failure
+-p <port>          the port to connect to the DNS server
+-4                 query A record only (IPv4)
+-6                 query AAAA record only (IPv6)
+-46                prefer IPv4; fallback to IPv6 if no A record exists
+-64                prefer IPv6; fallback to IPv4 if no AAAA record exists
+-q, --ip-only       print only one pure IP address (one line)
+                   exit code: 0 when an IP is printed, 1 when empty
+-ns                returns a list of name server records
+-mx                returns a list of mail exchange records
+@server            the IP address of the DNS server
+name               the domain name to resolve

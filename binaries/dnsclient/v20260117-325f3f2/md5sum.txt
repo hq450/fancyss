@@ -1,0 +1,7 @@
+5b9305b56f4b54a3c811800fab3bfc27  dnsclient_arm
+842b35e871f6dbc19fce590942c10207  dnsclient_hnd
+5c5aa5c0dbbe601c495e1beb73e87f37  dnsclient_hndv8
+cf30cb1331cf1f698be9ea41fb92dd6f  dnsclient_ipq32
+a515add6a0a200b53ab79b4754a67e47  dnsclient_ipq64
+8a2af6cb27cfbf932a60f3006e76b554  dnsclient_mtk
+f36f701c9ca8e91fe5337b539a44c40b  dnsclient_qca
