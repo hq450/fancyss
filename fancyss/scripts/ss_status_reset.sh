@@ -13,10 +13,9 @@ LOGFILE=/tmp/upload/ss_log.txt
 stop_status(){
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
-	killall curl >/dev/null 2>&1
-	killall curl-fancyss >/dev/null 2>&1
-	killall httping >/dev/null 2>&1
+	killall curl-status >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
+	rm -rf /tmp/curl-status
 }
 
 check_status(){

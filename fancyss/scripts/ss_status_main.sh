@@ -208,7 +208,7 @@ main(){
 			#continue
 		else
 			# kill the last status script if exist
-			killall curl >/dev/null 2>&1
+			killall curl-status >/dev/null 2>&1
 			if [ -n "$(pidof ss_status.sh)" ];then
 				kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
 				echo ${LOGTIME1} script run time out "[$(dbus get ssconf_basic_name_${CURRENT})]" >> $LOGFILE_F

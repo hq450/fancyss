@@ -1887,12 +1887,12 @@ curl_test(){
 	
 	# test multiple time and get the best one
 	# echo ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} >> ${TMP2}/curl_test_log.txt
-	local ret=$(run5 ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=${ret}@$(run5 ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=${ret}@$(run5 ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
 	local ret=$(echo ${ret} | sed 's/@/\n/g' | sort -n | sed -n '1p')
 	local _match=$(echo "${ret}"|grep -E "\|")
-	if [ -z ${_match} ];then
+	if [ -z "${_match}" ];then
 		echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 	else
 		local ret_time=$(echo $ret | awk -F "|" '{printf "%.0f\n", $1 * 1000}')

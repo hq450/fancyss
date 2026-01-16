@@ -337,7 +337,7 @@ check_internet6_pre(){
 	fi
 
 	local ipv6_addr=$(ip addr|grep -A3 -E "eth0|ppp0"|grep "scope global"|grep "inet6"|awk '{print $2}'|awk -F"/" '{print $1}')
-	if [ -z ${ipv6_addr} ];then
+	if [ -z "${ipv6_addr}" ];then
 		INTERNET6=0
 		return 1
 	fi
@@ -4363,9 +4363,7 @@ ss_pre_stop() {
 stop_status() {
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
-	killall curl >/dev/null 2>&1
-	killall curl-fancyss >/dev/null 2>&1
-	killall httping >/dev/null 2>&1
+	killall curl-status >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
 }
 

@@ -44,11 +44,22 @@ update_ss(){
 	echo_date "检查科学上网插件更新，使用主服务器：github"
 	echo_date "检测主服务器在线版本号..."
 	echo_date "地址：${main_url}/${VERSION}"
-	curl -4sk --connect-timeout 10 ${main_url}/${VERSION} >/tmp/version.json.js
+	
+	if [ ! -L "/tmp/curl-update" ];then
+		ln -sf /koolshare/bin/curl-fancyss /tmp/curl-update
+	fi
+
+	SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
+	if [ -n "${SOCKS5_OPEN}" ];then
+		run /tmp/curl-update -4sk -L --connect-timeout 5 --max-time 120 --retry 3 --retry-delay 1 -x socks5h://127.0.0.1:23456 ${main_url}/${VERSION} >/tmp/version.json.js
+	else
+		run /tmp/curl-update -4sk -L --connect-timeout 5 --max-time 120 --retry 3 --retry-delay 1 ${main_url}/${VERSION} >/tmp/version.json.js
+	fi	
+	
 	if [ "$?" != "0" ];then
 		echo_date "没有检测到主服务器在线版本号，访问github服务器可能有点问题！"
 		echo "XU6J03M6"
-		exit
+		exit 1
 	fi
 	run jq --tab . /tmp/version.json.js >/dev/null 2>&1
 	if [ "$?" != "0" ];then
@@ -63,12 +74,25 @@ update_ss(){
 	if [ "${ss_basic_version_local}" != "${fancyss_version_online}" ];then
 		echo_date "主服务器在线版本号：${fancyss_version_online} 和本地版本号：${ss_basic_version_local} 不同！"
 		cd /tmp
+		rm -rf /tmp/${PACKAGE}.tar.gz
 		fancyss_md5_online=$(cat /tmp/version.json.js | run jq -r .$MD5NAME)
 		echo_date "开启下载进程，从主服务器上下载更新包..."
 		echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
-		wget -4 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
+		if [ -z "${SOCKS5_OPEN}" ];then
+			run /tmp/curl-update -4k -L --connect-timeout 5 --max-time 120 --retry 3 --retry-delay 1 -x socks5h://127.0.0.1:23456 ${main_url}/${PACKAGE}.tar.gz --output /tmp/${PACKAGE}.tar.gz
+		else
+			run /tmp/curl-update -4k -L --connect-timeout 5 --max-time 120 --retry 3 --retry-delay 1 ${main_url}/${PACKAGE}.tar.gz --output /tmp/${PACKAGE}.tar.gz
+		fi
+		
+		if [ "$?" != "0" ];then
+			rm -rf /tmp/${PACKAGE}.tar.gz
+			wget -t 3 --no-check-certificate --timeout=5 ${main_url}/${PACKAGE}.tar.gz
+		fi
+		
 		if [ "$?" != "0" ];then
 			echo_date "下载失败！请检查你的网络！"
+			echo "XU6J03M6"
+			exit 1
 		fi
 		echo_date "${PACKAGE}.tar.gz 下载成功！"
 		mv ${PACKAGE}.tar.gz shadowsocks.tar.gz

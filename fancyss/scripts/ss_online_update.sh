@@ -1733,12 +1733,17 @@ get_ua(){
 download_by_curl(){
 	local url_encode=$(echo "$1")
 	UA=$(get_ua)
+
+	if [ ! -L "/tmp/curl-update" ];then
+		ln -sf /koolshare/bin/curl-fancyss /tmp/curl-subscribe
+	fi
+	
 	echo_date "⬇️使用curl下载订阅..."
 	echo_date "🪧使用UA：$UA"
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."
-		run5 curl-fancyss -4sSk -L --user-agent $UA --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		run /tmp/curl-subscribe -sSk -L --user-agent $UA --connect-timeout 5 -m 10 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		if [ "$?" == "0" ]; then
 			return 0
 		fi
@@ -1748,7 +1753,7 @@ download_by_curl(){
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			run5 curl-fancyss -4sSk -L --user-agent $UA -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			run /tmp/curl-subscribe -sSk -L --user-agent $UA --connect-timeout 5 -m 10 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，结束curl订阅下载！"
@@ -1760,7 +1765,7 @@ download_by_curl(){
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			run5 curl-fancyss -4sSk -L --user-agent $UA -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			run /tmp/curl-subscribe -sSk -L --user-agent $UA --connect-timeout 5 -m 10 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			local EXT_ARG=""
@@ -1770,7 +1775,7 @@ download_by_curl(){
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
 		echo_date "⬇️使用常规网络下载..."
-		run5 curl-fancyss -4sSk -L --user-agent $UA --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		run /tmp/curl-subscribe -sSk -L --user-agent $UA --connect-timeout 5 -m 10 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		return $?
 	fi
 }
@@ -1795,7 +1800,7 @@ download_by_wget(){
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."
-		run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		run5 wget -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		if [ "$?" == "0" ]; then
 			return 0
 		fi
@@ -1805,7 +1810,7 @@ download_by_wget(){
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			run5 wget -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		else
 			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
 			return 1
@@ -1816,7 +1821,7 @@ download_by_wget(){
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			run5 wget -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		else
 			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
 			return 1
@@ -1825,7 +1830,7 @@ download_by_wget(){
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
 		echo_date "⬇️使用常规网络下载..."
-		run5 wget -4 -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		run5 wget -t 3 --user-agent $UA -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		return $?
 	fi
 }

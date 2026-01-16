@@ -27,7 +27,7 @@ get_domain_name(){
 
 get_china_status(){
 	# get result by curl
-	local ret0=$(run curl-fancyss -o /dev/null -4sk -I --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${CHN_TEST_SITE} 2>/dev/null)
+	local ret0=$(run /tmp/curl-status -o /dev/null -4sk -I --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${CHN_TEST_SITE} 2>/dev/null)
 	local ret_time=$(echo $ret0 | awk -F "|" '{printf "%.2f\n", $1 * 1000}')
 	local ret_code=$(echo $ret0 | awk -F "|" '{print $2}')
 	local ret_addr=$(echo $ret0 | awk -F "|" '{print $3}')
@@ -59,7 +59,7 @@ get_foreign_status(){
 	# if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" -a -n "${dns_safe}" -a -n "${iptables_safe1}" -a -n "${iptables_safe2}" -a -n "${ipset_safe}" ];then
 	if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" ];then
 		# get foreign status through 23456 socks5 port (resolve test server domain in local)
-		local ret0=$(run curl-fancyss -o /dev/null -4sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
+		local ret0=$(run /tmp/curl-status -o /dev/null -4sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 	else
 		log1='国外链接 【'${LOGTIME}'】 <font color='#FF0000'>X</font>'
 		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"
@@ -110,6 +110,10 @@ prepare(){
 		exit
 	fi
 
+	if [ ! -L "/tmp/curl-status" ];then
+		ln -sf /koolshare/bin/curl-fancyss /tmp/curl-status
+	fi
+	
 	# # 3. kill all other ss_status.sh process if exist
 	# local current_pid=$$
 	# local ss_status_pids=$(ps | grep -E "ss_status\.sh" | awk '{print $1}'| grep -v ${current_pid})
@@ -120,9 +124,9 @@ prepare(){
 	# 	done
 	# fi
 
-	# # 4. killall curl-fancyss
-	# killall curl-fancyss
-	# local fancyss_pids=$(ps | grep "curl-fancyss" | grep -v "grep" | grep -E "${CHN_TEST_SITE}|${FRN_TEST_SITE}" | awk '{print $1}')
+	# # 4. killall curl-status
+	# killall curl-status
+	# local fancyss_pids=$(ps | grep "curl-status" | grep -v "grep" | grep -E "${CHN_TEST_SITE}|${FRN_TEST_SITE}" | awk '{print $1}')
 	# if [ -n "${fancyss_pids}" ];then
 	# 	for fancyss_pid in ${fancyss_pids}
 	# 	do

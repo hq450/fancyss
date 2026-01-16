@@ -30,7 +30,7 @@ esac
 
 # get xray location
 _TARGET_FILE=$(readlink /koolshare/bin/xray)
-if [ -z ${_TARGET_FILE} ];then
+if [ -z "${_TARGET_FILE}" ];then
 	_TARGET_FILE=/koolshare/bin/xray
 fi
 
