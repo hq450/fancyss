@@ -73,18 +73,7 @@ do
 done
 ssconf_basic_node=${cur_node}
 # ------------------------------------------------
-gfw_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "1")
-chn_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "2|3")
-all_on=$(dbus list ss_acl_mode_ | cut -d "=" -f 2 | grep -E "5")
 game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep "3")
-if [ "${ss_basic_mode}" == "1" -a -z "${chn_on}" -a -z "${all_on}" -o "${ss_basic_mode}" == "6" ];then
-	# gfwlist模式的时候，且访问控制主机中不存在 大陆白名单模式 游戏模式 全局模式，则使用国内优先模式
-	# 回国模式下自动判断使用国内优先
-	DNS_PLAN=1
-else
-	# 其它情况，均使用国外优先模式
-	DNS_PLAN=2
-fi
 
 # ---------------------- udp代理 ----------------------
 # 1. 非游戏模式，访问控制内无游戏模式，且关闭了udp代理	（当前模式 off udp）
