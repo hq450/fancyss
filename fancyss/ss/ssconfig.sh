@@ -3401,7 +3401,7 @@ creat_hy2_json(){
 				"settings": {
 					"version": 2,
 					"address": "${ss_basic_server}",
-					"port": ${ss_basic_hy2_port}
+					"port": $(echo ${ss_basic_hy2_port} | awk -F "," '{print $1}')
 				},
 				"streamSettings": {
 					"network": "hysteria",
@@ -3412,7 +3412,7 @@ creat_hy2_json(){
 						,"down": $(get_value_speed ${ss_basic_hy2_dl})
 						,"auth": $(get_value_null ${ss_basic_hy2_pass})
 						,"udphop": {
-							"port": "",
+							"port": "${ss_basic_hy2_port}",
 							"interval": 30
 						}
 					}
