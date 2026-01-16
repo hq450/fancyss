@@ -1,6 +1,10 @@
  fancyss Changelog
 ===========================================
-3.4.4 (to be release)
+3.4.5 (to be release)
+
+3.4.4 (20260116)
+   - fix	修复vmess节点运行失败的问题
+   - fix	修复ss协议节点启动时提示错误的问题
 
 3.4.3 (20260115)
    - note	全面拥抱xray-core，现在在出站协议上，v2ray仅独有vlite出站（还需要配置目前没几个人用的V5 json）
