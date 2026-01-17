@@ -680,10 +680,10 @@ __get_type_abbr_name() {
 		echo "SSR"
 		;;
 	3)
-		echo "Vless"
+		echo "Vmess"
 		;;
 	4)
-		echo "Vmess"
+		echo "Vless"
 		;;
 	5)
 		echo "Trojan"
@@ -832,7 +832,7 @@ __resolve_server_domain() {
 		# 只解析一轮
 		until [ ${count} -eq 18 ]; do
 			echo_date "尝试解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current}):$(__get_server_resolver_port ${current})"
-			SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+			SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null | head -n1)
 			SERVER_IP=$(__valid_ip ${SERVER_IP})
 			if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
 				dbus set ss_basic_lastru=${current}
@@ -872,7 +872,7 @@ __resolve_server_domain() {
 	elif [ "${ss_basic_server_resolv}" == "99" ];then
 		# 自定义udp解析服务器
 		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
-		SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
 		SERVER_IP=$(__valid_ip ${SERVER_IP})
 		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
 			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
@@ -891,7 +891,7 @@ __resolve_server_domain() {
 			ss_basic_server_resolv=3
 		fi
 		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_server_resolv}：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
-		SERVER_IP=$(run dnsclient -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
+		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
 		SERVER_IP=$(__valid_ip ${SERVER_IP})
 		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
 			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
@@ -4375,16 +4375,14 @@ detect_ip(){
 
 	if [ "${METHOD}" == "0" ];then
 		# 检测国内ip
-		#echo_date "检测国内ip地址，检测地址：${SUBJECT}"
-		local IP=$(run5 curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+		local IP=$(run curl-fancyss -4s -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
-		#echo_date "检测国外ip地址，检测地址：${SUBJECT}"
 		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
-			local IP=$(run5 curl-fancyss -4s -x socks5h://127.0.0.1:23456 --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
+			local IP=$(run curl-fancyss -4s -x socks5h://127.0.0.1:23456 -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
-			local IP=$(run5 curl-fancyss -4s --connect-timeout ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
+			local IP=$(run curl-fancyss -4s -m  ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		fi
 	fi
 
@@ -4478,10 +4476,13 @@ check_status() {
 		run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
 	fi
 
-	# 对一些域名进行预解析，如果本地有解析缓存，解析没有走路由器，则ipset没有写入导致无法走代理，所以一些域名可以预解析一次
-	run_bg dnsclient -t 5 -i 2 @127.0.0.1 openai.com
-	run_bg dnsclient -t 5 -i 2 @127.0.0.1 chat.openai.com
-	run_bg dnsclient -t 5 -i 2 @127.0.0.1 stun.syncthing.net
+	(
+		# 对一些域名进行预解析，如果本地有解析缓存，解析没有走路由器，则ipset没有写入导致无法走代理，所以一些域名可以预解析一次
+		run_bg dnsclient -46 -t 5 -i 2 @127.0.0.1 openai.com
+		run_bg dnsclient -46 -t 5 -i 2 @127.0.0.1 chat.openai.com
+		run_bg dnsclient -46 -t 5 -i 2 @127.0.0.1 stun.syncthing.net
+	)&
+
 }
 
 disable_ss() {

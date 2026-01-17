@@ -2,9 +2,12 @@
 ===========================================
 3.4.5 (to be release)
    - update	hysteria2节点支持端口跳跃配置，现有端口处填写即可，示例：443,20000-50000
+   - fix	修复创建vless/vmess配置文件时，日志打印错误的问题
    - fix	修复插件在线更新/规则更新/在线订阅的时候，经常出现Terminated错误导致中断的问题
    - fix	修复落地延迟测试过程中，经常连续几个几点failed，实际情况节点又可用的情况
    - update	优化在线订阅，提升订阅成功率
+   - update	更新dnsclient 代码，添加ipv6解析功能，添加ipv4 only，ipv6 only，ipv4 优先，ipv6 优先功能。
+   - update	现在插件节点域名解析支持ipv6，可以使用[ipv6地址 + ipv4 NAT] vps搭建的节点。
 
 3.4.4 (20260116)
    - fix	修复vmess节点运行失败的问题
