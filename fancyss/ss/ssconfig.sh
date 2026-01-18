@@ -36,6 +36,52 @@ unset_lock() {
 	rm -rf "$LOCK_FILE"
 }
 
+apply_quic_block() {
+	# Block outbound QUIC (UDP/443) to non-China destinations to avoid HTTP/3 direct-connect bypassing TCP proxy.
+	# Use filter table since nat can't DROP/REJECT.
+	if [ "${ss_basic_udp_quic}" = "1" ]; then
+		echo_date "开启屏蔽QUIC(UDP/443)功能，防止HTTP/3直连..."
+
+		ensure_chain filter SHADOWSOCKS_QUIC
+		iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
+
+		# Prefer REJECT for fast fallback to TCP. Fallback to DROP if unsupported.
+		if ! iptables -t filter -A SHADOWSOCKS_QUIC -p udp --dport 443 \
+			-m set ! --match-set chnroute dst -m set ! --match-set ignlist dst \
+			-j REJECT --reject-with icmp-port-unreachable >/dev/null 2>&1; then
+			iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
+			if ! iptables -t filter -A SHADOWSOCKS_QUIC -p udp --dport 443 \
+				-m set ! --match-set chnroute dst -m set ! --match-set ignlist dst \
+				-j REJECT >/dev/null 2>&1; then
+				iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
+				iptables -t filter -A SHADOWSOCKS_QUIC -p udp --dport 443 \
+					-m set ! --match-set chnroute dst -m set ! --match-set ignlist dst \
+					-j DROP >/dev/null 2>&1
+			fi
+		fi
+
+		# Hook early in FORWARD/OUTPUT so it works even if LAN->WAN is accepted by default rules.
+		if ! iptables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; then
+			iptables -t filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS_QUIC
+		fi
+		if ! iptables -t filter -C OUTPUT -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; then
+			iptables -t filter -I OUTPUT 1 -p udp --dport 443 -j SHADOWSOCKS_QUIC
+		fi
+	else
+		# Remove rules if feature is disabled.
+		if iptables -t filter -L SHADOWSOCKS_QUIC >/dev/null 2>&1; then
+			while iptables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; do
+				iptables -t filter -D FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1
+			done
+			while iptables -t filter -C OUTPUT -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; do
+				iptables -t filter -D OUTPUT -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1
+			done
+			iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
+			iptables -t filter -X SHADOWSOCKS_QUIC >/dev/null 2>&1
+		fi
+	fi
+}
+
 get_model_name(){
 	local ODMPID=$(nvram get odmpid)
 	local PRODUCTID=$(nvram get productid)
@@ -475,6 +521,8 @@ check_chn_public_ip(){
 prepare_system() {
 	# prepare system
 	echo_date "🛠️ 一些准备工作，请稍后..."
+	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
+	set_default "ss_basic_udp_quic" "1"
 	
 	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
 	set_skin
@@ -3992,45 +4040,62 @@ flush_iptables() {
 	
 	# flush NAT
 	local NAT_RULES=$(iptables -t nat -S | grep -E "SHADOWSOCKS|3333" | sort)
-	if [ -z "${NAT_RULES}" ];then
-		return 1
+	if [ -n "${NAT_RULES}" ];then
+		echo_date "清除iptables nat规则..."
+		echo "${NAT_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			#echo "$TYPE" "$line"
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/iptables -t nat -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/iptables -t nat -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/iptables -t nat -X/g')
+				run_bg $CMD3
+			fi
+		done
 	fi
-	echo_date "清除iptables nat规则..."
-	echo "${NAT_RULES}" | while read line
-	do
-		local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-		#echo "$TYPE" "$line"
-		if [ "${TYPE}" == "A" ];then
-			local CMD1=$(echo "$line" | sed 's/^-A/iptables -t nat -D/g')
-			run_bg $CMD1
-		elif [ "${TYPE}" == "N" ];then
-			local CMD2=$(echo "$line" | sed 's/^-N/iptables -t nat -F/g')
-			run_bg $CMD2
-			local CMD3=$(echo "$line" | sed 's/^-N/iptables -t nat -X/g')
-			run_bg $CMD3
-		fi
-	done
 
 	# flush MANGLE
 	local MANGLE_RULES=$(iptables -t mangle -S | grep -E "SHADOWSOCKS|3333|0x7" | sort)
-	if [ -z "${MANGLE_RULES}" ];then
-		return 1
+	if [ -n "${MANGLE_RULES}" ];then
+		echo_date "清除iptables mangle规则..."
+		echo "${MANGLE_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			#echo "$TYPE" "$line"
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/iptables -t mangle -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/iptables -t mangle -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/iptables -t mangle -X/g')
+				run_bg $CMD3
+			fi
+		done
 	fi
-	echo_date "清除iptables mangle规则..."
-	echo "${MANGLE_RULES}" | while read line
-	do
-		local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-		#echo "$TYPE" "$line"
-		if [ "${TYPE}" == "A" ];then
-			local CMD1=$(echo "$line" | sed 's/^-A/iptables -t mangle -D/g')
-			run_bg $CMD1
-		elif [ "${TYPE}" == "N" ];then
-			local CMD2=$(echo "$line" | sed 's/^-N/iptables -t mangle -F/g')
-			run_bg $CMD2
-			local CMD3=$(echo "$line" | sed 's/^-N/iptables -t mangle -X/g')
-			run_bg $CMD3
-		fi
-	done
+
+	# flush FILTER (QUIC block)
+	local FILTER_RULES=$(iptables -t filter -S | grep -E "SHADOWSOCKS_QUIC" | sort)
+	if [ -n "${FILTER_RULES}" ];then
+		echo_date "清除iptables filter规则..."
+		echo "${FILTER_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/iptables -t filter -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/iptables -t filter -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/iptables -t filter -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
 
 }
 load_iptables() {
@@ -4293,6 +4358,9 @@ _start_iptables() {
 	else
 		echo_date "DNS劫持功能未开启，建议开启！"
 	fi
+
+	# Block QUIC(UDP/443) to non-China destinations (HTTP/3) so clients fallback to TCP.
+	apply_quic_block
 	
 	# QOS开启的情况下
 	QOSO=$(iptables -t mangle -S | grep -o QOSO | wc -l)

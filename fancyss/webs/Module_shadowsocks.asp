@@ -478,7 +478,8 @@ function save() {
 	  //"ss_basic_proxy_ipv6"
 	  "ss_basic_udpoff",
 	  "ss_basic_udpall",
-	  "ss_basic_udpgpt"
+	  "ss_basic_udpgpt",
+	  "ss_basic_udp_quic"
 	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
@@ -6591,12 +6592,13 @@ function restart_chinadns() {
 															//	{ id: 'ss_basic_proxy_ipv6', type:'checkbox', func:'u', value:true},
 															//	{ suffix: '<a>ipv6</a>' },
 															//]},
-																{ title: 'New Bing模式', id:'ss_basic_proxy_newb', hint:'149', type:'checkbox', value:true},
-																{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
-																	{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">关闭</font></a>', value: 0},
-																	{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">开启</font></a>', value: 1},
-																	{ id:'ss_basic_udpgpt', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">仅chatgpt</font></a>', value: 2},
-																]},
+															{ title: 'New Bing模式', id:'ss_basic_proxy_newb', hint:'149', type:'checkbox', value:true},
+															{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
+																{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">关闭</font></a>', value: 0},
+																{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">开启</font></a>', value: 1},
+																{ id:'ss_basic_udpgpt', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">仅chatgpt</font></a>', value: 2},
+															]},
+															{ title: '屏蔽quic流量', id:'ss_basic_udp_quic', hint:'150', type:'checkbox', value:true},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
