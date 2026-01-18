@@ -3,7 +3,14 @@
 3.4.6 (to be release)
    - fix	修复部分机场因UA识别问题导致无法订阅的问题
    - update	现在识别到clash配置文件的订阅会加以提醒
-   - update	chinadns-ng版本更新到2026.01.18，增强其稳定性
+   - update	魔改版chinadns-ng版本更新到2026.01.18，增强稳定性
+   - update	chinadns-ng本地缓存由16384默认改为8192（未来根据机器性能做不同值）
+   - add	[详细状态] - [检测当前相关进程工作状态]增加程序内存占用显示
+   - update	xray二进制更新到 26.1.18
+   - update	hysteria2节点新增congestion（拥塞算法）设置，可选：reno, bbr, brutal, force-brutal
+   - update	hysteria2不设置上下行也能订阅了，但是congestion会被默认写为bbr
+   - update	hysteria2订阅新增congestion（拥塞算法）设置，可以在订阅时设置好hy2节点的拥塞算法
+   - fix	hysteria2现在可以直接写端口范围，不用指定单端口，如：20000-50000
 
 3.4.5 (20260117)
    - add	hysteria2节点支持端口跳跃配置，现有端口处填写即可，示例：443,20000-50000

@@ -1517,14 +1517,18 @@ add_hy2_node(){
 	local action="$2"
 	unset hy2_server hy2_server_port hy2_remarks hy2_uuid hy2_ai hy2_tfo hy2_sni_tmp hy2_peer_tmp hy2_sni hy2_group hy2_group_hash
 
-	if [ -z "${HY2_UP_SPEED}" ];then
-		echo_date "🔴hysteria2节点：未设置上行速度，跳过！"
-		return 1
+	if [ -z "${HY2_UP_SPEED}" -a -n "${HY2_DL_SPEED}" ];then
+		unset HY2_DL_SPEED
+	elif [ -n "${HY2_UP_SPEED}" -a -z "${HY2_DL_SPEED}" ];then
+		unset HY2_UP_SPEED
 	fi
 
-	if [ -z "${HY2_DL_SPEED}" ];then
-		echo_date "🔴hysteria2节点：未设置下行速度，跳过！"
-		return 1
+	if [ -z "${HY2_UP_SPEED}" -a -z "${HY2_DL_SPEED}" ];then
+		echo_date "🔴hysteria2节点：未设置上行/下行速度，congestion（拥塞算法）默认采用：bbr"
+		HY2_CG_OPT="bbr"
+	elif [ -n "${HY2_UP_SPEED}" -a -n "${HY2_DL_SPEED}" ];then
+		# echo_date "🔴hysteria2节点：congestion（拥塞算法）采用你设置的：${HY2_CG_OPT}！"
+		HY2_CG_OPT=$(dbus get ss_basic_hy2_cg_opt)
 	fi
 
 	hy2_server=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
@@ -1606,6 +1610,7 @@ add_hy2_node(){
 	json_add_string hy2_obfs_pass "${hy2_obfs_pass}"
 	json_add_string hy2_up "${HY2_UP_SPEED}"
 	json_add_string hy2_dl "${HY2_DL_SPEED}"
+	json_add_string hy2_cg "${HY2_CG_OPT}"
 	if [ "${HY2_TFO_SWITCH}" == "2" ];then
 		json_add_string hy2_tfo "${hy2_tfo}"
 	elif [ "${HY2_TFO_SWITCH}" == "1" ];then

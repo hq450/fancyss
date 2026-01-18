@@ -195,87 +195,106 @@ GET_CURRENT_NODE_NAME(){
 	echo "${ss_basic_name}"
 }
 
+GET_VM_RSS(){
+	# Backward-compatible wrapper for single pid; supports multiple pids too.
+	GET_VM_RSS_MULTI "$@"
+}
+
+__format_kb() {
+	# $1: integer KB
+	# output: 123KB | 12.3MB
+	awk -v val_kb="${1:-0}" 'BEGIN{
+		if (val_kb < 1024) {
+			printf "%.0fKB", val_kb
+		} else {
+			printf "%.1fMB", val_kb/1024
+		}
+	}'
+}
+
+__get_vm_rss_kb() {
+	# $1: pid, output integer KB (0 if missing)
+	[ -n "$1" ] || { echo 0; return 1; }
+	[ -r "/proc/$1/status" ] || { echo 0; return 1; }
+	awk '$1=="VmRSS:"{print $2; exit}' "/proc/$1/status" 2>/dev/null | awk 'NF{print;exit} END{if(NR==0)print 0}'
+}
+
+GET_VM_RSS_MULTI() {
+	# Usage: GET_VM_RSS_MULTI <pid1> [pid2 ...]
+	# Output:
+	# - single pid: "12.3MB"
+	# - multi pids : "1.0MB 0.8MB (1.8MB)"
+	local rss_list=""
+	local total_kb=0
+	local count=0
+	local pid kb
+
+	for pid in "$@"; do
+		[ -n "${pid}" ] || continue
+		kb="$(__get_vm_rss_kb "${pid}")"
+		[ -n "${kb}" ] || kb=0
+		rss_list="${rss_list}$(__format_kb "${kb}") "
+		total_kb=$((total_kb + kb))
+		count=$((count + 1))
+	done
+
+	# Trim trailing space
+	rss_list="${rss_list% }"
+
+	[ "${count}" -eq 0 ] && return 0
+	if [ "${count}" -eq 1 ]; then
+		echo "${rss_list}"
+	else
+		echo "${rss_list} ($(__format_kb "${total_kb}"))"
+	fi
+}
+
 GET_PROG_STAT(){
 	echo
 	echo "1️⃣ 检测当前相关进程工作状态："
 	echo "--------------------------------------------------------------------------------------------------------"
-	echo "程序		状态		作用		PID"
+	echo "程序		状态		作用		PID		内存"
 
 	# proxy core program
-	if [ "${ss_basic_type}" == "0" ]; then
-		# ss
-		local XRAY=$(pidof xray)
-		if [ -n "${XRAY}" ];then
-			local xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
-			if [ -n "${xray_time}" ];then
-				echo "Xray		运行中🟢		透明代理		${XRAY}	工作时长: ${xray_time}"
-			else
-				echo "Xray		运行中🟢		透明代理		${XRAY}"
-			fi
+if [ "${ss_basic_type}" == "1" ]; then
+		# ssr
+		local SSR_REDIR_PID=$(pidof rss-redir)
+		local SSR_REDIR_RSS=$(GET_VM_RSS_MULTI ${SSR_REDIR_PID})
+		if [ -n "${SSR_REDIR_PID}" ];then
+			echo "ssr-redir	运行中🟢		透明代理		${SSR_REDIR_PID}		${SSR_REDIR_RSS}"
+		else
+			echo "ssr-redir	未运行🔴		透明代理"
+		fi
+	elif [ "${ss_basic_type}" == "0" -o "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" -o "${ss_basic_type}" == "8" ]; then
+		# xray
+		local XRAY_PID=$(pidof xray)
+		local XRAY_RSS=$(GET_VM_RSS_MULTI ${XRAY_PID})
+		if [ -n "${XRAY_PID}" ];then
+			echo "Xray		运行中🟢		透明代理		${XRAY_PID}		${XRAY_RSS}"
 		else
 			echo "Xray	未运行🔴"
 		fi
 		local OBFS_SWITCH=$(dbus get ssconf_basic_ss_obfs_${ssconf_basic_node})
 		if [ -n "${OBFS_SWITCH}" -a "${OBFS_SWITCH}" != "0" ]; then
-			local SIMPLEOBFS=$(pidof obfs-local)
-			if [ -n "${SIMPLEOBFS}" ]; then
-				echo "obfs-local	运行中🟢		混淆插件		${SIMPLEOBFS}"
+			local SIMPLEOBFS_PID=$(pidof obfs-local)
+			local SIMPLEOBFS_RSS=$(GET_VM_RSS_MULTI ${SIMPLEOBFS_PID})
+			if [ -n "${SIMPLEOBFS_PID}" ]; then
+				echo "obfs-local	运行中🟢		混淆插件		${SIMPLEOBFS_PID}		${SIMPLEOBFS_RSS}"
 			else
 				echo "obfs-local	未运行🔴		混淆插件"
 			fi
 		fi
-	elif [ "${ss_basic_type}" == "1" ]; then
-		# ssr
-		local SSR_REDIR=$(pidof rss-redir)
-		if [ -n "${SSR_REDIR}" ];then
-			echo "ssr-redir	运行中🟢		透明代理		${SSR_REDIR}"
-		else
-			echo "ssr-redir	未运行🔴		透明代理"
-		fi
-	elif [ "${ss_basic_type}" == "3" ]; then
-		# v2ray
-		if [ "${ss_basic_vcore}" == "1" ];then
-			local XRAY=$(pidof xray)
-			if [ -n "${XRAY}" ];then
-				local xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
-				if [ -n "${xray_time}" ];then
-					echo "Xray		运行中🟢		透明代理		${XRAY}	工作时长: ${xray_time}"
-				else
-					echo "Xray		运行中🟢		透明代理		${XRAY}"
-				fi
-			else
-				echo "Xray	未运行🔴"
-			fi
-		else
-			local V2RAY=$(pidof v2ray)
-			if [ -n "${V2RAY}" ]; then
-				echo "v2ray		运行中🟢		透明代理		${V2RAY}"
-			else
-				echo "v2ray		未运行🔴		透明代理"
-			fi
-		fi
-	elif [ "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" -o "${ss_basic_type}" == "8" ]; then
-		# xray
-		local XRAY=$(pidof xray)
-		if [ -n "${XRAY}" ];then
-			local xray_time=$(perpls|grep xray|grep -Eo "uptime.+-s\ " | awk -F" |:|/" '{print $3}')
-			if [ -n "${xray_time}" ];then
-				echo "Xray		运行中🟢		透明代理		${XRAY}	工作时长: ${xray_time}"
-			else
-				echo "Xray		运行中🟢		透明代理		${XRAY}"
-			fi
-		else
-			echo "Xray	未运行🔴		透明代理"
-		fi
 	elif [ "${ss_basic_type}" == "6" ]; then
 		# naive
-		local NAIVE=$(pidof naive)
+		local NAIVE_PID=$(pidof naive)
+		local NAIVE_RSS=$(GET_VM_RSS_MULTI ${NAIVE_PID})
 		if [ -n "${NAIVE}" ]; then
 			echo "naive		运行中🟢		socks5		${NAIVE}"
 		else
 			echo "naive		未运行🔴		socks5"
 		fi
-		local IPT2SOCKS=$(pidof ipt2socks)
+		local IPT2SOCKS_PID=$(pidof ipt2socks)
+		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
 		if [ -n "${IPT2SOCKS}" ]; then
 			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
 		else
@@ -283,13 +302,15 @@ GET_PROG_STAT(){
 		fi
 	elif [ "${ss_basic_type}" == "7" ]; then
 		# tuic
-		local TUIC=$(pidof tuic-client)
+		local TUIC_PID=$(pidof tuic-client)
+		local TUIC_RSS=$(GET_VM_RSS_MULTI ${TUIC_PID})
 		if [ -n "${TUIC}" ]; then
 			echo "tuic-client	运行中🟢		socks5		${TUIC}"
 		else
 			echo "tuic-client	未运行🔴		socks5"
 		fi
-		local IPT2SOCKS=$(pidof ipt2socks)
+		local IPT2SOCKS_PID=$(pidof ipt2socks)
+		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
 		if [ -n "${IPT2SOCKS}" ]; then
 			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
 		else
@@ -300,26 +321,29 @@ GET_PROG_STAT(){
 	# DNS program
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		# chinadns-ng
-		local CHNG=$(pidof chinadns-ng)
-		if [ -n "${CHNG}" ];then
-			echo "chinadns-ng	运行中🟢		DNS分流		${CHNG}"
+		local CHNG_PID=$(pidof chinadns-ng)
+		local CHNG_RSS=$(GET_VM_RSS_MULTI ${CHNG_PID})
+		if [ -n "${CHNG_PID}" ];then
+			echo "chinadns-ng	运行中🟢		DNS分流		${CHNG_PID}		${CHNG_RSS}"
 		else
 			echo "chinadns-ng	未运行🔴		DNS分流"
 		fi
 	else
 		# smartdns
-		local SMRT=$(pidof smartdns)
-		if [ -n "${SMRT}" ];then
-			echo "smartdns	运行中🟢		DNS分流		${SMRT}"
+		local SMRT_PID=$(pidof smartdns)
+		local SMRT_RSS=$(GET_VM_RSS_MULTI ${SMRT_PID})
+		if [ -n "${SMRT_PID}" ];then
+			echo "smartdns	运行中🟢		DNS分流		${SMRT_PID}		${SMRT_RSS}"
 		else
 			echo "smartdns	未运行🔴		DNS分流"
 		fi
 	fi
 		
 	if [ "${ss_basic_dns_server}" != "1" ];then
-		local DMQ=$(pidof dnsmasq)
-		if [ -n "${DMQ}" ];then
-			echo "dnsmasq		运行中🟢		DNS解析		$DMQ"
+		local DMQ_PID=$(pidof dnsmasq)
+		local DMQ_RSS=$(GET_VM_RSS_MULTI ${DMQ_PID})
+		if [ -n "${DMQ_PID}" ];then
+			echo "dnsmasq		运行中🟢		DNS解析		${DMQ_PID}	${DMQ_RSS}"
 		else
 			echo "dnsmasq	未运行🔴		DNS解析"
 		fi

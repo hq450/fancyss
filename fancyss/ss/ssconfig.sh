@@ -1661,8 +1661,6 @@ start_chinadns_ng(){
 		EOF
 	fi
 	
-
-
 	# defalut
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 域名白名单
@@ -1758,7 +1756,7 @@ start_chinadns_ng(){
 		hosts /etc/chng_hosts
 		
 		# dns 缓存
-		cache 16384
+		cache 8192
 		cache-stale 86400
 		cache-refresh 20
 		cache-ignore asuscomm.com
@@ -2187,6 +2185,44 @@ get_value_empty(){
 		echo \"$1\"
 	else
 		echo \"\"
+	fi
+}
+
+get_value_congestion(){
+	if [ -n "${ss_basic_hy2_up}" -a -n "${ss_basic_hy2_dl}" ]; then
+		if [ -z "${ss_basic_hy2_cg}" ];then
+			# 之前的版本没有开放此选项，帮用户设置为brutal
+			echo \"brutal\"
+		else
+			# 上下行都设置了且正确，此时可以使用用户选择的congestion
+			echo \"$1\"
+		fi
+	elif [ -z "${ss_basic_hy2_up}" -a -z "${ss_basic_hy2_dl}" ]; then
+		echo \"bbr\"
+	fi
+}
+
+get_hy2_port(){
+	local _match1=$(echo $1 | grep -Eo ",")
+	local _match2=$(echo $1 | grep -Eo "-")
+	if [ -z "${_match1}" -a -z "${_match2}" ]; then
+		# single port
+		echo "$1"
+	else
+		# multi port or port range
+		echo null
+	fi
+}
+
+get_hy2_udphop_port(){
+	local _match1=$(echo $1 | grep -Eo ",")
+	local _match2=$(echo $1 | grep -Eo "-")
+	if [ -z "${_match1}" -a -z "${_match2}" ]; then
+		# single port
+		echo \"\"
+	else
+		# multi port or port range
+		echo \"$1\"
 	fi
 }
 
@@ -3392,6 +3428,40 @@ creat_hy2_json(){
 	else
 		ss_basic_hy2_sni="${ss_basic_hy2_sni}"
 	fi
+
+	# 避免用户输入单位，检测下是否是纯数值
+	if [ $(number_test ${ss_basic_hy2_up}) != "0" ];then
+		echo_date "错误！当前hysteria2节点上行速度设置不正确，请输入纯数字！"
+		close_in_five
+	fi
+	if [ $(number_test ${ss_basic_hy2_dl}) != "0" ];then
+		echo_date "错误！当前hysteria2节点下行速度设置不正确，请输入纯数字！"
+		close_in_five
+	fi
+
+	# 默认情况：有 up/down 时 brutal，无 up/down 时 bbr: https://github.com/XTLS/Xray-core/issues/5546
+	if [ -n "${ss_basic_hy2_up}" -a -z "${ss_basic_hy2_dl}" ]; then
+		echo_date "错误！当前hysteria2节点设置了上行速度未设置下行！请更正！"
+		close_in_five
+	elif [ -z "${ss_basic_hy2_up}" -a -n "${ss_basic_hy2_dl}" ]; then
+		echo_date "错误！当前hysteria2节点设置了下行速度未设置下行！请更正！"
+		close_in_five
+	elif [ -z "${ss_basic_hy2_up}" -a -z "${ss_basic_hy2_dl}" ]; then
+		# 未设置上下行可以允许，但是congestion必须设置为bbr，设置逻辑在：get_value_congestion
+		if [ -z "${ss_basic_hy2_cg}" ];then
+			echo_date "提醒！hysteria2协议未设置上行和下行速度，拥塞算法将采用：bbr！"
+		else
+			echo_date "提醒！hysteria2协议未设置上行和下行速度，拥塞算法将采用：bbr，而不是你设置的：${ss_basic_hy2_cg}"
+		fi
+	elif [ -n "${ss_basic_hy2_up}" -a -n "${ss_basic_hy2_dl}" ]; then
+		if [ -z "${ss_basic_hy2_cg}" ];then
+			# 之前的版本没有开放此选项，帮用户设置为brutal
+			echo_date "hysteria2协议拥塞算法将采用有上下行情况下的默认设置：brutal"
+		else
+			# 上下行都设置了且正确，此时可以使用用户选择的congestion
+			echo_date "hysteria2协议拥塞算法将采用你设置的：${ss_basic_hy2_cg}"
+		fi
+	fi
 	
 	# outbounds area
 	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
@@ -3401,18 +3471,18 @@ creat_hy2_json(){
 				"settings": {
 					"version": 2,
 					"address": "${ss_basic_server}",
-					"port": $(echo ${ss_basic_hy2_port} | awk -F "," '{print $1}')
+					"port": $(get_hy2_port ${ss_basic_hy2_port})
 				},
 				"streamSettings": {
 					"network": "hysteria",
 					"hysteriaSettings": {
-						"version": 2,
-						"auth": $(get_value_null ${ss_basic_hy2_pass})
+						"version": 2
+						,"auth": $(get_value_empty ${ss_basic_hy2_pass})
+						,"congestion": $(get_value_empty ${ss_basic_hy2_cg})
 						,"up": $(get_value_speed ${ss_basic_hy2_up})
 						,"down": $(get_value_speed ${ss_basic_hy2_dl})
-						,"auth": $(get_value_null ${ss_basic_hy2_pass})
 						,"udphop": {
-							"port": "${ss_basic_hy2_port}",
+							"port": $(get_hy2_udphop_port ${ss_basic_hy2_port}),
 							"interval": 30
 						}
 					}
