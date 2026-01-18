@@ -771,7 +771,7 @@ add_ss_node(){
 	fi
 	
 	if [ "${action}" == "1" ];then
-		group=$(echo "${urllink}" | sed -n 's/.\+group=\(.\+\)#.\+/\1/p')
+		group=$(echo "${urllink}" | urldecode | sed -n 's/.\+group=\(.\+\)#.\+/\1/p')
 		if [ -n "${group}" ];then
 			group=$(dec64 $group)
 		else
