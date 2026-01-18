@@ -1,23 +1,23 @@
 {
   "gfwlist": {
     "name": "gfwlist.gz",
-    "date": "2026-01-13 00:12",
-    "md5": "22af83f63427a93cd3623c13002df0a4",
-    "count": "7180"
+    "date": "2026-01-19 00:49",
+    "md5": "fa6fabce4aeab52bed35d8396806a604",
+    "count": "7183"
   },
   "chnlist": {
     "name": "chnlist.gz",
-    "date": "2026-01-15 23:48",
-    "md5": "32a8b3efe92877142bfc336dc8b608b0",
-    "count": "114215",
+    "date": "2026-01-19 00:49",
+    "md5": "46dee5ae1bfffc730402101e1c7b055b",
+    "count": "113923",
     "note": "merged from dnsmasq-china-list"
   },
   "chnroute": {
     "name": "chnroute.txt",
-    "date": "2026-01-15 23:49",
-    "md5": "b883d3acccf803eb93d55ab66d665905",
-    "count": "8228",
-    "count_ip": "358495292",
+    "date": "2026-01-19 00:49",
+    "md5": "f485432205ac98758a759e2a466bd1a8",
+    "count": "8230",
+    "count_ip": "358496060",
     "source": "merged"
   },
   "chnroute6": {
@@ -29,22 +29,22 @@
   },
   "adslist": {
     "name": "adslist.gz",
-    "date": "2026-01-13 00:12",
-    "md5": "8e7468a8007c26a9ca43c98a07fe793c",
-    "count": "107338",
+    "date": "2026-01-19 00:49",
+    "md5": "64caa9ee8cba5b23a151b76657a1e71b",
+    "count": "108630",
     "source": "anti-ad",
     "url": "https://anti-ad.net/domains.txt"
   },
   "udplist": {
     "name": "udplist.txt",
-    "date": "2026-01-15 23:45",
-    "md5": "922a52c0f0a2ba1e7732e8a7c32aaec0",
+    "date": "2026-01-19 00:48",
+    "md5": "b5544fd555af7bd76af8976e99ef1e6e",
     "count": "48"
   },
   "rotlist": {
     "name": "rotlist.txt",
-    "date": "2026-01-08 16:19",
-    "md5": "de470f08c946f80269b2b524efc93ce5",
+    "date": "2026-01-19 00:48",
+    "md5": "d58f9f77b477997e611850870d681ede",
     "count": "28"
   },
   "white_list": {
@@ -61,8 +61,8 @@
   },
   "block_list": {
     "name": "block_list.txt",
-    "date": "2026-01-06 23:21",
-    "md5": "a98186b603e45e546122dc1c29ab0310",
+    "date": "2026-01-19 00:48",
+    "md5": "3f74ab73534fe82a7c7c226ac3c5dfd5",
     "count": "898"
   },
   "apple_china": {
