@@ -1737,7 +1737,7 @@ get_ua(){
 	echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN|Shadowrocket"
 
 	#&flag=shadowrocket
-	#?flag=v2rayn
+	#&flag=v2rayn
 }
 
 download_by_curl(){
@@ -1979,19 +1979,26 @@ get_online_rule_now(){
 	echo_date "🔍开始解析节点信息..."
 
 	# 8. 解析订阅原始文本
-	# xargs --show-limits </dev/null to get arg_max, GT-AX6000 is 131072, which means 128kb
-	# 如果订阅原始文本超过128kb，会导致echo，printf命令无法完整输出，所以直接对文件操作即可
-	cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | tr -d '\n' | sed 's/-/+/g;s/_/\//g' | sed 's/$/===/' | base64 -d > ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
-	if [ "$?" != "0" ]; then
-		echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
+	local _head=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ss://|^ssr://|^vmess://|^vless://|^trojan://|^hysteria2://")
+	# 检测是否明文内容
+	if [ "${_head}" -gt "1" ];then
+		echo_date "📄检测到明文的订阅格式，无需解码，继续！"
+		cp -r ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
+	else
+		# xargs --show-limits </dev/null to get arg_max, GT-AX6000 is 131072, which means 128kb
+		# 如果订阅原始文本超过128kb，会导致echo，printf命令无法完整输出，所以直接对文件操作即可
+		cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | tr -d '\n' | sed 's/-/+/g;s/_/\//g' | sed 's/$/===/' | base64 -d > ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
+		if [ "$?" != "0" ]; then
+			echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
+		fi
 	fi
-
 	# 9. 一些机场使用的换行符是dos格式（\r\n\)，在路由Linux下会出问题！转换成unix格式
 	if [ -n "$(which dos2unix)" ];then
 		dos2unix -u ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	else
 		tr -d '\r' < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | sponge ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	fi
+	
 	echo "" >> ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	local NODE_NU_RAW=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -c "://")
 	echo_date "😀初步解析成功！共获得${NODE_NU_RAW}个节点！"

@@ -39,7 +39,7 @@ unset_lock() {
 apply_quic_block() {
 	# Block outbound QUIC (UDP/443) to non-China destinations to avoid HTTP/3 direct-connect bypassing TCP proxy.
 	# Use filter table since nat can't DROP/REJECT.
-	if [ "${ss_basic_udp_quic}" = "1" ]; then
+	if [ "${ss_basic_udp_quic}" != "0" ]; then
 		echo_date "开启屏蔽QUIC(UDP/443)功能，防止HTTP/3直连..."
 
 		ensure_chain filter SHADOWSOCKS_QUIC
@@ -60,21 +60,15 @@ apply_quic_block() {
 			fi
 		fi
 
-		# Hook early in FORWARD/OUTPUT so it works even if LAN->WAN is accepted by default rules.
+		# Hook early in FORWARD so it works even if LAN->WAN is accepted by default rules.
 		if ! iptables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; then
 			iptables -t filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS_QUIC
-		fi
-		if ! iptables -t filter -C OUTPUT -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; then
-			iptables -t filter -I OUTPUT 1 -p udp --dport 443 -j SHADOWSOCKS_QUIC
 		fi
 	else
 		# Remove rules if feature is disabled.
 		if iptables -t filter -L SHADOWSOCKS_QUIC >/dev/null 2>&1; then
 			while iptables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; do
 				iptables -t filter -D FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1
-			done
-			while iptables -t filter -C OUTPUT -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; do
-				iptables -t filter -D OUTPUT -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1
 			done
 			iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
 			iptables -t filter -X SHADOWSOCKS_QUIC >/dev/null 2>&1
