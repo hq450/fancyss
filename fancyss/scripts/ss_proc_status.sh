@@ -295,8 +295,8 @@ if [ "${ss_basic_type}" == "1" ]; then
 		fi
 		local IPT2SOCKS_PID=$(pidof ipt2socks)
 		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
-		if [ -n "${IPT2SOCKS}" ]; then
-			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
+		if [ -n "${IPT2SOCKS_PID}" ]; then
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}"
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
@@ -304,15 +304,15 @@ if [ "${ss_basic_type}" == "1" ]; then
 		# tuic
 		local TUIC_PID=$(pidof tuic-client)
 		local TUIC_RSS=$(GET_VM_RSS_MULTI ${TUIC_PID})
-		if [ -n "${TUIC}" ]; then
-			echo "tuic-client	运行中🟢		socks5		${TUIC}"
+		if [ -n "${TUIC_PID}" ]; then
+			echo "tuic-client	运行中🟢		socks5		${TUIC_PID}		${TUIC_RSS}"
 		else
 			echo "tuic-client	未运行🔴		socks5"
 		fi
 		local IPT2SOCKS_PID=$(pidof ipt2socks)
 		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
-		if [ -n "${IPT2SOCKS}" ]; then
-			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS}"
+		if [ -n "${IPT2SOCKS_PID}" ]; then
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}"
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
