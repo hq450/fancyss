@@ -2191,7 +2191,7 @@ function tabclickhandler(_type) {
 		E('trojan_uuid_tr').style.display = "none";
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none";
+		E("naive_prot_tr").style.display = "none";		//fancyss-full
 		E("naive_server_tr").style.display = "none";	//fancyss-full
 		E("naive_port_tr").style.display = "none";		//fancyss-full
 		E("naive_user_tr").style.display = "none";		//fancyss-full
