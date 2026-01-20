@@ -960,8 +960,8 @@ function verifyFields(r) {
 		var v2ray_on = false;
 		var xray_on = false;
 		var trojan_on = false;
-		var naive_on = false;
-		var tuic_on = false;
+		var naive_on = false;	//fancyss-full
+		var tuic_on = false;	//fancyss-full
 		var hy2_on = true;
 	}
 	var v_json_on = E("ss_basic_v2ray_use_json").checked == true;
@@ -2192,11 +2192,11 @@ function tabclickhandler(_type) {
 		E('trojan_sni_tr').style.display = "none";
 		E('trojan_tfo_tr').style.display = "none";
 		E("naive_prot_tr").style.display = "none";
-		E("naive_server_tr").style.display = "none";
-		E("naive_port_tr").style.display = "none";
-		E("naive_user_tr").style.display = "none";
-		E("naive_pass_tr").style.display = "none";		
-		E('tuic_json_tr').style.display = "none";
+		E("naive_server_tr").style.display = "none";	//fancyss-full
+		E("naive_port_tr").style.display = "none";		//fancyss-full
+		E("naive_user_tr").style.display = "none";		//fancyss-full
+		E("naive_pass_tr").style.display = "none";		//fancyss-full
+		E('tuic_json_tr').style.display = "none";		//fancyss-full
 		$(".hy2_elem").show();
 		showhide("hy2_obfs_pass_tr", E("ss_node_table_hy2_obfs").value == "1");
 	}
@@ -2574,8 +2574,8 @@ function edit_conf_table(o) {
 		E("ssrTitle").style.display = "none";
 		E("vmessTitle").style.display = "none";
 		E("vlessTitle").style.display = "none";
-		E("trojanTitle").style.display = "none";
-		E("naiveTitle").style.display = "none";
+		E("trojanTitle").style.display = "none";	//fancyss-full
+		E("naiveTitle").style.display = "none";		//fancyss-full
 		E("tuicTitle").style.display = "none";
 		E("hy2Title").style.display = "";
 		$("#hy2Title").html("编辑hysteria2账号");
