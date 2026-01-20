@@ -4,6 +4,23 @@
    - fix	修复hysteria2使用单443端口时候代理不通的问题
    - fix	修复tuic-client运行中，详细状态显示未运行的问题
    - update	支持更多的机场订阅格式（订阅内容非base64编码）
+   - update	xray运行trojan节点现在支持obfs-local WebSocket伪装类型节点
+   - update	trojan订阅支持obfs-local WebSocket伪装类型节点
+   - fix	修复因quic流量屏蔽导致hysteria2等443 udp通讯的节点挂掉的问题
+   - update	【屏蔽quic流量】控制将更加精细化，而不是一刀切，如果代理开启了udp，将不会屏蔽quic流量(udp 443)
+       		开启【屏蔽quic流量】：
+       			在【附加设置】- 【udp代理控制】中：
+       			1. 关闭 udp：将屏蔽海外udp 443数据包
+       			2. 开启 udp：不屏蔽海外udp 443数据包
+       			3. 仅chatgpt：将屏蔽除了udplist以外的海外udp 443数据包
+       			注意：游戏模式中，无论是否勾【屏蔽quic流量】，选始终不屏蔽海外udp 443数据包
+       		关闭【屏蔽quic流量】：
+       			关闭后udp的行为跟以前版本一样，不开启udp代理或者代理不支持udp是会泄露流量的
+       			如果不代理udp，会导致访问境外http3（基于quic协议，udp 443）站点被直连，让很多AI网站检测到国内ip而不可用
+       			注意：游戏模式中udp代理是强制打开的，【udp代理控制】无论怎么设置都不会起作用
+       		建议开启【屏蔽quic流量】！
+       			开启屏蔽后，即使不代理udp，访问境外http3站点也不会走直连，而是会回落到基于tcp协议的http2
+       			开启屏蔽后，如果代理了udp，插件不会屏蔽quic，所以http3数据会走代理成功访问。
 
 3.4.7 (20260119)
    - fix	修复部分机场订阅后出现skipd错误的问题

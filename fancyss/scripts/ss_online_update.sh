@@ -131,6 +131,10 @@ unset PWD
 # ssconf_basic_trojan_uuid_
 # ssconf_basic_trojan_sni_
 # ssconf_basic_trojan_tfo_
+# ssconf_basic_trojan_plugin_
+# ssconf_basic_trojan_obfs_
+# ssconf_basic_trojan_obfshost_
+# ssconf_basic_trojan_obfsuri_
 # ssconf_basic_naive_prot_
 # ssconf_basic_naive_server_
 # ssconf_basic_naive_port_
@@ -146,6 +150,7 @@ unset PWD
 # ssconf_basic_hy2_dl_
 # ssconf_basic_hy2_sni_
 # ssconf_basic_hy2_tfo_
+# ssconf_basic_hy2_cg_
 # ssconf_basic_type_
 
 # 方案
@@ -1429,10 +1434,20 @@ add_vless_node(){
 }
 
 add_trojan_node(){
-	local decode_link="$1"
-	local action="$2"
-	unset t_server t_server_port t_remarks t_uuid t_ai t_tfo t_sni_tmp t_peer_tmp t_sni t_group t_group_hash
+	# example, not real
+	# trojan://a479d06e-c8b2-4f47-8f3d-0fdda666c7fc@userm2.su.com:39718?allowInsecure=1&plugin=obfs-local;obfs=websocket;obfs-host=bing.com;obfs-uri=/&tfo=1#香港M2-5|专线|流媒体|
+	# trojan://auto@104.211.135.143:443?peer=elicense3.wawa55.workers.dev&plugin=obfs-local;obfs=websocket;obfs-host=esetsecuritylicense3.wawafec355.workers.dev;obfs-uri=/#United+States
+	# trojan://yaml77@104.121.161.173:443?peer=yaml117.ggggf.net&plugin=obfs-local;obfs=websocket;obfs-host=yaml7.ggff.net;obfs-uri=/#United+States
+	# trojan://amclubs2024@198.162.162.156:443?peer=trer.amub.us&plugin=obfs-local;obfs=websocket;obfs-host=trer.amub.us;obfs-uri=/?ed=2560#United+States
+	# trojan://37470001032741200@grateful-glowworm.treefrog761.one:443#Mexico
+	# trojan://37470001032741200@humble-rodent.treefrog761.one:443#South+Korea
 	
+	local decode_link="$1"
+	local decode_link=$(echo "$1" | urldecode)
+	local action="$2"
+	unset t_server t_server_port t_remarks t_uuid t_ai t_tfo t_sni_tmp t_peer_tmp t_sni t_group t_group_hash t_plugin t_obfs t_obfshost t_obfsuri
+	
+	t_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
 	t_server=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $2}')
 	t_server_port=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $3}')
 
@@ -1440,10 +1455,9 @@ add_trojan_node(){
 	if [ "$?" != "0" ];then
 		t_remarks=${t_server}
 	else
-		t_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}' | urldecode)
+		t_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}')
 	fi
 
-	t_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
 	t_ai=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "allowInsecure" | awk -F"=" '{print $2}')
 	t_tfo=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "tfo" | awk -F"=" '{print $2}')
 	t_sni_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
@@ -1455,6 +1469,10 @@ add_trojan_node(){
 			t_sni=${t_peer_tmp}
 		fi
 	fi
+	t_plugin=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^plugin=" | awk -F"=" '{print $2}')
+	t_obfs=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs=" | awk -F"=" '{print $2}')
+	t_obfshost=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs-host=" | awk -F"=" '{print $2}')
+	t_obfsuri=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs-uri=" | awk -F"=" '{print $2}')
 
 	if [ "${action}" == "1" ];then
 		t_group=${DOMAIN_NAME}
@@ -1466,16 +1484,19 @@ add_trojan_node(){
 	fi
 	
 	# for debug, please keep it here
-	# echo ------------
-	# echo group: ${t_group}
-	# echo remarks: ${t_remarks}
-	# echo server: ${t_server}
-	# echo port: ${t_server_port}
-	# echo password: ${t_uuid}
-	# echo allowInsecure: ${t_ai}
-	# echo SNI: ${t_sni}
-	# echo TFO: ${t_tfo}
-	# echo ------------	
+	echo ------------
+	echo group: ${t_group}
+	echo remarks: ${t_remarks}
+	echo server: ${t_server}
+	echo port: ${t_server_port}
+	echo password: ${t_uuid}
+	echo allowInsecure: ${t_ai}
+	echo SNI: ${t_sni}
+	echo plugin: ${t_tfo}
+	echo obfs: ${t_tfo}
+	echo obfs_host: ${t_tfo}
+	echo obfs_uri: ${t_tfo}
+	echo ------------	
 
 	if [ -z "${t_server}" -o -z "${t_remarks}" -o -z "${t_server_port}" -o -z "${t_uuid}" ]; then
 		# 丢弃无效节点
@@ -1503,6 +1524,10 @@ add_trojan_node(){
 	json_add_string trojan_sni "${t_sni}"
 	json_add_string trojan_tfo "${t_tfo}"
 	json_add_string trojan_uuid "${t_uuid}"
+	json_add_string trojan_plugin "${t_plugin}"
+	json_add_string trojan_obfs "${t_obfs}"
+	json_add_string trojan_obfshost "${t_obfshost}"
+	json_add_string trojan_obfsuri "${t_obfsuri}"
 	json_add_string type "5"
 
 	if [ "${action}" == "1" ];then
@@ -1759,7 +1784,7 @@ download_by_curl(){
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."
-		run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 10 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		if [ "$?" == "0" ]; then
 			return 0
 		fi
@@ -1769,7 +1794,7 @@ download_by_curl(){
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 10 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，结束curl订阅下载！"
@@ -1781,7 +1806,7 @@ download_by_curl(){
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
 			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
-			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 10 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			local EXT_ARG=""
@@ -1791,7 +1816,7 @@ download_by_curl(){
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
 		echo_date "⬇️使用常规网络下载..."
-		run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 10 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		return $?
 	fi
 }

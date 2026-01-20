@@ -36,46 +36,6 @@ unset_lock() {
 	rm -rf "$LOCK_FILE"
 }
 
-apply_quic_block() {
-	# Block outbound QUIC (UDP/443) to non-China destinations to avoid HTTP/3 direct-connect bypassing TCP proxy.
-	# Use filter table since nat can't DROP/REJECT.
-	if [ "${ss_basic_udp_quic}" != "0" ]; then
-		echo_date "开启屏蔽QUIC(UDP/443)功能，防止HTTP/3直连..."
-
-		ensure_chain filter SHADOWSOCKS_QUIC
-		iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
-
-		# Prefer REJECT for fast fallback to TCP. Fallback to DROP if unsupported.
-		if ! iptables -t filter -A SHADOWSOCKS_QUIC -p udp --dport 443 \
-			-m set ! --match-set chnroute dst -m set ! --match-set ignlist dst \
-			-j REJECT --reject-with icmp-port-unreachable >/dev/null 2>&1; then
-			iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
-			if ! iptables -t filter -A SHADOWSOCKS_QUIC -p udp --dport 443 \
-				-m set ! --match-set chnroute dst -m set ! --match-set ignlist dst \
-				-j REJECT >/dev/null 2>&1; then
-				iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
-				iptables -t filter -A SHADOWSOCKS_QUIC -p udp --dport 443 \
-					-m set ! --match-set chnroute dst -m set ! --match-set ignlist dst \
-					-j DROP >/dev/null 2>&1
-			fi
-		fi
-
-		# Hook early in FORWARD so it works even if LAN->WAN is accepted by default rules.
-		if ! iptables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; then
-			iptables -t filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS_QUIC
-		fi
-	else
-		# Remove rules if feature is disabled.
-		if iptables -t filter -L SHADOWSOCKS_QUIC >/dev/null 2>&1; then
-			while iptables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1; do
-				iptables -t filter -D FORWARD -p udp --dport 443 -j SHADOWSOCKS_QUIC >/dev/null 2>&1
-			done
-			iptables -t filter -F SHADOWSOCKS_QUIC >/dev/null 2>&1
-			iptables -t filter -X SHADOWSOCKS_QUIC >/dev/null 2>&1
-		fi
-	fi
-}
-
 get_model_name(){
 	local ODMPID=$(nvram get odmpid)
 	local PRODUCTID=$(nvram get productid)
@@ -3351,6 +3311,20 @@ creat_trojan_json(){
 		],
 	EOF
 	
+	if [ -n "${ss_basic_trojan_plugin}" -a "${ss_basic_trojan_plugin}" == "obfs-local" -a "${ss_basic_trojan_obfs}" == "websocket" ];then
+		echo_date "检测到该trojan节点为obfs-local WebSocket伪装，继续！"
+		local _trojan_network="ws"
+		local _trojan_ws="{
+						 	\"path\": \"${ss_basic_trojan_obfsuri}\",
+						 	\"headers\": {
+						 		\"Host\": \"${ss_basic_trojan_obfshost}\"
+						 	}
+						 }"
+	else
+		local _trojan_network="tcp"
+		local _trojan_ws=null
+	fi
+	
 	# outbounds area
 	cat >>"${TROJAN_CONFIG_TEMP}" <<-EOF
 		"outbounds": [
@@ -3364,12 +3338,13 @@ creat_trojan_json(){
 					}]
 				},
 				"streamSettings": {
-					"network": "tcp",
+					"network": "${_trojan_network}",
 					"security": "tls",
 					"tlsSettings": {
 						"serverName": $(get_value_null ${ss_basic_trojan_sni}),
 						"allowInsecure": $(get_function_switch ${ss_basic_trojan_ai})
 					}
+					,"wsSettings": ${_trojan_ws}
 					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
 				}
 			}
@@ -3932,7 +3907,72 @@ get_jump_mode() {
 	esac
 }
 
-lan_acess_control() {
+apply_quic_block() {
+	# lan access control
+	acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+	if [ -n "$acl_nu" ]; then
+		for acl in $acl_nu; do
+			ipaddr=$(eval echo \$ss_acl_ip_$acl)
+			ipaddr_hex=$(echo $ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("%02x\n", $4)}')
+			proxy_mode=$(eval echo \$ss_acl_mode_$acl)
+			
+			#  acl in SHADOWSOCKS for filter
+			if [ "$proxy_mode" == "1" -o "$proxy_mode" == "2" -o "$proxy_mode" == "5" ];then
+				# 该主机设置了gfwlist模式，chnroute模式，全局模式，不同的udp代理行为对应不同的udp443过滤行为
+				if [ "$ss_basic_udpoff" == "1" ];then
+					# proxy_mode=0 该主机不需要走代理，不对udp443进行过滤
+					# proxy_mode！=0 该主机需要走代理，但是用户关闭了udp代理，应该对udp443进行过滤
+					if [ "$proxy_mode" == "0" ];then
+						echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
+						iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp --dport 443 -j RETURN
+					else
+						echo_date "UDP 443过滤规则：【$ipaddr】过滤海外udp 443端口流量！"
+						iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp --dport 443 -g $(get_action_chain $proxy_mode)
+					fi
+				fi
+				if [ "$ss_basic_udpall" == "1" ];then
+					# 用户关闭了打开了udp代理，udp443不进行过滤
+					echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
+					iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+				fi
+				if [ "$ss_basic_udpgpt" == "1" ];then
+					# 用户关闭了打开了udplist代理，应该过滤的部分是剩余部分
+					echo_date "UDP 443过滤规则：【$ipaddr】过滤除udplist外的海外udp 443端口流量！"
+					iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp --dport 443 -m set ! --match-set udplist dst  -j SHADOWSOCKS_GPT
+				fi
+			elif [ "$proxy_mode" == "3" ];then
+				# 该主机设置了游戏模式，udp443不进行过滤
+				echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
+				iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+			else
+				# 该主机不经过代理，udp443不进行过滤
+				echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
+				iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+			fi
+		done
+		if [ "$ss_basic_udpoff" == "1" ];then
+			echo_date "UDP 443过滤规则：【剩余主机】过滤海外udp 443端口流量！"
+		fi
+		if [ "$ss_basic_udpall" == "1" ];then
+			echo_date "UDP 443过滤规则：【剩余主机】不过滤海外udp 443端口流量！"
+		fi
+		if [ "$ss_basic_udpgpt" == "1" ];then
+			echo_date "UDP 443过滤规则：【剩余主机】过滤除udplist外的海外udp 443端口流量！"
+		fi
+	else
+		if [ "$ss_basic_udpoff" == "1" ];then
+			echo_date "UDP 443过滤规则：【全部主机】过滤海外udp 443端口流量！"
+		fi
+		if [ "$ss_basic_udpall" == "1" ];then
+			echo_date "UDP 443过滤规则：【全部主机】不过滤海外udp 443端口流量！"
+		fi
+		if [ "$ss_basic_udpgpt" == "1" ];then
+			echo_date "UDP 443过滤规则：【全部主机】过滤除udplist外的海外udp 443端口流量！"
+		fi
+	fi
+}
+
+lan_access_control() {
 	# lan access control
 	acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
 	if [ -n "$acl_nu" ]; then
@@ -3955,7 +3995,8 @@ lan_acess_control() {
 			iptables -t nat -A SHADOWSOCKS_EXT -p tcp $(factor $ports "-m multiport --dport") -m mark --mark "$ipaddr_hex" -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
 			
 			# 3 acl in SHADOWSOCKS for mangle
-			if [ "$proxy_mode" != "0" ];then
+			if [ "$proxy_mode" == "1" -o "$proxy_mode" == "2" -o "$proxy_mode" == "5" ];then
+				# 该主机设置了gfwlist模式，chnroute模式，全局模式，udp行为应该遵循udp控制开关
 				if [ "$ss_basic_udpoff" == "1" ];then
 					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
 				fi
@@ -3965,7 +4006,13 @@ lan_acess_control() {
 				if [ "$ss_basic_udpgpt" == "1" ];then
 					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -j SHADOWSOCKS_GPT
 				fi
+			elif [ "$proxy_mode" == "3" ];then
+				# 添加到ipset中
+				ipset -! add gameip $ipaddr >/dev/null 2>&1
+				# 该主机设置了游戏模式，udp代理控制空开不控制此主机udp
+				iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
 			else
+				# 该主机不经过代理
 				iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
 			fi
 		done
@@ -4072,8 +4119,8 @@ flush_iptables() {
 		done
 	fi
 
-	# flush FILTER (QUIC block)
-	local FILTER_RULES=$(iptables -t filter -S | grep -E "SHADOWSOCKS_QUIC" | sort)
+	# flush MANGLE
+	local FILTER_RULES=$(iptables -t filter -S | grep -E "SHADOWSOCKS" | sort)
 	if [ -n "${FILTER_RULES}" ];then
 		echo_date "清除iptables filter规则..."
 		echo "${FILTER_RULES}" | while read line
@@ -4090,8 +4137,8 @@ flush_iptables() {
 			fi
 		done
 	fi
-
 }
+
 load_iptables() {
 	#local nat_ready=$(ip6tables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
 	local nat_ready=$(iptables -t nat -L PREROUTING -v -n --line-numbers | grep -v PREROUTING | grep -v destination)
@@ -4135,6 +4182,27 @@ append_if_not_exists() {
 		fi
 	else
 		echo "append_if_not_exists 需要以 -A 开头的参数" >&2
+		return 1
+	fi
+}
+
+insert_if_not_exists() {
+	table="$1"
+	shift
+	# 剩余参数为完整规则，例如：-A CHAIN ... -j ...
+	# 先构造对应的 -C 检查：把 -A 改为 -C
+	# 注意：iptables -C 格式为：iptables -t table -C chain rule-spec
+	# 因此需要拆出链名和去掉 -A
+	set -- "$@"
+	if [ "$1" = "-I" ]; then
+		chain="$2"
+		# 去掉前两个参数 "-A chain"
+		shift 2
+		if ! iptables -t "$table" -C "$chain" "$@" >/dev/null 2>&1; then
+		  iptables -t "$table" -I "$chain" "$@"
+		fi
+	else
+		echo "append_if_not_exists 需要以 -I 开头的参数" >&2
 		return 1
 	fi
 }
@@ -4233,20 +4301,20 @@ _start_iptables() {
 	fi
 
 	# 创建游戏模式udp rule
-	ensure_chain mangle SHADOWSOCKS 
+	ensure_chain mangle SHADOWSOCKS
 
 	# IP/cidr/白域名 白名单控制（不go proxy）
 	append_if_not_exists mangle -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
 
 	# 创建GPT模式udp rule
-	ensure_chain mangle SHADOWSOCKS_GPT 
+	ensure_chain mangle SHADOWSOCKS_GPT
 	# {udplist} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建gfw模式udp rule
-	ensure_chain mangle SHADOWSOCKS_GFW 
+	ensure_chain mangle SHADOWSOCKS_GFW
 	# {white_list} 直连
-	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN	
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {gfwlist} 代理
@@ -4257,7 +4325,7 @@ _start_iptables() {
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建白名单模式udp rule
-	ensure_chain mangle SHADOWSOCKS_CHN 
+	ensure_chain mangle SHADOWSOCKS_CHN
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {chnlist} 直连
@@ -4270,7 +4338,7 @@ _start_iptables() {
 	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建游戏模式udp rule
-	ensure_chain mangle SHADOWSOCKS_GAM 
+	ensure_chain mangle SHADOWSOCKS_GAM
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {chnlist} 直连
@@ -4288,9 +4356,72 @@ _start_iptables() {
 	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p tcp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+	
+	#-----------------------FOR FILTER UDP443---------------------
+	# 创建过滤 udp rule
+	ensure_chain filter SHADOWSOCKS
+
+	# {ignlist}不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
+
+	# 创建GPT模式udp filter rule
+	ensure_chain filter SHADOWSOCKS_GPT
+	# {udplist} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j RETURN
+
+	# 创建gfw模式udp filter rule
+	ensure_chain filter SHADOWSOCKS_GFW
+	# {white_list} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN
+	# {black_list} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j REJECT --reject-with icmp-port-unreachable
+	# {gfwlist} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j REJECT --reject-with icmp-port-unreachable
+	# {rotlist} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set router dst -j REJECT --reject-with icmp-port-unreachable
+	# {udplist} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j REJECT --reject-with icmp-port-unreachable
+
+	# 创建白名单模式udp filter rule
+	ensure_chain filter SHADOWSOCKS_CHN
+	# {black_list} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j REJECT --reject-with icmp-port-unreachable
+	# {chnlist} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_CHN -p udp -m set --match-set chnlist dst -j RETURN
+	# {chnroute} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_CHN -p udp -m set --match-set chnroute dst -j RETURN
+	# {white_list} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_CHN -p udp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_CHN -p udp -j REJECT --reject-with icmp-port-unreachable
+
+	# 创建游戏模式udp rule
+	ensure_chain filter SHADOWSOCKS_GAM 
+	# {black_list} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j RETURN
+	# {chnlist} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set chnlist dst -j RETURN
+	# {chnroute} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set chnroute dst -j RETURN
+	# {white_list} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -j RETURN
+
+	# 创建glo模式udp rule
+	ensure_chain filter SHADOWSOCKS_GLO
+	# {white_list} 不过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
+	# {剩余流量} 过滤udp 443
+	append_if_not_exists filter -A SHADOWSOCKS_GLO -p tcp -j REJECT --reject-with icmp-port-unreachable
+	
 	#-------------------------------------------------------
 	# 局域网黑名单（不go proxy）/局域网黑名单（go proxy）
-	lan_acess_control $1
+	lan_access_control $1
+
+	# Block QUIC(UDP/443) to non-China destinations (HTTP/3) so clients fallback to TCP.
+	apply_quic_block
+	
 	# DNS 劫持
 	dns_hijack_control $1
 	#-----------------------FOR ROUTER---------------------
@@ -4313,21 +4444,34 @@ _start_iptables() {
 		# 如果是主模式游戏模式，则把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM链
 		if [ "$ss_acl_default_mode" == "3" ];then
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GAM
+			# 剩余主机游戏模式，不需要过滤ud443，RETURN 
+			append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
 		else
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp -j RETURN
+			# 剩余主机关闭代理，不需要过滤ud443，RETURN 
+			append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443-j RETURN
 		fi
 	else
 		# 如果主模式不是游戏模式，则不需要把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM，不然会造成其他模式主机的udp也走游戏模式
 		if [ "$ss_basic_udpoff" == "1" ];then
+			# 非游戏模式，关闭udp代理
 			append_if_not_exists mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+			# 发到对应过滤链，进行udp443过滤操作
+			append_if_not_exists filter -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
 		fi
 		
 		if [ "$ss_basic_udpall" == "1" ];then
+			# 非游戏模式，开启udp代理
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+			# 不法到对应链，因为不需要过滤udp443
+			append_if_not_exists filter -A SHADOWSOCKS -p udp -j RETURN
 		fi
 
 		if [ "$ss_basic_udpgpt" == "1" ];then
+			# 非游戏模式，开启部分udp代理
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j SHADOWSOCKS_GPT
+			# 发到对应过滤链，进行udp443过滤操作
+			append_if_not_exists filter -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GPT
 		fi
 	fi
 	
@@ -4338,6 +4482,10 @@ _start_iptables() {
 	iptables -t nat -I PREROUTING "${INSET_NU}" -p tcp -j SHADOWSOCKS
 	
 	[ "${mangle}" != "0" ] && append_if_not_exists mangle -A PREROUTING -p udp -j SHADOWSOCKS
+
+	# FOR FILTER
+	[ "${ss_basic_udpoff}" == "1" ] && insert_if_not_exists filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS
+	[ "${ss_basic_udpgpt}" == "1" ] && insert_if_not_exists filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS
 
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		echo_date "开启DNS劫持功能功能，防止DNS污染..."
@@ -4353,9 +4501,6 @@ _start_iptables() {
 		echo_date "DNS劫持功能未开启，建议开启！"
 	fi
 
-	# Block QUIC(UDP/443) to non-China destinations (HTTP/3) so clients fallback to TCP.
-	apply_quic_block
-	
 	# QOS开启的情况下
 	QOSO=$(iptables -t mangle -S | grep -o QOSO | wc -l)
 	RRULE=$(iptables -t mangle -S | grep "A QOSO" | head -n1 | grep RETURN)

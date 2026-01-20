@@ -946,11 +946,12 @@ function openssHint(itemNum, flag) {
 		_caption = "说明：";
 	} else if (itemNum == 150) {
 		width = "650px";
-		statusmenu += "1. 因为游戏模式已经有了udp代理，此处功能仅针对gfwlist模式、大陆白名单模式、全局模式下的udp代理行为<br /><br />";
+		statusmenu += "1. 游戏模式下此处设置无效<br /><br />";
 		statusmenu += "2. 大陆白名单摸下，开启udp代理后，效果和游戏模式等同<br /><br />";
 		statusmenu += "3. 节点必须支持udp代理才能看到实际效果，否则希望被代理的udp包将无法抵达<br /><br />";
-		statusmenu += "4. 勾选仅chatgpt后，只有访问chatgpt网页的udp会被代理，其他udp包不会被代理<br /><br />";
+		statusmenu += "4. 勾选仅chatgpt后，只有访问udplist.txt中的域名udp会被代理，其他udp包不会被代理<br /><br />";
 		statusmenu += "5. 勾选仅chatgpt后，还无法访问chatgpt的，请检查节点是否支持udp，节点的区域是否被openai限制。<br />";
+		statusmenu += "6. 关闭udp代理时，udp443端口的海外数据包将被屏蔽，以。<br />";
 		_caption = "说明：";
 	}
 	//return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
