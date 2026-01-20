@@ -727,54 +727,14 @@ add_ss_node(){
 	# 3. ss://MjAyMi1ibGFrZTMtYWVzLTI1Ni1nY206TWtjeGJsTkJXbUpKemRvY25ERUpOSk5BUw==@11.22.33.44:333#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B93%0A
 	# 4. ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpGQU5DWVNTX1BBU1NAdGVzdC5mYW5jeXNzLmNvbTo0NDQ=#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B94%0A
 
-	info_first=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | sed -n '1p')
-	dec64 "${info_first}" >/dev/null 2>&1
-	if [ "$?" == "0" ];then
-		# first string is base64
-		string_nu=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | wc -l)
-		if [ "${string_nu}" -eq "2" ];then
-			# method:password@server:port are base64
-			decrypt_info=$(dec64 "${info_first}")
-			server_raw=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
-			if [ -n "${server_raw}" ];then
-				server=$(echo "${server_raw}" | awk -F':' '{print $1}')
-				server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
-			fi
-			encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
-			#password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
-			password=$(echo "${decrypt_info}" | sed 's/^[^:]*://')
-		elif [ "${string_nu}" -gt "2" ];then
-			# method:passwor are base64
-			decrypt_info=$(dec64 "${info_first}")
-			server_raw=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
-			if [ -n "${server_raw}" ];then
-				server=$(echo "${server_raw}" | awk -F':' '{print $1}')
-				server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
-			fi
-			encrypt_method=$(echo "${decrypt_info}" | awk -F':' '{print $1}')
-			#password=$(echo "${decrypt_info}" | sed 's/@/|/g;s/:/|/g;s/?/|/g;s/#/|/g' | awk -F'|' '{print $2}')
-			password=$(echo "${decrypt_info}" | sed 's/^[^:]*://')
-		fi
-	else
-		# first string not base64
-		# method:password@server:port/?group=group#remark
-		encrypt_method=${info_first}
-		server_raw=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
-		if [ -n "${server_raw}" ];then
-			server=$(echo "${server_raw}" | awk -F':' '{print $1}')
-			server_port=$(echo "${server_raw}" | awk -F':' '{print $2}')
-		fi
-		password=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
-	fi
-
-	#remarks=$(echo "${urllink}" | sed -n 's/.*#\(.*\).*$/\1/p' | sed 's/@.*$//g' | urldecode | sed 's/^[[:space:]]//g')
 	remarks=$(echo "${urllink}" | sed -n 's/.*#\(.*\).*$/\1/p' | urldecode | sed 's/^[[:space:]]//g')
+	
 	echo "${remarks}" | isutf8 -q
 	if [ "$?" != "0" ];then
 		echo_date "当前节点名中存在特殊字符，节点添加后可能出现乱码！"
 		remarks=""
 	fi
-	
+
 	if [ "${action}" == "1" ];then
 		group=$(echo "${urllink}" | urldecode | sed -n 's/.\+group=\(.\+\)#.\+/\1/p')
 		if [ -n "${group}" ];then
@@ -782,6 +742,47 @@ add_ss_node(){
 		else
 			group=${DOMAIN_NAME}
 		fi
+	fi
+
+	urllink=${urllink%%#*}
+	info_first=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | sed -n '1p')
+	dec64 "${info_first}" >/dev/null 2>&1
+	if [ "$?" == "0" ];then
+		# first string is base64
+		string_nu=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | wc -l)
+		if [ "${string_nu}" -eq "1" ];then
+			# method:password@server:port are base64
+			decrypt_info=$(dec64 "${info_first}")
+			server_raw=$(echo "${decrypt_info}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+			if [ -n "${server_raw}" ];then
+				server="${server_raw%%:*}"
+				server_port="${server_raw##*:}"
+			fi
+			encrypt_method="${decrypt_info%%:*}"
+			password="${decrypt_info%%@*}"
+			password="${password#*:}"
+		elif [ "${string_nu}" -gt "1" ];then
+			# method:passwor are base64
+			decrypt_info=$(dec64 "${info_first}")
+			server_raw=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+			if [ -n "${server_raw}" ];then
+				server="${server_raw%%:*}"
+				server_port="${server_raw##*:}"
+			fi
+			encrypt_method="${decrypt_info%%:*}"
+			password="${decrypt_info%%@*}"
+			password="${password#*:}"
+		fi
+	else
+		# first string not base64
+		# method:password@server:port/?group=group#remark
+		encrypt_method=${info_first}
+		server_raw=$(echo "${urllink}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+		if [ -n "${server_raw}" ];then
+			server="${server_raw%%:*}"
+			server_port="${server_raw##*:}"
+		fi
+		password=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
 	fi
 
 	password=$(echo ${password} | base64_encode | sed 's/[[:space:]]//g')
@@ -805,7 +806,7 @@ add_ss_node(){
 	# echo server: ${server}
 	# echo server_port: ${server_port}
 	# echo encrypt_method: ${encrypt_method}
-	# echo password: ${password}
+	# echo password: $(dec64 $password)
 	# echo group: ${group}
 	# echo plugin_prog: ${plugin_prog}
 	# echo ss_obfs: ${ss_obfs}
