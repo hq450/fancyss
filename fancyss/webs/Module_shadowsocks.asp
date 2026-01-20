@@ -1239,7 +1239,6 @@ function verifyFields(r) {
 	if (save_flag == "hysteria2") {
 		showhide("hy2_obfs_pass_tr", $("#ss_node_table_hy2_obfs").val() != "0");
 	}
-	//fancyss_full_1
 	// 插件重启功能
 	var Ti = E("ss_reboot_check").value;
 	var In = E("ss_basic_inter_pre").value;
@@ -1301,7 +1300,6 @@ function verifyFields(r) {
 			push_data("dummy_script.sh", "", dbus_post, "2");
 		}
 	}
-	//fancyss_full_2
 	refresh_acl_table();
 }
 function update_visibility() {
