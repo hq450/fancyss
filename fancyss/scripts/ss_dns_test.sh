@@ -81,9 +81,7 @@ _valid_ip() {
 test(){
 	START=$(date +%s)
 	for line in ${LISTS_FILE}; do
-		IP=$(dnsclient -p 53 -t 3 -i 1 @127.0.0.1 "${line}" 2>/dev/null|grep -E "^IP"|head -n1|awk '{print $2}')
-		#IP=$(nslookup "$line" 127.0.0.1:53 | sed '1,4d' | awk '{print $3}' | grep -v ":" | awk 'NR==1{print}' 2>/dev/null)
-		#IP=$(nslookup www.baidu.com 114.114.114.114|grep Address|grep -v "#"|sed 's/Address: //g'|head -n1)
+		IP=$(dnsclient -46 -p 53 -t 3 -i 1 @127.0.0.1 "${line}" 2>/dev/null|head -n1)
 		IP=$(_valid_ip ${IP})
 		
 		let count++
@@ -138,12 +136,14 @@ resolv_test(){
 		LISTS_FILE=$(cat /koolshare/ss/rules/google_china.txt)
 		;;
 	4|gfw)
+		[ ! -f "/tmp/gfwlist.txt" ] && gzip -d -c /koolshare/ss/rules/gfwlist.gz >/tmp/gfwlist.txt
 		RESULT_FILE=/tmp/upload/dns_gfwlist.txt
-		LISTS_FILE=$(cat /koolshare/ss/rules/gfwlist.conf | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sed '/^ipset=/d' | shuf -n 100)
+		LISTS_FILE=$(cat /tmp/gfwlist.txt | sed '/^#/d' | sed "s/server=\/\.//g" | sed "s/server=\///g" | sed -r "s/\/\S{1,30}//g" | sed -r "s/\/\S{1,30}//g" | sed '/^ipset=/d' | shuf -n 100)
 		;;
 	5|china)
+		[ ! -f "/tmp/chnlist.txt" ] && gzip -d -c /koolshare/ss/rules/chnlist.gz >/tmp/chnlist.txt
 		RESULT_FILE=/tmp/upload/dns_cdn_china.txt
-		LISTS_FILE=$(cat /koolshare/ss/rules/chnlist.txt | shuf -n 100)
+		LISTS_FILE=$(cat /tmp/chnlist.txt | shuf -n 500)
 		;;
 	esac
 	true >${RESULT_FILE}

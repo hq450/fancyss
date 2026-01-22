@@ -5342,7 +5342,16 @@ function restart_chinadns() {
 		push_data("ss_conf.sh", "restart_chng",  dbus_post);
 	}
 }
-
+function toggleKeyMask(o, show){
+	var el = $(o).attr("id");
+	//console.log(el)
+	if (!el) return;
+	if (show){
+		$(o).removeClass('fcx-mask');
+	} else {
+		$(o).addClass('fcx-mask');
+	}
+}
 </script>
 </head>
 <body id="app" skin='<% nvram_get("sc_skin"); %>' onload="init();">

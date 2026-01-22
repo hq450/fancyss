@@ -103,10 +103,10 @@ function createFormFields(data, settings) {
 					output += '<input type="radio"' + (f.name ? 'name=' + f.name : '') + common + 'class="input"'  + (f.value == 1 ? ' checked' : '') + '>' + (f.suffix ? f.suffix : '');
 					break;
 				case 'password':
-					common += ' class="input_ss_table" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
+					common += ' class="input_ss_table fcx-mask" data-lpignore="true" data-1p-ignore="true" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
 					if (f.style) common += ' style="' + f.style + '"';
-					if (f.peekaboo) common += ' readonly onBlur="switchType(this, false);" onFocus="switchType(this, true);this.removeAttribute(' + '\'readonly\'' + ');"';
-					output += '<input type="' + f.type + '"' + ' value="' + escapeHTML(UT(f.value)) + '"' + (f.maxlen ? (' maxlength="' + f.maxlen + '" ') : '') + common + '>';
+					if (f.peekaboo) common += ' readonly onBlur="toggleKeyMask(this, false);" onfocus="this.removeAttribute(' + '\'readonly\'' + ');toggleKeyMask(this, true);"';
+					output += '<input type="text"' + ' value="' + escapeHTML(UT(f.value)) + '"' + (f.maxlen ? (' maxlength="' + f.maxlen + '" ') : '') + common + '>';
 					break;
 				case 'text':
 					if (f.css) common += ' class="input_ss_table ' + f.css + '"';
@@ -149,8 +149,6 @@ function createFormFields(data, settings) {
 			}
 			if (f.suffix && (f.type != 'checkbox' && f.type != 'radio')) output += f.suffix;
 		});
-		//if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.hint + ')">' + v.title + '</a></th><td>' + output;
-		//if (v.hint) form += '<th><a class="hintstyle" href="javascript:void(0);" onmouseover="mOver(this, ' + v.hint + ')" onmouseout="mOut(this)" ><em>' + v.title + '</em></a></th><td>' + output;
 		if (v.hint) form += '<th><a class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);" onclick="openssHint(' + v.hint + ', 0)" onmouseover="mOver(this, ' + v.hint + ')" onmouseout="RunmOut(this)" >' + v.title + '</a></th><td>' + output;
 		else if (v.thtd) form += '<th>' + v.title + '</th><td>' + output;
 		else form += '<th>' + v.title + '</th><td>' + output;
@@ -249,7 +247,6 @@ function pop_node_add_ads() {
 	note = "<li>检测到你尚未添加任何代理节点！你至少需要一个节点，才能让插件正常工作！</li><br /> ";
 	note += "<li>如果你已经有节点，请从【手动添加】【节点订阅】【恢复配置】中选择一种添加。</li><br />";
 	note += "<li>如果你没有节点且不知道如何购买或搭建，可以点击【机场推荐】购买本插件推荐的机场<br />";
-	//ads_url_1 = 'https://123s.co/#/register?code=yf6ozeEO';
 	layer.open({
 		type: 0,
 		skin: 'layui-layer-lan',
@@ -579,9 +576,6 @@ function hideSSLoadingBar() {
 }
 function mOver(obj, hint){
 	mouse_status = 1;
-	//$("#overDiv").unbind('mouseout', function() { 
-	//	E("overDiv").style.visibility = "hidden";
-	//});
 	$("#overDiv").unbind();
 	$(obj).css({
 		"color": "#00ffe4",
@@ -592,10 +586,8 @@ function mOver(obj, hint){
 function mOut(obj){
 	if (mouse_status == 0) return;
 	if ($("#overDiv").is(":hover") == false){
-		// close hint automaticly
 		E("overDiv").style.visibility = "hidden";
 	}else{
-		// close hint whetn mounseout
 		$("#overDiv").bind('mouseleave', function() {
 			E("overDiv").style.visibility = "hidden";
 		});
@@ -607,7 +599,6 @@ function RunmOut(obj){
 		"text-decoration": ""
 	});
 	mOut("' + obj + '");
-	//setTimeout('mOut("' + obj + '");', 100);
 }
 var ol_textfont="Lucida Console";
 var ol_captionfont="Lucida Console";
@@ -831,7 +822,6 @@ function openssHint(itemNum, flag) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些trojan机场节点需要允许不安全才能正常工作，但是其节点订阅却没有指定允许不安全，此时可以开启此处，开启后会强制所有trojan节点允许不安全";
 		_caption = "说明";
 	} else if (itemNum == 133) {
-		// 中国DNS-1
 		width = "640px";
 		statusmenu = "<div style='padding-left:16px;padding-right:16px;line-height:1.5'>";
 		statusmenu += "<a href='https://github.com/zfl9/chinadns-ng' target='_blank'><u><font color='#00F'>chinadns-ng</font></u></a>是一款非常好用的DNS分流查询工具，作者是<a href='https://github.com/zfl9' target='_blank'><u><font color='#00F'>zfl9</font></u></a>。";

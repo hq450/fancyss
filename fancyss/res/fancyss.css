@@ -1,4 +1,5 @@
 /*COMMON CSS*/
+.fcx-mask{ -webkit-text-security: disc; text-security: disc; }
 .popup_bar_bg_ks{
 	position:fixed;	
 	margin: auto;
