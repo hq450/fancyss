@@ -7,6 +7,7 @@
    - fix	更新chinadns-ng二进制程序，修复运行一阵就会崩溃的问题
    - add	给chinadns-ng加上实时进程守护，虽然现在不崩了，但是还是上个保险
    - add	修复DNS解析测试，cdn、gfwlist、chnlist测试失效的问题
+   - update	更新密码/UUID输入框，避免被1password/lastpass等密码管理插件识别
 
 3.4.8 (20260120)
    - fix	修复hysteria2使用单443端口时候代理不通的问题
