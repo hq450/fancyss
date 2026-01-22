@@ -959,10 +959,6 @@ kill_process() {
 		killall xray >/dev/null 2>&1
 		kill -9 "$xray_process" >/dev/null 2>&1
 	fi
-	if [ -d "/koolshare/perp/xray" ];then
-		perpctl d xray >/dev/null 2>&1
-		rm -rf /koolshare/perp/xray
-	fi
 
 	local rssredir=$(pidof rss-redir)
 	if [ -n "$rssredir" ]; then
@@ -982,10 +978,18 @@ kill_process() {
 		killall ss-tunnel >/dev/null 2>&1
 	fi
 
-	local chinadnsNG_process=$(pidof chinadns-ng)
-	if [ -n "$chinadnsNG_process" ]; then
+	local CHNG_PID=$(pidof chinadns-ng)
+	if [ -n "${CHNG_PID}" ];then
 		echo_date "关闭chinadns-ng进程..."
-		killall chinadns-ng >/dev/null 2>&1
+		kill ${CHNG_PID}
+		if [ -d "/koolshare/perp/chinadns-ng" ];then
+			perpctl d chinadns-ng >/dev/null 2>&1
+			rm -rf /koolshare/perp/chinadns-ng
+			killall chinadns-ng >/dev/null 2>&1
+		else
+			killall chinadns-ng >/dev/null 2>&1
+			kill -9 ${CHNG_PID}
+		fi
 	fi
 
 	local smartdns_process=$(pidof smartdns)
@@ -1783,8 +1787,25 @@ start_chinadns_ng(){
 	rm -rf /tmp/chinadns@cache.db
 	rm -rf /tmp/chinadns@verdict-cache.db
 	rm -rf /tmp/chinadns_log.txt
-	#run_bg chinadns-ng -C /tmp/chinadns_ng.conf
-	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+
+	# use perp to start chinadns-ng
+	mkdir -p /koolshare/perp/chinadns-ng/
+	cat >/koolshare/perp/chinadns-ng/rc.main <<-EOF
+		#!/bin/sh
+		source /koolshare/scripts/base.sh
+		CMD="chinadns-ng -C /tmp/chinadns_ng.conf"
+		
+		exec >/tmp/chinadns_log.txt 2>&1
+		exec \$CMD
+		
+	EOF
+	chmod +x /koolshare/perp/chinadns-ng/rc.main
+	chmod +t /koolshare/perp/chinadns-ng/
+	sync
+	perpctl A chinadns-ng >/dev/null 2>&1
+	perpctl u chinadns-ng >/dev/null 2>&1
+
+	#env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }
@@ -1835,7 +1856,11 @@ get_dns(){
 	if [ "${dns_opt}" == "99" ];then
 		echo "${net}://${dns_usr}"
 	else
-		echo "${net}://${dns_opt}"
+		if [ "${net}" == "udp" ];then
+			echo "${net}://${dns_opt}?count=0?life=0"
+		else
+			echo "${net}://${dns_opt}"
+		fi
 	fi
 }
 

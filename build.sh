@@ -58,6 +58,13 @@ sync_binary(){
 		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv7 ${CURR_PATH}/fancyss/bin-qca/${BIN}
 		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv5 ${CURR_PATH}/fancyss/bin-arm/${BIN}
 	done
+
+	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@fast+lto.upx ${CURR_PATH}/fancyss/bin-mtk/chinadns-ng
+	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@fast+lto.upx ${CURR_PATH}/fancyss/bin-hnd_v8/chinadns-ng
+	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto.upx ${CURR_PATH}/fancyss/bin-ipq32/chinadns-ng
+	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto.upx ${CURR_PATH}/fancyss/bin-hnd/chinadns-ng
+	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto.upx ${CURR_PATH}/fancyss/bin-qca/chinadns-ng
+	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v5te+soft_float@fast+lto.upx ${CURR_PATH}/fancyss/bin-arm/chinadns-ng
 }
 
 gen_folder(){
