@@ -1017,7 +1017,6 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_v2ray_mux_enable', 'tr'), (v2ray_on && v_json_off));
 	elem.display(elem.parentElem('ss_basic_v2ray_mux_concurrency', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_mux_enable").checked));
 	elem.display(elem.parentElem('ss_basic_v2ray_json', 'tr'), (v2ray_on && v_json_on));
-	elem.display('v2ray_binary_update_tr', v2ray_on);		//fancyss-full
 	if(v_grpc_on){
 		$('#ss_basic_v2ray_network_path_tr > th > a').html('* serviceName');
 	}else{
@@ -5181,22 +5180,6 @@ function save_online_nodes(action) {
 		push_data("ss_online_update.sh", action,  dbus_post);
 	}
 }
-function v2ray_binary_update(){																												//fancyss-full
-	var dbus_post = {};																														//fancyss-full
-	db_ss["ss_basic_action"] = "15";																										//fancyss-full
-	layer.confirm('<li>为了避免不必要的问题，请保证路由器和服务器上的v2ray版本一致！</li><br /><li>你确定要更新v2ray二进制吗？</li>', {		//fancyss-full
-		shade: 0.8,																															//fancyss-full
-	}, function(index) {																													//fancyss-full
-		$("#log_content3").attr("rows", "20");																								//fancyss-full
-		push_data("ss_v2ray.sh", 1, dbus_post);																								//fancyss-full
-		layer.close(index);																													//fancyss-full
-		return true;																														//fancyss-full
-		//save_online_nodes(action);																										//fancyss-full
-	}, function(index) {																													//fancyss-full
-		layer.close(index);																													//fancyss-full
-		return false;																														//fancyss-full
-	});																																		//fancyss-full
-}																																			//fancyss-full
 function xray_binary_update(){
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "15";
@@ -5833,7 +5816,6 @@ function toggleKeyMask(o, show){
 															{ title: '* shortId', id:'ss_basic_xray_shortid', type:'text', ph:'没有请留空'},
 															{ title: '* spiderX', id:'ss_basic_xray_spiderx', type:'text', ph:'没有请留空'},
 															{ title: 'xray json', id:'ss_basic_xray_json', type:'textarea', rows:'36', ph:ph_xray},
-															{ title: '其它', rid:'v2ray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>'},	//fancyss-full
 															{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
 															//trojan
 															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
@@ -6430,7 +6412,6 @@ function toggleKeyMask(o, show){
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="updatelist(2)">立即更新规则</a>'},
 															]},
 															{ title: '二进制更新', multi: [
-																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="v2ray_binary_update(2)">更新v2ray程序</a>&nbsp;'},//fancyss-full
 																{ suffix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>&nbsp;'},
 															]},
 														]);

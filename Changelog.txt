@@ -1,13 +1,15 @@
  fancyss Changelog
 ===========================================
-3.4.9 (to be release)
+3.4.9 (20260123)
    - fix	修复lite版本勾选故障转移开关无用的问题
    - fix	修复lite版本插件定时重启设定界面错乱的问题
    - fix	修复lite版本无法手动添加节点的问题
-   - fix	更新chinadns-ng二进制程序，修复运行一阵就会崩溃的问题
+   - fix	重要！更新chinadns-ng二进制更新到2026.01.23版本，修复运行一阵就会崩溃的问题！
+       		注意：从fancyss 3.3.9开始，chinadnsdns-ng经过魔改，专门给fancyss使用，感谢原作者！
    - add	给chinadns-ng加上实时进程守护，虽然现在不崩了，但是还是上个保险
-   - add	修复DNS解析测试，cdn、gfwlist、chnlist测试失效的问题
-   - update	更新密码/UUID输入框，避免被1password/lastpass等密码管理插件识别
+   - fix	修复DNS解析测试，cdn、gfwlist、chnlist测试失效的问题
+   - update	修改前端页面的密码/UUID输入框，避免被1password/lastpass等密码管理插件识别
+   - update	更新xray二进制到v26.1.18版本最新commit：2d2102f，修复hysteria2 speedtest测速后断线问题
 
 3.4.8 (20260120)
    - fix	修复hysteria2使用单443端口时候代理不通的问题
