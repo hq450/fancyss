@@ -1352,13 +1352,13 @@ start_chinadns_ng(){
 	set_default "ss_basic_chng_trust_dns_1_chk" "1"
 	set_default "ss_basic_chng_trust_dns_2_chk" "1"
 	set_default "ss_basic_chng_trust_dns_3_chk" "1"
-	set_default "ss_basic_chng_trust_net_1_typ" "tcp"
+	set_default "ss_basic_chng_trust_net_1_typ" "udp"
 	set_default "ss_basic_chng_trust_net_2_typ" "tcp"
 	set_default "ss_basic_chng_trust_net_3_typ" "dot"
 
-	set_default "ss_basic_chng_trust_udp_1_opt" "1.1.1.1"
+	set_default "ss_basic_chng_trust_udp_1_opt" "8.8.8.8"
 	set_default "ss_basic_chng_trust_udp_1_usr" "8.8.8.8:53"
-	set_default "ss_basic_chng_trust_udp_2_opt" "8.8.8.8"
+	set_default "ss_basic_chng_trust_udp_2_opt" "1.1.1.1"
 	set_default "ss_basic_chng_trust_udp_2_usr" "8.8.8.8:53"
 	set_default "ss_basic_chng_trust_udp_3_opt" "9.9.9.9"
 	set_default "ss_basic_chng_trust_udp_3_usr" "8.8.8.8:53"
@@ -1405,17 +1405,17 @@ start_chinadns_ng(){
 	fi
 	
 	# 3. chinadns-ng的启动参数检查
-	if [ -n "${ss_basic_chng_dns_query_times}" ];then
-		if [ $(number_test ${ss_basic_chng_dns_query_times}) != "0" ];then
-			echo_date "⚠️ chinadns-ng重复发包次数填写错误，自动更正为1！"
-			ss_basic_chng_dns_query_times="1"
-			dbus set ss_basic_chng_dns_query_times="1"
-		fi
-		if [ ${ss_basic_chng_dns_query_times} -gt "3" ];then
-			echo_date "⚠️ chinadns-ng重复发包次数填为${ss_basic_chng_dns_query_times}！建议此处设置不超过3！继续！"
-		fi
-		local DNS_REPEATS="repeat-times ${ss_basic_chng_dns_query_times}"
-	fi
+	# if [ -n "${ss_basic_chng_dns_query_times}" ];then
+	# 	if [ $(number_test ${ss_basic_chng_dns_query_times}) != "0" ];then
+	# 		echo_date "⚠️ chinadns-ng重复发包次数填写错误，自动更正为1！"
+	# 		ss_basic_chng_dns_query_times="1"
+	# 		dbus set ss_basic_chng_dns_query_times="1"
+	# 	fi
+	# 	if [ ${ss_basic_chng_dns_query_times} -gt "3" ];then
+	# 		echo_date "⚠️ chinadns-ng重复发包次数填为${ss_basic_chng_dns_query_times}！建议此处设置不超过3！继续！"
+	# 	fi
+	# 	local DNS_REPEATS="repeat-times ${ss_basic_chng_dns_query_times}"
+	# fi
 
 	# 4. 生成chinadns-ng的国内DNS
 	# 中国DNS-1 (直连) 🌏
@@ -1773,10 +1773,11 @@ start_chinadns_ng(){
 	EOF
 	echo_date "🆗 chinadns-ng配置文件生成完毕，位于/tmp/chinadns_ng.conf"
 	echo_date "⚡️ 开启chinadns-ng，用于所有域名的DNS解析..."
-	rm -rf /tmp/chinadns@cache.db
-	rm -rf /tmp/chinadns@verdict-cache.db
-	rm -rf /tmp/chinadns_log.txt
-	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+	rm -rf /tmp/chinadns@cache.db >/dev/null 2>&1
+	rm -rf /tmp/chinadns@verdict-cache.db >/dev/null 2>&1
+	rm -rf /tmp/chinadns_log.txt >/dev/null 2>&1
+	
+	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }
@@ -1929,7 +1930,7 @@ get_dns(){
 			if [ "${type}" == "trust" ];then
 				echo "udp://127.0.0.1#${_port}?count=0?life=0"
 			else
-				echo "${net}://${dns_usr}"
+				echo "$udp://${dns_usr}?count=0?life=0"
 			fi
 		else
 			echo "${net}://${dns_usr}"
@@ -1939,7 +1940,7 @@ get_dns(){
 			if [ "${type}" == "trust" ];then
 				echo "udp://127.0.0.1#${_port}?count=0?life=0"
 			else
-				echo "${net}://${dns_opt}"
+				echo "udp://${dns_opt}?count=0?life=0"
 			fi
 		else
 			echo "${net}://${dns_opt}"

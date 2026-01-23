@@ -11,6 +11,8 @@
    - update	更新xray二进制到v26.1.18版本最新commit：2d2102f，修复hysteria2 speedtest测速后断线问题
    - fix	udp代理控制选择仅chatgpt，但是其它h3网站也走了代理的问题
    - add	chinadns-ng trust组支持udp协议dns，默认走xray inbound转发（tcp和dot还是走socks5转发）
+   - fix	修复部分机场订阅时候vless节点报错误节点的问题
+   - fix	修复部分机场订阅vless节点无法使用的问题
    - update 更新包内规则为最新版本
 
 3.4.8 (20260120)
