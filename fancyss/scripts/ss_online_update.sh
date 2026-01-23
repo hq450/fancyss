@@ -1181,6 +1181,7 @@ add_vmess_node(){
 
 add_vless_node(){
 	local decode_link="$1"
+	local decode_link=$(echo "${decode_link}" | urldecode)
 	local action="$2"
 	local strtype="$3"
 	unset x_server_raw x_server x_server_port x_remarks x_uuid x_host x_path x_encryption x_type
@@ -1188,41 +1189,47 @@ add_vless_node(){
 	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash x_kcp_seed
 	unset x_fp x_pbk x_sid x_spx
 
-	x_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
-	x_server=$(echo "${x_server_raw}" | awk -F':' '{print $1}')
-	x_server_port=$(echo "${x_server_raw}" | awk -F':' '{print $2}')
+	local _STRING_1=$(echo "${decode_link}" | awk -F"?" '{print $1}')
+	local _STRING_2=$(echo "${decode_link}" | awk -F"?" '{print $2}')
 
-	echo "${decode_link}"|grep -Eqo "#"
+	x_server_raw=$(echo "${decode_link}" | sed -n 's/.\+@\(.\+:[0-9]\+\).*/\1/p')
+	x_server="${x_server_raw%%:*}"
+	x_server_port="${x_server_raw##*:}"
+	x_uuid="${decode_link%%@*}"
+	#x_server=$(echo "${x_server_raw}" | awk -F':' '{print $1}')
+	#x_server_port=$(echo "${x_server_raw}" | awk -F':' '{print $2}')
+	#x_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
+
+	echo "${decode_link}" | grep -Eqo "#"
 	if [ "$?" != "0" ];then
 		x_remarks=${x_server}
 	else
-		x_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}' | urldecode)
+		x_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}')
 	fi
 	
-	x_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
 	if [ "${strtype}" == "vmess" ];then
-		x_aid=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "alterId" | awk -F"=" '{print $2}')
+		x_aid=$(echo "${_STRING_2}" |sed 's/&/\n/g;s/#/\n/g' | grep "alterId" | awk -F"=" '{print $2}')
 	fi
-	x_host=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "host" | awk -F"=" '{print $2}')
-	x_path=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "path" | awk -F"=" '{print $2}' | urldecode)
-	x_encryption=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "encryption" | awk -F"=" '{print $2}')
+	x_host=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "host" | awk -F"=" '{print $2}')
+	x_path=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "path" | awk -F"=" '{print $2}' | urldecode)
+	x_encryption=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "encryption" | awk -F"=" '{print $2}')
 	if [ -z "${x_encryption}" ];then
 		x_encryption="none"
 	fi
-	x_type=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "type" | grep -v "header" | awk -F"=" '{print $2}')
+	x_type=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "type" | grep -v "header" | awk -F"=" '{print $2}')
 	if [ -z "${x_type}" ];then
 		x_type="tcp"
 	fi
-	x_headerType=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "headerType" | awk -F"=" '{print $2}')
-	x_mode=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "mode" | awk -F"=" '{print $2}')
-	x_security=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "security" | awk -F"=" '{print $2}')
-	x_serviceName=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "serviceName" | awk -F"=" '{print $2}' | urldecode)
-	x_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
-	x_flow=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "flow" | awk -F"=" '{print $2}')
-	x_fp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "fp=" | awk -F"=" '{print $2}')
-	x_pbk=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "pbk=" | awk -F"=" '{print $2}')
-	x_sid=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sid=" | awk -F"=" '{print $2}')
-	x_spx=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "spx=" | awk -F"=" '{print $2}' | urldecode)
+	x_headerType=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "headerType" | awk -F"=" '{print $2}')
+	x_mode=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "mode" | awk -F"=" '{print $2}')
+	x_security=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "security" | awk -F"=" '{print $2}')
+	x_serviceName=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "serviceName" | awk -F"=" '{print $2}' | urldecode)
+	x_sni=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
+	x_flow=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "flow" | awk -F"=" '{print $2}')
+	x_fp=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "fp=" | awk -F"=" '{print $2}')
+	x_pbk=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "pbk=" | awk -F"=" '{print $2}')
+	x_sid=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "sid=" | awk -F"=" '{print $2}')
+	x_spx=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "spx=" | awk -F"=" '{print $2}' | urldecode)
 	case ${x_type} in
 	tcp)
 		# tcp协议设置【tcp伪装类型 (type)】
@@ -1341,9 +1348,10 @@ add_vless_node(){
 		x_group=""
 		x_group_hash=""
 	fi
-	
 	# # for debug, please keep it here
 	# echo ------------
+	# echo decode_link: ${decode_link}
+	# echo decrypt_info: ${decrypt_info}
 	# echo group: ${x_group_hash}
 	# echo remarks: ${x_remarks}
 	# echo x_server_raw: ${x_server_raw}
@@ -1485,19 +1493,19 @@ add_trojan_node(){
 	fi
 	
 	# for debug, please keep it here
-	echo ------------
-	echo group: ${t_group}
-	echo remarks: ${t_remarks}
-	echo server: ${t_server}
-	echo port: ${t_server_port}
-	echo password: ${t_uuid}
-	echo allowInsecure: ${t_ai}
-	echo SNI: ${t_sni}
-	echo plugin: ${t_tfo}
-	echo obfs: ${t_tfo}
-	echo obfs_host: ${t_tfo}
-	echo obfs_uri: ${t_tfo}
-	echo ------------	
+	# echo ------------
+	# echo group: ${t_group}
+	# echo remarks: ${t_remarks}
+	# echo server: ${t_server}
+	# echo port: ${t_server_port}
+	# echo password: ${t_uuid}
+	# echo allowInsecure: ${t_ai}
+	# echo SNI: ${t_sni}
+	# echo plugin: ${t_tfo}
+	# echo obfs: ${t_tfo}
+	# echo obfs_host: ${t_tfo}
+	# echo obfs_uri: ${t_tfo}
+	# echo ------------	
 
 	if [ -z "${t_server}" -o -z "${t_remarks}" -o -z "${t_server_port}" -o -z "${t_uuid}" ]; then
 		# 丢弃无效节点
@@ -1760,7 +1768,8 @@ get_ua(){
 	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_vers=$(dbus get ss_basic_version_local)
-	echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN|Shadowrocket"
+	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN|Shadowrocket"
+	echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
 
 	#&flag=shadowrocket
 	#&flag=v2rayn

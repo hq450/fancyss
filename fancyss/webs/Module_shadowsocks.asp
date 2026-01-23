@@ -6035,7 +6035,7 @@ function toggleKeyMask(o, show){
 															]},
 															{ title: '&nbsp;&nbsp;*可信DNS-1 <font color="#FF0066">(代理) 🚀</font>', hint:'134', class:'new_dns chng', multi: [
 																{ id: 'ss_basic_chng_trust_dns_1_chk', type:'checkbox', func:'u', value:true},
-																{ id: 'ss_basic_chng_trust_net_1_typ', type:'select', func:'u', options:["tcp", "dot"], style:'width:50px;', value:'tcp'},
+																{ id: 'ss_basic_chng_trust_net_1_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'tcp'},
 																{ id: 'ss_basic_chng_trust_udp_1_opt', type:'select', func:'u', options:[], style:'width:auto;'},
 																{ id: 'ss_basic_chng_trust_udp_1_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
 																{ id: 'ss_basic_chng_trust_tcp_1_opt', type:'select', func:'u', options:[], style:'width:auto;'},
@@ -6046,7 +6046,7 @@ function toggleKeyMask(o, show){
 															]},
 															{ title: '&nbsp;&nbsp;*可信DNS-2 <font color="#FF0066">(代理) 🚀</font>', class:'new_dns chng', hint:'134', multi: [
 																{ id: 'ss_basic_chng_trust_dns_2_chk', type:'checkbox', func:'u', value:true},
-																{ id: 'ss_basic_chng_trust_net_2_typ', type:'select', func:'u', options:["tcp", "dot"], style:'width:50px;', value:'tcp'},
+																{ id: 'ss_basic_chng_trust_net_2_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'tcp'},
 																{ id: 'ss_basic_chng_trust_udp_2_opt', type:'select', func:'u', options:[], style:'width:auto;'},
 																{ id: 'ss_basic_chng_trust_udp_2_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
 																{ id: 'ss_basic_chng_trust_tcp_2_opt', type:'select', func:'u', options:[], style:'width:auto;'},
@@ -6057,7 +6057,7 @@ function toggleKeyMask(o, show){
 															]},
 															{ title: '&nbsp;&nbsp;*可信DNS-3 <font color="#FF0066">(代理) 🚀</font>', class:'new_dns chng', hint:'134', multi: [
 																{ id: 'ss_basic_chng_trust_dns_3_chk', type:'checkbox', func:'u', value:true},
-																{ id: 'ss_basic_chng_trust_net_3_typ', type:'select', func:'u', options:["tcp", "dot"], style:'width:50px;', value:'dot'},
+																{ id: 'ss_basic_chng_trust_net_3_typ', type:'select', func:'u', options:["udp", "tcp", "dot"], style:'width:50px;', value:'dot'},
 																{ id: 'ss_basic_chng_trust_udp_3_opt', type:'select', func:'u', options:[], style:'width:auto;'},
 																{ id: 'ss_basic_chng_trust_udp_3_usr', type: 'text', style:'width:120px;', value:'8.8.8.8:53', ph:ph1 },
 																{ id: 'ss_basic_chng_trust_tcp_3_opt', type:'select', func:'u', options:[], style:'width:auto;'},

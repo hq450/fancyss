@@ -4,12 +4,14 @@
    - fix	修复lite版本勾选故障转移开关无用的问题
    - fix	修复lite版本插件定时重启设定界面错乱的问题
    - fix	修复lite版本无法手动添加节点的问题
-   - fix	重要！更新chinadns-ng二进制更新到2026.01.23版本，修复运行一阵就会崩溃的问题！
+   - fix	重要！更新chinadns-ng二进制更新到2026.01.23版本，修复运行一阵就会崩溃的问题！添加根据协议指定是否走proxy的功能。
        		注意：从fancyss 3.3.9开始，chinadnsdns-ng经过魔改，专门给fancyss使用，感谢原作者！
-   - add	给chinadns-ng加上实时进程守护，虽然现在不崩了，但是还是上个保险
    - fix	修复DNS解析测试，cdn、gfwlist、chnlist测试失效的问题
    - update	修改前端页面的密码/UUID输入框，避免被1password/lastpass等密码管理插件识别
    - update	更新xray二进制到v26.1.18版本最新commit：2d2102f，修复hysteria2 speedtest测速后断线问题
+   - fix	udp代理控制选择仅chatgpt，但是其它h3网站也走了代理的问题
+   - add	chinadns-ng trust组支持udp协议dns，默认走xray inbound转发（tcp和dot还是走socks5转发）
+   - update 更新包内规则为最新版本
 
 3.4.8 (20260120)
    - fix	修复hysteria2使用单443端口时候代理不通的问题
@@ -20,19 +22,11 @@
    - update	trojan订阅支持obfs-local WebSocket伪装类型节点
    - fix	修复因quic流量屏蔽导致hysteria2等443 udp通讯的节点挂掉的问题
    - update	【屏蔽quic流量】控制将更加精细化，而不是一刀切，如果代理开启了udp，将不会屏蔽quic流量(udp 443)
-       		开启【屏蔽quic流量】：
-       			在【附加设置】- 【udp代理控制】中：
-       			1. 关闭 udp：将屏蔽海外udp 443数据包
-       			2. 开启 udp：不屏蔽海外udp 443数据包
-       			3. 仅chatgpt：将屏蔽除了udplist以外的海外udp 443数据包
-       			注意：游戏模式中，无论是否勾【屏蔽quic流量】，选始终不屏蔽海外udp 443数据包
-       		关闭【屏蔽quic流量】：
-       			关闭后udp的行为跟以前版本一样，不开启udp代理或者代理不支持udp是会泄露流量的
-       			如果不代理udp，会导致访问境外http3（基于quic协议，udp 443）站点被直连，让很多AI网站检测到国内ip而不可用
-       			注意：游戏模式中udp代理是强制打开的，【udp代理控制】无论怎么设置都不会起作用
-       		建议开启【屏蔽quic流量】！
-       			开启屏蔽后，即使不代理udp，访问境外http3站点也不会走直连，而是会回落到基于tcp协议的http2
-       			开启屏蔽后，如果代理了udp，插件不会屏蔽quic，所以http3数据会走代理成功访问。
+       		在【附加设置】- 【udp代理控制】中：
+       		1. 关闭 udp：将屏蔽海外udp 443数据包
+       		2. 开启 udp：不屏蔽海外udp 443数据包
+       		3. 仅chatgpt：将屏蔽除了udplist以外的海外udp 443数据包
+       		注意：游戏模式中，无论是否勾【屏蔽quic流量】，选始终不屏蔽海外udp 443数据包
 
 3.4.7 (20260119)
    - fix	修复部分机场订阅后出现skipd错误的问题

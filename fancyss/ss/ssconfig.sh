@@ -981,15 +981,8 @@ kill_process() {
 	local CHNG_PID=$(pidof chinadns-ng)
 	if [ -n "${CHNG_PID}" ];then
 		echo_date "关闭chinadns-ng进程..."
-		kill ${CHNG_PID}
-		if [ -d "/koolshare/perp/chinadns-ng" ];then
-			perpctl d chinadns-ng >/dev/null 2>&1
-			rm -rf /koolshare/perp/chinadns-ng
-			killall chinadns-ng >/dev/null 2>&1
-		else
-			killall chinadns-ng >/dev/null 2>&1
-			kill -9 ${CHNG_PID}
-		fi
+		killall chinadns-ng >/dev/null 2>&1
+		kill -9 ${CHNG_PID} >/dev/null 2>&1
 	fi
 
 	local smartdns_process=$(pidof smartdns)
@@ -1411,7 +1404,7 @@ start_chinadns_ng(){
 		dbus set ss_basic_chng_trust_dns_2_chk="1"
 	fi
 	
-	# 3. chinandns-ng的启动参数检查
+	# 3. chinadns-ng的启动参数检查
 	if [ -n "${ss_basic_chng_dns_query_times}" ];then
 		if [ $(number_test ${ss_basic_chng_dns_query_times}) != "0" ];then
 			echo_date "⚠️ chinadns-ng重复发包次数填写错误，自动更正为1！"
@@ -1603,7 +1596,7 @@ start_chinadns_ng(){
 	else
 		local chng_bind_port=7913
 	fi
-	
+
 	# gen chinadns-ng conf
 	rm -rf /tmp/chinadns_ng.conf
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
@@ -1613,6 +1606,7 @@ start_chinadns_ng(){
 
 		proxy-server socks5://127.0.0.1:23456
 		proxy-group gfw,black,udp,router
+		proxy-protocol tcp,tls
 		
 	EOF
 
@@ -1778,34 +1772,11 @@ start_chinadns_ng(){
 		# verbose
 	EOF
 	echo_date "🆗 chinadns-ng配置文件生成完毕，位于/tmp/chinadns_ng.conf"
-
-	# 9. -ng
 	echo_date "⚡️ 开启chinadns-ng，用于所有域名的DNS解析..."
-
-
-	# start chinadns-ng2
 	rm -rf /tmp/chinadns@cache.db
 	rm -rf /tmp/chinadns@verdict-cache.db
 	rm -rf /tmp/chinadns_log.txt
-
-	# use perp to start chinadns-ng
-	mkdir -p /koolshare/perp/chinadns-ng/
-	cat >/koolshare/perp/chinadns-ng/rc.main <<-EOF
-		#!/bin/sh
-		source /koolshare/scripts/base.sh
-		CMD="chinadns-ng -C /tmp/chinadns_ng.conf"
-		
-		exec >/tmp/chinadns_log.txt 2>&1
-		exec \$CMD
-		
-	EOF
-	chmod +x /koolshare/perp/chinadns-ng/rc.main
-	chmod +t /koolshare/perp/chinadns-ng/
-	sync
-	perpctl A chinadns-ng >/dev/null 2>&1
-	perpctl u chinadns-ng >/dev/null 2>&1
-
-	#env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }
@@ -1829,21 +1800,108 @@ is_domain(){
 get_proxy_type(){
 	case "$1" in
 	udp)
-		echo "tproxy"
+		echo "xray"
 		;;
-	tcp)
-		echo "socks5"
-		;;
-	dot)
+	tcp|dot)
 		echo "socks5"
 		;;
 	esac
+}
+
+get_dns_para(){
+	local type=$1
+	local numb=$2
+	local para=$3
+	local addr="8.8.8.8"
+	local port="53"
+
+	# udp, tcp, dot
+	local net=$(eval echo \$ss_basic_chng_${type}_net_${numb}_typ)
+	
+	local dns_opt=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_opt)
+	local dns_usr=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_usr)
+	
+	if [ "${dns_opt}" == "99" ];then
+		local _match=$(echo ${dns_usr} | grep -E ":|#")
+		if [ -n "${_match}" ];then
+			# ip + port
+			local addr=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $1}')
+			local port=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $2}')
+		else
+			# only ip
+			local addr=$(__valid_ip ${dns_opt})
+			if [ -z "${xray_server_tmp}" ]; then
+				local addr="8.8.8.8"
+			fi
+		fi
+	else
+		local addr="${dns_opt}"
+	fi
+
+	if [ "${para}" == "addr" ];then
+		echo ${addr}
+	elif [ "${para}" == "port" ];then
+		echo ${port}
+	fi
+	
+}
+
+gen_xray_dns_inbound(){
+	local config_file=$1
+	if [ "${ss_basic_dns_plan}" == "1" ];then
+		if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "udp" ];then
+			cat >>"${config_file}" <<-EOF
+					{
+					"protocol": "dokodemo-door",
+					"port": 1055,
+					"settings": {
+						"address": "$(get_dns_para trust 1 addr)",
+						"port": $(get_dns_para trust 1 port),
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
+					},
+			EOF
+		fi
+		if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" -a "${ss_basic_chng_trust_net_2_typ}" == "udp" ];then
+			cat >>"${config_file}" <<-EOF
+					{
+					"protocol": "dokodemo-door",
+					"port": 1056,
+					"settings": {
+						"address": "$(get_dns_para trust 2 addr)",
+						"port": $(get_dns_para trust 2 port),
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
+					},
+			EOF
+		fi
+		if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" -a "${ss_basic_chng_trust_net_3_typ}" == "udp" ];then
+			cat >>"${config_file}" <<-EOF
+					{
+					"protocol": "dokodemo-door",
+					"port": 1057,
+					"settings": {
+						"address": "$(get_dns_para trust 3 addr)",
+						"port": $(get_dns_para trust 3 port),
+						"network": "udp",
+						"timeout": 0,
+						"followRedirect": false
+						}
+					},
+			EOF
+		fi
+	fi
 }
 
 get_dns(){
 	local type=$1
 	local numb=$2
 
+	# udp, tcp, dot
 	local net=$(eval echo \$ss_basic_chng_${type}_net_${numb}_typ)
 	
 	local dns_opt=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_opt)
@@ -1852,12 +1910,37 @@ get_dns(){
 	if [ "${net}" == "dot" ];then
 		net=tls
 	fi
+
+	if [ "${net}_${type}_${numb}" == "udp_trust_1" ];then
+		local _port=1055
+	elif [ "${net}_${type}_${numb}" == "udp_trust_2" ];then
+		local _port=1056
+	elif [ "${net}_${type}_${numb}" == "udp_trust_3" ];then
+		local _port=1057
+	fi
 	
 	if [ "${dns_opt}" == "99" ];then
-		echo "${net}://${dns_usr}"
+		local _match=$(echo ${dns_usr} | grep ":")
+		if [ -n "${_match}" ];then
+			dns_usr=$(echo ${dns_usr} | sed 's/:/#/g')
+		fi
+
+		if [ "${net}" == "udp" ];then
+			if [ "${type}" == "trust" ];then
+				echo "udp://127.0.0.1#${_port}?count=0?life=0"
+			else
+				echo "${net}://${dns_usr}"
+			fi
+		else
+			echo "${net}://${dns_usr}"
+		fi
 	else
 		if [ "${net}" == "udp" ];then
-			echo "${net}://${dns_opt}?count=0?life=0"
+			if [ "${type}" == "trust" ];then
+				echo "udp://127.0.0.1#${_port}?count=0?life=0"
+			else
+				echo "${net}://${dns_opt}"
+			fi
 		else
 			echo "${net}://${dns_opt}"
 		fi
@@ -2436,9 +2519,16 @@ creat_vmess_json() {
 				"loglevel": "none"
 			},
 		EOF
+		
 		# inbounds area (23456 for socks5)
 		cat >>"$VMESS_CONFIG_TEMP" <<-EOF
 			"inbounds": [
+		EOF
+
+		# when user use udp trust dns in chinadns-ng
+		gen_xray_dns_inbound ${VMESS_CONFIG_TEMP}
+		
+		cat >>"$VMESS_CONFIG_TEMP" <<-EOF
 				{
 					"port": 23456,
 					"listen": "127.0.0.1",
@@ -2686,6 +2776,12 @@ creat_xray_ss_json() {
 	# inbounds area (23456 for socks5)
 	cat >>"${SS_CONFIG_TEMP}" <<-EOF
 		"inbounds": [
+	EOF
+
+	# when user use udp trust dns in chinadns-ng
+	gen_xray_dns_inbound ${SS_CONFIG_TEMP}
+	
+	cat >>"${SS_CONFIG_TEMP}" <<-EOF
 			{
 				"port": 23456,
 				"listen": "127.0.0.1",
@@ -3034,9 +3130,17 @@ creat_vless_json() {
 				"loglevel": "none"
 			},
 		EOF
+		
 		# inbounds area (23456 for socks5)
 		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 			"inbounds": [
+		EOF
+
+		# when user use udp trust dns in chinadns-ng
+		gen_xray_dns_inbound ${VLESS_CONFIG_TEMP}
+
+		# continue
+		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 				{
 					"port": 23456,
 					"listen": "127.0.0.1",
@@ -3311,9 +3415,16 @@ creat_trojan_json(){
 			"loglevel": "none"
 		},
 	EOF
+
 	# inbounds area (23456 for socks5)
 	cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
 		"inbounds": [
+	EOF
+
+	# when user use udp trust dns in chinadns-ng
+	gen_xray_dns_inbound ${TROJAN_CONFIG_TEMP}
+	
+	cat >>"$TROJAN_CONFIG_TEMP" <<-EOF
 			{
 				"port": 23456,
 				"listen": "127.0.0.1",
@@ -3437,6 +3548,13 @@ creat_hy2_json(){
 	# inbounds area (23456 for socks5)
 	cat >>"$HY2_CONFIG_TEMP" <<-EOF
 		"inbounds": [
+	EOF
+
+	# when user use udp trust dns in chinadns-ng
+	gen_xray_dns_inbound ${HY2_CONFIG_TEMP}
+	
+	# continue
+	cat >>"$HY2_CONFIG_TEMP" <<-EOF
 			{
 				"port": 23456,
 				"listen": "127.0.0.1",
@@ -4393,6 +4511,8 @@ _start_iptables() {
 	ensure_chain filter SHADOWSOCKS_GPT
 	# {udplist} 不过滤udp 443
 	append_if_not_exists filter -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j RETURN
+	# {udplist} 以外的流量过滤udp443
+	append_if_not_exists filter -A SHADOWSOCKS_GPT -p udp -j REJECT --reject-with icmp-port-unreachable
 
 	# 创建gfw模式udp filter rule
 	ensure_chain filter SHADOWSOCKS_GFW
@@ -4422,16 +4542,7 @@ _start_iptables() {
 
 	# 创建游戏模式udp rule
 	ensure_chain filter SHADOWSOCKS_GAM 
-	# {black_list} 不过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j RETURN
-	# {chnlist} 不过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set chnlist dst -j RETURN
-	# {chnroute} 不过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set chnroute dst -j RETURN
-	# {white_list} 不过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -m set --match-set white_list dst -j RETURN
-	# {剩余流量} 不过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GAM -p udp -j RETURN
+	# 游戏模式默认不过滤，创建一个空的就行
 
 	# 创建glo模式udp rule
 	ensure_chain filter SHADOWSOCKS_GLO

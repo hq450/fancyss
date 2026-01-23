@@ -1,15 +1,15 @@
 {
   "gfwlist": {
     "name": "gfwlist.gz",
-    "date": "2026-01-19 00:49",
-    "md5": "fa6fabce4aeab52bed35d8396806a604",
-    "count": "7183"
+    "date": "2026-01-23 01:04",
+    "md5": "f0111be850985e434545dec3575bf9ba",
+    "count": "7184"
   },
   "chnlist": {
     "name": "chnlist.gz",
-    "date": "2026-01-19 00:49",
-    "md5": "46dee5ae1bfffc730402101e1c7b055b",
-    "count": "113923",
+    "date": "2026-01-23 01:04",
+    "md5": "f378d990d752ea7441f2a8690062abab",
+    "count": "113769",
     "note": "merged from dnsmasq-china-list"
   },
   "chnroute": {
@@ -37,14 +37,14 @@
   },
   "udplist": {
     "name": "udplist.txt",
-    "date": "2026-01-19 00:48",
-    "md5": "b5544fd555af7bd76af8976e99ef1e6e",
-    "count": "48"
+    "date": "2026-01-23 01:03",
+    "md5": "28323628249066941011e39e18219911",
+    "count": "50"
   },
   "rotlist": {
     "name": "rotlist.txt",
-    "date": "2026-01-19 00:48",
-    "md5": "d58f9f77b477997e611850870d681ede",
+    "date": "2026-01-23 01:03",
+    "md5": "8205dd76fbdca655a4862b1e37aad583",
     "count": "28"
   },
   "white_list": {

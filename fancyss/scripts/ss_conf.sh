@@ -255,15 +255,8 @@ restart_chinadnsng(){
 	local CHNG_PID=$(pidof chinadns-ng)
 	if [ -n "${CHNG_PID}" ];then
 		echo_date "当前chinadns-ng正常运行中，pid: ${CHNG_PID}，准备重启！"
-		kill ${CHNG_PID}
-		if [ -d "/koolshare/perp/chinadns-ng" ];then
-			perpctl d chinadns-ng >/dev/null 2>&1
-			rm -rf /koolshare/perp/chinadns-ng
-			killall chinadns-ng >/dev/null 2>&1
-		else
-			killall chinadns-ng >/dev/null 2>&1
-			kill -9 ${CHNG_PID}
-		fi
+		killall chinadns-ng >/dev/null 2>&1
+		kill -9 ${CHNG_PID} >/dev/null 2>&1
 	fi
 	
 	local OLD_PID=$(pidof smartdns)
@@ -341,15 +334,8 @@ restart_smartdns(){
 	local CHNG_PID=$(pidof chinadns-ng)
 	if [ -n "${CHNG_PID}" ];then
 		echo_date "当前chinadns-ng正常运行中，pid: ${CHNG_PID}，准备关闭！"
-		kill ${CHNG_PID}
-		if [ -d "/koolshare/perp/chinadns-ng" ];then
-			perpctl d chinadns-ng >/dev/null 2>&1
-			rm -rf /koolshare/perp/chinadns-ng
-			killall chinadns-ng >/dev/null 2>&1
-		else
-			killall chinadns-ng >/dev/null 2>&1
-			kill -9 ${CHNG_PID}
-		fi
+		killall chinadns-ng >/dev/null 2>&1
+		kill -9 ${CHNG_PID} >/dev/null 2>&1
 	fi
 		
 	local OLD_PID=$(pidof smartdns)
