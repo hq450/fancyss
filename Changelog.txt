@@ -1,5 +1,14 @@
  fancyss Changelog
 ===========================================
+3.4.10 (20260124)
+   - fix	更新chinadns-ng二进制更新到2026.01.24版本，修复异常时cpu占用率
+   - update	脚本增加防呆检测，禁止用户使用chinadns-ng的时候在中国dns部分使用国外dns
+   - fix	修复chinadns-ng和smartdns配置的默认值没有写入的问题
+   - fix	修复chinadns-ng自定义udp tcp DNS时chinadns无法启动的问题
+   - update	现在替换dnsmasq为实验特性，默认不开启。由于华硕/梅林机型的一些服务和dnsmasq深度绑定，部分机型替换后可能会有问题，请谨慎使用。
+   - remove	移除重启chinadns-ng和smartdns的按钮，因为现在dns和xray配置深度绑定，有时只重启dns程序无法达到效果。现在建议重启整个插件。
+   - update	更新xray二进制到v26.1.23版本
+
 3.4.9 (20260123)
    - fix	修复lite版本勾选故障转移开关无用的问题
    - fix	修复lite版本插件定时重启设定界面错乱的问题

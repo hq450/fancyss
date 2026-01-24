@@ -339,7 +339,7 @@ if [ "${ss_basic_type}" == "1" ]; then
 		fi
 	fi
 		
-	if [ "${ss_basic_dns_server}" != "1" ];then
+	if [ "${ss_basic_dns_serverx}" != "1" ];then
 		local DMQ_PID=$(pidof dnsmasq)
 		local DMQ_RSS=$(GET_VM_RSS_MULTI ${DMQ_PID})
 		if [ -n "${DMQ_PID}" ];then

@@ -471,7 +471,7 @@ function save() {
 	  "ss_basic_chng_trust_dns_3_chk",
 	  "ss_basic_chng_ipv6_drop_direc",
 	  "ss_basic_chng_ipv6_drop_proxy",
-	  "ss_basic_dns_server",
+	  "ss_basic_dns_serverx",
 	  "ss_basic_proxy_newb",
 	  //"ss_basic_proxy_ipv4",
 	  //"ss_basic_proxy_ipv6"
@@ -1415,7 +1415,7 @@ function update_visibility() {
 		$(".chng").hide();
 		$(".smrt").hide();
 	}
-	showhide("ss_dnsmasq_cus", E("ss_basic_dns_server").checked == false);
+	showhide("ss_dnsmasq_cus", E("ss_basic_dns_serverx").checked == false);
 }
 
 function Add_profile() { //点击节点页面内添加节点动作
@@ -5300,7 +5300,7 @@ function restart_smartdns() {
 	dbus_post["ss_basic_dns_plan"] = E("ss_basic_dns_plan").value;
 	dbus_post["ss_basic_smrt"] = E("ss_basic_smrt").value;
 	dbus_post["ss_basic_add_ispdns"] = E("ss_basic_add_ispdns").checked ? '1' : '0';
-	dbus_post["ss_basic_dns_server"] = E("ss_basic_dns_server").checked ? '1' : '0';
+	dbus_post["ss_basic_dns_serverx"] = E("ss_basic_dns_serverx").checked ? '1' : '0';
 	if(ws_flag == 1){
 		push_data_ws("ss_conf.sh", "restart_smrt",  dbus_post);
 	}else{
@@ -5315,7 +5315,7 @@ function restart_chinadns() {
 	for (var i = 0; i < chng_params_input.length; i++) {
 		dbus_post[chng_params_input[i]] = E(chng_params_input[i]).value;
 	}
-	var chng_params_check = ["ss_basic_chng_china_dns_1_chk", "ss_basic_chng_china_dns_2_chk", "ss_basic_chng_china_dns_3_chk", "ss_basic_chng_trust_dns_1_chk", "ss_basic_chng_trust_dns_2_chk","ss_basic_chng_trust_dns_3_chk", "ss_basic_chng_ipv6_drop_direc", "ss_basic_chng_ipv6_drop_proxy", "ss_basic_dns_server"];
+	var chng_params_check = ["ss_basic_chng_china_dns_1_chk", "ss_basic_chng_china_dns_2_chk", "ss_basic_chng_china_dns_3_chk", "ss_basic_chng_trust_dns_1_chk", "ss_basic_chng_trust_dns_2_chk","ss_basic_chng_trust_dns_3_chk", "ss_basic_chng_ipv6_drop_direc", "ss_basic_chng_ipv6_drop_proxy", "ss_basic_dns_serverx"];
 	for (var i = 0; i < chng_params_check.length; i++) {
 		dbus_post[chng_params_check[i]] = E(chng_params_check[i]).checked ? '1' : '0';;
 	}
@@ -6080,14 +6080,13 @@ function toggleKeyMask(o, show){
 																{ suffix: '<a type="button" id="edit_smartdns_conf" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf()">编辑smartdns配置</a>'},
 															]},
 															{ title: '&nbsp;&nbsp;*追加ISP DNS', id:'ss_basic_add_ispdns', type:'checkbox', hint:'151', class:'new_dns smrt', value:true},
-															{ title: '&nbsp;&nbsp;*替换dnsmasq', id:'ss_basic_dns_server', type:'checkbox', hint:'105', func:'u', value:true},
-															{ title: '&nbsp;&nbsp;*重启chinadns-ng', rid: 'restart_chinadns', class:'new_dns chng', multi: [	
-																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_chinadns()">重启chinadns-ng</a>'},
-															]},	
-															{ title: '&nbsp;&nbsp;*重启smartdns', rid: 'restart_smartdns', class:'new_dns smrt', multi: [	
-																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_smartdns()">重启smartdns</a>'},
-															]},	
-															
+															{ title: '&nbsp;&nbsp;*替换dnsmasq(实验特性)', id:'ss_basic_dns_serverx', type:'checkbox', hint:'105', func:'u', value:false},
+															//{ title: '&nbsp;&nbsp;*重启chinadns-ng', rid: 'restart_chinadns', class:'new_dns chng', multi: [	
+															//	{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_chinadns()">重启chinadns-ng</a>'},
+															//]},	
+															//{ title: '&nbsp;&nbsp;*重启smartdns', rid: 'restart_smartdns', class:'new_dns smrt', multi: [	
+															//	{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_smartdns()">重启smartdns</a>'},
+															//]},	
 															{ title: '<em>其它DNS相关设置</em>', th:'2'},
 															{ title: 'DNS重定向', id:'ss_basic_dns_hijack', type:'checkbox', hint:'106', value:true},
 															{ title: 'DNS解析测试', rid: 'ss_dns_test', multi: [

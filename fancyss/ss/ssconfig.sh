@@ -562,7 +562,7 @@ prepare_system() {
 		run /koolshare/bin/haveged -w 1024 >/dev/null 2>&1
 	fi
 
-	# 9. 用户自定义的dns不需要
+	# 9. 用户自定义的dns不需要，新固件这里已经不管用了
 	if [ -n "$(nvram get dhcp_dns1_x)" ]; then
 		nvram unset dhcp_dns1_x
 		nvram commit
@@ -571,7 +571,23 @@ prepare_system() {
 		nvram unset dhcp_dns2_x
 		nvram commit
 	fi
-
+	# 这些值，如果等1，则重设置为0
+	if [ "$(nvram get dns_fwd_local)" == "1" ]; then
+		nvram set dns_fwd_local=0
+		nvram commit
+	fi
+	if [ "$(nvram get dns_norebind)" == "1" ]; then
+		nvram set dns_norebind=0
+		nvram commit
+	fi
+	if [ "$(nvram get dnssec_enable)" == "1" ]; then
+		nvram set dnssec_enable=0
+		nvram commit
+	fi
+	if [ "$(nvram get dnspriv_enable)" == "1" ]; then
+		nvram set dnspriv_enable=0
+		nvram commit
+	fi
 
 	if [ "${ss_basic_type}" == "0" ];then
 		echo_date "ℹ️使用Xray-core运行ss协议节点..."
@@ -1166,7 +1182,7 @@ dbus_eset(){
 
 start_dns_x(){
 	set_default "ss_basic_dns_plan" "1"
-	set_default "ss_basic_dns_server" "1"
+	set_default "ss_basic_dns_serverx" "1"
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
 		if [ "$ss_basic_mode" == "1" ];then
@@ -1272,7 +1288,7 @@ start_smartdns(){
 	fi
 
 	# modify smartdns conf file
-	if [ "${ss_basic_dns_server}" == "1" ];then
+	if [ "${ss_basic_dns_serverx}" == "1" ];then
 		echo_date "编辑smartdns配置文件：${smartdns_conf}，监听端口7913 → 53"
 		sed -i 's/7913/53/g' ${smartdns_conf}
 	fi
@@ -1317,6 +1333,9 @@ start_chinadns_ng(){
 	local ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
 
 	# 1. set default value incase of ssconfig.sh restart after upgrade form old verison below 3.3.8
+	set_default "ss_basic_chng" "3"
+	set_default "ss_basic_smrt" "3"
+	
 	set_default "ss_basic_chng_china_dns_1_chk" "1"
 	set_default "ss_basic_chng_china_dns_2_chk" "1"
 	set_default "ss_basic_chng_china_dns_3_chk" "1"
@@ -1384,6 +1403,121 @@ start_chinadns_ng(){
 	echo_date "----------------------- start chinadns-ng -----------------------"
 	echo_date "💾 生成chinadns-ng配置文件，用于国内外DNS分流..."
 
+	check_fix_isp(){
+		local dns_para=$1
+		local dns_seq=$2
+		local dns_default=$3
+		
+		__valid_ip46 ${dns_para}
+		if [ "$?" == "0" ]; then
+			# ipv4
+			ipset test chnroute ${dns_para} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# 不是国内ip
+				echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+				eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+				dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+			fi
+		elif [ "$?" == "1" ]; then
+			# ipv6
+			ipset test chnroute6 ${dns_para} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# 不是国内ip
+				echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+				eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+				dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+			fi
+		elif [ "$?" == "1" ]; then
+			# 不是ip，帮忙纠正
+			echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
+			eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+			dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+		fi
+	}
+
+	# 非回国模式下，检测用户的isp dns是否为国外dns（是否在中国dns-1/-2/-3中使用了国外dns）
+	if [ "${ss_basic_mode}" != "6" ]; then
+		if [ "${ss_basic_chng_china_dns_1_chk}" == "1" -a "${ss_basic_chng_china_net_1_typ}" == "udp" ];then
+			check_fix_isp ${ss_basic_chng_china_udp_1_opt} 1 114.114.114.114
+		fi
+		if [ "${ss_basic_chng_china_dns_2_chk}" == "1" -a "${ss_basic_chng_china_net_2_typ}" == "udp" ];then
+			check_fix_isp ${ss_basic_chng_china_udp_2_opt} 2 114.114.114.115
+		fi
+		if [ "${ss_basic_chng_china_dns_3_chk}" == "1" -a "${ss_basic_chng_china_net_3_typ}" == "udp" ];then
+			check_fix_isp ${ss_basic_chng_china_udp_3_opt} 3 223.5.5.5
+		fi
+	fi
+
+	check_user_dns(){
+		local dns_para=$1
+		local dns_seq=$2
+		local dns_default=$3
+		local dns_type=$4
+
+		local _match=$(echo ${dns_para} | grep -E ":|#")
+		if [ -n "${_match}" ];then
+			# ip + port
+			local addr=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $1}')
+			local port=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $2}')
+		else
+			# only ip
+			local addr=${dns_para}
+			local port="53"
+		fi
+
+		__valid_ip46 ${addr}
+		if [ "$?" == "0" ]; then
+			# ipv4
+			ipset test chnroute ${addr} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# 不是国内ip
+				echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+				eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
+				dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+			fi
+		elif [ "$?" == "1" ]; then
+			# ipv6
+			ipset test chnroute6 ${addr} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# 不是国内ip
+				echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+				eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
+				dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+			fi
+		elif [ "$?" == "1" ]; then
+			# 不是ip，帮忙纠正
+			echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
+			eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
+			dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+		fi
+	}
+	
+	# 检测用户设置的中国udp/tcp DNS-1/-2/-3，自定义dns是否为国外dns
+	if [ "${ss_basic_mode}" != "6" ]; then
+		# udp
+		if [ "${ss_basic_chng_china_dns_1_chk}" == "1" -a "${ss_basic_chng_china_net_1_typ}" == "udp" -a "${ss_basic_chng_china_udp_1_opt}" == "99" ];then
+			check_user_dns ${ss_basic_chng_china_udp_1_usr} 1 114.114.114.114 udp
+		fi
+		if [ "${ss_basic_chng_china_dns_2_chk}" == "1" -a "${ss_basic_chng_china_net_2_typ}" == "udp" -a "${ss_basic_chng_china_udp_2_opt}" == "99" ];then
+			check_user_dns ${ss_basic_chng_china_udp_2_usr} 2 114.114.114.115 udp
+		fi
+		if [ "${ss_basic_chng_china_dns_3_chk}" == "1" -a "${ss_basic_chng_china_net_3_typ}" == "udp" -a "${ss_basic_chng_china_udp_3_opt}" == "99" ];then
+			check_user_dns ${ss_basic_chng_china_udp_3_usr} 3 223.5.5.5 udp
+		fi
+
+		# tcp
+		if [ "${ss_basic_chng_china_dns_1_chk}" == "1" -a "${ss_basic_chng_china_net_1_typ}" == "tcp" -a "${ss_basic_chng_china_tcp_1_opt}" == "99" ];then
+			check_user_dns ${ss_basic_chng_china_tcp_1_usr} 1 114.114.114.114 tcp
+		fi
+		if [ "${ss_basic_chng_china_dns_2_chk}" == "1" -a "${ss_basic_chng_china_net_2_typ}" == "tcp" -a "${ss_basic_chng_china_tcp_2_opt}" == "99" ];then
+			check_user_dns ${ss_basic_chng_china_tcp_2_usr} 2 114.114.114.115 tcp
+		fi
+		if [ "${ss_basic_chng_china_dns_3_chk}" == "1" -a "${ss_basic_chng_china_net_3_typ}" == "tcp" -a "${ss_basic_chng_china_tcp_3_opt}" == "99" ];then
+			check_user_dns ${ss_basic_chng_china_tcp_3_usr} 3 223.5.5.5 tcp
+		fi
+		
+	fi
+
 	# 1. 避免用户乱设置给关掉，强制要求中国DNS不能三个都不选
 	if [ "${ss_basic_chng_china_dns_1_chk}" != "1" -a "${ss_basic_chng_china_dns_2_chk}" != "1" -a "${ss_basic_chng_china_dns_3_chk}" != "1" ];then
 		echo_date "⚠️ 检测到中国DNS-1、中国DNS-2和中国DNS-3均未开启，至少需要指定一个国内上游DNS！"
@@ -1421,7 +1555,7 @@ start_chinadns_ng(){
 	# 中国DNS-1 (直连) 🌏
 	if [ "${ss_basic_chng_china_dns_1_chk}" == "1" ];then
 		local CDNS_1=$(get_dns china 1)
-		if [ "${ss_basic_dns_server}" == "1" ];then
+		if [ "${ss_basic_dns_serverx}" == "1" ];then
 			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_1}"
 		else
 			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_1}"
@@ -1431,7 +1565,7 @@ start_chinadns_ng(){
 	# 中国DNS-2 (直连) 🌏
 	if [ "${ss_basic_chng_china_dns_2_chk}" == "1" ];then
 		local CDNS_2=$(get_dns china 2)
-		if [ "${ss_basic_dns_server}" == "1" ];then
+		if [ "${ss_basic_dns_serverx}" == "1" ];then
 			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_2}"
 		else
 			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_2}"
@@ -1441,7 +1575,7 @@ start_chinadns_ng(){
 	# 中国DNS-3 (直连) 🌏
 	if [ "${ss_basic_chng_china_dns_3_chk}" == "1" ];then
 		local CDNS_3=$(get_dns china 3)
-		if [ "${ss_basic_dns_server}" == "1" ];then
+		if [ "${ss_basic_dns_serverx}" == "1" ];then
 			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_3}"
 		else
 			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_3}"
@@ -1485,7 +1619,7 @@ start_chinadns_ng(){
 	# 可信DNS-1 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" ];then
 		local FDNS_1=$(get_dns trust 1)
-		if [ "${ss_basic_dns_server}" == "1" ];then
+		if [ "${ss_basic_dns_serverx}" == "1" ];then
 			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
 		else
 			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
@@ -1495,7 +1629,7 @@ start_chinadns_ng(){
 	# 可信DNS-2 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" ];then
 		local FDNS_2=$(get_dns trust 2)
-		if [ "${ss_basic_dns_server}" == "1" ];then
+		if [ "${ss_basic_dns_serverx}" == "1" ];then
 			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
 		else
 			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
@@ -1505,7 +1639,7 @@ start_chinadns_ng(){
 	# 可信DNS-3 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" ];then
 		local FDNS_3=$(get_dns trust 3)
-		if [ "${ss_basic_dns_server}" == "1" ];then
+		if [ "${ss_basic_dns_serverx}" == "1" ];then
 			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
 		else
 			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
@@ -1591,7 +1725,7 @@ start_chinadns_ng(){
 		echo_date "⚠️ 警告：建议可信DNS里至少启用一个tcp/dot服务器，以避免代理节点不支持udp"
 	fi
 
-	if [ "${ss_basic_dns_server}" == "1" ];then
+	if [ "${ss_basic_dns_serverx}" == "1" ];then
 		local chng_bind_port=53
 	else
 		local chng_bind_port=7913
@@ -1930,7 +2064,7 @@ get_dns(){
 			if [ "${type}" == "trust" ];then
 				echo "udp://127.0.0.1#${_port}?count=0?life=0"
 			else
-				echo "$udp://${dns_usr}?count=0?life=0"
+				echo "udp://${dns_usr}?count=0?life=0"
 			fi
 		else
 			echo "${net}://${dns_usr}"

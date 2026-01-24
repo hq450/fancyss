@@ -2,8 +2,8 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 # this script help to set dnsmasq upstream dns server to 127.0.0.1#7913
-# dns query → dnsmasq(53) → chinadns-ng(7913)
-# dns query → dnsmasq(53) → martdns(7913)
+# ss_basic_dns_serverx=0，dns query → dnsmasq(53) → chinadns-ng(7913)
+# ss_basic_dns_serverx=1，dns query → dnsmasq(53) → martdns(7913)
 
 source /koolshare/scripts/ss_base.sh
 CONFIG=$1
@@ -20,7 +20,7 @@ perpare(){
 }
 
 fancyss_mod(){
-	if [ "$(dbus get ss_basic_dns_server)" == "1" ];then
+	if [ "$(dbus get ss_basic_dns_serverx)" == "1" ];then
 		sed -i '1i\port=0' ${CONFIG}
 		pc_insert "dhcp-option" "dhcp-option=option:dns-server,0.0.0.0" ${CONFIG}
 	else

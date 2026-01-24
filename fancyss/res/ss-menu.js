@@ -789,7 +789,8 @@ function openssHint(itemNum, flag) {
 	} else if (itemNum == 105) {
 		width = "600px";
 		statusmenu = "<b>替换dnsmasq：</b><br /><br />"
-		statusmenu += "开启此处后，将会关闭dnsmasq的dns服务器功能，chinadns-ng、smartdns将监听在53端口，以提供dns服务。<br />"
+		statusmenu += "开启此处后，将会关闭dnsmasq的dns服务器功能，chinadns-ng、smartdns将监听在53端口，以提供dns服务，这将让DNS请求再减少一层转发。<br />"
+		statusmenu += "由于华硕/梅林机型的一些服务和dnsmasq深度绑定，部分机型替换后可能会有问题，请谨慎使用此功能，。<br />"
 		_caption = "说明：";
 	} else if (itemNum == 106) {
 		width = "600px";

@@ -299,7 +299,7 @@ start_smartdns(){
 	fi
 
 	# modify smartdns conf file
-	if [ "${ss_basic_dns_server}" == "1" ];then
+	if [ "${ss_basic_dns_serverx}" == "1" ];then
 		echo_date "编辑smartdns配置文件：${smartdns_conf}，监听端口7913 → 53，以替换dnsmasq！"
 		sed -i 's/7913/53/g' ${smartdns_conf}
 	fi
