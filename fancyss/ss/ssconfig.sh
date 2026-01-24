@@ -972,6 +972,10 @@ kill_process() {
 	local xray_process=$(pidof xray)
 	if [ -n "$xray_process" ]; then
 		echo_date "关闭xray进程..."
+		if [ -d "/koolshare/perp/xray" ];then
+			perpctl d xray >/dev/null 2>&1
+			rm -rf /koolshare/perp/xray >/dev/null 2>&1
+		fi
 		killall xray >/dev/null 2>&1
 		kill -9 "$xray_process" >/dev/null 2>&1
 	fi
@@ -997,6 +1001,10 @@ kill_process() {
 	local CHNG_PID=$(pidof chinadns-ng)
 	if [ -n "${CHNG_PID}" ];then
 		echo_date "关闭chinadns-ng进程..."
+		if [ -d "/koolshare/perp/chinadns-ng" ];then
+			perpctl d chinadns-ng >/dev/null 2>&1
+			rm -rf /koolshare/perp/chinadns-ng >/dev/null 2>&1
+		fi
 		killall chinadns-ng >/dev/null 2>&1
 		kill -9 ${CHNG_PID} >/dev/null 2>&1
 	fi
@@ -1182,7 +1190,7 @@ dbus_eset(){
 
 start_dns_x(){
 	set_default "ss_basic_dns_plan" "1"
-	set_default "ss_basic_dns_serverx" "1"
+	set_default "ss_basic_dns_serverx" "0"
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
 		if [ "$ss_basic_mode" == "1" ];then
@@ -1407,6 +1415,10 @@ start_chinadns_ng(){
 		local dns_para=$1
 		local dns_seq=$2
 		local dns_default=$3
+
+		if [ "${dns_para}" == "99" ];then
+			return 0
+		fi
 		
 		__valid_ip46 ${dns_para}
 		if [ "$?" == "0" ]; then
@@ -1438,13 +1450,13 @@ start_chinadns_ng(){
 	# 非回国模式下，检测用户的isp dns是否为国外dns（是否在中国dns-1/-2/-3中使用了国外dns）
 	if [ "${ss_basic_mode}" != "6" ]; then
 		if [ "${ss_basic_chng_china_dns_1_chk}" == "1" -a "${ss_basic_chng_china_net_1_typ}" == "udp" ];then
-			check_fix_isp ${ss_basic_chng_china_udp_1_opt} 1 114.114.114.114
+			check_fix_isp ${ss_basic_chng_china_udp_1_opt} 1 223.5.5.5
 		fi
 		if [ "${ss_basic_chng_china_dns_2_chk}" == "1" -a "${ss_basic_chng_china_net_2_typ}" == "udp" ];then
-			check_fix_isp ${ss_basic_chng_china_udp_2_opt} 2 114.114.114.115
+			check_fix_isp ${ss_basic_chng_china_udp_2_opt} 2 223.6.6.6
 		fi
 		if [ "${ss_basic_chng_china_dns_3_chk}" == "1" -a "${ss_basic_chng_china_net_3_typ}" == "udp" ];then
-			check_fix_isp ${ss_basic_chng_china_udp_3_opt} 3 223.5.5.5
+			check_fix_isp ${ss_basic_chng_china_udp_3_opt} 3 119.29.29.29
 		fi
 	fi
 
@@ -1496,24 +1508,24 @@ start_chinadns_ng(){
 	if [ "${ss_basic_mode}" != "6" ]; then
 		# udp
 		if [ "${ss_basic_chng_china_dns_1_chk}" == "1" -a "${ss_basic_chng_china_net_1_typ}" == "udp" -a "${ss_basic_chng_china_udp_1_opt}" == "99" ];then
-			check_user_dns ${ss_basic_chng_china_udp_1_usr} 1 114.114.114.114 udp
+			check_user_dns ${ss_basic_chng_china_udp_1_usr} 1 223.5.5.5 udp
 		fi
 		if [ "${ss_basic_chng_china_dns_2_chk}" == "1" -a "${ss_basic_chng_china_net_2_typ}" == "udp" -a "${ss_basic_chng_china_udp_2_opt}" == "99" ];then
-			check_user_dns ${ss_basic_chng_china_udp_2_usr} 2 114.114.114.115 udp
+			check_user_dns ${ss_basic_chng_china_udp_2_usr} 2 223.6.6.6 udp
 		fi
 		if [ "${ss_basic_chng_china_dns_3_chk}" == "1" -a "${ss_basic_chng_china_net_3_typ}" == "udp" -a "${ss_basic_chng_china_udp_3_opt}" == "99" ];then
-			check_user_dns ${ss_basic_chng_china_udp_3_usr} 3 223.5.5.5 udp
+			check_user_dns ${ss_basic_chng_china_udp_3_usr} 3 119.29.29.29 udp
 		fi
 
 		# tcp
 		if [ "${ss_basic_chng_china_dns_1_chk}" == "1" -a "${ss_basic_chng_china_net_1_typ}" == "tcp" -a "${ss_basic_chng_china_tcp_1_opt}" == "99" ];then
-			check_user_dns ${ss_basic_chng_china_tcp_1_usr} 1 114.114.114.114 tcp
+			check_user_dns ${ss_basic_chng_china_tcp_1_usr} 1 223.5.5.5 tcp
 		fi
 		if [ "${ss_basic_chng_china_dns_2_chk}" == "1" -a "${ss_basic_chng_china_net_2_typ}" == "tcp" -a "${ss_basic_chng_china_tcp_2_opt}" == "99" ];then
-			check_user_dns ${ss_basic_chng_china_tcp_2_usr} 2 114.114.114.115 tcp
+			check_user_dns ${ss_basic_chng_china_tcp_2_usr} 2 223.6.6.6 tcp
 		fi
 		if [ "${ss_basic_chng_china_dns_3_chk}" == "1" -a "${ss_basic_chng_china_net_3_typ}" == "tcp" -a "${ss_basic_chng_china_tcp_3_opt}" == "99" ];then
-			check_user_dns ${ss_basic_chng_china_tcp_3_usr} 3 223.5.5.5 tcp
+			check_user_dns ${ss_basic_chng_china_tcp_3_usr} 3 119.28.28.28 tcp
 		fi
 		
 	fi
@@ -1556,9 +1568,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_china_dns_1_chk}" == "1" ];then
 		local CDNS_1=$(get_dns china 1)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_1}"
+			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_1%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_1}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_1%%\?*}"
 		fi
 	fi
 
@@ -1566,9 +1578,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_china_dns_2_chk}" == "1" ];then
 		local CDNS_2=$(get_dns china 2)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_2}"
+			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_2%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_2}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_2%%\?*}"
 		fi
 	fi
 
@@ -1576,9 +1588,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_china_dns_3_chk}" == "1" ];then
 		local CDNS_3=$(get_dns china 3)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_3}"
+			echo_date "🔍️ → chinadns-ng (china) → ${CDNS_3%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_3}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (china) → ${CDNS_3%%\?*}"
 		fi
 	fi
 
@@ -1620,9 +1632,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" ];then
 		local FDNS_1=$(get_dns trust 1)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1%%\?*}"
 		fi
 	fi
 
@@ -1630,9 +1642,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" ];then
 		local FDNS_2=$(get_dns trust 2)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2%%\?*}"
 		fi
 	fi
 
@@ -1640,9 +1652,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" ];then
 		local FDNS_3=$(get_dns trust 3)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3%%\?*}"
 		fi
 	fi
 
