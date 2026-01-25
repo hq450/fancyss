@@ -1426,24 +1426,34 @@ start_chinadns_ng(){
 			ipset test chnroute ${dns_para} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
-				eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
-				dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+				ipset test ignlist ${dns_para} >/dev/null 2>&1
+				if [ "$?" != "0" ]; then
+					# 不是局域网地址
+					echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+					eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+					dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+				fi
 			fi
 		elif [ "$?" == "1" ]; then
 			# ipv6
 			ipset test chnroute6 ${dns_para} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
-				eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
-				dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+				ipset test ignlist ${dns_para} >/dev/null 2>&1
+				if [ "$?" != "0" ]; then
+					echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+					eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+					dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+				fi
 			fi
 		elif [ "$?" == "1" ]; then
 			# 不是ip，帮忙纠正
-			echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
-			eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
-			dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+			ipset test ignlist ${dns_para} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
+				eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+				dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
+			fi
 		fi
 	}
 
@@ -1906,6 +1916,7 @@ start_chinadns_ng(){
 		cache-stale 86400
 		cache-refresh 20
 		cache-ignore asuscomm.com
+		#cache-db /tmp/chinadns_cache.db
 		
 		# verdict 缓存 (用于 tag:none 域名)
 		verdict-cache 8192
@@ -1923,7 +1934,8 @@ start_chinadns_ng(){
 	rm -rf /tmp/chinadns@verdict-cache.db >/dev/null 2>&1
 	rm -rf /tmp/chinadns_log.txt >/dev/null 2>&1
 	
-	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
+	#env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
+	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }
