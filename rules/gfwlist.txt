@@ -230,6 +230,7 @@ ai.binwang.me
 ai.dev
 ai.google
 ai.ls
+ai.studio
 aiosearch.com
 aiph.net
 airasia.com
@@ -246,6 +247,7 @@ aiweiwei.com
 aiweiweiblog.com
 ajunews.com
 akademiye.org
+akamai.tvb.com
 akamaihd.net
 akiba-online.com
 akiba-web.com
@@ -330,7 +332,10 @@ animecrazy.net
 animeshippuuden.com
 animezilla.com
 aniscartujo.com
+annas-archive.in
+annas-archive.li
 annas-archive.org
+annas-archive.pm
 annas-archive.se
 annatam.com
 anobii.com
@@ -1502,6 +1507,7 @@ daum.net
 david-kilgour.com
 dawangidc.com
 daylife.com
+dazn.com
 db.tt
 dbgjd.com
 dcard.tw
@@ -1535,8 +1541,6 @@ delcamp.net
 demo.opera-mini.net
 demo.unlock-music.dev
 demosisto.hk
-deno.com
-deno.dev
 depositphotos.com
 derekhsu.homeip.net
 derpibooru.org
@@ -3317,7 +3321,6 @@ ismalltits.com
 ismprofessional.net
 isohunt.com
 israbox.com
-issues.chromium.org 
 issuu.com
 istars.co.nz
 istef.info
@@ -4171,6 +4174,7 @@ myspace.com
 myspacecdn.com
 mytalkbox.com
 mytizi.com
+mytvsuper.com
 mywife.cc
 mywww.biz
 myz.info
@@ -4511,6 +4515,8 @@ onmypc.org
 onthehunt.com
 ontrac.com
 oojj.de
+ooni.io
+ooni.org
 open-assistant.io
 open.com.hk
 open.firstory.me
@@ -4638,6 +4644,7 @@ pct.org.tw
 pdetails.com
 pdproxy.com
 pds.nasa.gov
+pdst.fm
 peace.ca
 peacefire.org
 peacehall.com
@@ -4697,13 +4704,22 @@ pinkrod.com
 pinoy-n.com
 pinterest.at
 pinterest.ca
+pinterest.cl
 pinterest.co.uk
 pinterest.com
+pinterest.com.au
+pinterest.com.mx
 pinterest.de
 pinterest.dk
+pinterest.es
 pinterest.fr
+pinterest.ie
+pinterest.it
 pinterest.jp
 pinterest.nl
+pinterest.nz
+pinterest.ph
+pinterest.pt
 pinterest.se
 pioneer-worker.forums-free.com
 pionex.com
@@ -6148,6 +6164,7 @@ tv.com
 tv.google
 tv.jtbc.joins.com
 tvants.com
+tvbanywhere.com
 tvboxnow.com
 tvbs.com.tw
 tvider.com
@@ -6321,6 +6338,7 @@ unstable.icu
 untraceable.us
 unwire.hk
 uocn.org
+up.audio
 upbit.com
 updates.tdesktop.com
 upghsbc.com
@@ -6856,6 +6874,7 @@ xbabe.com
 xbookcn.com
 xbtce.com
 xcafe.in
+xcancel.com
 xchina.co
 xcity.jp
 xcritic.com
@@ -7016,6 +7035,7 @@ youdontcare.com
 youjizz.com
 youlucky.com
 youmaker.com
+youmind.com
 youngpornvideos.com
 youngspiration.hk
 youpai.org
