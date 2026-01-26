@@ -1439,7 +1439,7 @@ start_chinadns_ng(){
 			ipset test chnroute6 ${dns_para} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				ipset test ignlist ${dns_para} >/dev/null 2>&1
+				ipset test ignlist6 ${dns_para} >/dev/null 2>&1
 				if [ "$?" != "0" ]; then
 					echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
 					eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
@@ -1448,12 +1448,9 @@ start_chinadns_ng(){
 			fi
 		elif [ "$?" == "1" ]; then
 			# 不是ip，帮忙纠正
-			ipset test ignlist ${dns_para} >/dev/null 2>&1
-			if [ "$?" != "0" ]; then
-				echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
-				eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
-				dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
-			fi
+			echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
+			eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
+			dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
 		fi
 	}
 
@@ -1493,18 +1490,24 @@ start_chinadns_ng(){
 			ipset test chnroute ${addr} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
-				eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
-				dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+				ipset test ignlist ${dns_para} >/dev/null 2>&1
+				if [ "$?" != "0" ]; then
+					echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+					eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
+					dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+				fi
 			fi
 		elif [ "$?" == "1" ]; then
 			# ipv6
 			ipset test chnroute6 ${addr} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
-				eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
-				dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+				ipset test ignlist6 ${dns_para} >/dev/null 2>&1
+				if [ "$?" != "0" ]; then
+					echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
+					eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
+					dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
+				fi
 			fi
 		elif [ "$?" == "1" ]; then
 			# 不是ip，帮忙纠正
@@ -1934,8 +1937,8 @@ start_chinadns_ng(){
 	rm -rf /tmp/chinadns@verdict-cache.db >/dev/null 2>&1
 	rm -rf /tmp/chinadns_log.txt >/dev/null 2>&1
 	
-	#env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
-	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
+	#env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }
@@ -2224,6 +2227,9 @@ add_white_black() {
 	do
 		ipset -! add ignlist $ip >/dev/null 2>&1
 	done
+
+	ipset -! add ignlist6 ::1/128 >/dev/null 2>&1
+	ipset -! add ignlist6 fe80::/10 >/dev/null 2>&1
 	
 	# {black_list}, telegram ip
 	if [ "${ss_basic_mode}" != "6" ]; then
