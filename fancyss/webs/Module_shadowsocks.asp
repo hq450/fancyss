@@ -68,7 +68,7 @@ var refreshRate;
 var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_tuic = "# 填入tuic client json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的relay部分的配置正确！！！" 	//fancyss-full
-var option_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["6", "回国模式"], ["7", "xray分流模式"]];
+var option_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"]];
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305", "plain", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305" ];
 var option_protocals = [ "origin", "verify_simple", "verify_sha1", "auth_sha1", "auth_sha1_v2", "auth_sha1_v4", "auth_aes128_md5", "auth_aes128_sha1", "auth_chain_a", "auth_chain_b", "auth_chain_c", "auth_chain_d", "auth_chain_e", "auth_chain_f" ];
 var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
@@ -4969,7 +4969,7 @@ function refresh_acl_html() {
 	code += '<option value="2">大陆白名单模式</option>'
 	code += '<option value="3">游戏模式</option>'
 	code += '<option value="5">全局代理模式</option>'
-	code += '<option value="6">回国模式</option>'
+	// code += '<option value="6">回国模式</option>'
 	code += '</select>'
 	code += '</td>'
 	// port
@@ -5000,14 +5000,14 @@ function refresh_acl_html() {
 		code += '<select id="ss_acl_mode_' + ac["acl_node"] + '" name="ss_acl_mode_' + ac["acl_node"] + '" style="width:140px;margin:0px 0px 0px 2px;" class="sel_option" onchange="set_mode_2(this);">';
 		if ($("#ss_basic_mode").val() == 6) {
 			code += '<option value="0">不通过代理</option>';
-			code += '<option value="6">回国模式</option>';
+			//code += '<option value="6">回国模式</option>';
 		} else {
 			code += '<option value="0">不通过代理</option>';
 			code += '<option value="1">gfwlist模式</option>';
 			code += '<option value="2">大陆白名单模式</option>';
 			code += '<option value="3">游戏模式</option>';
 			code += '<option value="5">全局代理模式</option>';
-			code += '<option value="6">回国模式</option>';
+			//code += '<option value="6">回国模式</option>';
 		}
 		code += '</select>'
 		code += '</td>';
@@ -5047,7 +5047,7 @@ function refresh_acl_html() {
 		} else if (ssmode == 5) {
 			code += '<td width="23%">全局模式</td>';
 		} else if (ssmode == 6) {
-			code += '<td width="23%">回国模式</td>';
+			//code += '<td width="23%">回国模式</td>';
 		}
 	} else {
 		code += '<td width="23%">';
@@ -5068,7 +5068,7 @@ function refresh_acl_html() {
 			code += '<option value="5" selected>全局代理模式</option>';
 		} else if (ssmode == 6) {
 			code += '<option value="0">不通过代理</option>';
-			code += '<option value="6" selected>回国模式</option>';
+			//code += '<option value="6" selected>回国模式</option>';
 		}
 		code += '</select>';
 		code += '</td>';
