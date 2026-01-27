@@ -471,14 +471,14 @@ function save() {
 	  "ss_basic_chng_trust_dns_3_chk",
 	  "ss_basic_chng_ipv6_drop_direc",
 	  "ss_basic_chng_ipv6_drop_proxy",
+	  "ss_basic_block_resov",
 	  "ss_basic_dns_serverx",
 	  "ss_basic_proxy_newb",
 	  //"ss_basic_proxy_ipv4",
 	  //"ss_basic_proxy_ipv6"
 	  "ss_basic_udpoff",
 	  "ss_basic_udpall",
-	  "ss_basic_udpgpt"
-	  //"ss_basic_udp_quic"
+	  "ss_basic_block_quic"
 	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
@@ -5301,6 +5301,7 @@ function restart_smartdns() {
 	dbus_post["ss_basic_dns_plan"] = E("ss_basic_dns_plan").value;
 	dbus_post["ss_basic_smrt"] = E("ss_basic_smrt").value;
 	dbus_post["ss_basic_add_ispdns"] = E("ss_basic_add_ispdns").checked ? '1' : '0';
+	dbus_post["ss_basic_block_resov"] = E("ss_basic_block_resov").checked ? '1' : '0';
 	dbus_post["ss_basic_dns_serverx"] = E("ss_basic_dns_serverx").checked ? '1' : '0';
 	if(ws_flag == 1){
 		push_data_ws("ss_conf.sh", "restart_smrt",  dbus_post);
@@ -5316,7 +5317,7 @@ function restart_chinadns() {
 	for (var i = 0; i < chng_params_input.length; i++) {
 		dbus_post[chng_params_input[i]] = E(chng_params_input[i]).value;
 	}
-	var chng_params_check = ["ss_basic_chng_china_dns_1_chk", "ss_basic_chng_china_dns_2_chk", "ss_basic_chng_china_dns_3_chk", "ss_basic_chng_trust_dns_1_chk", "ss_basic_chng_trust_dns_2_chk","ss_basic_chng_trust_dns_3_chk", "ss_basic_chng_ipv6_drop_direc", "ss_basic_chng_ipv6_drop_proxy", "ss_basic_dns_serverx"];
+	var chng_params_check = ["ss_basic_chng_china_dns_1_chk", "ss_basic_chng_china_dns_2_chk", "ss_basic_chng_china_dns_3_chk", "ss_basic_chng_trust_dns_1_chk", "ss_basic_chng_trust_dns_2_chk","ss_basic_chng_trust_dns_3_chk", "ss_basic_chng_ipv6_drop_direc", "ss_basic_chng_ipv6_drop_proxy", "ss_basic_block_resov", "ss_basic_dns_serverx"];
 	for (var i = 0; i < chng_params_check.length; i++) {
 		dbus_post[chng_params_check[i]] = E(chng_params_check[i]).checked ? '1' : '0';;
 	}
@@ -5514,7 +5515,6 @@ function toggleKeyMask(o, show){
 													<input id="log_dig" class="button_gen" style="display:none;" type="button" onclick="download_route_file(10);" value="下载日志">
 													<input id="log_resv" class="button_gen" style="display:none;" type="button" onclick="download_route_file(11);" value="下载日志">
 													<input class="button_gen" type="button" onclick="close_dns_status();" value="返回主界面">
-													<input style="margin-left:10px" type="checkbox" id="ss_failover_c5">
 												</div>
 											</div>
 											<!-- this is the popup area for QRcode -->
@@ -6081,6 +6081,7 @@ function toggleKeyMask(o, show){
 																{ suffix: '<a type="button" id="edit_smartdns_conf" class="ss_btn" style="cursor:pointer" onclick="edit_smartdns_conf()">编辑smartdns配置</a>'},
 															]},
 															{ title: '&nbsp;&nbsp;*追加ISP DNS', id:'ss_basic_add_ispdns', type:'checkbox', hint:'151', class:'new_dns smrt', value:true},
+															{ title: '&nbsp;&nbsp;*屏蔽BlockList域名解析', id:'ss_basic_block_resov', type:'checkbox', hint:'104', func:'u', value:false},
 															{ title: '&nbsp;&nbsp;*替换dnsmasq(实验特性)', id:'ss_basic_dns_serverx', type:'checkbox', hint:'105', func:'u', value:false},
 															//{ title: '&nbsp;&nbsp;*重启chinadns-ng', rid: 'restart_chinadns', class:'new_dns chng', multi: [	
 															//	{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_chinadns()">重启chinadns-ng</a>'},
@@ -6583,9 +6584,8 @@ function toggleKeyMask(o, show){
 															{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
 																{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">关闭</font></a>', value: 0},
 																{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">开启</font></a>', value: 1},
-																{ id:'ss_basic_udpgpt', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">仅chatgpt</font></a>', value: 2},
 															]},
-															//{ title: '屏蔽quic流量', id:'ss_basic_udp_quic', hint:'150', type:'checkbox', value:true},
+															{ title: '屏蔽quic流量', id:'ss_basic_block_quic', hint:'152', type:'checkbox', value:true},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd

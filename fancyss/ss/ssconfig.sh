@@ -476,7 +476,7 @@ prepare_system() {
 	# prepare system
 	echo_date "🛠️ 一些准备工作，请稍后..."
 	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
-	set_default "ss_basic_udp_quic" "1"
+	set_default "ss_basic_block_quic" "1"
 	
 	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
 	set_skin
@@ -508,6 +508,14 @@ prepare_system() {
 	# 3. use different xtables libdir
 	if [ -d "/tmp/.xt" ];then
 		export XTABLES_LIBDIR=/tmp/.xt
+	fi
+
+	# 兼容，仅chatgpt删除掉了（3.4.13），ss_basic_udpoff和ss_basic_udpall必须有一个等于1
+	if [ "${ss_basic_udpoff}" != "1" -a "${ss_basic_udpall}" != "1" ];then
+		ss_basic_udpoff=1
+		ss_basic_udpall=0
+		dbus set ss_basic_udpoff=1
+		dbus set ss_basic_udpall=0
 	fi
 	
 	# 检查端口占用情况
@@ -1313,6 +1321,11 @@ start_smartdns(){
 		fi
 	fi
 
+	if [ "${ss_basic_block_resov}" != "1" ]; then
+		echo_date "编辑smartdns配置文件：${smartdns_conf}，移除block list域名解析屏蔽！"
+		sed -i "/block_list/d" ${smartdns_conf} 2>/dev/null
+	fi
+
 	# start smartdns	
 	echo_date "启动smartdns，使用smartdns配置文件：${smartdns_conf}"
 	run_bg smartdns -c ${smartdns_conf}
@@ -1764,7 +1777,7 @@ start_chinadns_ng(){
 		bind-port ${chng_bind_port}
 
 		proxy-server socks5://127.0.0.1:23456
-		proxy-group gfw,black,udp,router
+		proxy-group gfw,black,router
 		proxy-protocol tcp,tls
 		
 	EOF
@@ -1834,12 +1847,6 @@ start_chinadns_ng(){
 		group-upstream ${FDNS_LINE}
 		group-ipset black_list,black_list6
 
-		# 控制哪些域名需要走udp代理
-		group udp
-		group-dnl /koolshare/ss/rules/udplist.txt
-		group-upstream ${FDNS_LINE}
-		group-ipset udplist,udplist6
-
 		# 控制路由器内部哪些域名需要走代理
 		group router
 		group-dnl /koolshare/ss/rules/rotlist.txt
@@ -1848,20 +1855,9 @@ start_chinadns_ng(){
 		
 	EOF
 
-	# block_list
-	cat >>"/tmp/chinadns_ng.conf" <<-EOF
-		# 黑名单域名（不解析）
-		group null
-	EOF
-	
-	# ads, 广告域名列表压缩后761KB，先不启用此功能
-	if [ -f "/koolshare/ss/rules/adslist.gz" ]; then
+	if [ "${ss_basic_block_resov}" == "1" ]; then
 		cat >>"/tmp/chinadns_ng.conf" <<-EOF
-			group-dnl /tmp/block_list.txt,/koolshare/ss/rules/adslist.gz
-			
-		EOF
-	else
-		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			group null
 			group-dnl /tmp/block_list.txt
 			
 		EOF
@@ -1887,7 +1883,7 @@ start_chinadns_ng(){
 		if [ "${ss_basic_chng_ipv6_drop_direc}" == "0" -a "${ss_basic_chng_ipv6_drop_proxy}" == "1" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
 				# ipv6请求行为，过滤代理域名
-				no-ipv6 tag:gfw,tag:router,tag:udp,tag:black,tag:none@ip:non_china
+				no-ipv6 tag:gfw,tag:router,tag:black,tag:none@ip:non_china
 			EOF
 		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "1" -a "${ss_basic_chng_ipv6_drop_proxy}" == "1" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
@@ -2142,7 +2138,6 @@ add_white_black() {
 	# 2. gfwlist_ext (被墙名单-扩展：包括ip、域名，由fancyss更新推送)
 	# 3. black_list （doamin, user define）
 	# 4. black_list （ip/cidr, user define）
-	# 5. udplist 	 (doamin，这些域名走udp代理，可由fancyss更新推送)
 	#
 	# 黑名单-机内
 	# 1. router		 (在nat output中单独处理，控制机内走tcp代理的名单)
@@ -4093,9 +4088,6 @@ flush_ipset() {
 	ipset -F gfwlist >/dev/null 2>&1 && ipset -X gfwlist >/dev/null 2>&1
 	ipset -F gfwlist6 >/dev/null 2>&1 && ipset -X gfwlist6 >/dev/null 2>&1
 	
-	ipset -F udplist >/dev/null 2>&1 && ipset -X udplist >/dev/null 2>&1
-	ipset -F udplist6 >/dev/null 2>&1 && ipset -X udplist6 >/dev/null 2>&1
-	
 	ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
 	ipset -F router6 >/dev/null 2>&1 && ipset -X router6 >/dev/null 2>&1
 
@@ -4146,11 +4138,6 @@ creat_ipset() {
 		echo "flush gfwlist"
 		echo "create gfwlist6 nethash family inet6 -exist"
 		echo "flush gfwlist6"
-
-		echo "create udplist nethash -exist"
-		echo "flush udplist"
-		echo "create udplist6 nethash family inet6 -exist"
-		echo "flush udplist6"
 
 		echo "create router nethash -exist"
 		echo "flush router"
@@ -4238,63 +4225,138 @@ apply_quic_block() {
 	# lan access control
 	acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
 	if [ -n "$acl_nu" ]; then
+		# 先设定访问控制内的主机
 		for acl in $acl_nu; do
 			ipaddr=$(eval echo \$ss_acl_ip_$acl)
 			ipaddr_hex=$(echo $ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("%02x\n", $4)}')
 			proxy_mode=$(eval echo \$ss_acl_mode_$acl)
 			
 			#  acl in SHADOWSOCKS for filter
-			if [ "$proxy_mode" == "1" -o "$proxy_mode" == "2" -o "$proxy_mode" == "5" ];then
-				# 该主机设置了gfwlist模式，chnroute模式，全局模式，不同的udp代理行为对应不同的udp443过滤行为
-				if [ "$ss_basic_udpoff" == "1" ];then
-					# proxy_mode=0 该主机不需要走代理，不对udp443进行过滤
-					# proxy_mode！=0 该主机需要走代理，但是用户关闭了udp代理，应该对udp443进行过滤
-					if [ "$proxy_mode" == "0" ];then
-						echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
-						iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp --dport 443 -j RETURN
+			if [ "${ss_basic_udpoff}" == "1" ];then
+				# 用户关闭了udp代理，根据不通模式和不同的quic屏蔽值来决定该访问控制主机的udp 443端口是否应该被屏蔽
+				if [ "${proxy_mode}" == "0" ];then
+					# proxy_mode=0 该主机不需要走代理：不代理也不屏蔽
+					echo_date "UDP 443过滤规则：【${ipaddr}】不过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -j RETURN
+				elif [ "${proxy_mode}" == "3" ];then
+					# 游戏模式无视是否开启/关闭了udp代理，都需要进行代理，屏蔽udp443依ss_basic_block_quic而定
+					if [ "${ss_basic_block_quic}" == "1" ];then
+						# 该主机为游戏模式，代理了udp（游戏模式无视是否代理udp的开关），开启了屏蔽quic，则443没有代理，需要对udp443进行过滤
+						echo_date "UDP 443过滤规则：【${ipaddr}】过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -g $(get_action_chain ${proxy_mode})
 					else
-						echo_date "UDP 443过滤规则：【$ipaddr】过滤海外udp 443端口流量！"
-						iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp --dport 443 -g $(get_action_chain $proxy_mode)
+						# 该主机为游戏模式，代理了udp（游戏模式无视是否代理udp的开关），关闭了屏蔽quic，则443将被代理，不需要对udp443进行过滤
+						echo_date "UDP 443过滤规则：【${ipaddr}】不过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -j RETURN
+					fi
+				else
+					# 非游戏模式主机
+					if [ "${ss_basic_block_quic}" == "1" ];then
+						# 该主机为非游戏模式，不代理udp，开启了屏蔽quic，需要对udp443进行过滤
+						echo_date "UDP 443过滤规则：【${ipaddr}】过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -g $(get_action_chain ${proxy_mode})
+					else
+						# 该主机为非游戏模式，不代理udp，关闭了屏蔽quic，不需要对udp443进行过滤（此时访问chatgpt等http3站点会被检测到国内ip）
+						echo_date "UDP 443过滤规则：【${ipaddr}】不过滤海外udp 443端口流量！注意：${ipaddr}可能会漏udp，导致无法访问chatgpt等网站！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -j RETURN
 					fi
 				fi
-				if [ "$ss_basic_udpall" == "1" ];then
-					# 用户关闭了打开了udp代理，udp443不进行过滤
-					echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
-					iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
+			fi
+			if [ "$ss_basic_udpall" == "1" ];then
+				# 用户关闭了udp代理，根据不通模式和不同的quic屏蔽值来决定该访问控制主机的udp 443端口是否应该被屏蔽
+				if [ "${proxy_mode}" == "0" ];then
+					# proxy_mode=0 该主机不需要走代理：不代理也不屏蔽
+					echo_date "UDP 443过滤规则：【${ipaddr}】不过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -j RETURN
+				elif [ "${proxy_mode}" == "3" ];then
+					# 游戏模式无视是否开启/关闭了udp代理，都需要进行代理，屏蔽udp443依ss_basic_block_quic而定
+					if [ "${ss_basic_block_quic}" == "1" ];then
+						# 该主机为游戏模式，代理了udp（游戏模式无视是否代理udp的开关），开启了屏蔽quic，则443没有代理，需要对udp443进行过滤
+						echo_date "UDP 443过滤规则：【${ipaddr}】过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -g $(get_action_chain ${proxy_mode})
+					else
+						# 该主机为游戏模式，代理了udp（游戏模式无视是否代理udp的开关），关闭了屏蔽quic，则443将被代理，不需要对udp443进行过滤
+						echo_date "UDP 443过滤规则：【${ipaddr}】不过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -j RETURN
+					fi
+				else
+					# 非游戏模式主机
+					if [ "${ss_basic_block_quic}" == "1" ];then
+						# 该主机为非游戏模式，不代理udp，开启了屏蔽quic，需要对udp443进行过滤
+						echo_date "UDP 443过滤规则：【${ipaddr}】过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -g $(get_action_chain ${proxy_mode})
+					else
+						# 该主机为非游戏模式，不代理udp，关闭了屏蔽quic，不需要对udp443进行过滤（此时访问chatgpt等http3站点会被检测到国内ip）
+						echo_date "UDP 443过滤规则：【${ipaddr}】不过滤海外udp 443端口流量！"
+						append_if_not_exists filter -A SHADOWSOCKS $(factor ${ipaddr} "-s") -p udp --dport 443 -j RETURN
+					fi
 				fi
-				if [ "$ss_basic_udpgpt" == "1" ];then
-					# 用户关闭了打开了udplist代理，应该过滤的部分是剩余部分
-					echo_date "UDP 443过滤规则：【$ipaddr】过滤除udplist外的海外udp 443端口流量！"
-					iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp --dport 443 -m set ! --match-set udplist dst  -j SHADOWSOCKS_GPT
-				fi
-			elif [ "$proxy_mode" == "3" ];then
-				# 该主机设置了游戏模式，udp443不进行过滤
-				echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
-				iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
-			else
-				# 该主机不经过代理，udp443不进行过滤
-				echo_date "UDP 443过滤规则：【$ipaddr】不过滤海外udp 443端口流量！"
-				iptables -t filter -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
 			fi
 		done
-		if [ "$ss_basic_udpoff" == "1" ];then
-			echo_date "UDP 443过滤规则：【剩余主机】过滤海外udp 443端口流量！"
+		# 最后设定访问控制中的其它剩余主机
+		if [ "${ss_basic_udpoff}" == "1" ];then
+			if [ "$ss_acl_default_mode" == "0" ];then
+				echo_date "UDP 443过滤规则：【剩余主机】不过滤海外udp 443端口流量！"
+				append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+			else
+				# 剩余主机，不管是不是游戏模式，根据屏蔽udp 443开关规则进行屏蔽/不屏蔽
+				if [ "${ss_basic_block_quic}" == "1" ];then
+					echo_date "UDP 443过滤规则：【剩余主机】过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
+				else
+					echo_date "UDP 443过滤规则：【剩余主机】不过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+				fi
+			fi
 		fi
-		if [ "$ss_basic_udpall" == "1" ];then
-			echo_date "UDP 443过滤规则：【剩余主机】不过滤海外udp 443端口流量！"
-		fi
-		if [ "$ss_basic_udpgpt" == "1" ];then
-			echo_date "UDP 443过滤规则：【剩余主机】过滤除udplist外的海外udp 443端口流量！"
+		
+		if [ "${ss_basic_udpall}" == "1" ];then
+			if [ "$ss_acl_default_mode" == "0" ];then
+				echo_date "UDP 443过滤规则：【剩余主机】不过滤海外udp 443端口流量！"
+				append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+			else
+				# 剩余主机，不管是不是游戏模式，根据屏蔽udp 443开关规则进行屏蔽/不屏蔽
+				if [ "${ss_basic_block_quic}" == "1" ];then
+					echo_date "UDP 443过滤规则：【剩余主机】过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
+				else
+					echo_date "UDP 443过滤规则：【剩余主机】不过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+				fi
+			fi
 		fi
 	else
-		if [ "$ss_basic_udpoff" == "1" ];then
-			echo_date "UDP 443过滤规则：【全部主机】过滤海外udp 443端口流量！"
+		# 没有设置访问控制主机，则全部主机应用该规则
+		if [ "${ss_basic_udpoff}" == "1" ];then
+			if [ "$ss_acl_default_mode" == "0" ];then
+				echo_date "UDP 443过滤规则：【全部主机】不过滤海外udp 443端口流量！"
+				append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+			else
+				# 全部主机，不管是不是游戏模式，根据屏蔽udp 443开关规则进行屏蔽/不屏蔽
+				if [ "${ss_basic_block_quic}" == "1" ];then
+					echo_date "UDP 443过滤规则：【全部主机】过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
+				else
+					echo_date "UDP 443过滤规则：【全部主机】不过滤海外udp 443端口流量！注意：当前设定会漏udp，导致无法访问chatgpt等网站！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+				fi
+			fi
 		fi
-		if [ "$ss_basic_udpall" == "1" ];then
-			echo_date "UDP 443过滤规则：【全部主机】不过滤海外udp 443端口流量！"
-		fi
-		if [ "$ss_basic_udpgpt" == "1" ];then
-			echo_date "UDP 443过滤规则：【全部主机】过滤除udplist外的海外udp 443端口流量！"
+		
+		if [ "${ss_basic_udpall}" == "1" ];then
+			if [ "$ss_acl_default_mode" == "0" ];then
+				echo_date "UDP 443过滤规则：【全部主机】不过滤海外udp 443端口流量！"
+				append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+			else
+				# 全部主机，不管是不是游戏模式，根据屏蔽udp 443开关规则进行屏蔽/不屏蔽
+				if [ "${ss_basic_block_quic}" == "1" ];then
+					echo_date "UDP 443过滤规则：【全部主机】过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
+				else
+					echo_date "UDP 443过滤规则：【全部主机】不过滤海外udp 443端口流量！"
+					append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
+				fi
+			fi
 		fi
 	fi
 }
@@ -4329,9 +4391,6 @@ lan_access_control() {
 				fi
 				if [ "$ss_basic_udpall" == "1" ];then
 					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
-				fi
-				if [ "$ss_basic_udpgpt" == "1" ];then
-					iptables -t mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp $(factor $ports "-m multiport --dport") -j SHADOWSOCKS_GPT
 				fi
 			elif [ "$proxy_mode" == "3" ];then
 				# 添加到ipset中
@@ -4576,8 +4635,6 @@ _start_iptables() {
 	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports 3333
 	# {rotlist} 代理
 	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
-	# {udplist} 代理
-	append_if_not_exists nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set udplist dst -j REDIRECT --to-ports 3333
 	
 	#-----------------------FOR CHNMODE---------------------
 	# 创建大陆白名单模式nat rule
@@ -4633,26 +4690,23 @@ _start_iptables() {
 	# IP/cidr/白域名 白名单控制（不go proxy）
 	append_if_not_exists mangle -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
 
-	# 创建GPT模式udp rule
-	ensure_chain mangle SHADOWSOCKS_GPT
-	# {udplist} 代理
-	append_if_not_exists mangle -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-
 	# 创建gfw模式udp rule
 	ensure_chain mangle SHADOWSOCKS_GFW
 	# {white_list} 直连
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN
+	# 如果开启了屏蔽quic功能，udp 443流量将默认不走代理
+	[ "${ss_basic_block_quic}" == "1" ] && append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp --dport 443 -j RETURN
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {gfwlist} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {rotlist} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set router dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
-	# {udplist} 代理
-	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建白名单模式udp rule
 	ensure_chain mangle SHADOWSOCKS_CHN
+	# 如果开启了屏蔽quic功能，udp 443流量将默认不走代理
+	[ "${ss_basic_block_quic}" == "1" ] && append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp --dport 443 -j RETURN
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_CHN -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {chnlist} 直连
@@ -4678,7 +4732,9 @@ _start_iptables() {
 	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
 
 	# 创建glo模式udp rule
-	ensure_chain mangle SHADOWSOCKS_GLO 
+	ensure_chain mangle SHADOWSOCKS_GLO
+	# 如果开启了屏蔽quic功能，udp 443流量将默认不走代理
+	[ "${ss_basic_block_quic}" == "1" ] && append_if_not_exists mangle -A SHADOWSOCKS_GLO -p udp --dport 443 -j RETURN
 	# {white_list} 直连
 	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p tcp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
@@ -4691,13 +4747,6 @@ _start_iptables() {
 	# {ignlist}不过滤udp 443
 	append_if_not_exists filter -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
 
-	# 创建GPT模式udp filter rule
-	ensure_chain filter SHADOWSOCKS_GPT
-	# {udplist} 不过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GPT -p udp -m set --match-set udplist dst -j RETURN
-	# {udplist} 以外的流量过滤udp443
-	append_if_not_exists filter -A SHADOWSOCKS_GPT -p udp -j REJECT --reject-with icmp-port-unreachable
-
 	# 创建gfw模式udp filter rule
 	ensure_chain filter SHADOWSOCKS_GFW
 	# {white_list} 不过滤udp 443
@@ -4708,8 +4757,6 @@ _start_iptables() {
 	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set gfwlist dst -j REJECT --reject-with icmp-port-unreachable
 	# {rotlist} 过滤udp 443
 	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set router dst -j REJECT --reject-with icmp-port-unreachable
-	# {udplist} 过滤udp 443
-	append_if_not_exists filter -A SHADOWSOCKS_GFW -p udp -m set --match-set udplist dst -j REJECT --reject-with icmp-port-unreachable
 
 	# 创建白名单模式udp filter rule
 	ensure_chain filter SHADOWSOCKS_CHN
@@ -4746,7 +4793,7 @@ _start_iptables() {
 	dns_hijack_control $1
 	#-----------------------FOR ROUTER---------------------
 	# router itself
-	if [ "$ss_basic_mode" != "6" ];then
+	if [ "${ss_basic_mode}" != "6" ];then
 		append_if_not_exists nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
 
 		# make sure these match go proxy inside router
@@ -4764,34 +4811,19 @@ _start_iptables() {
 		# 如果是主模式游戏模式，则把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM链
 		if [ "$ss_acl_default_mode" == "3" ];then
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GAM
-			# 剩余主机游戏模式，不需要过滤ud443，RETURN 
-			append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443 -j RETURN
 		else
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp -j RETURN
-			# 剩余主机关闭代理，不需要过滤ud443，RETURN 
-			append_if_not_exists filter -A SHADOWSOCKS -p udp --dport 443-j RETURN
 		fi
 	else
 		# 如果主模式不是游戏模式，则不需要把SHADOWSOCKS链中剩余udp流量转发给SHADOWSOCKS_GAM，不然会造成其他模式主机的udp也走游戏模式
 		if [ "$ss_basic_udpoff" == "1" ];then
 			# 非游戏模式，关闭udp代理
 			append_if_not_exists mangle -A SHADOWSOCKS $(factor $ipaddr "-s") -p udp -j RETURN
-			# 发到对应过滤链，进行udp443过滤操作
-			append_if_not_exists filter -A SHADOWSOCKS -p udp -j $(get_action_chain $ss_acl_default_mode)
 		fi
 		
 		if [ "$ss_basic_udpall" == "1" ];then
 			# 非游戏模式，开启udp代理
 			append_if_not_exists mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
-			# 不法到对应链，因为不需要过滤udp443
-			append_if_not_exists filter -A SHADOWSOCKS -p udp -j RETURN
-		fi
-
-		if [ "$ss_basic_udpgpt" == "1" ];then
-			# 非游戏模式，开启部分udp代理
-			append_if_not_exists mangle -A SHADOWSOCKS -p udp $(factor $ss_acl_default_port "-m multiport --dport") -j SHADOWSOCKS_GPT
-			# 发到对应过滤链，进行udp443过滤操作
-			append_if_not_exists filter -A SHADOWSOCKS -p udp -j SHADOWSOCKS_GPT
 		fi
 	fi
 	
@@ -4804,8 +4836,8 @@ _start_iptables() {
 	[ "${mangle}" != "0" ] && append_if_not_exists mangle -A PREROUTING -p udp -j SHADOWSOCKS
 
 	# FOR FILTER
-	[ "${ss_basic_udpoff}" == "1" ] && insert_if_not_exists filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS
-	[ "${ss_basic_udpgpt}" == "1" ] && insert_if_not_exists filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS
+	# 只要开启了屏蔽quic，就需要开启此处
+	[ "${ss_basic_block_quic}" == "1" ] && insert_if_not_exists filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS
 
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		echo_date "开启DNS劫持功能功能，防止DNS污染..."

@@ -974,9 +974,15 @@ install_now(){
 	local PKG_TYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 
 	[ -z "${ss_basic_proxy_newb}" ] && dbus set ss_basic_proxy_newb=1
-	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=0
+	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=1
 	[ -z "${ss_basic_udpall}" ] && dbus set ss_basic_udpall=0
-	[ -z "${ss_basic_udpgpt}" ] && dbus set ss_basic_udpgpt=1
+	# 兼容，仅chatgpt删除掉了（3.4.13），ss_basic_udpoff和ss_basic_udpall必须有一个等于1
+	if [ "${ss_basic_udpoff}" != "1" -a "${ss_basic_udpall}" != "1" ];then
+		ss_basic_udpoff=1
+		ss_basic_udpall=0
+		dbus set ss_basic_udpoff=1
+		dbus set ss_basic_udpall=0
+	fi
 	[ -z "${ss_basic_nonetcheck}" ] && dbus set ss_basic_nonetcheck=1
 	[ -z "${ss_basic_notimecheck}" ] && dbus set ss_basic_notimecheck=1
 	[ -z "${ss_basic_nocdnscheck}" ] && dbus set ss_basic_nocdnscheck=1

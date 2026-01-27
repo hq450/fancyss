@@ -152,7 +152,6 @@ start_update(){
 	# 必要/常用规则：无UI开关，默认跟随规则更新
 	update_rule "chnroute6" "1"
 	update_rule "adslist" "1"
-	update_rule "udplist" "1"
 	update_rule "rotlist" "1"
 	update_rule "white_list" "1"
 	update_rule "black_list" "1"

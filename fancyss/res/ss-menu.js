@@ -937,15 +937,28 @@ function openssHint(itemNum, flag) {
 		_caption = "说明：";
 	} else if (itemNum == 150) {
 		width = "650px";
-		statusmenu += "1. 游戏模式下此处设置无效<br /><br />";
+		statusmenu += "1. 游戏模式下udp代理默认开启，此处设置无效<br /><br />";
 		statusmenu += "2. 大陆白名单摸下，开启udp代理后，效果和游戏模式等同<br /><br />";
 		statusmenu += "3. 节点必须支持udp代理才能看到实际效果，否则希望被代理的udp包将无法抵达<br /><br />";
-		statusmenu += "4. 勾选仅chatgpt后，只有访问udplist.txt中的域名udp会被代理，其他udp包不会被代理<br /><br />";
-		statusmenu += "5. 勾选仅chatgpt后，还无法访问chatgpt的，请检查节点是否支持udp，节点的区域是否被openai限制。<br />";
-		statusmenu += "6. 关闭udp代理时，udp443端口的海外数据包将被屏蔽，以。<br />";
+		statusmenu += "4. 关闭udp代理时，udp443端口的海外数据包将被屏蔽，以。<br />";
+		_caption = "说明：";
+	} else if (itemNum == 152) {
+		width = "720px";
+		statusmenu += "一些海外网站和APP用优先使用http3/quic协议，此协议基于udp协议443端口。此时有两个选择，A：代理udp 443，B：屏蔽udp 443<br /><br />";
+		statusmenu += "A：代理udp 443<br /><br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;代理udp 443需要节点支持udp代理，即使你有支持udp代理的节点，这也不一定是美好的，因为udp很多时候被运营商，国际出口等qos限速，会导致用quic看youtube视频速度慢等情况。<br /><br />";
+		statusmenu += "B：屏蔽udp 443<br /><br />";
+		statusmenu += "&nbsp;&nbsp;&nbsp;&nbsp;屏蔽udp 443后，http3的网站知道你无法使用quic，将会自动回落到基于tcp的http2，而代理软件都是支持tcp的，所以最后也能成功访问这类网站，且不会有udp qos限速的情况。<br /><br />";
+		statusmenu += "";
+		statusmenu += "-----------------------------------------------------------------------<br />";
+		statusmenu += "";
+		statusmenu += "1. 当udp代理开启时（或使用游戏模式），开启此处将不会代理443端口udp流量，且屏蔽本机发往海外的udp 443端口数据包，此时海外http3网站访问将自动回落到基于tcp的http2，最后正确走tcp代理。<br /><br />";
+		statusmenu += "2. 当udp代理开启时（或使用游戏模式），关闭此处将代理443端口udp流量，此时访问海外http3网站将会走udp代理，有时候udp代理速度不及tcp，会导致比如看youtube速度较慢。<br /><br />";
+		statusmenu += "3. 当udp代理关闭时，开启此处将后将会屏蔽本机发往海外的udp 443端口数据包，效果跟情形1一样，将回落到http2后走tcp代理<br /><br />";
+		statusmenu += "4. 当udp代理关闭时，关闭此处后海外udp 443流量将直连，可能导致chatgpt等http3网站检测到国内ip而不可用。<br /><br />";
+		statusmenu += "总之，除非你特别了解这个功能，否则请默认勾选屏蔽quic流量，以保证http3/quic协议网站的正确访问。";
 		_caption = "说明：";
 	}
-	//return overlib(statusmenu, OFFSETX, -160, LEFT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 	return overlib(statusmenu, OFFSETX, 30, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 
 	var tag_name = document.getElementsByTagName('a');

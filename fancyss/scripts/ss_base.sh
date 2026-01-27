@@ -78,19 +78,15 @@ game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep "3")
 # ---------------------- udp代理 ----------------------
 # 1. 非游戏模式，访问控制内无游戏模式，且关闭了udp代理	（当前模式 off udp）
 # 2. 非游戏模式，访问控制内无游戏模式，且开启了udp代理	（当前模式 all udp）
-# 3. 非游戏模式，访问控制内无游戏模式，且开启了gpt代理	（当前模式 gpt udp）
 
 # 1. 非游戏模式，访问控制内有游戏模式，且关闭了udp代理	（当前模式 off udp + 游戏模式 all udp）
 # 2. 非游戏模式，访问控制内有游戏模式，且开启了udp代理	（当前模式 all udp + 游戏模式 all udp）
-# 3. 非游戏模式，访问控制内有游戏模式，且开启了gpt代理	（当前模式 gpt udp + 游戏模式 all udp）
 
 # 1. 游戏模式，访问控制内无其他模式，且关闭了udp代理	（游戏模式 all udp）
 # 2. 游戏模式，访问控制内无其他模式，且开启了udp代理	（游戏模式 all udp）
-# 3. 游戏模式，访问控制内无其他模式，且开启了gpt代理	（游戏模式 all udp）
 
 # 1. 游戏模式，访问控制内有其他模式，且关闭了udp代理	（游戏模式 all udp + 其他模式 off udp）
 # 2. 游戏模式，访问控制内有其他模式，且开启了udp代理	（游戏模式 all udp + 其他模式 all udp）
-# 3. 游戏模式，访问控制内有其他模式，且开启了gpt代理	（游戏模式 all udp + 其他模式 gpt udp）
 
 # 默认不开启udp
 mangle=0
@@ -109,15 +105,10 @@ if [ "${ss_basic_udpall}" == "1" ];then
 	mangle=1
 fi
 
-if [ "${ss_basic_udpgpt}" == "1" ];then
-	mangle=1
-fi
-
 # naive 节点不支持udp
 if [ "${ss_basic_type}" == "6" ];then
 	mangle=0
 fi
-
 
 if [ "${ss_basic_type}" == "6" ];then
 	ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
