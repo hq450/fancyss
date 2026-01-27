@@ -121,12 +121,6 @@ fi
 
 ss_basic_server_orig=${ss_basic_server}
 
-# trojan 全局允许不安全
-if [ "${ss_basic_type}" == "5" -a "${ss_basic_tjai}" == "1" ];then
-	ss_basic_trojan_ai=1
-	#eval ss_basic_trojan_ai_${cur_node}=1
-fi
-
 [ -z "$(dbus get ss_basic_wt_furl)" ] && ss_basic_wt_furl="http://www.google.com.tw"
 [ -z "$(dbus get ss_basic_wt_curl)" ] && ss_basic_wt_curl="http://www.baidu.com"
 

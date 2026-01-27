@@ -21,6 +21,9 @@ fancyss Changelog
    - add	DNS设定中添加：[屏蔽BlockList域名解析]选项，默认不启用
        		fancyss提供了一份屏蔽域名解析名单：block list：https://github.com/hq450/fancyss/blob/3.0/rules_ng/block_list.txt
        		目前该list收录了一些Adobe激活相关的域名，开启后这些域名将不会得到解析，如果你使用正版adobe软件，请保持此处关闭。
+   - add	订阅功能新增：自定义UserAgent，目前提供了几个常见的以供选择，未来有需要可以开放用户填写
+   - add	订阅功能新增：订阅节点允许不安全，一些机场的vmess/vless/trojan/hysteria2节点必须设置允许不安全才能工作，勾选这里后订阅的节点将默认勾选允许不安全！
+   - remove	【附加功能】移除所有trojan强制允许不安全，如有需要，请在订阅阶段勾选允许不安全。
    - fix	修复添加vless节点弹窗页面显示bug（issues/33692）
 
 3.4.12 (20260126)

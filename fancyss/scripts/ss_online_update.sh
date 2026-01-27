@@ -20,6 +20,7 @@ HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
 HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)
 CURR_NODE=$(dbus get ssconf_basic_node)
 SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
+SUB_AI=$(dbus get ss_basic_sub_ai)
 [ -z "${SUB_BY_PROXY}" ] && SUB_BY_PROXY=0
 KEY_WORDS_1=$(dbus get ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(dbus get ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
@@ -1048,7 +1049,6 @@ add_vmess_node(){
 	# 底层传输安全：none, tls
 	v_tls=$(json_query tls "${decrypt_info}")
 	if [ "${v_tls}" == "tls" ];then
-
 		# 跳过证书验证 (AllowInsecure)，此处在底层传输安全（network_security）为tls时使用
 		v_ai_tmp=$(json_query verify_cert "${decrypt_info}")
 		if [ "${v_ai_tmp}" == "true" ];then
@@ -1074,6 +1074,7 @@ add_vmess_node(){
 
 		# SNI, 如果空则用host替代，如果host空则空，此处在底层传输安全（network_security）为tls时使用
 		v_sni=$(json_query sni "${decrypt_info}")
+		[ "${SUB_AI}" == "1" ] && v_ai="1"
 	else
 		v_tls="none"
 		v_ai=""
@@ -1330,6 +1331,7 @@ add_vless_node(){
 		else
 			x_alpn_http=""
 		fi
+		[ "${SUB_AI}" == "1" ] && x_ai="1"
 	elif [ "${x_security}" == "reality" ];then
 		# fingerprint, reality must have fp
 		if [ -z "${x_fp}" ];then
@@ -1361,6 +1363,7 @@ add_vless_node(){
 	# echo encryption: ${x_encryption}
 	# echo type: ${x_type}
 	# echo security: ${x_security}
+	# echo AllowInsecure: ${x_ai}
 	# echo host: ${x_host}
 	# echo sni: ${x_sni}
 	# echo fingerprint: ${x_fp}
@@ -1423,7 +1426,7 @@ add_vless_node(){
 	json_add_string xray_network_host "${x_host}"
 	json_add_string xray_network_path "${x_path}"
 	json_add_string xray_network_security "${x_security}"
-	#json_add_string xray_network_security_ai
+	json_add_string xray_network_security_ai "${x_ai}"
 	json_add_string xray_network_security_alpn_h2 "${x_alpn_h2}"
 	json_add_string xray_network_security_alpn_http "${x_alpn_http}"
 	json_add_string xray_network_security_sni "${x_sni}"
@@ -1483,6 +1486,8 @@ add_trojan_node(){
 	t_obfshost=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs-host=" | awk -F"=" '{print $2}')
 	t_obfsuri=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs-uri=" | awk -F"=" '{print $2}')
 
+	[ "${SUB_AI}" == "1" ] && t_ai="1"
+	
 	if [ "${action}" == "1" ];then
 		t_group=${DOMAIN_NAME}
 		t_group_hash="${t_group}_${SUB_LINK_HASH:0:4}"
@@ -1591,6 +1596,8 @@ add_hy2_node(){
 	if [ -n "${hy2_mport}" ];then
 		hy2_port=${hy2_mport}
 	fi
+
+	[ "${SUB_AI}" == "1" ] && hy2_ai="1"
 
 	if [ "${action}" == "1" ];then
 		hy2_group=${DOMAIN_NAME}
@@ -1769,8 +1776,26 @@ get_ua(){
 	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_vers=$(dbus get ss_basic_version_local)
 	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN|Shadowrocket"
-	echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
+	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
 
+	_UA=$(dbus get ss_basic_online_ua)
+	case ${_UA} in
+	0)
+		echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
+		;;
+	1)
+		echo -n ""
+		;;
+	2)
+		echo -n "v2rayn"
+		;;
+	3)
+		echo -n "v2rayng"
+		;;
+	4)
+		echo -n "shadowrocket"
+		;;
+	esac
 	#&flag=shadowrocket
 	#&flag=v2rayn
 }
@@ -1778,10 +1803,13 @@ get_ua(){
 download_by_curl(){
 	local url_encode=$(echo "$1")
 	
+	echo_date "⬇️使用curl下载订阅..."
 	local UA=$(get_ua)
 	if [ -n "${UA}" ];then
+		echo_date "🪧使用UA：$UA"
 		local UA_ARG="--user-agent ${UA}"
 	else
+		echo_date "🪧使用UA：curl"
 		local UA_ARG=""
 	fi
 
@@ -1789,8 +1817,6 @@ download_by_curl(){
 		ln -sf /koolshare/bin/curl-fancyss /tmp/curl-subscribe
 	fi
 	
-	echo_date "⬇️使用curl下载订阅..."
-	echo_date "🪧使用UA：$UA"
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."
@@ -1834,10 +1860,13 @@ download_by_curl(){
 download_by_wget(){
 	local url_encode=$(echo "$1")
 	#local url_encode="${url_encode}&flag=shadowrocket"
+	echo_date "⬇️使用wget下载订阅..."
 	local UA=$(get_ua)
 	if [ -n "${UA}" ];then
+		echo_date "🪧使用UA：$UA"
 		local UA_ARG="--user-agent ${UA}"
 	else
+		echo_date "🪧使用UA：wget"
 		local UA_ARG=""
 	fi
 
@@ -1852,8 +1881,6 @@ download_by_wget(){
 		chmod 644 /root/.wget-hsts
 	fi
 	
-	echo_date "⬇️使用wget下载订阅..."
-	echo_date "🪧使用UA：$UA"
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."

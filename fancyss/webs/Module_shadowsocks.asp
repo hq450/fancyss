@@ -412,6 +412,7 @@ function save() {
 	  "ss_basic_rule_update_time",
 	  "ssr_subscribe_mode",
 	  "ss_basic_online_links_proxy",
+	  "ss_basic_online_ua",
 	  "ss_basic_node_update",
 	  "ss_basic_node_update_day",
 	  "ss_basic_node_update_hr",
@@ -453,7 +454,6 @@ function save() {
 	  "ss_basic_enable",
 	  "ss_basic_gfwlist_update",
 	  "ss_basic_tfo",
-	  "ss_basic_tjai",
 	  "ss_basic_nonetcheck",
 	  "ss_basic_nochnipcheck",
 	  "ss_basic_nofrnipcheck",
@@ -478,7 +478,8 @@ function save() {
 	  //"ss_basic_proxy_ipv6"
 	  "ss_basic_udpoff",
 	  "ss_basic_udpall",
-	  "ss_basic_block_quic"
+	  "ss_basic_block_quic",
+	  "ss_basic_sub_ai"
 	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
@@ -1077,10 +1078,6 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_hy2_ai', 'tr'), hy2_on);
 	elem.display(elem.parentElem('ss_basic_hy2_tfo', 'tr'), hy2_on);
 	elem.display(elem.parentElem('ss_basic_hy2_cg', 'tr'), hy2_on);
-	if (E("ss_basic_tjai").checked == true){
-		E("ss_basic_trojan_ai").disabled = true;
-		E("ss_basic_trojan_ai_note").innerHTML = "已全局跳过证书验证";
-	}
 	if (save_flag == "shadowsocks") {
 		showhide("ss_obfs_host_support", $("#ss_node_table_ss_obfs").val() != "0");
 	}
@@ -1264,6 +1261,8 @@ function verifyFields(r) {
 		$("#ssr_subscribe_mode").parent().parent().hide();
 		$("#ss_basic_hy2_up_speed").parent().parent().hide();
 		$("#ss_basic_online_links_proxy").parent().parent().hide();
+		$("#ss_basic_sub_ai").parent().parent().hide();
+		$("#ss_basic_online_ua").parent().parent().hide();
 		$("#ss_basic_node_update").parent().parent().hide();
 		$("#ss_basic_exclude").parent().parent().hide();
 		$("#ss_basic_include").parent().parent().hide();
@@ -1273,6 +1272,8 @@ function verifyFields(r) {
 		$("#ssr_subscribe_mode").parent().parent().show();
 		$("#ss_basic_hy2_up_speed").parent().parent().show();
 		$("#ss_basic_online_links_proxy").parent().parent().show();
+		$("#ss_basic_sub_ai").parent().parent().show();
+		$("#ss_basic_online_ua").parent().parent().show();
 		$("#ss_basic_node_update").parent().parent().show();
 		$("#ss_basic_exclude").parent().parent().show();
 		$("#ss_basic_include").parent().parent().show();
@@ -5163,6 +5164,8 @@ function save_online_nodes(action) {
 		dbus_post["ss_online_links"] = Base64.encode(E("ss_online_links").value);
 		dbus_post["ssr_subscribe_mode"] = E("ssr_subscribe_mode").value;
 		dbus_post["ss_basic_online_links_proxy"] = E("ss_basic_online_links_proxy").value;
+		dbus_post["ss_basic_sub_ai"] = E("ss_basic_sub_ai").checked ? "1":"0";
+		dbus_post["ss_basic_online_ua"] = E("ss_basic_online_ua").value;
 		dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
 		dbus_post["ss_basic_node_update_day"] = E("ss_basic_node_update_day").value;
 		dbus_post["ss_basic_node_update_hr"] = E("ss_basic_node_update_hr").value;
@@ -6452,7 +6455,9 @@ function toggleKeyMask(o, show){
 																{ suffix: '&nbsp;congestion:' },
 																{ id:'ss_basic_hy2_cg_opt', type:'select', style:'width:70px', options:option_hy2_cg, value:'brutal'},
 															]},
+															{ title: '订阅节点允许不安全', id:'ss_basic_sub_ai', hint:'113', type:'checkbox', value:true},
 															{ title: '下载订阅时走代理网络', id:'ss_basic_online_links_proxy', type:'select', style:'width:auto', options:[["0", "自动判断"], ["1", "走代理"], ["2", "不走代理"]], value:'0'},
+															{ title: '自定义UserAgent', id:'ss_basic_online_ua', type:'select', style:'width:auto', hint:'112', options:[["0", "fancyss默认（≥3.3.9）"], ["1", "curl/wget（≤3.3.8）"], ["2", "V2rayN"], ["3", "V2rayNG"], ["4", "Shadowrocket"]], value:'0'},
 															{ title: '订阅计划任务', multi: [
 																{ id:'ss_basic_node_update', type:'select', style:'width:auto', func:'u', options:[["0", "禁用"], ["1", "开启"]], value:'0'},
 																{ id:'ss_basic_node_update_day', type:'select', style:'width:auto', options:option_noded, value:'6'},
@@ -6590,7 +6595,6 @@ function toggleKeyMask(o, show){
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
-															{ title: '所有trojan节点强制允许不安全', id:'ss_basic_tjai', hint:'120', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过国内出口ip检测', id:'ss_basic_nochnipcheck', hint:'142', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过代理出口ip检测', id:'ss_basic_nofrnipcheck', hint:'143', type:'checkbox', value:false},

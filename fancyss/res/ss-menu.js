@@ -786,6 +786,11 @@ function openssHint(itemNum, flag) {
 		statusmenu = "<b>追加ISP DNS：</b><br /><br />"
 		statusmenu += "开启此处后，在smartdns的配置文件中的server配置中，中国国内组(group chn)将自动追加ISP DNS，以获得更好的CDN解析。<br />"
 		_caption = "说明：";
+	} else if (itemNum == 104) {
+		width = "600px";
+		statusmenu = "<b>屏蔽BlockList域名解析：</b><br /><br />"
+		statusmenu += "fancyss提供了一份屏蔽域名解析名单：<a href='https://github.com/hq450/fancyss/blob/3.0/rules_ng/block_list.txt' target='_blank'><u><font color='#00F'>block list</font></u></a>，目前该list收录了一些Adobe激活相关的域名，开启后这些域名将不会得到解析，如果你使用正版adobe软件，请保持此处关闭。<br />"
+		_caption = "说明：";
 	} else if (itemNum == 105) {
 		width = "600px";
 		statusmenu = "<b>替换dnsmasq：</b><br /><br />"
@@ -816,12 +821,17 @@ function openssHint(itemNum, flag) {
 	} else if (itemNum == 111) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;匹配节点名称和节点域名/IP，含关键词的节点才会添加，多个关键词用<font color='#00F'>英文逗号</font>分隔，关键词支持中文、英文、数字，如：<font color='#CC0066'>香港,深圳,NF,BGP</font><br />&nbsp;&nbsp;&nbsp;&nbsp;此功能支持SS/SSR/V2ray/Xray订阅，<font color='#00F'>[排除]关键词</font>功能和<font color='#00F'>[包括]关键词</font>功能同时起作用。"
 		_caption = "[包括]关键词：";
+	} else if (itemNum == 112) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些机场需要特定的UA才能获得通用订阅，如果你使用默认订阅无法获得正确的而节点，可以尝试切换不同的UA来进行订阅！";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;fancyss 3.3.8及其以前版本使用的UA是：curl/wget。";
+		_caption = "说明";
+	} else if (itemNum == 113) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些机场的vmess/vless/trojan/hysteria2节点必须设置允许不安全才能工作，勾选这里后订阅的节点将默认启用允许不安全！";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;如果不勾选，允许不安全设定将跟随机场订阅设定(如果机场有此设定的话)。";
+		_caption = "说明";
 	} else if (itemNum == 116) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！<br />&nbsp;&nbsp;&nbsp;&nbsp;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：<br />-------------------------------------------------<br />🚀魅影极速<br />https://subserver.maying.io/xxx<br /><br />🛩️nextitally<br />https://naixisubs.com/downloadConfig/xxx<br />-------------------------------------------------"
 		_caption = "订阅地址管理";
-	} else if (itemNum == 120) {
-		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些trojan机场节点需要允许不安全才能正常工作，但是其节点订阅却没有指定允许不安全，此时可以开启此处，开启后会强制所有trojan节点允许不安全";
-		_caption = "说明";
 	} else if (itemNum == 133) {
 		width = "640px";
 		statusmenu = "<div style='padding-left:16px;padding-right:16px;line-height:1.5'>";
