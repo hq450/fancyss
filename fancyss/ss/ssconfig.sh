@@ -1929,16 +1929,35 @@ start_chinadns_ng(){
 		${DNS_REPEATS}
 		
 		# 详细日志
-		# verbose
+		#verbose
 	EOF
 	echo_date "🆗 chinadns-ng配置文件生成完毕，位于/tmp/chinadns_ng.conf"
 	echo_date "⚡️ 开启chinadns-ng，用于所有域名的DNS解析..."
 	rm -rf /tmp/chinadns@cache.db >/dev/null 2>&1
 	rm -rf /tmp/chinadns@verdict-cache.db >/dev/null 2>&1
 	rm -rf /tmp/chinadns_log.txt >/dev/null 2>&1
+
+	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_exta=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_EXTA=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+
+	if [ "${pkg_arch}" == "hnd_v8" -o "${pkg_arch}" == "mtk" -o "${pkg_arch}" == "ipq64" ];then
+		if [ "${pkg_type}" == "full" -a "${pkg_exta}" == "_debug" ];then
+			echo_date "⚡️ 开启chinadns-ng debug模式..."
+			local _debug_mode=1
+			sed -i 's/#verbose/verbose/g' /tmp/chinadns_ng.conf
+			sed -i 's/#cache-db \/tmp\/chinadns_cache.db/cache-db \/tmp\/chinadns_cache.db/g' /tmp/chinadns_ng.conf
+		fi
+	fi
 	
-	env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
-	#env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+	if [ "${_debug_mode}" == "1" ];then
+		ulimit -c unlimited
+		cd /tmp
+		env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+	else
+		env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
+	fi
+	
 	detect_running_status chinadns-ng
 	echo_date "---------------------------------------------------------"
 }

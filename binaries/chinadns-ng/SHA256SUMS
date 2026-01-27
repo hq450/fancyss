@@ -1,0 +1,7 @@
+f90825086893c1d66ae258e4e603ddda79900279c63fa350e9471c8b29e8c729  dist/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@fast+lto
+8ebce61e92988499fc12f09bd2576828eb337daf7a51c802b137a4156e499d62  dist/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto
+0dd655ce1d358ee1fe71e6728cb3dfbfc87971d0d1082d24eec196610ef5ac79  dist/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v5te+soft_float@fast+lto
+4c8e03cbd9ebed3381cdf1dadee3e0a1cdec786a70e108fdbc44c8063ea99df0  dist/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@debug
+5227180d525be7a32cae47e8323ab313e275f4e44e3b085730813e68fceea004  dist/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@fast+lto.upx
+ecd2248b97338581fd8eb1e5c9b7df8d959f54b1efc674d4f1c4382f2c991fd7  dist/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto.upx
+4c64889f374bc2751383d2eed737aed2a235604d47a464a4430cef5f419694ca  dist/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v5te+soft_float@fast+lto.upx
