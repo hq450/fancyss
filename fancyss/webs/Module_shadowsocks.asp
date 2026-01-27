@@ -1215,7 +1215,7 @@ function verifyFields(r) {
 			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
 			showhide("xray_grpc_mode_tr", x_grpc_on_2);
-			showhide("xray_http_mode_tr", x_xhttp_on_2);
+			showhide("xray_xhttp_mode_tr", x_xhttp_on_2);
 			showhide("xray_network_host_tr", x_host_on_2);
 			showhide("xray_network_path_tr", x_path_on_2);
 			showhide("xray_json_tr", (E("ss_node_table_xray_use_json").checked));
@@ -1879,14 +1879,15 @@ function tabclickhandler(_type) {
 			E('xray_network_security_ai_tr').style.display = "";
 			E('xray_network_security_alpn_tr').style.display = "";
 			E('xray_network_security_sni_tr').style.display = "";
+			E('xray_fingerprint_tr').style.display = "none";
 			E('xray_json_tr').style.display = "none";
-			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp";
 			var x_http_on_2 = E("ss_node_table_xray_network").value == "tcp" && E("ss_node_table_xray_headtype_tcp").value == "http";
 			var x_host_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
 			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "grpc" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
 			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls" || E("ss_node_table_xray_network_security").value == "xtls";
 			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
 			var x_real_on_2 = E("ss_node_table_xray_network_security").value == "reality";
+			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp";
 			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc";
 			var x_xhttp_on_2 = E("ss_node_table_xray_network").value == "xhttp";
 			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
@@ -1902,7 +1903,7 @@ function tabclickhandler(_type) {
 			showhide("xray_network_security_alpn_tr", x_tls_on_2);
 			showhide("xray_network_security_sni_tr", x_tls_on_2 || x_real_on_2);
 			showhide("xray_fingerprint_tr", x_tls_on_2 || x_real_on_2);
-			showhide("xray_flow_tr", x_xtls_on_2 && x_tcp_on_2 || x_real_on_2 && x_tcp_on_2);
+			showhide("xray_flow_tr", x_tls_on_2 && x_tcp_on_2 || x_real_on_2 && x_tcp_on_2);
 			showhide("xray_show_tr", x_real_on_2);
 			showhide("xray_publickey_tr", x_real_on_2);
 			showhide("xray_shortid_tr", x_real_on_2);
