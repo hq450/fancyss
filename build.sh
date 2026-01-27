@@ -179,10 +179,18 @@ gen_folder(){
 	# find ./shadowsocks/bin -name "tuic-client" | xargs rm -rf
 	# find ./shadowsocks/bin -name "naive" | xargs rm -rf
 
+	# use debug version of chinadns-ng for aarch64 platform
+	if [ "${platform}" == "hnd_v8" -o "${platform}" == "mtk" -o "${platform}" == "ipq64" ];then
+		if [ "${pkgtype}" == "full" -a "${release_type}" == "debug" ];then
+			cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@debug ./shadowsocks/bin/chinadns-ng
+		fi
+	fi
+	
 	# wirte type string
 	if [ "${release_type}" != "debug" ];then
 		sed -i 's/PKG_EXTA=\"_debug\"/PKG_EXTA=\"\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
+	
 	if [ "${pkgtype}" == "lite" ];then
 		sed -i 's/var PKG_TYPE=\"full\"/var PKG_TYPE=\"lite\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
