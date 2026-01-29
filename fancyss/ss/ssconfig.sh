@@ -1774,7 +1774,7 @@ start_chinadns_ng(){
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 监听地址和端口
 		bind-addr ::
-		bind-port ${chng_bind_port}
+		bind-port ${chng_bind_port}@udp
 
 		proxy-server socks5://127.0.0.1:23456
 		proxy-group gfw,black,router
@@ -1941,8 +1941,8 @@ start_chinadns_ng(){
 		if [ "${pkg_type}" == "full" -a "${pkg_exta}" == "_debug" ];then
 			echo_date "⚡️ 开启chinadns-ng debug模式..."
 			local _debug_mode=1
-			sed -i 's/#verbose/verbose/g' /tmp/chinadns_ng.conf
-			sed -i 's/#cache-db \/tmp\/chinadns_cache.db/cache-db \/tmp\/chinadns_cache.db/g' /tmp/chinadns_ng.conf
+			#sed -i 's/#verbose/verbose/g' /tmp/chinadns_ng.conf
+			#sed -i 's/#cache-db \/tmp\/chinadns_cache.db/cache-db \/tmp\/chinadns_cache.db/g' /tmp/chinadns_ng.conf
 		fi
 	fi
 	
