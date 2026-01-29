@@ -180,11 +180,11 @@ gen_folder(){
 	# find ./shadowsocks/bin -name "naive" | xargs rm -rf
 
 	# use debug version of chinadns-ng for aarch64 platform
-	if [ "${platform}" == "hnd_v8" -o "${platform}" == "mtk" -o "${platform}" == "ipq64" ];then
-		if [ "${pkgtype}" == "full" -a "${release_type}" == "debug" ];then
-			cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@debug ./shadowsocks/bin/chinadns-ng
-		fi
-	fi
+	# if [ "${platform}" == "hnd_v8" -o "${platform}" == "mtk" -o "${platform}" == "ipq64" ];then
+	# 	if [ "${pkgtype}" == "full" -a "${release_type}" == "debug" ];then
+	# 		cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@debug ./shadowsocks/bin/chinadns-ng
+	# 	fi
+	# fi
 	
 	# wirte type string
 	if [ "${release_type}" != "debug" ];then
