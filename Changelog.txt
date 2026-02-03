@@ -2,6 +2,8 @@ fancyss Changelog
 
 3.5.1（todo）
    - fix	修复使用远程访问fancyss页面，状态一直waiting的问题。
+   - update	优化websockset连接，现在页面加载时只会进行一次连接。
+   - update	更新xray二进制到v26.2.2
 
 3.5.0（20260129）
    - update	chinadns-ng二进制更新到2026.01.29版本，修复一个内存泄露问题

@@ -92,6 +92,7 @@ var time_wait;
 var ws;
 var ws_flag;
 var wss_open;
+var wss;
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -117,20 +118,38 @@ function init() {
 function try_ws_connect(){
 	if (ws_enable != 1){
 		ws_flag = 0;
+		if (wss){
+			try {
+				wss.close();
+			} catch (e) {}
+			wss = null;
+		}
 		get_ss_status(false);
 		return false;
 	}
 	if (window.location.protocol != "http:"){
 		ws_flag = 0;
+		if (wss){
+			try {
+				wss.close();
+			} catch (e) {}
+			wss = null;
+		}
 		get_ss_status(false);
 		return false;
 	}
 	if (hostname != lan_ipaddr){
 		ws_flag = 0;
+		if (wss){
+			try {
+				wss.close();
+			} catch (e) {}
+			wss = null;
+		}
 		get_ss_status(false);
 		return false;
 	}
-	var ws_test = new WebSocket("ws://" + hostname + ":803/");
+	wss = new WebSocket("ws://" + hostname + ":803/");
 	var ws_test_done = false;
 	var ws_test_timer = setTimeout(function() {
 		if (ws_test_done){
@@ -138,36 +157,43 @@ function try_ws_connect(){
 		}
 		ws_test_done = true;
 		ws_flag = 3;
+		wss_open = 0;
 		try {
-			ws_test.close();
+			wss.close();
 		} catch (e) {}
+		wss = null;
 		get_ss_status(false);
 	}, 1000);
-	ws_test.onopen = function() {
+	wss.onopen = function() {
 		if (ws_test_done){
 			return;
 		}
-		ws_test.send("echo ws_ok");
+		wss.send("echo ws_ok");
 	};
-	ws_test.onerror = function(event) {
+	wss.onerror = function(event) {
 		if (ws_test_done){
 			return;
 		}
 		ws_test_done = true;
 		clearTimeout(ws_test_timer);
 		ws_flag = 2;
+		wss_open = 0;
 		//console.log('ws_test failed!');
+		try {
+			wss.close();
+		} catch (e) {}
+		wss = null;
 		get_ss_status(false);
 	};
-	ws_test.onmessage = function(event) {
+	wss.onmessage = function(event) {
 		if (ws_test_done){
 			return;
 		}
 		ws_test_done = true;
 		clearTimeout(ws_test_timer);
 		ws_flag = 1;
+		wss_open = 1;
 		//console.log('ws_test message_ok!');
-		ws_test.close();
 		get_ss_status(true);
 	};
 }
@@ -4240,6 +4266,39 @@ function get_ss_status(use_ws) {
 	}
 }
 function get_ss_status_front() {
+	if (wss && wss.readyState === 1){
+		wss_open = 1;
+		wss.onerror = function(event) {
+			//console.log('WS Error 1: ' + event.data);
+			wss_open = 0;
+			get_ss_status_front_httpd();
+		};
+		wss.onclose = function() {
+			//console.log('WS DISCONNECT');
+			wss_open = 0;
+			get_ss_status_front_httpd();
+		};
+		wss.onmessage = function(event) {
+			// 运行状态
+			var res = event.data;
+			//console.log(res);
+			if(res.indexOf("@@") != -1){
+				var arr = res.split("@@");
+				if (arr[0] == "" || arr[1] == "") {
+					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+				} else {
+					E("ss_state2").innerHTML = arr[0];
+					E("ss_state3").innerHTML = arr[1];
+				}
+			}else{
+				E("ss_state2").innerHTML = "国外连接 - " + "Waiting ...";
+				E("ss_state3").innerHTML = "国内连接 - " + "Waiting ...";
+			}
+		};
+		get_ss_status_front_websocket();
+		return;
+	}
 	wss = new WebSocket("ws://" + hostname + ":803/");
 	var ws_open_timeout = false;
 	var ws_test_timer = setTimeout(function() {
@@ -4366,6 +4425,44 @@ function get_ss_status_back() {
 	}
 	//console.log("time_wait: ", time_wait);
 	
+	if (wss && wss.readyState === 1){
+		wss_open = 1;
+		wss.onerror = function(event) {
+			//console.log('WS Error 2: ' + event.data);
+			wss_open = 0;
+			get_ss_status_back_httpd();
+		};
+		wss.onclose = function() {
+			//console.log('WS DISCONNECT');
+			wss_open = 0;
+			get_ss_status_back_httpd();
+		};
+		wss.onmessage = function(event) {
+			// 运行状态
+			var res = event.data;
+			//console.log(res);
+			if(res.indexOf("@@") != -1){
+				var arr = res.split("@@");
+				if (arr[0] == "" || arr[1] == "") {
+					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
+					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
+				} else {
+					E("ss_state2").innerHTML = arr[0];
+					E("ss_state3").innerHTML = arr[1];
+				}
+				if (arr[2] == "1") {
+					var dbus_post = {};
+					dbus_post["ss_heart_beat"] = "0";
+					push_data("dummy_script.sh", "", dbus_post, "2");
+				}
+			}else{
+				E("ss_state2").innerHTML = "国外连接 - " + "Waiting ...";
+				E("ss_state3").innerHTML = "国内连接 - " + "Waiting ...";
+			}
+		};
+		get_ss_status_back_websocket();
+		return;
+	}
 	//wss = new WebSocket('ws://192.168.60.1:803/');
 	wss = new WebSocket("ws://" + hostname + ":803/");
 	var ws_open_timeout = false;
