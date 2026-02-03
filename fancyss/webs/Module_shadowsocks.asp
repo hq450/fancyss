@@ -93,6 +93,7 @@ var ws;
 var ws_flag;
 var wss_open;
 var hostname = document.domain;
+var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
 var ads_url_1
 var ws_enable = 0;
@@ -116,24 +117,58 @@ function init() {
 function try_ws_connect(){
 	if (ws_enable != 1){
 		ws_flag = 0;
+		get_ss_status(false);
 		return false;
 	}
 	if (window.location.protocol != "http:"){
 		ws_flag = 0;
+		get_ss_status(false);
 		return false;
 	}
-	ws_test = new WebSocket("ws://" + hostname + ":803/");
+	if (hostname != lan_ipaddr){
+		ws_flag = 0;
+		get_ss_status(false);
+		return false;
+	}
+	var ws_test = new WebSocket("ws://" + hostname + ":803/");
+	var ws_test_done = false;
+	var ws_test_timer = setTimeout(function() {
+		if (ws_test_done){
+			return;
+		}
+		ws_test_done = true;
+		ws_flag = 3;
+		try {
+			ws_test.close();
+		} catch (e) {}
+		get_ss_status(false);
+	}, 1000);
 	ws_test.onopen = function() {
+		if (ws_test_done){
+			return;
+		}
 		ws_test.send("echo ws_ok");
 	};
 	ws_test.onerror = function(event) {
+		if (ws_test_done){
+			return;
+		}
+		ws_test_done = true;
+		clearTimeout(ws_test_timer);
 		ws_flag = 2;
 		//console.log('ws_test failed!');
+		get_ss_status(false);
 	};
 	ws_test.onmessage = function(event) {
+		if (ws_test_done){
+			return;
+		}
+		ws_test_done = true;
+		clearTimeout(ws_test_timer);
 		ws_flag = 1;
 		//console.log('ws_test message_ok!');
 		ws_test.close();
+		get_ss_status(true);
 	};
 }
 function refresh_dbss() {
@@ -169,8 +204,6 @@ function get_dbus_data() {
 			ss_node_sel();
 			// define click action
 			toggle_func();
-			// start to get fancyss staus
-			get_ss_status();
 			// try to get latest version of fancyss
 			version_show();
 			message_show();
@@ -4182,7 +4215,10 @@ function change_select_width(o, p) {
 	}).click();
 }
 
-function get_ss_status() {
+function get_ss_status(use_ws) {
+	if (typeof use_ws == "undefined"){
+		use_ws = (ws_flag == 1);
+	}
 	E("ss_state2").innerHTML = "国外连接 - " + "Waiting..";
 	E("ss_state3").innerHTML = "国内连接 - " + "Waiting..";
 	if (db_ss['ss_basic_enable'] != "1") {
@@ -4190,32 +4226,56 @@ function get_ss_status() {
 	}
 
 	if(db_ss["ss_failover_enable"] == "1"){
-		get_ss_status_back();
+		if (use_ws){
+			get_ss_status_back();
+		}else{
+			get_ss_status_back_httpd();
+		}
 	}else{
-		get_ss_status_front();
+		if (use_ws){
+			get_ss_status_front();
+		}else{
+			get_ss_status_front_httpd();
+		}
 	}
 }
 function get_ss_status_front() {
-	if (ws_enable != 1){
-		get_ss_status_front_httpd();
-		return false;
-	}
-	if (window.location.protocol != "http:"){
-		get_ss_status_front_httpd();
-		return false;
-	}
 	wss = new WebSocket("ws://" + hostname + ":803/");
+	var ws_open_timeout = false;
+	var ws_test_timer = setTimeout(function() {
+		ws_open_timeout = true;
+		wss_open = 0;
+		try {
+			wss.close();
+		} catch (e) {}
+		get_ss_status_front_httpd();
+	}, 1000);
 	wss.onopen = function() {
+		if (ws_open_timeout){
+			try {
+				wss.close();
+			} catch (e) {}
+			return;
+		}
+		clearTimeout(ws_test_timer);
 		//console.log('成功建立websocket链接，开始获取后台状态1...');
 		wss_open = 1;
 		get_ss_status_front_websocket();
 	};
 	wss.onerror = function(event) {
+		if (ws_open_timeout){
+			return;
+		}
+		clearTimeout(ws_test_timer);
 		//console.log('WS Error 1: ' + event.data);
 		wss_open = 0;
 		get_ss_status_front_httpd();
 	};
 	wss.onclose = function() {
+		if (ws_open_timeout){
+			return;
+		}
+		clearTimeout(ws_test_timer);
 		//console.log('WS DISCONNECT');
 		wss_open = 0;
 		get_ss_status_front_httpd();
@@ -4306,27 +4366,43 @@ function get_ss_status_back() {
 	}
 	//console.log("time_wait: ", time_wait);
 	
-	if (ws_enable != 1){
-		get_ss_status_back_httpd();
-		return false;
-	}
-	if (window.location.protocol != "http:"){
-		get_ss_status_back_httpd();
-		return false;
-	}
 	//wss = new WebSocket('ws://192.168.60.1:803/');
 	wss = new WebSocket("ws://" + hostname + ":803/");
+	var ws_open_timeout = false;
+	var ws_test_timer = setTimeout(function() {
+		ws_open_timeout = true;
+		wss_open = 0;
+		try {
+			wss.close();
+		} catch (e) {}
+		get_ss_status_back_httpd();
+	}, 1000);
 	wss.onopen = function() {
+		if (ws_open_timeout){
+			try {
+				wss.close();
+			} catch (e) {}
+			return;
+		}
+		clearTimeout(ws_test_timer);
 		//console.log('成功建立websocket链接，开始获取后台状态2...');
 		wss_open = 1;
 		get_ss_status_back_websocket();
 	};
 	wss.onerror = function(event) {
+		if (ws_open_timeout){
+			return;
+		}
+		clearTimeout(ws_test_timer);
 		//console.log('WS Error 2: ' + event.data);
 		wss_open = 0;
 		get_ss_status_back_httpd();
 	};
 	wss.onclose = function() {
+		if (ws_open_timeout){
+			return;
+		}
+		clearTimeout(ws_test_timer);
 		//console.log('WS DISCONNECT');
 		wss_open = 0;
 		get_ss_status_back_httpd();
