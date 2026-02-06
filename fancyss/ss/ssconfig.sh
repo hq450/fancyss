@@ -3836,14 +3836,15 @@ creat_hy2_json(){
 
 	if [ "${ss_basic_hy2_obfs}" == "1" -a -n "${ss_basic_hy2_obfs_pass}" ];then
 		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
-						
-						,"udpmasks": [
+					,"finalmask": {
+						"udp": [
 						{
 							"type": "salamander",
 							"settings": {
 								"password": "${ss_basic_hy2_obfs_pass}"
 							}
 						}]
+					}
 		EOF
 	fi
 					
