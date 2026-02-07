@@ -6,6 +6,7 @@ fancyss Changelog
    - update	更新xray二进制到v26.2.6
    - update	更新xray配置文件生成以适应新版本xray
    - update	vless/hysteria2出站协议新增pinnedPeerCertSha256，verifyPeerCertByName支持，以备未来（2026.06.01）取消允许不安全（AllowInscure）
+   - remove 移除xray底层传输安全的xtls，xtls在自xray-core 1.7.x开始就被XTLS Vision取代了
 
 3.5.0（20260129）
    - update	chinadns-ng二进制更新到2026.01.29版本，修复一个内存泄露问题
