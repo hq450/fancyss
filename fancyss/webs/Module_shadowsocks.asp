@@ -287,7 +287,7 @@ function ssconf_node2obj(node_sel) {
 	obj_node = {};
 	var p = "ssconf_basic";
 	var params_tt_0 = ["ss_obfs", "v2ray_use_json", "v2ray_network_security_ai", "v2ray_mux_enable", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "hy2_ai", "hy2_tfo"];
-	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_json", "tuic_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_cg"];
+	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_json", "tuic_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_cg"];
 	for (var i = 0; i < params_tt_0.length; i++) {
 		obj_node["ss_basic_" + params_tt_0[i]] = db_ss[p + "_" + params_tt_0[i] + "_" + node_sel] || "0";
 	}
@@ -678,7 +678,7 @@ function save() {
 	if (db_ss["ssconf_basic_type_" + node_sel] =="4" ){
 		// for xray json, we need to encode json format
 		if (E("ss_basic_xray_use_json").checked == true){
-			var params_xr_more = ["server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
+			var params_xr_more = ["server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_network_security_sni", "xray_fingerprint", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
 			for (var i = 0; i < params_xr_more.length; i++) {
 				dbus["ssconf_basic_" + params_xr_more[i] + "_" + node_sel] = "";
 			}
@@ -737,7 +737,9 @@ function save() {
 			}
 			dbus["ssconf_basic_xray_network_security_" + node_sel] = E("ss_basic_xray_network_security").value;
 			dbus["ssconf_basic_xray_network_security_sni_" + node_sel] = E("ss_basic_xray_network_security_sni").value;
-			if(E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls"){
+			dbus["ssconf_basic_xray_pcs_" + node_sel] = E("ss_basic_xray_pcs").value;
+			dbus["ssconf_basic_xray_svn_" + node_sel] = E("ss_basic_xray_svn").value;
+			if(E("ss_basic_xray_network_security").value == "tls"){
 				if(E("ss_basic_xray_network").value == "tcp"){
 					dbus["ssconf_basic_xray_flow_" + node_sel] = E("ss_basic_xray_flow").value;
 				}else{
@@ -807,7 +809,7 @@ function save() {
 	// fancyss_full_2
 	// hysteria2
 	if (db_ss["ssconf_basic_type_" + node_sel] =="8" ){
-		var params_hy2_1 = ["mode", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_cg"];
+		var params_hy2_1 = ["mode", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_cg"];
 		for (var i = 0; i < params_hy2_1.length; i++) {
 			dbus["ssconf_basic_" + params_hy2_1[i] + "_" + node_sel] = E("ss_basic_" + params_hy2_1[i]).value;
 		}
@@ -1036,12 +1038,12 @@ function verifyFields(r) {
 	var x_http_on = E("ss_basic_xray_network").value == "tcp" && E("ss_basic_xray_headtype_tcp").value == "http";
 	var x_host_on = E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2" || E("ss_basic_xray_network").value == "quic" || E("ss_basic_xray_network").value == "httpupgrade" || E("ss_basic_xray_network").value == "xhttp" || x_http_on;
 	var x_path_on = E("ss_basic_xray_network").value == "ws" || E("ss_basic_xray_network").value == "h2" || E("ss_basic_xray_network").value == "quic" || E("ss_basic_xray_network").value == "grpc" || E("ss_basic_xray_network").value == "httpupgrade" || E("ss_basic_xray_network").value == "xhttp" || x_http_on;
-	var x_tls_on = E("ss_basic_xray_network_security").value == "tls" || E("ss_basic_xray_network_security").value == "xtls";
-	var x_xtls_on = E("ss_basic_xray_network_security").value == "xtls";
+	var x_tls_on = E("ss_basic_xray_network_security").value == "tls";
 	var x_real_on = E("ss_basic_xray_network_security").value == "reality";
 	var x_tcp_on = E("ss_basic_xray_network").value == "tcp";
 	var x_grpc_on = E("ss_basic_xray_network").value == "grpc";
 	var x_xhttp_on = E("ss_basic_xray_network").value == "xhttp";
+	var x_ai_off = E("ss_basic_xray_network_security_ai").checked == false;
 	//ss
 	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
 	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
@@ -1100,6 +1102,8 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_xray_network_security_ai', 'tr'), (xray_on && x_json_off && x_tls_on));
 	elem.display(elem.parentElem('ss_basic_xray_network_security_alpn_h2', 'tr'), (xray_on && x_json_off && x_tls_on));
 	elem.display(elem.parentElem('ss_basic_xray_network_security_sni', 'tr'), (xray_on && x_json_off && (x_tls_on || x_real_on)));
+	elem.display(elem.parentElem('ss_basic_xray_pcs', 'tr'), (xray_on && x_json_off && x_tls_on && x_ai_off));
+	elem.display(elem.parentElem('ss_basic_xray_svn', 'tr'), (xray_on && x_json_off && x_tls_on && x_ai_off));
 	elem.display(elem.parentElem('ss_basic_xray_fingerprint', 'tr'), (xray_on && x_json_off && (x_tls_on || x_real_on)));
 	elem.display(elem.parentElem('ss_basic_xray_show', 'tr'), (xray_on && x_json_off && x_real_on));
 	elem.display(elem.parentElem('ss_basic_xray_publickey', 'tr'), (xray_on && x_json_off && x_real_on));
@@ -1126,6 +1130,7 @@ function verifyFields(r) {
 	//tuic
 	elem.display(elem.parentElem('ss_basic_tuic_json', 'tr'), tuic_on);			//fancyss-full
 	//hy2
+	var hy2_ai_off = E("ss_basic_hy2_ai").checked == false;
 	elem.display(elem.parentElem('ss_basic_hy2_server', 'tr'), hy2_on);
 	elem.display(elem.parentElem('ss_basic_hy2_port', 'tr'), hy2_on);
 	elem.display(elem.parentElem('ss_basic_hy2_pass', 'tr'), hy2_on);
@@ -1135,6 +1140,8 @@ function verifyFields(r) {
 	elem.display(elem.parentElem('ss_basic_hy2_obfs_pass', 'tr'), hy2_on && E("ss_basic_hy2_obfs").value != "0");
 	elem.display(elem.parentElem('ss_basic_hy2_sni', 'tr'), hy2_on);
 	elem.display(elem.parentElem('ss_basic_hy2_ai', 'tr'), hy2_on);
+	elem.display(elem.parentElem('ss_basic_hy2_pcs', 'tr'), hy2_on && hy2_ai_off);
+	elem.display(elem.parentElem('ss_basic_hy2_svn', 'tr'), hy2_on && hy2_ai_off);
 	elem.display(elem.parentElem('ss_basic_hy2_tfo', 'tr'), hy2_on);
 	elem.display(elem.parentElem('ss_basic_hy2_cg', 'tr'), hy2_on);
 	if (save_flag == "shadowsocks") {
@@ -1189,7 +1196,7 @@ function verifyFields(r) {
 			var v_http_on_2 = E("ss_node_table_v2ray_network").value == "tcp" && E("ss_node_table_v2ray_headtype_tcp").value == "http";
 			var v_host_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || E("ss_node_table_v2ray_network").value == "quic" || E("ss_node_table_v2ray_network").value == "httpupgrade" || v_http_on_2;
 			var v_path_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || E("ss_node_table_v2ray_network").value == "quic" || E("ss_node_table_v2ray_network").value == "grpc" || E("ss_node_table_v2ray_network").value == "httpupgrade" || v_http_on_2;
-			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls" || E("ss_node_table_v2ray_network_security").value == "xtls";
+			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls";
 			showhide("v2ray_headtype_tcp_tr", v_tcp_on_2);
 			showhide("v2ray_headtype_kcp_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
 			showhide("v2ray_kcp_seed_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
@@ -1229,6 +1236,8 @@ function verifyFields(r) {
 			E('xray_network_security_ai_tr').style.display = "none";
 			E('xray_network_security_alpn_tr').style.display = "none";
 			E('xray_network_security_sni_tr').style.display = "none";
+			E('xray_pcs_tr').style.display = "none";
+			E('xray_svn_tr').style.display = "none";
 			E('xray_fingerprint_tr').style.display = "none";
 			E('xray_json_tr').style.display = "";
 		}else{
@@ -1255,17 +1264,19 @@ function verifyFields(r) {
 			E('xray_network_security_ai_tr').style.display = "";
 			E('xray_network_security_alpn_tr').style.display = "";
 			E('xray_network_security_sni_tr').style.display = "none";
+			E('xray_pcs_tr').style.display = "none";
+			E('xray_svn_tr').style.display = "none";
 			E('xray_fingerprint_tr').style.display = "none";
 			E('xray_json_tr').style.display = "none";
 			var x_http_on_2 = E("ss_node_table_xray_network").value == "tcp" && E("ss_node_table_xray_headtype_tcp").value == "http";
 			var x_host_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
 			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "grpc" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
-			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls" || E("ss_node_table_xray_network_security").value == "xtls";
-			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
+			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls";
 			var x_real_on_2 = E("ss_node_table_xray_network_security").value == "reality";
 			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp"
 			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc"
 			var x_xhttp_on_2 = E("ss_node_table_xray_network").value == "xhttp"
+			var x_ai_off_2 = E("ss_node_table_xray_network_security_ai").checked == false;
 			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
 			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
@@ -1277,6 +1288,8 @@ function verifyFields(r) {
 			showhide("xray_json_tr", (E("ss_node_table_xray_use_json").checked));
 			showhide("xray_network_security_ai_tr", x_tls_on_2);
 			showhide("xray_network_security_alpn_tr", x_tls_on_2);
+			showhide("xray_pcs_tr", x_tls_on_2 && x_ai_off_2);
+			showhide("xray_svn_tr", x_tls_on_2 && x_ai_off_2);
 			showhide("xray_network_security_sni_tr", x_tls_on_2  || x_real_on_2);
 			showhide("xray_fingerprint_tr", x_tls_on_2 || x_real_on_2);
 			showhide("xray_flow_tr", x_tls_on_2 && x_tcp_on_2 || x_real_on_2 && x_tcp_on_2);
@@ -1598,6 +1611,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_show_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
@@ -1672,6 +1687,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
 		E('trojan_ai_tr').style.display = "none";
@@ -1740,6 +1757,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
 		E('trojan_ai_tr').style.display = "none";
@@ -1876,6 +1895,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "";
 		E('xray_network_security_alpn_tr').style.display = "";
 		E('xray_network_security_sni_tr').style.display = "";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "";
 		E('xray_json_tr').style.display = "";
 		E('trojan_ai_tr').style.display = "none";
@@ -1913,6 +1934,8 @@ function tabclickhandler(_type) {
 			E('xray_network_security_ai_tr').style.display = "none";
 			E('xray_network_security_alpn_tr').style.display = "none";
 			E('xray_network_security_sni_tr').style.display = "none";
+			E('xray_pcs_tr').style.display = "none";
+			E('xray_svn_tr').style.display = "none";
 			E('xray_fingerprint_tr').style.display = "none";
 			E('xray_json_tr').style.display = "";
 		}else{
@@ -1939,17 +1962,19 @@ function tabclickhandler(_type) {
 			E('xray_network_security_ai_tr').style.display = "";
 			E('xray_network_security_alpn_tr').style.display = "";
 			E('xray_network_security_sni_tr').style.display = "";
+			E('xray_pcs_tr').style.display = "none";
+			E('xray_svn_tr').style.display = "none";
 			E('xray_fingerprint_tr').style.display = "none";
 			E('xray_json_tr').style.display = "none";
 			var x_http_on_2 = E("ss_node_table_xray_network").value == "tcp" && E("ss_node_table_xray_headtype_tcp").value == "http";
 			var x_host_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
 			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "grpc" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
-			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls" || E("ss_node_table_xray_network_security").value == "xtls";
-			var x_xtls_on_2 = E("ss_node_table_xray_network_security").value == "xtls";
+			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls";
 			var x_real_on_2 = E("ss_node_table_xray_network_security").value == "reality";
 			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp";
 			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc";
 			var x_xhttp_on_2 = E("ss_node_table_xray_network").value == "xhttp";
+			var x_ai_off_2 = E("ss_node_table_xray_network_security_ai").checked == false;
 			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
 			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
 			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
@@ -1962,6 +1987,8 @@ function tabclickhandler(_type) {
 			showhide("xray_network_security_ai_tr", x_tls_on_2);
 			showhide("xray_network_security_alpn_tr", x_tls_on_2);
 			showhide("xray_network_security_sni_tr", x_tls_on_2 || x_real_on_2);
+			showhide("xray_pcs_tr", x_tls_on_2 && x_ai_off_2);
+			showhide("xray_svn_tr", x_tls_on_2 && x_ai_off_2);
 			showhide("xray_fingerprint_tr", x_tls_on_2 || x_real_on_2);
 			showhide("xray_flow_tr", x_tls_on_2 && x_tcp_on_2 || x_real_on_2 && x_tcp_on_2);
 			showhide("xray_show_tr", x_real_on_2);
@@ -2031,6 +2058,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
 		E('trojan_ai_tr').style.display = "";
@@ -2102,6 +2131,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
 		E('trojan_ai_tr').style.display = "none";
@@ -2174,6 +2205,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
 		E('trojan_ai_tr').style.display = "none";
@@ -2245,6 +2278,8 @@ function tabclickhandler(_type) {
 		E('xray_network_security_ai_tr').style.display = "none";
 		E('xray_network_security_alpn_tr').style.display = "none";
 		E('xray_network_security_sni_tr').style.display = "none";
+		E('xray_pcs_tr').style.display = "none";
+		E('xray_svn_tr').style.display = "none";
 		E('xray_fingerprint_tr').style.display = "none";
 		E('xray_json_tr').style.display = "none";
 		E('trojan_ai_tr').style.display = "none";
@@ -2318,7 +2353,7 @@ function add_ss_node_conf(flag) {
 		}
 		ns[p + "_type_" + node_max] = "3";
 	} else if (flag == 'xray') {
-		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
+		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
 		var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show"];
 		if (E("ss_node_table_xray_use_json").checked == true){
 			ns[p + "_mode_" + node_max] = $.trim($("#ss_node_table_mode").val());
@@ -2393,7 +2428,7 @@ function add_ss_node_conf(flag) {
 	}
 	//fancyss_tuic_2
 	else if (flag == 'hysteria2') {
-		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_cg"];
+		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_cg"];
 		for (var i = 0; i < params8.length; i++) {
 			ns[p + "_" + params8[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params8[i]).val());
 		}
@@ -2458,7 +2493,7 @@ function remove_conf_table(o) {
 	//console.log("删除第", id, "个节点！！！")
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_ai", "hy2_tfo", "hy2_cg"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_ai", "hy2_tfo", "hy2_cg"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -2509,7 +2544,7 @@ function edit_conf_table(o) {
 	var c = confs[id];
 	var params1_base64 = ["password", "naive_pass"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "trojan_ai", "xray_show", "hy2_ai", "hy2_tfo"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_cg"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_cg"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -2698,7 +2733,7 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_type_" + edit_id] = "3";
 	}
 	else if (flag == 'xray') {
-		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
+		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
 		var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show"];
 		if (E("ss_node_table_xray_use_json").checked == true){
 			ns[p + "_mode_" + edit_id] = $.trim($("#ss_node_table_mode").val());
@@ -2774,7 +2809,7 @@ function edit_ss_node_conf(flag) {
 	}
 	//fancyss_tuic_2
 	else if (flag == 'hysteria2') {
-		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_cg"];
+		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_cg"];
 		for (var i = 0; i < params8.length; i++) {
 			ns[p + "_" + params8[i] + "_" + edit_id] = $.trim($('#ss_node_table' + "_" + params8[i]).val());
 		}
@@ -2827,6 +2862,8 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_hy2_obfs").value = "0";
 			E("ss_node_table_hy2_obfs_pass").value = "";
 			E("ss_node_table_hy2_sni").value = "";
+			E("ss_node_table_hy2_pcs").value = "";
+			E("ss_node_table_hy2_svn").value = "";
 			E("ss_node_table_hy2_ai").checked = true;
 			E("ss_node_table_hy2_cg").value = "brutal";
 			// refresh panel
@@ -2881,7 +2918,7 @@ function generate_node_info() {
 			obj["type"] = db_ss["ssconf_basic_type_" + idx];
 		}
 		//这些值统一处理
-		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_ai", "hy2_tfo", "hy2_cg"];
+		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_ai", "hy2_tfo", "hy2_cg"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + idx;
 			if (typeof db_ss[ofield] == "undefined") {
@@ -3353,7 +3390,7 @@ function save_new_order(){
 	var tr = table.getElementsByTagName("tr");
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_ai", "hy2_tfo", "hy2_cg"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_svn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_pcs", "hy2_svn", "hy2_ai", "hy2_tfo", "hy2_cg"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -5872,8 +5909,10 @@ function toggleKeyMask(o, show){
 																		{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
 																		{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"], ["reality", "reality"]], style:'width:412px', value: "none"},
+																		{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]], style:'width:412px', value: "none"},
 																		{ title: '* 跳过证书验证 (AllowInsecure)', rid:'xray_network_security_ai_tr', id:'ss_node_table_xray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
+																		{ title: '* pinnedPeerCertSha256', rid:'xray_pcs_tr', id:'ss_node_table_xray_pcs', type:'text', style:'width:440px', ph:'没有请留空'},
+																		{ title: '* verifyPeerCertByName', rid:'xray_svn_tr', id:'ss_node_table_xray_svn', type:'text', ph:'没有请留空'},
 																		{ title: '* alpn', rid:'xray_network_security_alpn_tr', multi: [
 																			{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_h2">h2' },
 																			{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_http">http/1.1' },
@@ -5909,6 +5948,8 @@ function toggleKeyMask(o, show){
 																		{ title: '混淆密码', rid:'hy2_obfs_pass_tr', id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
 																		{ title: 'SNI（域名）', rid:'hy2_sni_tr', id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
 																		{ title: '允许不安全', rid:'hy2_ai_tr', id:'ss_node_table_hy2_ai', type:'checkbox', class:'hy2_elem', value: "false"},
+																		{ title: 'pinnedPeerCertSha256', rid:'hy2_pcs_tr', id:'ss_node_table_hy2_pcs', type:'text', class:'hy2_elem', maxlen:'300', style:'width:440px', ph:'没有请留空'},
+																		{ title: 'verifyPeerCertByName', rid:'hy2_svn_tr', id:'ss_node_table_hy2_svn', type:'text', class:'hy2_elem', maxlen:'300', ph:'没有请留空'},
 																		{ title: 'congestion', rid:'hy2_cg_tr', id:'ss_node_table_hy2_cg', type:'select', class:'hy2_elem', func:'v', options:option_hy2_cg, maxlen:'300', style:'width:412px', value: "brutal"},
 																	]);
 																</script>
@@ -5980,8 +6021,10 @@ function toggleKeyMask(o, show){
 															{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
-															{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["xtls", "xtls"], ["reality", "reality"]]},
-															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', hint:'56'},
+															{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]]},
+															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', func:'v', hint:'56'},
+															{ title: '* pinnedPeerCertSha256', id:'ss_basic_xray_pcs', type:'text', style:'width:440px', ph:'没有请留空'},
+															{ title: '* verifyPeerCertByName', id:'ss_basic_xray_svn', type:'text', ph:'没有请留空'},
 															{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', multi: [
 																{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_h2">h2' },
 																{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_http">http/1.1' },
@@ -6020,7 +6063,9 @@ function toggleKeyMask(o, show){
 															{ title: '混淆类型', id:'ss_basic_hy2_obfs', type:'select', func:'v', options:option_hy2_obfs, maxlen:'300', value: "0"},
 															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', type:'text', maxlen:'300'},
 															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', type:'text'},
-															{ title: '允许不安全', id:'ss_basic_hy2_ai', type:'checkbox'},
+															{ title: '允许不安全', id:'ss_basic_hy2_ai', type:'checkbox', func:'v'},
+															{ title: 'pinnedPeerCertSha256', id:'ss_basic_hy2_pcs', type:'text', style:'width:440px', ph:'没有请留空'},
+															{ title: 'verifyPeerCertByName', id:'ss_basic_hy2_svn', type:'text', ph:'没有请留空'},
 															{ title: 'congestion', id:'ss_basic_hy2_cg', type:'select', func:'v', options:option_hy2_cg, maxlen:'300', value: "brutal"},
 														]);
 													</script>

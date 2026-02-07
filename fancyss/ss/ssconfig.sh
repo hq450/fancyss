@@ -3101,7 +3101,6 @@ creat_vless_json() {
 		local qc="null"
 		local gr="null"
 		local tls="null"
-		local xtls="null"
 		local reali="null"
 		local xht="null"
 		local htup="null"
@@ -3162,30 +3161,25 @@ creat_vless_json() {
 				ss_basic_xray_fingerprint="chrome"
 				dbus set ssconf_basic_xray_fingerprint_${cur_node}="chrome"
 			fi
-			local tls="{
-					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
-					,\"alpn\": ${apln}
-					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
-					,\"fingerprint\": $(get_value_empty $ss_basic_xray_fingerprint)
-					}"
+			# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and svn as soon as possible.
+			if [ "${ss_basic_xray_network_security_ai}" != "1" ];then
+				local tls="{
+						\"alpn\": ${apln}
+						,\"serverName\": $(get_value_null ${ss_basic_xray_network_security_sni})
+						,\"fingerprint\": $(get_value_empty ${ss_basic_xray_fingerprint})
+						,\"pinnedPeerCertSha256\": $(get_value_empty ${ss_basic_xray_pcs})
+						,\"verifyPeerCertByName\": $(get_value_empty ${ss_basic_xray_svn})
+						}"
+			else
+				local tls="{
+						\"allowInsecure\": true
+						,\"alpn\": ${apln}
+						,\"serverName\": $(get_value_null ${ss_basic_xray_network_security_sni})
+						,\"fingerprint\": $(get_value_empty ${ss_basic_xray_fingerprint})
+						}"
+			fi
 		else
 			local tls="null"
-		fi
-
-		if [ "${ss_basic_xray_network_security}" == "xtls" ];then
-			if [ -z "${ss_basic_xray_fingerprint}" ];then
-				echo_date "fingerprint为空，默认使用chrome作为指纹"
-				ss_basic_xray_fingerprint="chrome"
-				dbus set ssconf_basic_xray_fingerprint_${cur_node}="chrome"
-			fi
-			local xtls="{
-					\"allowInsecure\": $(get_function_switch $ss_basic_xray_network_security_ai)
-					,\"alpn\": ${apln}
-					,\"serverName\": $(get_value_null $ss_basic_xray_network_security_sni)
-					,\"fingerprint\": $(get_value_empty $ss_basic_xray_fingerprint)
-					}"
-		else
-			local xtls="null"
 		fi
 
 		if [ "${ss_basic_xray_network_security}" == "reality" ];then
@@ -3371,7 +3365,6 @@ creat_vless_json() {
 						"network": "$ss_basic_xray_network"
 						,"security": "$ss_basic_xray_network_security"
 						,"tlsSettings": $tls
-						,"xtlsSettings": $xtls
 						,"realitySettings": $reali
 						,"tcpSettings": $tcp
 						,"kcpSettings": $kcp
@@ -3828,7 +3821,21 @@ creat_hy2_json(){
 					,"security": "tls"
 					,"tlsSettings": {
 						"serverName": "${ss_basic_hy2_sni}"
-						,"allowInsecure": $(get_function_switch ${ss_basic_hy2_ai})
+	EOF
+
+	# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and svn as soon as possible.
+	if [ "${ss_basic_hy2_ai}" != "1" ];then
+		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
+							,"pinnedPeerCertSha256": $(get_value_empty ${ss_basic_hy2_pcs})
+							,"verifyPeerCertByName": $(get_value_empty ${ss_basic_hy2_svn})
+		EOF
+	else
+		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
+							,"allowInsecure": true
+		EOF
+	fi
+	
+	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
 						,"alpn": ["h3"]
 					}
 					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_hy2_tfo})}
