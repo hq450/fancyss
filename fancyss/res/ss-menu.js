@@ -1,6 +1,7 @@
 function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
+console.log("[fancyss-ui] build 2026-02-09 codex");
 function isObjectEmpty(obj) {
 	return Object.keys(obj).length === 0;
 }
@@ -43,6 +44,19 @@ function UT(v) {
 	return (typeof(v) == 'undefined') ? '' : '' + v;
 }
 
+function buildDataAttrs(data) {
+	var out = '';
+	if (!data) return out;
+	for (var key in data) {
+		if (!data.hasOwnProperty(key)) continue;
+		var attr = key.replace(/[A-Z]/g, function(m) {
+			return '-' + m.toLowerCase();
+		});
+		out += ' data-' + attr + '="' + escapeHTML(UT(data[key])) + '"';
+	}
+	return out;
+}
+
 function createFormFields(data, settings) {
 	var id, id1, common, output, form = '', multiornot;
 	var s = $.extend({
@@ -56,8 +70,9 @@ function createFormFields(data, settings) {
 			return;
 		}
 		if (v.ignore) return;
+		var dataAttrs = buildDataAttrs(v.data);
 		if (v.th) {
-			form += '<tr' + ((v.class) ? ' class="' + v.class + '"' : '') + '><th colspan="' + v.th + '">' + v.title + '</th></tr>';
+			form += '<tr' + ((v.rid) ? ' id="' + v.rid + '"' : '') + ((v.class) ? ' class="' + v.class + '"' : '') + dataAttrs + '><th colspan="' + v.th + '">' + v.title + '</th></tr>';
 			return;
 		}
 		if (v.thead) {
@@ -68,7 +83,7 @@ function createFormFields(data, settings) {
 			form += v.td;
 			return;
 		}
-		form += '<tr' + ((v.rid) ? ' id="' + v.rid + '"' : '') + ((v.class) ? ' class="' + v.class + '"' : '') + ((v.hidden) ? ' style="display: none;"' : '') + '>';
+		form += '<tr' + ((v.rid) ? ' id="' + v.rid + '"' : '') + ((v.class) ? ' class="' + v.class + '"' : '') + dataAttrs + ((v.hidden) ? ' style="display: none;"' : '') + '>';
 		if (v.help) {
 			v.title += '&nbsp;&nbsp;<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(' + v.help + ')"><font color="#ffcc00"><u>[说明]</u></font></a>';
 		}

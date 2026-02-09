@@ -112,8 +112,9 @@ String.prototype.myReplace = function(f, e){
 }
 function init() {
 	show_menu(menu_hook);
-	get_dbus_data();
-	try_ws_connect();
+	get_dbus_data(function() {
+		try_ws_connect();
+	});
 }
 function try_ws_connect(){
 	if (ws_enable != 1){
@@ -197,25 +198,31 @@ function try_ws_connect(){
 		get_ss_status(true);
 	};
 }
-function refresh_dbss() {
-	$.ajax({
+function refresh_dbss(cb) {
+	return $.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
-		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
 			generate_node_info();
+			if (typeof cb === "function") {
+				cb();
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb();
+			}
 		}
 	});
 }
-function get_dbus_data() {
-	$.ajax({
+function get_dbus_data(cb) {
+	return $.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
 		cache: false,
-		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
 			// basic conf to fill element
@@ -233,10 +240,16 @@ function get_dbus_data() {
 			// try to get latest version of fancyss
 			version_show();
 			message_show();
+			if (typeof cb === "function") {
+				cb(true);
+			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			console.log(XmlHttpRequest.responseText);
 			alert("skipd数据读取错误，请格式化jffs分区后重新尝试！");
+			if (typeof cb === "function") {
+				cb(false);
+			}
 		}
 		,timeout: 0
 	});
@@ -925,6 +938,132 @@ function push_data(script, arg, obj, flag){
 		}
 	});
 }
+function applyVisibility(container, ctx) {
+	if (!ctx) return;
+	var root = (typeof container == "string") ? document.querySelector(container) : container;
+	if (!root) return;
+	var rows = root.querySelectorAll("[data-show],[data-show-any],[data-show-not]");
+	for (var i = 0; i < rows.length; i++) {
+		var row = rows[i];
+		var show = true;
+		var showAll = row.dataset.show;
+		var showAny = row.dataset.showAny;
+		var showNot = row.dataset.showNot;
+		if (showAll){
+			var tokensAll = showAll.trim().split(/\s+/);
+			for (var a = 0; a < tokensAll.length; a++) {
+				if (!ctx[tokensAll[a]]){
+					show = false;
+					break;
+				}
+			}
+		}
+		if (show && showAny){
+			var tokensAny = showAny.trim().split(/\s+/);
+			var anyOk = false;
+			for (var b = 0; b < tokensAny.length; b++) {
+				if (ctx[tokensAny[b]]){
+					anyOk = true;
+					break;
+				}
+			}
+			if (!anyOk) show = false;
+		}
+		if (show && showNot){
+			var tokensNot = showNot.trim().split(/\s+/);
+			for (var c = 0; c < tokensNot.length; c++) {
+				if (ctx[tokensNot[c]]){
+					show = false;
+					break;
+				}
+			}
+		}
+		row.style.display = show ? "" : "none";
+	}
+}
+function getFieldValue(id, def) {
+	var el = E(id);
+	return el ? el.value : (def || "");
+}
+function getFieldChecked(id) {
+	var el = E(id);
+	return el ? el.checked : false;
+}
+function getNodeCtx() {
+	if (!save_flag) return null;
+	var ctx = {};
+	ctx.ss_on = (save_flag == "shadowsocks");
+	ctx.ssr_on = (save_flag == "shadowsocksR");
+	ctx.v2ray_on = (save_flag == "v2ray");
+	ctx.xray_on = (save_flag == "xray");
+	ctx.trojan_on = (save_flag == "trojan");
+	ctx.naive_on = (save_flag == "naive");
+	ctx.tuic_on = (save_flag == "tuic");
+	ctx.hy2_on = (save_flag == "hysteria2");
+
+	ctx.v_json_on = ctx.v2ray_on && getFieldChecked("ss_node_table_v2ray_use_json");
+	ctx.v_json_off = ctx.v2ray_on && !getFieldChecked("ss_node_table_v2ray_use_json");
+	var v_net = getFieldValue("ss_node_table_v2ray_network");
+	var v_head_tcp = getFieldValue("ss_node_table_v2ray_headtype_tcp");
+	ctx.v_net_tcp = v_net == "tcp";
+	ctx.v_net_kcp = v_net == "kcp";
+	ctx.v_net_quic = v_net == "quic";
+	ctx.v_net_grpc = v_net == "grpc";
+	ctx.v_grpc_on = ctx.v_net_grpc;
+	ctx.v_host_on = v_net == "ws" || v_net == "h2" || v_net == "quic" || v_net == "httpupgrade" || (v_net == "tcp" && v_head_tcp == "http");
+	ctx.v_path_on = v_net == "ws" || v_net == "h2" || v_net == "quic" || v_net == "grpc" || v_net == "httpupgrade" || (v_net == "tcp" && v_head_tcp == "http");
+	ctx.v_tls_on = getFieldValue("ss_node_table_v2ray_network_security") == "tls";
+	ctx.v_mux_on = getFieldChecked("ss_node_table_v2ray_mux_enable");
+
+	ctx.x_json_on = ctx.xray_on && getFieldChecked("ss_node_table_xray_use_json");
+	ctx.x_json_off = ctx.xray_on && !getFieldChecked("ss_node_table_xray_use_json");
+	var x_net = getFieldValue("ss_node_table_xray_network");
+	var x_head_tcp = getFieldValue("ss_node_table_xray_headtype_tcp");
+	ctx.x_net_tcp = x_net == "tcp";
+	ctx.x_net_kcp = x_net == "kcp";
+	ctx.x_net_quic = x_net == "quic";
+	ctx.x_net_grpc = x_net == "grpc";
+	ctx.x_grpc_on = ctx.x_net_grpc;
+	ctx.x_xhttp_on = x_net == "xhttp";
+	ctx.x_host_on = x_net == "ws" || x_net == "h2" || x_net == "quic" || x_net == "httpupgrade" || x_net == "xhttp" || (x_net == "tcp" && x_head_tcp == "http");
+	ctx.x_path_on = x_net == "ws" || x_net == "h2" || x_net == "quic" || x_net == "grpc" || x_net == "httpupgrade" || x_net == "xhttp" || (x_net == "tcp" && x_head_tcp == "http");
+	ctx.x_tls_on = getFieldValue("ss_node_table_xray_network_security") == "tls";
+	ctx.x_real_on = getFieldValue("ss_node_table_xray_network_security") == "reality";
+	ctx.x_ai_off = !getFieldChecked("ss_node_table_xray_network_security_ai");
+	ctx.x_flow_on = ctx.x_net_tcp && (ctx.x_tls_on || ctx.x_real_on);
+
+	ctx.trojan_ai_off = !getFieldChecked("ss_node_table_trojan_ai");
+	ctx.hy2_ai_off = !getFieldChecked("ss_node_table_hy2_ai");
+	ctx.hy2_obfs_on = getFieldValue("ss_node_table_hy2_obfs") != "0";
+
+	ctx.ss_obfs_allowed = ctx.ss_on && getFieldValue("ss_node_table_mode") != "3";
+	ctx.ss_obfs_host_on = ctx.ss_obfs_allowed && getFieldValue("ss_node_table_ss_obfs") != "0";
+
+	ctx.basic_server_on = ctx.ss_on || ctx.ssr_on || (ctx.v2ray_on && ctx.v_json_off) || (ctx.xray_on && ctx.x_json_off) || ctx.trojan_on;
+	ctx.basic_pass_on = ctx.ss_on || ctx.ssr_on;
+	return ctx;
+}
+function applyNodeVisibility() {
+	var ctx = getNodeCtx();
+	if (!ctx) return;
+	applyVisibility("#table_add_nodes", ctx);
+	var vPathRow = $('#ss_node_table_v2ray_network_path').closest('tr');
+	if (vPathRow.length){
+		if (ctx.v_grpc_on){
+			vPathRow.find('th').html('* serviceName');
+		}else{
+			vPathRow.find('th').html('* 路径 (path)');
+		}
+	}
+	var xPathRow = $('#ss_node_table_xray_network_path').closest('tr');
+	if (xPathRow.length){
+		if (ctx.x_grpc_on){
+			xPathRow.find('th').html('* serviceName');
+		}else{
+			xPathRow.find('th').html('* 路径 (path)');
+		}
+	}
+}
 function verifyFields(r) {
 	var node_sel = E("ssconf_basic_node").value;
 	var ss_on = false;
@@ -1044,278 +1183,61 @@ function verifyFields(r) {
 	var x_grpc_on = E("ss_basic_xray_network").value == "grpc";
 	var x_xhttp_on = E("ss_basic_xray_network").value == "xhttp";
 	var x_ai_off = E("ss_basic_xray_network_security_ai").checked == false;
-	//ss
-	elem.display(elem.parentElem('ss_basic_ss_obfs', 'tr'), ss_on);
-	elem.display(elem.parentElem('ss_basic_ss_obfs_host', 'tr'), (ss_on && E("ss_basic_ss_obfs").value != "0"));
-	//ssr-libev
-	elem.display(elem.parentElem('ss_basic_rss_protocol_param', 'tr'), ssr_on);
-	elem.display(elem.parentElem('ss_basic_rss_protocol', 'tr'), ssr_on);
-	elem.display(elem.parentElem('ss_basic_rss_obfs', 'tr'), ssr_on);
-	elem.display(elem.parentElem('ss_basic_rss_obfs_param', 'tr'), ssr_on);
-	//basic
-	elem.display(elem.parentElem('ss_basic_server', 'tr'), ss_on || ssr_on || (v2ray_on && v_json_off) || (xray_on && x_json_off) || trojan_on);
-	elem.display(elem.parentElem('ss_basic_port', 'tr'), ss_on || ssr_on || (v2ray_on && v_json_off) || (xray_on && x_json_off) || trojan_on);
-	//elem.display(elem.parentElem('ss_basic_password', 'tr'), !v2ray_on && ! xray_on && ! trojan_on && ! naive_on);
-	//elem.display(elem.parentElem('ss_basic_method', 'tr'), !v2ray_on && ! xray_on && ! trojan_on && ! naive_on);
-	elem.display(elem.parentElem('ss_basic_password', 'tr'), ss_on || ssr_on);
-	elem.display(elem.parentElem('ss_basic_method', 'tr'), ss_on || ssr_on);
-	//v2ray
-	elem.display(elem.parentElem('ss_basic_v2ray_use_json', 'tr'), v2ray_on);
-	elem.display(elem.parentElem('ss_basic_v2ray_uuid', 'tr'), (v2ray_on && v_json_off));
-	elem.display(elem.parentElem('ss_basic_v2ray_alterid', 'tr'), (v2ray_on && v_json_off));
-	elem.display(elem.parentElem('ss_basic_v2ray_security', 'tr'), (v2ray_on && v_json_off));
-	elem.display(elem.parentElem('ss_basic_v2ray_network', 'tr'), (v2ray_on && v_json_off));
-	elem.display(elem.parentElem('ss_basic_v2ray_headtype_tcp', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "tcp"));
-	elem.display(elem.parentElem('ss_basic_v2ray_headtype_kcp', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "kcp"));
-	elem.display(elem.parentElem('ss_basic_v2ray_kcp_seed', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "kcp"));
-	elem.display(elem.parentElem('ss_basic_v2ray_headtype_quic', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "quic"));
-	elem.display(elem.parentElem('ss_basic_v2ray_grpc_mode', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_network").value == "grpc"));
-	elem.display(elem.parentElem('ss_basic_v2ray_network_host', 'tr'), (v2ray_on && v_json_off && v_host_on));
-	elem.display(elem.parentElem('ss_basic_v2ray_network_path', 'tr'), (v2ray_on && v_json_off && v_path_on));
-	elem.display(elem.parentElem('ss_basic_v2ray_network_security', 'tr'), (v2ray_on && v_json_off));
-	elem.display(elem.parentElem('ss_basic_v2ray_network_security_ai', 'tr'), (v2ray_on && v_json_off && v_tls_on));
-	elem.display(elem.parentElem('ss_basic_v2ray_network_security_alpn_h2', 'tr'), (v2ray_on && v_json_off && v_tls_on));
-	elem.display(elem.parentElem('ss_basic_v2ray_network_security_sni', 'tr'), (v2ray_on && v_json_off && v_tls_on));
-	elem.display(elem.parentElem('ss_basic_v2ray_mux_enable', 'tr'), (v2ray_on && v_json_off));
-	elem.display(elem.parentElem('ss_basic_v2ray_mux_concurrency', 'tr'), (v2ray_on && v_json_off && E("ss_basic_v2ray_mux_enable").checked));
-	elem.display(elem.parentElem('ss_basic_v2ray_json', 'tr'), (v2ray_on && v_json_on));
-	if(v_grpc_on){
-		$('#ss_basic_v2ray_network_path_tr > th > a').html('* serviceName');
-	}else{
-		$('#ss_basic_v2ray_network_path_tr > th > a').html('* 路径 (path)');
-	}
-	//xray
-	elem.display(elem.parentElem('ss_basic_xray_use_json', 'tr'), xray_on);
-	elem.display(elem.parentElem('ss_basic_xray_uuid', 'tr'), (xray_on && x_json_off));
-	elem.display(elem.parentElem('ss_basic_xray_encryption', 'tr'), (xray_on && x_json_off));
-	elem.display(elem.parentElem('ss_basic_xray_flow', 'tr'), (xray_on && x_json_off && (x_tls_on && x_tcp_on || x_real_on && x_tcp_on)));
-	elem.display(elem.parentElem('ss_basic_xray_network', 'tr'), (xray_on && x_json_off));
-	elem.display(elem.parentElem('ss_basic_xray_headtype_tcp', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "tcp"));
-	elem.display(elem.parentElem('ss_basic_xray_headtype_kcp', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "kcp"));
-	elem.display(elem.parentElem('ss_basic_xray_kcp_seed', 'tr'), (xray_on && v_json_off && E("ss_basic_xray_network").value == "kcp"));
-	elem.display(elem.parentElem('ss_basic_xray_headtype_quic', 'tr'), (xray_on && x_json_off && E("ss_basic_xray_network").value == "quic"));
-	elem.display(elem.parentElem('ss_basic_xray_grpc_mode', 'tr'), (xray_on && x_json_off && x_grpc_on));
-	elem.display(elem.parentElem('ss_basic_xray_xhttp_mode', 'tr'), (xray_on && x_json_off && x_xhttp_on));
-	elem.display(elem.parentElem('ss_basic_xray_network_host', 'tr'), (xray_on && x_json_off && x_host_on));
-	elem.display(elem.parentElem('ss_basic_xray_network_path', 'tr'), (xray_on && x_json_off && x_path_on));
-	elem.display(elem.parentElem('ss_basic_xray_network_security', 'tr'), (xray_on && x_json_off));
-	elem.display(elem.parentElem('ss_basic_xray_network_security_ai', 'tr'), (xray_on && x_json_off && x_tls_on));
-	elem.display(elem.parentElem('ss_basic_xray_network_security_alpn_h2', 'tr'), (xray_on && x_json_off && x_tls_on));
-	elem.display(elem.parentElem('ss_basic_xray_network_security_sni', 'tr'), (xray_on && x_json_off && (x_tls_on || x_real_on)));
-	elem.display(elem.parentElem('ss_basic_xray_pcs', 'tr'), (xray_on && x_json_off && x_tls_on && x_ai_off));
-	elem.display(elem.parentElem('ss_basic_xray_vcn', 'tr'), (xray_on && x_json_off && x_tls_on && x_ai_off));
-	elem.display(elem.parentElem('ss_basic_xray_fingerprint', 'tr'), (xray_on && x_json_off && (x_tls_on || x_real_on)));
-	elem.display(elem.parentElem('ss_basic_xray_show', 'tr'), (xray_on && x_json_off && x_real_on));
-	elem.display(elem.parentElem('ss_basic_xray_publickey', 'tr'), (xray_on && x_json_off && x_real_on));
-	elem.display(elem.parentElem('ss_basic_xray_shortid', 'tr'), (xray_on && x_json_off && x_real_on));
-	elem.display(elem.parentElem('ss_basic_xray_spiderx', 'tr'), (xray_on && x_json_off && x_real_on));
-	elem.display(elem.parentElem('ss_basic_xray_json', 'tr'), (xray_on && x_json_on));
-	elem.display('xray_binary_update_tr', xray_on);
-	if(x_grpc_on){
-		$('#ss_basic_xray_network_path_tr > th > a').html('* serviceName');
-	}else{
-		$('#ss_basic_xray_network_path_tr > th > a').html('* 路径 (path)');
-	}
-	//trojan
 	var trojan_ai_off = E("ss_basic_trojan_ai").checked == false;
-	elem.display(elem.parentElem('ss_basic_trojan_uuid', 'tr'), trojan_on);
-	elem.display(elem.parentElem('ss_basic_trojan_ai', 'tr'), trojan_on);
-	elem.display(elem.parentElem('ss_basic_trojan_sni', 'tr'), trojan_on);
-	elem.display(elem.parentElem('ss_basic_trojan_pcs', 'tr'), trojan_on && trojan_ai_off);
-	elem.display(elem.parentElem('ss_basic_trojan_vcn', 'tr'), trojan_on && trojan_ai_off);
-	elem.display(elem.parentElem('ss_basic_trojan_tfo', 'tr'), trojan_on);
-	//naive
-	elem.display(elem.parentElem('ss_basic_naive_prot', 'tr'), (naive_on));		//fancyss-full
-	elem.display(elem.parentElem('ss_basic_naive_server', 'tr'), (naive_on));	//fancyss-full
-	elem.display(elem.parentElem('ss_basic_naive_port', 'tr'), (naive_on));		//fancyss-full
-	elem.display(elem.parentElem('ss_basic_naive_user', 'tr'), (naive_on));		//fancyss-full
-	elem.display(elem.parentElem('ss_basic_naive_pass', 'tr'), (naive_on));		//fancyss-full
-	//tuic
-	elem.display(elem.parentElem('ss_basic_tuic_json', 'tr'), tuic_on);			//fancyss-full
-	//hy2
 	var hy2_ai_off = E("ss_basic_hy2_ai").checked == false;
-	elem.display(elem.parentElem('ss_basic_hy2_server', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_port', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_pass', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_up', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_dl', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_obfs', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_obfs_pass', 'tr'), hy2_on && E("ss_basic_hy2_obfs").value != "0");
-	elem.display(elem.parentElem('ss_basic_hy2_sni', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_ai', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_pcs', 'tr'), hy2_on && hy2_ai_off);
-	elem.display(elem.parentElem('ss_basic_hy2_vcn', 'tr'), hy2_on && hy2_ai_off);
-	elem.display(elem.parentElem('ss_basic_hy2_tfo', 'tr'), hy2_on);
-	elem.display(elem.parentElem('ss_basic_hy2_cg', 'tr'), hy2_on);
-	if (save_flag == "shadowsocks") {
-		showhide("ss_obfs_host_support", $("#ss_node_table_ss_obfs").val() != "0");
+	var v_net = E("ss_basic_v2ray_network").value;
+	var x_net = E("ss_basic_xray_network").value;
+	var ctx = {
+		ss_on: ss_on,
+		ssr_on: ssr_on,
+		v2ray_on: v2ray_on,
+		xray_on: xray_on,
+		trojan_on: trojan_on,
+		naive_on: naive_on,
+		tuic_on: tuic_on,
+		hy2_on: hy2_on,
+		basic_server_on: ss_on || ssr_on || (v2ray_on && v_json_off) || (xray_on && x_json_off) || trojan_on,
+		basic_pass_on: ss_on || ssr_on,
+		ss_obfs_host_on: ss_on && E("ss_basic_ss_obfs").value != "0",
+		v_json_on: v_json_on,
+		v_json_off: v_json_off,
+		v_net_tcp: v_net == "tcp",
+		v_net_kcp: v_net == "kcp",
+		v_net_quic: v_net == "quic",
+		v_net_grpc: v_net == "grpc",
+		v_host_on: v_host_on,
+		v_path_on: v_path_on,
+		v_tls_on: v_tls_on,
+		v_mux_on: E("ss_basic_v2ray_mux_enable").checked,
+		x_json_on: x_json_on,
+		x_json_off: x_json_off,
+		x_net_tcp: x_net == "tcp",
+		x_net_kcp: x_net == "kcp",
+		x_net_quic: x_net == "quic",
+		x_net_grpc: x_net == "grpc",
+		x_host_on: x_host_on,
+		x_path_on: x_path_on,
+		x_tls_on: x_tls_on,
+		x_real_on: x_real_on,
+		x_ai_off: x_ai_off,
+		x_flow_on: x_tcp_on && (x_tls_on || x_real_on),
+		x_xhttp_on: x_xhttp_on,
+		trojan_ai_off: trojan_ai_off,
+		hy2_obfs_on: hy2_on && E("ss_basic_hy2_obfs").value != "0",
+		hy2_ai_off: hy2_ai_off
+	};
+	applyVisibility("#table_basic", ctx);
+	if(v_grpc_on){
+		$("#ss_basic_v2ray_network_path_tr > th > a").html("* serviceName");
+	}else{
+		$("#ss_basic_v2ray_network_path_tr > th > a").html("* 路径 (path)");
 	}
-	if (save_flag == "v2ray") {
-		if(E("ss_node_table_v2ray_use_json").checked){
-			E('ss_server_support_tr').style.display = "none";
-			E('ss_port_support_tr').style.display = "none";
-			E('v2ray_uuid_tr').style.display = "none";
-			$(".v2ray_elem").hide();
-			E('v2ray_alterid_tr').style.display = "none";
-			E('v2ray_security_tr').style.display = "none";
-			E('v2ray_network_tr').style.display = "none";
-			E('v2ray_headtype_tcp_tr').style.display = "none";
-			E('v2ray_headtype_kcp_tr').style.display = "none";
-			E('v2ray_headtype_quic_tr').style.display = "none";
-			E('v2ray_grpc_mode_tr').style.display = "none";
-			E('v2ray_network_path_tr').style.display = "none";
-			E('v2ray_network_host_tr').style.display = "none";
-			E('v2ray_kcp_seed_tr').style.display = "none";
-			E('v2ray_network_security_tr').style.display = "none";
-			E('v2ray_network_security_ai_tr').style.display = "none";
-			E('v2ray_network_security_alpn_tr').style.display = "none";
-			E('v2ray_network_security_sni_tr').style.display = "none";
-			E('v2ray_mux_enable_tr').style.display = "none";
-			E('v2ray_mux_concurrency_tr').style.display = "none";
-			E('v2ray_json_tr').style.display = "";
-		}else{
-			E('ss_server_support_tr').style.display = "";
-			E('ss_port_support_tr').style.display = "";
-			E('v2ray_uuid_tr').style.display = "";
-			$(".v2ray_elem").show();
-			E('v2ray_alterid_tr').style.display = "";
-			E('v2ray_security_tr').style.display = "";
-			E('v2ray_network_tr').style.display = "";
-			E('v2ray_headtype_tcp_tr').style.display = "";
-			E('v2ray_headtype_kcp_tr').style.display = "";
-			E('v2ray_headtype_quic_tr').style.display = "";
-			E('v2ray_grpc_mode_tr').style.display = "";
-			E('v2ray_network_path_tr').style.display = "";
-			E('v2ray_network_host_tr').style.display = "";
-			E('v2ray_kcp_seed_tr').style.display = "none";
-			E('v2ray_network_security_tr').style.display = "";
-			E('v2ray_network_security_ai_tr').style.display = "none";
-			E('v2ray_network_security_alpn_tr').style.display = "none";
-			E('v2ray_network_security_sni_tr').style.display = "none";
-			E('v2ray_mux_enable_tr').style.display = "";
-			E('v2ray_mux_concurrency_tr').style.display = "";
-			E('v2ray_json_tr').style.display = "none";
-			var v_tcp_on_2 = E("ss_node_table_v2ray_network").value == "tcp";
-			var v_http_on_2 = E("ss_node_table_v2ray_network").value == "tcp" && E("ss_node_table_v2ray_headtype_tcp").value == "http";
-			var v_host_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || E("ss_node_table_v2ray_network").value == "quic" || E("ss_node_table_v2ray_network").value == "httpupgrade" || v_http_on_2;
-			var v_path_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || E("ss_node_table_v2ray_network").value == "quic" || E("ss_node_table_v2ray_network").value == "grpc" || E("ss_node_table_v2ray_network").value == "httpupgrade" || v_http_on_2;
-			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls";
-			showhide("v2ray_headtype_tcp_tr", v_tcp_on_2);
-			showhide("v2ray_headtype_kcp_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
-			showhide("v2ray_kcp_seed_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
-			showhide("v2ray_headtype_quic_tr", (E("ss_node_table_v2ray_network").value == "quic"));
-			showhide("v2ray_grpc_mode_tr", (E("ss_node_table_v2ray_network").value == "grpc"));
-			showhide("v2ray_network_host_tr", v_host_on_2);
-			showhide("v2ray_network_path_tr", v_path_on_2);
-			showhide("v2ray_mux_concurrency_tr", (E("ss_node_table_v2ray_mux_enable").checked));
-			showhide("v2ray_json_tr", (E("ss_node_table_v2ray_use_json").checked));
-			showhide("v2ray_network_security_ai_tr", v_tls_on_2);
-			showhide("v2ray_network_security_alpn_tr", v_tls_on_2);
-			showhide("v2ray_network_security_sni_tr", v_tls_on_2);
-		}
+	if(x_grpc_on){
+		$("#ss_basic_xray_network_path_tr > th > a").html("* serviceName");
+	}else{
+		$("#ss_basic_xray_network_path_tr > th > a").html("* 路径 (path)");
 	}
-	if (save_flag == "xray") {
-		if(E("ss_node_table_xray_use_json").checked){
-			E('ss_server_support_tr').style.display = "none";
-			E('ss_port_support_tr').style.display = "none";
-			E('xray_uuid_tr').style.display = "none";
-			$(".xray_elem").hide();
-			E('xray_encryption_tr').style.display = "none";
-			E('xray_flow_tr').style.display = "none";
-			E('xray_show_tr').style.display = "none";
-			E('xray_publickey_tr').style.display = "none";
-			E('xray_shortid_tr').style.display = "none";
-			E('xray_spiderx_tr').style.display = "none";
-			E('xray_network_tr').style.display = "none";
-			E('xray_headtype_tcp_tr').style.display = "none";
-			E('xray_headtype_kcp_tr').style.display = "none";
-			E('xray_headtype_quic_tr').style.display = "none";
-			E('xray_grpc_mode_tr').style.display = "none";
-			E('xray_xhttp_mode_tr').style.display = "none";
-			E('xray_network_path_tr').style.display = "none";
-			E('xray_network_host_tr').style.display = "none";
-			E('xray_kcp_seed_tr').style.display = "none";
-			E('xray_network_security_tr').style.display = "none";
-			E('xray_network_security_ai_tr').style.display = "none";
-			E('xray_network_security_alpn_tr').style.display = "none";
-			E('xray_network_security_sni_tr').style.display = "none";
-			E('xray_pcs_tr').style.display = "none";
-			E('xray_vcn_tr').style.display = "none";
-			E('xray_fingerprint_tr').style.display = "none";
-			E('xray_json_tr').style.display = "";
-		}else{
-			E('ss_server_support_tr').style.display = "";
-			E('ss_port_support_tr').style.display = "";
-			E('xray_uuid_tr').style.display = "";
-			$(".xray_elem").show();
-			E('xray_encryption_tr').style.display = "";
-			E('xray_flow_tr').style.display = "";
-			E('xray_show_tr').style.display = "";
-			E('xray_publickey_tr').style.display = "";
-			E('xray_shortid_tr').style.display = "";
-			E('xray_spiderx_tr').style.display = "";
-			E('xray_network_tr').style.display = "";
-			E('xray_headtype_tcp_tr').style.display = "";
-			E('xray_headtype_kcp_tr').style.display = "";
-			E('xray_headtype_quic_tr').style.display = "";
-			E('xray_grpc_mode_tr').style.display = "";
-			E('xray_xhttp_mode_tr').style.display = "";
-			E('xray_network_path_tr').style.display = "";
-			E('xray_network_host_tr').style.display = "";
-			E('xray_kcp_seed_tr').style.display = "none";
-			E('xray_network_security_tr').style.display = "";
-			E('xray_network_security_ai_tr').style.display = "";
-			E('xray_network_security_alpn_tr').style.display = "";
-			E('xray_network_security_sni_tr').style.display = "none";
-			E('xray_pcs_tr').style.display = "none";
-			E('xray_vcn_tr').style.display = "none";
-			E('xray_fingerprint_tr').style.display = "none";
-			E('xray_json_tr').style.display = "none";
-			var x_http_on_2 = E("ss_node_table_xray_network").value == "tcp" && E("ss_node_table_xray_headtype_tcp").value == "http";
-			var x_host_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
-			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "grpc" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
-			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls";
-			var x_real_on_2 = E("ss_node_table_xray_network_security").value == "reality";
-			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp"
-			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc"
-			var x_xhttp_on_2 = E("ss_node_table_xray_network").value == "xhttp"
-			var x_ai_off_2 = E("ss_node_table_xray_network_security_ai").checked == false;
-			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
-			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
-			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
-			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
-			showhide("xray_grpc_mode_tr", x_grpc_on_2);
-			showhide("xray_xhttp_mode_tr", x_xhttp_on_2);
-			showhide("xray_network_host_tr", x_host_on_2);
-			showhide("xray_network_path_tr", x_path_on_2);
-			showhide("xray_json_tr", (E("ss_node_table_xray_use_json").checked));
-			showhide("xray_network_security_ai_tr", x_tls_on_2);
-			showhide("xray_network_security_alpn_tr", x_tls_on_2);
-			showhide("xray_pcs_tr", x_tls_on_2 && x_ai_off_2);
-			showhide("xray_vcn_tr", x_tls_on_2 && x_ai_off_2);
-			showhide("xray_network_security_sni_tr", x_tls_on_2  || x_real_on_2);
-			showhide("xray_fingerprint_tr", x_tls_on_2 || x_real_on_2);
-			showhide("xray_flow_tr", x_tls_on_2 && x_tcp_on_2 || x_real_on_2 && x_tcp_on_2);
-			showhide("xray_show_tr", x_real_on_2);
-			showhide("xray_publickey_tr", x_real_on_2);
-			showhide("xray_shortid_tr", x_real_on_2);
-			showhide("xray_spiderx_tr", x_real_on_2);
-			if(x_grpc_on_2){
-				$('#xray_network_path_tr > th').html('* serviceName');
-			}else{
-				$('#xray_network_path_tr > th').html('* 路径 (path)');
-			}
-		}
-	}
-	if (save_flag == "trojan") {
-		showhide("trojan_pcs_tr", E("ss_node_table_trojan_ai").checked == false);
-		showhide("trojan_vcn_tr", E("ss_node_table_trojan_ai").checked == false);
-	}
-	if (save_flag == "hysteria2") {
-		showhide("hy2_obfs_pass_tr", $("#ss_node_table_hy2_obfs").val() != "0");
-		showhide("hy2_pcs_tr", E("ss_node_table_hy2_ai").checked == false);
-		showhide("hy2_vcn_tr", E("ss_node_table_hy2_ai").checked == false);
-	}
+	applyNodeVisibility();
 	// 插件重启功能
 	var Ti = E("ss_reboot_check").value;
 	var In = E("ss_basic_inter_pre").value;
@@ -1570,763 +1492,35 @@ function tabclickhandler(_type) {
 	if (_type == 0) {
 		save_flag = "shadowsocks";
 		E('ssTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "";
-		E('ss_port_support_tr').style.display = "";
-		E('ss_passwd_support_tr').style.display = "";
-		E('ss_method_support_tr').style.display = "";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none";		//fancyss-full
-		E("naive_server_tr").style.display = "none";	//fancyss-full
-		E("naive_port_tr").style.display = "none";		//fancyss-full
-		E("naive_user_tr").style.display = "none";		//fancyss-full
-		E("naive_pass_tr").style.display = "none";		//fancyss-full
-		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();
-		showhide("ss_obfs_support", ($("#ss_node_table_mode").val() != "3"));
-		showhide("ss_obfs_host_support", ($("#ss_node_table_mode").val() != "3" && $("#ss_node_table_ss_obfs").val() != "0"));
-	}
-	else if (_type == 1) {
+	} else if (_type == 1) {
 		save_flag = "shadowsocksR";
 		E('ssrTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "";
-		E('ss_port_support_tr').style.display = "";
-		E('ss_passwd_support_tr').style.display = "";
-		E('ss_method_support_tr').style.display = "";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "";
-		E('ssr_protocol_param_tr').style.display = "";
-		E('ssr_obfs_tr').style.display = "";
-		E('ssr_obfs_param_tr').style.display = "";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none";		//fancyss-full
-		E("naive_server_tr").style.display = "none";	//fancyss-full
-		E("naive_port_tr").style.display = "none";		//fancyss-full
-		E("naive_user_tr").style.display = "none";		//fancyss-full
-		E("naive_pass_tr").style.display = "none";		//fancyss-full
-		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();
-	}
-	else if (_type == 3) {
+	} else if (_type == 3) {
 		save_flag = "v2ray";
 		E('vmessTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_passwd_support_tr').style.display = "none";
-		E('ss_method_support_tr').style.display = "none";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "";
-		$(".v2ray_elem").show();
-		E('v2ray_alterid_tr').style.display = "";
-		E('v2ray_security_tr').style.display = "";
-		E('v2ray_network_tr').style.display = "";
-		E('v2ray_headtype_tcp_tr').style.display = "";
-		E('v2ray_headtype_kcp_tr').style.display = "";
-		E('v2ray_headtype_quic_tr').style.display = "";
-		E('v2ray_grpc_mode_tr').style.display = "";
-		E('v2ray_network_path_tr').style.display = "";
-		E('v2ray_network_host_tr').style.display = "";
-		E('v2ray_kcp_seed_tr').style.display = "";
-		E('v2ray_network_security_tr').style.display = "";
-		E('v2ray_network_security_ai_tr').style.display = "";
-		E('v2ray_network_security_alpn_tr').style.display = "";
-		E('v2ray_network_security_sni_tr').style.display = "";
-		E('v2ray_mux_enable_tr').style.display = "";
-		E('v2ray_mux_concurrency_tr').style.display = "";
-		E('v2ray_json_tr').style.display = "";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none";		//fancyss-full
-		E("naive_server_tr").style.display = "none";	//fancyss-full
-		E("naive_port_tr").style.display = "none";		//fancyss-full
-		E("naive_user_tr").style.display = "none";		//fancyss-full
-		E("naive_pass_tr").style.display = "none";		//fancyss-full
-		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();
-		if(E("ss_node_table_v2ray_use_json").checked){
-			E('ss_server_support_tr').style.display = "none";
-			E('ss_port_support_tr').style.display = "none";
-			E('v2ray_uuid_tr').style.display = "none";
-			$(".v2ray_elem").hide();
-			E('v2ray_alterid_tr').style.display = "none";
-			E('v2ray_security_tr').style.display = "none";
-			E('v2ray_network_tr').style.display = "none";
-			E('v2ray_headtype_tcp_tr').style.display = "none";
-			E('v2ray_headtype_kcp_tr').style.display = "none";
-			E('v2ray_headtype_quic_tr').style.display = "none";
-			E('v2ray_grpc_mode_tr').style.display = "none";
-			E('v2ray_network_path_tr').style.display = "none";
-			E('v2ray_network_host_tr').style.display = "none";
-			E('v2ray_kcp_seed_tr').style.display = "none";
-			E('v2ray_network_security_tr').style.display = "none";
-			E('v2ray_network_security_ai_tr').style.display = "none";
-			E('v2ray_network_security_alpn_tr').style.display = "none";
-			E('v2ray_network_security_sni_tr').style.display = "none";
-			E('v2ray_mux_enable_tr').style.display = "none";
-			E('v2ray_mux_concurrency_tr').style.display = "none";
-			E('v2ray_json_tr').style.display = "";
-		}else{
-			E('ss_server_support_tr').style.display = "";
-			E('ss_port_support_tr').style.display = "";
-			E('v2ray_uuid_tr').style.display = "";
-			$(".v2ray_elem").show();
-			E('v2ray_alterid_tr').style.display = "";
-			E('v2ray_security_tr').style.display = "";
-			E('v2ray_network_tr').style.display = "";
-			E('v2ray_headtype_tcp_tr').style.display = "";
-			E('v2ray_headtype_kcp_tr').style.display = "";
-			E('v2ray_headtype_quic_tr').style.display = "";
-			E('v2ray_grpc_mode_tr').style.display = "";
-			E('v2ray_network_path_tr').style.display = "";
-			E('v2ray_network_host_tr').style.display = "";
-			E('v2ray_kcp_seed_tr').style.display = "";
-			E('v2ray_network_security_tr').style.display = "";
-			E('v2ray_network_security_ai_tr').style.display = "";
-			E('v2ray_network_security_alpn_tr').style.display = "";
-			E('v2ray_network_security_sni_tr').style.display = "";
-			E('v2ray_mux_enable_tr').style.display = "";
-			E('v2ray_mux_concurrency_tr').style.display = "";
-			E('v2ray_json_tr').style.display = "none";
-			var v_tcp_on_2 = E("ss_node_table_v2ray_network").value == "tcp";
-			var v_http_on_2 = E("ss_node_table_v2ray_network").value == "tcp" && E("ss_node_table_v2ray_headtype_tcp").value == "http";
-			var v_host_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || E("ss_node_table_v2ray_network").value == "quic" || E("ss_node_table_v2ray_network").value == "httpupgrade" || v_http_on_2;
-			var v_path_on_2 = E("ss_node_table_v2ray_network").value == "ws" || E("ss_node_table_v2ray_network").value == "h2" || E("ss_node_table_v2ray_network").value == "quic" || E("ss_node_table_v2ray_network").value == "grpc" || E("ss_node_table_v2ray_network").value == "httpupgrade" || v_http_on_2;
-			var v_tls_on_2 = E("ss_node_table_v2ray_network_security").value == "tls";
-			var v_grpc_on_2 = E("ss_node_table_v2ray_network").value == "grpc"
-			showhide("v2ray_headtype_tcp_tr", v_tcp_on_2);
-			showhide("v2ray_headtype_kcp_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
-			showhide("v2ray_kcp_seed_tr", (E("ss_node_table_v2ray_network").value == "kcp"));
-			showhide("v2ray_headtype_quic_tr", (E("ss_node_table_v2ray_network").value == "quic"));
-			showhide("v2ray_grpc_mode_tr", v_grpc_on_2);
-			showhide("v2ray_network_host_tr", v_host_on_2);
-			showhide("v2ray_network_path_tr", v_path_on_2);
-			showhide("v2ray_mux_concurrency_tr", (E("ss_node_table_v2ray_mux_enable").checked));
-			showhide("v2ray_json_tr", (E("ss_node_table_v2ray_use_json").checked));
-			showhide("v2ray_network_security_ai_tr", v_tls_on_2);
-			showhide("v2ray_network_security_alpn_tr", v_tls_on_2);
-			showhide("v2ray_network_security_sni_tr", v_tls_on_2);
-			if(v_grpc_on_2){
-				$('#v2ray_network_path_tr > th').html('* serviceName');
-			}else{
-				$('#v2ray_network_path_tr > th').html('* 路径 (path)');
-			}
-		}
-	}
-	else if (_type == 4) {
+	} else if (_type == 4) {
 		save_flag = "xray";
 		E('vlessTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_passwd_support_tr').style.display = "none";
-		E('ss_method_support_tr').style.display = "none";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "";
-		$(".xray_elem").show();
-		E('xray_encryption_tr').style.display = "";
-		E('xray_flow_tr').style.display = "";
-		E('xray_show_tr').style.display = "";
-		E('xray_publickey_tr').style.display = "";
-		E('xray_shortid_tr').style.display = "";
-		E('xray_spiderx_tr').style.display = "";
-		E('xray_network_tr').style.display = "";
-		E('xray_headtype_tcp_tr').style.display = "";
-		E('xray_headtype_kcp_tr').style.display = "";
-		E('xray_headtype_quic_tr').style.display = "";
-		E('xray_grpc_mode_tr').style.display = "";
-		E('xray_xhttp_mode_tr').style.display = "";
-		E('xray_network_path_tr').style.display = "";
-		E('xray_network_host_tr').style.display = "";
-		E('xray_kcp_seed_tr').style.display = "";
-		E('xray_network_security_tr').style.display = "";
-		E('xray_network_security_ai_tr').style.display = "";
-		E('xray_network_security_alpn_tr').style.display = "";
-		E('xray_network_security_sni_tr').style.display = "";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "";
-		E('xray_json_tr').style.display = "";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none"; 		//fancyss-full
-		E("naive_server_tr").style.display = "none";	//fancyss-full
-		E("naive_port_tr").style.display = "none";		//fancyss-full
-		E("naive_user_tr").style.display = "none";		//fancyss-full
-		E("naive_pass_tr").style.display = "none";		//fancyss-full
-		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();
-		if(E("ss_node_table_xray_use_json").checked){
-			E('ss_server_support_tr').style.display = "none";
-			E('ss_port_support_tr').style.display = "none";
-			E('xray_uuid_tr').style.display = "none";
-			$(".xray_elem").hide();
-			E('xray_encryption_tr').style.display = "none";
-			E('xray_flow_tr').style.display = "none";
-			E('xray_show_tr').style.display = "none";
-			E('xray_publickey_tr').style.display = "none";
-			E('xray_shortid_tr').style.display = "none";
-			E('xray_spiderx_tr').style.display = "none";
-			E('xray_network_tr').style.display = "none";
-			E('xray_headtype_tcp_tr').style.display = "none";
-			E('xray_headtype_kcp_tr').style.display = "none";
-			E('xray_headtype_quic_tr').style.display = "none";
-			E('xray_grpc_mode_tr').style.display = "none";
-			E('xray_xhttp_mode_tr').style.display = "none";
-			E('xray_network_path_tr').style.display = "none";
-			E('xray_network_host_tr').style.display = "none";
-			E('xray_kcp_seed_tr').style.display = "none";
-			E('xray_network_security_tr').style.display = "none";
-			E('xray_network_security_ai_tr').style.display = "none";
-			E('xray_network_security_alpn_tr').style.display = "none";
-			E('xray_network_security_sni_tr').style.display = "none";
-			E('xray_pcs_tr').style.display = "none";
-			E('xray_vcn_tr').style.display = "none";
-			E('xray_fingerprint_tr').style.display = "none";
-			E('xray_json_tr').style.display = "";
-		}else{
-			E('ss_server_support_tr').style.display = "";
-			E('ss_port_support_tr').style.display = "";
-			E('xray_uuid_tr').style.display = "";
-			$(".xray_elem").show();
-			E('xray_encryption_tr').style.display = "";
-			E('xray_flow_tr').style.display = "";
-			E('xray_show_tr').style.display = "";
-			E('xray_publickey_tr').style.display = "";
-			E('xray_shortid_tr').style.display = "";
-			E('xray_spiderx_tr').style.display = "";
-			E('xray_network_tr').style.display = "";
-			E('xray_headtype_tcp_tr').style.display = "";
-			E('xray_headtype_kcp_tr').style.display = "";
-			E('xray_headtype_quic_tr').style.display = "";
-			E('xray_grpc_mode_tr').style.display = "";
-			E('xray_xhttp_mode_tr').style.display = "";
-			E('xray_network_path_tr').style.display = "";
-			E('xray_network_host_tr').style.display = "";
-			E('xray_kcp_seed_tr').style.display = "";
-			E('xray_network_security_tr').style.display = "";
-			E('xray_network_security_ai_tr').style.display = "";
-			E('xray_network_security_alpn_tr').style.display = "";
-			E('xray_network_security_sni_tr').style.display = "";
-			E('xray_pcs_tr').style.display = "none";
-			E('xray_vcn_tr').style.display = "none";
-			E('xray_fingerprint_tr').style.display = "none";
-			E('xray_json_tr').style.display = "none";
-			var x_http_on_2 = E("ss_node_table_xray_network").value == "tcp" && E("ss_node_table_xray_headtype_tcp").value == "http";
-			var x_host_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
-			var x_path_on_2 = E("ss_node_table_xray_network").value == "ws" || E("ss_node_table_xray_network").value == "h2" || E("ss_node_table_xray_network").value == "quic" || E("ss_node_table_xray_network").value == "grpc" || E("ss_node_table_xray_network").value == "httpupgrade" || E("ss_node_table_xray_network").value == "xhttp" || x_http_on_2;
-			var x_tls_on_2 = E("ss_node_table_xray_network_security").value == "tls";
-			var x_real_on_2 = E("ss_node_table_xray_network_security").value == "reality";
-			var x_tcp_on_2 = E("ss_node_table_xray_network").value == "tcp";
-			var x_grpc_on_2 = E("ss_node_table_xray_network").value == "grpc";
-			var x_xhttp_on_2 = E("ss_node_table_xray_network").value == "xhttp";
-			var x_ai_off_2 = E("ss_node_table_xray_network_security_ai").checked == false;
-			showhide("xray_headtype_tcp_tr", x_tcp_on_2);
-			showhide("xray_headtype_kcp_tr", (E("ss_node_table_xray_network").value == "kcp"));
-			showhide("xray_kcp_seed_tr", (E("ss_node_table_xray_network").value == "kcp"));
-			showhide("xray_headtype_quic_tr", (E("ss_node_table_xray_network").value == "quic"));
-			showhide("xray_grpc_mode_tr", x_grpc_on_2);
-			showhide("xray_xhttp_mode_tr", x_grpc_on_2);
-			showhide("xray_network_host_tr", x_host_on_2);
-			showhide("xray_network_path_tr", x_path_on_2);
-			showhide("xray_json_tr", (E("ss_node_table_xray_use_json").checked));
-			showhide("xray_network_security_ai_tr", x_tls_on_2);
-			showhide("xray_network_security_alpn_tr", x_tls_on_2);
-			showhide("xray_network_security_sni_tr", x_tls_on_2 || x_real_on_2);
-			showhide("xray_pcs_tr", (x_tls_on_2 && x_ai_off_2));
-			showhide("xray_vcn_tr", (x_tls_on_2 && x_ai_off_2));
-			showhide("xray_fingerprint_tr", x_tls_on_2 || x_real_on_2);
-			showhide("xray_flow_tr", x_tls_on_2 && x_tcp_on_2 || x_real_on_2 && x_tcp_on_2);
-			showhide("xray_show_tr", x_real_on_2);
-			showhide("xray_publickey_tr", x_real_on_2);
-			showhide("xray_shortid_tr", x_real_on_2);
-			showhide("xray_spiderx_tr", x_real_on_2);
-			if(x_grpc_on_2){
-				$('#xray_network_path_tr > th').html('* serviceName');
-			}else{
-				$('#xray_network_path_tr > th').html('* 路径 (path)');
-			}
-		}
-	}
-	else if (_type == 5) {
+	} else if (_type == 5) {
 		save_flag = "trojan";
 		E('trojanTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "";
-		E('ss_port_support_tr').style.display = "";
-		E('ss_passwd_support_tr').style.display = "none";
-		E('ss_method_support_tr').style.display = "none";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "";
-		E('trojan_uuid_tr').style.display = "";
-		E('trojan_sni_tr').style.display = "";
-		var trojan_ai_off_2 = E("ss_node_table_trojan_ai").checked == false;
-		showhide("trojan_pcs_tr", trojan_ai_off_2);
-		showhide("trojan_vcn_tr", trojan_ai_off_2);
-		E('trojan_tfo_tr').style.display = "";
-		E("naive_prot_tr").style.display = "none";		//fancyss-full
-		E("naive_server_tr").style.display = "none";	//fancyss-full
-		E("naive_port_tr").style.display = "none";		//fancyss-full
-		E("naive_user_tr").style.display = "none";		//fancyss-full
-		E("naive_pass_tr").style.display = "none";		//fancyss-full
-		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").hide();
-	}
-	//fancyss_naive_1
-	else if (_type == 6) {
+	} else if (_type == 6) {
 		save_flag = "naive";
 		E('naiveTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "none";
-		E('ss_port_support_tr').style.display = "none";
-		E('ss_passwd_support_tr').style.display = "none";
-		E('ss_method_support_tr').style.display = "none";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "";
-		E("naive_server_tr").style.display = "";
-		E("naive_port_tr").style.display = "";
-		E("naive_user_tr").style.display = "";
-		E("naive_pass_tr").style.display = "";
-		E('tuic_json_tr').style.display = "none";
-		$(".hy2_elem").hide();
-	}
-	//fancyss_naive_2
-	//fancyss_tuic_1
-	else if (_type == 7) {
+	} else if (_type == 7) {
 		save_flag = "tuic";
 		E('tuicTitle').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "none";
-		E('ss_port_support_tr').style.display = "none";
-		E('ss_passwd_support_tr').style.display = "none";
-		E('ss_method_support_tr').style.display = "none";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none";
-		E("naive_server_tr").style.display = "none";
-		E("naive_port_tr").style.display = "none";
-		E("naive_user_tr").style.display = "none";
-		E("naive_pass_tr").style.display = "none";		
-		E('tuic_json_tr').style.display = "";
-		$(".hy2_elem").hide();
-	}
-	//fancyss_tuic_2
-	else if (_type == 8) {
+	} else if (_type == 8) {
 		save_flag = "hysteria2";
 		E('hy2Title').className = "vpnClientTitle_td_click";
-		E('v2ray_use_json_tr').style.display = "none";
-		E('xray_use_json_tr').style.display = "none";
-		E('ss_name_support_tr').style.display = "";
-		E('ss_server_support_tr').style.display = "none";
-		E('ss_port_support_tr').style.display = "none";
-		E('ss_passwd_support_tr').style.display = "none";
-		E('ss_method_support_tr').style.display = "none";
-		E('ss_obfs_support').style.display = "none";
-		E('ss_obfs_host_support').style.display = "none";
-		E('ssr_protocol_tr').style.display = "none";
-		E('ssr_protocol_param_tr').style.display = "none";
-		E('ssr_obfs_tr').style.display = "none";
-		E('ssr_obfs_param_tr').style.display = "none";
-		E('v2ray_uuid_tr').style.display = "none";
-		$(".v2ray_elem").hide();
-		E('v2ray_alterid_tr').style.display = "none";
-		E('v2ray_security_tr').style.display = "none";
-		E('v2ray_network_tr').style.display = "none";
-		E('v2ray_headtype_tcp_tr').style.display = "none";
-		E('v2ray_headtype_kcp_tr').style.display = "none";
-		E('v2ray_headtype_quic_tr').style.display = "none";
-		E('v2ray_grpc_mode_tr').style.display = "none";
-		E('v2ray_network_path_tr').style.display = "none";
-		E('v2ray_network_host_tr').style.display = "none";
-		E('v2ray_kcp_seed_tr').style.display = "none";
-		E('v2ray_network_security_tr').style.display = "none";
-		E('v2ray_network_security_ai_tr').style.display = "none";
-		E('v2ray_network_security_alpn_tr').style.display = "none";
-		E('v2ray_network_security_sni_tr').style.display = "none";
-		E('v2ray_mux_enable_tr').style.display = "none";
-		E('v2ray_mux_concurrency_tr').style.display = "none";
-		E('v2ray_json_tr').style.display = "none";
-		E('xray_uuid_tr').style.display = "none";
-		$(".xray_elem").hide();
-		E('xray_encryption_tr').style.display = "none";
-		E('xray_flow_tr').style.display = "none";
-		E('xray_show_tr').style.display = "none";
-		E('xray_publickey_tr').style.display = "none";
-		E('xray_shortid_tr').style.display = "none";
-		E('xray_spiderx_tr').style.display = "none";
-		E('xray_network_tr').style.display = "none";
-		E('xray_headtype_tcp_tr').style.display = "none";
-		E('xray_headtype_kcp_tr').style.display = "none";
-		E('xray_headtype_quic_tr').style.display = "none";
-		E('xray_grpc_mode_tr').style.display = "none";
-		E('xray_xhttp_mode_tr').style.display = "none";
-		E('xray_network_path_tr').style.display = "none";
-		E('xray_network_host_tr').style.display = "none";
-		E('xray_kcp_seed_tr').style.display = "none";
-		E('xray_network_security_tr').style.display = "none";
-		E('xray_network_security_ai_tr').style.display = "none";
-		E('xray_network_security_alpn_tr').style.display = "none";
-		E('xray_network_security_sni_tr').style.display = "none";
-		E('xray_pcs_tr').style.display = "none";
-		E('xray_vcn_tr').style.display = "none";
-		E('xray_fingerprint_tr').style.display = "none";
-		E('xray_json_tr').style.display = "none";
-		E('trojan_ai_tr').style.display = "none";
-		E('trojan_uuid_tr').style.display = "none";
-		E('trojan_sni_tr').style.display = "none";
-		E('trojan_pcs_tr').style.display = "none";
-		E('trojan_vcn_tr').style.display = "none";
-		E('trojan_tfo_tr').style.display = "none";
-		E("naive_prot_tr").style.display = "none";		//fancyss-full
-		E("naive_server_tr").style.display = "none";	//fancyss-full
-		E("naive_port_tr").style.display = "none";		//fancyss-full
-		E("naive_user_tr").style.display = "none";		//fancyss-full
-		E("naive_pass_tr").style.display = "none";		//fancyss-full
-		E('tuic_json_tr').style.display = "none";		//fancyss-full
-		$(".hy2_elem").show();
-		showhide("hy2_obfs_pass_tr", E("ss_node_table_hy2_obfs").value == "1");
-		showhide("hy2_pcs_tr", E("ss_node_table_hy2_ai").checked == false);
-		showhide("hy2_vcn_tr", E("ss_node_table_hy2_ai").checked == false);
+	} else {
+		save_flag = "shadowsocks";
+		E('ssTitle').className = "vpnClientTitle_td_click";
 	}
+	applyNodeVisibility();
 	return save_flag;
 }
+
 function add_ss_node_conf(flag) {
 	var ns = {};
 	var p = "ssconf_basic";
@@ -2558,9 +1752,10 @@ function remove_conf_table(o) {
 		dataType: "json",
 		success: function(response) {
 			$('#ss_node_list_table tr:nth-child(' + id + ')').remove();
-			refresh_dbss();
-			reorder_trs();
-			refresh_options();
+			refresh_dbss(function() {
+				reorder_trs();
+				refresh_options();
+			});
 		}
 	});
 }
@@ -2906,15 +2101,22 @@ function edit_ss_node_conf(flag) {
 	});
 	cancel_add_node();
 }
-function refresh_node_panel() {
-	$.ajax({
+function refresh_node_panel(cb) {
+	return $.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
-		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
 			ss_node_sel();
+			if (typeof cb === "function") {
+				cb();
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb();
+			}
 		}
 	});
 }
@@ -3136,18 +2338,25 @@ function generate_node_info() {
 	}
 	//console.log("所有节点信息：", confs);
 }
-function refresh_table() {
-	$.ajax({
+function refresh_table(cb) {
+	return $.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
 		cache:false,
-		async: false,
 		success: function(data) {
 			db_ss = data.result[0];
 			generate_node_info();
 			refresh_options();
 			refresh_html();
+			if (typeof cb === "function") {
+				cb();
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb();
+			}
 		}
 	});
 }
@@ -3465,11 +2674,12 @@ function save_new_order(){
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			refresh_dbss();
-			reorder_trs();
-			refresh_options();
-			getNowFormatDate();
-			ss_node_sel();
+			refresh_dbss(function() {
+				reorder_trs();
+				refresh_options();
+				getNowFormatDate();
+				ss_node_sel();
+			});
 		}
 	});
 }
@@ -3822,14 +3032,13 @@ function get_latency_data(action){
 			const hasStop = array.some(subArray => subArray.includes('stop'));
 			if(hasStop){
 				//console.log("stop getting webtest result!");
-				$.ajax({
-					type: "GET",
-					url: "/_api/ss_basic_webtest_ts",
-					dataType: "json",
-					async: false,
-					success: function(data) {
-						db_get = data.result[0];
-						if(db_get["ss_basic_webtest_ts"]){
+					$.ajax({
+						type: "GET",
+						url: "/_api/ss_basic_webtest_ts",
+						dataType: "json",
+						success: function(data) {
+							db_get = data.result[0];
+							if(db_get["ss_basic_webtest_ts"]){
 							$("#ss_wts_show").html("<em>【上次完成时间: " + db_get["ss_basic_webtest_ts"] + "】</em>")
 							$("#dropdown").width(370);
 						}
@@ -3837,11 +3046,11 @@ function get_latency_data(action){
 				});
 			}else{
 				//console.log("getting webtest result...");
-				setTimeout("get_latency_data(2);", 1000);
+					setTimeout(function() { get_latency_data(2); }, 1000);
 			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
-			setTimeout("get_latency_data(" + action + ");", 1000);
+				setTimeout(function() { get_latency_data(action); }, 1000);
 		},
 	});
 }
@@ -3899,7 +3108,7 @@ function download_route_file(arg) {
 	if(arg == 2){
 		db_ss["ss_basic_action"] = "11";
 		showSSLoadingBar();
-		setTimeout("get_realtime_log();", 600);
+		setTimeout(get_realtime_log, 600);
 	}
 	if(arg == 10){
 		var dbus_tmp = dns_log;
@@ -4129,9 +3338,9 @@ function message_show() {
 			});
 			//开始滚动，每个广告停留5s
 			if (res["ads_time"]){
-				setInterval("scroll_msg();", res["ads_time"]);
+				setInterval(scroll_msg, res["ads_time"]);
 			}else{
-				setInterval("scroll_msg();", 5000);
+				setInterval(scroll_msg, 5000);
 			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
@@ -4162,6 +3371,107 @@ function tabSelect(w) {
 	$('#tablet_' + w).show();	
 }
 
+var tab_actions = {
+	0: function() {
+		$('#apply_button').show();
+		$('#ss_failover_save').hide();
+		showhide("table_basic", (node_max != 0));
+		change_select_width('#ssconf_basic_node');
+	},
+	1: function() {
+		$('#apply_button').hide();
+		$(".nodeTable").show();
+		select_default_node(3);
+	},
+	2: function() {
+		$('#apply_button').show();
+		$('#ss_failover_save').show();
+		verifyFields();
+	},
+	3: function() {
+		var selects = [
+			'#ss_basic_chng_china_udp_1_opt',
+			'#ss_basic_chng_china_tcp_1_opt',
+			'#ss_basic_chng_china_dot_1_opt',
+			'#ss_basic_chng_china_udp_2_opt',
+			'#ss_basic_chng_china_tcp_2_opt',
+			'#ss_basic_chng_china_dot_2_opt',
+			'#ss_basic_chng_china_udp_3_opt',
+			'#ss_basic_chng_china_tcp_3_opt',
+			'#ss_basic_chng_china_dot_3_opt',
+			'#ss_basic_chng_trust_udp_1_opt',
+			'#ss_basic_chng_trust_tcp_1_opt',
+			'#ss_basic_chng_trust_dot_1_opt',
+			'#ss_basic_chng_trust_udp_2_opt',
+			'#ss_basic_chng_trust_tcp_2_opt',
+			'#ss_basic_chng_trust_dot_2_opt',
+			'#ss_basic_chng_trust_udp_3_opt',
+			'#ss_basic_chng_trust_tcp_3_opt',
+			'#ss_basic_chng_trust_dot_3_opt'
+		];
+		$('#apply_button').show();
+		$('#ss_failover_save').hide();
+		for (var i = 0; i < selects.length; i++) {
+			change_select_width(selects[i], '1');
+		}
+		change_select_width('#ss_basic_server_resolv');
+		change_select_width('#ss_basic_dig_opt');
+		update_visibility();
+		autoTextarea(E("ss_dnsmasq"), 0, 500);
+	},
+	4: function() {
+		var fields = [
+			"ss_wan_white_ip",
+			"ss_wan_white_domain",
+			"ss_wan_black_ip",
+			"ss_wan_black_domain"
+		];
+		$('#apply_button').show();
+		$('#ss_failover_save').hide();
+		for (var i = 0; i < fields.length; i++) {
+			autoTextarea(E(fields[i]), 0, 400);
+		}
+	},
+	7: function() {
+		$('#apply_button').hide();
+		$('#ss_failover_save').hide();
+		update_visibility();
+	},
+	8: function() {
+		$('#apply_button').show();
+		$('#ss_failover_save').hide();
+		refresh_acl_table();
+	},
+	9: function() {
+		$('#apply_button').show();
+		$('#ss_failover_save').hide();
+		update_visibility();
+	},
+	10: function() {
+		$('#apply_button').hide();
+		$('#ss_failover_save').hide();
+		get_log();
+	}
+};
+
+function handle_tab_click() {
+	var match = this.className.match(/show-btn(\d+)/);
+	if (!match) return;
+	var idx = parseInt(match[1], 10);
+	tabSelect(idx);
+	if (tab_actions[idx]) {
+		tab_actions[idx]();
+	}
+}
+
+function bind_tab_handlers() {
+	$('[class*="show-btn"]').each(function() {
+		if (this.className.match(/show-btn\d+/)) {
+			$(this).off('click.tab').on('click.tab', handle_tab_click);
+		}
+	});
+}
+
 function toggle_func() {
 	$("#ss_basic_enable").click(
 	function() {
@@ -4176,100 +3486,7 @@ function toggle_func() {
 			E("reset_select").style.display = db_ss["ss_basic_enable"] == "1" ? "":"none";
 		}
 	});
-	$(".show-btn0").click(
-		function() {
-			tabSelect(0);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			//ss_node_sel();
-			showhide("table_basic", (node_max != 0));
-			change_select_width('#ssconf_basic_node');
-			//E("ss_basic_hy2_server").style.width = Math.max(E("ss_basic_hy2_server").value.length, 21) + 'ch';	//fancyss-full
-			//E("ss_basic_hy2_pass").style.width = Math.max(E("ss_basic_hy2_pass").value.length, 21) + 'ch';
-			//E("ss_basic_hy2_sni").style.width = Math.max(E("ss_basic_hy2_sni").value.length, 21) + 'ch';
-		});
-	$(".show-btn1").click(
-		function() {
-			tabSelect(1);
-			$('#apply_button').hide();
-			$(".nodeTable").show();
-			select_default_node(3);
-		});
-	$(".show-btn2").click(
-		function() {
-			tabSelect(2);
-			$('#apply_button').show();
-			$('#ss_failover_save').show();
-			verifyFields();
-		});
-	$(".show-btn3").click(
-		function() {
-			tabSelect(3);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			change_select_width('#ss_basic_chng_china_udp_1_opt', '1');
-			change_select_width('#ss_basic_chng_china_tcp_1_opt', '1');
-			change_select_width('#ss_basic_chng_china_dot_1_opt', '1');
-			change_select_width('#ss_basic_chng_china_udp_2_opt', '1');
-			change_select_width('#ss_basic_chng_china_tcp_2_opt', '1');
-			change_select_width('#ss_basic_chng_china_dot_2_opt', '1');
-			change_select_width('#ss_basic_chng_china_udp_3_opt', '1');
-			change_select_width('#ss_basic_chng_china_tcp_3_opt', '1');
-			change_select_width('#ss_basic_chng_china_dot_3_opt', '1');
-			change_select_width('#ss_basic_chng_trust_udp_1_opt', '1');
-			change_select_width('#ss_basic_chng_trust_tcp_1_opt', '1');
-			change_select_width('#ss_basic_chng_trust_dot_1_opt', '1');
-			change_select_width('#ss_basic_chng_trust_udp_2_opt', '1');
-			change_select_width('#ss_basic_chng_trust_tcp_2_opt', '1');
-			change_select_width('#ss_basic_chng_trust_dot_2_opt', '1');
-			change_select_width('#ss_basic_chng_trust_udp_3_opt', '1');
-			change_select_width('#ss_basic_chng_trust_tcp_3_opt', '1');
-			change_select_width('#ss_basic_chng_trust_dot_3_opt', '1');
-			
-			change_select_width('#ss_basic_server_resolv');
-			change_select_width('#ss_basic_dig_opt');
-			update_visibility();
-			autoTextarea(E("ss_dnsmasq"), 0, 500);
-		});
-	$(".show-btn4").click(
-		function() {
-			tabSelect(4);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			autoTextarea(E("ss_wan_white_ip"), 0, 400);
-			autoTextarea(E("ss_wan_white_domain"), 0, 400);
-			autoTextarea(E("ss_wan_black_ip"), 0, 400);
-			autoTextarea(E("ss_wan_black_domain"), 0, 400);
-		});
-	$(".show-btn7").click(
-		function() {
-			tabSelect(7);
-			$('#apply_button').hide();
-			$('#ss_failover_save').hide();
-			update_visibility();
-		});
-	$(".show-btn8").click(
-		function() {
-			tabSelect(8);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			refresh_acl_table();
-			//update_visibility();
-		});
-	$(".show-btn9").click(
-		function() {
-			tabSelect(9);
-			$('#apply_button').show();
-			$('#ss_failover_save').hide();
-			update_visibility();
-		});
-	$(".show-btn10").click(
-		function() {
-			tabSelect(10);
-			$('#apply_button').hide();
-			$('#ss_failover_save').hide();
-			get_log();
-		});
+	bind_tab_handlers();
 	$("#log_content2").click(
 		function() {
 			x = -1;
@@ -4312,12 +3529,109 @@ function change_select_width(o, p) {
 	}).click();
 }
 
+function set_ss_status_waiting(text) {
+	E("ss_state2").innerHTML = "国外连接 - " + text;
+	E("ss_state3").innerHTML = "国内连接 - " + text;
+}
+
+function apply_ss_status(res, with_heartbeat) {
+	if (res && res.indexOf("@@") != -1){
+		var arr = res.split("@@");
+		if (arr[0] == "" || arr[1] == "") {
+			set_ss_status_waiting("Waiting for first refresh...");
+		} else {
+			E("ss_state2").innerHTML = arr[0];
+			E("ss_state3").innerHTML = arr[1];
+		}
+		if (with_heartbeat && arr[2] == "1") {
+			var dbus_post = {};
+			dbus_post["ss_heart_beat"] = "0";
+			push_data("dummy_script.sh", "", dbus_post, "2");
+		}
+		return true;
+	}
+	set_ss_status_waiting("Waiting ...");
+	return false;
+}
+
+function setup_status_ws(onFail, with_heartbeat, onReady) {
+	if (wss && wss.readyState === 1){
+		wss_open = 1;
+		wss.onerror = function(event) {
+			//console.log('WS Error: ' + event.data);
+			wss_open = 0;
+			onFail();
+		};
+		wss.onclose = function() {
+			//console.log('WS DISCONNECT');
+			wss_open = 0;
+			onFail();
+		};
+		wss.onmessage = function(event) {
+			apply_ss_status(event.data, with_heartbeat);
+		};
+		if (typeof onReady === "function") {
+			onReady();
+		}
+		return true;
+	}
+	if (ws_flag != 1){
+		onFail();
+		return false;
+	}
+	wss = new WebSocket("ws://" + hostname + ":803/");
+	var ws_open_timeout = false;
+	var ws_test_timer = setTimeout(function() {
+		ws_open_timeout = true;
+		wss_open = 0;
+		try {
+			wss.close();
+		} catch (e) {}
+		onFail();
+	}, 1000);
+	wss.onopen = function() {
+		if (ws_open_timeout){
+			try {
+				wss.close();
+			} catch (e) {}
+			return;
+		}
+		clearTimeout(ws_test_timer);
+		//console.log('成功建立websocket链接，开始获取后台状态...');
+		wss_open = 1;
+		if (typeof onReady === "function") {
+			onReady();
+		}
+	};
+	wss.onerror = function(event) {
+		if (ws_open_timeout){
+			return;
+		}
+		clearTimeout(ws_test_timer);
+		//console.log('WS Error: ' + event.data);
+		wss_open = 0;
+		onFail();
+	};
+	wss.onclose = function() {
+		if (ws_open_timeout){
+			return;
+		}
+		clearTimeout(ws_test_timer);
+		//console.log('WS DISCONNECT');
+		wss_open = 0;
+		onFail();
+	};
+	wss.onmessage = function(event) {
+		apply_ss_status(event.data, with_heartbeat);
+	};
+	return true;
+}
+
 function get_ss_status(use_ws) {
 	if (typeof use_ws == "undefined"){
 		use_ws = (ws_flag == 1);
 	}
-	E("ss_state2").innerHTML = "国外连接 - " + "Waiting..";
-	E("ss_state3").innerHTML = "国内连接 - " + "Waiting..";
+	set_ss_status_waiting("Waiting..");
 	if (db_ss['ss_basic_enable'] != "1") {
 		return false;
 	}
@@ -4337,103 +3651,13 @@ function get_ss_status(use_ws) {
 	}
 }
 function get_ss_status_front() {
-	if (wss && wss.readyState === 1){
-		wss_open = 1;
-		wss.onerror = function(event) {
-			//console.log('WS Error 1: ' + event.data);
-			wss_open = 0;
-			get_ss_status_front_httpd();
-		};
-		wss.onclose = function() {
-			//console.log('WS DISCONNECT');
-			wss_open = 0;
-			get_ss_status_front_httpd();
-		};
-		wss.onmessage = function(event) {
-			// 运行状态
-			var res = event.data;
-			//console.log(res);
-			if(res.indexOf("@@") != -1){
-				var arr = res.split("@@");
-				if (arr[0] == "" || arr[1] == "") {
-					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-				} else {
-					E("ss_state2").innerHTML = arr[0];
-					E("ss_state3").innerHTML = arr[1];
-				}
-			}else{
-				E("ss_state2").innerHTML = "国外连接 - " + "Waiting ...";
-				E("ss_state3").innerHTML = "国内连接 - " + "Waiting ...";
-			}
-		};
-		get_ss_status_front_websocket();
-		return;
-	}
-	wss = new WebSocket("ws://" + hostname + ":803/");
-	var ws_open_timeout = false;
-	var ws_test_timer = setTimeout(function() {
-		ws_open_timeout = true;
-		wss_open = 0;
-		try {
-			wss.close();
-		} catch (e) {}
-		get_ss_status_front_httpd();
-	}, 1000);
-	wss.onopen = function() {
-		if (ws_open_timeout){
-			try {
-				wss.close();
-			} catch (e) {}
-			return;
-		}
-		clearTimeout(ws_test_timer);
-		//console.log('成功建立websocket链接，开始获取后台状态1...');
-		wss_open = 1;
-		get_ss_status_front_websocket();
-	};
-	wss.onerror = function(event) {
-		if (ws_open_timeout){
-			return;
-		}
-		clearTimeout(ws_test_timer);
-		//console.log('WS Error 1: ' + event.data);
-		wss_open = 0;
-		get_ss_status_front_httpd();
-	};
-	wss.onclose = function() {
-		if (ws_open_timeout){
-			return;
-		}
-		clearTimeout(ws_test_timer);
-		//console.log('WS DISCONNECT');
-		wss_open = 0;
-		get_ss_status_front_httpd();
-	};
-	wss.onmessage = function(event) {
-		// 运行状态
-		var res = event.data;
-		//console.log(res);
-		if(res.indexOf("@@") != -1){
-			var arr = res.split("@@");
-			if (arr[0] == "" || arr[1] == "") {
-				E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-				E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-			} else {
-				E("ss_state2").innerHTML = arr[0];
-				E("ss_state3").innerHTML = arr[1];
-			}
-		}else{
-			E("ss_state2").innerHTML = "国外连接 - " + "Waiting ...";
-			E("ss_state3").innerHTML = "国内连接 - " + "Waiting ...";
-		}
-	}
+	setup_status_ws(get_ss_status_front_httpd, false, get_ss_status_front_websocket);
 }
 
 function get_ss_status_front_httpd() {
 	if (submit_flag == "1") {
 		//console.log("wait for 5s to get next status...")
-		setTimeout("get_ss_status_front_httpd();", 5000);
+		setTimeout(get_ss_status_front_httpd, 5000);
 		return false;
 	}
 
@@ -4461,12 +3685,12 @@ function get_ss_status_front_httpd() {
 	var time_plus = Math.pow("2", String(db_ss['ss_basic_interval']||"2")) * 1000;
 	var time_base = time_plus - 1000;
 	refreshRate = Math.floor(Math.random() * time_base) + time_plus ;
-	setTimeout("get_ss_status_front_httpd();", refreshRate);
+	setTimeout(get_ss_status_front_httpd, refreshRate);
 }
 function get_ss_status_front_websocket() {
 	if (submit_flag == "1") {
 		//console.log("wait for 5s to get next status...")
-		setTimeout("get_ss_status_front_websocket();", 5000);
+		setTimeout(get_ss_status_front_websocket, 5000);
 		return false;
 	}
 	
@@ -4479,7 +3703,7 @@ function get_ss_status_front_websocket() {
 		var time_plus = Math.pow("2", String(db_ss['ss_basic_interval']||"2")) * 1000;
 		var time_base = time_plus - 1000;
 		refreshRate = Math.floor(Math.random() * time_base) + time_plus ;
-		setTimeout("get_ss_status_front_websocket();", refreshRate);
+		setTimeout(get_ss_status_front_websocket, refreshRate);
 	}
 }
 function get_ss_status_back() {
@@ -4496,108 +3720,7 @@ function get_ss_status_back() {
 	}
 	//console.log("time_wait: ", time_wait);
 	
-	if (wss && wss.readyState === 1){
-		wss_open = 1;
-		wss.onerror = function(event) {
-			//console.log('WS Error 2: ' + event.data);
-			wss_open = 0;
-			get_ss_status_back_httpd();
-		};
-		wss.onclose = function() {
-			//console.log('WS DISCONNECT');
-			wss_open = 0;
-			get_ss_status_back_httpd();
-		};
-		wss.onmessage = function(event) {
-			// 运行状态
-			var res = event.data;
-			//console.log(res);
-			if(res.indexOf("@@") != -1){
-				var arr = res.split("@@");
-				if (arr[0] == "" || arr[1] == "") {
-					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-				} else {
-					E("ss_state2").innerHTML = arr[0];
-					E("ss_state3").innerHTML = arr[1];
-				}
-				if (arr[2] == "1") {
-					var dbus_post = {};
-					dbus_post["ss_heart_beat"] = "0";
-					push_data("dummy_script.sh", "", dbus_post, "2");
-				}
-			}else{
-				E("ss_state2").innerHTML = "国外连接 - " + "Waiting ...";
-				E("ss_state3").innerHTML = "国内连接 - " + "Waiting ...";
-			}
-		};
-		get_ss_status_back_websocket();
-		return;
-	}
-	//wss = new WebSocket('ws://192.168.60.1:803/');
-	wss = new WebSocket("ws://" + hostname + ":803/");
-	var ws_open_timeout = false;
-	var ws_test_timer = setTimeout(function() {
-		ws_open_timeout = true;
-		wss_open = 0;
-		try {
-			wss.close();
-		} catch (e) {}
-		get_ss_status_back_httpd();
-	}, 1000);
-	wss.onopen = function() {
-		if (ws_open_timeout){
-			try {
-				wss.close();
-			} catch (e) {}
-			return;
-		}
-		clearTimeout(ws_test_timer);
-		//console.log('成功建立websocket链接，开始获取后台状态2...');
-		wss_open = 1;
-		get_ss_status_back_websocket();
-	};
-	wss.onerror = function(event) {
-		if (ws_open_timeout){
-			return;
-		}
-		clearTimeout(ws_test_timer);
-		//console.log('WS Error 2: ' + event.data);
-		wss_open = 0;
-		get_ss_status_back_httpd();
-	};
-	wss.onclose = function() {
-		if (ws_open_timeout){
-			return;
-		}
-		clearTimeout(ws_test_timer);
-		//console.log('WS DISCONNECT');
-		wss_open = 0;
-		get_ss_status_back_httpd();
-	};
-	wss.onmessage = function(event) {
-		// 运行状态
-		var res = event.data;
-		//console.log(res);
-		if(res.indexOf("@@") != -1){
-			var arr = res.split("@@");
-			if (arr[0] == "" || arr[1] == "") {
-				E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-				E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-			} else {
-				E("ss_state2").innerHTML = arr[0];
-				E("ss_state3").innerHTML = arr[1];
-			}
-			if (arr[2] == "1") {
-				var dbus_post = {};
-				dbus_post["ss_heart_beat"] = "0";
-				push_data("dummy_script.sh", "", dbus_post, "2");
-			}
-		}else{
-			E("ss_state2").innerHTML = "国外连接 - " + "Waiting ...";
-			E("ss_state3").innerHTML = "国内连接 - " + "Waiting ...";
-		}
-	};
+	setup_status_ws(get_ss_status_back_httpd, true, get_ss_status_back_websocket);
 }
 function get_ss_status_back_websocket() {
 	try {
@@ -4606,7 +3729,7 @@ function get_ss_status_back_websocket() {
 		console.log('Cannot send: ' + ex);
 	}
 	if (wss_open == "1"){
-		setTimeout("get_ss_status_back_websocket();", 1000);
+		setTimeout(get_ss_status_back_websocket, 1000);
 	}
 }
 function get_ss_status_back_httpd() {
@@ -4665,7 +3788,7 @@ function get_ss_status_back_httpd() {
 	}else if(E("ss_basic_interval").value == "5"){
 		var time_wait = 63000;
 	}
-	setTimeout("get_ss_status_back_httpd();", time_wait);
+	setTimeout(get_ss_status_back_httpd, time_wait);
 }
 function close_dns_status() {
 	$("#dns_status_div").hide(200);
@@ -4747,7 +3870,7 @@ function dns_test(s) {
 			get_dns_log(s);
 		},
 		error: function(){
-			setTimeout("dns_test();", 2000);
+			setTimeout(dns_test, 2000);
 		}
 	});
 }
@@ -4792,11 +3915,11 @@ function get_dns_log(s) {
 			} else {
 				noChange_dns = 0;
 			}
-			if (noChange_dns > 20) {
-				return false;
-			} else {
-				setTimeout('get_dns_log("' + s + '");', 500);
-			}
+				if (noChange_dns > 20) {
+					return false;
+				} else {
+					setTimeout(function() { get_dns_log(s); }, 500);
+				}
 			retArea.value = response.myReplace("XU6J03M6", " ");
 			retArea.scrollTop = retArea.scrollHeight;
 			_responseLen = response.length;
@@ -4873,11 +3996,11 @@ function get_status_log(s) {
 			} else {
 				noChange_status = 0;
 			}
-			if (noChange_status > 10) {
-				return false;
-			} else {
-				setTimeout('get_status_log("' + s + '");', 3123);
-			}
+				if (noChange_status > 10) {
+					return false;
+				} else {
+					setTimeout(function() { get_status_log(s); }, 3123);
+				}
 			retArea.value = response;
 			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
 				retArea.scrollTop = retArea.scrollHeight;
@@ -4940,11 +4063,11 @@ function get_log_httpd() {
 			} else {
 				noChange = 0;
 			}
-			if (noChange > 5) {
-				return false;
-			} else {
-				setTimeout("get_log_httpd();", 100);
-			}
+				if (noChange > 5) {
+					return false;
+				} else {
+					setTimeout(get_log_httpd, 100);
+				}
 			retArea.value = response;
 			_responseLen = response.length;
 			if(E("tablet_9").style.display == "none"){
@@ -4978,21 +4101,21 @@ function get_realtime_log() {
 			} else {
 				noChange = 0;
 			}
-			if (noChange > 1000) {
-				console.log("log time out!!")
-				return false;
-			} else {
-				setTimeout("get_realtime_log();", 100);
-			}
+				if (noChange > 1000) {
+					console.log("log time out!!")
+					return false;
+				} else {
+					setTimeout(get_realtime_log, 100);
+				}
 			retArea.value = response.myReplace("XU6J03M6", " ");
 			retArea.scrollTop = retArea.scrollHeight;
 			_responseLen = response.length;
 		},
-		error: function() {
-			setTimeout("get_realtime_log();", 500);
-		}
-	});
-}
+			error: function() {
+				setTimeout(get_realtime_log, 500);
+			}
+		});
+	}
 function count_down_close() {
 	if (x == "0") {
 		hideSSLoadingBar();
@@ -5003,7 +4126,7 @@ function count_down_close() {
 	}
 	E("ok_button1").value = "自动关闭（" + x + "）"
 		--x;
-	setTimeout("count_down_close();", 1000);
+	setTimeout(count_down_close, 1000);
 }
 function reload_Soft_Center() {
 	location.href = "/Module_Softcenter.asp";
@@ -5095,12 +4218,11 @@ function delTr(o) {
 		}
 	});
 }
-function refresh_acl_table(q) {
-	$.ajax({
+function refresh_acl_table(q, cb) {
+	return $.ajax({
 		type: "GET",
 		url: "/_api/ss_acl",
 		dataType: "json",
-		async: false,
 		success: function(data) {
 			db_acl = data.result[0];
 			refresh_acl_html();
@@ -5136,6 +4258,14 @@ function refresh_acl_table(q) {
 			//after table generated and value filled, set default value for first line_image1
 			$('#ss_acl_mode').val("1");
 			$('#ss_acl_port').val("80,443");
+			if (typeof cb === "function") {
+				cb();
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb();
+			}
 		}
 	});
 }
@@ -5889,104 +5019,104 @@ function toggleKeyMask(o, show){
 																	$('#table_add_nodes').forms([
 																		// common
 																		{ title: '使用模式', id:'ss_node_table_mode', type:'select', func:'v', options:option_modes, style:'width:412px;', value: "2"},
-																		{ title: '使用json配置', rid:'v2ray_use_json_tr', id:'ss_node_table_v2ray_use_json', type:'checkbox', func:'v', help:'27', value:false},
-																		{ title: '使用json配置', rid:'xray_use_json_tr', id:'ss_node_table_xray_use_json', type:'checkbox', func:'v', help:'25', value:false},
-																		{ title: '节点别名', rid:'ss_name_support_tr', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:400px'},
-																		{ title: '服务器地址', rid:'ss_server_support_tr', id:'ss_node_table_server', type:'text', maxlen:'64', style:'width:400px'},
-																		{ title: '服务器端口', rid:'ss_port_support_tr', id:'ss_node_table_port', type:'text', maxlen:'64', style:'width:400px'},
-																		{ title: '密码', rid:'ss_passwd_support_tr', id:'ss_node_table_password', type:'text', maxlen:'64', style:'width:400px'},
-																		{ title: '加密方式', rid:'ss_method_support_tr', id:'ss_node_table_method', type:'select', options:option_method, style:'width:412px', value: "aes-256-cfb"},
+																		{ title: '使用json配置', data:{show:'v2ray_on'}, id:'ss_node_table_v2ray_use_json', type:'checkbox', func:'v', help:'27', value:false},
+																		{ title: '使用json配置', data:{show:'xray_on'}, id:'ss_node_table_xray_use_json', type:'checkbox', func:'v', help:'25', value:false},
+																		{ title: '节点别名', id:'ss_node_table_name', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '服务器地址', data:{show:'basic_server_on'}, id:'ss_node_table_server', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '服务器端口', data:{show:'basic_server_on'}, id:'ss_node_table_port', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '密码', data:{show:'basic_pass_on'}, id:'ss_node_table_password', type:'text', maxlen:'64', style:'width:400px'},
+																		{ title: '加密方式', data:{show:'basic_pass_on'}, id:'ss_node_table_method', type:'select', options:option_method, style:'width:412px', value: "aes-256-cfb"},
 																		// ss
-																		{ title: '混淆 (obfs)', rid:'ss_obfs_support', id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:412px', value: "0"},
-																		{ title: '混淆主机名 (obfs-host)', rid:'ss_obfs_host_support', id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
+																		{ title: '混淆 (obfs)', data:{show:'ss_obfs_allowed'}, id:'ss_node_table_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], style:'width:412px', value: "0"},
+																		{ title: '混淆主机名 (obfs-host)', data:{show:'ss_obfs_host_on'}, id:'ss_node_table_ss_obfs_host', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
 																		// ssr
-																		{ title: '协议 (protocol)', rid:'ssr_protocol_tr', id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:412px', value: "0"},
-																		{ title: '协议参数 (protocol_param)', rid:'ssr_protocol_param_tr', id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:400px', ph:'id:password'},
-																		{ title: '混淆 (obfs)', rid:'ssr_obfs_tr', id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:412px', value: "0"},
-																		{ title: '混淆参数 (obfs_param)', rid:'ssr_obfs_param_tr', id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
+																		{ title: '协议 (protocol)', data:{show:'ssr_on'}, id:'ss_node_table_rss_protocol', type:'select', func:'v', options:option_protocals, style:'width:412px', value: "0"},
+																		{ title: '协议参数 (protocol_param)', data:{show:'ssr_on'}, id:'ss_node_table_rss_protocol_param', type:'text', maxlen:'300', style:'width:400px', ph:'id:password'},
+																		{ title: '混淆 (obfs)', data:{show:'ssr_on'}, id:'ss_node_table_rss_obfs', type:'select', func:'v', options:option_obfs, style:'width:412px', value: "0"},
+																		{ title: '混淆参数 (obfs_param)', data:{show:'ssr_on'}, id:'ss_node_table_rss_obfs_param', type:'text', maxlen:'300', style:'width:400px', ph:'bing.com'},
 																		// v2ray
-																		{ title: '<em>服务器配置</em>（以下配置使用vmess作为传出协议，其它传出协议请使用json配置）', class:'v2ray_elem', th:'2'},
-																		{ title: '用户id (id)', rid:'v2ray_uuid_tr', id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:400px'},
-																		{ title: '额外ID (Alterld)', rid:'v2ray_alterid_tr', id:'ss_node_table_v2ray_alterid', type:'text', maxlen:'300', style:'width:400px', value: "0"},
-																		{ title: '加密方式 (security)', rid:'v2ray_security_tr', id:'ss_node_table_v2ray_security', type:'select', options:option_v2enc, style:'width:412px', value: "auto"},
-																		{ title: '<em>底层传输方式</em>', class:'v2ray_elem', th:'2'},
-																		{ title: '传输协议 (network)', rid:'v2ray_network_tr', id:'ss_node_table_v2ray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade"], style:'width:412px', value: "tcp"},
-																		{ title: '* tcp伪装类型 (type)', rid:'v2ray_headtype_tcp_tr', id:'ss_node_table_v2ray_headtype_tcp', type:'select', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
-																		{ title: '* kcp伪装类型 (type)', rid:'v2ray_headtype_kcp_tr', id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
-																		{ title: '* quic伪装类型 (type)', rid:'v2ray_headtype_quic_tr', id:'ss_node_table_v2ray_headtype_quic', type:'select', options:option_headquic, value: "none"},
-																		{ title: '* grpc模式', rid:'v2ray_grpc_mode_tr', id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
-																		{ title: '* 伪装域名 (host)', rid:'v2ray_network_host_tr', id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:400px'},
-																		{ title: '* 路径 (path)', rid:'v2ray_network_path_tr', id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: '* kcp seed', rid:'v2ray_kcp_seed_tr', id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: '底层传输安全', rid:'v2ray_network_security_tr', id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:412px', value: "none"},
-																		{ title: '* 跳过证书验证 (AllowInsecure)', rid:'v2ray_network_security_ai_tr', id:'ss_node_table_v2ray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
-																		{ title: '* alpn', rid:'v2ray_network_security_alpn_tr', multi: [
+																		{ title: '<em>服务器配置</em>（以下配置使用vmess作为传出协议，其它传出协议请使用json配置）', class:'v2ray_elem', data:{show:'v2ray_on v_json_off'}, th:'2'},
+																		{ title: '用户id (id)', data:{show:'v2ray_on v_json_off'}, id:'ss_node_table_v2ray_uuid', type:'text', maxlen:'300', hint:'49', style:'width:400px'},
+																		{ title: '额外ID (Alterld)', data:{show:'v2ray_on v_json_off'}, id:'ss_node_table_v2ray_alterid', type:'text', maxlen:'300', style:'width:400px', value: "0"},
+																		{ title: '加密方式 (security)', data:{show:'v2ray_on v_json_off'}, id:'ss_node_table_v2ray_security', type:'select', options:option_v2enc, style:'width:412px', value: "auto"},
+																		{ title: '<em>底层传输方式</em>', class:'v2ray_elem', data:{show:'v2ray_on v_json_off'}, th:'2'},
+																		{ title: '传输协议 (network)', data:{show:'v2ray_on v_json_off'}, id:'ss_node_table_v2ray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade"], style:'width:412px', value: "tcp"},
+																		{ title: '* tcp伪装类型 (type)', data:{show:'v2ray_on v_json_off v_net_tcp'}, id:'ss_node_table_v2ray_headtype_tcp', type:'select', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
+																		{ title: '* kcp伪装类型 (type)', data:{show:'v2ray_on v_json_off v_net_kcp'}, id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
+																		{ title: '* quic伪装类型 (type)', data:{show:'v2ray_on v_json_off v_net_quic'}, id:'ss_node_table_v2ray_headtype_quic', type:'select', options:option_headquic, value: "none"},
+																		{ title: '* grpc模式', data:{show:'v2ray_on v_json_off v_net_grpc'}, id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
+																		{ title: '* 伪装域名 (host)', data:{show:'v2ray_on v_json_off v_host_on'}, id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '* 路径 (path)', data:{show:'v2ray_on v_json_off v_path_on'}, id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* kcp seed', data:{show:'v2ray_on v_json_off v_net_kcp'}, id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '底层传输安全', data:{show:'v2ray_on v_json_off'}, id:'ss_node_table_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]], style:'width:412px', value: "none"},
+																		{ title: '* 跳过证书验证 (AllowInsecure)', data:{show:'v2ray_on v_json_off v_tls_on'}, id:'ss_node_table_v2ray_network_security_ai', type:'checkbox', hint:'56', value: "false"},
+																		{ title: '* alpn', data:{show:'v2ray_on v_json_off v_tls_on'}, multi: [
 																			{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_h2">h2' },
 																			{ suffix: '<input type="checkbox" id="ss_node_table_v2ray_network_security_alpn_http">http/1.1' },
 																		]},
-																		{ title: 'SNI', rid:'v2ray_network_security_sni_tr', id:'ss_node_table_v2ray_network_security_sni', type:'text'},
-																		{ title: '多路复用 (Mux)', rid:'v2ray_mux_enable_tr', id:'ss_node_table_v2ray_mux_enable', type:'checkbox', func:'v', value: false},
-																		{ title: '* Mux并发连接数', rid:'v2ray_mux_concurrency_tr', id:'ss_node_table_v2ray_mux_concurrency', type:'text', maxlen:'300', style:'width:400px'},
-																		{ title: 'v2ray json', rid:'v2ray_json_tr', id:'ss_node_table_v2ray_json', type:'textarea', rows:'32', ph:ph_v2ray, style:'width:400px'},
+																		{ title: 'SNI', data:{show:'v2ray_on v_json_off v_tls_on'}, id:'ss_node_table_v2ray_network_security_sni', type:'text'},
+																		{ title: '多路复用 (Mux)', data:{show:'v2ray_on v_json_off'}, id:'ss_node_table_v2ray_mux_enable', type:'checkbox', func:'v', value: false},
+																		{ title: '* Mux并发连接数', data:{show:'v2ray_on v_json_off v_mux_on'}, id:'ss_node_table_v2ray_mux_concurrency', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: 'v2ray json', data:{show:'v2ray_on v_json_on'}, id:'ss_node_table_v2ray_json', type:'textarea', rows:'32', ph:ph_v2ray, style:'width:400px'},
 																		// xray
-																		{ title: '<em>服务器配置</em>（以下配置使用vless作为传出协议，其它传出协议请使用json配置）', class:'xray_elem', th:'2'},
-																		{ title: '用户id (id)', rid:'xray_uuid_tr', id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:400px'},
-																		{ title: '加密 (encryption)', rid:'xray_encryption_tr', id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
-																		{ title: 'flow (流控模式，没有请留空)', rid:'xray_flow_tr', id:'ss_node_table_xray_flow', type:'select', options:option_xflow, style:'width:412px', value: ""},
-																		{ title: '<em>底层传输方式</em>', class:'xray_elem', th:'2'},
-																		{ title: '传输协议 (network)', rid:'xray_network_tr', id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade", "xhttp"], style:'width:412px', value: "tcp"},
-																		{ title: '* tcp伪装类型 (type)', rid:'xray_headtype_tcp_tr', id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
-																		{ title: '* 伪装类型 (type)', rid:'xray_headtype_kcp_tr', id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
-																		{ title: '* quic伪装类型 (type)', rid:'xray_headtype_quic_tr', id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
-																		{ title: '* grpc模式', rid:'xray_grpc_mode_tr', id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: "multi"},
-																		{ title: '* xhttp模式', rid:'xray_xhttp_mode_tr', id:'ss_node_table_xray_xhttp_mode', type:'select', options:option_xhttpmode, value: "auto"},
-																		{ title: '* 伪装域名 (host)', rid:'xray_network_host_tr', id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
-																		{ title: '* 路径 (path)', rid:'xray_network_path_tr', id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: '* kcp seed', rid:'xray_kcp_seed_tr', id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: '底层传输安全', rid:'xray_network_security_tr', id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]], style:'width:412px', value: "none"},
-																		{ title: '* 跳过证书验证 (AllowInsecure)', rid:'xray_network_security_ai_tr', id:'ss_node_table_xray_network_security_ai', type:'checkbox', func:'v', hint:'56', value: "false"},
-																		{ title: '* pinnedPeerCertSha256', rid:'xray_pcs_tr', id:'ss_node_table_xray_pcs', type:'text', style:'width:400px', ph:'没有请留空'},
-																		{ title: '* verifyPeerCertByName', rid:'xray_vcn_tr', id:'ss_node_table_xray_vcn', type:'text', style:'width:400px', ph:'没有请留空'},
-																		{ title: '* alpn', rid:'xray_network_security_alpn_tr', multi: [
+																		{ title: '<em>服务器配置</em>（以下配置使用vless作为传出协议，其它传出协议请使用json配置）', class:'xray_elem', data:{show:'xray_on x_json_off'}, th:'2'},
+																		{ title: '用户id (id)', data:{show:'xray_on x_json_off'}, id:'ss_node_table_xray_uuid', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '加密 (encryption)', data:{show:'xray_on x_json_off'}, id:'ss_node_table_xray_encryption', type:'text', hint:'55', maxlen:'300', style:'width:400px', value: "none"},
+																		{ title: 'flow (流控模式，没有请留空)', data:{show:'xray_on x_json_off x_flow_on'}, id:'ss_node_table_xray_flow', type:'select', options:option_xflow, style:'width:412px', value: ""},
+																		{ title: '<em>底层传输方式</em>', class:'xray_elem', data:{show:'xray_on x_json_off'}, th:'2'},
+																		{ title: '传输协议 (network)', data:{show:'xray_on x_json_off'}, id:'ss_node_table_xray_network', type:'select', func:'v', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade", "xhttp"], style:'width:412px', value: "tcp"},
+																		{ title: '* tcp伪装类型 (type)', data:{show:'xray_on x_json_off x_net_tcp'}, id:'ss_node_table_xray_headtype_tcp', type:'select', hint:'36', func:'v', options:option_headtcp, style:'width:412px', value: "none"},
+																		{ title: '* 伪装类型 (type)', data:{show:'xray_on x_json_off x_net_kcp'}, id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
+																		{ title: '* quic伪装类型 (type)', data:{show:'xray_on x_json_off x_net_quic'}, id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
+																		{ title: '* grpc模式', data:{show:'xray_on x_json_off x_net_grpc'}, id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: "multi"},
+																		{ title: '* xhttp模式', data:{show:'xray_on x_json_off x_xhttp_on'}, id:'ss_node_table_xray_xhttp_mode', type:'select', options:option_xhttpmode, value: "auto"},
+																		{ title: '* 伪装域名 (host)', data:{show:'xray_on x_json_off x_host_on'}, id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '* 路径 (path)', data:{show:'xray_on x_json_off x_path_on'}, id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* kcp seed', data:{show:'xray_on x_json_off x_net_kcp'}, id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: '底层传输安全', data:{show:'xray_on x_json_off'}, id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]], style:'width:412px', value: "none"},
+																		{ title: '* 跳过证书验证 (AllowInsecure)', data:{show:'xray_on x_json_off x_tls_on'}, id:'ss_node_table_xray_network_security_ai', type:'checkbox', func:'v', hint:'56', value: "false"},
+																		{ title: '* pinnedPeerCertSha256', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, id:'ss_node_table_xray_pcs', type:'text', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* verifyPeerCertByName', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, id:'ss_node_table_xray_vcn', type:'text', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* alpn', data:{show:'xray_on x_json_off x_tls_on'}, multi: [
 																			{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_h2">h2' },
 																			{ suffix: '<input type="checkbox" id="ss_node_table_xray_network_security_alpn_http">http/1.1' },
 																		]},
-																		{ title: '* show', rid:'xray_show_tr', id:'ss_node_table_xray_show', type:'checkbox', value:false},
-																		{ title: '* fingerprint', rid:'xray_fingerprint_tr', id:'ss_node_table_xray_fingerprint', type:'select', options:option_fingerprint, value: ""},
-																		{ title: '* SNI', rid:'xray_network_security_sni_tr', id:'ss_node_table_xray_network_security_sni', type:'text'},
-																		{ title: '* publicKey', rid:'xray_publickey_tr', id:'ss_node_table_xray_publickey', maxlen:'300', style:'width:400px', type:'text'},
-																		{ title: '* shortId', rid:'xray_shortid_tr', id:'ss_node_table_xray_shortid', type:'text', style:'width:400px', ph:'没有请留空'},
-																		{ title: '* spiderX', rid:'xray_spiderx_tr', id:'ss_node_table_xray_spiderx', type:'text', ph:'没有请留空'},
-																		{ title: 'xray json', rid:'xray_json_tr', id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:400px'},
+																		{ title: '* show', data:{show:'xray_on x_json_off x_real_on'}, id:'ss_node_table_xray_show', type:'checkbox', value:false},
+																		{ title: '* fingerprint', data:{show:'xray_on x_json_off', showAny:'x_tls_on x_real_on'}, id:'ss_node_table_xray_fingerprint', type:'select', options:option_fingerprint, value: ""},
+																		{ title: '* SNI', data:{show:'xray_on x_json_off', showAny:'x_tls_on x_real_on'}, id:'ss_node_table_xray_network_security_sni', type:'text'},
+																		{ title: '* publicKey', data:{show:'xray_on x_json_off x_real_on'}, id:'ss_node_table_xray_publickey', maxlen:'300', style:'width:400px', type:'text'},
+																		{ title: '* shortId', data:{show:'xray_on x_json_off x_real_on'}, id:'ss_node_table_xray_shortid', type:'text', style:'width:400px', ph:'没有请留空'},
+																		{ title: '* spiderX', data:{show:'xray_on x_json_off x_real_on'}, id:'ss_node_table_xray_spiderx', type:'text', ph:'没有请留空'},
+																		{ title: 'xray json', data:{show:'xray_on x_json_on'}, id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:400px'},
 																		// trojan
-																		{ title: 'trojan 密码', rid:'trojan_uuid_tr', id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
-																		{ title: '跳过证书验证 (AllowInsecure)', rid:'trojan_ai_tr', id:'ss_node_table_trojan_ai', type:'checkbox', func:'v', value: "false"},
-																		{ title: 'pinnedPeerCertSha256', rid:'trojan_pcs_tr', id:'ss_node_table_trojan_pcs', type:'text', style:'width:400px'},
-																		{ title: 'verifyPeerCertByName', rid:'trojan_vcn_tr', id:'ss_node_table_trojan_vcn', type:'text', style:'width:400px'},
-																		{ title: 'SNI', rid:'trojan_sni_tr', id:'ss_node_table_trojan_sni', type:'text', style:'width:400px'},
-																		{ title: 'tcp fast open', rid:'trojan_tfo_tr', id:'ss_node_table_trojan_tfo', type:'checkbox', value: "false"},
+																		{ title: 'trojan 密码', data:{show:'trojan_on'}, id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
+																		{ title: '跳过证书验证 (AllowInsecure)', data:{show:'trojan_on'}, id:'ss_node_table_trojan_ai', type:'checkbox', func:'v', value: "false"},
+																		{ title: 'pinnedPeerCertSha256', data:{show:'trojan_on trojan_ai_off'}, id:'ss_node_table_trojan_pcs', type:'text', style:'width:400px'},
+																		{ title: 'verifyPeerCertByName', data:{show:'trojan_on trojan_ai_off'}, id:'ss_node_table_trojan_vcn', type:'text', style:'width:400px'},
+																		{ title: 'SNI', data:{show:'trojan_on'}, id:'ss_node_table_trojan_sni', type:'text', style:'width:400px'},
+																		{ title: 'tcp fast open', data:{show:'trojan_on'}, id:'ss_node_table_trojan_tfo', type:'checkbox', value: "false"},
 																		// naive
-																		{ title: 'NaïveProxy 协议', rid:'naive_prot_tr', id:'ss_node_table_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', style:'width:412px', value: "https"},		//fancyss-full
-																		{ title: 'NaïveProxy 服务器', rid:'naive_server_tr', id:'ss_node_table_naive_server', type:'text', maxlen:'300', style:'width:400px'},														//fancyss-full
-																		{ title: 'NaïveProxy 端口', rid:'naive_port_tr', id:'ss_node_table_naive_port', type:'text', maxlen:'300', style:'width:400px', value: "443"},												//fancyss-full
-																		{ title: 'NaïveProxy 账户', rid:'naive_user_tr', id:'ss_node_table_naive_user', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
-																		{ title: 'NaïveProxy 密码', rid:'naive_pass_tr', id:'ss_node_table_naive_pass', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
+																		{ title: 'NaïveProxy 协议', data:{show:'naive_on'}, id:'ss_node_table_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', style:'width:412px', value: "https"},		//fancyss-full
+																		{ title: 'NaïveProxy 服务器', data:{show:'naive_on'}, id:'ss_node_table_naive_server', type:'text', maxlen:'300', style:'width:400px'},														//fancyss-full
+																		{ title: 'NaïveProxy 端口', data:{show:'naive_on'}, id:'ss_node_table_naive_port', type:'text', maxlen:'300', style:'width:400px', value: "443"},												//fancyss-full
+																		{ title: 'NaïveProxy 账户', data:{show:'naive_on'}, id:'ss_node_table_naive_user', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
+																		{ title: 'NaïveProxy 密码', data:{show:'naive_on'}, id:'ss_node_table_naive_pass', type:'text', maxlen:'300', style:'width:400px'},															//fancyss-full
 																		// tuic
-																		{ title: 'tuic client json', rid:'tuic_json_tr', id:'ss_node_table_tuic_json', type:'textarea', rows:'18', ph:ph_tuic, style:'width:400px'},												//fancyss-full
+																		{ title: 'tuic client json', data:{show:'tuic_on'}, id:'ss_node_table_tuic_json', type:'textarea', rows:'18', ph:ph_tuic, style:'width:400px'},												//fancyss-full
 																		// hy2
-																		{ title: '服务器', rid:'hy2_server_tr', id:'ss_node_table_hy2_server', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
-																		{ title: '端口', rid:'hy2_port_tr', id:'ss_node_table_hy2_port', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: "443"},
-																		{ title: '认证密码', rid:'hy2_pass_tr', id:'ss_node_table_hy2_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
-																		{ title: '最大上行（mbps）', rid:'hy2_up_tr', id:'ss_node_table_hy2_up', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},
-																		{ title: '最大下行（mbps）', rid:'hy2_dl_tr', id:'ss_node_table_hy2_dl', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},
-																		{ title: 'tcp fast open', rid:'hy2_tfo_tr', id:'ss_node_table_hy2_tfo', type:'checkbox', class:'hy2_elem', value: "false"},
-																		{ title: '混淆类型', rid:'hy2_obfs_tr', id:'ss_node_table_hy2_obfs', type:'select', class:'hy2_elem', func:'v', options:option_hy2_obfs, maxlen:'300', style:'width:412px', value: "0"},
-																		{ title: '混淆密码', rid:'hy2_obfs_pass_tr', id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
-																		{ title: 'SNI（域名）', rid:'hy2_sni_tr', id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
-																		{ title: '允许不安全', rid:'hy2_ai_tr', id:'ss_node_table_hy2_ai', type:'checkbox', func:'v', class:'hy2_elem', value: "false"},
-																		{ title: 'pinnedPeerCertSha256', rid:'hy2_pcs_tr', id:'ss_node_table_hy2_pcs', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: 'verifyPeerCertByName', rid:'hy2_vcn_tr', id:'ss_node_table_hy2_vcn', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
-																		{ title: 'congestion', rid:'hy2_cg_tr', id:'ss_node_table_hy2_cg', type:'select', class:'hy2_elem', func:'v', options:option_hy2_cg, maxlen:'300', style:'width:412px', value: "brutal"},
+																		{ title: '服务器', data:{show:'hy2_on'}, id:'ss_node_table_hy2_server', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: '端口', data:{show:'hy2_on'}, id:'ss_node_table_hy2_port', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: "443"},
+																		{ title: '认证密码', data:{show:'hy2_on'}, id:'ss_node_table_hy2_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: '最大上行（mbps）', data:{show:'hy2_on'}, id:'ss_node_table_hy2_up', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},
+																		{ title: '最大下行（mbps）', data:{show:'hy2_on'}, id:'ss_node_table_hy2_dl', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', value: ""},
+																		{ title: 'tcp fast open', data:{show:'hy2_on'}, id:'ss_node_table_hy2_tfo', type:'checkbox', class:'hy2_elem', value: "false"},
+																		{ title: '混淆类型', data:{show:'hy2_on'}, id:'ss_node_table_hy2_obfs', type:'select', class:'hy2_elem', func:'v', options:option_hy2_obfs, maxlen:'300', style:'width:412px', value: "0"},
+																		{ title: '混淆密码', data:{show:'hy2_on hy2_obfs_on'}, id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: 'SNI（域名）', data:{show:'hy2_on'}, id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
+																		{ title: '允许不安全', data:{show:'hy2_on'}, id:'ss_node_table_hy2_ai', type:'checkbox', func:'v', class:'hy2_elem', value: "false"},
+																		{ title: 'pinnedPeerCertSha256', data:{show:'hy2_on hy2_ai_off'}, id:'ss_node_table_hy2_pcs', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: 'verifyPeerCertByName', data:{show:'hy2_on hy2_ai_off'}, id:'ss_node_table_hy2_vcn', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
+																		{ title: 'congestion', data:{show:'hy2_on'}, id:'ss_node_table_hy2_cg', type:'select', class:'hy2_elem', func:'v', options:option_hy2_cg, maxlen:'300', style:'width:412px', value: "brutal"},
 																	]);
 																</script>
 																</table>
@@ -6008,100 +5138,100 @@ function toggleKeyMask(o, show){
 															// commom
 															{ title: '节点选择', id:'ssconf_basic_node', type:'select', func:'onchange="ss_node_sel();"', style:'width:auto;min-width:164px;max-width:450px;', options:[], value: "1"},
 															{ title: '模式', id:'ss_basic_mode', type:'select', func:'v', hint:'1', options:option_modes, value: "1"},
-															{ title: '使用json配置', id:'ss_basic_v2ray_use_json', type:'checkbox', func:'v', hint:'27'},
-															{ title: '使用json配置', id:'ss_basic_xray_use_json', type:'checkbox', func:'v', hint:'27'},
-															{ title: '服务器地址', id:'ss_basic_server', type:'text', maxlen:'100'},
-															{ title: '服务器端口', id:'ss_basic_port', type:'text', maxlen:'100'},
-															{ title: '密码', id:'ss_basic_password', type:'password', maxlen:'100', peekaboo:'1'},
-															{ title: '加密方式', id:'ss_basic_method', type:'select', func:'v', options:option_method},
+															{ title: '使用json配置', id:'ss_basic_v2ray_use_json', data:{show:'v2ray_on'}, type:'checkbox', func:'v', hint:'27'},
+															{ title: '使用json配置', id:'ss_basic_xray_use_json', data:{show:'xray_on'}, type:'checkbox', func:'v', hint:'27'},
+															{ title: '服务器地址', id:'ss_basic_server', data:{show:'basic_server_on'}, type:'text', maxlen:'100'},
+															{ title: '服务器端口', id:'ss_basic_port', data:{show:'basic_server_on'}, type:'text', maxlen:'100'},
+															{ title: '密码', id:'ss_basic_password', data:{show:'basic_pass_on'}, type:'password', maxlen:'100', peekaboo:'1'},
+															{ title: '加密方式', id:'ss_basic_method', data:{show:'basic_pass_on'}, type:'select', func:'v', options:option_method},
 															// ss
-															{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
-															{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', type:'text', maxlen:'100', ph:'bing.com'},
+															{ title: '混淆 (obfs)', id:'ss_basic_ss_obfs', data:{show:'ss_on'}, type:'select', func:'v', options:[["0", "关闭"], ["tls", "tls"], ["http", "http"]], value: "0"},
+															{ title: '混淆主机名 (obfs_host)', id:'ss_basic_ss_obfs_host', data:{show:'ss_obfs_host_on'}, type:'text', maxlen:'100', ph:'bing.com'},
 															// ssr
-															{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', type:'select', func:'v', options:option_protocals},
-															{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
-															{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', type:'select', func:'v', options:option_obfs},
-															{ title: '混淆参数 (obfs_param)', id:'ss_basic_rss_obfs_param', type:'text', hint:'11', maxlen:'300', ph:'cloudflare.com;bing.com'},
+															{ title: '协议 (protocol)', id:'ss_basic_rss_protocol', data:{show:'ssr_on'}, type:'select', func:'v', options:option_protocals},
+															{ title: '协议参数 (protocol_param)', id:'ss_basic_rss_protocol_param', data:{show:'ssr_on'}, type:'password', hint:'54', maxlen:'100', ph:'id:password', peekaboo:'1'},
+															{ title: '混淆 (obfs)', id:'ss_basic_rss_obfs', data:{show:'ssr_on'}, type:'select', func:'v', options:option_obfs},
+															{ title: '混淆参数 (obfs_param)', id:'ss_basic_rss_obfs_param', data:{show:'ssr_on'}, type:'text', hint:'11', maxlen:'300', ph:'cloudflare.com;bing.com'},
 															// v2ray
-															{ title: '用户id (id)', id:'ss_basic_v2ray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
-															{ title: '额外ID (Alterld)', id:'ss_basic_v2ray_alterid', type:'text', hint:'48', maxlen:'50'},
-															{ title: '加密方式 (security)', id:'ss_basic_v2ray_security', type:'select', hint:'47', options:option_v2enc},
-															{ title: '传输协议 (network)', id:'ss_basic_v2ray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade"]},
-															{ title: '* tcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
-															{ title: '* kcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
-															{ title: '* quic伪装类型 (type)', id:'ss_basic_v2ray_headtype_quic', type:'select', options:option_headquic},
-															{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', type:'select', options:option_grpcmode},
-															{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', type:'text', maxlen:'300', ph:'没有请留空'},
-															{ title: '* 路径 (path)', rid:'ss_basic_v2ray_network_path_tr', id:'ss_basic_v2ray_network_path', type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
-															{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
-															{ title: '底层传输安全', id:'ss_basic_v2ray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]]},
-															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_v2ray_network_security_ai', type:'checkbox', hint:'56'},
-															{ title: '* alpn', id:'ss_basic_v2ray_network_security_alpn', multi: [
+															{ title: '用户id (id)', id:'ss_basic_v2ray_uuid', data:{show:'v2ray_on v_json_off'}, type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
+															{ title: '额外ID (Alterld)', id:'ss_basic_v2ray_alterid', data:{show:'v2ray_on v_json_off'}, type:'text', hint:'48', maxlen:'50'},
+															{ title: '加密方式 (security)', id:'ss_basic_v2ray_security', data:{show:'v2ray_on v_json_off'}, type:'select', hint:'47', options:option_v2enc},
+															{ title: '传输协议 (network)', id:'ss_basic_v2ray_network', data:{show:'v2ray_on v_json_off'}, type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade"]},
+															{ title: '* tcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_tcp', data:{show:'v2ray_on v_json_off v_net_tcp'}, type:'select', func:'v', hint:'36', options:option_headtcp},
+															{ title: '* kcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_kcp', data:{show:'v2ray_on v_json_off v_net_kcp'}, type:'select', func:'v', hint:'37', options:option_headkcp},
+															{ title: '* quic伪装类型 (type)', id:'ss_basic_v2ray_headtype_quic', data:{show:'v2ray_on v_json_off v_net_quic'}, type:'select', options:option_headquic},
+															{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', data:{show:'v2ray_on v_json_off v_net_grpc'}, type:'select', options:option_grpcmode},
+															{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', data:{show:'v2ray_on v_json_off v_host_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '* 路径 (path)', rid:'ss_basic_v2ray_network_path_tr', id:'ss_basic_v2ray_network_path', data:{show:'v2ray_on v_json_off v_path_on'}, type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
+															{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', data:{show:'v2ray_on v_json_off v_net_kcp'}, type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '底层传输安全', id:'ss_basic_v2ray_network_security', data:{show:'v2ray_on v_json_off'}, type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"]]},
+															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_v2ray_network_security_ai', data:{show:'v2ray_on v_json_off v_tls_on'}, type:'checkbox', hint:'56'},
+															{ title: '* alpn', id:'ss_basic_v2ray_network_security_alpn', data:{show:'v2ray_on v_json_off v_tls_on'}, multi: [
 																{ suffix: '<input type="checkbox" id="ss_basic_v2ray_network_security_alpn_h2">h2' },
 																{ suffix: '<input type="checkbox" id="ss_basic_v2ray_network_security_alpn_http">http/1.1' },
 															]},
-															{ title: '* SNI', id:'ss_basic_v2ray_network_security_sni', type:'text'},
-															{ title: '多路复用 (Mux)', id:'ss_basic_v2ray_mux_enable', type:'checkbox', func:'v', hint:'31'},
-															{ title: 'Mux并发连接数', id:'ss_basic_v2ray_mux_concurrency', type:'text', hint:'32', maxlen:'300'},
-															{ title: 'v2ray json', id:'ss_basic_v2ray_json', type:'textarea', rows:'36', ph:ph_v2ray},
+															{ title: '* SNI', id:'ss_basic_v2ray_network_security_sni', data:{show:'v2ray_on v_json_off v_tls_on'}, type:'text'},
+															{ title: '多路复用 (Mux)', id:'ss_basic_v2ray_mux_enable', data:{show:'v2ray_on v_json_off'}, type:'checkbox', func:'v', hint:'31'},
+															{ title: 'Mux并发连接数', id:'ss_basic_v2ray_mux_concurrency', data:{show:'v2ray_on v_json_off v_mux_on'}, type:'text', hint:'32', maxlen:'300'},
+															{ title: 'v2ray json', id:'ss_basic_v2ray_json', data:{show:'v2ray_on v_json_on'}, type:'textarea', rows:'36', ph:ph_v2ray},
 															// xray
-															{ title: '用户id (id)', id:'ss_basic_xray_uuid', type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
-															{ title: '加密 (encryption)', id:'ss_basic_xray_encryption', type:'text', hint:'55', maxlen:'50'},
-															{ title: 'flow (流控模式，没有请留空)', id:'ss_basic_xray_flow', type:'select', options:option_xflow},
-															{ title: '传输协议 (network)', id:'ss_basic_xray_network', type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade", "xhttp"]},
-															{ title: '* tcp伪装类型 (type)', id:'ss_basic_xray_headtype_tcp', type:'select', func:'v', hint:'36', options:option_headtcp},
-															{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', type:'select', func:'v', hint:'37', options:option_headkcp},
-															{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', type:'select', options:option_headquic},
-															{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', type:'select', options:option_grpcmode},
-															{ title: '* xhttp模式', id:'ss_basic_xray_xhttp_mode', type:'select', options:option_xhttpmode, value: "auto"},
-															{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', type:'text', maxlen:'300', ph:'没有请留空'},
-															{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', type:'text', maxlen:'300', ph:'没有请留空'},
-															{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', type:'text', maxlen:'300', ph:'没有请留空'},
-															{ title: '底层传输安全', id:'ss_basic_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]]},
-															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', type:'checkbox', func:'v', hint:'56'},
-															{ title: '* pinnedPeerCertSha256', id:'ss_basic_xray_pcs', type:'text', style:'width:440px', ph:'没有请留空'},
-															{ title: '* verifyPeerCertByName', id:'ss_basic_xray_vcn', type:'text', ph:'没有请留空'},
-															{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', multi: [
+															{ title: '用户id (id)', id:'ss_basic_xray_uuid', data:{show:'xray_on x_json_off'}, type:'password', hint:'49', maxlen:'300', style:'width:300px;', peekaboo:'1'},
+															{ title: '加密 (encryption)', id:'ss_basic_xray_encryption', data:{show:'xray_on x_json_off'}, type:'text', hint:'55', maxlen:'50'},
+															{ title: 'flow (流控模式，没有请留空)', id:'ss_basic_xray_flow', data:{show:'xray_on x_json_off x_flow_on'}, type:'select', options:option_xflow},
+															{ title: '传输协议 (network)', id:'ss_basic_xray_network', data:{show:'xray_on x_json_off'}, type:'select', func:'v', hint:'35', options:["tcp", "kcp", "ws", "h2", "quic", "grpc", "httpupgrade", "xhttp"]},
+															{ title: '* tcp伪装类型 (type)', id:'ss_basic_xray_headtype_tcp', data:{show:'xray_on x_json_off x_net_tcp'}, type:'select', func:'v', hint:'36', options:option_headtcp},
+															{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', data:{show:'xray_on x_json_off x_net_kcp'}, type:'select', func:'v', hint:'37', options:option_headkcp},
+															{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', data:{show:'xray_on x_json_off x_net_quic'}, type:'select', options:option_headquic},
+															{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', data:{show:'xray_on x_json_off x_net_grpc'}, type:'select', options:option_grpcmode},
+															{ title: '* xhttp模式', id:'ss_basic_xray_xhttp_mode', data:{show:'xray_on x_json_off x_xhttp_on'}, type:'select', options:option_xhttpmode, value: "auto"},
+															{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', data:{show:'xray_on x_json_off x_host_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', data:{show:'xray_on x_json_off x_path_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', data:{show:'xray_on x_json_off x_net_kcp'}, type:'text', maxlen:'300', ph:'没有请留空'},
+															{ title: '底层传输安全', id:'ss_basic_xray_network_security', data:{show:'xray_on x_json_off'}, type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]]},
+															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', data:{show:'xray_on x_json_off x_tls_on'}, type:'checkbox', func:'v', hint:'56'},
+															{ title: '* pinnedPeerCertSha256', id:'ss_basic_xray_pcs', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
+															{ title: '* verifyPeerCertByName', id:'ss_basic_xray_vcn', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, type:'text', ph:'没有请留空'},
+															{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', data:{show:'xray_on x_json_off x_tls_on'}, multi: [
 																{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_h2">h2' },
 																{ suffix: '<input type="checkbox" id="ss_basic_xray_network_security_alpn_http">http/1.1' },
 															]},
-															{ title: '* show', id:'ss_basic_xray_show', type:'checkbox'},
-															{ title: '* fingerprint', id:'ss_basic_xray_fingerprint', type:'select', options:option_fingerprint},
-															{ title: '* SNI', id:'ss_basic_xray_network_security_sni', type:'text', ph:'realitySettings中的serverName'},
-															{ title: '* publickey', id:'ss_basic_xray_publickey', type:'password', maxlen:'300', style:'width:320px;', ph:'填写公钥', peekaboo:'1'},
-															{ title: '* shortId', id:'ss_basic_xray_shortid', type:'text', ph:'没有请留空'},
-															{ title: '* spiderX', id:'ss_basic_xray_spiderx', type:'text', ph:'没有请留空'},
-															{ title: 'xray json', id:'ss_basic_xray_json', type:'textarea', rows:'36', ph:ph_xray},
-															{ title: '其它', rid:'xray_binary_update_tr', prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
+															{ title: '* show', id:'ss_basic_xray_show', data:{show:'xray_on x_json_off x_real_on'}, type:'checkbox'},
+															{ title: '* fingerprint', id:'ss_basic_xray_fingerprint', data:{show:'xray_on x_json_off', showAny:'x_tls_on x_real_on'}, type:'select', options:option_fingerprint},
+															{ title: '* SNI', id:'ss_basic_xray_network_security_sni', data:{show:'xray_on x_json_off', showAny:'x_tls_on x_real_on'}, type:'text', ph:'realitySettings中的serverName'},
+															{ title: '* publickey', id:'ss_basic_xray_publickey', data:{show:'xray_on x_json_off x_real_on'}, type:'password', maxlen:'300', style:'width:320px;', ph:'填写公钥', peekaboo:'1'},
+															{ title: '* shortId', id:'ss_basic_xray_shortid', data:{show:'xray_on x_json_off x_real_on'}, type:'text', ph:'没有请留空'},
+															{ title: '* spiderX', id:'ss_basic_xray_spiderx', data:{show:'xray_on x_json_off x_real_on'}, type:'text', ph:'没有请留空'},
+															{ title: 'xray json', id:'ss_basic_xray_json', data:{show:'xray_on x_json_on'}, type:'textarea', rows:'36', ph:ph_xray},
+															{ title: '其它', rid:'xray_binary_update_tr', data:{show:'xray_on'}, prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
 															//trojan
-															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
-															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai', type:'checkbox', func:'v'},
-															{ title: 'pinnedPeerCertSha256', id:'ss_basic_trojan_pcs', type:'text', style:'width:440px', ph:'没有请留空'},
-															{ title: 'verifyPeerCertByName', id:'ss_basic_trojan_vcn', type:'text', ph:'没有请留空'},
-															{ title: 'SNI', id:'ss_basic_trojan_sni', type:'text'},
-															{ title: 'tcp fast open', id:'ss_basic_trojan_tfo', type:'checkbox'},
+															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', data:{show:'trojan_on'}, type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
+															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai', data:{show:'trojan_on'}, type:'checkbox', func:'v'},
+															{ title: 'pinnedPeerCertSha256', id:'ss_basic_trojan_pcs', data:{show:'trojan_on trojan_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
+															{ title: 'verifyPeerCertByName', id:'ss_basic_trojan_vcn', data:{show:'trojan_on trojan_ai_off'}, type:'text', ph:'没有请留空'},
+															{ title: 'SNI', id:'ss_basic_trojan_sni', data:{show:'trojan_on'}, type:'text'},
+															{ title: 'tcp fast open', id:'ss_basic_trojan_tfo', data:{show:'trojan_on'}, type:'checkbox'},
 															// naive
-															{ title: 'NaïveProxy 协议', id:'ss_basic_naive_prot', type:'select', func:'v', options:option_naive_prot, maxlen:'300', value: "https"},								//fancyss-full
-															{ title: 'NaïveProxy 服务器', id:'ss_basic_naive_server', type:'text', maxlen:'300'},																					//fancyss-full
-															{ title: 'NaïveProxy 端口', id:'ss_basic_naive_port', type:'text', maxlen:'300', value: "443"},																			//fancyss-full
-															{ title: 'NaïveProxy 账户', id:'ss_basic_naive_user', type:'text', maxlen:'300'},																						//fancyss-full
-															{ title: 'NaïveProxy 密码', id:'ss_basic_naive_pass', type:'text', maxlen:'300'},																						//fancyss-full
+															{ title: 'NaïveProxy 协议', id:'ss_basic_naive_prot', data:{show:'naive_on'}, type:'select', func:'v', options:option_naive_prot, maxlen:'300', value: "https"},								//fancyss-full
+															{ title: 'NaïveProxy 服务器', id:'ss_basic_naive_server', data:{show:'naive_on'}, type:'text', maxlen:'300'},																					//fancyss-full
+															{ title: 'NaïveProxy 端口', id:'ss_basic_naive_port', data:{show:'naive_on'}, type:'text', maxlen:'300', value: "443"},																			//fancyss-full
+															{ title: 'NaïveProxy 账户', id:'ss_basic_naive_user', data:{show:'naive_on'}, type:'text', maxlen:'300'},																						//fancyss-full
+															{ title: 'NaïveProxy 密码', id:'ss_basic_naive_pass', data:{show:'naive_on'}, type:'text', maxlen:'300'},																						//fancyss-full
 															//tuic
-															{ title: 'tuic json', id:'ss_basic_tuic_json', type:'textarea', rows:'18', ph:ph_tuic},																					//fancyss-full
+															{ title: 'tuic json', id:'ss_basic_tuic_json', data:{show:'tuic_on'}, type:'textarea', rows:'18', ph:ph_tuic},																					//fancyss-full
 															//hysteria2
-															{ title: '服务器', id:'ss_basic_hy2_server', type:'text', maxlen:'300'},
-															{ title: '端口', id:'ss_basic_hy2_port', type:'text', maxlen:'300'},
-															{ title: '认证密码', id:'ss_basic_hy2_pass', type:'text', maxlen:'300'},
-															{ title: '最大上行（mbps）', id:'ss_basic_hy2_up', type:'text', maxlen:'300'},
-															{ title: '最大下行（mbps）', id:'ss_basic_hy2_dl', type:'text', maxlen:'300'},
-															{ title: 'tcp fast open', id:'ss_basic_hy2_tfo', type:'checkbox'},
-															{ title: '混淆类型', id:'ss_basic_hy2_obfs', type:'select', func:'v', options:option_hy2_obfs, maxlen:'300', value: "0"},
-															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', type:'text', maxlen:'300'},
-															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', type:'text'},
-															{ title: '允许不安全', id:'ss_basic_hy2_ai', type:'checkbox', func:'v'},
-															{ title: 'pinnedPeerCertSha256', id:'ss_basic_hy2_pcs', type:'text', style:'width:440px', ph:'没有请留空'},
-															{ title: 'verifyPeerCertByName', id:'ss_basic_hy2_vcn', type:'text', ph:'没有请留空'},
-															{ title: 'congestion', id:'ss_basic_hy2_cg', type:'select', func:'v', options:option_hy2_cg, maxlen:'300', value: "brutal"},
+															{ title: '服务器', id:'ss_basic_hy2_server', data:{show:'hy2_on'}, type:'text', maxlen:'300'},
+															{ title: '端口', id:'ss_basic_hy2_port', data:{show:'hy2_on'}, type:'text', maxlen:'300'},
+															{ title: '认证密码', id:'ss_basic_hy2_pass', data:{show:'hy2_on'}, type:'text', maxlen:'300'},
+															{ title: '最大上行（mbps）', id:'ss_basic_hy2_up', data:{show:'hy2_on'}, type:'text', maxlen:'300'},
+															{ title: '最大下行（mbps）', id:'ss_basic_hy2_dl', data:{show:'hy2_on'}, type:'text', maxlen:'300'},
+															{ title: 'tcp fast open', id:'ss_basic_hy2_tfo', data:{show:'hy2_on'}, type:'checkbox'},
+															{ title: '混淆类型', id:'ss_basic_hy2_obfs', data:{show:'hy2_on'}, type:'select', func:'v', options:option_hy2_obfs, maxlen:'300', value: "0"},
+															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', data:{show:'hy2_on hy2_obfs_on'}, type:'text', maxlen:'300'},
+															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', data:{show:'hy2_on'}, type:'text'},
+															{ title: '允许不安全', id:'ss_basic_hy2_ai', data:{show:'hy2_on'}, type:'checkbox', func:'v'},
+															{ title: 'pinnedPeerCertSha256', id:'ss_basic_hy2_pcs', data:{show:'hy2_on hy2_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
+															{ title: 'verifyPeerCertByName', id:'ss_basic_hy2_vcn', data:{show:'hy2_on hy2_ai_off'}, type:'text', ph:'没有请留空'},
+															{ title: 'congestion', id:'ss_basic_hy2_cg', data:{show:'hy2_on'}, type:'select', func:'v', options:option_hy2_cg, maxlen:'300', value: "brutal"},
 														]);
 													</script>
 												</table>
