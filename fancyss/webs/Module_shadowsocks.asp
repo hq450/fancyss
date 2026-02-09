@@ -98,6 +98,7 @@ var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
 var ads_url_1
 var ws_enable = 0;
+var node_form_defaults = null;
 if(PKG_ARCH == "hnd"){
 	if(PKG_TYPE == "full"){
 		var ws_enable = 1;
@@ -240,6 +241,9 @@ function get_dbus_data(cb) {
 			// try to get latest version of fancyss
 			version_show();
 			message_show();
+			if (!node_form_defaults) {
+				capture_node_form_defaults();
+			}
 			if (typeof cb === "function") {
 				cb(true);
 			}
@@ -1425,44 +1429,8 @@ function update_visibility() {
 function Add_profile() { //点击节点页面内添加节点动作
 	$('body').prepend(tableApi.genFullScreen());
 	$('.fullScreen').show();
+	reset_node_form();
 	tabclickhandler(0); //默认显示添加ss节点
-	E("ss_node_table_name").value = "";
-	E("ss_node_table_server").value = "";
-	E("ss_node_table_port").value = "";
-	E("ss_node_table_password").value = "";
-	E("ss_node_table_method").value = "aes-256-cfb";
-	E("ss_node_table_mode").value = "2";
-	E("ss_node_table_ss_obfs").value = "0"
-	E("ss_node_table_ss_obfs_host").value = "";
-	E("ss_node_table_rss_protocol").value = "origin";
-	E("ss_node_table_rss_protocol_param").value = "";
-	E("ss_node_table_rss_obfs").value = "plain";
-	E("ss_node_table_rss_obfs_param").value = "";
-	E("ss_node_table_v2ray_uuid").value = "";
-	E("ss_node_table_v2ray_alterid").value = "0";
-	E("ss_node_table_v2ray_json").value = "";
-	E("ss_node_table_xray_uuid").value = "";
-	E("ss_node_table_xray_encryption").value = "none";
-	E("ss_node_table_xray_json").value = "";
-	E("ss_node_table_trojan_uuid").value = "";
-	E("ss_node_table_trojan_ai").checked = false;
-	E("ss_node_table_trojan_sni").value = "";
-	E("ss_node_table_trojan_pcs").value = "";
-	E("ss_node_table_trojan_vcn").value = "";
-	E("ss_node_table_trojan_tfo").checked = false;
-	E("ss_node_table_hy2_tfo").checked = false;
-	E("ss_node_table_hy2_ai").checked = false;
-	E("ssTitle").style.display = "";
-	E("ssrTitle").style.display = "";
-	E("vmessTitle").style.display = "";
-	E("vlessTitle").style.display = "";
-	E("trojanTitle").style.display = "";
-	E("naiveTitle").style.display = "";		//fancyss-full
-	E("tuicTitle").style.display = "";		//fancyss-full
-	E("hy2Title").style.display = "";
-	E("add_node").style.display = "";
-	E("edit_node").style.display = "none";
-	E("continue_add").style.display = "";
 	show_add_node_panel();
 }
 function show_add_node_panel(){
@@ -1479,6 +1447,7 @@ function cancel_add_node() {
 	$("#add_fancyss_node").hide();
 	//$('html, body').css({overflow: 'auto', height: 'auto'});
 	$("body").find(".fullScreen").show(function() { tableApi.removeElement("fullScreen"); });
+	reset_node_form();
 }
 function tabclickhandler(_type) {
 	E('ssTitle').className = "vpnClientTitle_td_unclick";
@@ -4217,6 +4186,63 @@ function delTr(o) {
 			refresh_acl_table();
 		}
 	});
+}
+
+function capture_node_form_defaults() {
+	var defaults = {};
+	$("#table_add_nodes").find("input,select,textarea").each(function() {
+		if (!this.id) return;
+		if (this.type === "checkbox" || this.type === "radio") {
+			defaults[this.id] = this.checked;
+		} else {
+			defaults[this.id] = this.value;
+		}
+	});
+	node_form_defaults = defaults;
+}
+
+function reset_node_form() {
+	if (!node_form_defaults) {
+		capture_node_form_defaults();
+	}
+	$("#table_add_nodes").find("input,select,textarea").each(function() {
+		if (!this.id) return;
+		if (node_form_defaults && Object.prototype.hasOwnProperty.call(node_form_defaults, this.id)) {
+			if (this.type === "checkbox" || this.type === "radio") {
+				this.checked = !!node_form_defaults[this.id];
+			} else {
+				this.value = node_form_defaults[this.id];
+			}
+		} else {
+			if (this.type === "checkbox" || this.type === "radio") {
+				this.checked = false;
+			} else {
+				this.value = "";
+			}
+		}
+	});
+	$("#ssTitle").html("SS节点");
+	$("#ssrTitle").html("SSR节点");
+	$("#vmessTitle").html("Vmess节点");
+	$("#vlessTitle").html("Vless节点");
+	$("#trojanTitle").html("Trojan节点");
+	$("#naiveTitle").html("Naïve节点");
+	$("#tuicTitle").html("tuic节点");
+	$("#hy2Title").html("hysteria2节点");
+	E("ssTitle").style.display = "";
+	E("ssrTitle").style.display = "";
+	E("vmessTitle").style.display = "";
+	E("vlessTitle").style.display = "";
+	E("trojanTitle").style.display = "";
+	E("naiveTitle").style.display = "";
+	E("tuicTitle").style.display = "";
+	E("hy2Title").style.display = "";
+	E("add_node").style.display = "";
+	E("edit_node").style.display = "none";
+	E("continue_add").style.display = "";
+	$("#cancel_Btn").css("margin-left", "160px");
+	$('#add_fancyss_node_title').html("添加节点");
+	edit_id = null;
 }
 function refresh_acl_table(q, cb) {
 	return $.ajax({
