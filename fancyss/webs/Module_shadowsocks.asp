@@ -514,8 +514,8 @@ function save() {
 	  "ss_basic_tri_reboot_time",
 	  "ss_basic_server_resolv",
 	  "ss_basic_server_resolv_user",
-	  "ss_basic_wt_furl",
-	  "ss_basic_wt_curl",
+	  "ss_basic_furl",
+	  "ss_basic_curl",
 	  "ss_basic_latency_batch",
 	  "ss_basic_lt_cru_opts",
 	  "ss_basic_lt_cru_time",
@@ -1008,8 +1008,8 @@ function getNodeCtx() {
 	ctx.v2ray_on = (save_flag == "v2ray");
 	ctx.xray_on = (save_flag == "xray");
 	ctx.trojan_on = (save_flag == "trojan");
-	ctx.naive_on = (save_flag == "naive");
-	ctx.tuic_on = (save_flag == "tuic");
+	ctx.naive_on = (save_flag == "naive");		//fancyss-full
+	ctx.tuic_on = (save_flag == "tuic");		//fancyss-full
 	ctx.hy2_on = (save_flag == "hysteria2");
 
 	ctx.v_json_on = ctx.v2ray_on && getFieldChecked("ss_node_table_v2ray_use_json");
@@ -1204,8 +1204,8 @@ function verifyFields(r) {
 		v2ray_on: v2ray_on,
 		xray_on: xray_on,
 		trojan_on: trojan_on,
-		naive_on: naive_on,
-		tuic_on: tuic_on,
+		naive_on: naive_on,  //fancyss-full
+		tuic_on: tuic_on,    //fancyss-full
 		hy2_on: hy2_on,
 		basic_server_on: ss_on || ssr_on || (v2ray_on && v_json_off) || (xray_on && x_json_off) || trojan_on,
 		basic_pass_on: ss_on || ssr_on,
@@ -2911,17 +2911,17 @@ function leav_test_sett() {
 function save_latency_sett(){
 	var dbus_post = {};
 	var post_para = 0;
-	dbus_post["ss_basic_wt_furl"] = E("ss_basic_wt_furl").value;
-	dbus_post["ss_basic_wt_curl"] = E("ss_basic_wt_curl").value;
+	dbus_post["ss_basic_furl"] = E("ss_basic_furl").value;
+	dbus_post["ss_basic_curl"] = E("ss_basic_curl").value;
 	dbus_post["ss_basic_latency_batch"] = E("ss_basic_latency_batch").value;
 	dbus_post["ss_basic_lt_cru_opts"] = E("ss_basic_lt_cru_opts").value;
 	dbus_post["ss_basic_lt_cru_time"] = E("ss_basic_lt_cru_time").value;
 	var post_dbus = compfilter(db_ss, dbus_post);
 	if(isObjectEmpty(post_dbus) == false){
-		if(post_dbus.hasOwnProperty("ss_basic_wt_furl")){
+		if(post_dbus.hasOwnProperty("ss_basic_furl")){
 			post_para += 1;
 		}
-		if(post_dbus.hasOwnProperty("ss_basic_wt_curl")){
+		if(post_dbus.hasOwnProperty("ss_basic_curl")){
 			post_para += 2;
 		}
 		//console.log(post_para);
@@ -4261,7 +4261,7 @@ function lookup_status_log(s) {
 		var elem_h_offset = (page_h - elem_h) / 2;
 		var elem_w_offset = (page_w - elem_w) / 2 + 90;
 		if(elem_h_offset < 0) elem_h_offset = 10;
-		$("#ssf_test_url").html(E("ss_basic_wt_furl").value)
+		$("#ssf_test_url").html(E("ss_basic_furl").value)
 		E("ssf_status_div").style.visibility = "visible";
 		$('#ssf_status_div').offset({top: elem_h_offset, left: elem_w_offset});
 		get_status_log(1);
@@ -4271,7 +4271,7 @@ function lookup_status_log(s) {
 		var elem_h_offset = (page_h - elem_h) / 2;
 		var elem_w_offset = (page_w - elem_w) / 2 + 90;
 		if(elem_h_offset < 0) elem_h_offset = 10;
-		$("#ssc_test_url").html(E("ss_basic_wt_curl").value)
+		$("#ssc_test_url").html(E("ss_basic_curl").value)
 		E("ssc_status_div").style.visibility = "visible";
 		$('#ssc_status_div').offset({top: elem_h_offset, left: elem_w_offset});
 		get_status_log(2);
@@ -5143,8 +5143,8 @@ function toggleKeyMask(o, show){
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
 								$('#table_test').forms([
 									{ title: '延迟测试设置', thead:'1'},
-									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_wt_furl', type:'select', style:'width:auto', options:furl, value:''},
-									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_wt_curl', type:'select', style:'width:auto', options:curl, value:''},
+									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
+									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
 									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},

@@ -121,8 +121,8 @@ fi
 
 ss_basic_server_orig=${ss_basic_server}
 
-[ -z "$(dbus get ss_basic_wt_furl)" ] && ss_basic_wt_furl="http://www.google.com.tw"
-[ -z "$(dbus get ss_basic_wt_curl)" ] && ss_basic_wt_curl="http://www.baidu.com"
+[ -z "$(dbus get ss_basic_furl)" ] && ss_basic_furl="http://www.google.com.tw"
+[ -z "$(dbus get ss_basic_curl)" ] && ss_basic_curl="http://www.baidu.com"
 
 #----------------------------
 number_test(){

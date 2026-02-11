@@ -134,8 +134,8 @@ remove_now(){
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=1
 	[ -z "$(dbus get ss_acl_default_port)" ] && dbus set ss_acl_default_port=all
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
-	[ -z "$(dbus get ss_basic_wt_furl)" ] && dbus set ss_basic_wt_furl="http://www.gstatic.com/generate_204"
-	[ -z "$(dbus get ss_basic_wt_curl)" ] && dbus set ss_basic_wt_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
+	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.gstatic.com/generate_204"
+	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
 	# fancyss_arm 默认关闭延迟测试
 	PKG_ARCH=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' | sed 's/"//g')
