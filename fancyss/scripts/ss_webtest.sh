@@ -17,6 +17,8 @@ detect_perf(){
 	WT_MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
 	WT_LOW_END=0
 
+	# 低端机型： armv7l设备，或者aarch64设备，内存小于1G
+	# 高端机型： aarch64设备，且内存1G及其以上
 	if [ "${WT_ARCH}" == "armv7l" ];then
 		WT_LOW_END=1
 	elif [ "${WT_ARCH}" == "aarch64" ];then
@@ -30,11 +32,17 @@ detect_perf(){
 	if [ "${WT_LOW_END}" == "1" ];then
 		WT_XRAY_THREADS=1
 		WT_SSR_THREADS=1
+		if [ "$(nvram get odmpid)" == "RT-AX89X" ];then
+			WT_XRAY_THREADS=4
+			WT_SSR_THREADS=2
+		fi
 	else
-		if [ "${WT_CPU_CORES}" -ge 4 -a "${WT_MEM_MB}" -ge 1024 ];then
+		if [ "${WT_CPU_CORES}" -ge 3 -a "${WT_MEM_MB}" -ge 1024 ];then
+			# aarch64 4cores + 2G内存
 			WT_XRAY_THREADS=8
 			WT_SSR_THREADS=4
 		else
+			# aarch64 4cores + 1G内存
 			WT_XRAY_THREADS=4
 			WT_SSR_THREADS=2
 		fi
