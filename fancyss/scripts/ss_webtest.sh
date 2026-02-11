@@ -839,21 +839,22 @@ curl_test(){
 
 	if [ "${WT_SINGLE}" == "1" ];then
 		local pids=""
-		run_curl_once 1a 5 socks5h &
+		run_curl_once 1a 3 socks5h &
 		pids="${pids} $!"
-		run_curl_once 1b 5 socks5 &
+		run_curl_once 1b 3 socks5 &
 		pids="${pids} $!"
-		sleep 1
-		run_curl_once 2a 4 socks5h &
+		sleep 2
+		run_curl_once 2a 3 socks5h &
 		pids="${pids} $!"
-		run_curl_once 2b 4 socks5 &
+		run_curl_once 2b 3 socks5 &
 		pids="${pids} $!"
 
 		wait ${pids}
 		set -- ${tdir}/run1a.txt ${tdir}/run1b.txt ${tdir}/run2a.txt ${tdir}/run2b.txt
+
 	else
-		run_curl_once 1a 4 socks5h
-		run_curl_once 1b 4 socks5
+		run_curl_once 1a 3 socks5h
+		run_curl_once 1b 3 socks5
 		run_curl_once 2a 3 socks5h
 		run_curl_once 2b 3 socks5
 		set -- ${tdir}/run1a.txt ${tdir}/run1b.txt ${tdir}/run2a.txt ${tdir}/run2b.txt

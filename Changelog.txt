@@ -1,12 +1,17 @@
 fancyss Changelog
 
-3.5.1（todo）
+3.5.1（20260211）
    - fix	修复使用远程访问fancyss页面，状态一直waiting的问题。
+   - update	优化fancyss前端页面逻辑，前端代码量减小约70kb。
    - update	优化websockset连接，现在页面加载时只会进行一次连接。
    - update	更新xray二进制到v26.2.6
    - update	更新xray配置文件生成以适应新版本xray
-   - update	vless/hysteria2出站协议新增pinnedPeerCertSha256，verifyPeerCertByName支持，以备未来（2026.06.01）取消允许不安全（AllowInscure）
+   - update	vless/hysteria2/trojan出站协议新增pinnedPeerCertSha256，verifyPeerCertByName支持，以备未来（2026.06.01）取消允许不安全（AllowInscure）
    - remove 移除xray底层传输安全的xtls，xtls在自xray-core 1.7.x开始就被XTLS Vision取代了
+   - fix	修复hysteria2节点无法测试落地延迟的问题
+   - update	节点列表新增测试按钮，可以对单节点进行落地延迟测试
+   - update	批量延迟测试机制更新，现在ss, vless, vmess, trojan, hysteria2使用xray多outbound测试
+   - update	批量延迟测试针对不同性能机型使用不同线程数量
 
 3.5.0（20260129）
    - update	chinadns-ng二进制更新到2026.01.29版本，修复一个内存泄露问题
