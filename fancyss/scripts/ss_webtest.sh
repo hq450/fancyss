@@ -428,6 +428,7 @@ test_xray_group(){
 
 	# now we can start xray to host multiple outbounds
 	run ${TMP2}/wt-xray run -confdir ${TMP2}/json_${mark}/ >${TMP2}/logs_${mark}/log.txt 2>&1 &
+	local xray_pid=$!
 
 	# make sure xray is runing, otherwise output error
 	wait_program2 wt-xray ${TMP2}/logs_${mark}/log.txt started
@@ -443,33 +444,71 @@ test_xray_group(){
 		eval $(cat ${TMP2}/socsk5_ports.txt)
 	fi
 
-	# test in multiple process
-	cat ${TMP2}/${file} | xargs -n ${WT_XRAY_THREADS} | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+	# test in multiple process (FIFO semaphore)
+	local count=$(cat ${TMP2}/${file} | wc -l)
+	[ "${count}" -lt 1 ] && return 0
+	if [ "${WT_XRAY_THREADS}" -gt "${count}" ];then
+		WT_XRAY_THREADS=${count}
+	fi
 
-				# 1. start obfs-local if needed
-				if [ -x "${TMP2}/bash_${mark}/start_${nu}.sh" ];then
-					sh ${TMP2}/bash_${mark}/start_${nu}.sh
-				fi
+	local fifo="${TMP2}/fd1_${mark}"
+	[ -e "${fifo}" ] || mknod "${fifo}" p
+	exec 3<>"${fifo}"
+	rm -f "${fifo}"
 
-				# 2. start curl test
-				local socks5_port=$(eval echo \$socks5_port_${nu})
-				curl_test ${nu} ${socks5_port}
-
-				# 3. stop obfs-local if needed
-				if [ -x "${TMP2}/bash_${mark}/stop_${nu}.sh" ];then
-					sh ${TMP2}/bash_${mark}/stop_${nu}.sh
-				fi
-			} &
-		done
-		wait
-		update_webtest_file
+	local i=0
+	while [ ${i} -lt ${WT_XRAY_THREADS} ]; do
+		echo >&3
+		i=$((i+1))
 	done
 
+	local pids=""
+	while read -r nu; do
+		[ -z "${nu}" ] && continue
+		read -r _ <&3
+		{
+			trap 'echo >&3' EXIT
+			# 0. testing info
+			echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+
+			# 1. start obfs-local if needed
+			if [ -x "${TMP2}/bash_${mark}/start_${nu}.sh" ];then
+				sh ${TMP2}/bash_${mark}/start_${nu}.sh
+			fi
+
+			# 2. start curl test
+			local socks5_port=$(eval echo \$socks5_port_${nu})
+			if [ -z "${socks5_port}" ];then
+				echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+				# 4. update result to web file
+				cat ${TMP2}/results/${nu}.txt >> /tmp/upload/webtest.txt
+				exit 0
+			fi
+			curl_test ${nu} ${socks5_port}
+
+			# 3. stop obfs-local if needed
+			if [ -x "${TMP2}/bash_${mark}/stop_${nu}.sh" ];then
+				sh ${TMP2}/bash_${mark}/stop_${nu}.sh
+			fi
+
+			# 4. update result to web file
+			if [ -f "${TMP2}/results/${nu}.txt" ];then
+				cat ${TMP2}/results/${nu}.txt >> /tmp/upload/webtest.txt
+			fi
+		} &
+		pids="${pids} $!"
+	done < ${TMP2}/${file}
+	if [ -n "${pids}" ]; then
+		wait ${pids}
+	fi
+
+	exec 3<&-
+	exec 3>&-
+
 	# finished kill xray
+	if [ -n "${xray_pid}" ]; then
+		kill ${xray_pid} >/dev/null 2>&1
+	fi
 	killall wt-xray >/dev/null 2>&1
 	killall wt-obfs >/dev/null 2>&1
 
@@ -779,8 +818,10 @@ curl_test(){
 
 	# curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:23456 --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" http://www.google.com.tw
 
-	# staggered test: 1s gap, 5/4/3s timeout, pick the best result
-	# echo ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} >> ${TMP2}/curl_test_log.txt
+	# single node: dual-protocol staggered test
+	# round1: socks5h + socks5 (5s timeout), round2 after 1s: socks5h + socks5 (4s timeout)
+	# pick the best result, max wait about 5s
+	# multi node: sequential 4 runs (4s/4s/3s/3s), pick the best result
 	local ret=""
 	local has_timeout=0
 	local tdir="${TMP2}/curl_${nu}"
@@ -790,23 +831,35 @@ curl_test(){
 	run_curl_once(){
 		local idx=$1
 		local t=$2
-		local out=$(__timeout_run ${t} ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout ${t} -m ${t} -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+		local proto=$3
+		local out=$(__timeout_run ${t} ${TMP2}/curl-webtest -o /dev/null -s -I -x ${proto}://127.0.0.1:${port} --connect-timeout ${t} -m ${t} -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
 		local rc=$?
 		echo "${rc}|${out}" > ${tdir}/run${idx}.txt
 	}
 
-	run_curl_once 1 5 &
-	local p1=$!
-	sleep 1
-	run_curl_once 2 4 &
-	local p2=$!
-	sleep 1
-	run_curl_once 3 3 &
-	local p3=$!
+	if [ "${WT_SINGLE}" == "1" ];then
+		local pids=""
+		run_curl_once 1a 5 socks5h &
+		pids="${pids} $!"
+		run_curl_once 1b 5 socks5 &
+		pids="${pids} $!"
+		sleep 1
+		run_curl_once 2a 4 socks5h &
+		pids="${pids} $!"
+		run_curl_once 2b 4 socks5 &
+		pids="${pids} $!"
 
-	wait ${p1} ${p2} ${p3}
+		wait ${pids}
+		set -- ${tdir}/run1a.txt ${tdir}/run1b.txt ${tdir}/run2a.txt ${tdir}/run2b.txt
+	else
+		run_curl_once 1a 4 socks5h
+		run_curl_once 1b 4 socks5
+		run_curl_once 2a 3 socks5h
+		run_curl_once 2b 3 socks5
+		set -- ${tdir}/run1a.txt ${tdir}/run1b.txt ${tdir}/run2a.txt ${tdir}/run2b.txt
+	fi
 
-	for f in ${tdir}/run1.txt ${tdir}/run2.txt ${tdir}/run3.txt; do
+	for f in "$@"; do
 		[ -f "${f}" ] || continue
 		local rc=$(cut -d"|" -f1 ${f})
 		local out=$(cut -d"|" -f2- ${f})

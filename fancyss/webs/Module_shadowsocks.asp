@@ -3034,7 +3034,13 @@ function normalize_latency_val(){
 function test_latency_single(node){
 	if(!node) return;
 	if(batch_test_running){
-		layer.msg("批量测速中，无法进行单节点测速");
+		check_batch_status(function(done){
+			if(done){
+				test_latency_single(node);
+			}else{
+				layer.msg("批量测速中，无法进行单节点测速");
+			}
+		});
 		return;
 	}
 	if(single_test_running){
@@ -3084,6 +3090,26 @@ function test_latency_single(node){
 			single_test_running = false;
 			single_test_node = null;
 			enable_latency_buttons();
+		}
+	});
+}
+
+function check_batch_status(cb){
+	$.ajax({
+		url: '/_temp/webtest.txt',
+		type: 'GET',
+		cache:false,
+		dataType: 'text',
+		success: function(res) {
+			if(res && res.indexOf("stop>") !== -1){
+				batch_test_running = false;
+				if(typeof cb === "function"){ cb(true); }
+			}else{
+				if(typeof cb === "function"){ cb(false); }
+			}
+		},
+		error: function(){
+			if(typeof cb === "function"){ cb(false); }
 		}
 	});
 }
@@ -3246,6 +3272,7 @@ function load_latency_cache(){
 			const usable = count_usable_webtest(data.list);
 			const threshold = Math.max(1, Math.floor(node_nu * 0.5));
 			if(data.complete && usable >= threshold){
+				batch_test_running = false;
 				write_webtest(data.list);
 			}else{
 				load_latency_backup(usable);

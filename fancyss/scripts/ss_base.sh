@@ -173,11 +173,18 @@ __timeout_init() {
 
 	if [ -n "${__TIMEOUT_CMD}" ]; then
 		# Prefer GNU/coreutils style: timeout DURATION CMD...
-		# BusyBox (newer) is compatible; older BusyBox uses: timeout -t SECONDS -s SIG CMD...
-		if env -i PATH=${PATH} ${__TIMEOUT_CMD} 1 sh -c ":" >/dev/null 2>&1; then
+		# BusyBox uses: timeout -t SECONDS [CMD...]
+		if env -i PATH=${PATH} ${__TIMEOUT_CMD} --help 2>&1 | grep -q -- "-t SECS"; then
+			# Some BusyBox timeout returns 0 even on timeout; avoid it to keep 124 semantics.
+			env -i PATH=${PATH} ${__TIMEOUT_CMD} -t 1 sh -c "sleep 2" >/dev/null 2>&1
+			if [ "$?" = "124" ]; then
+				__TIMEOUT_STYLE="bb"
+			else
+				__TIMEOUT_CMD=""
+				__TIMEOUT_STYLE=""
+			fi
+		elif env -i PATH=${PATH} ${__TIMEOUT_CMD} 1 sh -c ":" >/dev/null 2>&1; then
 			__TIMEOUT_STYLE="gnu"
-		elif env -i PATH=${PATH} ${__TIMEOUT_CMD} -t 1 -s KILL sh -c ":" >/dev/null 2>&1; then
-			__TIMEOUT_STYLE="bb"
 		else
 			__TIMEOUT_CMD=""
 			__TIMEOUT_STYLE=""
@@ -201,26 +208,22 @@ __timeout_run() {
 		env -i PATH=${PATH} ${__TIMEOUT_CMD} "${_t}" "$@"
 		return $?
 	elif [ -n "${__TIMEOUT_CMD}" -a "${__TIMEOUT_STYLE}" = "bb" ]; then
-		env -i PATH=${PATH} ${__TIMEOUT_CMD} -t "${_t}" -s KILL "$@"
+		env -i PATH=${PATH} ${__TIMEOUT_CMD} -t "${_t}" "$@"
 		return $?
 	fi
 
 	# Shell fallback: run command in background, kill it if still running after _t seconds.
-	# Try to isolate process group via setsid when available.
-	local _cmd_pid _timer_pid _rc _timer_rc _kill_target
-	if command -v setsid >/dev/null 2>&1; then
-		env -i PATH=${PATH} setsid "$@" &
-		_cmd_pid=$!
-		_kill_target="-${_cmd_pid}"
-	else
-		env -i PATH=${PATH} "$@" &
-		_cmd_pid=$!
-		_kill_target="${_cmd_pid}"
-	fi
+	# Avoid setsid on BusyBox as it can detach and make wait() return immediately.
+	local _cmd_pid _timer_pid _rc _timer_rc _kill_target _flag
+	env -i PATH=${PATH} "$@" &
+	_cmd_pid=$!
+	_kill_target="${_cmd_pid}"
+	_flag="/tmp/.timeout_${$}_${_cmd_pid}"
 
 	(
 		sleep "${_t}"
 		if kill -0 "${_cmd_pid}" >/dev/null 2>&1; then
+			echo 1 > "${_flag}"
 			kill -TERM ${_kill_target} >/dev/null 2>&1
 			sleep 1
 			kill -KILL ${_kill_target} >/dev/null 2>&1
@@ -232,6 +235,13 @@ __timeout_run() {
 
 	wait "${_cmd_pid}"
 	_rc=$?
+
+	# If timeout fired, honor it.
+	if [ -f "${_flag}" ]; then
+		rm -f "${_flag}"
+		wait "${_timer_pid}" >/dev/null 2>&1
+		return 124
+	fi
 
 	# Stop timer early if command finished before timeout.
 	if kill -0 "${_timer_pid}" >/dev/null 2>&1; then
