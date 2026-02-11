@@ -3,11 +3,63 @@
 # fancyss script for asuswrt/merlin based router with software center
 
 source /koolshare/scripts/ss_base.sh
+source /koolshare/scripts/ss_webtest_gen.sh
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 TMP2=/tmp/fancyss_webtest
 
 run(){
 	env -i PATH=${PATH} "$@"
+}
+
+detect_perf(){
+	WT_ARCH=$(uname -m)
+	WT_CPU_CORES=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
+	WT_MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
+	WT_LOW_END=0
+
+	if [ "${WT_ARCH}" == "armv7l" ];then
+		WT_LOW_END=1
+	elif [ "${WT_ARCH}" == "aarch64" ];then
+		if [ "${WT_CPU_CORES}" -le 2 -o "${WT_MEM_MB}" -lt 768 ];then
+			WT_LOW_END=1
+		fi
+	else
+		WT_LOW_END=1
+	fi
+
+	if [ "${WT_LOW_END}" == "1" ];then
+		WT_XRAY_THREADS=1
+		WT_SSR_THREADS=1
+	else
+		if [ "${WT_CPU_CORES}" -ge 4 -a "${WT_MEM_MB}" -ge 1024 ];then
+			WT_XRAY_THREADS=8
+			WT_SSR_THREADS=4
+		else
+			WT_XRAY_THREADS=4
+			WT_SSR_THREADS=2
+		fi
+	fi
+}
+
+ensure_latency_batch(){
+	if [ -z "${ss_basic_latency_batch}" ];then
+		detect_perf
+		if [ "${WT_LOW_END}" == "1" ];then
+			dbus set ss_basic_latency_batch="0"
+			ss_basic_latency_batch="0"
+		else
+			dbus set ss_basic_latency_batch="1"
+			ss_basic_latency_batch="1"
+		fi
+	fi
+}
+
+update_webtest_file(){
+	if [ "${WT_SINGLE}" == "1" ];then
+		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat >> /tmp/upload/webtest.txt
+	else
+		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+	fi
 }
 
 # ----------------------------------------------------------------------
@@ -30,6 +82,11 @@ run(){
 # 8. 运行测试的时候，需要将各个二进制改名后运行，以免ssconfig.sh的启停将某个测试进程杀掉
 
 webtest_web(){
+	ensure_latency_batch
+	if [ "${ss_basic_latency_batch}" != "1" ];then
+		http_response "batch_disabled"
+		return 0
+	fi
 	# 1. 如果没有结果文件，需要去获取webtest
 	if [ ! -f "/tmp/upload/webtest.txt" ];then
 		clean_webtest
@@ -67,6 +124,9 @@ webtest_web(){
 start_webtest(){
 	# create lock
 	touch /tmp/webtest.lock
+	WT_SINGLE=0
+	WT_SKIP_DNS=1
+	ensure_latency_batch
 	
 	# 1. prepare
 	mkdir -p ${TMP2}
@@ -161,6 +221,7 @@ sort_nodes(){
 test_nodes(){
 	# define
 	LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+	detect_perf
 
 	# 优先测试当前节点及其附近的同类型节点，重排生成节点序号储存文件
 	local CURR_NODE=$(dbus get ssconf_basic_node)
@@ -204,7 +265,35 @@ test_nodes(){
 	#echo CURR_LINE $CURR_LINE
 	#echo CURR_FILE $CURR_FILE
 	#echo BEGN_NODE $BEGN_NODE
+
+	# merge all xray-core capable nodes into one file for batch testing
+	local XRAY_GROUP_FILE="${TMP2}/wt_xray_group.txt"
+	local XRAY_GROUP_NAME="wt_xray_group.txt"
+	rm -rf ${XRAY_GROUP_FILE}
+	find ${TMP2}/wt_*.txt|sort -t"/" -n | while read xfile; do
+		local xfile_name=${xfile##*/}
+		local xnode_type=${xfile_name#wt_*_}
+		local xnode_type=${xnode_type%%.*}
+		case ${xnode_type} in
+		00_01|00_02|00_04|00_05|03|04|05|08)
+			cat ${xfile} >> ${XRAY_GROUP_FILE}
+			;;
+		esac
+	done
+	if [ -s "${XRAY_GROUP_FILE}" ];then
+		local XR_CURR=$(grep -Ew "^${CURR_NODE}$" ${XRAY_GROUP_FILE})
+		if [ -n "${XR_CURR}" ];then
+			local XR_FIRST=$(cat ${XRAY_GROUP_FILE} | sed -n '1p')
+			if [ "${BEGN_NODE}" -gt "${XR_FIRST}" ];then
+				sed -n "/${BEGN_NODE}/,\$p" ${XRAY_GROUP_FILE} > ${TMP2}/re-arrange-1.txt
+				sed -n "1,/^${BEGN_NODE}\$/p" ${XRAY_GROUP_FILE} | sed '$d' > ${TMP2}/re-arrange-2.txt
+				cat ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt > ${XRAY_GROUP_FILE}
+				rm -rf ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt
+			fi
+		fi
+	fi
 	
+	local xray_group_done=0
 	cat ${TMP2}/nodes_file_name.txt | while read test_file
 	do
 		local file_name=${test_file##*/}
@@ -233,38 +322,20 @@ test_nodes(){
 		# 07 tuic
 		# 08 hysteria2
 		case $node_type in
-		00_01)
-			test_01_ss_fake_multi $file_name $node_type
-			;;
-		00_02)
-			test_01_ss_fake_multi $file_name $node_type
-			;;
-		00_04)
-			test_01_ss_fake_multi $file_name $node_type
-			;;
-		00_05)
-			test_01_ss_fake_multi $file_name $node_type
+		00_01|00_02|00_04|00_05|03|04|05|08)
+			if [ "${xray_group_done}" != "1" -a -s "${XRAY_GROUP_FILE}" ];then
+				test_xray_group ${XRAY_GROUP_NAME} xg
+				xray_group_done=1
+			fi
 			;;
 		01)
 			test_07_sr $file_name $node_type
-			;;
-		03)
-			test_09_xr $file_name $node_type
-			;;
-		04)
-			test_09_xr $file_name $node_type
-			;;
-		05)
-			test_10_tj $file_name $node_type
 			;;
 		06)
 			test_11_nv $file_name $node_type
 			;;
 		07)
 			test_12_tc $file_name $node_type
-			;;
-		08)
-			test_13_h2 $file_name $node_type
 			;;
 		esac
 	done
@@ -284,156 +355,31 @@ test_nodes(){
 	
 }
 
-test_01_ss_new(){
-	# test ss nodes by ss-libev
-	local file=$1
-
-	# multi thread
-	[ -e /tmp/fd1 ] || mknod /tmp/fd1 p
-	exec 3<>/tmp/fd1
-	rm -rf /tmp/fd1
-
-	awk 'BEGIN { for (i=1; i<=8; i++) printf("%d\n", i) }' | while read seq
-	do
-		echo
-	done >&3
-
-	# alisa binary
-	ln -sf /koolshare/bin/ss-local ${TMP2}/wt-ss-local
-	killall wt-ss-local >/dev/null 2>&1
-
-	# get extra option for shadowsocks-libev
-	local ARG_1 ARG_2
-	if [ "$(dbus get ss_basic_tfo)" == "1" -a "${LINUX_VER}" != "26" ]; then
-		local ARG_1="--fast-open"
-		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	fi
-	if [ "$(dbus get ss_basic_tnd)" == "1" ]; then
-		local ARG_2="--no-delay"
-	fi
-
-	# start to test
-	cat ${TMP2}/${file} | while read nu; do
-		read -u3
-		{
-			# 0. write testing info
-			echo -en "${nu}>testing...\n" >>${TMP2}/results/${nu}.txt
-			cat ${TMP2}/results/*.txt > /tmp/upload/webtest.txt
-			
-			# 1. resolve server
-			local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_server_${nu}))
-			if [ -z "${_server_ip}" ];then
-				echo -en "${nu}:\t解析失败！\n"
-				continue
-			fi
-			
-			# 2. start ss-local
-			local socks5_port=$(get_rand_port)
-			run_bg ${TMP2}/wt-ss-local -s ${_server_ip} -p $(dbus get ssconf_basic_port_${nu}) -b 0.0.0.0 -l ${socks5_port} -k $(dbus get ssconf_basic_password_${nu} | base64_decode) -m $(dbus get ssconf_basic_method_${nu}) ${ARG_1} ${ARG_2}
-			sleep 1
-			wait_program wt-ss-local
-			
-			# 3. start curl test
-			curl_test ${nu} ${socks5_port}
-
-			# 4. write tested info
-			cat ${TMP2}/results/*.txt > /tmp/upload/webtest.txt
-			
-			# 5. stop ss-local
-			local _pid=$(ps -w | grep "wt-ss-local" | grep -w "${_server_ip}" | grep -w "$(dbus get ssconf_basic_port_${nu})" | grep -w "${socks5_port}" | awk '{print $1}' | sed -n '1p')
-			if [ -n "${_pid}" ];then
-				kill -9 ${_pid} >/dev/null 2>&1
-			fi
-			
-			echo >&3
-		} &
-	done
-	wait
-	
-	exec 3<&-
-	exec 3>&-
-	
-	rm -rf ${TMP2}/pids/*
-	rm -rf ${TMP2}/wt-ss-local
-}
-
-test_01_ss_old(){
-	# test ss nodes by ss-libev
+test_xray_group(){
+	# test nodes by single xray instance
 	local file=$1
 	local mark=$2
-
-	# alisa binary
-	ln -sf /koolshare/bin/ss-local ${TMP2}/wt-ss-local
-	killall wt-ss-local >/dev/null 2>&1
-
-	# get extra option for shadowsocks-libev
-	local ARG_1 ARG_2
-	if [ "$(dbus get ss_basic_tfo)" == "1" -a "${LINUX_VER}" != "26" ]; then
-		local ARG_1="--fast-open"
-		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
+	[ -z "${WT_XRAY_THREADS}" ] && WT_XRAY_THREADS=1
+	[ ! -f "${TMP2}/${file}" ] && return 0
+	local count=$(cat ${TMP2}/${file} | wc -l)
+	[ "${count}" -lt 1 ] && return 0
+	local JQ_BIN="/koolshare/bin/jq"
+	if [ ! -x "${JQ_BIN}" ];then
+		JQ_BIN="$(command -v jq 2>/dev/null)"
 	fi
-	if [ "$(dbus get ss_basic_tnd)" == "1" ]; then
-		local ARG_2="--no-delay"
-	fi
+	[ -z "${JQ_BIN}" ] && JQ_BIN="/usr/bin/jq"
 
-	# start to test
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-				
-				# 1. resolve server
-				local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_server_${nu}))
-				if [ -z "${_server_ip}" ];then
-					echo -en "${nu}:\t解析失败！\n"
-					continue
-				fi
-				
-				# 2. start ss-local
-				local socks5_port=$(get_rand_port)
-				run_bg ${TMP2}/wt-ss-local -s ${_server_ip} -p $(dbus get ssconf_basic_port_${nu}) -b 0.0.0.0 -l ${socks5_port} -k $(dbus get ssconf_basic_password_${nu} | base64_decode) -m $(dbus get ssconf_basic_method_${nu}) ${ARG_1} ${ARG_2}
-
-				sleep 1
-				wait_program wt-ss-local
-
-				# 3. start curl test
-				curl_test ${nu} ${socks5_port}
-				
-				# 4. stop ss-local
-				local _pid=$(ps -w | grep "wt-ss-local" | grep -w "${_server_ip}" | grep -w "$(dbus get ssconf_basic_port_${nu})" | grep -w "${socks5_port}" | awk '{print $1}' | sed -n '1p')
-				if [ -n "${_pid}" ];then
-					kill -9 ${_pid} >/dev/null 2>&1
-				fi
-			} &
-		done
-		wait
-		
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	done
-	
-	rm -rf ${TMP2}/pids/*
-	rm -rf ${TMP2}/wt-ss-local
-}
-
-test_01_ss_fake_multi(){
-	# test ss nodes by xray fake multi thread
-	local file=$1
-	local mark=$2
-	local count=$(cat ${TMP2}/$file | wc -l)
-	
 	# show info to web as soon as possible
-	cat ${TMP2}/${file} | xargs -n 8 | sed -n '1p' | while read nus
-	do
+	cat ${TMP2}/${file} | xargs -n ${WT_XRAY_THREADS} | sed -n '1p' | while read nus; do
 		for nu in $nus; do
-			echo -e -n "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+			echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
 		done
 	done
+
 	# prepare
-	killall wt-ss >/dev/null 2>&1
+	killall wt-xray >/dev/null 2>&1
 	killall wt-obfs >/dev/null 2>&1
-	ln -sf /koolshare/bin/xray ${TMP2}/wt-ss
+	ln -sf /koolshare/bin/xray ${TMP2}/wt-xray
 	ln -sf /koolshare/bin/obfs-local ${TMP2}/wt-obfs
 	mkdir -p ${TMP2}/conf_${mark}
 	mkdir -p ${TMP2}/json_${mark}
@@ -443,189 +389,93 @@ test_01_ss_fake_multi(){
 	rm -rf ${TMP2}/json_${mark}/*
 	rm -rf ${TMP2}/bash_${mark}/*
 	rm -rf ${TMP2}/logs_${mark}/*
+	rm -f ${TMP2}/socsk5_ports.txt
 
-	# gen all xray conf at once
-	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-		for nu in $nus; do
-			{
-				creat_xray_ss_json ${nu} ${mark}
-			} &
-		done
-		wait
+	# gen xray json for all nodes
+	cat ${TMP2}/${file} | while read nu; do
+		local node_type=$(dbus get ssconf_basic_type_${nu})
+		case ${node_type} in
+		0)
+			wt_gen_ss_outbound ${nu} ${mark}
+			;;
+		3)
+			wt_gen_vmess_outbound ${nu} ${mark}
+			;;
+		4)
+			wt_gen_vless_outbound ${nu} ${mark}
+			;;
+		5)
+			wt_gen_trojan_outbound ${nu} ${mark}
+			;;
+		8)
+			wt_gen_hy2_outbound ${nu} ${mark}
+			;;
+		esac
+		wt_write_inbound_routing ${nu} ${mark}
 	done
 
 	# merge all xray json
-	find ${TMP2}/conf_${mark} -name "*_inbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ inbounds: [ inputs.inbounds[0] ] }' >${TMP2}/json_${mark}/00_inbounds.json
-	find ${TMP2}/conf_${mark} -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json_${mark}/01_outbounds.json
-	find ${TMP2}/conf_${mark} -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json_${mark}/02_routing.json
+	find ${TMP2}/conf_${mark} -name "*_inbounds.json" | sort -t "/" -nk5 | xargs cat | run ${JQ_BIN} -n '{ inbounds: [ inputs.inbounds[0] ] }' >${TMP2}/json_${mark}/00_inbounds.json
+	find ${TMP2}/conf_${mark} -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run ${JQ_BIN} -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json_${mark}/01_outbounds.json
+	find ${TMP2}/conf_${mark} -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run ${JQ_BIN} -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json_${mark}/02_routing.json
+	if [ ! -s "${TMP2}/json_${mark}/00_inbounds.json" -o ! -s "${TMP2}/json_${mark}/01_outbounds.json" -o ! -s "${TMP2}/json_${mark}/02_routing.json" ];then
+		cat ${TMP2}/${file} | while read nu; do
+			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+		done
+		update_webtest_file
+		return 0
+	fi
 
 	# now we can start xray to host multiple outbounds
-	run ${TMP2}/wt-ss run -confdir ${TMP2}/json_${mark}/ >${TMP2}/logs_${mark}/log.txt 2>&1 &
+	run ${TMP2}/wt-xray run -confdir ${TMP2}/json_${mark}/ >${TMP2}/logs_${mark}/log.txt 2>&1 &
 
 	# make sure xray is runing, otherwise output error
-	# sleep 3
-	wait_program2 wt-ss ${TMP2}/logs_${mark}/log.txt started
+	wait_program2 wt-xray ${TMP2}/logs_${mark}/log.txt started
+	if ! pidof wt-xray >/dev/null 2>&1;then
+		cat ${TMP2}/${file} | while read nu; do
+			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+		done
+		update_webtest_file
+		return 0
+	fi
 
 	if [ -f "${TMP2}/socsk5_ports.txt" ];then
 		eval $(cat ${TMP2}/socsk5_ports.txt)
 	fi
 
 	# test in multiple process
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
+	cat ${TMP2}/${file} | xargs -n ${WT_XRAY_THREADS} | while read nus; do
 		for nu in $nus; do
 			{
 				# 0. testing info
 				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
 
-				# 1. start obfs-local
+				# 1. start obfs-local if needed
 				if [ -x "${TMP2}/bash_${mark}/start_${nu}.sh" ];then
 					sh ${TMP2}/bash_${mark}/start_${nu}.sh
 				fi
-				
+
 				# 2. start curl test
 				local socks5_port=$(eval echo \$socks5_port_${nu})
 				curl_test ${nu} ${socks5_port}
-				
-				# 3. stop obfs-local
+
+				# 3. stop obfs-local if needed
 				if [ -x "${TMP2}/bash_${mark}/stop_${nu}.sh" ];then
 					sh ${TMP2}/bash_${mark}/stop_${nu}.sh
 				fi
 			} &
 		done
 		wait
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+		update_webtest_file
 	done
 
 	# finished kill xray
-	killall wt-ss >/dev/null 2>&1
-
-	# finished
-	rm -rf ${TMP2}/wt-ss
-	rm -rf ${TMP2}/wt-obfs
-}
-
-
-test_01_ss_real_multi(){
-	# test ss nodes by xray real multi thread
-	local file=$1
-	local mark=$2
-	local count=$(cat ${TMP2}/$file | wc -l)
-	
-	# show info to web as soon as possible
-	cat ${TMP2}/${file} | xargs -n 8 | sed -n '1p' | while read nus; do
-		for nu in $nus; do
-			echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-		done
-	done
-	
-	# prepare
-	killall wt-ss >/dev/null 2>&1
-	killall wt-obfs >/dev/null 2>&1
-	ln -sf /koolshare/bin/xray ${TMP2}/wt-ss
-	ln -sf /koolshare/bin/obfs-local ${TMP2}/wt-obfs
-	mkdir -p ${TMP2}/conf_${mark}
-	mkdir -p ${TMP2}/json_${mark}
-	mkdir -p ${TMP2}/bash_${mark}
-	mkdir -p ${TMP2}/logs_${mark}
-	rm -rf ${TMP2}/conf_${mark}/*
-	rm -rf ${TMP2}/json_${mark}/*
-	rm -rf ${TMP2}/bash_${mark}/*
-	rm -rf ${TMP2}/logs_${mark}/*
-
-	# gen all xray conf at once
-	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-		for nu in $nus; do
-			{
-				creat_xray_ss_json ${nu} ${mark}
-			} &
-		done
-		wait
-	done
-
-	# merge all xray json
-	find ${TMP2}/conf_${mark} -name "*_inbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ inbounds: [ inputs.inbounds[0] ] }' >${TMP2}/json_${mark}/00_inbounds.json
-	find ${TMP2}/conf_${mark} -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json_${mark}/01_outbounds.json
-	find ${TMP2}/conf_${mark} -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json_${mark}/02_routing.json
-
-	# now we can start xray to host multiple outbounds
-	run ${TMP2}/wt-ss run -confdir ${TMP2}/json_${mark}/ >${TMP2}/logs_${mark}/log.txt 2>&1 &
-
-	# make sure xray is runing, otherwise output error
-	# sleep 3
-	wait_program2 wt-ss ${TMP2}/logs_${mark}/log.txt started
-
-	if [ -f "${TMP2}/socsk5_ports.txt" ];then
-		eval $(cat ${TMP2}/socsk5_ports.txt)
-	fi
-
-	# multi thread
-	[ -e /tmp/fd1 ] || mknod /tmp/fd1 p
-	exec 3<>/tmp/fd1
-	rm -rf /tmp/fd1
-
-	awk 'BEGIN { for (i=1; i<=8; i++) printf("%d\n", i) }' | while read seq
-	do
-		echo
-	done >&3
-
-	# test in multiple process
-	cat ${TMP2}/${file} | while read nu; do
-		read -u3
-		{
-			# 0. testing info
-			echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-			cat ${TMP2}/results/*.txt > /tmp/upload/webtest.txt
-			
-			# 1. start obfs-local
-			if [ -x "${TMP2}/bash_${mark}/start_${nu}.sh" ];then
-				sh ${TMP2}/bash_${mark}/start_${nu}.sh
-			fi
-			
-			# 2. start curl test
-			local socks5_port=$(eval echo \$socks5_port_${nu})
-			curl_test ${nu} ${socks5_port}
-
-			# 4. write tested info
-			cat ${TMP2}/results/*.txt > /tmp/upload/webtest.txt
-			
-			# 5. stop obfs-local
-			if [ -x "${TMP2}/bash_${mark}/stop_${nu}.sh" ];then
-				sh ${TMP2}/bash_${mark}/stop_${nu}.sh
-			fi
-			
-			echo >&3
-		} &
-	done
-
-	exec 3<&-
-	exec 3>&-
-
-	# finished kill xray
-	killall wt-ss >/dev/null 2>&1
+	killall wt-xray >/dev/null 2>&1
 	killall wt-obfs >/dev/null 2>&1
 
 	# finished
-	rm -rf ${TMP2}/wt-ss
+	rm -rf ${TMP2}/wt-xray
 	rm -rf ${TMP2}/wt-obfs
-}
-
-test_03_ss(){
-	# not used since 3.3.6
-	local file=$1
-
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
-		for nu in $nus; do
-			{
-				echo -en "${nu}>testing\n" >>/tmp/upload/webtest.txt
-				echo -en "${nu}>ns\n" >>${TMP2}/results/${nu}.txt
-			} &
-		done
-		wait
-
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	done
 }
 
 test_07_sr(){
@@ -691,213 +541,6 @@ test_07_sr(){
 	rm -rf ${TMP2}/wt-ss-local
 }
 
-test_08_vr(){
-	local file=$1
-
-	# alisa binary
-	killall wt-v2ray >/dev/null 2>&1
-	#if [ -x "/koolshare/bin/v2ray" ];then
-	#	ln -sf /koolshare/bin/v2ray ${TMP2}/wt-v2ray
-	#else
-		ln -sf /koolshare/bin/xray ${TMP2}/wt-v2ray
-	#fi
-
-	# gen all v2ray conf
-	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-		for nu in $nus; do
-			{
-				creat_v2ray_json ${nu}
-			} &
-		done
-		wait
-	done
-
-	# merge json
-	mkdir -p ${TMP2}/json
-	rm -rf ${TMP2}/json/*
-	find ${TMP2}/conf -name "*_inbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ inbounds: [ inputs.inbounds[0] ] }' >${TMP2}/json/00_inbounds.json
-	find ${TMP2}/conf -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json/01_outbounds.json
-	find ${TMP2}/conf -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json/02_routing.json
-	rm -rf ${TMP2}/conf/*
-
-	# now we can start v2ray or v2ray/xray to host multiple outbounds
-	run ${TMP2}/wt-v2ray run -confdir ${TMP2}/json/ >/dev/null 2>&1 &
-	
-	# make sure xray/v2ray is runing, otherwise output error
-	sleep 3
-	wait_program wt-v2ray
-
-	if [ -f "${TMP2}/socsk5_ports.txt" ];then
-		eval $(cat ${TMP2}/socsk5_ports.txt)
-	fi
-	
-	# test in multiple process
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-
-				# 2. start curl test
-				local socks5_port=$(eval echo \$socks5_port_${nu})
-				curl_test ${nu} ${socks5_port}
-			} &
-		done
-		wait
-
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	done
-	
-	# finished kill v2ray
-	killall wt-v2ray >/dev/null 2>&1
-
-	# finished
-	rm -rf ${TMP2}/conf/*
-	rm -rf ${TMP2}/json/*
-	rm -rf ${TMP2}/wt-v2ray
-}
-
-test_09_xr(){
-	local file=$1
-	local _node_type=$2
-
-	# alisa binary
-	killall wt-xray >/dev/null 2>&1
-	ln -sf /koolshare/bin/xray ${TMP2}/wt-xray
-	mkdir -p ${TMP2}/conf/
-	rm -rf ${TMP2}/conf/*
-
-	# gen all xray conf
-	if [ "${_node_type}" == "03" ];then
-		cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-			for nu in $nus; do
-				{
-					creat_v2ray_json ${nu}
-				} &
-			done
-			wait
-		done
-	elif [ "${_node_type}" == "04" ];then
-		cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-			for nu in $nus; do
-				{
-					creat_xray_json ${nu}
-				} &
-			done
-			wait
-		done
-	fi
-
-	# merge all xray json
-	mkdir -p ${TMP2}/json
-	rm -rf ${TMP2}/json/*
-	find ${TMP2}/conf -name "*_inbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ inbounds: [ inputs.inbounds[0] ] }' >${TMP2}/json/00_inbounds.json
-	find ${TMP2}/conf -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json/01_outbounds.json
-	find ${TMP2}/conf -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json/02_routing.json
-	rm -rf ${TMP2}/conf/*
-
-	# now we can start xray or xray to host multiple outbounds
-	run ${TMP2}/wt-xray run -confdir ${TMP2}/json/ >/dev/null 2>&1 &
-
-	# make sure xray is runing, otherwise output error
-	sleep 3
-	wait_program wt-xray
-
-	if [ -f "${TMP2}/socsk5_ports.txt" ];then
-		eval $(cat ${TMP2}/socsk5_ports.txt)
-	fi
-
-	# test in multiple process
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-				
-				# 2. start curl test
-				local socks5_port=$(eval echo \$socks5_port_${nu})
-				curl_test ${nu} ${socks5_port}
-			} &
-		done
-		wait
-
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	done
-
-	# finished kill xray
-	killall wt-xray >/dev/null 2>&1
-
-	# finished
-	rm -rf ${TMP2}/conf/*
-	rm -rf ${TMP2}/json/*
-	rm -rf ${TMP2}/wt-xray
-}
-
-test_10_tj(){
-	local file=$1
-
-	# alisa binary
-	killall wt-trojan >/dev/null 2>&1
-	ln -sf /koolshare/bin/xray ${TMP2}/wt-trojan
-
-	# gen all trojan conf
-	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-		for nu in $nus; do
-			{
-				creat_trojan_json ${nu}
-			} &
-		done
-		wait
-	done
-
-	# merge all trojan json
-	mkdir -p ${TMP2}/json
-	rm -rf ${TMP2}/json/*
-	find ${TMP2}/conf -name "*_inbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ inbounds: [ inputs.inbounds[0] ] }' >${TMP2}/json/00_inbounds.json
-	find ${TMP2}/conf -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json/01_outbounds.json
-	find ${TMP2}/conf -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run jq -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json/02_routing.json
-	rm -rf ${TMP2}/conf/*
-
-	# now we can start wt-trojan to host multiple outbounds
-	run ${TMP2}/wt-trojan run -confdir ${TMP2}/json/ >/dev/null 2>&1 &
-
-	# make sure wt-trojan is runing, otherwise output error
-	sleep 3
-	wait_program wt-trojan
-
-	if [ -f "${TMP2}/socsk5_ports.txt" ];then
-		eval $(cat ${TMP2}/socsk5_ports.txt)
-	fi
-
-	# test in multiple process
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-
-				# 2. start curl test
-				local socks5_port=$(eval echo \$socks5_port_${nu})
-				curl_test ${nu} ${socks5_port}
-			} &
-		done
-		wait
-
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	done
-
-	# finished kill wt-trojan
-	killall wt-trojan >/dev/null 2>&1
-
-	# finished
-	rm -rf ${TMP2}/conf/*
-	rm -rf ${TMP2}/json/*
-	rm -rf ${TMP2}/wt-trojan
-}
-
 test_11_nv(){
 	local file=$1
 
@@ -905,7 +548,7 @@ test_11_nv(){
 	ln -sf /koolshare/bin/naive ${TMP2}/wt-naive
 	killall wt-naive >/dev/null 2>&1
 
-	cat ${TMP2}/${file} | xargs -n 2 | while read nus; do
+	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
 		for nu in $nus; do
 			{
 				# 1. resolve server
@@ -934,7 +577,7 @@ test_11_nv(){
 		wait
 
 		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+		update_webtest_file
 	done
 	
 	killall wt-naive >/dev/null 2>&1
@@ -948,7 +591,7 @@ test_12_tc(){
 	ln -sf /koolshare/bin/tuic-client ${TMP2}/wt-tuic
 	killall wt-tuic >/dev/null 2>&1
 
-	cat ${TMP2}/${file} | xargs -n 2 | while read nus; do
+	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
 		for nu in $nus; do
 			{
 				# 1. gen json
@@ -974,760 +617,11 @@ test_12_tc(){
 		wait
 
 		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+		update_webtest_file
 	done
 	
 	killall wt-tuic >/dev/null 2>&1
 	rm -rf ${TMP2}/wt-tuic
-}
-
-test_13_h2(){
-	local file=$1
-	local mark=$2
-	
-	# alisa binary
-	killall wt-hy2 >/dev/null 2>&1
-	mkdir -p ${TMP2}/conf_${mark}
-	rm -rf ${TMP2}/wt-hy2
-	rm -rf ${TMP2}/conf_${mark}/*
-	ln -sf /koolshare/bin/hysteria2 ${TMP2}/wt-hy2
-
-	# gen hy2 yaml
-	cat ${TMP2}/${file} | xargs -n 16 | while read nus; do
-		for nu in $nus; do
-			{
-				creat_hy2_yaml ${nu} ${mark}
-			} &
-		done
-		wait
-	done
-
-	if [ -f "${TMP2}/socsk5_ports.txt" ];then
-		eval $(cat ${TMP2}/socsk5_ports.txt)
-	fi
-
-	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
-
-				# 1. start hy2       
-				if [ "${LINUX_VER}" == "419" -o "${LINUX_VER}" == "54" ];then
-					run ${TMP2}/wt-hy2 -c ${TMP2}/conf_${mark}/${nu}.yaml >/dev/null 2>&1 &
-				else
-					env -i PATH=${PATH} QUIC_GO_DISABLE_ECN=true ${TMP2}/wt-hy2 -c ${TMP2}/conf_${mark}/${nu}.yaml >/dev/null 2>&1 &
-				fi
-				sleep 2
-
-				# 2. start curl test
-				local socks5_port=$(eval echo \$socks5_port_${nu})
-				curl_test ${nu} ${socks5_port}
-
-				# 3. stop hy2
-				killall wt-hy2
-			} &
-		done
-		wait
-		
-		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	done
-
-	rm -rf ${TMP2}/wt-hy2
-	#rm -rf ${TMP2}/conf/*
-}
-
-creat_v2ray_json() {
-	local nu=$1
-	local v2ray_use_json=$(dbus get ssconf_basic_v2ray_use_json_${nu})
-	# regular format
-	if [ "${v2ray_use_json}" != "1" ]; then
-		local v2ray_server=$(dbus get ssconf_basic_server_${nu})
-		local _server_ip=$(_get_server_ip ${v2ray_server})
-		if [ -z "${_server_ip}" ];then
-			_server_ip=${v2ray_server}
-		fi
-	
-		local tcp="null"
-		local kcp="null"
-		local ws="null"
-		local h2="null"
-		local qc="null"
-		local gr="null"
-		local htup="null"
-		local tls="null"
-		
-		local v2ray_network_host=$(dbus get ssconf_basic_v2ray_network_host_${nu} | sed 's/,/", "/g')
-		local v2ray_network_path=$(dbus get ssconf_basic_v2ray_network_path_${nu})
-		local v2ray_network_security="none"
-		local v2ray_network_security=$(dbus get ssconf_basic_v2ray_network_security_${nu})
-		if [ "${v2ray_network_security}" == "tls" ];then
-			local v2ray_network_security_ai=$(dbus get ssconf_basic_v2ray_network_security_ai_${nu})
-			local v2ray_network_security_alpn_h2=$(dbus get ssconf_basic_v2ray_network_security_alpn_h2_${nu})
-			local v2ray_network_security_alpn_http=$(dbus get ssconf_basic_v2ray_network_security_alpn_http_${nu})
-
-			if [ "${v2ray_network_security_alpn_h2}" == "1" -a "${v2ray_network_security_alpn_http}" == "1" ];then
-				local apln="[\"h2\",\"http/1.1\"]"
-			elif [ "${v2ray_network_security_alpn_h2}" != "1" -a "${v2ray_network_security_alpn_http}" == "1" ];then
-				local apln="[\"http/1.1\"]"
-			elif [ "${v2ray_network_security_alpn_h2}" == "1" -a "${v2ray_network_security_alpn_http}" != "1" ];then
-				local apln="[\"h2\"]"
-			elif [ "${v2ray_network_security_alpn_h2}" != "1" -a "${v2ray_network_security_alpn_http}" != "1" ];then
-				local apln="null"
-			fi
-
-			# sni is sni
-			local v2ray_network_security_sni=$(dbus get ssconf_basic_v2ray_network_security_sni_${nu})
-			
-			# sni is server
-			if [ -z "${v2ray_network_security_sni}" ];then
-				__valid_ip "${v2ray_server}"
-				if [ "$?" != "0" ]; then
-					# likely to be domain
-					local v2ray_network_security_sni="$(dbus get ssconf_basic_server_${nu})"
-				fi
-			fi
-
-			# sni is host
-			if [ -z "${v2ray_network_security_sni}" -a -n "{v2ray_network_host}" ];then
-				local v2ray_network_security_sni=$(echo "${v2ray_network_host}" | sed 's/", "/\n/g' | sed -n '1p')
-			fi
-
-			# gather
-			local tls="{
-				\"allowInsecure\": $(get_function_switch ${v2ray_network_security_ai})
-				,\"alpn\": ${apln}
-				,\"serverName\": $(get_value_null ${v2ray_network_security_sni})
-				}"		
-		fi
-		local v2ray_headtype_tcp=$(dbus get ssconf_basic_v2ray_headtype_tcp_${nu})
-		local v2ray_headtype_kcp=$(dbus get ssconf_basic_v2ray_headtype_kcp_${nu})
-		local v2ray_kcp_seed=$(dbus get ssconf_basic_v2ray_kcp_seed_${nu})
-		local v2ray_headtype_quic=$(dbus get ssconf_basic_v2ray_headtype_quic_${nu})
-		local v2ray_grpc_mode=$(dbus get ssconf_basic_v2ray_grpc_mode_${nu})
-		
-		local v2ray_network=$(dbus get ssconf_basic_v2ray_network_${nu})
-		[ -z "${v2ray_network}" ] && v2ray_network="tcp"
-		case "${v2ray_network}" in
-		tcp)
-			if [ "${v2ray_headtype_tcp}" == "http" ]; then
-				local tcp="{
-					\"header\": {
-					\"type\": \"http\"
-					,\"request\": {
-					\"version\": \"1.1\"
-					,\"method\": \"GET\"
-					,\"path\": $(get_path_empty ${v2ray_network_path})
-					,\"headers\": {
-					\"Host\": $(get_host_empty ${v2ray_network_host}),
-					\"User-Agent\": [
-					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
-					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
-					]
-					,\"Accept-Encoding\": [\"gzip, deflate\"]
-					,\"Connection\": [\"keep-alive\"]
-					,\"Pragma\": \"no-cache\"
-					}
-					}
-					}
-					}"
-			fi
-			;;
-		kcp)
-			local kcp="{
-				\"mtu\": 1350
-				,\"tti\": 50
-				,\"uplinkCapacity\": 12
-				,\"downlinkCapacity\": 100
-				,\"congestion\": false
-				,\"readBufferSize\": 2
-				,\"writeBufferSize\": 2
-				,\"header\": {
-				\"type\": \"${v2ray_headtype_kcp}\"
-				}
-				,\"seed\": $(get_value_null ${v2ray_kcp_seed})
-				}"
-			;;
-		ws)
-			if [ -z "${v2ray_network_path}" -a -z "${v2ray_network_host}" ]; then
-				local ws="{}"
-			elif [ -z "${v2ray_network_path}" -a -n "${v2ray_network_host}" ]; then
-				local ws="{
-					\"headers\": $(get_ws_header ${v2ray_network_host})
-					}"
-			elif [ -n "${v2ray_network_path}" -a -z "${v2ray_network_host}" ]; then
-				local ws="{
-					\"path\": $(get_value_null ${v2ray_network_path})
-					}"
-			elif [ -n "${v2ray_network_path}" -a -n "${v2ray_network_host}" ]; then
-				local ws="{
-					\"path\": $(get_value_null ${v2ray_network_path}),
-					\"headers\": $(get_ws_header ${v2ray_network_host})
-					}"
-			fi
-			;;
-		h2)
-			local h2="{
-				\"path\": $(get_value_empty ${v2ray_network_path})
-				,\"host\": $(get_host ${v2ray_network_host})
-				}"
-			;;
-		quic)
-			local qc="{
-				\"security\": $(get_value_empty ${v2ray_network_host}),
-				\"key\": $(get_value_empty ${v2ray_network_path}),
-				\"header\": {
-				\"type\": \"${v2ray_headtype_quic}\"
-				}
-				}"
-			;;
-		grpc)
-			local gr="{
-				\"serviceName\": $(get_value_empty ${v2ray_network_path}),
-				\"multiMode\": $(get_grpc_multimode ${v2ray_grpc_mode})
-				}"
-			;;
-		httpupgrade)
-			local htup="{
-				\"path\": $(get_value_empty $ss_basic_v2ray_network_path)
-				,\"host\": $(get_value_empty $ss_basic_v2ray_network_host)
-				}"
-			;;
-		esac
-
-		local v2ray_port=$(dbus get ssconf_basic_port_${nu})
-		local v2ray_uuid=$(dbus get ssconf_basic_v2ray_uuid_${nu})
-		local v2ray_alterid=$(dbus get ssconf_basic_v2ray_alterid_${nu})
-		local v2ray_security=$(dbus get ssconf_basic_v2ray_security_${nu})
-		[ -z "${xray_alterid}" ] && xray_alterid="0"
-		[ -z "${v2ray_security}" ] && v2ray_security="auto"
-	
-		# outbounds area
-		cat >>${TMP2}/conf/${nu}_outbounds.json <<-EOF
-			{
-			"outbounds": [
-				{
-					"tag": "proxy${nu}",
-					"protocol": "vmess",
-					"settings": {
-						"vnext": [
-							{
-								"address": "${_server_ip}",
-								"port": ${v2ray_port},
-								"users": [
-									{
-										"id": "${v2ray_uuid}"
-										,"alterId": ${v2ray_alterid}
-										,"security": "${v2ray_security}"
-									}
-								]
-							}
-						]
-					},
-					"streamSettings": {
-						"network": "${v2ray_network}"
-						,"security": "${v2ray_network_security}"
-						,"tlsSettings": $tls
-						,"tcpSettings": $tcp
-						,"kcpSettings": $kcp
-						,"wsSettings": $ws
-						,"httpSettings": $h2
-						,"quicSettings": $qc
-						,"grpcSettings": $gr
-						,"httpupgradeSettings": $htup
-					},
-					"mux": {"enabled": false}
-				}
-			]
-			}
-		EOF
-
-		# delete all null value
-		# jq 'del(..|nulls)' ${TMP2}/conf/${nu}_outbounds.json | run sponge ${TMP2}/conf/${nu}_outbounds.json
-		sed -i '/null/d' ${TMP2}/conf/${nu}_outbounds.json 2>/dev/null
-	else
-		dbus get ssconf_basic_v2ray_json_${nu} | base64_decode >${TMP2}/v2ray_user.json
-		local OB=$(cat ${TMP2}/v2ray_user.json | run jq .outbound)
-		local OBS=$(cat ${TMP2}/v2ray_user.json | run jq .outbounds)
-
-		# 兼容旧格式：outbound
-		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat ${TMP2}/v2ray_user.json | run jq .outbound)
-		fi
-		
-		# 新格式：outbound[]
-		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat ${TMP2}/v2ray_user.json | run jq .outbounds[0])
-		fi
-		echo "{}" | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >${TMP2}/conf/${nu}_outbounds.json
-	fi
-
-	# inbounds
-	local socks5_port=$(get_rand_port)
-	echo "export socks5_port_${nu}=${socks5_port}" >> ${TMP2}/socsk5_ports.txt
-	cat >>${TMP2}/conf/${nu}_inbounds.json <<-EOF
-		{
-		  "inbounds": [
-		    {
-		      "port": ${socks5_port},
-		      "protocol": "socks",
-		      "settings": {
-		        "auth": "noauth",
-		        "udp": true
-		      },
-		      "tag": "socks${nu}"
-		    }
-		  ]
-		}
-	EOF
-
-	# routing
-	cat >>${TMP2}/conf/${nu}_routing.json <<-EOF
-		{
-		  "routing": {
-		    "rules": [
-		      {
-		        "type": "field",
-		        "inboundTag": ["socks${nu}"],
-		        "outboundTag": "proxy${nu}"
-		      }
-		    ]
-		  }
-		}
-	EOF
-}
-
-creat_xray_ss_json() {
-	local nu=$1
-	local mark=$2
-
-	# gen xray outbound
-	local ss_server=$(dbus get ssconf_basic_server_${nu})
-	local _server_ip=$(_get_server_ip ${ss_server})
-	if [ -z "${_server_ip}" ];then
-		_server_ip=${ss_server}
-	fi
-	local ss_port=$(dbus get ssconf_basic_port_${nu})
-	local ss_pass=$(dbus get ssconf_basic_password_${nu} | base64_decode)
-	local ss_meth=$(dbus get ssconf_basic_method_${nu})
-	
-	if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
-		local OBFS_ARG="--fast-open"
-		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	else
-		local OBFS_ARG=""
-	fi
-
-	# obfs
-	if [ "$(dbus get ssconf_basic_ss_obfs_${nu})" == "http" -o "$(dbus get ssconf_basic_ss_obfs_${nu})" == "tls" ]; then
-		local obfs_port=$(get_rand_port)
-		local _server_ip_tmp="127.0.0.1"
-		local _server_port_tmp="${obfs_port}"
-		if [ -n "$(dbus get ssconf_basic_ss_obfs_host_${nu})" ]; then
-			cat >>"${TMP2}/bash_${mark}/start_${nu}.sh" <<-EOF
-				#!/bin/sh
-				${TMP2}/wt-obfs -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(dbus get ssconf_basic_ss_obfs_${nu}) --obfs-host $(dbus get ssconf_basic_ss_obfs_host_${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
-			EOF
-		else
-			cat >>"${TMP2}/bash_${mark}/start_${nu}.sh" <<-EOF
-				#!/bin/sh
-				${TMP2}/wt-obfs -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(dbus get ssconf_basic_ss_obfs_${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
-			EOF
-		fi
-		cat >${TMP2}/bash_${mark}/stop_${nu}.sh <<-EOF
-			#!/bin/sh
-			_pid=\$(ps -w | grep "wt-obfs" | grep -w "${_server_ip}" | grep -w "${ss_port}" | grep -w "${_server_port_tmp}" | awk '{print \$1}' | sed -n '1p')
-			if [ -n "\${_pid}" ];then
-			    kill -9 \${_pid}
-			fi
-		EOF
-		
-		chmod +x ${TMP2}/bash_${mark}/start_${nu}.sh
-		chmod +x ${TMP2}/bash_${mark}/stop_${nu}.sh
-	else
-		local _server_ip_tmp="${_server_ip}"
-		local _server_port_tmp="${ss_port}"
-	fi
-	
-	cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
-		{
-		"outbounds": [
-			{
-				"tag": "proxy${nu}",
-				"protocol": "shadowsocks",
-				"settings": {
-					"servers": [
-						{
-							"address": "${_server_ip_tmp}",
-							"port": ${_server_port_tmp},
-							"password": "${ss_pass}",
-							"method": "${ss_meth}",
-							"uot": false
-						}
-					]
-				},
-				"sockopt": {
-					"tcpFastOpen": $(get_function_switch ${ss_basic_tfo}),
-					"tcpcongestion": "bbr"
-				}
-			}
-		]
-		}
-	EOF
-	
-	sed -i '/null/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
-	if [ "${LINUX_VER}" == "26" ]; then
-		sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
-	fi
-
-	# inbounds
-	local socks5_port=$(get_rand_port)
-	echo "export socks5_port_${nu}=${socks5_port}" >> ${TMP2}/socsk5_ports.txt
-	cat >>${TMP2}/conf_${mark}/${nu}_inbounds.json <<-EOF
-		{
-		  "inbounds": [
-		    {
-		      "port": ${socks5_port},
-		      "protocol": "socks",
-		      "settings": {
-		        "auth": "noauth",
-		        "udp": true
-		      },
-		      "tag": "socks${nu}"
-		    }
-		  ]
-		}
-	EOF
-
-	# routing
-	cat >>${TMP2}/conf_${mark}/${nu}_routing.json <<-EOF
-		{
-		  "routing": {
-		    "rules": [
-		      {
-		        "type": "field",
-		        "inboundTag": ["socks${nu}"],
-		        "outboundTag": "proxy${nu}"
-		      }
-		    ]
-		  }
-		}
-	EOF
-}
-
-creat_xray_json() {
-	local nu=$1
-	local xray_use_json=$(dbus get ssconf_basic_xray_use_json_${nu})
-
-	if [ "${xray_use_json}" != "1" ]; then
-		local xray_server=$(dbus get ssconf_basic_server_${nu})
-		local _server_ip=$(_get_server_ip ${xray_server})
-		if [ -z "${_server_ip}" ];then
-			_server_ip=${xray_server}
-		fi
-
-		local tcp="null"
-		local kcp="null"
-		local ws="null"
-		local h2="null"
-		local qc="null"
-		local gr="null"
-		local tls="null"
-		local xtls="null"
-		local reali="null"
-		local xht="null"
-		local htup="null"
-		
-		local xray_network_host=$(dbus get ssconf_basic_xray_network_host_${nu} | sed 's/,/", "/g')
-		local xray_network_path=$(dbus get ssconf_basic_xray_network_path_${nu})
-		# sni is sni
-		local xray_network_security_sni=$(dbus get ssconf_basic_xray_network_security_sni_${nu})
-		# sni is server
-		if [ -z "${xray_network_security_sni}" ];then
-			__valid_ip "${xray_server}"
-			if [ "$?" != "0" ]; then
-				# likely to be domain
-				local xray_network_security_sni="$(dbus get ssconf_basic_server_${nu})"
-			fi
-		fi
-		# sni is host
-		if [ -z "${xray_network_security_sni}" -a -n "{xray_network_host}" ];then
-			local xray_network_security_sni=$(echo "${xray_network_host}" | sed 's/", "/\n/g' | sed -n '1p')
-		fi
-		local xray_flow=$(dbus get ssconf_basic_xray_flow_${nu})
-		local xray_fingerprint=$(dbus get ssconf_basic_xray_fingerprint_${nu})
-		[ -z "${xray_fingerprint}" ] && xray_fingerprint="chrome"
-		local xray_network_security="none"
-		local xray_network_security=$(dbus get ssconf_basic_xray_network_security_${nu})
-		local xray_xhttp_mode=$(dbus get ssconf_basic_xray_xhttp_mode_${nu})
-
-		if [ "${xray_network_security}" == "tls" -o "${xray_network_security}" == "xtls" ];then
-			local xray_network_security_ai=$(dbus get ssconf_basic_xray_network_security_ai_${nu})
-			local xray_network_security_alpn_h2=$(dbus get ssconf_basic_xray_network_security_alpn_h2_${nu})
-			local xray_network_security_alpn_ht=$(dbus get ssconf_basic_xray_network_security_alpn_http_${nu})
-			if [ "${xray_network_security_alpn_h2}" == "1" -a "${xray_network_security_alpn_ht}" == "1" ];then
-				local apln="[\"h2\",\"http/1.1\"]"
-			elif [ "${xray_network_security_alpn_h2}" != "1" -a "${xray_network_security_alpn_ht}" == "1" ];then
-				local apln="[\"http/1.1\"]"
-			elif [ "${xray_network_security_alpn_h2}" == "1" -a "${xray_network_security_alpn_ht}" != "1" ];then
-				local apln="[\"h2\"]"
-			elif [ "${xray_network_security_alpn_h2}" != "1" -a "${xray_network_security_alpn_ht}" != "1" ];then
-				local apln="null"
-			fi
-
-			# gather
-			local _tmp="{
-					\"allowInsecure\": $(get_function_switch ${xray_network_security_ai})
-					,\"alpn\": ${apln}
-					,\"serverName\": $(get_value_null ${xray_network_security_sni})
-					,\"fingerprint\": $(get_value_empty ${xray_fingerprint})
-					}"
-
-			# tls or xtls
-			if [ "${xray_network_security}" == "tls" ];then
-				local tls="${_tmp}"
-			elif [ "${xray_network_security}" == "xtls" ];then
-				local xtls="${_tmp}"
-			fi
-		fi
-
-		if [ "${xray_network_security}" == "reality" ];then
-			local xray_show=$(dbus get ssconf_basic_xray_show_${nu})
-			local xray_fingerprint=$(dbus get ssconf_basic_xray_fingerprint_${nu})
-			[ -z "${xray_fingerprint}" ] && xray_fingerprint="chrome"
-			local xray_publickey=$(dbus get ssconf_basic_xray_publickey_${nu})
-			local xray_shortid=$(dbus get ssconf_basic_xray_shortid_${nu})
-			local xray_spiderx=$(dbus get ssconf_basic_xray_spiderx_${nu})
-			local reali="{
-					\"show\": $(get_function_switch ${xray_show})
-					,\"fingerprint\": $(get_value_empty ${xray_fingerprint})
-					,\"serverName\": $(get_value_null ${xray_network_security_sni})
-					,\"publicKey\": $(get_value_null ${xray_publickey})
-					,\"shortId\": $(get_value_empty ${xray_shortid})
-					,\"spiderX\": $(get_value_empty $xray_spiderx)
-					}"
-		fi
-
-		if [ "${xray_network_security}" == "none" ];then
-			local xray_flow=""
-		fi
-
-		local xray_headtype_tcp=$(dbus get ssconf_basic_xray_headtype_tcp_${nu})
-		local xray_headtype_kcp=$(dbus get ssconf_basic_xray_headtype_kcp_${nu})
-		local xray_kcp_seed=$(dbus get ssconf_basic_xray_kcp_seed_${nu})
-		local xray_headtype_quic=$(dbus get ssconf_basic_xray_headtype_quic_${nu})
-		local xray_grpc_mode=$(dbus get ssconf_basic_xray_grpc_mode_${nu})
-		
-		local xray_network=$(dbus get ssconf_basic_xray_network_${nu})
-		[ -z "${xray_network}" ] && xray_network="tcp"
-		case "${xray_network}" in
-		tcp)
-			if [ "${xray_headtype_tcp}" == "http" ]; then
-				local tcp="{
-					\"header\": {
-					\"type\": \"http\"
-					,\"request\": {
-					\"version\": \"1.1\"
-					,\"method\": \"GET\"
-					,\"path\": $(get_path_empty ${xray_network_path})
-					,\"headers\": {
-					\"Host\": $(get_host_empty ${xray_network_host}),
-					\"User-Agent\": [
-					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
-					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
-					]
-					,\"Accept-Encoding\": [\"gzip, deflate\"]
-					,\"Connection\": [\"keep-alive\"]
-					,\"Pragma\": \"no-cache\"
-					}
-					}
-					}
-					}"
-			fi
-			;;
-		kcp)
-			local kcp="{
-				\"mtu\": 1350
-				,\"tti\": 50
-				,\"uplinkCapacity\": 12
-				,\"downlinkCapacity\": 100
-				,\"congestion\": false
-				,\"readBufferSize\": 2
-				,\"writeBufferSize\": 2
-				,\"header\": {
-				\"type\": \"${xray_headtype_kcp}\"
-				}
-				,\"seed\": $(get_value_null ${xray_kcp_seed})
-				}"
-			;;
-		ws)
-			if [ -z "${xray_network_path}" -a -z "${xray_network_host}" ]; then
-				local ws="{}"
-			elif [ -z "${xray_network_path}" -a -n "${xray_network_host}" ]; then
-				local ws="{
-					\"headers\": $(get_ws_header ${xray_network_host})
-					}"
-			elif [ -n "${xray_network_path}" -a -z "${xray_network_host}" ]; then
-				local ws="{
-					\"path\": $(get_value_null ${xray_network_path})
-					}"
-			elif [ -n "${xray_network_path}" -a -n "${xray_network_host}" ]; then
-				local ws="{
-					\"path\": $(get_value_null ${xray_network_path}),
-					\"headers\": $(get_ws_header ${xray_network_host})
-					}"
-			fi
-			;;
-		h2)
-			local h2="{
-				\"path\": $(get_value_empty ${xray_network_path})
-				,\"host\": $(get_host ${xray_network_host})
-				}"
-			;;
-		quic)
-			local qc="{
-				\"security\": $(get_value_empty ${xray_network_host}),
-				\"key\": $(get_value_empty ${xray_network_path}),
-				\"header\": {
-				\"type\": \"${xray_headtype_quic}\"
-				}
-				}"
-			;;
-		grpc)
-			local gr="{
-				\"serviceName\": $(get_value_empty ${xray_network_path}),
-				\"multiMode\": $(get_grpc_multimode ${xray_grpc_mode})
-				}"
-			;;
-		httpupgrade)
-			local htup="{
-				\"path\": $(get_value_empty ${xray_network_path})
-				,\"host\": $(get_value_empty ${xray_network_host})
-				}"
-			;;
-		xhttp)
-			local xht="{
-				\"path\": $(get_value_empty ${xray_network_path})
-				,\"host\": $(get_value_empty ${xray_network_host})
-				,\"mode\": \"${xray_xhttp_mode}\"
-				}"
-			;;
-		esac
-
-		local xray_port=$(dbus get ssconf_basic_port_${nu})
-		local xray_uuid=$(dbus get ssconf_basic_xray_uuid_${nu})
-		local xray_prot=$(dbus get ssconf_basic_xray_prot_${nu})
-		local xray_alterid=$(dbus get ssconf_basic_xray_alterid_${nu})
-		local xray_encryption=$(dbus get ssconf_basic_xray_encryption_${nu})
-		[ -z "${xray_prot}" ] && xray_prot="vless"
-		[ -z "${xray_alterid}" ] && xray_alterid="0"
-
-		# outbounds area
-		cat >>${TMP2}/conf/${nu}_outbounds.json <<-EOF
-			{
-			"outbounds": [
-				{
-					"tag": "proxy${nu}",
-					"protocol": "${xray_prot}",
-					"settings": {
-						"vnext": [
-							{
-								"address": "${_server_ip}",
-								"port": ${xray_port},
-								"users": [
-									{
-										"id": "${xray_uuid}"
-										,"alterId": ${xray_alterid}
-										,"security": "auto"
-										,"encryption": "${xray_encryption}"
-										,"flow": $(get_value_null ${xray_flow})
-									}
-								]
-							}
-						]
-					},
-					"streamSettings": {
-						"network": "${xray_network}"
-						,"security": "${xray_network_security}"
-						,"tlsSettings": $tls
-						,"xtlsSettings": $xtls
-						,"realitySettings": $reali
-						,"tcpSettings": $tcp
-						,"kcpSettings": $kcp
-						,"wsSettings": $ws
-						,"httpSettings": $h2
-						,"quicSettings": $qc
-						,"grpcSettings": $gr
-						,"httpupgradeSettings": $htup
-						,"xhttpSettings": $xht
-						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
-					},
-					"mux": {"enabled": false}
-				}
-			]
-			}
-		EOF
-
-		# delete all null value
-		# jq 'del(..|nulls)' ${TMP2}/conf/${nu}_outbounds.json | run sponge ${TMP2}/conf/${nu}_outbounds.json
-		sed -i '/null/d' ${TMP2}/conf/${nu}_outbounds.json 2>/dev/null
-		if [ "${xray_prot}" == "vless" ];then
-			sed -i '/alterId/d' ${TMP2}/conf/${nu}_outbounds.json 2>/dev/null
-		fi
-		if [ "${LINUX_VER}" == "26" ]; then
-			sed -i '/tcpFastOpen/d' ${TMP2}/conf/${nu}_outbounds.json 2>/dev/null
-		fi
-	else
-		dbus get ssconf_basic_xray_json_${nu} | base64_decode >${TMP2}/xray_user.json
-		local OB=$(cat ${TMP2}/xray_user.json | run jq .outbound)
-		local OBS=$(cat ${TMP2}/xray_user.json | run jq .outbounds)
-
-		# 兼容旧格式：outbound
-		if [ "$OB" != "null" ]; then
-			OUTBOUNDS=$(cat ${TMP2}/xray_user.json | run jq .outbound)
-		fi
-		
-		# 新格式：outbound[]
-		if [ "$OBS" != "null" ]; then
-			OUTBOUNDS=$(cat ${TMP2}/xray_user.json | run jq .outbounds[0])
-		fi
-		echo "{}" | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >${TMP2}/conf/${nu}_outbounds.json
-	fi
-
-	# inbounds
-	local socks5_port=$(get_rand_port)
-	echo "export socks5_port_${nu}=${socks5_port}" >> ${TMP2}/socsk5_ports.txt
-	cat >>${TMP2}/conf/${nu}_inbounds.json <<-EOF
-		{
-		  "inbounds": [
-		    {
-		      "port": ${socks5_port},
-		      "protocol": "socks",
-		      "settings": {
-		        "auth": "noauth",
-		        "udp": true
-		      },
-		      "tag": "socks${nu}"
-		    }
-		  ]
-		}
-	EOF
-
-	# routing
-	cat >>${TMP2}/conf/${nu}_routing.json <<-EOF
-		{
-		  "routing": {
-		    "rules": [
-		      {
-		        "type": "field",
-		        "inboundTag": ["socks${nu}"],
-		        "outboundTag": "proxy${nu}"
-		      }
-		    ]
-		  }
-		}
-	EOF
 }
 
 creat_trojan_json(){
@@ -1884,31 +778,149 @@ curl_test(){
 	local port=$2
 
 	# curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:23456 --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" http://www.google.com.tw
-	
-	# test multiple time and get the best one
-	# echo ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} >> ${TMP2}/curl_test_log.txt
-	local ret=$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=${ret}@$(run ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
-	local ret=$(echo ${ret} | sed 's/@/\n/g' | sort -n | sed -n '1p')
-	local _match=$(echo "${ret}"|grep -E "\|")
-	if [ -z "${_match}" ];then
-		echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
-	else
-		local ret_time=$(echo $ret | awk -F "|" '{printf "%.0f\n", $1 * 1000}')
-		local ret_code=$(echo $ret | awk -F "|" '{print $2}')
 
-		# 5. show result
+	# staggered test: 1s gap, 5/4/3s timeout, pick the best result
+	# echo ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} >> ${TMP2}/curl_test_log.txt
+	local ret=""
+	local has_timeout=0
+	local tdir="${TMP2}/curl_${nu}"
+	rm -rf ${tdir}
+	mkdir -p ${tdir}
+
+	run_curl_once(){
+		local idx=$1
+		local t=$2
+		local out=$(__timeout_run ${t} ${TMP2}/curl-webtest -o /dev/null -s -I -x socks5h://127.0.0.1:${port} --connect-timeout ${t} -m ${t} -w "%{time_total}|%{response_code}\n" ${ss_basic_wt_furl} 2>/dev/null)
+		local rc=$?
+		echo "${rc}|${out}" > ${tdir}/run${idx}.txt
+	}
+
+	run_curl_once 1 5 &
+	local p1=$!
+	sleep 1
+	run_curl_once 2 4 &
+	local p2=$!
+	sleep 1
+	run_curl_once 3 3 &
+	local p3=$!
+
+	wait ${p1} ${p2} ${p3}
+
+	for f in ${tdir}/run1.txt ${tdir}/run2.txt ${tdir}/run3.txt; do
+		[ -f "${f}" ] || continue
+		local rc=$(cut -d"|" -f1 ${f})
+		local out=$(cut -d"|" -f2- ${f})
+		if [ "${rc}" = "124" -o "${rc}" = "28" ];then
+			has_timeout=1
+			continue
+		fi
+		if echo "${out}" | grep -q "|"; then
+			if [ -n "${ret}" ];then
+				ret="${ret}@${out}"
+			else
+				ret="${out}"
+			fi
+		fi
+	done
+	rm -rf ${tdir}
+	if [ -n "${ret}" ];then
+		local best=$(echo ${ret} | sed 's/@/\n/g' | sort -n | sed -n '1p')
+		local ret_time=$(echo $best | awk -F "|" '{printf "%.0f\n", $1 * 1000}')
+		local ret_code=$(echo $best | awk -F "|" '{print $2}')
 		if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
-			echo -en "${nu}>${ret_time}\n" >>${TMP2}/results/${nu}.txt
+			if [ "${ret_time}" -gt 5000 ];then
+				echo -en "${nu}>timeout\n" >>${TMP2}/results/${nu}.txt
+			else
+				echo -en "${nu}>${ret_time}\n" >>${TMP2}/results/${nu}.txt
+			fi
+		else
+			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+		fi
+	else
+		if [ "${has_timeout}" = "1" ];then
+			echo -en "${nu}>timeout\n" >>${TMP2}/results/${nu}.txt
 		else
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 		fi
 	fi
 }
 
+single_test_node(){
+	local nu="$1"
+	if [ -z "${nu}" ];then
+		return 1
+	fi
+
+	WT_SINGLE=1
+	WT_SKIP_DNS=1
+	detect_perf
+	WT_XRAY_THREADS=1
+	WT_SSR_THREADS=1
+
+	mkdir -p ${TMP2}
+	mkdir -p ${TMP2}/conf
+	mkdir -p ${TMP2}/pids
+	mkdir -p ${TMP2}/results
+	rm -rf ${TMP2}/conf/*
+	rm -rf ${TMP2}/pids/*
+	rm -rf ${TMP2}/results/*
+	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
+
+	echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+
+	local single_file="wt_single_${nu}.txt"
+	echo "${nu}" > ${TMP2}/${single_file}
+	local node_type=$(dbus get ssconf_basic_type_${nu})
+	case ${node_type} in
+	0|3|4|5|8)
+		test_xray_group ${single_file} xg
+		;;
+	1)
+		test_07_sr ${single_file} single
+		;;
+	6)
+		test_11_nv ${single_file}
+		;;
+	7)
+		test_12_tc ${single_file}
+		;;
+	*)
+		echo -en "${nu}>failed\n" >>/tmp/upload/webtest.txt
+		;;
+	esac
+
+	# update backup with latest single test result
+	update_single_backup "${nu}"
+	echo -en "stop>stop\n" >>/tmp/upload/webtest.txt
+}
+
+update_single_backup(){
+	local nu="$1"
+	[ -z "${nu}" ] && return 0
+	local new_line=$(grep "^${nu}>" /tmp/upload/webtest.txt | tail -n 1)
+	[ -z "${new_line}" ] && return 0
+	local tmp_file="${TMP2}/webtest_bakcup.tmp"
+	if [ -f "/tmp/upload/webtest_bakcup.txt" ];then
+		grep -v -E "^${nu}>|^stop>" /tmp/upload/webtest_bakcup.txt > ${tmp_file}
+	else
+		grep -v -E "^stop>" /tmp/upload/webtest.txt > ${tmp_file}
+	fi
+	echo "${new_line}" >> ${tmp_file}
+	echo "stop>stop" >> ${tmp_file}
+	mv -f ${tmp_file} /tmp/upload/webtest_bakcup.txt
+}
+
 _get_server_ip() {
 	local SERVER_IP
+	if [ "${WT_SKIP_DNS}" = "1" ];then
+		SERVER_IP=$(__valid_ip $1)
+		if [ -n "${SERVER_IP}" ]; then
+			echo $SERVER_IP
+		else
+			echo $1
+		fi
+		return 0
+	fi
 	local domain1=$(echo "$1" | grep -E "^https://|^http://|/")
 	local domain2=$(echo "$1" | grep -E "\.")
 	if [ -n "${domain1}" -o -z "${domain2}" ]; then
@@ -2166,6 +1178,12 @@ clean_webtest(){
 }
 
 set_latency_job() {
+	ensure_latency_batch
+	if [ "${ss_basic_latency_batch}" != "1" ]; then
+		echo_date "批量web延迟测试已关闭!"
+		sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
+		return 0
+	fi
 	if [ "${ss_basic_lt_cru_opts}" == "0" ]; then
 		echo_date "定时测试节点延迟未开启!"
 		sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
@@ -2194,7 +1212,30 @@ web_webtest)
 	# 当用户进入插件，插件列表渲染好后开始调用本脚本进行webtest
 	webtest_web
 	;;
+clear_webtest)
+	if [ -f "/tmp/webtest.lock" ];then
+		http_response "busy"
+		exit 0
+	fi
+	http_response $1
+	clean_webtest
+	dbus remove ss_basic_webtest_ts
+	rm -f /tmp/upload/webtest_bakcup.txt
+	;;
+single_test)
+	if [ -f "/tmp/webtest.lock" ];then
+		http_response "busy"
+		exit 0
+	fi
+	http_response $1
+	single_test_node $3
+	;;
 manual_webtest)
+	ensure_latency_batch
+	if [ "${ss_basic_latency_batch}" != "1" ];then
+		http_response "batch_disabled"
+		exit 0
+	fi
 	clean_webtest
 	http_response $1
 	;;

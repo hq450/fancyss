@@ -99,6 +99,10 @@ var mouse_status;
 var ads_url_1
 var ws_enable = 0;
 var node_form_defaults = null;
+var single_test_wait = {};
+var single_test_running = false;
+var single_test_node = null;
+var batch_test_running = false;
 if(PKG_ARCH == "hnd"){
 	if(PKG_TYPE == "full"){
 		var ws_enable = 1;
@@ -206,6 +210,7 @@ function refresh_dbss(cb) {
 		dataType: "json",
 		success: function(data) {
 			db_ss = data.result[0];
+			normalize_latency_val();
 			generate_node_info();
 			if (typeof cb === "function") {
 				cb();
@@ -226,6 +231,7 @@ function get_dbus_data(cb) {
 		cache: false,
 		success: function(data) {
 			db_ss = data.result[0];
+			normalize_latency_val();
 			// basic conf to fill element
 			conf2obj(db_ss);
 			// generate node info (obj confs) for node table 
@@ -510,6 +516,7 @@ function save() {
 	  "ss_basic_server_resolv_user",
 	  "ss_basic_wt_furl",
 	  "ss_basic_wt_curl",
+	  "ss_basic_latency_batch",
 	  "ss_basic_lt_cru_opts",
 	  "ss_basic_lt_cru_time",
 	  "ss_basic_hy2_up_speed",
@@ -2077,6 +2084,7 @@ function refresh_node_panel(cb) {
 		dataType: "json",
 		success: function(data) {
 			db_ss = data.result[0];
+			normalize_latency_val();
 			ss_node_sel();
 			if (typeof cb === "function") {
 				cb();
@@ -2315,6 +2323,7 @@ function refresh_table(cb) {
 		cache:false,
 		success: function(data) {
 			db_ss = data.result[0];
+			normalize_latency_val();
 			generate_node_info();
 			refresh_options();
 			refresh_html();
@@ -2356,19 +2365,19 @@ function refresh_html() {
 		//开启延迟测试
 		if(noserver == "1"){
 			//关闭server
-			var width = ["", "5%", "54%", "0%", "14%", "12%", "10%", "5%", ];
+			var width = ["", "5%", "53%", "0%", "10%", "10%", "16%", ];
 		}else{
 			//开启server
-			var width = ["", "5%", "28%", "26%", "14%", "12%", "10%", "5%", ];
+			var width = ["", "5%", "27%", "28%", "10%", "10%", "16%", ];
 		}
 	}else{
 		//关闭延迟测试
 		if(noserver == "1"){
 			//关闭server
-			var width = ["", "5%", "64%", "0%", "16%", "0%", "10%", "5%" ];
+			var width = ["", "5%", "63%", "0%", "16%", "0%", "16%" ];
 		}else{
 			//开启server
-			var width = ["", "5%", "36%", "30%", "14%", "0%", "10%", "5%" ];
+			var width = ["", "5%", "34%", "31%", "10%", "0%", "16%" ];
 		}
 	}
 	// make dynamic element
@@ -2382,11 +2391,10 @@ function refresh_html() {
 		html += '<th style="width:' + width[3] + ';cursor:pointer" onclick="hide_server();" title="点我隐藏服务器信息!" >服务器地址</th>'
 	}
 	html += '<th style="width:' + width[4] + ';">类型</th>'
-	if(node_nu && db_ss["ss_basic_latency_val"] == "2"){
+	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
 		html += '<th style="width:' + width[5] + ';" id="depay_th">web落地延迟</th>'
 	}
-	html += '<th style="width:' + width[6] + ';">编辑</th>'
-	html += '<th style="width:' + width[7] + ';">使用</th>'
+	html += '<th style="width:' + width[6] + ';">操作</th>'
 	html += '</tr>'
 	html += '</table>'
 	html += '</div>'
@@ -2480,16 +2488,17 @@ function refresh_html() {
 		
 		html +='</td>';
 		//webtest
-		if(node_nu && db_ss["ss_basic_latency_val"] == "2"){
-			html += '<td style="width:' + width[5] + ';" id="ss_node_lt_' + c["node"] + '" class="latency"></td>';
+		if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+			html += '<td style="width:' + width[5] + ';overflow:hidden;text-overflow:clip;" id="ss_node_lt_' + c["node"] + '" class="latency"><span class="latency_val"></span></td>';
 		}
-		//节点编辑
-		html += '<td style="width:' + width[6] + ';">'
-		html += '<input style="margin:-2px 0px -4px -2px;" id="dd_node_' + c["node"] + '" class="edit_btn" type="button" onclick="edit_conf_table(this);" value=""><input style="margin:-2px 0px -4px -2px;" id="td_node_' + c["node"] + '" class="remove_btn" type="button" onclick="remove_conf_table(this);" value="">'
-		html += '</td>';
-		//节点应用
-		html += '<td style="width:' + width[7] + ';">'
-		html += '<div class="deactivate_icon" id="apply_ss_node_' + c["node"] + '" onclick="apply_this_ss_node(this);"></div>';
+		//节点操作
+		html += '<td style="width:' + width[6] + ';white-space:nowrap;">'
+		if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+			html += '<img src="/res/speed.png" class="latency_btn" data-node="' + c["node"] + '" style="width:22px;height:22px;cursor:pointer;vertical-align:middle;margin:-2px 0px 0px 0px;" title="点击后将测试此节点的web落地延迟！" onmouseover="this.src=\'/res/speed_blue.png\';" onmouseout="this.src=\'/res/speed.png\';" onclick="test_latency_single(' + c["node"] + ');return false;" />'
+		}
+		html += '<input style="margin:-2px 0px -4px -2px;" id="dd_node_' + c["node"] + '" class="edit_btn" type="button" onclick="edit_conf_table(this);" value="">'
+		html += '<input style="margin:-2px 0px -4px -2px;" id="td_node_' + c["node"] + '" class="remove_btn" type="button" onclick="remove_conf_table(this);" value="">'
+		html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;margin:-2px 0px 0px -2px;width:26px;height:26px;" id="apply_ss_node_' + c["node"] + '" onclick="apply_this_ss_node(this);"></div>';
 		html += '</td>';
 		html += '</tr>';
 	}
@@ -2501,8 +2510,17 @@ function refresh_html() {
 	if(node_nu){
 		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">'
 		html += '<div class="dropdown" id="dropdown">'
-		html += '<a onclick="test_latency_now(2)" href="javascript:void(0);"></lable>开始 web 延迟测试<lable id="ss_wts_show"></lable></a>'
-		html += '<a onclick="test_latency_now(0)" href="javascript:void(0);"></lable>关闭延迟测试功能</a>'
+		if(db_ss["ss_basic_latency_batch"] == "1"){
+			html += '<a onclick="test_latency_now(2)" href="javascript:void(0);"></lable>开始 web 延迟测试<lable id="ss_wts_show"></lable></a>'
+		}else{
+			html += '<a href="javascript:void(0);" style="color:#999;cursor:not-allowed"></lable>批量测速已关闭</a>'
+		}
+		if(db_ss["ss_basic_latency_val"] == "0"){
+			html += '<a onclick="enable_latency_feature()" href="javascript:void(0);"></lable>开启延迟测试功能</a>'
+		}else{
+			html += '<a onclick="test_latency_now(0)" href="javascript:void(0);"></lable>关闭延迟测试功能</a>'
+		}
+		html += '<a onclick="clear_latency_cache()" href="javascript:void(0);"></lable>清空延迟测试结果</a>'
 		html += '<a onclick="open_latency_sett()" href="javascript:void(0);"></lable>设置</a>'
 		html += '</div>'
 	}
@@ -2516,6 +2534,10 @@ function refresh_html() {
 	$('.nodeTable').remove();
 	// add dynamic table
 	$('#ss_list_table').before(html);
+	// load cached webtest results if available
+	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+		load_latency_cache();
+	}
 	if(node_max != 0 && node_max != node_nu ){
 		console.log("自动调整顺序！")
 		save_new_order();
@@ -2654,37 +2676,41 @@ function save_new_order(){
 }
 function reorder_trs(){
 	var trs = $("#ss_node_list_table tr");
+	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
+	var has_latency = node_nu && db_ss["ss_basic_latency_val"] != "0";
+	var idx_order = 1;
+	var idx_name = 2;
+	var idx_server = (noserver != "1") ? 3 : 0;
+	var idx_type = (noserver != "1") ? 4 : 3;
+	var idx_latency = has_latency ? ((noserver != "1") ? 5 : 4) : 0;
+	var idx_ops = has_latency ? ((noserver != "1") ? 6 : 5) : ((noserver != "1") ? 5 : 4);
 	for (var i = 0; i < trs.length; i++) {
 		// 改写显示的顺序
 		var new_nu = i + 1;
 		//tr
-		$('#ss_node_list_table tr:nth-child(' + new_nu + ')').attr("id", "node_" + new_nu);
+		var row_sel = '#ss_node_list_table tr:nth-child(' + new_nu + ')';
+		var $row = $(row_sel);
+		$row.attr("id", "node_" + new_nu);
 		//$('#ss_node_list_table tr:nth-child(' + new_nu + ')').removeAttr("class");
 		//$('#ss_node_list_table tr:nth-child(' + new_nu + ')').removeAttr("style");
 		//序号
-		$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(1)').attr("id", "node_order_" + new_nu);
-		$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(1)').html(String(new_nu));
+		$row.find('td:nth-child(' + idx_order + ')').attr("id", "node_order_" + new_nu);
+		$row.find('td:nth-child(' + idx_order + ')').html(String(new_nu));
 		//节点名称
-		$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(2)').attr("id", "ss_node_name_" + new_nu);
+		$row.find('td:nth-child(' + idx_name + ')').attr("id", "ss_node_name_" + new_nu);
 		//服务器地址
-		$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(3)').attr("id", "server_" + new_nu);
-		//类型
-		$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(4)').attr("id", "server_" + new_nu);
-		if($('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5)').attr("id") != undefined){
-			//webtest
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5)').attr("id", "ss_node_lt_" + new_nu);
-			//编辑节点
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(6) input:nth-child(1)').attr("id", "dd_node_" + new_nu);
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(6) input:nth-child(2)').attr("id", "td_node_" + new_nu);
-			//应用节点
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(7) div').attr("id", "apply_ss_node_" + new_nu);
-		}else{
-			//编辑节点
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5) input:nth-child(1)').attr("id", "dd_node_" + new_nu);
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(5) input:nth-child(2)').attr("id", "td_node_" + new_nu);
-			//应用节点
-			$('#ss_node_list_table tr:nth-child(' + new_nu + ') td:nth-child(6) div').attr("id", "apply_ss_node_" + new_nu);
+		if(idx_server){
+			$row.find('td:nth-child(' + idx_server + ')').attr("id", "server_" + new_nu);
 		}
+		//类型
+		$row.find('td:nth-child(' + idx_type + ')').attr("id", "server_" + new_nu);
+		if(idx_latency){
+			$row.find('td:nth-child(' + idx_latency + ')').attr("id", "ss_node_lt_" + new_nu);
+		}
+		var $ops = $row.find('td:nth-child(' + idx_ops + ')');
+		$ops.find('input.edit_btn').attr("id", "dd_node_" + new_nu);
+		$ops.find('input.remove_btn').attr("id", "td_node_" + new_nu);
+		$ops.find('div.activate_icon, div.deactivate_icon').attr("id", "apply_ss_node_" + new_nu);
 	}
 	//console.log("更改顺序OK");
 }
@@ -2887,6 +2913,7 @@ function save_latency_sett(){
 	var post_para = 0;
 	dbus_post["ss_basic_wt_furl"] = E("ss_basic_wt_furl").value;
 	dbus_post["ss_basic_wt_curl"] = E("ss_basic_wt_curl").value;
+	dbus_post["ss_basic_latency_batch"] = E("ss_basic_latency_batch").value;
 	dbus_post["ss_basic_lt_cru_opts"] = E("ss_basic_lt_cru_opts").value;
 	dbus_post["ss_basic_lt_cru_time"] = E("ss_basic_lt_cru_time").value;
 	var post_dbus = compfilter(db_ss, dbus_post);
@@ -2920,8 +2947,12 @@ function save_latency_sett(){
 	}
 }
 function test_latency_now(test_flag) {
+	if(test_flag == 2 && db_ss["ss_basic_latency_batch"] != "1"){
+		layer.msg("批量测速已关闭");
+		return;
+	}
 	var dbus_post = {};
-	dbus_post["ss_basic_latency_val"] = test_flag;
+	dbus_post["ss_basic_latency_val"] = String(test_flag);
 	if(test_flag == 0){
 		var post_para = "close_latency_test";
 	}else if(test_flag == 2){
@@ -2942,22 +2973,128 @@ function test_latency_now(test_flag) {
 				refresh_table();
 				if(test_flag == 0){
 					close_latency_flag=1;
+					batch_test_running = false;
 					$("#ss_wts_show").html("");
 					$("#dropdown").width(150);
 				}
 				if(test_flag == "2"){
-					$(".latency").html("waiting...");
+					$(".latency .latency_val").html("waiting...");
+					batch_test_running = true;
 				}
 			}
 		}
 	});
 }
+function clear_latency_cache() {
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_webtest.sh", "params":["clear_webtest"], "fields": {}};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			if(response.result == "busy"){
+				layer.msg("正在测速，请稍后重试");
+				return;
+			}
+			if (response.result == id){
+				$(".latency .latency_val").html("");
+				$("#ss_wts_show").html("");
+				$("#dropdown").width(150);
+			}
+		}
+	});
+}
+function enable_latency_feature() {
+	var dbus_post = {};
+	dbus_post["ss_basic_latency_val"] = "2";
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_webtest.sh", "params":["0"], "fields": dbus_post};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			if (response.result == id){
+				close_latency_flag = 0;
+				refresh_table();
+			}
+		}
+	});
+}
+function normalize_latency_val(){
+	if(db_ss["ss_basic_latency_val"] === undefined || db_ss["ss_basic_latency_val"] === null || db_ss["ss_basic_latency_val"] === ""){
+		db_ss["ss_basic_latency_val"] = "0";
+	}
+}
+function test_latency_single(node){
+	if(!node) return;
+	if(batch_test_running){
+		layer.msg("批量测速中，无法进行单节点测速");
+		return;
+	}
+	if(single_test_running){
+		if(String(single_test_node) != String(node)){
+			layer.msg("请等待当前测试完成");
+			return;
+		}else{
+			return;
+		}
+	}
+	var cell = $("#ss_node_lt_" + node + " .latency_val");
+	if(cell.length){
+		cell.html("testing...");
+	}
+	single_test_wait[node] = true;
+	single_test_running = true;
+	single_test_node = node;
+	disable_latency_buttons(node);
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_webtest.sh", "params":["single_test", String(node)], "fields": {}};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			if(response.result == "busy"){
+				if(cell.length){
+					cell.html("busy");
+				}
+				layer.msg("正在批量测速，请稍后重试");
+				single_test_running = false;
+				single_test_node = null;
+				enable_latency_buttons();
+				return;
+			}
+			if (response.result == id){
+				setTimeout(function() { get_latency_data_single(node, 0); }, 300);
+			}else{
+				single_test_running = false;
+				single_test_node = null;
+				enable_latency_buttons();
+			}
+		},
+		error: function() {
+			single_test_running = false;
+			single_test_node = null;
+			enable_latency_buttons();
+		}
+	});
+}
 function latency_test(action) {
 	if(action == "0") return;
+	if(db_ss["ss_basic_latency_batch"] != "1") return;
 	//console.log("start latency test")
 	
 	if(action == "2"){
 		var bash_para = "web_webtest";
+		batch_test_running = true;
 	}
 	//now post
 	var id = parseInt(Math.random() * 100000000);
@@ -2971,13 +3108,86 @@ function latency_test(action) {
 		dataType: "json",
 		success: function(response) {
 			//console.log(response.result)
-			$(".latency").html("waiting...");
+			$(".latency .latency_val").html("waiting...");
 			get_latency_data(action);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
-			$(".latency").html("失败!");
+			$(".latency .latency_val").html("失败!");
+			batch_test_running = false;
 		},
 		timeout: 60000
+	});
+}
+function get_latency_data_single(node, retry){
+	if(retry > 40){
+		var cell = $("#ss_node_lt_" + node + " .latency_val");
+		if(cell.length){
+			cell.html("timeout");
+		}
+		single_test_wait[node] = false;
+		single_test_running = false;
+		single_test_node = null;
+		enable_latency_buttons();
+		return;
+	}
+	var URL = '/_temp/webtest.txt'
+	$.ajax({
+		url: URL,
+		type: 'GET',
+		cache:false,
+		dataType: 'text',
+		success: function(res) {
+			const lines = res.split('\n');
+			var value = null;
+			for(var i=lines.length - 1; i >= 0; i--){
+				const parts = lines[i].split('>').map(part => part.trim());
+				if(parts.length >= 2 && parts[0] == String(node)){
+					value = parts[1];
+					break;
+				}
+			}
+			if(single_test_wait[node]){
+				if(value && String(value).indexOf("testing") === 0){
+					single_test_wait[node] = false;
+				}else{
+					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
+					return;
+				}
+			}
+			if(!value || String(value).indexOf("testing") === 0 || String(value).indexOf("waiting") === 0){
+				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
+			}else{
+				write_webtest([[String(node), value]]);
+				single_test_running = false;
+				single_test_node = null;
+				enable_latency_buttons();
+			}
+		},
+		error: function(){
+			setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
+		},
+	});
+}
+
+function disable_latency_buttons(active_node){
+	$(".latency_btn").each(function() {
+		var n = $(this).data("node");
+		if(String(n) === String(active_node)) return;
+		if($(this).data("orig-title") === undefined){
+			$(this).data("orig-title", $(this).attr("title") || "");
+		}
+		$(this).attr("title", "请等待当前测试完成");
+		$(this).css({"opacity":"0.4","cursor":"not-allowed"});
+	});
+}
+
+function enable_latency_buttons(){
+	$(".latency_btn").each(function() {
+		var orig = $(this).data("orig-title");
+		if(orig !== undefined){
+			$(this).attr("title", orig);
+		}
+		$(this).css({"opacity":"1","cursor":"pointer"});
 	});
 }
 function get_latency_data(action){
@@ -3000,6 +3210,7 @@ function get_latency_data(action){
 			write_webtest(array);
 			const hasStop = array.some(subArray => subArray.includes('stop'));
 			if(hasStop){
+				batch_test_running = false;
 				//console.log("stop getting webtest result!");
 					$.ajax({
 						type: "GET",
@@ -3023,10 +3234,104 @@ function get_latency_data(action){
 		},
 	});
 }
+function load_latency_cache(){
+	var URL = '/_temp/webtest.txt';
+	$.ajax({
+		url: URL,
+		type: 'GET',
+		cache:false,
+		dataType: 'text',
+		success: function(res) {
+			const data = parse_webtest_complete(res);
+			const usable = count_usable_webtest(data.list);
+			const threshold = Math.max(1, Math.floor(node_nu * 0.5));
+			if(data.complete && usable >= threshold){
+				write_webtest(data.list);
+			}else{
+				load_latency_backup(usable);
+			}
+		}
+	});
+}
+function load_latency_backup(minCount){
+	var URL = '/_temp/webtest_bakcup.txt';
+	$.ajax({
+		url: URL,
+		type: 'GET',
+		cache:false,
+		dataType: 'text',
+		success: function(res) {
+			const data = parse_webtest_complete(res);
+			const usable = count_usable_webtest(data.list);
+			if(usable >= Math.max(1, minCount || 0)){
+				write_webtest(data.list);
+			}else if(usable > 0){
+				write_webtest(data.list);
+			}
+		}
+	});
+}
+function parse_webtest_complete(res){
+	const lines = res.split('\n');
+	let current = {};
+	let last_complete = null;
+	lines.forEach(line => {
+		const parts = line.split('>').map(part => part.trim());
+		if(parts.length >= 2){
+			const key = parts[0];
+			const val = parts[1];
+			if(!key){
+				return;
+			}
+			if(key === "stop"){
+				if(Object.keys(current).length){
+					last_complete = current;
+				}
+				current = {};
+				return;
+			}
+			current[key] = val;
+		}
+	});
+	if(last_complete){
+		return { list: Object.entries(last_complete), complete: true };
+	}
+	return { list: Object.entries(current), complete: false };
+}
+function has_usable_webtest(array){
+	return array.some(function(item){
+		return $.isNumeric(item[1]) || item[1] == "failed" || item[1] == "timeout" || item[1] == "ns";
+	});
+}
+function count_usable_webtest(array){
+	var cnt = 0;
+	array.forEach(function(item){
+		if($.isNumeric(item[1]) || item[1] == "failed" || item[1] == "timeout" || item[1] == "ns"){
+			cnt++;
+		}
+	});
+	return cnt;
+}
 function write_webtest(ps){
 	for(var i = 0; i<ps.length; i++){
 		var nu = ps[i][0];
 		var lag = ps[i][1];
+		if(typeof lag === "string"){
+			lag = lag.replace(/\.{3,}/, "...");
+			if(lag.indexOf("testing") === 0){
+				lag = "testing...";
+			}
+		}
+		var $cell = $('#ss_node_lt_' + nu);
+		var $val = $cell.length ? $cell.find(".latency_val") : null;
+		if(typeof lag === "string" && (lag.indexOf("testing") === 0 || lag.indexOf("waiting") === 0)){
+			if($val && $val.length){
+				var curr = $val.text().trim();
+				if(curr && curr !== "-" && curr.indexOf("testing") !== 0 && curr.indexOf("waiting") !== 0){
+					continue;
+				}
+			}
+		}
 		if($.isNumeric(lag)){
 			if (lag <= 100){
 				test_result = '<font color="#1bbf35">' + lag +' ms</font>';
@@ -3040,6 +3345,8 @@ function write_webtest(ps){
 		}else{
 			if(lag == "failed"){
 				test_result = '<font color="#FF0000">failed!</font>';
+			}else if(lag == "timeout"){
+				test_result = '<font color="#FF0000">timeout!</font>';
 			}else if(lag == "ns"){
 				test_result = '<font color="#FF0000">不支持!</font>';
 			}else{
@@ -3047,8 +3354,12 @@ function write_webtest(ps){
 			}
 		}
 		
-		if($('#ss_node_lt_' + nu)){
-			$('#ss_node_lt_' + nu).html(test_result);
+		if($cell.length){
+			if($val && $val.length){
+				$val.html(test_result);
+			}else{
+				$cell.html(test_result);
+			}
 		}
 	}
 }
@@ -4798,11 +5109,16 @@ function toggleKeyMask(o, show){
 											["0", "关闭定时测试"],
 											["1", "定时测试web延迟"]
 										   ]
+								var lt_batch = [
+											["0", "关闭批量测速"],
+											["1", "开启批量测速"]
+										   ]
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
 								$('#table_test').forms([
 									{ title: '延迟测试设置', thead:'1'},
 									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_wt_furl', type:'select', style:'width:auto', options:furl, value:''},
 									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_wt_curl', type:'select', style:'width:auto', options:curl, value:''},
+									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},

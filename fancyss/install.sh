@@ -1000,11 +1000,28 @@ install_now(){
 	[ -z "$(dbus get ss_basic_wt_furl)" ] && dbus set ss_basic_wt_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_wt_curl)" ] && dbus set ss_basic_wt_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
-	# 延迟测试需要较多性能，默认只有aarch64机型才开启
+	# 延迟测试列默认开启（批量测速由独立开关控制）
 	if [ "${ROT_ARCH}" == "aarch64" ]; then
 		[ -z "${ss_basic_latency_val}" ] && dbus set ss_basic_latency_val="2"
 	else
-		[ -z "${ss_basic_latency_val}" ] && dbus set ss_basic_latency_val="0"
+		[ -z "${ss_basic_latency_val}" ] && dbus set ss_basic_latency_val="2"
+	fi
+
+	# 批量测速开关：低端设备默认关闭，高端设备默认开启
+	if [ -z "${ss_basic_latency_batch}" ]; then
+		local CPU_CORES=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
+		local MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
+		if [ "${ROT_ARCH}" == "armv7l" ]; then
+			dbus set ss_basic_latency_batch="0"
+		elif [ "${ROT_ARCH}" == "aarch64" ]; then
+			if [ "${CPU_CORES}" -le 2 -o "${MEM_MB}" -lt 768 ]; then
+				dbus set ss_basic_latency_batch="0"
+			else
+				dbus set ss_basic_latency_batch="1"
+			fi
+		else
+			dbus set ss_basic_latency_batch="0"
+		fi
 	fi
 
 	# 因版本变化导致一些值没有了，更改一下
