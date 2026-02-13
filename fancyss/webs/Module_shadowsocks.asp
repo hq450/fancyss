@@ -4572,8 +4572,8 @@ function reset_node_form() {
 	E("vmessTitle").style.display = "";
 	E("vlessTitle").style.display = "";
 	E("trojanTitle").style.display = "";
-	E("naiveTitle").style.display = "";
-	E("tuicTitle").style.display = "";
+	E("naiveTitle").style.display = "";			//fancyss-full
+	E("tuicTitle").style.display = "";			//fancyss-full
 	E("hy2Title").style.display = "";
 	E("add_node").style.display = "";
 	E("edit_node").style.display = "none";
