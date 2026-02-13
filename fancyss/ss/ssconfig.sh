@@ -645,18 +645,35 @@ prepare_system() {
 
 	# 把当前节点名写入文件，下次启动进行对比就知道是否更换了节点
 	if [ -f "/tmp/upload/fancyss_node_name.txt" ];then
-		last_node_name=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '1p' | base64_decode)
+		last_node_name=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '1p' | base64_decode | tr -d '\r')
 		last_node_hash=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '2p')
 		last_node_indx=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '3p')
+		last_node_index=$(cat /tmp/upload/fancyss_node_name.txt | sed -n '4p')
 	else
 		last_node_name=""
 		last_node_hash=""
 		last_node_indx=""
+		last_node_index=""
 	fi
-	curr_node_hash=$(echo "${ss_basic_name}" | md5sum | awk '{print $1}')
+	curr_node_name=$(printf "%s" "${ss_basic_name}" | tr -d '\r')
+	curr_node_hash=$(printf "%s" "${curr_node_name}" | md5sum | awk '{print $1}')
+	curr_node_index="${ssconf_basic_node}"
 
-	if [ "${curr_node_hash}" == "${last_node_hash}" ];then
-		echo_date "🟠继续使用节点：【${ss_basic_name}】"
+	local _same_node="0"
+	if [ -n "${last_node_index}" -a "${last_node_index}" = "${curr_node_index}" ];then
+		_same_node="1"
+	elif [ "${curr_node_hash}" = "${last_node_hash}" ];then
+		_same_node="1"
+	elif [ -n "${last_node_name}" -a "${curr_node_name}" = "${last_node_name}" ];then
+		_same_node="1"
+	fi
+
+	if [ "${_same_node}" = "1" ];then
+		if [ "${ss_basic_status}" == "1" ];then
+			echo_date "🟠重启节点：【${ss_basic_name}】"
+		else
+			echo_date "🟠继续使用节点：【${ss_basic_name}】"
+		fi
 		_node_change_status="0"
 	else
 		if [ -n "${last_node_name}" ];then
@@ -671,6 +688,7 @@ prepare_system() {
 	echo "${ss_basic_name}" | base64_encode | sed 's/$/\n/' >/tmp/upload/fancyss_node_name.txt
 	echo "${curr_node_hash}" >>/tmp/upload/fancyss_node_name.txt
 	echo "${ss_basic_smrt}" >>/tmp/upload/fancyss_node_name.txt
+	echo "${curr_node_index}" >>/tmp/upload/fancyss_node_name.txt
 }
 
 get_lan_cidr() {
