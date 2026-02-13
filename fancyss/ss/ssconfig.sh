@@ -4700,10 +4700,10 @@ _start_iptables() {
 
 	# 创建gfw模式udp rule
 	ensure_chain mangle SHADOWSOCKS_GFW
-	# {white_list} 直连
-	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN
 	# 如果开启了屏蔽quic功能，udp 443流量将默认不走代理
 	[ "${ss_basic_block_quic}" == "1" ] && append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp --dport 443 -j RETURN
+	# {white_list} 直连
+	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set white_list dst -j RETURN
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GFW -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {gfwlist} 代理
@@ -4728,6 +4728,8 @@ _start_iptables() {
 
 	# 创建游戏模式udp rule
 	ensure_chain mangle SHADOWSOCKS_GAM
+	# 如果开启了屏蔽quic功能，udp 443流量将默认不走代理
+	[ "${ss_basic_block_quic}" == "1" ] && append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp --dport 443 -j RETURN
 	# {black_list} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# {chnlist} 直连
