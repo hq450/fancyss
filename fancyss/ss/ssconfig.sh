@@ -1169,18 +1169,36 @@ get_proxy_server_ip(){
 	if [ -n "${ss_real_server_ip}" ]; then
 		return
 	fi
-	
+
 	if [ -n "${ss_basic_server_ip}" ]; then
-		# 用chnroute去判断SS服务器在国内还是在国外
-		ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
-		if [ "$?" != "0" ]; then
-			# ss服务器是国外IP
-			ss_real_server_ip="${ss_basic_server_ip}"
-			echo_date "检测到节点服务器的ip地址为：${ss_basic_server_ip}，是国外IP"
+		__valid_ip46 ${dns_para}
+		if [ "$?" == "0" ]; then
+			# ipv4
+			ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# ss服务器是国外IP
+				ss_real_server_ip="${ss_basic_server_ip}"
+				echo_date "检测到节点服务器的ip地址为：${ss_basic_server_ip}，是国外IP"
+			else
+				# ss服务器是国内ip （可能用了国内中转）
+				ss_real_server_ip=""
+				echo_date "检测到代理服务器的ip地址为：${ss_basic_server_ip}，是国内IP，可能是国内中转节点！"
+			fi
+		elif [ "$?" == "1" ]; then
+			# ipv6
+			ipset test chnroute6 ${ss_basic_server_ip} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# ss服务器是国外IP
+				ss_real_server_ip="${ss_basic_server_ip}"
+				echo_date "检测到节点服务器的ip地址为：${ss_basic_server_ip}，是国外IP"
+			else
+				# ss服务器是国内ip （可能用了国内中转）
+				ss_real_server_ip=""
+				echo_date "检测到代理服务器的ip地址为：${ss_basic_server_ip}，是国内IP，可能是国内中转节点！"
+			fi
 		else
-			# ss服务器是国内ip （可能用了国内中转）
+			# 不是ip
 			ss_real_server_ip=""
-			echo_date "检测到代理服务器的ip地址为：${ss_basic_server_ip}，是国内IP，可能是国内中转节点！"
 		fi
 	else
 		# ss服务器可能是域名且没有正确解析
@@ -1477,7 +1495,7 @@ start_chinadns_ng(){
 					dbus set "ss_basic_chng_china_udp_${dns_seq}_opt=$dns_default"
 				fi
 			fi
-		elif [ "$?" == "1" ]; then
+		else
 			# 不是ip，帮忙纠正
 			echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
 			eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
@@ -5100,18 +5118,35 @@ check_frn_public_ip(){
 		echo_date "---------------------------------------------------------"
 		# close_in_five flag
 	fi
-	
+
+
 	# 检测节点解析结果
-	if [ -n "${ss_basic_server_ip}" ];then
-		#[ -z "${ss_basic_server_orig}" ] && 
-		ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
-		if [ "$?" != "0" ]; then
-			# 国外ip
-			echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：海外，来源：${ss_basic_server_orig}"
-			
-		else
-			# 国内ip
-			echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：大陆，来源：${ss_basic_server_orig}"
+	if [ -n "${ss_basic_server_ip}" ]; then
+		__valid_ip46 ${dns_para}
+		if [ "$?" == "0" ]; then
+			# ipv4
+			ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# 国外ip
+				ss_real_server_ip="${ss_basic_server_ip}"
+				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：海外，来源：${ss_basic_server_orig}"
+			else
+				# 国内ip
+				ss_real_server_ip=""
+				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：大陆，来源：${ss_basic_server_orig}"
+			fi
+		elif [ "$?" == "1" ]; then
+			# ipv6
+			ipset test chnroute6 ${ss_basic_server_ip} >/dev/null 2>&1
+			if [ "$?" != "0" ]; then
+				# 国外ip
+				ss_real_server_ip="${ss_basic_server_ip}"
+				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：海外，来源：${ss_basic_server_orig}"
+			else
+				# 国内ip
+				ss_real_server_ip=""
+				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：大陆，来源：${ss_basic_server_orig}"
+			fi
 		fi
 	fi
 }
