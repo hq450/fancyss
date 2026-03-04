@@ -3684,6 +3684,7 @@ var tab_actions = {
 		$('#ss_failover_save').hide();
 		showhide("table_basic", (node_max != 0));
 		change_select_width('#ssconf_basic_node');
+		change_select_width('#ss_basic_method');
 	},
 	1: function() {
 		$('#apply_button').hide();
