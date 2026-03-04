@@ -3822,7 +3822,7 @@ function toggle_func() {
 }
 
 function refresh_basic_input_width() {
-	var inputs = ['#ss_basic_server', '#ss_basic_password', '#ss_basic_xray_uuid'];
+	var inputs = ['#ss_basic_server', '#ss_basic_password', '#ss_basic_xray_uuid', '#ss_basic_xray_publickey'];
 	for (var i = 0; i < inputs.length; i++) {
 		change_select_width(inputs[i], null, {min: 152, max: 438});
 	}
@@ -3857,7 +3857,7 @@ function change_select_width(o, p, cfg) {
 			});
 			$("body").append($aux);
 
-			var aux_width = Math.ceil($aux.outerWidth()) + 26;
+			var aux_width = Math.ceil($aux.outerWidth());
 			$aux.remove();
 
 			var min_width = cfg && !isNaN(parseInt(cfg.min, 10))
