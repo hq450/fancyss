@@ -331,6 +331,7 @@ function ss_node_sel() {
 	var obj = ssconf_node2obj(node_sel);
 	conf2obj(obj, 1);
 	verifyFields();
+	refresh_basic_input_width();
 }
 function refresh_options() {
 	if (node_max == 0) return false;
@@ -3685,6 +3686,7 @@ var tab_actions = {
 		showhide("table_basic", (node_max != 0));
 		change_select_width('#ssconf_basic_node');
 		change_select_width('#ss_basic_method');
+		refresh_basic_input_width();
 	},
 	1: function() {
 		$('#apply_button').hide();
@@ -3819,22 +3821,76 @@ function toggle_func() {
 	}
 }
 
-function change_select_width(o, p) {
-	$(o).click(function(){
-		var text = $(this).find('option:selected').text();
-		var className = $(o).attr('class');
-		var $aux = $('<select class="' + className + '">').append($('<option/>').text(text));
+function refresh_basic_input_width() {
+	var inputs = ['#ss_basic_server', '#ss_basic_password', '#ss_basic_xray_uuid'];
+	for (var i = 0; i < inputs.length; i++) {
+		change_select_width(inputs[i], null, {min: 152, max: 438});
+	}
+}
+
+function change_select_width(o, p, cfg) {
+	var $el = $(o);
+	if (!$el.length) return;
+	var tagName = ($el.prop('tagName') || '').toLowerCase();
+
+	if (tagName === "input") {
+		$el.off("input.auto_width change.auto_width keyup.auto_width").on("input.auto_width change.auto_width keyup.auto_width", function() {
+			var $this = $(this);
+			if (!$this.data("auto_width_min")) {
+				$this.data("auto_width_min", Math.ceil($this.outerWidth()));
+			}
+
+			var text = $this.val();
+			if (!text) text = $this.attr("placeholder") || "";
+
+			var $aux = $("<span></span>").text(text);
+			$aux.css({
+				position: "absolute",
+				left: "-9999px",
+				top: "-9999px",
+				visibility: "hidden",
+				whiteSpace: "pre",
+				fontSize: $this.css("font-size"),
+				fontFamily: $this.css("font-family"),
+				fontWeight: $this.css("font-weight"),
+				letterSpacing: $this.css("letter-spacing")
+			});
+			$("body").append($aux);
+
+			var aux_width = Math.ceil($aux.outerWidth()) + 26;
+			$aux.remove();
+
+			var min_width = cfg && !isNaN(parseInt(cfg.min, 10))
+				? parseInt(cfg.min, 10)
+				: (parseInt($this.data("auto_width_min"), 10) || 0);
+			if (aux_width < min_width) aux_width = min_width;
+
+			var max_width = cfg && !isNaN(parseInt(cfg.max, 10))
+				? parseInt(cfg.max, 10)
+				: parseFloat($this.css("max-width"));
+			if (!isNaN(max_width) && max_width > 0 && aux_width > max_width) {
+				aux_width = max_width;
+			}
+			$this.width(aux_width);
+		}).trigger("input");
+		return;
+	}
+
+	$el.off("click.auto_width change.auto_width").on("click.auto_width change.auto_width", function() {
+		var text = $(this).find("option:selected").text();
+		var className = $(this).attr("class") || "";
+		var $aux = $('<select class="' + className + '">').append($("<option/>").text(text));
 		$(this).after($aux);
-		var aux_width=$aux.width();
-		if(aux_width < 135 && p == "1"){
+		var aux_width = $aux.width();
+		if (aux_width < 135 && p == "1") {
 			aux_width = 135;
 		}
-		if(aux_width < 118 && p == "0"){
+		if (aux_width < 118 && p == "0") {
 			aux_width = 118;
 		}
 		$(this).width(aux_width);
 		$aux.remove();
-	}).click();
+	}).trigger("change");
 }
 
 function set_ss_status_waiting(text) {
