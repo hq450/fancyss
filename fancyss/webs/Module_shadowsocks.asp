@@ -563,6 +563,8 @@ function save() {
 	  "ss_basic_udpoff",
 	  "ss_basic_udpall",
 	  "ss_basic_block_quic",
+	  "ss_acl_default_udp",
+	  "ss_acl_default_quic",
 	  "ss_basic_sub_ai"
 	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
@@ -578,7 +580,9 @@ function save() {
 	dbus["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 	// collect data from checkbox
 	for (var i = 0; i < params_check.length; i++) {
-		dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
+		if (E(params_check[i])) {
+			dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
+		}
 	}
 	// data need base64 encode, format b with plain text
 	for (var i = 0; i < params_base64.length; i++) {
@@ -592,6 +596,8 @@ function save() {
 			dbus["ss_acl_name_" + rowid] = E("ss_acl_name_" + rowid).value;
 			dbus["ss_acl_mode_" + rowid] = E("ss_acl_mode_" + rowid).value;
 			dbus["ss_acl_port_" + rowid] = E("ss_acl_port_" + rowid).value;
+			dbus["ss_acl_udp_" + rowid] = E("ss_acl_udp_" + rowid).checked ? '1' : '0';
+			dbus["ss_acl_quic_" + rowid] = E("ss_acl_quic_" + rowid).checked ? '1' : '0';
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
@@ -4521,6 +4527,8 @@ function getACLConfigs() {
 			obj[params[i]] = db_acl[ofield];
 		}
 		if (obj != null) {
+			obj["udp"] = get_acl_udp_value(obj["mode"], db_acl[p + "_udp_" + field]);
+			obj["quic"] = get_acl_quic_value(db_acl[p + "_quic_" + field]);
 			var node_a = parseInt(field);
 			if (node_a > acl_node_max) {
 				acl_node_max = node_a;
@@ -4539,6 +4547,8 @@ function addTr() {
 	for (var i = 0; i < params.length; i++) {
 		acls[p + "_" + params[i] + "_" + acl_node_max] = $('#' + p + "_" + params[i]).val();
 	}
+	acls[p + "_udp_" + acl_node_max] = E("ss_acl_udp").checked ? "1" : "0";
+	acls[p + "_quic_" + acl_node_max] = E("ss_acl_quic").checked ? "1" : "0";
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": acls};
 	$.ajax({
@@ -4565,7 +4575,7 @@ function delTr(o) {
 	var p = "ss_acl";
 	id = ids[ids.length - 1];
 	var acls = {};
-	var params = ["ip", "name", "port", "mode"];
+	var params = ["ip", "name", "port", "mode", "udp", "quic"];
 	for (var i = 0; i < params.length; i++) {
 		acls[p + "_" + params[i] + "_" + id] = "";
 	}
@@ -4668,17 +4678,26 @@ function refresh_acl_table(q, cb) {
 			} else {
 				$('#ss_acl_default_port').val("all");
 			}
+			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value($('#ss_acl_default_mode').val() || E("ss_basic_mode").value, db_acl["ss_acl_default_udp"]));
+			set_acl_checkbox_state("ss_acl_default_quic", get_acl_quic_value(db_acl["ss_acl_default_quic"]));
 			//write dynamic table value
-			for (var i = 1; i < acl_node_max + 1; i++) {
-				$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
-				$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
-				$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
-			}
+				for (var i = 1; i < acl_node_max + 1; i++) {
+					$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
+					$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
+					$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
+					sync_acl_port_state("ss_acl_port_" + i, db_acl["ss_acl_mode_" + i]);
+					set_acl_checkbox_state("ss_acl_udp_" + i, get_acl_udp_value(db_acl["ss_acl_mode_" + i], db_acl["ss_acl_udp_" + i]));
+					set_acl_checkbox_state("ss_acl_quic_" + i, get_acl_quic_value(db_acl["ss_acl_quic_" + i]));
+				}
 			//set default rule port to all when game mode enabled
 			set_default_port();
-			//after table generated and value filled, set default value for first line_image1
-			$('#ss_acl_mode').val("1");
-			$('#ss_acl_port').val("80,443");
+				//after table generated and value filled, set default value for first line_image1
+				$('#ss_acl_mode').val("1");
+				$('#ss_acl_port').val("80,443");
+				sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
+				set_acl_checkbox_state("ss_acl_udp", false);
+				set_acl_checkbox_state("ss_acl_quic", true);
+			sync_acl_udp_quic_labels();
 			if (typeof cb === "function") {
 				cb();
 			}
@@ -4699,6 +4718,8 @@ function set_mode_1() {
 	} else if ($('#ss_acl_mode').val() == 2 || $('#ss_acl_mode').val() == 5) {
 		$("#ss_acl_port").val("22,80,443");
 	}
+	sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
+	update_acl_udp_quic_label_pair("ss_acl_udp", "ss_acl_quic");
 }
 function set_mode_2(o) {
 	var id2 = $(o).attr("id");
@@ -4711,14 +4732,158 @@ function set_mode_2(o) {
 	} else if ($(o).val() == 2 || $(o).val() == 5) {
 		$("#ss_acl_port_" + id2).val("22,80,443");
 	}
+	sync_acl_port_state("ss_acl_port_" + id2, $(o).val());
+	update_acl_udp_quic_label_pair("ss_acl_udp_" + id2, "ss_acl_quic_" + id2);
 }
 function set_default_port() {
-	if ($('#ss_acl_default_mode').val() == 3) {
+	if ($('#ss_acl_default_mode').val() == 0 || $('#ss_acl_default_mode').val() == 3) {
 		$("#ss_acl_default_port").val("all");
 	} else if ($('#ss_acl_default_mode').val() == 1) {
 		$("#ss_acl_default_port").val("80,443");
 	} else if ($('#ss_acl_default_mode').val() == 2 || $('#ss_acl_default_mode').val() == 5) {
 		$("#ss_acl_default_port").val("22,80,443");
+	}
+	sync_acl_port_state("ss_acl_default_port", $('#ss_acl_default_mode').val());
+	update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
+}
+function is_acl_game_mode(mode) {
+	return String(mode) == "3";
+}
+function is_acl_no_proxy_mode(mode) {
+	return String(mode) == "0";
+}
+function get_acl_mode_value_by_udp_id(udpId) {
+	if (udpId == "ss_acl_udp") {
+		return $('#ss_acl_mode').val();
+	}
+	if (udpId == "ss_acl_default_udp") {
+		if (E("ss_acl_default_mode")) {
+			return $('#ss_acl_default_mode').val();
+		}
+		return E("ss_basic_mode").value;
+	}
+	var ids = udpId.split("_");
+	var rowid = ids[ids.length - 1];
+	if (rowid && E("ss_acl_mode_" + rowid)) {
+		return $('#ss_acl_mode_' + rowid).val();
+	}
+	return "";
+}
+function sync_acl_checkbox_ui(boxId, title, disabled) {
+	var box = E(boxId);
+	if (!box) {
+		return;
+	}
+	var labelWrap = box.parentNode;
+	var text = E(boxId + "_label");
+	box.disabled = !!disabled;
+	box.title = title;
+	box.style.cursor = disabled ? "not-allowed" : "pointer";
+	if (labelWrap) {
+		labelWrap.style.cursor = disabled ? "not-allowed" : "pointer";
+		labelWrap.title = title;
+	}
+	if (text) {
+		text.title = title;
+	}
+}
+function sync_acl_port_state(portId, mode) {
+	var portSelect = E(portId);
+	if (!portSelect) {
+		return;
+	}
+	var noProxy = is_acl_no_proxy_mode(mode);
+	if (noProxy) {
+		portSelect.value = "all";
+	}
+	portSelect.disabled = noProxy;
+	portSelect.title = noProxy ? "不通过代理时，目标端口将全部走本地网络直连" : "";
+	portSelect.style.cursor = noProxy ? "not-allowed" : "pointer";
+}
+function sync_acl_checkbox_state_by_mode(udpId, quicId, mode) {
+	var udpBox = E(udpId);
+	var quicBox = E(quicId);
+	if (!udpBox || !quicBox) {
+		return;
+	}
+	if (is_acl_no_proxy_mode(mode)) {
+		udpBox.checked = false;
+		quicBox.checked = false;
+		sync_acl_checkbox_ui(udpId, "不通过代理时，udp将走本地网络直连", true);
+		sync_acl_checkbox_ui(quicId, "不通过代理时，quic流量将走本地网络直连", true);
+		return;
+	}
+	if (is_acl_game_mode(mode)) {
+		udpBox.checked = true;
+	}
+	sync_acl_checkbox_ui(udpId, is_acl_game_mode(mode) ? "游戏模式下UDP默认开启，无法关闭" : "开启该主机的UDP代理", is_acl_game_mode(mode));
+	sync_acl_checkbox_ui(quicId, "屏蔽该主机的QUIC流量", false);
+}
+function get_acl_udp_value(mode, value) {
+	if (is_acl_game_mode(mode)) {
+		return true;
+	}
+	if (typeof value != "undefined") {
+		return value == "1";
+	}
+	return db_ss["ss_basic_udpall"] == "1";
+}
+function get_acl_quic_value(value) {
+	if (typeof value != "undefined") {
+		return value == "1";
+	}
+	if (typeof db_ss["ss_basic_block_quic"] != "undefined") {
+		return db_ss["ss_basic_block_quic"] == "1";
+	}
+	return true;
+}
+function set_acl_checkbox_state(id, checked) {
+	if (E(id)) {
+		E(id).checked = !!checked;
+	}
+}
+function update_acl_udp_quic_label_pair(udpId, quicId) {
+	var mode = get_acl_mode_value_by_udp_id(udpId);
+	sync_acl_checkbox_state_by_mode(udpId, quicId, mode);
+	var udpLabel = E(udpId + "_label");
+	var quicLabel = E(quicId + "_label");
+	if (is_acl_no_proxy_mode(mode)) {
+		if (udpLabel) {
+			udpLabel.style.textDecoration = "none";
+			udpLabel.style.color = "#999999";
+			udpLabel.style.opacity = "1";
+		}
+		if (quicLabel) {
+			quicLabel.style.textDecoration = "none";
+			quicLabel.style.color = "#999999";
+			quicLabel.style.opacity = "1";
+		}
+		return;
+	}
+	if (udpLabel && E(udpId)) {
+		var udpEnabled = E(udpId).checked;
+		udpLabel.style.textDecoration = udpEnabled ? "none" : "line-through";
+		udpLabel.style.color = udpEnabled ? "#3cb371" : "#d9534f";
+		udpLabel.style.opacity = "1";
+	}
+	if (quicLabel && E(quicId)) {
+		var quicBlocked = E(quicId).checked;
+		quicLabel.style.textDecoration = quicBlocked ? "line-through" : "none";
+		quicLabel.style.color = quicBlocked ? "#d9534f" : "#3cb371";
+		quicLabel.style.opacity = "1";
+	}
+}
+function sync_acl_udp_quic_labels() {
+	var boxes = document.querySelectorAll('input[type="checkbox"]');
+	for (var i = 0; i < boxes.length; i++) {
+		var udpId = boxes[i].id;
+		if (udpId.indexOf("ss_acl") !== 0 || udpId.indexOf("udp") === -1) {
+			continue;
+		}
+		var quicId = udpId.replace("_udp", "_quic");
+		if (quicId !== udpId) {
+			update_acl_udp_quic_label_pair(udpId, quicId);
+		}
 	}
 }
 function render_acl_port_select(id, className, style) {
@@ -4733,8 +4898,29 @@ function render_acl_port_select(id, className, style) {
 	code += '>';
 	code += '<option value="80,443">80,443</option>';
 	code += '<option value="22,80,443">22,80,443</option>';
+	code += '<option value="22,80,443,8080,8443">22,80,443,8080,8443</option>';
 	code += '<option value="all">all</option>';
 	code += '</select>';
+	return code;
+}
+function render_acl_udp_control(udpId, quicId, udpChecked) {
+	var code = '';
+	code += '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:11px;line-height:1;">';
+	code += '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;margin:0;" title="开启该主机的UDP代理">';
+	code += '<input type="checkbox" id="' + udpId + '"' + (udpChecked ? ' checked' : '') + ' onchange="update_acl_udp_quic_label_pair(\'' + udpId + '\', \'' + quicId + '\')" />';
+	code += '<span id="' + udpId + '_label">UDP</span>';
+	code += '</label>';
+	code += '</div>';
+	return code;
+}
+function render_acl_quic_control(udpId, quicId, quicChecked) {
+	var code = '';
+	code += '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:11px;line-height:1;">';
+	code += '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;margin:0;" title="屏蔽该主机的QUIC流量">';
+	code += '<input type="checkbox" id="' + quicId + '"' + (quicChecked ? ' checked' : '') + ' onchange="update_acl_udp_quic_label_pair(\'' + udpId + '\', \'' + quicId + '\')" />';
+	code += '<span id="' + quicId + '_label">QUIC</span>';
+	code += '</label>';
+	code += '</div>';
 	return code;
 }
 function refresh_acl_html() {
@@ -4747,29 +4933,33 @@ function refresh_acl_html() {
 	// acl table th
 	code += '<table width="100%" border="0" align="center" cellpadding="4" cellspacing="0" class="FormTable_table acl_lists" style="margin:-1px 0px 0px 0px;">'
 	code += '<tr>'
-	code += '<th width="23%">主机IP地址</th>'
-	code += '<th width="23%">主机别名</th>'
-	code += '<th width="23%">访问控制</th>'
-	code += '<th width="23%">目标端口</th>'
-	code += '<th width="8%">操作</th>'
+	code += '<th width="18%">客户端地址</th>'
+	code += '<th width="20%">主机别名</th>'
+	code += '<th width="18%">访问控制</th>'
+	code += '<th width="8%">UDP代理</th>'
+	code += '<th width="8%">屏蔽QUIC</th>'
+	code += '<th width="22%">代理端口</th>'
+	code += '<th width="6%">操作</th>'
 	code += '</tr>'
 	code += '</table>'
 	// acl table input area
 	code += '<table id="ACL_table" width="100%" border="0" align="center" cellpadding="4" cellspacing="0" class="list_table acl_lists" style="margin:-1px 0px 0px 0px;">'
 	code += '<tr>'
 	// ip addr
-	code += '<td width="23%">'
-	code += '<input type="text" maxlength="15" class="input_ss_table" id="ss_acl_ip" align="left" style="float:left;width:110px;margin-left:16px;text-align:center" autocomplete="off" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">'
-	code += '<img id="pull_arrow" height="14px;" src="/res/arrow-down.gif" align="right" onclick="pullLANIPList(this);" title="<#select_IP#>">'
+	code += '<td width="18%">'
+	code += '<div style="display:flex;align-items:center;gap:0;padding:0 4px;box-sizing:border-box;">'
+	code += '<input type="text" maxlength="15" class="input_ss_table" id="ss_acl_ip" align="left" style="flex:1;min-width:0;width:auto;height:25px;line-height:25px;margin-left:0;text-align:center;box-sizing:border-box;" autocomplete="off" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">'
+	code += '<img id="pull_arrow" height="14px;" src="/res/arrow-down.gif" style="flex:none;cursor:pointer;" onclick="pullLANIPList(this);" title="<#select_IP#>">'
+	code += '</div>'
 	code += '<div id="ClientList_Block" class="clientlist_dropdown" style="margin-left:2px;margin-top:25px;"></div>'
 	code += '</td>'
 	// name
-	code += '<td width="23%">'
-	code += '<input type="text" id="ss_acl_name" class="input_ss_table" maxlength="50" style="width:140px;text-align:center" placeholder="" />'
+	code += '<td width="20%">'
+	code += '<input type="text" id="ss_acl_name" class="input_ss_table" maxlength="50" style="display:block;width:92%;max-width:92%;height:25px;line-height:25px;margin:0 auto;box-sizing:border-box;text-align:center" placeholder="" />'
 	code += '</td>'
 	// mode
-	code += '<td width="23%">'
-	code += '<select id="ss_acl_mode" style="width:140px;margin:0px 0px 0px 2px;text-align:center;text-align-last:center;padding-left: 12px;" class="input_option" onchange="set_mode_1(this);">'
+	code += '<td width="18%">'
+	code += '<select id="ss_acl_mode" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;text-align:center;text-align-last:center;padding-left:0;" class="input_option" onchange="set_mode_1(this);">'
 	code += '<option value="0">不通过代理</option>'
 	code += '<option value="1">gfwlist模式</option>'
 	code += '<option value="2">大陆白名单模式</option>'
@@ -4778,12 +4968,18 @@ function refresh_acl_html() {
 	// code += '<option value="6">回国模式</option>'
 	code += '</select>'
 	code += '</td>'
-		// port
-		code += '<td width="23%">'
-		code += render_acl_port_select('ss_acl_port', 'input_option', 'width:152px;margin:0px 0px 0px 2px;text-align-last:center;padding-left: 12px;')
-		code += '</td>'
-	// add/delete
 	code += '<td width="8%">'
+	code += render_acl_udp_control('ss_acl_udp', 'ss_acl_quic', false);
+	code += '</td>'
+	code += '<td width="8%">'
+	code += render_acl_quic_control('ss_acl_udp', 'ss_acl_quic', true);
+	code += '</td>'
+	// port
+	code += '<td width="22%">'
+	code += render_acl_port_select('ss_acl_port', 'input_option', 'width:100%;max-width:100%;box-sizing:border-box;margin:0;text-align-last:center;padding-left:0;')
+	code += '</td>'
+	// add/delete
+	code += '<td width="6%">'
 	code += '<input style="margin-left: 6px;margin: -2px 0px -4px -2px;" type="button" class="add_btn" onclick="addTr()" value="" />'
 	code += '</td>'
 	code += '</tr>'
@@ -4792,14 +4988,14 @@ function refresh_acl_html() {
 		var ac = acl_confs[field];
 		code += '<tr id="acl_tr_' + ac["acl_node"] + '">';
 		
-		code += '<td width="23%">' + ac["ip"] + '</td>';
+		code += '<td width="18%">' + ac["ip"] + '</td>';
 		
-		code += '<td width="23%">';
-		code += '<input type="text" placeholder="' + ac["acl_node"] + '号机" id="ss_acl_name_' + ac["acl_node"] + '" name="ss_acl_name_' + ac["acl_node"] + '" class="input_option_2" maxlength="50" style="width:140px;" placeholder="" />';
+		code += '<td width="20%">';
+		code += '<input type="text" placeholder="' + ac["acl_node"] + '号机" id="ss_acl_name_' + ac["acl_node"] + '" name="ss_acl_name_' + ac["acl_node"] + '" class="input_option_2" maxlength="50" style="display:block;width:92%;max-width:92%;height:25px;line-height:25px;margin:0 auto;box-sizing:border-box;" placeholder="" />';
 		code += '</td>';
 		
-		code += '<td width="23%">';
-		code += '<select id="ss_acl_mode_' + ac["acl_node"] + '" name="ss_acl_mode_' + ac["acl_node"] + '" style="width:140px;margin:0px 0px 0px 2px;" class="sel_option" onchange="set_mode_2(this);">';
+		code += '<td width="18%">';
+		code += '<select id="ss_acl_mode_' + ac["acl_node"] + '" name="ss_acl_mode_' + ac["acl_node"] + '" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="sel_option" onchange="set_mode_2(this);">';
 		if ($("#ss_basic_mode").val() == 6) {
 			code += '<option value="0">不通过代理</option>';
 			//code += '<option value="6">回国模式</option>';
@@ -4811,43 +5007,51 @@ function refresh_acl_html() {
 			code += '<option value="5">全局代理模式</option>';
 			//code += '<option value="6">回国模式</option>';
 		}
-			code += '</select>'
-			code += '</td>';
-			
-			code += '<td width="23%">';
-			code += render_acl_port_select('ss_acl_port_' + ac["acl_node"], 'sel_option', 'width:140px;');
-			code += '</td>';
-		
+		code += '</select>'
+		code += '</td>';
 		code += '<td width="8%">';
+		code += render_acl_udp_control('ss_acl_udp_' + ac["acl_node"], 'ss_acl_quic_' + ac["acl_node"], ac["udp"]);
+		code += '</td>';
+		code += '<td width="8%">';
+		code += render_acl_quic_control('ss_acl_udp_' + ac["acl_node"], 'ss_acl_quic_' + ac["acl_node"], ac["quic"]);
+		code += '</td>';
+		code += '<td width="22%">';
+		code += render_acl_port_select('ss_acl_port_' + ac["acl_node"], 'sel_option', 'width:100%;max-width:100%;box-sizing:border-box;');
+		code += '</td>';
+		
+		code += '<td width="6%">';
 		code += '<input style="margin: -2px 0px -4px -2px;" id="acl_node_' + ac["acl_node"] + '" class="remove_btn" type="button" onclick="delTr(this);" value="">'
 		code += '</td>';
 		code += '</tr>';
 	}
 	code += '<tr>';
 	if (n == 0) {
-		code += '<td width="23%">所有主机</td>';
+		code += '<td width="18%">所有主机</td>';
 	} else {
-		code += '<td width="23%">其它主机</td>';
+		code += '<td width="18%">其它主机</td>';
 	}
-	code += '<td width="23%">默认规则</td>';
+	code += '<td width="20%">默认规则</td>';
 	ssmode = E("ss_basic_mode").value;
+	var defaultMode = typeof db_acl["ss_acl_default_mode"] != "undefined" ? db_acl["ss_acl_default_mode"] : ssmode;
+	var defaultUdp = get_acl_udp_value(defaultMode, db_acl["ss_acl_default_udp"]);
+	var defaultQuic = get_acl_quic_value(db_acl["ss_acl_default_quic"]);
 	if (n == 0) {
 		if (ssmode == 0) {
-			code += '<td width="23%">SS关闭</td>';
+			code += '<td width="18%">SS关闭</td>';
 		} else if (ssmode == 1) {
-			code += '<td width="23%">gfwlist模式</td>';
+			code += '<td width="18%">gfwlist模式</td>';
 		} else if (ssmode == 2) {
-			code += '<td width="23%">大陆白名单模式</td>';
+			code += '<td width="18%">大陆白名单模式</td>';
 		} else if (ssmode == 3) {
-			code += '<td width="23%">游戏模式</td>';
+			code += '<td width="18%">游戏模式</td>';
 		} else if (ssmode == 5) {
-			code += '<td width="23%">全局模式</td>';
+			code += '<td width="18%">全局模式</td>';
 		} else if (ssmode == 6) {
-			//code += '<td width="23%">回国模式</td>';
+			//code += '<td width="18%">回国模式</td>';
 		}
 	} else {
-		code += '<td width="23%">';
-		code += '<select id="ss_acl_default_mode" style="width:140px;margin:0px 0px 0px 2px;" class="sel_option" onchange="set_default_port();">';
+		code += '<td width="18%">';
+		code += '<select id="ss_acl_default_mode" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="sel_option" onchange="set_default_port();">';
 		if (ssmode == 0) {
 			code += '<td>SS关闭</td>';
 		} else if (ssmode == 1) {
@@ -4868,17 +5072,24 @@ function refresh_acl_html() {
 		}
 		code += '</select>';
 		code += '</td>';
-		}
-		code += '<td width="23%">';
-			code += render_acl_port_select('ss_acl_default_port', 'sel_option', 'width:140px;');
-		code += '</td>';
+	}
 	code += '<td width="8%">';
+	code += render_acl_udp_control('ss_acl_default_udp', 'ss_acl_default_quic', defaultUdp);
+	code += '</td>';
+	code += '<td width="8%">';
+	code += render_acl_quic_control('ss_acl_default_udp', 'ss_acl_default_quic', defaultQuic);
+	code += '</td>';
+	code += '<td width="22%">';
+	code += render_acl_port_select('ss_acl_default_port', 'sel_option', 'width:100%;max-width:100%;box-sizing:border-box;');
+	code += '</td>';
+	code += '<td width="6%">';
 	code += '</td>';
 	code += '</tr>';
 	code += '</table>';
 
 	$(".acl_lists").remove();
 	$('#ss_acl_table').append(code);
+	sync_acl_udp_quic_labels();
 	
 	showDropdownClientList('setClientIP', 'ip', 'all', 'ClientList_Block', 'pull_arrow', 'online');
 }
@@ -6394,11 +6605,6 @@ function toggleKeyMask(o, show){
 															//	{ suffix: '<a>ipv6</a>' },
 															//]},
 															{ title: 'New Bing模式', id:'ss_basic_proxy_newb', hint:'149', type:'checkbox', value:true},
-															{ title: 'udp代理控制', hint:'150', thtd:1 , multi: [
-																{ id:'ss_basic_udpoff', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">关闭</font></a>', value: 0},
-																{ id:'ss_basic_udpall', name:'ss_basic_udp_proxy', func:'u', type:'radio', suffix: '<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(150)"><font color="#ffcc00">开启</font></a>', value: 1},
-															]},
-															{ title: '屏蔽quic流量', id:'ss_basic_block_quic', hint:'152', type:'checkbox', value:true},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd

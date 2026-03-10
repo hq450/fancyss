@@ -73,37 +73,42 @@ do
 done
 ssconf_basic_node=${cur_node}
 # ------------------------------------------------
-game_on=$(dbus list ss_acl_mode | cut -d "=" -f 2 | grep "3")
-
-# ---------------------- udp代理 ----------------------
-# 1. 非游戏模式，访问控制内无游戏模式，且关闭了udp代理	（当前模式 off udp）
-# 2. 非游戏模式，访问控制内无游戏模式，且开启了udp代理	（当前模式 all udp）
-
-# 1. 非游戏模式，访问控制内有游戏模式，且关闭了udp代理	（当前模式 off udp + 游戏模式 all udp）
-# 2. 非游戏模式，访问控制内有游戏模式，且开启了udp代理	（当前模式 all udp + 游戏模式 all udp）
-
-# 1. 游戏模式，访问控制内无其他模式，且关闭了udp代理	（游戏模式 all udp）
-# 2. 游戏模式，访问控制内无其他模式，且开启了udp代理	（游戏模式 all udp）
-
-# 1. 游戏模式，访问控制内有其他模式，且关闭了udp代理	（游戏模式 all udp + 其他模式 off udp）
-# 2. 游戏模式，访问控制内有其他模式，且开启了udp代理	（游戏模式 all udp + 其他模式 all udp）
-
-# 默认不开启udp
 mangle=0
 
-if [ "${ss_basic_mode}" == "3" ];then
-	# 游戏模式下启用udp
+resolve_acl_udp_flag() {
+	local udp_flag="$1"
+	local proxy_mode="$2"
+	if [ "${proxy_mode}" == "3" ];then
+		echo "1"
+		return
+	fi
+	if [ -z "${udp_flag}" ];then
+		if [ "${ss_basic_udpall}" == "1" ];then
+			udp_flag="1"
+		else
+			udp_flag="0"
+		fi
+	fi
+	echo "${udp_flag}"
+}
+
+default_mode="${ss_acl_default_mode:-${ss_basic_mode}}"
+default_udp_flag=$(resolve_acl_udp_flag "${ss_acl_default_udp}" "${default_mode}")
+if [ "${default_mode}" != "0" -a "${default_udp_flag}" == "1" ];then
 	mangle=1
 fi
 
-# 访问控制内有主机开启了游戏模式
-if [ -n "${game_on}" ];then
-	mangle=1
-fi
-
-if [ "${ss_basic_udpall}" == "1" ];then
-	mangle=1
-fi
+acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+for acl in ${acl_nu}
+do
+	eval acl_mode=\$ss_acl_mode_${acl}
+	eval acl_udp=\$ss_acl_udp_${acl}
+	acl_udp=$(resolve_acl_udp_flag "${acl_udp}" "${acl_mode}")
+	if [ "${acl_mode}" != "0" -a "${acl_udp}" == "1" ];then
+		mangle=1
+		break
+	fi
+done
 
 # naive 节点不支持udp
 if [ "${ss_basic_type}" == "6" ];then

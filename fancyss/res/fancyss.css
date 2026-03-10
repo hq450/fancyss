@@ -237,6 +237,25 @@ input[type=radio]{
 	border:1px solid transparent;
 	background-color: transparent;
 }
+.acl_lists,
+.acl_lists th,
+.acl_lists td,
+.acl_lists .input_ss_table,
+.acl_lists .input_option,
+.acl_lists .input_option_2,
+.acl_lists .sel_option,
+.acl_lists label,
+.acl_lists span{
+	font-size:11px !important;
+}
+.acl_lists .input_option,
+.acl_lists .sel_option{
+	padding-left:0 !important;
+}
+.acl_lists th,
+.acl_lists td{
+	white-space:nowrap;
+}
 #log_content, #log_content_fov{
 	outline: 1px solid #222;
 	width:748px;
