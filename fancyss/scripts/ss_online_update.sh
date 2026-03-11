@@ -1300,9 +1300,9 @@ add_vless_node(){
 		x_headtype_kcp=""
 		x_headtype_quic=""
 		x_xhttp_mode=${x_mode}
-		if [ -z "${x_host}" ];then
-			x_host="${x_server}"
-		fi
+		#if [ -z "${x_host}" ];then
+		#	x_host="${x_server}"
+		#fi
 		;;
 	esac
 

@@ -501,7 +501,7 @@ function save() {
 	  "ss_basic_node_update_hr",
 	  "ss_basic_exclude",
 	  "ss_basic_include",
-	  "ss_acl_default_port",
+	  "ss_acl_default_ports",
 	  "ss_acl_default_mode",
 	  "ss_reboot_check",
 	  "ss_basic_week",
@@ -4666,10 +4666,10 @@ function refresh_acl_table(q, cb) {
 				$('#ss_acl_default_mode').val("2");
 			}
 			//write default rule port
-			if (typeof db_acl["ss_acl_default_port"] != "undefined") {
-				$('#ss_acl_default_port').val(db_acl["ss_acl_default_port"]);
+			if (typeof db_acl["ss_acl_default_ports"] != "undefined") {
+				$('#ss_acl_default_ports').val(db_acl["ss_acl_default_ports"]);
 			} else {
-				$('#ss_acl_default_port').val("22,80,443,8080,8443");
+				$('#ss_acl_default_ports').val("22,80,443,8080,8443");
 			}
 			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value($('#ss_acl_default_mode').val() || "2", db_acl["ss_acl_default_udp"], false));
 			set_acl_checkbox_state("ss_acl_default_quic", get_acl_quic_value(db_acl["ss_acl_default_quic"], true));
@@ -4730,13 +4730,13 @@ function set_mode_2(o) {
 }
 function set_default_port() {
 	if ($('#ss_acl_default_mode').val() == 0 || $('#ss_acl_default_mode').val() == 3) {
-		$("#ss_acl_default_port").val("all");
+		$("#ss_acl_default_ports").val("all");
 	} else if ($('#ss_acl_default_mode').val() == 1) {
-		$("#ss_acl_default_port").val("80,443");
+		$("#ss_acl_default_ports").val("80,443");
 	} else if ($('#ss_acl_default_mode').val() == 2 || $('#ss_acl_default_mode').val() == 5) {
-		$("#ss_acl_default_port").val("22,80,443,8080,8443");
+		$("#ss_acl_default_ports").val("22,80,443,8080,8443");
 	}
-	sync_acl_port_state("ss_acl_default_port", $('#ss_acl_default_mode').val());
+	sync_acl_port_state("ss_acl_default_ports", $('#ss_acl_default_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
 }
 function is_acl_game_mode(mode) {
@@ -5076,7 +5076,7 @@ function refresh_acl_html() {
 	code += render_acl_quic_control('ss_acl_default_udp', 'ss_acl_default_quic', defaultQuic);
 	code += '</td>';
 	code += '<td width="22%">';
-	code += render_acl_port_select('ss_acl_default_port', 'sel_option', 'width:100%;max-width:100%;box-sizing:border-box;');
+	code += render_acl_port_select('ss_acl_default_ports', 'sel_option', 'width:100%;max-width:100%;box-sizing:border-box;');
 	code += '</td>';
 	code += '<td width="6%">';
 	code += '</td>';

@@ -4415,20 +4415,28 @@ lan_access_control() {
 			dbus set ss_acl_default_mode="2"
 			ss_acl_default_mode="2"
 		fi
-		if [ "$ss_acl_default_port" == "all" ]; then
-			ss_acl_default_port=""
+		if [ -z "${ss_acl_default_ports}" ];then
+			dbus set ss_acl_default_ports="22,80,443,8080,8443"
+			ss_acl_default_ports="22,80,443,8080,8443"
+		fi
+		if [ "$ss_acl_default_ports" == "all" ]; then
+			ss_acl_default_ports=""
 			echo_date "加载ACL规则：【${acl_default_label}】【全部端口】模式为：$(get_mode_name $ss_acl_default_mode)"
 		else
-			echo_date "加载ACL规则：【${acl_default_label}】【$ss_acl_default_port】模式为：$(get_mode_name $ss_acl_default_mode)"
+			echo_date "加载ACL规则：【${acl_default_label}】【$ss_acl_default_ports】模式为：$(get_mode_name $ss_acl_default_mode)"
 		fi
 	else
 		acl_default_label="全部主机"
 		ss_acl_default_mode="$ss_basic_mode"
-		if [ "$ss_acl_default_port" == "all" ]; then
-			ss_acl_default_port=""
+		if [ -z "${ss_acl_default_ports}" ];then
+			dbus set ss_acl_default_ports="22,80,443,8080,8443"
+			ss_acl_default_ports="22,80,443,8080,8443"
+		fi
+		if [ "$ss_acl_default_ports" == "all" ]; then
+			ss_acl_default_ports=""
 			echo_date "加载ACL规则：【${acl_default_label}】【全部端口】模式为：$(get_mode_name $ss_acl_default_mode)"
 		else
-			echo_date "加载ACL规则：【${acl_default_label}】【$ss_acl_default_port】模式为：$(get_mode_name $ss_acl_default_mode)"
+			echo_date "加载ACL规则：【${acl_default_label}】【$ss_acl_default_ports】模式为：$(get_mode_name $ss_acl_default_mode)"
 		fi
 	fi
 	dbus remove ss_acl_ip
@@ -4830,13 +4838,13 @@ _start_iptables() {
 	append_if_not_exists nat -A OUTPUT -p tcp -m mark --mark "$ip_prefix_hex" -j SHADOWSOCKS_EXT
 
 	# 把最后剩余流量重定向到相应模式的nat表中对应的主模式的链
-	append_if_not_exists nat -A SHADOWSOCKS -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	append_if_not_exists nat -A SHADOWSOCKS -p tcp $(factor $ss_acl_default_ports "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 	
-	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_port "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_ports "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 
 	local default_udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
 	local default_quic_flag=$(get_acl_quic_flag)
-	apply_acl_udp_rule "${acl_default_label}" "" "${ss_acl_default_port}" "${ss_acl_default_mode}" "${default_udp_flag}" "${default_quic_flag}"
+	apply_acl_udp_rule "${acl_default_label}" "" "${ss_acl_default_ports}" "${ss_acl_default_mode}" "${default_udp_flag}" "${default_quic_flag}"
 	
 	# 重定所有流量到 SHADOWSOCKS
 	KP_NU=$(iptables -nvL PREROUTING -t nat | sed 1,2d | sed -n '/KOOLPROXY/=' | head -n1)
