@@ -4659,27 +4659,20 @@ function refresh_acl_table(q, cb) {
 			refresh_acl_html();
 			//write defaut rule mode when switching ss mode
 			if (typeof db_acl["ss_acl_default_mode"] != "undefined") {
-				if (E("ss_basic_mode").value == 1 && db_acl["ss_acl_default_mode"] == 1 || db_acl["ss_acl_default_mode"] == 0) {
+				if ($('#ss_acl_default_mode option[value="' + db_acl["ss_acl_default_mode"] + '"]').length) {
 					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
 				}
-				if (E("ss_basic_mode").value == 2 && db_acl["ss_acl_default_mode"] == 2 || db_acl["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
-				}
-				if (E("ss_basic_mode").value == 3 && db_acl["ss_acl_default_mode"] == 3 || db_acl["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
-				}
-				if (E("ss_basic_mode").value == 5 && db_acl["ss_acl_default_mode"] == 5 || db_acl["ss_acl_default_mode"] == 0) {
-					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
-				}
+			} else if ($('#ss_acl_default_mode option[value="2"]').length) {
+				$('#ss_acl_default_mode').val("2");
 			}
 			//write default rule port
 			if (typeof db_acl["ss_acl_default_port"] != "undefined") {
 				$('#ss_acl_default_port').val(db_acl["ss_acl_default_port"]);
 			} else {
-				$('#ss_acl_default_port').val("all");
+				$('#ss_acl_default_port').val("22,80,443,8080,8443");
 			}
-			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value($('#ss_acl_default_mode').val() || E("ss_basic_mode").value, db_acl["ss_acl_default_udp"]));
-			set_acl_checkbox_state("ss_acl_default_quic", get_acl_quic_value(db_acl["ss_acl_default_quic"]));
+			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value($('#ss_acl_default_mode').val() || "2", db_acl["ss_acl_default_udp"], false));
+			set_acl_checkbox_state("ss_acl_default_quic", get_acl_quic_value(db_acl["ss_acl_default_quic"], true));
 			//write dynamic table value
 				for (var i = 1; i < acl_node_max + 1; i++) {
 					$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
@@ -4716,7 +4709,7 @@ function set_mode_1() {
 	} else if ($('#ss_acl_mode').val() == 1) {
 		$("#ss_acl_port").val("80,443");
 	} else if ($('#ss_acl_mode').val() == 2 || $('#ss_acl_mode').val() == 5) {
-		$("#ss_acl_port").val("22,80,443");
+		$("#ss_acl_port").val("22,80,443,8080,8443");
 	}
 	sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_udp", "ss_acl_quic");
@@ -4730,7 +4723,7 @@ function set_mode_2(o) {
 	} else if ($(o).val() == 1) {
 		$("#ss_acl_port_" + id2).val("80,443");
 	} else if ($(o).val() == 2 || $(o).val() == 5) {
-		$("#ss_acl_port_" + id2).val("22,80,443");
+		$("#ss_acl_port_" + id2).val("22,80,443,8080,8443");
 	}
 	sync_acl_port_state("ss_acl_port_" + id2, $(o).val());
 	update_acl_udp_quic_label_pair("ss_acl_udp_" + id2, "ss_acl_quic_" + id2);
@@ -4741,7 +4734,7 @@ function set_default_port() {
 	} else if ($('#ss_acl_default_mode').val() == 1) {
 		$("#ss_acl_default_port").val("80,443");
 	} else if ($('#ss_acl_default_mode').val() == 2 || $('#ss_acl_default_mode').val() == 5) {
-		$("#ss_acl_default_port").val("22,80,443");
+		$("#ss_acl_default_port").val("22,80,443,8080,8443");
 	}
 	sync_acl_port_state("ss_acl_default_port", $('#ss_acl_default_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
@@ -4816,21 +4809,27 @@ function sync_acl_checkbox_state_by_mode(udpId, quicId, mode) {
 	if (is_acl_game_mode(mode)) {
 		udpBox.checked = true;
 	}
-	sync_acl_checkbox_ui(udpId, is_acl_game_mode(mode) ? "游戏模式下UDP默认开启，无法关闭" : "开启该主机的UDP代理", is_acl_game_mode(mode));
-	sync_acl_checkbox_ui(quicId, "屏蔽该主机的QUIC流量", false);
+	sync_acl_checkbox_ui(udpId, is_acl_game_mode(mode) ? "游戏模式下UDP默认开启，无法关闭" : "勾选后开启此设备的UDP代理", is_acl_game_mode(mode));
+	sync_acl_checkbox_ui(quicId, "勾选后屏蔽此设备的海外QUIC流量", false);
 }
-function get_acl_udp_value(mode, value) {
+function get_acl_udp_value(mode, value, fallbackValue) {
 	if (is_acl_game_mode(mode)) {
 		return true;
 	}
 	if (typeof value != "undefined") {
 		return value == "1";
 	}
+	if (typeof fallbackValue != "undefined") {
+		return !!fallbackValue;
+	}
 	return db_ss["ss_basic_udpall"] == "1";
 }
-function get_acl_quic_value(value) {
+function get_acl_quic_value(value, fallbackValue) {
 	if (typeof value != "undefined") {
 		return value == "1";
+	}
+	if (typeof fallbackValue != "undefined") {
+		return !!fallbackValue;
 	}
 	if (typeof db_ss["ss_basic_block_quic"] != "undefined") {
 		return db_ss["ss_basic_block_quic"] == "1";
@@ -4906,7 +4905,7 @@ function render_acl_port_select(id, className, style) {
 function render_acl_udp_control(udpId, quicId, udpChecked) {
 	var code = '';
 	code += '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:11px;line-height:1;">';
-	code += '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;margin:0;" title="开启该主机的UDP代理">';
+	code += '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;margin:0;" title="勾选后开启此设备的UDP代理">';
 	code += '<input type="checkbox" id="' + udpId + '"' + (udpChecked ? ' checked' : '') + ' onchange="update_acl_udp_quic_label_pair(\'' + udpId + '\', \'' + quicId + '\')" />';
 	code += '<span id="' + udpId + '_label">UDP</span>';
 	code += '</label>';
@@ -4916,7 +4915,7 @@ function render_acl_udp_control(udpId, quicId, udpChecked) {
 function render_acl_quic_control(udpId, quicId, quicChecked) {
 	var code = '';
 	code += '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:11px;line-height:1;">';
-	code += '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;margin:0;" title="屏蔽该主机的QUIC流量">';
+	code += '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;margin:0;" title="勾选后屏蔽此设备的海外QUIC流量">';
 	code += '<input type="checkbox" id="' + quicId + '"' + (quicChecked ? ' checked' : '') + ' onchange="update_acl_udp_quic_label_pair(\'' + udpId + '\', \'' + quicId + '\')" />';
 	code += '<span id="' + quicId + '_label">QUIC</span>';
 	code += '</label>';
@@ -5032,12 +5031,12 @@ function refresh_acl_html() {
 	}
 	code += '<td width="20%">默认规则</td>';
 	ssmode = E("ss_basic_mode").value;
-	var defaultMode = typeof db_acl["ss_acl_default_mode"] != "undefined" ? db_acl["ss_acl_default_mode"] : ssmode;
-	var defaultUdp = get_acl_udp_value(defaultMode, db_acl["ss_acl_default_udp"]);
-	var defaultQuic = get_acl_quic_value(db_acl["ss_acl_default_quic"]);
+	var defaultMode = typeof db_acl["ss_acl_default_mode"] != "undefined" ? db_acl["ss_acl_default_mode"] : "2";
+	var defaultUdp = get_acl_udp_value(defaultMode, db_acl["ss_acl_default_udp"], false);
+	var defaultQuic = get_acl_quic_value(db_acl["ss_acl_default_quic"], true);
 	if (n == 0) {
 		if (ssmode == 0) {
-			code += '<td width="18%">SS关闭</td>';
+			code += '<td width="18%">插件未启用</td>';
 		} else if (ssmode == 1) {
 			code += '<td width="18%">gfwlist模式</td>';
 		} else if (ssmode == 2) {
@@ -5053,22 +5052,19 @@ function refresh_acl_html() {
 		code += '<td width="18%">';
 		code += '<select id="ss_acl_default_mode" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="sel_option" onchange="set_default_port();">';
 		if (ssmode == 0) {
-			code += '<td>SS关闭</td>';
-		} else if (ssmode == 1) {
-			code += '<option value="0">不通过代理</option>';
-			code += '<option value="1" selected>gfwlist模式</option>';
-		} else if (ssmode == 2) {
-			code += '<option value="0">不通过代理</option>';
-			code += '<option value="2" selected>大陆白名单模式</option>';
-		} else if (ssmode == 3) {
-			code += '<option value="0">不通过代理</option>';
-			code += '<option value="3" selected>游戏模式</option>';
-		} else if (ssmode == 5) {
-			code += '<option value="0">不通过代理</option>';
-			code += '<option value="5" selected>全局代理模式</option>';
-		} else if (ssmode == 6) {
-			code += '<option value="0">不通过代理</option>';
-			//code += '<option value="6" selected>回国模式</option>';
+			code += '<td>插件未启用</td>';
+		} else {
+			code += '<option value="0"' + (String(defaultMode) == "0" ? ' selected' : '') + '>不通过代理</option>';
+			code += '<option value="2"' + (String(defaultMode) == "2" ? ' selected' : '') + '>大陆白名单模式</option>';
+			if (ssmode == 1) {
+				code += '<option value="1"' + (String(defaultMode) == "1" ? ' selected' : '') + '>gfwlist模式</option>';
+			} else if (ssmode == 3) {
+				code += '<option value="3"' + (String(defaultMode) == "3" ? ' selected' : '') + '>游戏模式</option>';
+			} else if (ssmode == 5) {
+				code += '<option value="5"' + (String(defaultMode) == "5" ? ' selected' : '') + '>全局代理模式</option>';
+			} else if (ssmode == 6) {
+				//code += '<option value="6"' + (String(defaultMode) == "6" ? ' selected' : '') + '>回国模式</option>';
+			}
 		}
 		code += '</select>';
 		code += '</td>';
@@ -6512,10 +6508,11 @@ function toggleKeyMask(o, show){
 											<div id="tablet_8" style="display: none;">
 												<div id="ss_acl_table"></div>
 												<div id="ACL_note" style="margin:10px 0 0 5px">
-													<div><i>1&nbsp;&nbsp;默认状态下，所有局域网的主机都会走当前节点的模式（主模式），相当于即不启用局域网访问控制。</i></div>
+													<div><i>1&nbsp;&nbsp;默认状态下，所有局域网的设备流量都会走当前节点的模式（主模式），即相当于不启用局域网访问控制。</i></div>
 													<div><i>2&nbsp;&nbsp;当你设置默认规则为不通过代理，添加了主机走大陆白名单模式，则只有添加的主机才会走代理(大陆白名单模式)。</i></div>
 													<div><i>3&nbsp;&nbsp;当你设置默认规则为正在使用节点的模式，除了添加的主机才会走相应的模式，未添加的主机会走默认规则的模式。</i></div>
-													<div><i>5&nbsp;&nbsp;如果需要自定义端口范围，适用英文逗号和冒号，参考格式：80,443,5566:6677,7777:8888</i></div>
+													<div><i>4&nbsp;&nbsp;开启udp代理的情况下，建议勾选屏蔽QUIC，不屏蔽QUIC的话一些媒体网站如youtube使用QUIC流量，速度可能会比较慢</i></div>
+													<div><i>5&nbsp;&nbsp;关闭udp代理的情况下，建议勾选屏蔽QUIC，不屏蔽QUIC的话会直连访问http3网站，导致比如chatgpt，gemini等检测到国内ip地址</i></div>
 												</div>
 											</div>
 											<div id="tablet_9" style="display: none;">

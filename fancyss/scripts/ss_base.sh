@@ -92,13 +92,19 @@ resolve_acl_udp_flag() {
 	echo "${udp_flag}"
 }
 
-default_mode="${ss_acl_default_mode:-${ss_basic_mode}}"
-default_udp_flag=$(resolve_acl_udp_flag "${ss_acl_default_udp}" "${default_mode}")
+acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+if [ -n "${ss_acl_default_mode}" ];then
+	default_mode="${ss_acl_default_mode}"
+elif [ -n "${acl_nu}" ];then
+	default_mode="2"
+else
+	default_mode="${ss_basic_mode}"
+fi
+default_udp_flag=$(resolve_acl_udp_flag "${ss_acl_default_udp:-0}" "${default_mode}")
 if [ "${default_mode}" != "0" -a "${default_udp_flag}" == "1" ];then
 	mangle=1
 fi
 
-acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
 for acl in ${acl_nu}
 do
 	eval acl_mode=\$ss_acl_mode_${acl}

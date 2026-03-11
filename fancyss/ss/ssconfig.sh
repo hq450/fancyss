@@ -4283,8 +4283,12 @@ get_acl_udp_flag() {
 		udp_flag="${ss_acl_default_udp}"
 	fi
 	if [ -z "${udp_flag}" ];then
-		if [ "${ss_basic_udpall}" == "1" ];then
-			udp_flag="1"
+		if [ -n "${acl}" ];then
+			if [ "${ss_basic_udpall}" == "1" ];then
+				udp_flag="1"
+			else
+				udp_flag="0"
+			fi
 		else
 			udp_flag="0"
 		fi
@@ -4301,8 +4305,12 @@ get_acl_quic_flag() {
 		quic_flag="${ss_acl_default_quic}"
 	fi
 	if [ -z "${quic_flag}" ];then
-		if [ -n "${ss_basic_block_quic}" ];then
-			quic_flag="${ss_basic_block_quic}"
+		if [ -n "${acl}" ];then
+			if [ -n "${ss_basic_block_quic}" ];then
+				quic_flag="${ss_basic_block_quic}"
+			else
+				quic_flag="1"
+			fi
 		else
 			quic_flag="1"
 		fi
@@ -4404,8 +4412,8 @@ lan_access_control() {
 		done
 
 		if [ -z "$ss_acl_default_mode" ];then
-			dbus set ss_acl_default_mode="$ss_basic_mode"
-			ss_acl_default_mode="$ss_basic_mode"
+			dbus set ss_acl_default_mode="2"
+			ss_acl_default_mode="2"
 		fi
 		if [ "$ss_acl_default_port" == "all" ]; then
 			ss_acl_default_port=""
