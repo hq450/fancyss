@@ -4975,8 +4975,8 @@ function refresh_acl_html() {
 	code += '<th width="18%">客户端地址</th>'
 	code += '<th width="20%">主机别名</th>'
 	code += '<th width="18%">访问控制</th>'
-	code += '<th width="8%"><a onmouseover="mOver(this, 150)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">UDP代理</a></th>'
-	code += '<th width="8%"><a onmouseover="mOver(this, 152)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">屏蔽QUIC</a></th>'
+	code += '<th width="8%"><a onmouseover="mOver(this, 150)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">UDP代理</a></th>'
+	code += '<th width="8%"><a onmouseover="mOver(this, 152)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">屏蔽QUIC</a></th>'
 	code += '<th width="22%">代理端口</th>'
 	code += '<th width="6%">操作</th>'
 	code += '</tr>'
@@ -5446,8 +5446,8 @@ function toggleKeyMask(o, show){
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
 								$('#table_test').forms([
 									{ title: '延迟测试设置', thead:'1'},
-									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
-									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
+									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
+									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
 									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},

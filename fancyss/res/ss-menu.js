@@ -965,7 +965,7 @@ function openssHint(itemNum, flag) {
 		statusmenu += "1. 游戏模式下udp代理默认开启，此处设置无效<br /><br />";
 		statusmenu += "2. 大陆白名单摸下，开启udp代理后，效果和游戏模式等同<br /><br />";
 		statusmenu += "3. 节点必须支持udp代理才能看到实际效果，否则希望被代理的udp包将无法抵达<br /><br />";
-		statusmenu += "4. 关闭udp代理时，udp443端口的海外数据包将被屏蔽，以。<br />";
+		statusmenu += "4. 关闭udp代理时，建议开启屏蔽quic，这样udp443端口的海外数据包将被屏蔽，以避免直连访问海外h3网站。<br />";
 		_caption = "说明：";
 	} else if (itemNum == 152) {
 		width = "720px";
