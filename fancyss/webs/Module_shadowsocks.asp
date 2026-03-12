@@ -5180,9 +5180,9 @@ function save_online_nodes(action) {
 	}
 
 	if(ws_flag == 1){
-		push_data_ws("ss_online_update.sh", action,  dbus_post);
+		push_data_ws("ss_node_subscribe.sh", action,  dbus_post);
 	}else{
-		push_data("ss_online_update.sh", action,  dbus_post);
+		push_data("ss_node_subscribe.sh", action,  dbus_post);
 	}
 }
 function xray_binary_update(){

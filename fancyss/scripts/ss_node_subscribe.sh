@@ -6,7 +6,7 @@ NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'
 export PATH=${NEW_PATH}
 LC_ALL=C
 LANG=C
-LOCK_FILE=/var/lock/online_update.lock
+LOCK_FILE=/var/lock/node_subscribe.lock
 LOG_FILE=/tmp/upload/ss_log.txt
 DIR="/tmp/fancyss_subs"
 LOCAL_NODES_SPL="$DIR/ss_nodes_spl.txt"
@@ -177,7 +177,7 @@ set_lock(){
 	exec 233>"${LOCK_FILE}"
 	flock -n 233 || {
 		local PID1=$$
-		local PID2=$(ps|grep -w "ss_online_update.sh"|grep -vw "grep"|grep -vw ${PID1})
+		local PID2=$(ps|grep -w "ss_node_subscribe.sh"|grep -vw "grep"|grep -vw ${PID1})
 		if [ -n "${PID2}" ];then
 			echo_date "订阅脚本已经在运行，请稍候再试！"
 			exit 1			
@@ -2194,7 +2194,7 @@ exit_sub(){
 	exit 1
 }
 
-start_online_update(){
+start_node_subscribe(){
 	echo_date "==================================================================="
 	echo_date "                服务器订阅程序(Shell by stones & sadog)"
 	echo_date "==================================================================="
@@ -2393,10 +2393,10 @@ case $SH_ARG in
 	sed -i '/ssnodeupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	if [ "$(dbus get ss_basic_node_update)" = "1" ]; then
 		if [ "$(dbus get ss_basic_node_update_day)" = "7" ]; then
-			cru a ssnodeupdate "0 $(dbus get ss_basic_node_update_hr) * * * /koolshare/scripts/ss_online_update.sh fancyss 3"
+			cru a ssnodeupdate "0 $(dbus get ss_basic_node_update_hr) * * * /koolshare/scripts/ss_node_subscribe.sh fancyss 3"
 			echo_date "设置自动更新订阅服务在每天 $(dbus get ss_basic_node_update_hr) 点。" | tee -a $LOG_FILE
 		else
-			cru a ssnodeupdate "0 $(dbus get ss_basic_node_update_hr) * * $(dbus get ss_basic_node_update_day) /koolshare/scripts/ss_online_update.sh fancyss 3"
+			cru a ssnodeupdate "0 $(dbus get ss_basic_node_update_hr) * * $(dbus get ss_basic_node_update_day) /koolshare/scripts/ss_node_subscribe.sh fancyss 3"
 			echo_date "设置自动更新订阅服务在星期 $(dbus get ss_basic_node_update_day) 的 $(dbus get ss_basic_node_update_hr) 点。" | tee -a $LOG_FILE
 		fi
 	else
@@ -2411,7 +2411,7 @@ case $SH_ARG in
 	set_lock
 	true > $LOG_FILE
 	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
-	start_online_update | tee -a $LOG_FILE
+	start_node_subscribe | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
 	;;
