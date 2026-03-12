@@ -4975,8 +4975,8 @@ function refresh_acl_html() {
 	code += '<th width="18%">客户端地址</th>'
 	code += '<th width="20%">主机别名</th>'
 	code += '<th width="18%">访问控制</th>'
-	code += '<th width="8%">UDP代理</th>'
-	code += '<th width="8%">屏蔽QUIC</th>'
+	code += '<th width="8%"><a onmouseover="mOver(this, 150)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">UDP代理</a></th>'
+	code += '<th width="8%"><a onmouseover="mOver(this, 152)" onmouseout="mOut(this)" class="hintstyle" href="javascript:void(0);">屏蔽QUIC</a></th>'
 	code += '<th width="22%">代理端口</th>'
 	code += '<th width="6%">操作</th>'
 	code += '</tr>'
@@ -5000,7 +5000,7 @@ function refresh_acl_html() {
 	code += '<td width="18%">'
 	code += '<select id="ss_acl_mode" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;text-align:center;text-align-last:center;padding-left:0;" class="input_option" onchange="set_mode_1(this);">'
 	code += '<option value="0">不通过代理</option>'
-	code += '<option value="1">gfwlist模式</option>'
+	code += '<option value="1">gfw黑名单模式</option>'
 	code += '<option value="2">大陆白名单模式</option>'
 	code += '<option value="3">游戏模式</option>'
 	code += '<option value="5">全局代理模式</option>'
@@ -5040,7 +5040,7 @@ function refresh_acl_html() {
 			//code += '<option value="6">回国模式</option>';
 		} else {
 			code += '<option value="0">不通过代理</option>';
-			code += '<option value="1">gfwlist模式</option>';
+			code += '<option value="1">gfw黑名单模式</option>';
 			code += '<option value="2">大陆白名单模式</option>';
 			code += '<option value="3">游戏模式</option>';
 			code += '<option value="5">全局代理模式</option>';
@@ -5078,7 +5078,7 @@ function refresh_acl_html() {
 		if (ssmode == 0) {
 			code += '<td width="18%">插件未启用</td>';
 		} else if (ssmode == 1) {
-			code += '<td width="18%">gfwlist模式</td>';
+			code += '<td width="18%">gfw黑名单模式</td>';
 		} else if (ssmode == 2) {
 			code += '<td width="18%">大陆白名单模式</td>';
 		} else if (ssmode == 3) {
@@ -5097,7 +5097,7 @@ function refresh_acl_html() {
 			code += '<option value="0"' + (String(defaultMode) == "0" ? ' selected' : '') + '>不通过代理</option>';
 			code += '<option value="2"' + (String(defaultMode) == "2" ? ' selected' : '') + '>大陆白名单模式</option>';
 			if (ssmode == 1) {
-				code += '<option value="1"' + (String(defaultMode) == "1" ? ' selected' : '') + '>gfwlist模式</option>';
+				code += '<option value="1"' + (String(defaultMode) == "1" ? ' selected' : '') + '>gfw黑名单模式</option>';
 			} else if (ssmode == 3) {
 				code += '<option value="3"' + (String(defaultMode) == "3" ? ' selected' : '') + '>游戏模式</option>';
 			} else if (ssmode == 5) {

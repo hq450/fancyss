@@ -1,5 +1,19 @@
 fancyss Changelog
 
+3.5.4（20260312）
+   - fix	修复某些时候gfw黑名单模式下无法翻墙的问题。
+   - fix	修复当服务器ip为纯ipv6的时候，ip归属判断错误的问题。
+   - update	同步最新版本规则（gfwlist、chnroute、chnroute6、chnlist、adslist）。
+   - update	优化ipv6相关日志输出。
+   - update	优化账号设置页面显示，部分输入框和加密方式选择框支持按内容长度自动调整宽度，并增加最小/最大宽度限制。
+   - update	优化访问控制页面布局和交互，代理端口改为下拉选择，udp代理和屏蔽quic拆分为独立控制列。
+   - add	访问控制支持为每个设备单独控制udp代理和海外quic流量屏蔽。
+   - fix	修复访问控制下udp/quic相关前后端逻辑不一致的问题，按不同acl模式正确处理海外udp流量的直连、代理和拦截。
+   - update	调整访问控制默认规则：默认模式改为大陆白名单模式，默认关闭udp代理，默认开启quic屏蔽，默认代理端口改为22,80,443,8080,8443。
+   - update	访问控制默认端口dbus键由ss_acl_default_port更名为ss_acl_default_ports，确保升级用户使用新的默认值。
+   - update	订阅脚本ss_online_update.sh更名为ss_node_subscribe.sh，以防止部分机型固件中被删除，并同步更新前端及相关调用。
+   - update	同步最新版本规则。
+
 3.5.3（20260214）
    - fix	修复游戏模式下屏蔽quic流量失效的问题。
    - fix	修复lite版本下节点列表无法选择节点的问题。

@@ -4365,7 +4365,7 @@ apply_acl_quic_filter_rule() {
 
 apply_quic_block() {
 	# lan access control
-	acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+	acl_nu=$(get_acl_rule_indexes)
 	if [ -n "$acl_nu" ]; then
 		# 先设定访问控制内的主机
 		for acl in $acl_nu; do
@@ -4384,12 +4384,12 @@ apply_quic_block() {
 
 lan_access_control() {
 	# lan access control
-	acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+	acl_nu=$(get_acl_rule_indexes)
 	if [ -n "$acl_nu" ]; then
 		acl_default_label="剩余主机"
 		for acl in $acl_nu; do
 			ipaddr=$(eval echo \$ss_acl_ip_$acl)
-			ipaddr_hex=$(echo $ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("%02x\n", $4)}')
+			ipaddr_hex=$(get_acl_ip_mark "${ipaddr}")
 			ports=$(eval echo \$ss_acl_port_$acl)
 			proxy_mode=$(eval echo \$ss_acl_mode_$acl)
 			proxy_name=$(eval echo \$ss_acl_name_$acl)
@@ -4460,12 +4460,11 @@ dns_hijack_control() {
 		do
 			local dest_ipaddr=$(ifconfig br${VLAN_INDEX} | grep "inet addr" | awk '{print $2}'|awk -F ":" '{print $2}')
 			local dest_ipaddr_3=$(echo $dest_ipaddr | awk -F "." '{print $3}')
-			local acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+			local acl_nu=$(get_acl_rule_indexes)
 			if [ -n "$acl_nu" ]; then
 				for acl in $acl_nu; do
 					ipaddr=$(eval echo \$ss_acl_ip_$acl)
 					ipaddr_3=$(echo $ipaddr | awk -F "." '{print $3}')
-					ipaddr_hex=$(echo $ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("%02x\n", $4)}')
 					ports=$(eval echo \$ss_acl_port_$acl)
 					proxy_mode=$(eval echo \$ss_acl_mode_$acl)
 					if [ "${proxy_mode}" == "0" -a "${ipaddr_3}" == "${dest_ipaddr_3}" ]; then

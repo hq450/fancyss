@@ -92,7 +92,117 @@ resolve_acl_udp_flag() {
 	echo "${udp_flag}"
 }
 
-acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+cleanup_acl_rule() {
+	local acl="$1"
+	local field=""
+	for field in ip name mode port udp quic
+	do
+		dbus remove ss_acl_${field}_${acl}
+		unset ss_acl_${field}_${acl}
+	done
+}
+
+is_valid_acl_source() {
+	local acl_ip="$1"
+	local host_ip="${acl_ip}"
+	local prefix="32"
+	local octet=""
+
+	case "${acl_ip}" in
+	*/*)
+		host_ip="${acl_ip%/*}"
+		prefix="${acl_ip##*/}"
+		case "${prefix}" in
+		''|*[!0-9]*)
+			return 1
+			;;
+		esac
+		[ "${prefix}" -ge 0 ] && [ "${prefix}" -le 32 ] || return 1
+		;;
+	esac
+
+	echo "${host_ip}" | grep -Eq "^([0-9]{1,3}[.]){3}[0-9]{1,3}$" || return 1
+	for octet in $(echo "${host_ip}" | tr '.' ' ')
+	do
+		[ "${octet}" -ge 0 ] && [ "${octet}" -le 255 ] || return 1
+	done
+	return 0
+}
+
+get_acl_ip_mark() {
+	local acl_ip="$1"
+	local host_ip="${acl_ip}"
+	local prefix="32"
+	local o1 o2 o3 o4
+	local m1 m2 m3 m4
+	local n1 n2 n3 n4
+	local rem
+
+	case "${acl_ip}" in
+	*/*)
+		host_ip="${acl_ip%/*}"
+		prefix="${acl_ip##*/}"
+		;;
+	esac
+
+	IFS='.' read -r o1 o2 o3 o4 <<EOF
+${host_ip}
+EOF
+
+	rem=${prefix}
+	for idx in 1 2 3 4
+	do
+		local mask_val=0
+		if [ "${rem}" -ge 8 ];then
+			mask_val=255
+			rem=$((rem - 8))
+		elif [ "${rem}" -gt 0 ];then
+			mask_val=$((256 - (1 << (8 - rem))))
+			rem=0
+		fi
+		eval m${idx}=${mask_val}
+	done
+
+	n1=$((o1 & m1))
+	n2=$((o2 & m2))
+	n3=$((o3 & m3))
+	n4=$((o4 & m4))
+	printf "0x%02x%02x%02x%02x/0x%02x%02x%02x%02x\n" "${n1}" "${n2}" "${n3}" "${n4}" "${m1}" "${m2}" "${m3}" "${m4}"
+}
+
+is_acl_rule_complete() {
+	local acl="$1"
+	local acl_ip=""
+	local acl_mode=""
+	local acl_port=""
+	eval acl_ip=\$ss_acl_ip_${acl}
+	eval acl_mode=\$ss_acl_mode_${acl}
+	eval acl_port=\$ss_acl_port_${acl}
+
+	if [ -z "${acl_ip}" -o -z "${acl_mode}" -o -z "${acl_port}" ];then
+		return 1
+	fi
+
+	is_valid_acl_source "${acl_ip}" || return 1
+	return 0
+}
+
+get_acl_rule_indexes() {
+	local all_acl_nu=$(dbus list ss_acl_mode_ | cut -d "=" -f 1 | cut -d "_" -f 4 | sort -n)
+	local valid_acl_nu=""
+	local acl=""
+	for acl in ${all_acl_nu}
+	do
+		if is_acl_rule_complete "${acl}";then
+			valid_acl_nu="${valid_acl_nu} ${acl}"
+		else
+			cleanup_acl_rule "${acl}"
+		fi
+	done
+	echo ${valid_acl_nu}
+}
+
+acl_nu=$(get_acl_rule_indexes)
 if [ -n "${ss_acl_default_mode}" ];then
 	default_mode="${ss_acl_default_mode}"
 elif [ -n "${acl_nu}" ];then
