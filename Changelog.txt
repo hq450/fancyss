@@ -1,6 +1,6 @@
 fancyss Changelog
 
-3.5.4（todo）
+3.5.4（20260313）
    - fix	修复某些时候gfw黑名单模式下无法翻墙的问题。
    - fix	修复当服务器ip为纯ipv6的时候，ip归属判断错误的问题。
    - update	同步最新版本规则（gfwlist、chnroute、chnroute6、chnlist、adslist）。
