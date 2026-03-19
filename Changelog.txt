@@ -1,6 +1,6 @@
 fancyss Changelog
 
-3.5.5（20260317）
+3.5.5（20260319）
    - add	新增MTK平台机型：GS7_Air支持。
    - add	全面支持ipv6透明代理，开关位于附件功能-代理行为-开启ipv6代理，可加载ipv6的tcp/udp透明代理规则（其中NaiveProxy仅支持tcp）。
    - add	访问控制新增MAC匹配能力，普通主机规则会优先按MAC匹配，CIDR规则继续按IP/CIDR匹配，并支持通过ARP自动补全MAC地址。
