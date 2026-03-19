@@ -392,11 +392,109 @@ json2skipd(){
 	sync
 }
 
+normalize_group_name(){
+	local raw_group="$1"
+	[ -z "${raw_group}" ] && return 1
+	[ "${raw_group}" == "null" ] && return 1
+	local real_group=$(echo "${raw_group}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/_[^_]\+$//')
+	case "${real_group}" in
+	""|"null"|"_")
+		return 1
+		;;
+	*)
+		echo -n "${real_group}"
+		return 0
+		;;
+	esac
+}
+
+get_group_hash_value(){
+	local raw_group="$1"
+	local real_group=$(normalize_group_name "${raw_group}")
+	[ -z "${real_group}" ] && return 1
+	case "${raw_group}" in
+	*_*)
+		echo -n "${raw_group##*_}"
+		return 0
+		;;
+	*)
+		echo -n "${raw_group}"
+		return 0
+		;;
+	esac
+}
+
+sanitize_invalid_local_groups(){
+	local key value node
+	while IFS='=' read -r key value
+	do
+		[ -z "${key}" ] && continue
+		if ! normalize_group_name "${value}" >/dev/null 2>&1;then
+			node="${key##*_}"
+			echo_date "🧹检测到第${node}个节点的group值无效，已移除该group标记。"
+			dbus remove "${key}"
+		fi
+	done <<-EOF
+$(dbus list ssconf_basic_group_ 2>/dev/null)
+EOF
+}
+
+get_sub_group_fallback_by_hash(){
+	local sub_hash="$1"
+	[ -z "${sub_hash}" ] && return 1
+	local online_sub_urls=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
+	local online_sub_url sublink_url sublink_hash
+	for online_sub_url in ${online_sub_urls}
+	do
+		sublink_url=$(echo "${online_sub_url}" | sed 's/%20/ /g')
+		sublink_hash=$(echo "${sublink_url}" | md5sum | awk '{print $1}')
+		if [ "${sublink_hash:0:4}" == "${sub_hash}" ];then
+			get_domain_name "${sublink_url}"
+			return 0
+		fi
+	done
+	return 1
+}
+
+get_file_group_fallback(){
+	local file_name=$(basename "$1")
+	local sub_hash=""
+	case "${file_name}" in
+	local_0_user.txt)
+		return 1
+		;;
+	local_*_*.txt)
+		sub_hash=$(echo "${file_name}" | sed -n 's/^local_[0-9]\+_\([^.]\+\)\.txt$/\1/p')
+		;;
+	online_*_*.txt)
+		sub_hash=$(echo "${file_name}" | sed -n 's/^online_[0-9]\+_\([^.]\+\)\.txt$/\1/p')
+		;;
+	esac
+	[ -n "${sub_hash}" ] && get_sub_group_fallback_by_hash "${sub_hash}"
+}
+
+get_group_label_from_file(){
+	local file_path="$1"
+	local fallback_name="$2"
+	[ -z "${file_path}" -o ! -f "${file_path}" ] && echo -n "${fallback_name}" && return 0
+	local group_label=$(cat "${file_path}" | run jq -r '.group' | while IFS= read -r raw_group
+	do
+		local real_group=$(normalize_group_name "${raw_group}")
+		[ -n "${real_group}" ] && echo "${real_group}"
+	done | sort -u | sed '/^$/d' | sed 's/$/ + /g' | sed ':a;N;$!ba;s#\n##g' | sed 's/ + $//g')
+	if [ -n "${group_label}" ];then
+		echo -n "${group_label}"
+	else
+		echo -n "${fallback_name}"
+	fi
+}
+
 skipdb2json(){
 	if [ "${SEQ_NU}" == "0" ];then
 		return
 	fi
 	echo_date "➡️开始整理本地节点到文件，请稍等..."
+	sanitize_invalid_local_groups
 	# 将所有节点数据储存到文件，顺便清理掉空值的key
 	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >${DIR}/ssconf_keyval.txt
 	NODES_SEQ=$(cat ${DIR}/ssconf_keyval.txt | sed -n 's/name_\([0-9]\+\)=.*/\1/p'| sort -n)
@@ -422,7 +520,11 @@ nodes2files(){
 	local SP_NAME
 	local SP_NUBS
 	local SP_COUN=0
-	local SP_STAT=$(cat ${LOCAL_NODES_SPL}|run jq -rc '.group'|awk -F "_" '{print $NF}'|uniq -c|sed 's/^[[:space:]]\+//g' | sed 's/[[:space:]]/|/g')
+	local SP_STAT=$(cat ${LOCAL_NODES_SPL} | run jq -r '.group' | while IFS= read -r raw_group
+	do
+		local group_hash=$(get_group_hash_value "${raw_group}")
+		[ -n "${group_hash}" ] && echo "${group_hash}" || echo "null"
+	done | uniq -c | sed 's/^[[:space:]]\+//g' | sed 's/[[:space:]]/|/g')
 	for SP_LINE in ${SP_STAT}
 	do
 		SP_NAME=$(echo ${SP_LINE} | awk -F"|" '{print $2}')
@@ -461,9 +563,10 @@ nodes_stats(){
 		echo_date "📢当前节点统计信息：共有节点${TTNODE}个，其中："
 		for file in ${NFILES}
 		do
-			GROP=$(cat $file | run jq -c '.group' | sed 's/""/null/;s/^"//;s/"$//;s/_\w\+$//' | sort -u | sed 's/$/ + /g' | sed ':a;N;$!ba;s#\n##g' | sed 's/ + $//g')
+			local fallback_name=$(get_file_group_fallback "${file}")
+			GROP=$(get_group_label_from_file "${file}" "${fallback_name}")
 			NUBS=$(cat $file | wc -l)
-			if [ "${GROP}" == "null" ];then
+			if [ "$(basename "${file}")" == "local_0_user.txt" ];then
 				GROP_NAME="😛【用户自添加】节点"
 			else
 				GROP_NAME="🚀【${GROP}】机场节点"
@@ -492,13 +595,18 @@ remove_null(){
 		echo ${sublink_hash:0:4} >> $DIR/sublink_hash.txt
 	done
 
-	local local_hashs=$(find $DIR -name "local_*.txt" | sort -n | xargs cat | run jq -r '.group' | awk -F "_" '{print $NF}' | grep -v "null" | sort -u)
+	local local_hashs=$(find $DIR -name "local_*.txt" | sort -n | xargs cat | run jq -r '.group' | while IFS= read -r raw_group
+	do
+		get_group_hash_value "${raw_group}"
+		echo
+	done | sed '/^$/d' | sort -u)
 	for local_hash in $local_hashs
 	do
 		local match_hash=$(cat $DIR/sublink_hash.txt | grep -Eo "${local_hash}")
 		if [ -z "${match_hash}" ];then
 			# remove node
-			local _local_group=$(cat $DIR/local_*_${local_hash}.txt | run jq -rc '.group' | sed 's/_.*$//' | sort -u | sed 's/$/ + /g' | sed ':a;N;$!ba;s#\n##g' | sed 's/ + $//g')
+			local local_group_file=$(find $DIR -name "local_*_${local_hash}.txt" | head -n1)
+			local _local_group=$(get_group_label_from_file "${local_group_file}" "$(get_sub_group_fallback_by_hash "${local_hash}")")
 			echo_date "⚠️检测到【${_local_group}】机场已经不再订阅！尝试删除该订阅的节点！"
 			rm -rf $DIR/local_*_${local_hash}.txt
 		fi
@@ -740,9 +848,9 @@ add_ss_node(){
 		group=$(echo "${urllink}" | urldecode | sed -n 's/.\+group=\(.\+\)#.\+/\1/p')
 		if [ -n "${group}" ];then
 			group=$(dec64 $group)
-		else
-			group=${DOMAIN_NAME}
 		fi
+		group=$(normalize_group_name "${group}")
+		[ -z "${group}" ] && group=${DOMAIN_NAME}
 	fi
 
 	urllink=${urllink%%#*}
@@ -903,9 +1011,9 @@ add_ssr_node(){
 		# 在线订阅，group从订阅链接里拿
 		if [ -n "${group_temp}" ];then
 			ssr_group=$(dec64 $group_temp)
-		else
-			ssr_group=${DOMAIN_NAME}
 		fi
+		ssr_group=$(normalize_group_name "${ssr_group}")
+		[ -z "${ssr_group}" ] && ssr_group=${DOMAIN_NAME}
 		ssr_group_hash="${ssr_group}_${SUB_LINK_HASH:0:4}"
 	elif [ "${action}" == "2" ]; then
 		# 离线离线添加节点，group不需要
@@ -2151,11 +2259,7 @@ get_online_rule_now(){
 	fi
 
 	# 14. print INFO
-	local ONLINE_GROUP=$(cat ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt | run jq -rc '.group' | sed 's/_[^_]\+$//' | sort -u | sed 's/$/ + /g' | sed ':a;N;$!ba;s#\n##g' | sed 's/ + $//g')
-	if [ -z "${ONLINE_GROUP}" ]; then
-		# 如果机场没有定义group，则用其订阅域名写入即可
-		ONLINE_GROUP=${DOMAIN_NAME}
-	fi
+	local ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt" "${DOMAIN_NAME}")
 	local md5_new=$(md5sum ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt | awk '{print $1}')
 	echo_date "🌎订阅节点信息："
 	echo_date "🔷当前订阅来源【${ONLINE_GROUP}】，共有节点${NODE_NU_TT}个。"
@@ -2167,7 +2271,7 @@ get_online_rule_now(){
 	local ISLOCALFILE=$(find ${DIR} -name "local_*_${SUB_LINK_HASH:0:4}.txt")
 	if [ -n "${ISLOCALFILE}" ];then
 		local md5_loc=$(md5sum ${ISLOCALFILE} | awk '{print $1}')
-		local LOCAL_GROUP=$(cat $ISLOCALFILE | run jq -rc '.group' | sort -u | sed 's/_[^_]\+$//' | sed 's/$/ + /g' | sed ':a;N;$!ba;s#\n##g' | sed 's/ + $//g')
+		local LOCAL_GROUP=$(get_group_label_from_file "${ISLOCALFILE}" "${DOMAIN_NAME}")
 		local LOCAL_NODES=$(cat $ISLOCALFILE | wc -l)
 		echo_date "🔶当前订阅来源【${LOCAL_GROUP}】，在本地已有节点${LOCAL_NODES}个。"
 		echo_date "🔶本地节点校验：${md5_loc}"
