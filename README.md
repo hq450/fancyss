@@ -92,7 +92,7 @@ fancyss 3.0支持hnd、hnd_v8、qca、arm、mtk 、ipq32、ipq64七个平台，�
 
 full版本为全功能版本，支持SS、 SSR、Vmess、 Vless、Trojan、NaïveProxy、TuicV5、Hysteria2 八种协议，安装包体积较大
 
-1. full版本虽然支持tuic，但因作者已放弃项目，所以默认不自带tuic二进制
+1. full版本支持tuic，并默认提供tuic-client二进制
 2. full版本虽然支持naiveproxy，但不提供kcptun二进制，如果使用naiveproxy，会提示下载二进制
 
 lite版本为精简版本，支持SS、 SSR、 Vmess、 Vless、 Trojan 五种协议，安装包小巧，以下为lite版本精简内容：
@@ -145,6 +145,13 @@ RT-AX86U、GT-AX6000等armv8机型（见上表），从3.0.6开始建议安装fa
    tar -zxvf /tmp/shadowsocks.tar.gz
    sh /tmp/shadowsocks/install.sh
    ```
+
+## 使用文档
+
+目前仓库内提供以下协议相关实践文档：
+
+1. [TUIC 配置指南](./doc/tuic_usage_on_fancyss.md)
+2. [NaiveProxy 配置实践](./doc/naive_usage_on_fancyss.md)
 
 ## 关于皮肤
 

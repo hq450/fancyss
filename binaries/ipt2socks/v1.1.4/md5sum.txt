@@ -1,0 +1,3 @@
+756024e86b6a7a99dddbb9848a33bea9  ipt2socks_arm64
+9329901a0dfb565ecf7ccd9e269d328d  ipt2socks_armv7
+dd19bb683e1d39da5408545158560608  ipt2socks_armv5

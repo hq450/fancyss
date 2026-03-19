@@ -1,0 +1,2 @@
+62fc29d6fa5ffb88fdbf39fa0974a8fa  tuic-client_arm64
+f03038866915587b0a7d67e5bd66d284  tuic-client_armv7

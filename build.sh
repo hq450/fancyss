@@ -40,7 +40,7 @@ sync_binary(){
 	# done
 
 	# update to latest binary
-	BINS_COPY="xray naive"
+	BINS_COPY="xray naive ipt2socks"
 	for BIN in $BINS_COPY;
 	do
 		local VERSION_FLAG="latest.txt"
@@ -58,6 +58,15 @@ sync_binary(){
 		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv7 ${CURR_PATH}/fancyss/bin-qca/${BIN}
 		cp -rf ${CURR_PATH}/binaries/${BIN}/${version}/${BIN}_armv5 ${CURR_PATH}/fancyss/bin-arm/${BIN}
 	done
+
+	local TUIC_VERSION=$(cat ${CURR_PATH}/binaries/tuic-client/latest.txt)
+	echo ">>> start to copy latest tuic-client, version: ${TUIC_VERSION}"
+	cp -rf ${CURR_PATH}/binaries/tuic-client/${TUIC_VERSION}/tuic-client_arm64 ${CURR_PATH}/fancyss/bin-mtk/tuic-client
+	cp -rf ${CURR_PATH}/binaries/tuic-client/${TUIC_VERSION}/tuic-client_arm64 ${CURR_PATH}/fancyss/bin-hnd_v8/tuic-client
+	cp -rf ${CURR_PATH}/binaries/tuic-client/${TUIC_VERSION}/tuic-client_armv7 ${CURR_PATH}/fancyss/bin-ipq32/tuic-client
+	cp -rf ${CURR_PATH}/binaries/tuic-client/${TUIC_VERSION}/tuic-client_armv7 ${CURR_PATH}/fancyss/bin-hnd/tuic-client
+	cp -rf ${CURR_PATH}/binaries/tuic-client/${TUIC_VERSION}/tuic-client_armv7 ${CURR_PATH}/fancyss/bin-qca/tuic-client
+	cp -rf ${CURR_PATH}/binaries/tuic-client/${TUIC_VERSION}/tuic-client_armv7 ${CURR_PATH}/fancyss/bin-arm/tuic-client
 
 	local upx=".upx"
 	

@@ -1,6 +1,6 @@
-.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy
+.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy update_ipt2socks update_tuic_client
 
-all: update_kcptun update_ss_rust update_v2ray update_xray update_naive
+all: update_kcptun update_ss_rust update_v2ray update_xray update_naive update_ipt2socks update_tuic_client
 
 update_kcptun:
 	kcptun/get_latest.sh
@@ -19,3 +19,9 @@ update_vray-plugin:
 
 update_naive:
 	naive/get_latest.sh
+
+update_ipt2socks:
+	ipt2socks/get_latest.sh
+
+update_tuic_client:
+	tuic-client/get_latest.sh
