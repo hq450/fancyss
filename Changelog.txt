@@ -1,5 +1,9 @@
 fancyss Changelog
 
+3.5.6（todo）
+   - fix	修复full版本刷lite版本时，lite版本不支持的节点移除不干净的问题
+   - fix	修复订阅节点时产生"null" "_"类型的节点的问题
+
 3.5.5（20260319）
    - add	新增MTK平台机型：GS7_Air支持。
    - add	全面支持ipv6透明代理，开关位于附件功能-代理行为-开启ipv6代理，可加载ipv6的tcp/udp透明代理规则（其中NaiveProxy仅支持tcp）。
