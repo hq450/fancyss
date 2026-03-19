@@ -362,6 +362,109 @@ check_internet(){
 	fi
 }
 
+ipv6_proxy_enabled() {
+	[ "${ss_basic_proxy_ipv6}" == "1" ]
+}
+
+ipv6_proxy_supported() {
+	case "${ss_basic_type}" in
+	0|1|3|4|5|6|7|8)
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+check_ipv6_proxy_prerequisites() {
+	ipv6_proxy_enabled || return 0
+	echo_date "➡️ IPv6透明代理预检查..."
+	if ! ipv6_proxy_supported; then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+ 当前节点类型暂不支持IPv6透明代理，请关闭【开启ipv6代理】开关！ +"
+		echo_date "+ 或切换到SS/SSR/VMess/VLESS/Trojan/Naive/TUIC/HY2等支持IPv6透明代理的节点！ +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		close_in_five flag
+	fi
+
+	if [ "$(nvram get ipv6_service)" == "disabled" ];then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+ 检测到路由器系统未开启IPv6，请先到【高级设置】-【IPv6】完成配置！ +"
+		echo_date "+ 页面路径：/Advanced_IPv6_Content.asp                          +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
+	fi
+
+	if [ ! -f "/usr/lib/xtables/libip6t_REDIRECT.so" ];then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+ 当前固件iptables缺少libip6t_REDIRECT扩展，无法启用ipv6代理！ +"
+		echo_date "+           请尝试将固件升级到最新版本后再启用此功能！         +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
+	fi
+
+	check_internet6_pre
+	if [ "${INTERNET6}" != "1" ];then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+ 检测到路由器当前没有可用的IPv6全局地址，无法开启IPv6透明代理！ +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		close_in_five flag
+	fi
+
+	check_internet6
+	if [ "${INTERNET6}" != "1" ];then
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "+ 检测到路由器当前无法正常访问IPv6公网，无法开启IPv6透明代理！ +"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		close_in_five flag
+	fi
+
+	if ! ip6tables -t nat -L PREROUTING >/dev/null 2>&1; then
+		echo_date "错误：当前系统不支持ip6tables nat表，无法开启IPv6透明代理！"
+		close_in_five flag
+	fi
+	if ! ip6tables -t mangle -L PREROUTING >/dev/null 2>&1; then
+		echo_date "错误：当前系统不支持ip6tables mangle表，无法开启IPv6透明代理！"
+		close_in_five flag
+	fi
+	if ! ip6tables -t filter -L FORWARD >/dev/null 2>&1; then
+		echo_date "错误：当前系统不支持ip6tables filter表，无法开启IPv6透明代理！"
+		close_in_five flag
+	fi
+
+	echo_date "✅️ IPv6透明代理预检查通过，继续！"
+}
+
+sync_dns_ipv6_policy() {
+	set_default "ss_basic_dns_plan" "1"
+	set_default "ss_basic_chng_ipv6_drop_proxy" "1"
+	if [ "${ss_basic_dns_plan}" == "1" ];then
+		if ipv6_proxy_enabled; then
+			return 0
+		fi
+		if [ "${ss_basic_chng_ipv6_drop_proxy}" != "1" ];then
+			echo_date "⚠️检测到当前使用chinadns-ng且未开启IPv6代理，但【过滤代理】未勾选。"
+			echo_date "🔁为避免代理域名解析到IPv6地址后直连访问，本次自动启用【过滤代理】。"
+			ss_basic_chng_ipv6_drop_proxy="1"
+			dbus set ss_basic_chng_ipv6_drop_proxy="1"
+		fi
+		return 0
+	fi
+
+	if [ "${ss_basic_dns_plan}" == "2" ];then
+		if ipv6_proxy_enabled; then
+			echo_date "ℹ️检测到当前使用smartdns且已开启IPv6代理，代理域名的IPv6解析将按需放开。"
+		else
+			echo_date "ℹ️检测到当前使用smartdns且未开启IPv6代理，保持代理域名默认屏蔽IPv6解析。"
+		fi
+	fi
+}
+
 check_chn_public_ip(){
 	# 5.1 检测路由器公网出口IPV4地址
 	if [ -z "${REMOTE_IP_OUT}" ];then
@@ -477,6 +580,7 @@ prepare_system() {
 	echo_date "🛠️ 一些准备工作，请稍后..."
 	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
 	set_default "ss_basic_block_quic" "1"
+	set_default "ss_basic_proxy_ipv6" "0"
 	
 	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
 	set_skin
@@ -519,11 +623,13 @@ prepare_system() {
 	fi
 	
 	# 检查端口占用情况
-	# 3333 23456 7913 1051 1052 2055 2056 1091 1092 1093
+	# 3333 3334 23456 7913 1051 1052 2055 2056 1091 1092 1093
 	kill_used_port
 
 	# 3. internet detect
 	check_internet
+	check_ipv6_proxy_prerequisites
+	sync_dns_ipv6_policy
 
 	# 4. 检测路由器时间是否正确，只有vmess协议节点需要检测时间正确否
 	if [ "${ss_basic_type}" == "3" ];then
@@ -742,6 +848,14 @@ __get_type_abbr_name() {
 		echo "Hysteria2"
 		;;
 	esac
+}
+
+get_tproxy_port4() {
+	echo "3333"
+}
+
+get_tproxy_port6() {
+	echo "3333"
 }
 
 __get_server_resolver() {
@@ -1150,7 +1264,7 @@ creat_ssr_json() {
 		{
 		    "server":"${ss_basic_server}",
 		    "server_port":${ss_basic_port},
-		    "local_address":"0.0.0.0",
+		    "local_address":"$(if ipv6_proxy_enabled; then echo '::'; else echo '0.0.0.0'; fi)",
 		    "local_port":3333,
 		    "password":"${ss_basic_password}",
 		    "timeout":600,
@@ -1171,7 +1285,7 @@ get_proxy_server_ip(){
 	fi
 
 	if [ -n "${ss_basic_server_ip}" ]; then
-		__valid_ip46 ${dns_para}
+		__valid_ip46 "${ss_basic_server_ip}"
 		if [ "$?" == "0" ]; then
 			# ipv4
 			ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
@@ -1360,6 +1474,13 @@ start_smartdns(){
 	if [ "${ss_basic_block_resov}" != "1" ]; then
 		echo_date "编辑smartdns配置文件：${smartdns_conf}，移除block list域名解析屏蔽！"
 		sed -i "/block_list/d" ${smartdns_conf} 2>/dev/null
+	fi
+
+	if ipv6_proxy_enabled; then
+		echo_date "编辑smartdns配置文件：${smartdns_conf}，为代理域名开启IPv6解析..."
+		sed -i 's/#4:gfwlist,#6:- -c none -a #6 -n gfw/#4:gfwlist,#6:gfwlist6 -c none -n gfw/g' ${smartdns_conf} 2>/dev/null
+		sed -i 's/#4:black_list,#6:- -c none -a #6 -n gfw/#4:black_list,#6:black_list6 -c none -n gfw/g' ${smartdns_conf} 2>/dev/null
+		sed -i 's/#4:router,#6:- -c none -a #6 -n gfw/#4:router,#6:router6 -c none -n gfw/g' ${smartdns_conf} 2>/dev/null
 	fi
 
 	# start smartdns	
@@ -1920,17 +2041,23 @@ start_chinadns_ng(){
 		EOF
 	else
 		dbus set ss_basic_internet6_flag=1
-		if [ "${ss_basic_chng_ipv6_drop_direc}" == "0" -a "${ss_basic_chng_ipv6_drop_proxy}" == "1" ];then
+		local chng_drop_direc="${ss_basic_chng_ipv6_drop_direc}"
+		local chng_drop_proxy="${ss_basic_chng_ipv6_drop_proxy}"
+		if ipv6_proxy_enabled; then
+			chng_drop_proxy="0"
+			echo_date "检测到IPv6透明代理已开启，代理域名的AAAA过滤将自动关闭。"
+		fi
+		if [ "${chng_drop_direc}" == "0" -a "${chng_drop_proxy}" == "1" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
 				# ipv6请求行为，过滤代理域名
 				no-ipv6 tag:gfw,tag:router,tag:black,tag:none@ip:non_china
 			EOF
-		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "1" -a "${ss_basic_chng_ipv6_drop_proxy}" == "1" ];then
+		elif [ "${chng_drop_direc}" == "1" -a "${chng_drop_proxy}" == "1" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
 				# ipv6请求行为：全部过滤
 				no-ipv6
 			EOF
-		elif [ "${ss_basic_chng_ipv6_drop_direc}" == "1" -a "${ss_basic_chng_ipv6_drop_proxy}" == "0" ];then
+		elif [ "${chng_drop_direc}" == "1" -a "${chng_drop_proxy}" == "0" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
 				# ipv6请求行为：全部直连域名
 				no-ipv6 tag:chn,tag:white,tag:none@ip:china
@@ -2112,6 +2239,22 @@ gen_xray_dns_inbound(){
 			EOF
 		fi
 	fi
+}
+
+append_xray_ipv6_tproxy_inbound() {
+	local config_file="$1"
+	local tmp_file="${config_file}.ipv6"
+	ipv6_proxy_enabled || return 0
+	[ -f "${config_file}" ] || return 1
+	# Reuse the existing 3333 transparent proxy inbound for both IPv4 and IPv6.
+	if cat "${config_file}" | run jq -e '.inbounds[]? | select(.protocol == "dokodemo-door" and .port == 3333)' >/dev/null 2>&1; then
+		return 0
+	fi
+	if ! cat "${config_file}" | run jq '.inbounds += [{"listen":"0.0.0.0","port":3333,"protocol":"dokodemo-door","settings":{"network":"tcp,udp","followRedirect":true}}]' >"${tmp_file}"; then
+		rm -rf "${tmp_file}" >/dev/null 2>&1
+		return 1
+	fi
+	mv "${tmp_file}" "${config_file}"
 }
 
 get_dns(){
@@ -2821,6 +2964,10 @@ creat_vmess_json() {
 		fi
 		run jq --tab . $VMESS_CONFIG_TEMP >"${VMESS_CONFIG_FILE}"
 		echo_date "$vmess协议配置文件写入成功到${VMESS_CONFIG_FILE}"
+		if ! append_xray_ipv6_tproxy_inbound "${VMESS_CONFIG_FILE}"; then
+			echo_date "错误：追加IPv6透明代理入口到${VCORE_NAME}配置文件失败！"
+			close_in_five flag
+		fi
 	else
 		echo_date "使用自定义的${VCORE_NAME} json配置文件..."
 		echo "$ss_basic_v2ray_json" | base64_decode >"$VMESS_CONFIG_TEMP"
@@ -2869,6 +3016,10 @@ creat_vmess_json() {
 		echo_date "解析${VCORE_NAME}配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$VMESS_CONFIG_FILE"
 		echo_date "${VCORE_NAME}配置文件写入成功到$VMESS_CONFIG_FILE"
+		if ! append_xray_ipv6_tproxy_inbound "${VMESS_CONFIG_FILE}"; then
+			echo_date "错误：追加IPv6透明代理入口到${VCORE_NAME}配置文件失败！"
+			close_in_five flag
+		fi
 
 		# 检测用户json的服务器ip地址
 		v2ray_protocal=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].protocol)
@@ -3117,6 +3268,10 @@ creat_xray_ss_json() {
 	fi
 	run jq --tab . ${SS_CONFIG_TEMP} >${SS_CONFIG_FILE}
 	echo_date "Xray配置文件写入成功到${SS_CONFIG_FILE}"
+	if ! append_xray_ipv6_tproxy_inbound "${SS_CONFIG_FILE}"; then
+		echo_date "错误：追加IPv6透明代理入口到Xray配置文件失败！"
+		close_in_five flag
+	fi
 }
 
 creat_vless_json() {
@@ -3442,6 +3597,10 @@ creat_vless_json() {
 		fi
 		run jq --tab . ${VLESS_CONFIG_TEMP} >${VLESS_CONFIG_FILE}
 		echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
+		if ! append_xray_ipv6_tproxy_inbound "${VLESS_CONFIG_FILE}"; then
+			echo_date "错误：追加IPv6透明代理入口到Xray配置文件失败！"
+			close_in_five flag
+		fi
 	else
 		echo_date "使用自定义的Xray json配置文件..."
 		echo "$ss_basic_xray_json" | base64_decode >"$VLESS_CONFIG_TEMP"
@@ -3491,6 +3650,10 @@ creat_vless_json() {
 		echo_date "解析Xray配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${VLESS_CONFIG_FILE}"
 		echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
+		if ! append_xray_ipv6_tproxy_inbound "${VLESS_CONFIG_FILE}"; then
+			echo_date "错误：追加IPv6透明代理入口到Xray配置文件失败！"
+			close_in_five flag
+		fi
 
 		# 检测用户json的服务器ip地址
 		xray_protocal=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].protocol)
@@ -3713,6 +3876,10 @@ creat_trojan_json(){
 	fi
 	run jq --tab . ${TROJAN_CONFIG_TEMP} >${TROJAN_CONFIG_FILE}
 	echo_date "解析成功！xray的trojan配置文件成功写入到${TROJAN_CONFIG_FILE}"
+	if ! append_xray_ipv6_tproxy_inbound "${TROJAN_CONFIG_FILE}"; then
+		echo_date "错误：追加IPv6透明代理入口到Xray配置文件失败！"
+		close_in_five flag
+	fi
 }
 
 start_trojan(){
@@ -3915,6 +4082,10 @@ creat_hy2_json(){
 	fi
 	run jq --tab . ${HY2_CONFIG_TEMP} >${HY2_CONFIG_FILE}
 	echo_date "解析成功！xray的hysteria2配置文件成功写入到${HY2_CONFIG_FILE}"
+	if ! append_xray_ipv6_tproxy_inbound "${HY2_CONFIG_FILE}"; then
+		echo_date "错误：追加IPv6透明代理入口到Xray配置文件失败！"
+		close_in_five flag
+	fi
 }
 
 start_hy2(){
@@ -3961,7 +4132,7 @@ start_naive(){
 	fi
 	
 	echo_date "开启ipt2socks进程..."
-	run_bg ipt2socks -p 23456 -l 3333 -4 -R
+	run_bg ipt2socks -p 23456 -l 3333 -b 0.0.0.0 -B :: -n 10000 -R
 	detect_running_status2 ipt2socks 23456
 	
 	echo_date "开启NaïveProxy主进程..."
@@ -3974,7 +4145,6 @@ start_naive(){
 }
 
 start_tuic(){
-	# 从3.3.3开始，tuic-client二进制不在默认提供，需要用户自行下载
 	if [ -f "/koolshare/bin/tuic-client" ];then
 		chmod +x /koolshare/bin/tuic-client
 		local ret=$(run /koolshare/bin/tuic-client --help 2>&1)
@@ -3990,8 +4160,8 @@ start_tuic(){
 		echo_date ""
 		echo_date "重要提醒！！"
 		echo_date ""
-		echo_date "检测到你需要使用tuic-client！但是本插件默认没有提供相关的二进制文件！"
-		echo_date "请前往下面的链接下载tuic-client二进制，并将其放置在路由器的/koolshare/bin目录后重启插件！"
+		echo_date "检测到你需要使用tuic-client！但是当前/koolshare/bin目录下缺少此二进制文件！"
+		echo_date "请前往下面的链接下载对应平台的tuic-client，并将其放置在路由器的/koolshare/bin目录后重启插件！"
 		echo_date "https://raw.githubusercontent.com/hq450/fancyss/3.0/fancyss/bin-${pkg_arch}/tuic-client"
 		echo_date ""
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -4007,46 +4177,77 @@ start_tuic(){
 	echo "{\"local\": {\"server\": \"127.0.0.1:23456\"},\"log_level\": \"warn\"}" | run jq --argjson args "$RELAY" '. + {relay: $args}' >/koolshare/ss/tuic.json
 
 	# 检测用户是否配置了ip地址
-	local tuic_server=$(cat /koolshare/ss/tuic.json | run jq -r '.relay.server' | awk -F ":" '{print $1}')
+	local tuic_server_raw=$(cat /koolshare/ss/tuic.json | run jq -r '.relay.server')
+	local tuic_server=""
+	case "${tuic_server_raw}" in
+	\[*\]:*)
+		tuic_server="${tuic_server_raw#\[}"
+		tuic_server="${tuic_server%\]:*}"
+		;;
+	\[*\])
+		tuic_server="${tuic_server_raw#\[}"
+		tuic_server="${tuic_server%\]}"
+		;;
+	*:* )
+		tuic_server="${tuic_server_raw%:*}"
+		;;
+	*)
+		tuic_server="${tuic_server_raw}"
+		;;
+	esac
 	if [ -z "${tuic_server}" -o "${tuic_server}" == "null" ];then
 		echo_date "检测到你的tuic配置文件未配置服务器地址/域名，请修改配置，退出！"
 		close_in_five
 	fi
+
+	# tuic节点的server/ip来自relay字段，这里回填到全局变量，供后续日志展示和状态检测复用。
+	ss_basic_server="${tuic_server}"
+	ss_basic_server_orig="${tuic_server}"
 	
 	local tuic_ip=$(cat /koolshare/ss/tuic.json | run jq -r '.relay.ip')
 	local tuic_ipaddr=$(__valid_ip ${tuic_ip})
 	if [ -z "${tuic_ipaddr}" ];then
-		echo_date "检测到你的tuic配置文件未配置ip地址，尝试解析！"
-		__resolve_server_domain "${tuic_server}"
-		case $? in
-		0)
-			echo_date "$(__get_type_abbr_name)服务器【${tuic_server}】的ip地址解析成功：${SERVER_IP}"
-			tuic_server_ip="$SERVER_IP"
-			;;
-		1)
-			# server is domain format and failed to resolve.
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，这将大概率导致节点无法正常工作！"
-			echo_date "请尝试在【DNS设定】- 【节点域名解析DNS服务器】处更换节点服务器的解析方案后重试！"
-			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-			tuic_server_ip=""
-			# close_in_five flag
-			;;
-		2)
-			# server is not ip either domain!
-			echo_date "错误2！！检测到你设置的服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
-			echo_date "请更正你的错误然后重试！！"
-			close_in_five flag
-			;;
-		esac
+		local tuic_server_ip=$(__valid_ip "${tuic_server}")
+		if [ -n "${tuic_server_ip}" ];then
+			echo_date "检测到tuic配置server已直接使用ip地址：${tuic_server_ip}，跳过域名解析。"
+			ss_basic_server_ip="${tuic_server_ip}"
+		else
+			echo_date "检测到你的tuic配置文件未配置ip地址，尝试解析！"
+			__resolve_server_domain "${tuic_server}"
+			case $? in
+			0)
+				echo_date "$(__get_type_abbr_name)服务器【${tuic_server}】的ip地址解析成功：${SERVER_IP}"
+				tuic_server_ip="$SERVER_IP"
+				ss_basic_server_ip="${SERVER_IP}"
+				;;
+			1)
+				# server is domain format and failed to resolve.
+				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+				echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，这将大概率导致节点无法正常工作！"
+				echo_date "请尝试在【DNS设定】- 【节点域名解析DNS服务器】处更换节点服务器的解析方案后重试！"
+				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+				tuic_server_ip=""
+				unset ss_basic_server_ip
+				# close_in_five flag
+				;;
+			2)
+				# server is not ip either domain!
+				echo_date "错误2！！检测到你设置的服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
+				echo_date "请更正你的错误然后重试！！"
+				close_in_five flag
+				;;
+			esac
+		fi
 
 		if [ -n "${tuic_server_ip}" ];then
 			cat /koolshare/ss/tuic.json | run jq --arg addr "$tuic_server_ip" '.relay.ip = $addr' | run sponge /koolshare/ss/tuic.json
 		fi
+	else
+		ss_basic_server_ip="${tuic_ipaddr}"
 	fi
 	
 	echo_date "开启ipt2socks进程..."
-	run_bg ipt2socks -p 23456 -l 3333 -4 -R
+	run_bg ipt2socks -p 23456 -l 3333 -b 0.0.0.0 -B :: -n 10000 -R
 	detect_running_status2 ipt2socks 23456
 	
 	echo_date "开启tuic-client主进程..."
@@ -4227,6 +4428,29 @@ get_action_chain() {
 	esac
 }
 
+get_action_chain6() {
+	case "$1" in
+	0)
+		echo "RETURN"
+		;;
+	1)
+		echo "SHADOWSOCKS6_GFW"
+		;;
+	2)
+		echo "SHADOWSOCKS6_CHN"
+		;;
+	3)
+		echo "SHADOWSOCKS6_GAM"
+		;;
+	5)
+		echo "SHADOWSOCKS6_GLO"
+		;;
+	6)
+		echo "SHADOWSOCKS6_HOM"
+		;;
+	esac
+}
+
 get_mode_name() {
 	case "$1" in
 	0)
@@ -4269,10 +4493,36 @@ get_jump_mode() {
 	esac
 }
 
+acl_proxy_supports_udp() {
+	[ "${ss_basic_type}" == "6" ] && return 1
+	return 0
+}
+
+note_acl_udp_unsupported_once() {
+	if [ "${ACL_UDP_UNSUPPORTED_NOTICE}" != "1" ]; then
+		echo_date "⚠️因Naïve协议不支持UDP代理，访问控制中的UDP代理开关将被忽略，并默认屏蔽对应规则的QUIC流量。"
+		ACL_UDP_UNSUPPORTED_NOTICE="1"
+	fi
+}
+
+note_acl_quic_forced_once() {
+	if [ "${ACL_QUIC_FORCED_NOTICE}" != "1" ]; then
+		echo_date "⚠️检测到访问控制存在“UDP代理关闭且未屏蔽QUIC”的组合，已自动按“屏蔽QUIC”处理。"
+		ACL_QUIC_FORCED_NOTICE="1"
+	fi
+}
+
 get_acl_udp_flag() {
 	local acl="$1"
 	local proxy_mode="$2"
 	local udp_flag=""
+	if ! acl_proxy_supports_udp; then
+		if [ "${proxy_mode}" != "0" ]; then
+			note_acl_udp_unsupported_once
+		fi
+		echo "0"
+		return
+	fi
 	if [ "${proxy_mode}" == "3" ];then
 		echo "1"
 		return
@@ -4298,6 +4548,8 @@ get_acl_udp_flag() {
 
 get_acl_quic_flag() {
 	local acl="$1"
+	local proxy_mode="$2"
+	local udp_flag="$3"
 	local quic_flag=""
 	if [ -n "${acl}" ];then
 		eval quic_flag=\$ss_acl_quic_${acl}
@@ -4315,7 +4567,44 @@ get_acl_quic_flag() {
 			quic_flag="1"
 		fi
 	fi
+	if [ "${proxy_mode}" != "0" ]; then
+		if ! acl_proxy_supports_udp; then
+			note_acl_udp_unsupported_once
+			quic_flag="1"
+		elif [ "${udp_flag}" != "1" ] && [ "${quic_flag}" != "1" ]; then
+			note_acl_quic_forced_once
+			quic_flag="1"
+		fi
+	fi
 	echo "${quic_flag}"
+}
+
+get_acl_source_rule4() {
+	local acl="$1"
+	local ipaddr=""
+	local acl_mac=""
+	eval ipaddr=\$ss_acl_ip_${acl}
+	if acl_is_cidr_rule "${ipaddr}"; then
+		echo "$(factor "${ipaddr}" "-s")"
+		return 0
+	fi
+	acl_mac=$(resolve_acl_mac "${acl}")
+	if [ -n "${acl_mac}" ]; then
+		echo "-m mac --mac-source ${acl_mac}"
+	else
+		echo "$(factor "${ipaddr}" "-s")"
+	fi
+}
+
+get_acl_source_rule6() {
+	local acl="$1"
+	local ipaddr=""
+	local acl_mac=""
+	eval ipaddr=\$ss_acl_ip_${acl}
+	acl_is_cidr_rule "${ipaddr}" && return 1
+	acl_mac=$(resolve_acl_mac "${acl}")
+	[ -n "${acl_mac}" ] || return 1
+	echo "-m mac --mac-source ${acl_mac}"
 }
 
 apply_acl_udp_rule() {
@@ -4338,6 +4627,8 @@ apply_acl_udp_rule() {
 	else
 		if [ "${proxy_mode}" == "0" ];then
 			echo_date "UDP代理规则：【${acl_desc}】不通过代理，UDP流量直连。"
+		elif ! acl_proxy_supports_udp; then
+			echo_date "UDP代理规则：【${acl_desc}】当前节点不支持UDP代理，已忽略UDP代理设置。"
 		else
 			echo_date "UDP代理规则：【${acl_desc}】关闭UDP代理。"
 		fi
@@ -4354,12 +4645,127 @@ apply_acl_quic_filter_rule() {
 	if [ "${proxy_mode}" == "0" ];then
 		echo_date "UDP 443过滤规则：【${acl_desc}】不通过代理，UDP 443直连。"
 		append_if_not_exists filter -A SHADOWSOCKS ${source_rule} -p udp --dport 443 -j RETURN
+	elif ! acl_proxy_supports_udp; then
+		echo_date "UDP 443过滤规则：【${acl_desc}】因当前节点不支持UDP代理，默认屏蔽QUIC流量，按$(get_mode_name ${proxy_mode})处理海外UDP 443。"
+		append_if_not_exists filter -A SHADOWSOCKS ${source_rule} -p udp --dport 443 -$(get_jump_mode ${proxy_mode}) $(get_action_chain ${proxy_mode})
 	elif [ "${quic_flag}" == "1" ];then
 		echo_date "UDP 443过滤规则：【${acl_desc}】屏蔽QUIC流量，按$(get_mode_name ${proxy_mode})处理海外UDP 443。"
 		append_if_not_exists filter -A SHADOWSOCKS ${source_rule} -p udp --dport 443 -$(get_jump_mode ${proxy_mode}) $(get_action_chain ${proxy_mode})
 	else
 		echo_date "UDP 443过滤规则：【${acl_desc}】不屏蔽QUIC流量。"
 		append_if_not_exists filter -A SHADOWSOCKS ${source_rule} -p udp --dport 443 -j RETURN
+	fi
+}
+
+append_acl_desc_list() {
+	local current="$1"
+	local value="$2"
+	if [ -z "${value}" ];then
+		echo "${current}"
+	elif [ -n "${current}" ];then
+		echo "${current}、${value}"
+	else
+		echo "${value}"
+	fi
+}
+
+resolve_ipv6_default_acl() {
+	local acl_nu=$(get_acl_rule_indexes)
+	local acl=""
+	local ipaddr=""
+	local source_rule6=""
+
+	IPV6_ACL_RULES=""
+	IPV6_ACL_SKIP_CIDR=""
+	IPV6_ACL_SKIP_NOMAC=""
+	IPV6_ACL_TOTAL_COUNT="0"
+	IPV6_ACL_ACTIVE_COUNT="0"
+
+	if [ -n "${acl_nu}" ]; then
+		IPV6_ACL_HAS_CUSTOM="1"
+		IPV6_ACL_DEFAULT_MODE="${ss_acl_default_mode}"
+		if [ -z "${IPV6_ACL_DEFAULT_MODE}" ];then
+			IPV6_ACL_DEFAULT_MODE="2"
+		fi
+		for acl in ${acl_nu}
+		do
+			ipaddr=$(eval echo \$ss_acl_ip_${acl})
+			IPV6_ACL_TOTAL_COUNT=$((${IPV6_ACL_TOTAL_COUNT} + 1))
+			if acl_is_cidr_rule "${ipaddr}"; then
+				IPV6_ACL_SKIP_CIDR=$(append_acl_desc_list "${IPV6_ACL_SKIP_CIDR}" "${ipaddr}")
+				continue
+			fi
+			source_rule6=$(get_acl_source_rule6 ${acl})
+			if [ -n "${source_rule6}" ];then
+				IPV6_ACL_RULES="${IPV6_ACL_RULES} ${acl}"
+				IPV6_ACL_ACTIVE_COUNT=$((${IPV6_ACL_ACTIVE_COUNT} + 1))
+			else
+				IPV6_ACL_SKIP_NOMAC=$(append_acl_desc_list "${IPV6_ACL_SKIP_NOMAC}" "${ipaddr}")
+			fi
+		done
+		if [ "${IPV6_ACL_ACTIVE_COUNT}" -gt "0" ];then
+			IPV6_ACL_DEFAULT_LABEL="剩余IPv6主机"
+		else
+			IPV6_ACL_DEFAULT_LABEL="全部IPv6主机"
+		fi
+	else
+		IPV6_ACL_DEFAULT_LABEL="全部IPv6主机"
+		IPV6_ACL_HAS_CUSTOM="0"
+		IPV6_ACL_DEFAULT_MODE="${ss_basic_mode}"
+	fi
+	IPV6_ACL_DEFAULT_PORTS="${ss_acl_default_ports}"
+	if [ -z "${IPV6_ACL_DEFAULT_PORTS}" ];then
+		IPV6_ACL_DEFAULT_PORTS="22,80,443,8080,8443"
+	fi
+}
+
+apply_acl_udp_rule6() {
+	local acl_desc="$1"
+	local source_rule="$2"
+	local ports="$3"
+	local proxy_mode="$4"
+	local udp_flag="$5"
+	local quic_flag="$6"
+
+	if [ "${proxy_mode}" != "0" -a "${udp_flag}" == "1" ];then
+		echo_date "IPv6 UDP代理规则：【${acl_desc}】开启UDP代理，模式：$(get_mode_name ${proxy_mode})"
+		if [ "${quic_flag}" == "1" ];then
+			echo_date "IPv6 UDP 443处理：【${acl_desc}】屏蔽QUIC流量，先直连放行至filter表进一步处理。"
+			append_if_not_exists6 mangle -A SHADOWSOCKS6 ${source_rule} -p udp --dport 443 -j RETURN || return 1
+		else
+			echo_date "IPv6 UDP 443处理：【${acl_desc}】不屏蔽QUIC流量。"
+		fi
+		append_if_not_exists6 mangle -A SHADOWSOCKS6 ${source_rule} -p udp $(factor ${ports} "-m multiport --dport") -$(get_jump_mode ${proxy_mode}) $(get_action_chain6 ${proxy_mode}) || return 1
+	else
+		if [ "${proxy_mode}" == "0" ];then
+			echo_date "IPv6 UDP代理规则：【${acl_desc}】不通过代理，UDP流量直连。"
+		elif ! acl_proxy_supports_udp; then
+			echo_date "IPv6 UDP代理规则：【${acl_desc}】当前节点不支持UDP代理，已忽略UDP代理设置。"
+		else
+			echo_date "IPv6 UDP代理规则：【${acl_desc}】关闭UDP代理。"
+		fi
+		append_if_not_exists6 mangle -A SHADOWSOCKS6 ${source_rule} -p udp -j RETURN || return 1
+	fi
+}
+
+apply_acl_quic_filter_rule6() {
+	local acl_desc="$1"
+	local source_rule="$2"
+	local proxy_mode="$3"
+	local quic_flag="$4"
+
+	if [ "${proxy_mode}" == "0" ];then
+		echo_date "IPv6 UDP 443过滤规则：【${acl_desc}】不通过代理，UDP 443直连。"
+		append_if_not_exists6 filter -A SHADOWSOCKS6 ${source_rule} -p udp --dport 443 -j RETURN || return 1
+	elif ! acl_proxy_supports_udp; then
+		echo_date "IPv6 UDP 443过滤规则：【${acl_desc}】因当前节点不支持UDP代理，默认屏蔽QUIC流量，按$(get_mode_name ${proxy_mode})处理海外UDP 443。"
+		append_if_not_exists6 filter -A SHADOWSOCKS6 ${source_rule} -p udp --dport 443 -$(get_jump_mode ${proxy_mode}) $(get_action_chain6 ${proxy_mode}) || return 1
+	elif [ "${quic_flag}" == "1" ];then
+		echo_date "IPv6 UDP 443过滤规则：【${acl_desc}】屏蔽QUIC流量，按$(get_mode_name ${proxy_mode})处理海外UDP 443。"
+		append_if_not_exists6 filter -A SHADOWSOCKS6 ${source_rule} -p udp --dport 443 -$(get_jump_mode ${proxy_mode}) $(get_action_chain6 ${proxy_mode}) || return 1
+	else
+		echo_date "IPv6 UDP 443过滤规则：【${acl_desc}】不屏蔽QUIC流量。"
+		append_if_not_exists6 filter -A SHADOWSOCKS6 ${source_rule} -p udp --dport 443 -j RETURN || return 1
 	fi
 }
 
@@ -4371,13 +4777,16 @@ apply_quic_block() {
 		for acl in $acl_nu; do
 			ipaddr=$(eval echo \$ss_acl_ip_$acl)
 			proxy_mode=$(eval echo \$ss_acl_mode_$acl)
-			quic_flag=$(get_acl_quic_flag ${acl})
-			apply_acl_quic_filter_rule "${ipaddr}" "$(factor ${ipaddr} "-s")" "${proxy_mode}" "${quic_flag}"
+			udp_flag=$(get_acl_udp_flag ${acl} ${proxy_mode})
+			quic_flag=$(get_acl_quic_flag ${acl} ${proxy_mode} "${udp_flag}")
+			apply_acl_quic_filter_rule "${ipaddr}" "$(get_acl_source_rule4 ${acl})" "${proxy_mode}" "${quic_flag}"
 		done
-		quic_flag=$(get_acl_quic_flag)
+		udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
+		quic_flag=$(get_acl_quic_flag "" "${ss_acl_default_mode}" "${udp_flag}")
 		apply_acl_quic_filter_rule "剩余主机" "" "${ss_acl_default_mode}" "${quic_flag}"
 	else
-		quic_flag=$(get_acl_quic_flag)
+		udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
+		quic_flag=$(get_acl_quic_flag "" "${ss_acl_default_mode}" "${udp_flag}")
 		apply_acl_quic_filter_rule "全部主机" "" "${ss_acl_default_mode}" "${quic_flag}"
 	fi
 }
@@ -4390,11 +4799,12 @@ lan_access_control() {
 		for acl in $acl_nu; do
 			ipaddr=$(eval echo \$ss_acl_ip_$acl)
 			ipaddr_hex=$(get_acl_ip_mark "${ipaddr}")
+			source_rule=$(get_acl_source_rule4 ${acl})
 			ports=$(eval echo \$ss_acl_port_$acl)
 			proxy_mode=$(eval echo \$ss_acl_mode_$acl)
 			proxy_name=$(eval echo \$ss_acl_name_$acl)
 			udp_flag=$(get_acl_udp_flag ${acl} ${proxy_mode})
-			quic_flag=$(get_acl_quic_flag ${acl})
+			quic_flag=$(get_acl_quic_flag ${acl} ${proxy_mode} "${udp_flag}")
 			if [ "$ports" == "all" ]; then
 				ports=""
 				echo_date "加载ACL规则：【$ipaddr】【全部端口】模式为：$(get_mode_name $proxy_mode)"
@@ -4402,13 +4812,13 @@ lan_access_control() {
 				echo_date "加载ACL规则：【$ipaddr】【$ports】模式为：$(get_mode_name $proxy_mode)"
 			fi
 			# 1 acl in SHADOWSOCKS for nat
-			iptables -t nat -A SHADOWSOCKS $(factor $ipaddr "-s") -p tcp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
+			iptables -t nat -A SHADOWSOCKS ${source_rule} -p tcp $(factor $ports "-m multiport --dport") -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
 			
 			# 2 acl in OUTPUT（used by koolproxy）
 			iptables -t nat -A SHADOWSOCKS_EXT -p tcp $(factor $ports "-m multiport --dport") -m mark --mark "$ipaddr_hex" -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
 			
 			# 3 acl in SHADOWSOCKS for mangle
-			apply_acl_udp_rule "${ipaddr}" "$(factor ${ipaddr} "-s")" "${ports}" "${proxy_mode}" "${udp_flag}" "${quic_flag}"
+			apply_acl_udp_rule "${ipaddr}" "${source_rule}" "${ports}" "${proxy_mode}" "${udp_flag}" "${quic_flag}"
 		done
 
 		if [ -z "$ss_acl_default_mode" ];then
@@ -4440,6 +4850,7 @@ lan_access_control() {
 		fi
 	fi
 	dbus remove ss_acl_ip
+	dbus remove ss_acl_mac
 	dbus remove ss_acl_name
 	dbus remove ss_acl_mode
 	dbus remove ss_acl_port
@@ -4448,31 +4859,54 @@ lan_access_control() {
 }
 
 dns_hijack_control() {
-	local type=$1
+	local type=${1:-4}
 	if [ "${type}" == "4" ];then
 		local iptab=iptables
+		local chain_prefix=SHADOWSOCKS_DNS
 	elif [ "${type}" == "6" ];then
 		local iptab=ip6tables
+		local chain_prefix=SHADOWSOCKS6_DNS
 	fi
 	
 	if [ "$ss_basic_dns_hijack" == "1" ]; then
 		for VLAN_INDEX in ${VLAN_INDEXS}
 		do
-			local dest_ipaddr=$(ifconfig br${VLAN_INDEX} | grep "inet addr" | awk '{print $2}'|awk -F ":" '{print $2}')
-			local dest_ipaddr_3=$(echo $dest_ipaddr | awk -F "." '{print $3}')
+			if [ "${type}" == "4" ];then
+				local dest_ipaddr=$(ifconfig br${VLAN_INDEX} | grep "inet addr" | awk '{print $2}'|awk -F ":" '{print $2}')
+			else
+				local dest_ipaddr=$(ip -6 addr show dev br${VLAN_INDEX} scope global 2>/dev/null | awk '/inet6/ {print $2}' | head -n1 | awk -F "/" '{print $1}')
+				if [ -z "${dest_ipaddr}" ];then
+					echo_date "IPv6 DNS劫持：未获取到br${VLAN_INDEX}的IPv6地址，跳过该接口。"
+					continue
+				fi
+			fi
 			local acl_nu=$(get_acl_rule_indexes)
 			if [ -n "$acl_nu" ]; then
 				for acl in $acl_nu; do
 					ipaddr=$(eval echo \$ss_acl_ip_$acl)
-					ipaddr_3=$(echo $ipaddr | awk -F "." '{print $3}')
-					ports=$(eval echo \$ss_acl_port_$acl)
 					proxy_mode=$(eval echo \$ss_acl_mode_$acl)
-					if [ "${proxy_mode}" == "0" -a "${ipaddr_3}" == "${dest_ipaddr_3}" ]; then
-						iptables -t nat -A SHADOWSOCKS_DNS_${VLAN_INDEX} -p udp -s ${ipaddr} -j RETURN
+					if [ "${proxy_mode}" == "0" ]; then
+						if [ "${type}" == "4" ];then
+							local source_rule=$(get_acl_source_rule4 ${acl})
+							${iptab} -t nat -A ${chain_prefix}_${VLAN_INDEX} ${source_rule} -p udp -j RETURN
+						else
+							local source_rule6=$(get_acl_source_rule6 ${acl})
+							if [ -n "${source_rule6}" ]; then
+								${iptab} -t nat -A ${chain_prefix}_${VLAN_INDEX} ${source_rule6} -p udp -j RETURN
+							elif acl_is_cidr_rule "${ipaddr}"; then
+								echo_date "IPv6 DNS劫持：ACL【${ipaddr}】为CIDR规则，无法按设备豁免DNS劫持，继续按IPv6默认DNS规则处理。"
+							else
+								echo_date "IPv6 DNS劫持：ACL【${ipaddr}】未获取到MAC地址，无法按设备豁免DNS劫持，继续按IPv6默认DNS规则处理。"
+							fi
+						fi
 					fi
 				done
 			fi
-			iptables -t nat -A SHADOWSOCKS_DNS_${VLAN_INDEX} -p udp -j DNAT --to ${dest_ipaddr}:53
+			if [ "${type}" == "4" ];then
+				${iptab} -t nat -A ${chain_prefix}_${VLAN_INDEX} -p udp -j DNAT --to ${dest_ipaddr}:53
+			else
+				${iptab} -t nat -A ${chain_prefix}_${VLAN_INDEX} -p udp -j DNAT --to-destination [${dest_ipaddr}]:53
+			fi
 		done
 	fi
 }
@@ -4541,6 +4975,179 @@ flush_iptables() {
 			fi
 		done
 	fi
+
+	# flush IPv6 NAT
+	local NAT6_RULES=$(ip6tables -t nat -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334" | sort)
+	if [ -n "${NAT6_RULES}" ];then
+		echo_date "清除ip6tables nat规则..."
+		echo "${NAT6_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t nat -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t nat -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t nat -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
+
+	# flush IPv6 MANGLE
+	local MANGLE6_RULES=$(ip6tables -t mangle -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334|0x7" | sort)
+	if [ -n "${MANGLE6_RULES}" ];then
+		echo_date "清除ip6tables mangle规则..."
+		echo "${MANGLE6_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t mangle -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t mangle -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t mangle -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
+
+	# flush IPv6 FILTER
+	local FILTER6_RULES=$(ip6tables -t filter -S 2>/dev/null | grep -E "SHADOWSOCKS6" | sort)
+	if [ -n "${FILTER6_RULES}" ];then
+		echo_date "清除ip6tables filter规则..."
+		echo "${FILTER6_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t filter -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t filter -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t filter -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
+
+	local ip6_rule_exist=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | grep -c 310)
+	if [ -n "${ip6_rule_exist}" ]; then
+		until [ "${ip6_rule_exist}" == "0" ]; do
+			IP6_ARG=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | head -n 1 | cut -d " " -f3,4,5,6)
+			ip -6 rule del $IP6_ARG >/dev/null 2>&1
+			ip6_rule_exist=$(expr $ip6_rule_exist - 1)
+		done
+	fi
+	ip -6 route del local ::/0 dev lo table 310 >/dev/null 2>&1
+}
+
+stop_dns_process() {
+	local CHNG_PID=$(pidof chinadns-ng)
+	if [ -n "${CHNG_PID}" ];then
+		echo_date "关闭chinadns-ng进程..."
+		if [ -d "/koolshare/perp/chinadns-ng" ];then
+			perpctl d chinadns-ng >/dev/null 2>&1
+			rm -rf /koolshare/perp/chinadns-ng >/dev/null 2>&1
+		fi
+		killall chinadns-ng >/dev/null 2>&1
+		kill -9 ${CHNG_PID} >/dev/null 2>&1
+	fi
+
+	local smartdns_process=$(pidof smartdns)
+	if [ -n "$smartdns_process" ]; then
+		echo_date "关闭smartdns进程..."
+		killall smartdns >/dev/null 2>&1
+	fi
+}
+
+flush_ip6tables() {
+	if [ -d "/tmp/.xt" ];then
+		export XTABLES_LIBDIR=/tmp/.xt
+	fi
+
+	local NAT6_RULES=$(ip6tables -t nat -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334" | sort)
+	if [ -n "${NAT6_RULES}" ];then
+		echo_date "清除ip6tables nat规则..."
+		echo "${NAT6_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t nat -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t nat -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t nat -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
+
+	local MANGLE6_RULES=$(ip6tables -t mangle -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334|0x7" | sort)
+	if [ -n "${MANGLE6_RULES}" ];then
+		echo_date "清除ip6tables mangle规则..."
+		echo "${MANGLE6_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t mangle -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t mangle -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t mangle -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
+
+	local FILTER6_RULES=$(ip6tables -t filter -S 2>/dev/null | grep -E "SHADOWSOCKS6" | sort)
+	if [ -n "${FILTER6_RULES}" ];then
+		echo_date "清除ip6tables filter规则..."
+		echo "${FILTER6_RULES}" | while read line
+		do
+			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
+			if [ "${TYPE}" == "A" ];then
+				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t filter -D/g')
+				run_bg $CMD1
+			elif [ "${TYPE}" == "N" ];then
+				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t filter -F/g')
+				run_bg $CMD2
+				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t filter -X/g')
+				run_bg $CMD3
+			fi
+		done
+	fi
+
+	local ip6_rule_exist=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | grep -c 310)
+	if [ -n "${ip6_rule_exist}" ]; then
+		until [ "${ip6_rule_exist}" == "0" ]; do
+			IP6_ARG=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | head -n 1 | cut -d " " -f3,4,5,6)
+			ip -6 rule del $IP6_ARG >/dev/null 2>&1
+			ip6_rule_exist=$(expr $ip6_rule_exist - 1)
+		done
+	fi
+	ip -6 route del local ::/0 dev lo table 310 >/dev/null 2>&1
+}
+
+disable_ipv6_proxy_runtime() {
+	ss_basic_proxy_ipv6="0"
+	ss_basic_chng_ipv6_drop_proxy="1"
+	dbus set ss_basic_proxy_ipv6="0"
+	dbus set ss_basic_chng_ipv6_drop_proxy="1"
+}
+
+fallback_ipv6_proxy_to_ipv4() {
+	echo_date "⚠️检测到IPv6透明代理规则写入失败，开始回退到IPv4代理模式..."
+	flush_ip6tables
+	disable_ipv6_proxy_runtime
+	echo_date "↪ 已同步关闭前端的IPv6代理开关，并强制开启代理域名IPv6过滤。"
+	stop_dns_process
+	start_dns_x
+	echo_date "✅ 已回退为IPv4代理模式，IPv4透明代理规则继续生效。"
 }
 
 load_iptables() {
@@ -4558,31 +5165,49 @@ load_iptables() {
 	done
 	# creat_ipset
 	# add_white_black
-	_start_iptables
+	if ! _start_iptables; then
+		echo_date "错误：写入iptables透明代理规则失败，正在回滚..."
+		flush_iptables
+		flush_ipset
+		close_in_five flag
+	fi
 }
 
 ensure_chain() {
-	table="$1"
-	chain="$2"
-	if ! iptables -t "$table" -L "$chain" >/dev/null 2>&1; then
-		iptables -t "$table" -N "$chain"
+	ensure_chain_with_cmd iptables "$@"
+}
+
+ensure_chain6() {
+	ensure_chain_with_cmd ip6tables "$@"
+}
+
+ensure_chain_with_cmd() {
+	local cmd="$1"
+	local table="$2"
+	local chain="$3"
+	if ! ${cmd} -t "$table" -L "$chain" >/dev/null 2>&1; then
+		${cmd} -t "$table" -N "$chain" >/dev/null 2>&1 || return 1
 	fi
 }
 
 append_if_not_exists() {
-	table="$1"
-	shift
-	# 剩余参数为完整规则，例如：-A CHAIN ... -j ...
-	# 先构造对应的 -C 检查：把 -A 改为 -C
-	# 注意：iptables -C 格式为：iptables -t table -C chain rule-spec
-	# 因此需要拆出链名和去掉 -A
+	append_if_not_exists_with_cmd iptables "$@"
+}
+
+append_if_not_exists6() {
+	append_if_not_exists_with_cmd ip6tables "$@"
+}
+
+append_if_not_exists_with_cmd() {
+	local cmd="$1"
+	local table="$2"
+	shift 2
 	set -- "$@"
 	if [ "$1" = "-A" ]; then
-		chain="$2"
-		# 去掉前两个参数 "-A chain"
+		local chain="$2"
 		shift 2
-		if ! iptables -t "$table" -C "$chain" "$@" >/dev/null 2>&1; then
-		  iptables -t "$table" -A "$chain" "$@"
+		if ! ${cmd} -t "$table" -C "$chain" "$@" >/dev/null 2>&1; then
+			${cmd} -t "$table" -A "$chain" "$@" >/dev/null 2>&1 || return 1
 		fi
 	else
 		echo "append_if_not_exists 需要以 -A 开头的参数" >&2
@@ -4824,7 +5449,7 @@ _start_iptables() {
 	apply_quic_block
 	
 	# DNS 劫持
-	dns_hijack_control $1
+	dns_hijack_control 4
 	#-----------------------FOR ROUTER---------------------
 	# router itself
 	if [ "${ss_basic_mode}" != "6" ];then
@@ -4842,7 +5467,7 @@ _start_iptables() {
 	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_ports "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
 
 	local default_udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
-	local default_quic_flag=$(get_acl_quic_flag)
+	local default_quic_flag=$(get_acl_quic_flag "" "${ss_acl_default_mode}" "${default_udp_flag}")
 	apply_acl_udp_rule "${acl_default_label}" "" "${ss_acl_default_ports}" "${ss_acl_default_mode}" "${default_udp_flag}" "${default_quic_flag}"
 	
 	# 重定所有流量到 SHADOWSOCKS
@@ -4876,6 +5501,214 @@ _start_iptables() {
 	if [ "$QOSO" -gt "1" -a -z "$RRULE" ]; then
 		iptables -t mangle -I QOSO0 -m mark --mark "$ip_prefix_hex" -j RETURN
 	fi
+
+	if ipv6_proxy_enabled; then
+		if ! _start_ipv6_iptables; then
+			fallback_ipv6_proxy_to_ipv4 || return 1
+		fi
+	fi
+}
+
+_start_ipv6_iptables() {
+	echo_date "写入ip6tables规则到ipv6 nat/mangle/filter表中..."
+
+	resolve_ipv6_default_acl
+
+	local ipv6_ports="${IPV6_ACL_DEFAULT_PORTS}"
+	if [ "${ipv6_ports}" == "all" ];then
+		ipv6_ports=""
+		echo_date "加载IPv6默认ACL规则：【${IPV6_ACL_DEFAULT_LABEL}】【全部端口】模式为：$(get_mode_name ${IPV6_ACL_DEFAULT_MODE})"
+	else
+		echo_date "加载IPv6默认ACL规则：【${IPV6_ACL_DEFAULT_LABEL}】【${ipv6_ports}】模式为：$(get_mode_name ${IPV6_ACL_DEFAULT_MODE})"
+	fi
+	if [ -n "${IPV6_ACL_SKIP_CIDR}" ];then
+		echo_date "IPv6 ACL提示：以下CIDR规则继续仅用于IPv4：${IPV6_ACL_SKIP_CIDR}"
+	fi
+	if [ -n "${IPV6_ACL_SKIP_NOMAC}" ];then
+		echo_date "IPv6 ACL提示：以下主机未获取到MAC，继续仅用于IPv4：${IPV6_ACL_SKIP_NOMAC}"
+	fi
+	if [ "${IPV6_ACL_HAS_CUSTOM}" == "1" -a "${IPV6_ACL_ACTIVE_COUNT}" == "0" ];then
+		echo_date "IPv6 ACL提示：当前没有可直接用于IPv6的自定义主机规则，全部IPv6流量将按默认规则处理。"
+	fi
+
+	#-----------------------FOR NAT TCP---------------------
+	ensure_chain6 nat SHADOWSOCKS6 || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6 -p tcp -m set --match-set ignlist6 dst -j RETURN || return 1
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		for VLAN_INDEX in ${VLAN_INDEXS}
+		do
+			ensure_chain6 nat SHADOWSOCKS6_DNS_${VLAN_INDEX} || return 1
+		done
+	fi
+
+	ensure_chain6 nat SHADOWSOCKS6_GLO || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GLO -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GLO -p tcp -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+
+	ensure_chain6 nat SHADOWSOCKS6_GFW || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GFW -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GFW -p tcp -m set --match-set black_list6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GFW -p tcp -m set --match-set gfwlist6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GFW -p tcp -m set --match-set router6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+
+	ensure_chain6 nat SHADOWSOCKS6_CHN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_CHN -p tcp -m set --match-set black_list6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_CHN -p tcp -m set --match-set chnlist6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_CHN -p tcp -m set --match-set chnroute6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_CHN -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_CHN -p tcp -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+
+	ensure_chain6 nat SHADOWSOCKS6_GAM || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GAM -p tcp -m set --match-set black_list6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GAM -p tcp -m set --match-set chnlist6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GAM -p tcp -m set --match-set chnroute6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GAM -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_GAM -p tcp -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+
+	ensure_chain6 nat SHADOWSOCKS6_HOM || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_HOM -p tcp -m set --match-set black_list6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_HOM -p tcp -m set --match-set gfwlist6 dst -j RETURN || return 1
+	append_if_not_exists6 nat -A SHADOWSOCKS6_HOM -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+
+	#-----------------------FOR TPROXY UDP---------------------
+	load_tproxy
+	if [ -z "$(ip -6 rule show table 310 2>/dev/null | grep "fwmark 0x7")" ];then
+		ip -6 rule add fwmark 0x07 table 310 >/dev/null 2>&1 || return 1
+	fi
+	if [ -z "$(ip -6 route show table 310 2>/dev/null | grep "^local ::/0 dev lo")" ];then
+		ip -6 route add local ::/0 dev lo table 310 >/dev/null 2>&1 || return 1
+	fi
+
+	ensure_chain6 mangle SHADOWSOCKS6 || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6 -p udp -m set --match-set ignlist6 dst -j RETURN || return 1
+
+	ensure_chain6 mangle SHADOWSOCKS6_GFW || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GFW -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GFW -p udp -m set --match-set black_list6 dst -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GFW -p udp -m set --match-set gfwlist6 dst -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GFW -p udp -m set --match-set router6 dst -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+
+	ensure_chain6 mangle SHADOWSOCKS6_CHN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_CHN -p udp -m set --match-set black_list6 dst -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_CHN -p udp -m set --match-set chnlist6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_CHN -p udp -m set --match-set chnroute6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_CHN -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_CHN -p udp -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+
+	ensure_chain6 mangle SHADOWSOCKS6_GAM || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GAM -p udp -m set --match-set black_list6 dst -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GAM -p udp -m set --match-set chnlist6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GAM -p udp -m set --match-set chnroute6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GAM -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GAM -p udp -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+
+	ensure_chain6 mangle SHADOWSOCKS6_GLO || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GLO -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_GLO -p udp -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+
+	ensure_chain6 mangle SHADOWSOCKS6_HOM || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_HOM -p udp -m set --match-set black_list6 dst -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_HOM -p udp -m set --match-set gfwlist6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_HOM -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 mangle -A SHADOWSOCKS6_HOM -p udp -j TPROXY --on-port $(get_tproxy_port6) --tproxy-mark 0x07 || return 1
+
+	#-----------------------FOR FILTER UDP443---------------------
+	ensure_chain6 filter SHADOWSOCKS6 || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6 -p udp -m set --match-set ignlist6 dst -j RETURN || return 1
+
+	ensure_chain6 filter SHADOWSOCKS6_GFW || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_GFW -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_GFW -p udp -m set --match-set black_list6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_GFW -p udp -m set --match-set gfwlist6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_GFW -p udp -m set --match-set router6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
+
+	ensure_chain6 filter SHADOWSOCKS6_CHN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_CHN -p udp -m set --match-set black_list6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_CHN -p udp -m set --match-set chnlist6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_CHN -p udp -m set --match-set chnroute6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_CHN -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_CHN -p udp -j REJECT --reject-with icmp6-port-unreachable || return 1
+
+	ensure_chain6 filter SHADOWSOCKS6_GAM || return 1
+
+	ensure_chain6 filter SHADOWSOCKS6_GLO || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_GLO -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_GLO -p udp -j REJECT --reject-with icmp6-port-unreachable || return 1
+
+	ensure_chain6 filter SHADOWSOCKS6_HOM || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_HOM -p udp -m set --match-set black_list6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_HOM -p udp -m set --match-set gfwlist6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_HOM -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+	append_if_not_exists6 filter -A SHADOWSOCKS6_HOM -p udp -j REJECT --reject-with icmp6-port-unreachable || return 1
+
+	local acl_nu="${IPV6_ACL_RULES}"
+	if [ -n "${acl_nu}" ];then
+		for acl in ${acl_nu}
+		do
+			ipaddr=$(eval echo \$ss_acl_ip_${acl})
+			source_rule6=$(get_acl_source_rule6 ${acl})
+			if [ -z "${source_rule6}" ];then
+				continue
+			fi
+
+			ports=$(eval echo \$ss_acl_port_${acl})
+			proxy_mode=$(eval echo \$ss_acl_mode_${acl})
+			udp_flag=$(get_acl_udp_flag ${acl} ${proxy_mode})
+			quic_flag=$(get_acl_quic_flag ${acl} ${proxy_mode} "${udp_flag}")
+			if [ "${ports}" == "all" ]; then
+				ports=""
+				echo_date "加载IPv6 ACL规则：【${ipaddr}】【全部端口】模式为：$(get_mode_name ${proxy_mode})"
+			else
+				echo_date "加载IPv6 ACL规则：【${ipaddr}】【${ports}】模式为：$(get_mode_name ${proxy_mode})"
+			fi
+
+			append_if_not_exists6 nat -A SHADOWSOCKS6 ${source_rule6} -p tcp $(factor ${ports} "-m multiport --dport") -$(get_jump_mode ${proxy_mode}) $(get_action_chain6 ${proxy_mode}) || return 1
+			apply_acl_udp_rule6 "${ipaddr}" "${source_rule6}" "${ports}" "${proxy_mode}" "${udp_flag}" "${quic_flag}" || return 1
+			apply_acl_quic_filter_rule6 "${ipaddr}" "${source_rule6}" "${proxy_mode}" "${quic_flag}" || return 1
+		done
+	fi
+
+	local default_udp_flag=$(get_acl_udp_flag "" "${IPV6_ACL_DEFAULT_MODE}")
+	local default_quic_flag=$(get_acl_quic_flag "" "${IPV6_ACL_DEFAULT_MODE}" "${default_udp_flag}")
+	append_if_not_exists6 nat -A SHADOWSOCKS6 -p tcp $(factor ${ipv6_ports} "-m multiport --dport") -j $(get_action_chain6 ${IPV6_ACL_DEFAULT_MODE}) || return 1
+	apply_acl_udp_rule6 "${IPV6_ACL_DEFAULT_LABEL}" "" "${ipv6_ports}" "${IPV6_ACL_DEFAULT_MODE}" "${default_udp_flag}" "${default_quic_flag}" || return 1
+	apply_acl_quic_filter_rule6 "${IPV6_ACL_DEFAULT_LABEL}" "" "${IPV6_ACL_DEFAULT_MODE}" "${default_quic_flag}" || return 1
+
+	if ! ip6tables -t nat -C PREROUTING -p tcp -j SHADOWSOCKS6 >/dev/null 2>&1; then
+		ip6tables -t nat -I PREROUTING 1 -p tcp -j SHADOWSOCKS6 >/dev/null 2>&1 || return 1
+	fi
+
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		echo_date "开启IPv6 DNS劫持功能，防止IPv6 DNS污染..."
+		dns_hijack_control 6 || return 1
+		local INSET_NU_DNS6=1
+		for VLAN_INDEX in ${VLAN_INDEXS}
+		do
+			local br_ipv6=$(ip -6 addr show dev br${VLAN_INDEX} scope global 2>/dev/null | awk '/inet6/ {print $2}' | head -n1)
+			[ -z "${br_ipv6}" ] && continue
+			ip6tables -t nat -I PREROUTING "${INSET_NU_DNS6}" -i br${VLAN_INDEX} -p udp -m udp --dport 53 -j SHADOWSOCKS6_DNS_${VLAN_INDEX} >/dev/null 2>&1 || return 1
+			let INSET_NU_DNS6+=1
+		done
+	else
+		echo_date "IPv6 DNS劫持功能未开启，建议开启！"
+	fi
+
+	if [ "${ss_basic_mode}" != "6" ];then
+		append_if_not_exists6 nat -A OUTPUT -p tcp -m set --match-set router6 dst -j REDIRECT --to-ports $(get_tproxy_port6) || return 1
+		append_if_not_exists6 mangle -A OUTPUT -p udp -m set --match-set router6 dst -m udp --dport 53 -j MARK --set-mark 0x7/0xffffffff || return 1
+	fi
+
+	if [ "${mangle}" != "0" ];then
+		if ! ip6tables -t mangle -C PREROUTING -p udp -j SHADOWSOCKS6 >/dev/null 2>&1; then
+			ip6tables -t mangle -A PREROUTING -p udp -j SHADOWSOCKS6 >/dev/null 2>&1 || return 1
+		fi
+	fi
+
+	if ! ip6tables -t filter -C FORWARD -p udp --dport 443 -j SHADOWSOCKS6 >/dev/null 2>&1; then
+		ip6tables -t filter -I FORWARD 1 -p udp --dport 443 -j SHADOWSOCKS6 >/dev/null 2>&1 || return 1
+	fi
+
+	return 0
 }
 
 restart_dnsmasq() {
@@ -5017,18 +5850,23 @@ detect_ip(){
 	local SUBJECT=$1
 	local TIMEOUT=$2
 	local METHOD=$3
+	local CURL_IP_FLAG="-4"
 	[ -z "${TIMEOUT}" ] && TIMEOUT="3"
+
+	if [ "${METHOD}" == "1" ] && ipv6_proxy_enabled; then
+		CURL_IP_FLAG=""
+	fi
 
 	if [ "${METHOD}" == "0" ];then
 		# 检测国内ip
-		local IP=$(run curl-fancyss -4s -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
+		local IP=$(run curl-fancyss ${CURL_IP_FLAG} -s -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
 		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
-			local IP=$(run curl-fancyss -4s -x socks5h://127.0.0.1:23456 -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
+			local IP=$(run curl-fancyss ${CURL_IP_FLAG} -s -x socks5h://127.0.0.1:23456 -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
-			local IP=$(run curl-fancyss -4s -m  ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
+			local IP=$(run curl-fancyss ${CURL_IP_FLAG} -s -m  ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		fi
 	fi
 
@@ -5093,7 +5931,7 @@ check_frn_public_ip(){
 
 	# 检测节点解析结果
 	if [ -n "${ss_basic_server_ip}" ]; then
-		__valid_ip46 ${dns_para}
+		__valid_ip46 "${ss_basic_server_ip}"
 		if [ "$?" == "0" ]; then
 			# ipv4
 			ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1

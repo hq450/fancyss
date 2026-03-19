@@ -288,8 +288,8 @@ if [ "${ss_basic_type}" == "1" ]; then
 		# naive
 		local NAIVE_PID=$(pidof naive)
 		local NAIVE_RSS=$(GET_VM_RSS_MULTI ${NAIVE_PID})
-		if [ -n "${NAIVE}" ]; then
-			echo "naive		运行中🟢		socks5		${NAIVE}"
+		if [ -n "${NAIVE_PID}" ]; then
+			echo "naive		运行中🟢		socks5		${NAIVE_PID}		${NAIVE_RSS}"
 		else
 			echo "naive		未运行🔴		socks5"
 		fi
@@ -367,7 +367,7 @@ ECHO_VERSION(){
 		echo "naive			$(run naive --version|awk '{print $NF}')		https://github.com/klzgrad/naiveproxy"
 	fi
 	if [ -x "/koolshare/bin/tuic-client" ];then
-		echo "tuic-client		$(run tuic-client -v|awk '{print $NF}')			https://github.com/EAimTY/tuic"
+		echo "tuic-client		$(run tuic-client -V|awk '{print $NF}')			https://github.com/Itsusinn/tuic"
 	fi
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)

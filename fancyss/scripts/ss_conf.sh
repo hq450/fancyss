@@ -122,6 +122,7 @@ remove_now(){
 	local PKG_TYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 
 	[ -z "${ss_basic_proxy_newb}" ] && dbus set ss_basic_proxy_newb=1
+	[ -z "${ss_basic_proxy_ipv6}" ] && dbus set ss_basic_proxy_ipv6=0
 	[ -z "${ss_basic_udpoff}" ] && dbus set ss_basic_udpoff=0
 	[ -z "${ss_basic_udpall}" ] && dbus set ss_basic_udpall=0
 	[ -z "${ss_basic_udpgpt}" ] && dbus set ss_basic_udpgpt=1

@@ -12,6 +12,7 @@ HEART_STATUS=$(dbus get ss_heart_beat)
 eval $(dbus export ss_failover_enable)
 CHN_TEST_SITE=$(dbus get ss_basic_curl)
 FRN_TEST_SITE=$(dbus get ss_basic_furl)
+PROXY_IPV6=$(dbus get ss_basic_proxy_ipv6)
 [ -z "${CHN_TEST_SITE}" ] && CHN_TEST_SITE="http://connectivitycheck.platform.hicloud.com/generate_204"
 [ -z "${FRN_TEST_SITE}" ] && FRN_TEST_SITE="http://www.gstatic.com/generate_204"
 SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic|hysteria"|head -n1)
@@ -19,6 +20,14 @@ REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal
 
 run(){
 	env -i PATH=${PATH} "$@"
+}
+
+get_foreign_curl_ip_flag(){
+	if [ "${PROXY_IPV6}" == "1" ];then
+		echo ""
+	else
+		echo "-4"
+	fi
 }
 
 get_domain_name(){
@@ -51,6 +60,7 @@ get_china_status(){
 	fi
 }
 get_foreign_status(){
+	local CURL_IP_FLAG=$(get_foreign_curl_ip_flag)
 	# get result by curl
 	# local dns_safe=$(cat /etc/dnsmasq.conf | grep -Eo "7913")
 	# local iptables_safe1=$(iptables -t nat -nvL OUTPUT | grep -Eo "router")
@@ -59,7 +69,7 @@ get_foreign_status(){
 	# if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" -a -n "${dns_safe}" -a -n "${iptables_safe1}" -a -n "${iptables_safe2}" -a -n "${ipset_safe}" ];then
 	if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" ];then
 		# get foreign status through 23456 socks5 port (resolve test server domain in local)
-		local ret0=$(run /tmp/curl-status -o /dev/null -4sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
+		local ret0=$(run /tmp/curl-status -o /dev/null ${CURL_IP_FLAG} -sk -I -x socks5://127.0.0.1:23456 --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" ${FRN_TEST_SITE} 2>/dev/null)
 	else
 		log1='国外链接 【'${LOGTIME}'】 <font color='#FF0000'>X</font>'
 		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ $(dbus get ssconf_basic_name_${CURRENT}) 🧮$1"
@@ -174,4 +184,3 @@ case $1 in
 		fi
 	;;
 esac
-

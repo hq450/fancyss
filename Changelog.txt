@@ -1,5 +1,25 @@
 fancyss Changelog
 
+3.5.5（20260317）
+   - add	新增MTK平台机型：GS7_Air支持。
+   - add	新增tuic协议配置实践文档，并在README中增加TUIC协议文档入口。
+   - add	新增NaiveProxy配置实践文档，并在README中增加NaiveProxy协议文档入口。
+   - add	新增ipv6透明代理支持，当前SS、SSR、VMess、VLESS、Trojan、TUIC、Hysteria2、NaiveProxy等节点可加载ipv6的tcp/udp透明代理规则（其中NaiveProxy仅支持tcp）。
+   - add	访问控制新增MAC匹配能力，普通主机规则会优先按MAC匹配，CIDR规则继续按IP/CIDR匹配，并支持通过ARP自动补全MAC地址。
+   - add	ipv6 ACL支持复用现有访问控制规则，可按设备控制ipv6流量的代理模式、udp代理和quic屏蔽，并新增ipv6 DNS劫持。
+   - update	优化DNS逻辑，开启ipv6代理后，chinadns-ng和smartdns将不再过滤代理域名AAAA记录，并同步支持gfwlist6、black_list6、router6等ipv6规则集。
+   - update	Xray配置文件生成逻辑更新，开启ipv6代理时会自动追加ipv6透明代理inbound。
+   - update	TUIC节点现已支持ipv6透明代理，优化TUIC配置解析和状态展示，可在运行检测中显示relay.server对应的解析地址。
+   - update	NaiveProxy节点现已支持ipv6透明代理（仅tcp，udp仍不支持）。
+   - update	SSR节点现已支持ipv6透明代理，开启ipv6代理时rss-redir将监听在ipv6地址上以接管透明代理流量。
+   - update	优化DNS设定中AAAA过滤逻辑：开启ipv6代理后，前端会自动取消并禁用chinadns-ng的【过滤代理】开关；未开启ipv6代理时，后端会自动纠正chinadns-ng配置，smartdns继续保持代理域名默认屏蔽AAAA解析。
+   - update	优化访问控制前端显示，客户端地址支持悬浮显示MAC信息，并根据是否启用ipv6代理显示不同提示。
+   - fix	修复开启ipv6代理后，代理出口IP检测和国外状态检测仍强制使用ipv4的问题。
+   - fix	优化ipv6透明代理的预检查和回退逻辑：当系统未开启ipv6、固件缺少libip6t_REDIRECT扩展，或ip6tables规则写入失败时，将自动关闭ipv6代理开关并回退到纯ipv4代理模式继续运行。
+   - update	ipt2socks更新到v1.1.4，新增二进制自动获取/打包同步逻辑，并调整透明代理启动参数以适配新版本。
+   - update	tuic-client更新到v1.7.1，full版本默认提供对应平台的二进制，并新增二进制自动获取/打包同步逻辑。
+   - update	安装脚本补充ss_basic_proxy_ipv6默认值写入。
+
 3.5.4（20260313）
    - fix	修复某些时候gfw黑名单模式下无法翻墙的问题。
    - fix	修复当服务器ip为纯ipv6的时候，ip归属判断错误的问题。

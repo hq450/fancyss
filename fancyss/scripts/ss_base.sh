@@ -95,11 +95,83 @@ resolve_acl_udp_flag() {
 cleanup_acl_rule() {
 	local acl="$1"
 	local field=""
-	for field in ip name mode port udp quic
+	for field in ip mac name mode port udp quic
 	do
 		dbus remove ss_acl_${field}_${acl}
 		unset ss_acl_${field}_${acl}
 	done
+}
+
+get_acl_host_ip() {
+	local acl_ip="$1"
+	case "${acl_ip}" in
+	*/*)
+		echo "${acl_ip%/*}"
+		;;
+	*)
+		echo "${acl_ip}"
+		;;
+	esac
+}
+
+acl_is_cidr_rule() {
+	case "$1" in
+	*/*)
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+is_valid_acl_mac() {
+	echo "$1" | grep -Eiq '^([0-9a-f]{2}:){5}[0-9a-f]{2}$'
+}
+
+normalize_acl_mac() {
+	local acl_mac=$(echo "$1" | tr 'A-F' 'a-f')
+	if is_valid_acl_mac "${acl_mac}"; then
+		echo "${acl_mac}"
+	fi
+}
+
+get_arp_mac_by_ip() {
+	local host_ip="$(get_acl_host_ip "$1")"
+	local acl_mac=""
+	acl_mac=$(arp -n 2>/dev/null | awk -v target="(${host_ip})" '$2 == target {print $4; exit}')
+	if [ -z "${acl_mac}" ]; then
+		acl_mac=$(ip neigh show 2>/dev/null | awk -v target="${host_ip}" '$1 == target {for (i = 1; i <= NF; i++) if ($i == "lladdr") {print $(i + 1); exit}}')
+	fi
+	normalize_acl_mac "${acl_mac}"
+}
+
+resolve_acl_mac() {
+	local acl="$1"
+	local acl_ip=""
+	local acl_mac=""
+	eval acl_ip=\$ss_acl_ip_${acl}
+	eval acl_mac=\$ss_acl_mac_${acl}
+
+	acl_mac=$(normalize_acl_mac "${acl_mac}")
+	if acl_is_cidr_rule "${acl_ip}"; then
+		[ -n "${acl_mac}" ] && dbus remove ss_acl_mac_${acl}
+		return 1
+	fi
+
+	if [ -z "${acl_mac}" ]; then
+		acl_mac=$(get_arp_mac_by_ip "${acl_ip}")
+	fi
+
+	if [ -n "${acl_mac}" ]; then
+		dbus set ss_acl_mac_${acl}=${acl_mac}
+		eval ss_acl_mac_${acl}="${acl_mac}"
+		echo "${acl_mac}"
+		return 0
+	fi
+
+	dbus remove ss_acl_mac_${acl}
+	return 1
 }
 
 is_valid_acl_source() {
@@ -194,6 +266,7 @@ get_acl_rule_indexes() {
 	for acl in ${all_acl_nu}
 	do
 		if is_acl_rule_complete "${acl}";then
+			resolve_acl_mac "${acl}" >/dev/null 2>&1
 			valid_acl_nu="${valid_acl_nu} ${acl}"
 		else
 			cleanup_acl_rule "${acl}"
@@ -583,7 +656,7 @@ get_rand_port(){
 
 kill_used_port(){
 	# ports will be used in fancyss
-	local ports="3333 23456 7913 1051 1052 1055 1056 2051 2052 2055 2056 1091 1092 1093"
+	local ports="3333 3334 23456 7913 1051 1052 1055 1056 2051 2052 2055 2056 1091 1092 1093"
 	# get all used port in system
 	local LISTENS=$(netstat -nlp 2>/dev/null | grep -E "^tcp|^udp|^raw" | awk '{print $4}'|awk -F ":" '{print $NF}'|sort -un)
 	# get target ports that have been used
