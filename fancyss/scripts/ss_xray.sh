@@ -9,7 +9,8 @@ XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/xray"
 
 # arm hnd hnd_v8 qca mtk
-pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
+pkg_arch=$(dbus get ss_basic_pkg_arch)
+[ -n "${pkg_arch}" ] || pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 case $pkg_arch in
 arm)
 	ARCH=armv5

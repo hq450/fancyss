@@ -24,8 +24,8 @@ run(){
 }
 
 # arm hnd hnd_v8 qca mtk
-PLATFORM=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-PKGTYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+PLATFORM=$(get_pkg_arch)
+PKGTYPE=$(get_pkg_type)
 MD5NAME=md5_${PLATFORM}_${PKGTYPE}
 PACKAGE=fancyss_${PLATFORM}_${PKGTYPE}
 VERSION=version.json.js

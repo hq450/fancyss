@@ -535,7 +535,7 @@ function LoadingSSProgress(seconds) {
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，等待脚本运行完毕后再刷新！</font></li><li><font color='#ffcc00'>正在自动检测github上的更新...</font></li>");
 	} else if (action == 9) {
 		document.getElementById("loading_block3").innerHTML = "恢复科学上网配置 ..."
-		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，配置恢复后需要重新提交！</font></li><li><font color='#ffcc00'>恢复配置中...</font></li>");
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，配置恢复后需要重新提交！</font></li><li><font color='#ffcc00'>恢复配置中...</font></li><li><font color='#ffcc00'>旧版兼容SH备份恢复时间可能较长，请耐心等待日志输出。</font></li>");
 	} else if (action == 10) {
 		document.getElementById("loading_block3").innerHTML = "清空科学上网配置 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在清空科学上网配置...</font></li>");
@@ -581,6 +581,15 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 24) {
 		document.getElementById("loading_block3").innerHTML = "清除dohclient缓存 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，清除中 ...</font></li>");
+	} else if (action == 25) {
+		document.getElementById("loading_block3").innerHTML = "生成旧版兼容配置 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在生成旧版兼容配置...</font></li><li><font color='#ffcc00'>节点较多时耗时会比较长，日志会显示导出阶段和节点进度。</font></li>");
+	} else if (action == 26) {
+		document.getElementById("loading_block3").innerHTML = "生成新版本JSON配置 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在整理新版本JSON配置...</font></li>");
+	} else if (action == 27) {
+		document.getElementById("loading_block3").innerHTML = "生成旧版迁移快照 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在整理迁移快照...</font></li>");
 	}
 }
 function hideSSLoadingBar() {
@@ -624,34 +633,23 @@ function openssHint(itemNum, flag) {
 	statusmenu = "";
 	width = "350px";
 	if (itemNum == 0) {
-		width = "850px";
+		width = "820px";
 		bgcolor = "#CC0066",
-			statusmenu = "<li>在路由器内部，通过httping，访问<a href='https://www.google.com.tw/' target='_blank'><u><font color='#00F'>www.google.com.tw</font></u></a>检测国外连接状态，访问<a href='https://www.baidu.com/' target='_blank'><u><font color='#00F'>www.baidu.com</font></u></a>检测国内连接状态，返回状态信息。然后默认在4000ms - 7000ms的区间内随机进行下一次检测，每次检测都会访问对应的检测网站，该访问不会进行下载整个网页，而仅仅请求HTTP头部，请求成功会返回√，请求失败会返回<font color='#FF0000'>X</font>，还会显示请求检测网站header的延迟，注意此延迟不是传统的icmp ping！</li>"
-		statusmenu += "<br /><li>国内、国外状态检测的历史记录会显示在【故障转移】内的日志窗口，该日志记录会实时更新，且最新的一条记录即为插件顶部的【插件运行状态】；</li>"
-		statusmenu += "<br /><li>状态检测反应的是路由器本身访问www.google.com.tw的结果，并不代表电脑或路由器下其它终端的访问结果，透过状态检测，可以为使用科学上网中遇到的一些问题进行排查,一下列举一些常见的情况：</li>"
-		statusmenu += "<br /><b><font color='#CC0066'>1：双√，不能访问被墙网站：</font></b>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.1：电脑DNS缓存：</font>可能你在未开启ss的时候访问过被墙域名，DNS缓存受到了污染，只需要简单的刷新下缓存，window电脑通过在CMD中运行命令：<font color='#669900'>ipconfig /flushdns</font>刷新电脑DNS缓存，手机端可以通过尝试开启飞行模式后关闭飞行模式刷新DNS缓存。"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.2：电脑自定义DNS：</font>很多用户喜欢自己在电脑上定义DNS来使用，这样访问google等被墙网站，解析出来的域名基本都是污染的，因此建议将DNS解析改为自动获取。如果你的路由器很多人使用，你不能阻止别人自定义DNS，那么建议开启chromecast功能，路由器会将所有自定义的DNS劫持到自己的DNS服务器上，避免DNS污染。"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1.3：电脑host：</font>电脑端以前设置过host翻墙，host翻墙失效快，DNS解析将通过host完成，不过路由器，如果host失效，使用chnroute翻墙的模式将无法使用；即使未失效，在gfwlist模式下，域名解析通过电脑host完成，而无法进入ipset，同样使得翻墙无法使用，因此强烈建议清除相关host！"
-		statusmenu += "<br /><b><font color='#CC0066'>2：国内√，国外<font color='#FF0000'>X</font>：</font></b>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.1：检查你的科学上网账号：</font>在电脑端用相应客户端检查是否正常；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.2：是否使用了域名：</font>一些机场提供的域名，特别是较为复杂的域名，可能有解析不了的问题，可尝试更换为IP地址，或者更换节点解析DNS；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.3：是否使用了含有特殊字符的密码：</font>极少数情况下，电脑端账号使用正常，路由端却<font color='#FF0000'>X</font>是因为使用了包含特殊字符的密码；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.4：尝试更换国外DNS：</font>此部分详细解析，请看DNS部分帮助文档；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.5：检查程序运行状态：</font>在本插件内点击【详细状态按钮】，可以看到当前程序运行状态，如果某个程序显示未运行，就会导致错误。尝试重启插件/重启路由器/添加虚拟内存等操作，也许可以解决此问题"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.5：检查iptables工作状态：</font>在本插件内点击【详细状态按钮】，可以看到当前iptables状态，如果某个iptables链下没有规则，就会导致错误，这可能是由于其它插件冲突导致的，包括但不限于系统防火墙、qos、其它插件！请关闭相应服务后，重启科学上网插件看是否恢复正常！"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.7：更新服务器端程序：</font>一些代理软件，由于更新后导致新旧版本不兼容，所以一半要求服务器端和客户端部署相同版本号的程序。如果你不希望更换路由器端主程序，可以更新最新服务器端来尝试解决问题，另外建议使用原版SS的朋友,在服务器端部署和路由器端相同版本的shadowsocks-libev；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.8：ntp时间问题：</font>如果你使用ssr或者V2ray，一些协议是需要验证服务器和路由器的时间的，如果时间相差太多，那么就会出现<font color='#FF0000'>X</font> 。"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2.9：是否在插件内定义了错误格式的黑白名单</font>：如果定义的格式错误，会造成路由器dnsmasq无法启动，从而无法正常解析域名。点击【详细状态按钮】按钮能看到dnsmasq运行状态！"
-		statusmenu += "<br /><b><font color='#CC0066'>3：双<font color='#FF0000'>X</font>：</font></b>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.1：更换国内DNS：</font>在电脑端用SS客户端检查是否正常；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3.2：逐项检查第2点中每个项目。</font>"
-		statusmenu += "<br /><b><font color='#CC0066'>4：国内<font color='#FF0000'>X</font>，国外√：</font></b>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>4.1：尝试更换国内DNS。</font>"
-		statusmenu += "<br /><b><font color='#CC0066'>5：国外间歇性<font color='#FF0000'>X</font>：</font></b>"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.1：检查你的服务器ping和丢包：</font>一些线路可能在高峰期或者线路调整期，导致丢包过多，获取状态失败；"
-		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5.2：如果是升级新版本科学上网插件后出现这种情况：</font>fancyss插件从2015年6月，其核心部分就基本无改动，升级新版本出现这种情况，最大可能的原因，新版本升级了最新的ss或者ssr的主程序，解决方法可以通过回滚路由器内程序，也可以升级你的服务器端到最新，如果你是自己搭建的用户,建议最新原版shadowsocks-libev程序。"
-		statusmenu += "<br /><b><font color='#CC0066'>6：你遇到了非常少见的情况：</font></b>来这里反馈吧：<a href='https://telegram.me/joinchat/DCq55kC7pgWKX9J4cJ4dJw' target='_blank'><u><font color='#00F'>telegram</font></u></a>。"
+			statusmenu = "<li>插件运行状态会定时请求你在【web延迟测试】中设置的检测网址，只取HTTP响应头，不下载完整网页；显示的延迟是HTTP响应时间，不是传统ping。</li>"
+		statusmenu += "<br /><li><font color='#00F'>未开启IPv6代理：</font>国外检测优先使用 <font color='#669900'>-x socks5://127.0.0.1:23456</font>，主要检查节点可用性和路由器本机DNS解析是否正常，这是当前IPv4场景的默认最佳实践。</li>"
+		statusmenu += "<br /><li><font color='#00F'>开启IPv6代理：</font>国外检测会拆分为【国外IPv4】和【国外IPv6】；两项都会直接走透明代理链路，不再使用 <font color='#669900'>-x socks5</font>，这样才能正确检测IPv6透明代理，同时把DNS、ipset、iptables、透明代理一起覆盖到。</li>"
+		statusmenu += "<br /><li><font color='#00F'>提示：</font>web 延迟测试地址使用插件内置检测网址；开启IPv6代理时，建议优先选择支持 IPv6 的国外检测网址。故障转移中的国外状态历史仍然只记录IPv4结果。</li>"
+		statusmenu += "<br /><li><font color='#00F'>边界说明：</font>这里的检测结果用于判断当前 fancyss 运行链路对测试域名的访问情况，不等同于节点本身可用性检测；节点可用性请结合 web 延迟测试、详细状态和终端实际访问一起判断。</li>"
+		statusmenu += "<br /><br /><b><font color='#CC0066'>常见结果说明：</font></b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>1. 国外IPv4 √，国外IPv6 X：</font>节点大概率不支持IPv6，或者远端协议/服务器未提供IPv6能力，建议关闭IPv6代理。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>2. 国内√，国外X：</font>优先检查节点配置、服务器可用性、国外DNS、程序运行状态，以及iptables/ipset是否正常。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>3. 国内X，国外√：</font>通常是国内DNS、WAN连通性，或本地网络环境异常。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>4. 双X：</font>通常是插件未正确启动、DNS异常、WAN故障，或节点本身不可用。"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<font color='#00F'>5. 双√但终端仍异常：</font><b>重点先做这3项：</b>"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5.1 刷新终端DNS缓存/浏览器缓存，手机可开关飞行模式后重试；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5.2 把终端自定义DNS改为自动获取，避免本地DNS污染或绕过路由器DNS；"
+		statusmenu += "<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5.3 清理终端hosts或其它本地解析覆盖规则，避免域名被错误指向。"
+		statusmenu += "<br /><br />如果需要进一步定位，请结合【详细状态】和【故障转移】-【查看历史状态】一起判断。"
 		_caption = "状态检测";
 	}
 	if (itemNum == 1) {
@@ -794,8 +792,8 @@ function openssHint(itemNum, flag) {
 		_caption = "加密（encryption）";
 	} else if (itemNum == 56) {
 		width = "750px";
-		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tlsSettings】位置<br /><br />设置为false表示安全，true表示不安全。很多机场没有配置tls证书的，需要设置为true才能使得节点正常工作<br />"
-		_caption = "加密（encryption）";
+		statusmenu = "<br />此参数在客户端json配置文件的【outbound/outbounds → streamSettings → tlsSettings → allowInsecure】位置。<br /><br />勾选后会跳过证书校验，仅建议在自签证书、测试环境，或服务提供方明确要求时使用。<br /><br />Xray-core 计划于 2026 年 6 月 1 日移除 allowInsecure，建议尽快改用 pinnedPeerCertSha256（pcs）/ verifyPeerCertByName（vcn）。";
+		_caption = "AllowInsecure";
 	} else if (itemNum == 151) {
 		width = "600px";
 		statusmenu = "<b>追加ISP DNS：</b><br /><br />"
@@ -944,15 +942,20 @@ function openssHint(itemNum, flag) {
 		_caption = "说明：";
 	} else if (itemNum == 147) {
 		width = "500px";
-		statusmenu = "1. 此处设定的域名将用于所有节点的web延迟测试，同时用于插件运行状态中的国外运行状态检测（保存后立即生效）<br /><br />";
-		statusmenu += "2. 不同的url测试的结果不一样是正常的，fancyss在3.2.1版本之前一直是采用的www.google.com.tw作为测试域名，现在可以根据自己的情况自由选择<br /><br />";
-		statusmenu += "3. 因为机场节点服务器通常是各个国家的，要测试到最好的延迟，使用一些大服务商提供的测试url更加准确，比如google、apple、clodflare<br /><br />";
-		statusmenu += "4. 部分中转机场会在中转机上劫持测试url，以返回更好的延迟，导致比如香港、美国等不同地区节点测出相似的延迟，此时建议更换测试url，以获得真实延迟<br />";
+		statusmenu = "1. 此处设定的网址将用于所有节点的 web 延迟测试，同时用于插件运行状态中的国外状态检测，保存后立即生效。<br /><br />";
+		statusmenu += "2. 插件默认国外检测网址为：<font color='#669900'>http://www.google.com/generate_204</font><br /><br />";
+		statusmenu += "3. 此处使用插件预置的国外测试网址，通过下拉框直接选择即可。<br /><br />";
+		statusmenu += "4. 如果开启了 IPv6 代理，请优先选择支持 IPv6 的国外检测网址，否则【国外IPv6】可能显示失败。<br /><br />";
+		statusmenu += "5. 这里的检测结果用于判断 fancyss 当前运行链路，不等同于节点本身可用性检测；节点是否可用请结合 web 延迟测试、详细状态和实际访问结果一起判断。<br /><br />";
+		statusmenu += "6. 部分中转机场可能会对特定测试网址做优化或劫持，导致不同地区节点测出相似延迟，此时建议更换测试网址。<br />";
 		_caption = "说明：";
 	} else if (itemNum == 148) {
 		width = "500px";
-		statusmenu += "1. 此处设定的域名将用于插件运行状态中的国内运行状态检测，（保存后立即生效）fancyss在3.2.1版本之前使用的是www.baidu.com<br /><br />";
-		statusmenu += "2. fancyss在3.2.1版本之前使用的是www.baidu.com作为测试域名，现在可以根据自己情况选择一个延迟较低的来使用<br />";
+		statusmenu = "1. 此处设定的网址将用于插件运行状态中的国内状态检测，保存后立即生效。<br /><br />";
+		statusmenu += "2. 插件默认国内检测网址为：<font color='#669900'>http://connectivitycheck.platform.hicloud.com/generate_204</font><br /><br />";
+		statusmenu += "3. 此处使用插件预置的国内测试网址，通过下拉框直接选择即可。<br /><br />";
+		statusmenu += "4. 建议选择国内可稳定访问、响应轻量、返回固定的检测网址，以减少误判。<br /><br />";
+		statusmenu += "5. 这里的检测结果用于判断 fancyss 当前国内直连链路，不等同于节点本身可用性检测。<br />";
 		_caption = "说明：";
 	} else if (itemNum == 149) {
 		width = "600px";

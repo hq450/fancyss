@@ -3,22 +3,125 @@
 # fancyss script for asuswrt/merlin based router with software center
 
 source /koolshare/scripts/ss_base.sh
+source /koolshare/scripts/ss_node_common.sh
 #alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
 LOG_FILE=/tmp/upload/ss_log.txt
 
-backup_conf(){
-	rm -rf /tmp/files
-	rm -rf /koolshare/webs/files
+prepare_download_dir(){
 	mkdir -p /tmp/files
-	ln -sf /tmp/files /koolshare/webs/files
-	dbus list ss | grep -v "ss_basic_enable" | grep -v "ssid_" | sed 's/=/=\"/' | sed 's/$/\"/g'|sed 's/^/dbus set /' | sed '1 isource /koolshare/scripts/base.sh' |sed '1 i#!/bin/sh' > /koolshare/webs/files/ssconf_backup.sh
+	ln -snf /tmp/files /koolshare/webs/files
+}
+
+with_download_job_lock(){
+	local lock_name="$1"
+	shift
+	local lock_dir="/tmp/${lock_name}.lock"
+	local pid_file="${lock_dir}/pid"
+	local owner_pid=""
+
+	while ! mkdir "${lock_dir}" 2>/dev/null
+	do
+		owner_pid=""
+		[ -f "${pid_file}" ] && owner_pid=$(cat "${pid_file}" 2>/dev/null)
+		if [ -n "${owner_pid}" ] && ! kill -0 "${owner_pid}" 2>/dev/null; then
+			rm -rf "${lock_dir}"
+			continue
+		fi
+		echo_date "检测到相同导出任务已在进行，复用当前导出任务..." >&2
+		return 2
+	done
+
+	echo "$$" > "${pid_file}"
+	[ -n "${LOG_FILE}" ] && true > "${LOG_FILE}"
+	"$@"
+	local ret=$?
+	rm -rf "${lock_dir}"
+	return "${ret}"
+}
+
+report_export_progress(){
+	echo_date "$1" >&2
+}
+
+generate_download_file_atomically(){
+	local target_file="$1"
+	local tmp_file="$2"
+	shift 2
+
+	[ -n "${target_file}" ] || return 1
+	[ -n "${tmp_file}" ] || return 1
+
+	rm -f "${target_file}" "${tmp_file}"
+	if "$@" "${tmp_file}"; then
+		mv -f "${tmp_file}" "${target_file}"
+	else
+		local ret=$?
+		rm -f "${tmp_file}" "${target_file}"
+		return "${ret}"
+	fi
+}
+
+generate_legacy_backup_file(){
+	local output_file="$1"
+	echo_date "开始生成旧版兼容配置..." >&2
+	fss_export_legacy_backup "${output_file}" report_export_progress
+	echo_date "旧版兼容配置生成完成，准备下载..." >&2
+}
+
+generate_native_backup_file(){
+	local output_file="$1"
+	echo_date "开始生成新版本JSON配置..." >&2
+	fss_export_native_backup "${output_file}"
+	echo_date "新版本JSON配置生成完成，准备下载..." >&2
+}
+
+generate_migration_snapshot_file(){
+	local output_file="$1"
+	local snapshot_file
+	echo_date "开始整理旧版迁移快照..." >&2
+	fss_prune_migration_snapshots
+	snapshot_file=$(fss_resolve_migration_snapshot)
+	if [ -f "${snapshot_file}" ];then
+		cp -f "${snapshot_file}" "${output_file}"
+	else
+		cat > "${output_file}" <<-EOF
+#!/bin/sh
+# migration snapshot not found
+EOF
+	fi
+	chmod +x "${output_file}"
+	echo_date "旧版迁移快照已生成，准备下载..." >&2
+}
+
+backup_conf(){
+	prepare_download_dir
+	with_download_job_lock "fancyss_export_legacy" \
+		generate_download_file_atomically \
+			"/tmp/files/ssconf_backup.sh" \
+			"/tmp/files/.ssconf_backup.sh.tmp.$$" \
+			generate_legacy_backup_file
+}
+
+backup_conf_json(){
+	prepare_download_dir
+	with_download_job_lock "fancyss_export_json" \
+		generate_download_file_atomically \
+			"/tmp/files/ssconf_backup_v2.json" \
+			"/tmp/files/.ssconf_backup_v2.json.tmp.$$" \
+			generate_native_backup_file
+}
+
+download_migration_snapshot(){
+	prepare_download_dir
+	with_download_job_lock "fancyss_export_migration" \
+		generate_download_file_atomically \
+			"/tmp/files/ssconf_legacy_migration.sh" \
+			"/tmp/files/.ssconf_legacy_migration.sh.tmp.$$" \
+			generate_migration_snapshot_file
 }
 
 backup_tar(){
-	rm -rf /tmp/files
-	rm -rf /koolshare/webs/files
-	mkdir -p /tmp/files
-	ln -sf /tmp/files /koolshare/webs/files
+	prepare_download_dir
 	echo_date "开始打包..."
 	cd /tmp
 	mkdir shadowsocks
@@ -27,10 +130,10 @@ backup_tar(){
 	mkdir shadowsocks/webs
 	mkdir shadowsocks/res
 	echo_date "请等待一会儿..."
-	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_exta=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_EXTA=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_name=$(get_pkg_name)
+	local pkg_arch=$(get_pkg_arch)
+	local pkg_type=$(get_pkg_type)
+	local pkg_exta=$(get_pkg_exta)
 	local pkg_vers=$(dbus get ss_basic_version_local)
 	local _pkg_name=${pkg_name}_${pkg_arch}_${pkg_type}${pkg_exta}
 	TARGET_FOLDER=/tmp/shadowsocks
@@ -99,6 +202,28 @@ backup_tar(){
 	echo_date "打包完毕！"
 }
 
+list_ss_clearable_keys(){
+	dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" | grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign"
+}
+
+clear_ss_config_storage(){
+	local confs conf_count node_count
+	confs=$(list_ss_clearable_keys)
+	conf_count=$(printf '%s
+' "${confs}" | sed '/^$/d' | awk 'END{print NR + 0}')
+	node_count=$(fss_get_node_count)
+	[ -z "${node_count}" ] && node_count=0
+
+	echo_date "开始清理科学上网配置..."
+	echo_date "检测到可清理配置 ${conf_count} 项，节点 ${node_count} 个。"
+	for conf in ${confs}
+	do
+		dbus remove "${conf}"
+	done
+	fss_clear_v2_nodes
+	echo_date "旧配置清理完成：普通配置 ${conf_count} 项，节点 ${node_count} 个。"
+}
+
 remove_now(){
 	# 1. 关闭插件
 	echo_date "尝试关闭科学上网..."
@@ -106,20 +231,14 @@ remove_now(){
 	sh /koolshare/ss/ssconfig.sh stop
 
 	# 2. 清空配置
-	echo_date "开始清理科学上网配置..."
-	confs=$(dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign")
-	for conf in $confs
-	do
-		echo_date "移除$conf"
-		dbus remove $conf
-	done
+	clear_ss_config_storage
 	
 	# 2. 设置默认值
 	echo_date "设置一些默认参数..."
 
 	# default values
 	eval $(dbus export ss)
-	local PKG_TYPE=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local PKG_TYPE=$(get_pkg_type)
 
 	[ -z "${ss_basic_proxy_newb}" ] && dbus set ss_basic_proxy_newb=1
 	[ -z "${ss_basic_proxy_ipv6}" ] && dbus set ss_basic_proxy_ipv6=0
@@ -130,18 +249,20 @@ remove_now(){
 	[ -z "${ss_basic_notimecheck}" ] && dbus set ss_basic_notimecheck=1
 	[ -z "${ss_basic_nocdnscheck}" ] && dbus set ss_basic_nocdnscheck=1
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
+	[ -z "${ss_basic_qrcode}" ] && dbus set ss_basic_qrcode=1
 	
 	# others
+	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
 	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=2
 	[ -z "$(dbus get ss_acl_default_udp)" ] && dbus set ss_acl_default_udp=0
 	[ -z "$(dbus get ss_acl_default_quic)" ] && dbus set ss_acl_default_quic=1
 	[ -z "$(dbus get ss_acl_default_ports)" ] && dbus set ss_acl_default_ports="22,80,443,8080,8443"
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
-	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.gstatic.com/generate_204"
+	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
 	# fancyss_arm 默认关闭延迟测试
-	PKG_ARCH=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' | sed 's/"//g')
+	PKG_ARCH=$(get_pkg_arch)
 	if [ "${PKG_ARCH}" == "arm" ];then
 		[ -z "${ss_basic_latency_opt}" ] && dbus set ss_basic_latency_opt="0"
 	else
@@ -166,12 +287,7 @@ remove_now(){
 
 remove_silent(){
 	echo_date "先清除已有的参数..."
-	confs=$(dbus list ss | cut -d "=" -f 1 | grep -v "version" | grep -v "ssserver_" | grep -v "ssid_" |grep -v "ss_basic_state_china" | grep -v "ss_basic_state_foreign")
-	for conf in $confs
-	do
-		echo_date "移除$conf"
-		dbus remove $conf
-	done
+	clear_ss_config_storage
 	echo_date "设置一些默认参数..."
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	echo_date "--------------------"
@@ -180,30 +296,74 @@ remove_silent(){
 restore_sh(){
 	echo_date "检测到科学上网备份文件..."
 	echo_date "开始恢复配置..."
+	echo_date "兼容SH备份恢复耗时可能较长，请耐心等待..."
 	chmod +x /tmp/upload/ssconf_backup.sh
-	sh /tmp/upload/ssconf_backup.sh
+	if fss_restore_legacy_backup_sh_fast /tmp/upload/ssconf_backup.sh; then
+		echo_date "兼容SH备份快速恢复完成！"
+	else
+		echo_date "快速恢复失败，回退到兼容恢复模式..."
+		echo_date "开始执行备份脚本..."
+		sh /tmp/upload/ssconf_backup.sh
+		echo_date "备份脚本执行完成，开始迁移节点数据..."
+		if fss_auto_migrate_if_needed 1 >/dev/null 2>&1; then
+			echo_date "节点数据迁移完成！"
+		else
+			echo_date "节点数据迁移未执行或无需迁移，继续..."
+		fi
+	fi
 	dbus set ss_basic_enable="0"
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	echo_date "配置恢复成功！"
 }
 
+restore_json(){
+	echo_date "检测到科学上网JSON备份文件..."
+	echo_date "开始恢复JSON备份..."
+	echo_date "JSON备份恢复期间可能耗时较长，请耐心等待..."
+	if fss_restore_native_backup_v2 /tmp/upload/ssconf_backup.json; then
+		dbus set ss_basic_enable="0"
+		dbus set ss_basic_version_local=$(cat /koolshare/ss/version)
+		echo_date "JSON备份恢复成功！"
+	else
+		echo_date "JSON备份恢复失败！请检查备份文件格式是否正确。"
+		return 1
+	fi
+}
+
 restore_now(){
-	[ -f "/tmp/upload/ssconf_backup.sh" ] && restore_sh
+	if [ -f "/tmp/upload/ssconf_backup.json" ];then
+		restore_json
+	elif [ -f "/tmp/upload/ssconf_backup.sh" ];then
+		restore_sh
+	fi
 	echo_date "一点点清理工作..."
 	rm -rf /tmp/ss_conf_*
 	echo_date "完成！"
 }
 
 reomve_ping(){
-	# flush previous ping value in the table
-	pings=$(dbus list ssconf_basic_ping | sort -n -t "_" -k 4|cut -d "=" -f 1)
-	if [ -n "$pings" ];then
-		for ping in $pings
-		do
-			echo "remove $ping"
-			dbus remove "$ping"
-		done
-	fi
+	# schema 1 stores runtime fields as split KVs; schema 2 stores them inside node json.
+	fss_clear_all_runtime_fields
+}
+
+migrate_schema2_now(){
+	echo_date "检测到旧版节点数据，开始升级到 schema 2 存储..."
+	fss_auto_migrate_if_needed 1
+	local rc=$?
+	case "${rc}" in
+	0)
+		echo_date "节点数据迁移完成！"
+		return 0
+		;;
+	2)
+		echo_date "当前没有可迁移的旧版节点数据，跳过。"
+		return 0
+		;;
+	*)
+		echo_date "节点数据迁移失败！保留旧版节点结构。"
+		return 1
+		;;
+	esac
 }
 
 download_ssf(){
@@ -477,9 +637,37 @@ fi
 
 case $act in
 1)
-	true > ${LOG_FILE}
-	backup_conf
-	http_response "$1"
+	if [ "${ws_flag}" == "0" ];then
+		backup_conf >> ${LOG_FILE} 2>&1
+		ret=$?
+		[ "${ret}" != "2" ] && echo XU6J03M6 >> ${LOG_FILE}
+		http_response "$1"
+	else
+		backup_conf 2>&1 | tee -a ${LOG_FILE}
+		echo XU6J03M6 | tee -a ${LOG_FILE}
+	fi
+	;;
+12)
+	if [ "${ws_flag}" == "0" ];then
+		backup_conf_json >> ${LOG_FILE} 2>&1
+		ret=$?
+		[ "${ret}" != "2" ] && echo XU6J03M6 >> ${LOG_FILE}
+		http_response "$1"
+	else
+		backup_conf_json 2>&1 | tee -a ${LOG_FILE}
+		echo XU6J03M6 | tee -a ${LOG_FILE}
+	fi
+	;;
+13)
+	if [ "${ws_flag}" == "0" ];then
+		download_migration_snapshot >> ${LOG_FILE} 2>&1
+		ret=$?
+		[ "${ret}" != "2" ] && echo XU6J03M6 >> ${LOG_FILE}
+		http_response "$1"
+	else
+		download_migration_snapshot 2>&1 | tee -a ${LOG_FILE}
+		echo XU6J03M6 | tee -a ${LOG_FILE}
+	fi
 	;;
 2)
 	true > ${LOG_FILE}
@@ -491,16 +679,27 @@ case $act in
 	;;
 3)
 	true > ${LOG_FILE}
-	http_response "$1"
-	remove_now >> ${LOG_FILE}
-	echo XU6J03M6 >> ${LOG_FILE}
+	if [ "${ws_flag}" == "0" ];then
+		http_response "$1"
+		remove_now >> ${LOG_FILE}
+		echo XU6J03M6 >> ${LOG_FILE}
+	else
+		remove_now | tee -a ${LOG_FILE}
+		echo XU6J03M6 | tee -a ${LOG_FILE}
+	fi
 	;;
 4)
 	true > ${LOG_FILE}
-	http_response "$1"
-	remove_silent >> ${LOG_FILE}
-	restore_now >> ${LOG_FILE}
-	echo XU6J03M6 >> ${LOG_FILE}
+	if [ "${ws_flag}" == "0" ];then
+		http_response "$1"
+		remove_silent >> ${LOG_FILE}
+		restore_now >> ${LOG_FILE}
+		echo XU6J03M6 >> ${LOG_FILE}
+	else
+		remove_silent | tee -a ${LOG_FILE}
+		restore_now | tee -a ${LOG_FILE}
+		echo XU6J03M6 | tee -a ${LOG_FILE}
+	fi
 	;;
 5)
 	reomve_ping
@@ -517,9 +716,14 @@ case $act in
 	;;
 8)
 	true > ${LOG_FILE}
-	http_response "$1"
-	restart_dnsmasq >> ${LOG_FILE}
-	echo XU6J03M6 >> ${LOG_FILE}
+	if [ "${ws_flag}" == "0" ];then
+		http_response "$1"
+		restart_dnsmasq >> ${LOG_FILE}
+		echo XU6J03M6 >> ${LOG_FILE}
+	else
+		restart_dnsmasq | tee -a ${LOG_FILE}
+		echo XU6J03M6 | tee -a ${LOG_FILE}
+	fi
 	;;
 10)
 	true > ${LOG_FILE}
@@ -530,6 +734,12 @@ case $act in
 	true > ${LOG_FILE}
 	download_dig_log
 	http_response "$1"
+	;;
+migrate_schema2)
+	true > ${LOG_FILE}
+	http_response "$1"
+	migrate_schema2_now >> ${LOG_FILE} 2>&1
+	echo XU6J03M6 >> ${LOG_FILE}
 	;;
 restart_chng)
 	true > ${LOG_FILE}

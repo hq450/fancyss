@@ -3,6 +3,16 @@
 # Shared config generators for ss_webtest.sh
 # Keep logic consistent with ssconfig.sh where possible.
 
+source /koolshare/scripts/ss_node_common.sh
+
+wt_node_get() {
+	fss_get_node_field_legacy "$2" "$1"
+}
+
+wt_node_get_plain() {
+	fss_get_node_field_plain "$2" "$1"
+}
+
 wt_get_path_empty() {
 	if [ -n "$1" ]; then
 		echo [\"$1\"]
@@ -146,14 +156,14 @@ wt_gen_ss_outbound() {
 	local nu="$1"
 	local mark="$2"
 
-	local ss_server=$(dbus get ssconf_basic_server_${nu})
+	local ss_server=$(wt_node_get server ${nu})
 	local _server_ip=$(_get_server_ip ${ss_server})
 	if [ -z "${_server_ip}" ];then
 		_server_ip=${ss_server}
 	fi
-	local ss_port=$(dbus get ssconf_basic_port_${nu})
-	local ss_pass=$(dbus get ssconf_basic_password_${nu} | base64_decode)
-	local ss_meth=$(dbus get ssconf_basic_method_${nu})
+	local ss_port=$(wt_node_get port ${nu})
+	local ss_pass=$(wt_node_get password ${nu} | base64_decode)
+	local ss_meth=$(wt_node_get method ${nu})
 
 	if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
 		local OBFS_ARG="--fast-open"
@@ -162,19 +172,19 @@ wt_gen_ss_outbound() {
 		local OBFS_ARG=""
 	fi
 
-	if [ "$(dbus get ssconf_basic_ss_obfs_${nu})" == "http" -o "$(dbus get ssconf_basic_ss_obfs_${nu})" == "tls" ]; then
+	if [ "$(wt_node_get ss_obfs ${nu})" == "http" -o "$(wt_node_get ss_obfs ${nu})" == "tls" ]; then
 		local obfs_port=$(get_rand_port)
 		local _server_ip_tmp="127.0.0.1"
 		local _server_port_tmp="${obfs_port}"
-		if [ -n "$(dbus get ssconf_basic_ss_obfs_host_${nu})" ]; then
+		if [ -n "$(wt_node_get ss_obfs_host ${nu})" ]; then
 			cat >>"${TMP2}/bash_${mark}/start_${nu}.sh" <<-EOF
 				#!/bin/sh
-				${TMP2}/wt-obfs -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(dbus get ssconf_basic_ss_obfs_${nu}) --obfs-host $(dbus get ssconf_basic_ss_obfs_host_${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
+				${TMP2}/wt-obfs -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(wt_node_get ss_obfs ${nu}) --obfs-host $(wt_node_get ss_obfs_host ${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
 			EOF
 		else
 			cat >>"${TMP2}/bash_${mark}/start_${nu}.sh" <<-EOF
 				#!/bin/sh
-				${TMP2}/wt-obfs -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(dbus get ssconf_basic_ss_obfs_${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
+				${TMP2}/wt-obfs -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(wt_node_get ss_obfs ${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
 			EOF
 		fi
 		cat >${TMP2}/bash_${mark}/stop_${nu}.sh <<-EOF
@@ -232,9 +242,9 @@ wt_gen_ss_outbound() {
 wt_gen_vmess_outbound() {
 	local nu="$1"
 	local mark="$2"
-	local v2ray_use_json=$(dbus get ssconf_basic_v2ray_use_json_${nu})
+	local v2ray_use_json=$(wt_node_get v2ray_use_json ${nu})
 	if [ "${v2ray_use_json}" != "1" ]; then
-		local v2ray_server=$(dbus get ssconf_basic_server_${nu})
+		local v2ray_server=$(wt_node_get server ${nu})
 		local _server_ip=$(_get_server_ip ${v2ray_server})
 		if [ -z "${_server_ip}" ];then
 			_server_ip=${v2ray_server}
@@ -248,20 +258,21 @@ wt_gen_vmess_outbound() {
 		local gr="null"
 		local tls="null"
 
-		local v2ray_network=$(dbus get ssconf_basic_v2ray_network_${nu})
+		local v2ray_network=$(wt_node_get v2ray_network ${nu})
 		[ -z "${v2ray_network}" ] && v2ray_network="tcp"
-		local v2ray_network_host_raw=$(dbus get ssconf_basic_v2ray_network_host_${nu})
+		local v2ray_network_host_raw=$(wt_node_get v2ray_network_host ${nu})
 		local v2ray_network_host=$(echo ${v2ray_network_host_raw} | sed 's/,/", "/g')
-		local v2ray_network_path=$(dbus get ssconf_basic_v2ray_network_path_${nu})
-		local v2ray_network_security=$(dbus get ssconf_basic_v2ray_network_security_${nu})
+		local v2ray_network_path=$(wt_node_get v2ray_network_path ${nu})
+		local v2ray_grpc_authority=$(wt_node_get v2ray_grpc_authority ${nu})
+		local v2ray_network_security=$(wt_node_get v2ray_network_security ${nu})
 		[ -z "${v2ray_network_security}" ] && v2ray_network_security="none"
 
-		if [ "$(dbus get ssconf_basic_v2ray_mux_enable_${nu})" == "1" -a -z "$(dbus get ssconf_basic_v2ray_mux_concurrency_${nu})" ];then
+		if [ "$(wt_node_get v2ray_mux_enable ${nu})" == "1" -a -z "$(wt_node_get v2ray_mux_concurrency ${nu})" ];then
 			local v2ray_mux_concurrency=8
 		else
-			local v2ray_mux_concurrency=$(dbus get ssconf_basic_v2ray_mux_concurrency_${nu})
+			local v2ray_mux_concurrency=$(wt_node_get v2ray_mux_concurrency ${nu})
 		fi
-		if [ "$(dbus get ssconf_basic_v2ray_mux_enable_${nu})" != "1" ];then
+		if [ "$(wt_node_get v2ray_mux_enable ${nu})" != "1" ];then
 			local v2ray_mux_concurrency="-1"
 		fi
 
@@ -271,10 +282,10 @@ wt_gen_vmess_outbound() {
 			local v2ray_network_security_alpn_http=""
 			local v2ray_network_security_sni=""
 		else
-			local v2ray_network_security_ai=$(dbus get ssconf_basic_v2ray_network_security_ai_${nu})
-			local v2ray_network_security_alpn_h2=$(dbus get ssconf_basic_v2ray_network_security_alpn_h2_${nu})
-			local v2ray_network_security_alpn_http=$(dbus get ssconf_basic_v2ray_network_security_alpn_http_${nu})
-			local v2ray_network_security_sni=$(dbus get ssconf_basic_v2ray_network_security_sni_${nu})
+			local v2ray_network_security_ai=$(wt_node_get v2ray_network_security_ai ${nu})
+			local v2ray_network_security_alpn_h2=$(wt_node_get v2ray_network_security_alpn_h2 ${nu})
+			local v2ray_network_security_alpn_http=$(wt_node_get v2ray_network_security_alpn_http ${nu})
+			local v2ray_network_security_sni=$(wt_node_get v2ray_network_security_sni ${nu})
 		fi
 
 		if [ "${v2ray_network_security}" == "tls" ];then
@@ -310,7 +321,7 @@ wt_gen_vmess_outbound() {
 
 		case "${v2ray_network}" in
 		tcp)
-			if [ "$(dbus get ssconf_basic_v2ray_headtype_tcp_${nu})" == "http" ]; then
+			if [ "$(wt_node_get v2ray_headtype_tcp ${nu})" == "http" ]; then
 				local tcp="{
 					\"header\": {
 					\"type\": \"http\"
@@ -343,9 +354,9 @@ wt_gen_vmess_outbound() {
 				,\"readBufferSize\": 2
 				,\"writeBufferSize\": 2
 				,\"header\": {
-				\"type\": \"$(dbus get ssconf_basic_v2ray_headtype_kcp_${nu})\"
+				\"type\": \"$(wt_node_get v2ray_headtype_kcp ${nu})\"
 				}
-				,\"seed\": $(wt_get_value_null $(dbus get ssconf_basic_v2ray_kcp_seed_${nu}))
+				,\"seed\": $(wt_get_value_null $(wt_node_get v2ray_kcp_seed ${nu}))
 				}"
 			;;
 		ws)
@@ -377,14 +388,15 @@ wt_gen_vmess_outbound() {
 				\"security\": $(wt_get_value_empty ${v2ray_network_host}),
 				\"key\": $(wt_get_value_empty ${v2ray_network_path}),
 				\"header\": {
-				\"type\": \"$(dbus get ssconf_basic_v2ray_headtype_quic_${nu})\"
+				\"type\": \"$(wt_node_get v2ray_headtype_quic ${nu})\"
 				}
 				}"
 			;;
 		grpc)
 			local gr="{
 				\"serviceName\": $(wt_get_value_empty ${v2ray_network_path}),
-				\"multiMode\": $(wt_get_grpc_multimode $(dbus get ssconf_basic_v2ray_grpc_mode_${nu}))
+				\"authority\": $(wt_get_value_empty ${v2ray_grpc_authority}),
+				\"multiMode\": $(wt_get_grpc_multimode $(wt_node_get v2ray_grpc_mode ${nu}))
 				}"
 			;;
 		esac
@@ -399,12 +411,12 @@ wt_gen_vmess_outbound() {
 						"vnext": [
 							{
 								"address": "${_server_ip}",
-								"port": $(dbus get ssconf_basic_port_${nu}),
+								"port": $(wt_node_get port ${nu}),
 								"users": [
 									{
-										"id": "$(dbus get ssconf_basic_v2ray_uuid_${nu})"
-										,"alterId": $(dbus get ssconf_basic_v2ray_alterid_${nu})
-										,"security": "$(dbus get ssconf_basic_v2ray_security_${nu})"
+										"id": "$(wt_node_get v2ray_uuid ${nu})"
+										,"alterId": $(wt_node_get v2ray_alterid ${nu})
+										,"security": "$(wt_node_get v2ray_security ${nu})"
 									}
 								]
 							}
@@ -422,7 +434,7 @@ wt_gen_vmess_outbound() {
 						,"grpcSettings": $gr
 					},
 					"mux": {
-						"enabled": $(get_function_switch $(dbus get ssconf_basic_v2ray_mux_enable_${nu})),
+						"enabled": $(get_function_switch $(wt_node_get v2ray_mux_enable ${nu})),
 						"concurrency": ${v2ray_mux_concurrency}
 					}
 				}
@@ -432,7 +444,7 @@ wt_gen_vmess_outbound() {
 
 		sed -i '/null/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
 	else
-		dbus get ssconf_basic_v2ray_json_${nu} | base64_decode >${TMP2}/v2ray_user_${nu}.json
+		wt_node_get v2ray_json ${nu} | base64_decode >${TMP2}/v2ray_user_${nu}.json
 		local OB=$(cat ${TMP2}/v2ray_user_${nu}.json | run jq .outbound)
 		local OBS=$(cat ${TMP2}/v2ray_user_${nu}.json | run jq .outbounds)
 		if [ "$OB" != "null" ]; then
@@ -448,9 +460,9 @@ wt_gen_vmess_outbound() {
 wt_gen_vless_outbound() {
 	local nu="$1"
 	local mark="$2"
-	local xray_use_json=$(dbus get ssconf_basic_xray_use_json_${nu})
+	local xray_use_json=$(wt_node_get xray_use_json ${nu})
 	if [ "${xray_use_json}" != "1" ]; then
-		local xray_server=$(dbus get ssconf_basic_server_${nu})
+		local xray_server=$(wt_node_get server ${nu})
 		local _server_ip=$(_get_server_ip ${xray_server})
 		if [ -z "${_server_ip}" ];then
 			_server_ip=${xray_server}
@@ -468,10 +480,11 @@ wt_gen_vless_outbound() {
 		local xht="null"
 		local htup="null"
 
-		local xray_network_host_raw=$(dbus get ssconf_basic_xray_network_host_${nu})
+		local xray_network_host_raw=$(wt_node_get xray_network_host ${nu})
 		local xray_network_host=$(echo ${xray_network_host_raw} | sed 's/,/", "/g')
-		local xray_network_path=$(dbus get ssconf_basic_xray_network_path_${nu})
-		local xray_network_security_sni=$(dbus get ssconf_basic_xray_network_security_sni_${nu})
+		local xray_network_path=$(wt_node_get xray_network_path ${nu})
+		local xray_grpc_authority=$(wt_node_get xray_grpc_authority ${nu})
+		local xray_network_security_sni=$(wt_node_get xray_network_security_sni ${nu})
 		if [ -z "${xray_network_security_sni}" ];then
 			if [ -n "${xray_network_host_raw}" ];then
 				xray_network_security_sni="${xray_network_host_raw}"
@@ -484,23 +497,23 @@ wt_gen_vless_outbound() {
 				fi
 			fi
 		fi
-		local xray_flow=$(dbus get ssconf_basic_xray_flow_${nu})
-		local xray_fingerprint=$(dbus get ssconf_basic_xray_fingerprint_${nu})
+		local xray_flow=$(wt_node_get xray_flow ${nu})
+		local xray_fingerprint=$(wt_node_get xray_fingerprint ${nu})
 		[ -z "${xray_fingerprint}" ] && xray_fingerprint="chrome"
-		local xray_pcs=$(dbus get ssconf_basic_xray_pcs_${nu})
-		local xray_svn=$(dbus get ssconf_basic_xray_svn_${nu})
-		local xray_network_security=$(dbus get ssconf_basic_xray_network_security_${nu})
+		local xray_pcs=$(wt_node_get xray_pcs ${nu})
+		local xray_vcn=$(wt_node_get xray_vcn ${nu})
+		local xray_network_security=$(wt_node_get xray_network_security ${nu})
 		[ -z "${xray_network_security}" ] && xray_network_security="none"
-		local xray_xhttp_mode=$(dbus get ssconf_basic_xray_xhttp_mode_${nu})
+		local xray_xhttp_mode=$(wt_node_get xray_xhttp_mode ${nu})
 
 		if [ "${xray_network_security}" == "none" ];then
 			xray_flow=""
 		fi
 
 		if [ "${xray_network_security}" == "tls" -o "${xray_network_security}" == "xtls" ];then
-			local xray_network_security_ai=$(dbus get ssconf_basic_xray_network_security_ai_${nu})
-			local xray_network_security_alpn_h2=$(dbus get ssconf_basic_xray_network_security_alpn_h2_${nu})
-			local xray_network_security_alpn_ht=$(dbus get ssconf_basic_xray_network_security_alpn_http_${nu})
+			local xray_network_security_ai=$(wt_node_get xray_network_security_ai ${nu})
+			local xray_network_security_alpn_h2=$(wt_node_get xray_network_security_alpn_h2 ${nu})
+			local xray_network_security_alpn_ht=$(wt_node_get xray_network_security_alpn_http ${nu})
 			if [ "${xray_network_security_alpn_h2}" == "1" -a "${xray_network_security_alpn_ht}" == "1" ];then
 				local apln="[\"h2\",\"http/1.1\"]"
 			elif [ "${xray_network_security_alpn_h2}" != "1" -a "${xray_network_security_alpn_ht}" == "1" ];then
@@ -517,7 +530,7 @@ wt_gen_vless_outbound() {
 						,\"serverName\": $(wt_get_value_null ${xray_network_security_sni})
 						,\"fingerprint\": $(wt_get_value_empty ${xray_fingerprint})
 						,\"pinnedPeerCertSha256\": $(wt_get_value_empty ${xray_pcs})
-						,\"verifyPeerCertByName\": $(wt_get_value_empty ${xray_svn})
+						,\"verifyPeerCertByName\": $(wt_get_value_empty ${xray_vcn})
 						}"
 			else
 				local _tmp="{
@@ -535,10 +548,10 @@ wt_gen_vless_outbound() {
 		fi
 
 		if [ "${xray_network_security}" == "reality" ];then
-			local xray_show=$(dbus get ssconf_basic_xray_show_${nu})
-			local xray_publickey=$(dbus get ssconf_basic_xray_publickey_${nu})
-			local xray_shortid=$(dbus get ssconf_basic_xray_shortid_${nu})
-			local xray_spiderx=$(dbus get ssconf_basic_xray_spiderx_${nu})
+			local xray_show=$(wt_node_get xray_show ${nu})
+			local xray_publickey=$(wt_node_get xray_publickey ${nu})
+			local xray_shortid=$(wt_node_get xray_shortid ${nu})
+			local xray_spiderx=$(wt_node_get xray_spiderx ${nu})
 			local reali="{
 					\"show\": $(get_function_switch ${xray_show})
 					,\"fingerprint\": $(wt_get_value_empty ${xray_fingerprint})
@@ -549,11 +562,11 @@ wt_gen_vless_outbound() {
 					}"
 		fi
 
-		local xray_network=$(dbus get ssconf_basic_xray_network_${nu})
+		local xray_network=$(wt_node_get xray_network ${nu})
 		[ -z "${xray_network}" ] && xray_network="tcp"
 		case "${xray_network}" in
 		tcp)
-			if [ "$(dbus get ssconf_basic_xray_headtype_tcp_${nu})" == "http" ]; then
+			if [ "$(wt_node_get xray_headtype_tcp ${nu})" == "http" ]; then
 				local tcp="{
 					\"header\": {
 					\"type\": \"http\"
@@ -586,9 +599,9 @@ wt_gen_vless_outbound() {
 				,\"readBufferSize\": 2
 				,\"writeBufferSize\": 2
 				,\"header\": {
-				\"type\": \"$(dbus get ssconf_basic_xray_headtype_kcp_${nu})\"
+				\"type\": \"$(wt_node_get xray_headtype_kcp ${nu})\"
 				}
-				,\"seed\": $(wt_get_value_null $(dbus get ssconf_basic_xray_kcp_seed_${nu}))
+				,\"seed\": $(wt_get_value_null $(wt_node_get xray_kcp_seed ${nu}))
 				}"
 			;;
 		ws)
@@ -620,14 +633,15 @@ wt_gen_vless_outbound() {
 				\"security\": $(wt_get_value_empty ${xray_network_host}),
 				\"key\": $(wt_get_value_empty ${xray_network_path}),
 				\"header\": {
-				\"type\": \"$(dbus get ssconf_basic_xray_headtype_quic_${nu})\"
+				\"type\": \"$(wt_node_get xray_headtype_quic ${nu})\"
 				}
 				}"
 			;;
 		grpc)
 			local gr="{
 				\"serviceName\": $(wt_get_value_empty ${xray_network_path}),
-				\"multiMode\": $(wt_get_grpc_multimode $(dbus get ssconf_basic_xray_grpc_mode_${nu}))
+				\"authority\": $(wt_get_value_empty ${xray_grpc_authority}),
+				\"multiMode\": $(wt_get_grpc_multimode $(wt_node_get xray_grpc_mode ${nu}))
 				}"
 			;;
 		xhttp)
@@ -645,11 +659,11 @@ wt_gen_vless_outbound() {
 			;;
 		esac
 
-		local xray_port=$(dbus get ssconf_basic_port_${nu})
-		local xray_uuid=$(dbus get ssconf_basic_xray_uuid_${nu})
-		local xray_prot=$(dbus get ssconf_basic_xray_prot_${nu})
-		local xray_alterid=$(dbus get ssconf_basic_xray_alterid_${nu})
-		local xray_encryption=$(dbus get ssconf_basic_xray_encryption_${nu})
+		local xray_port=$(wt_node_get port ${nu})
+		local xray_uuid=$(wt_node_get xray_uuid ${nu})
+		local xray_prot=$(wt_node_get xray_prot ${nu})
+		local xray_alterid=$(wt_node_get xray_alterid ${nu})
+		local xray_encryption=$(wt_node_get xray_encryption ${nu})
 		[ -z "${xray_prot}" ] && xray_prot="vless"
 		[ -z "${xray_alterid}" ] && xray_alterid="0"
 
@@ -706,7 +720,7 @@ wt_gen_vless_outbound() {
 			sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
 		fi
 	else
-		dbus get ssconf_basic_xray_json_${nu} | base64_decode >${TMP2}/xray_user_${nu}.json
+		wt_node_get xray_json ${nu} | base64_decode >${TMP2}/xray_user_${nu}.json
 		local OB=$(cat ${TMP2}/xray_user_${nu}.json | run jq .outbound)
 		local OBS=$(cat ${TMP2}/xray_user_${nu}.json | run jq .outbounds)
 		if [ "$OB" != "null" ]; then
@@ -723,24 +737,26 @@ wt_gen_trojan_outbound() {
 	local nu="$1"
 	local mark="$2"
 
-	local trojan_server=$(dbus get ssconf_basic_server_${nu})
-	local trojan_port=$(dbus get ssconf_basic_port_${nu})
-	local trojan_uuid=$(dbus get ssconf_basic_trojan_uuid_${nu})
-	local trojan_sni=$(dbus get ssconf_basic_trojan_sni_${nu})
-	local trojan_ai=$(dbus get ssconf_basic_trojan_ai_${nu})
-	local trojan_tfo=$(dbus get ssconf_basic_trojan_tfo_${nu})
+	local trojan_server=$(wt_node_get server ${nu})
+	local trojan_port=$(wt_node_get port ${nu})
+	local trojan_uuid=$(wt_node_get trojan_uuid ${nu})
+	local trojan_sni=$(wt_node_get trojan_sni ${nu})
+	local trojan_pcs=$(wt_node_get trojan_pcs ${nu})
+	local trojan_vcn=$(wt_node_get trojan_vcn ${nu})
+	local trojan_ai=$(wt_node_get trojan_ai ${nu})
+	local trojan_tfo=$(wt_node_get trojan_tfo ${nu})
 
 	local _server_ip=$(_get_server_ip ${trojan_server})
 	if [ -z "${_server_ip}" ];then
 		_server_ip=${trojan_server}
 	fi
 
-	if [ -n "$(dbus get ssconf_basic_trojan_plugin_${nu})" -a "$(dbus get ssconf_basic_trojan_plugin_${nu})" == "obfs-local" -a "$(dbus get ssconf_basic_trojan_obfs_${nu})" == "websocket" ];then
+	if [ -n "$(wt_node_get trojan_plugin ${nu})" -a "$(wt_node_get trojan_plugin ${nu})" == "obfs-local" -a "$(wt_node_get trojan_obfs ${nu})" == "websocket" ];then
 		local _trojan_network="ws"
 		local _trojan_ws="{
-							\"path\": \"$(dbus get ssconf_basic_trojan_obfsuri_${nu})\",
+							\"path\": \"$(wt_node_get trojan_obfsuri ${nu})\",
 							\"headers\": {
-								\"Host\": \"$(dbus get ssconf_basic_trojan_obfshost_${nu})\"
+								\"Host\": \"$(wt_node_get trojan_obfshost ${nu})\"
 							}
 						 }"
 	else
@@ -766,6 +782,8 @@ wt_gen_trojan_outbound() {
 					"security": "tls",
 					"tlsSettings": {
 						"serverName": $(wt_get_value_null ${trojan_sni}),
+						"pinnedPeerCertSha256": $(wt_get_value_empty ${trojan_pcs}),
+						"verifyPeerCertByName": $(wt_get_value_empty ${trojan_vcn}),
 						"allowInsecure": $(get_function_switch ${trojan_ai})
 					}
 					,"wsSettings": ${_trojan_ws}
@@ -785,19 +803,19 @@ wt_gen_hy2_outbound() {
 	local nu="$1"
 	local mark="$2"
 
-	local hy2_server=$(dbus get ssconf_basic_hy2_server_${nu})
-	local hy2_port=$(dbus get ssconf_basic_hy2_port_${nu})
-	local hy2_pass=$(dbus get ssconf_basic_hy2_pass_${nu})
-	local hy2_up=$(dbus get ssconf_basic_hy2_up_${nu})
-	local hy2_dl=$(dbus get ssconf_basic_hy2_dl_${nu})
-	local hy2_obfs=$(dbus get ssconf_basic_hy2_obfs_${nu})
-	local hy2_obfs_pass=$(dbus get ssconf_basic_hy2_obfs_pass_${nu})
-	local hy2_sni=$(dbus get ssconf_basic_hy2_sni_${nu})
-	local hy2_pcs=$(dbus get ssconf_basic_hy2_pcs_${nu})
-	local hy2_svn=$(dbus get ssconf_basic_hy2_svn_${nu})
-	local hy2_ai=$(dbus get ssconf_basic_hy2_ai_${nu})
-	local hy2_tfo=$(dbus get ssconf_basic_hy2_tfo_${nu})
-	local hy2_cg=$(dbus get ssconf_basic_hy2_cg_${nu})
+	local hy2_server=$(wt_node_get hy2_server ${nu})
+	local hy2_port=$(wt_node_get hy2_port ${nu})
+	local hy2_pass=$(wt_node_get hy2_pass ${nu})
+	local hy2_up=$(wt_node_get hy2_up ${nu})
+	local hy2_dl=$(wt_node_get hy2_dl ${nu})
+	local hy2_obfs=$(wt_node_get hy2_obfs ${nu})
+	local hy2_obfs_pass=$(wt_node_get hy2_obfs_pass ${nu})
+	local hy2_sni=$(wt_node_get hy2_sni ${nu})
+	local hy2_pcs=$(wt_node_get hy2_pcs ${nu})
+	local hy2_vcn=$(wt_node_get hy2_vcn ${nu})
+	local hy2_ai=$(wt_node_get hy2_ai ${nu})
+	local hy2_tfo=$(wt_node_get hy2_tfo ${nu})
+	local hy2_cg=$(wt_node_get hy2_cg ${nu})
 
 	if [ -z "${hy2_sni}" ];then
 		__valid_ip_silent "${hy2_server}"
@@ -844,7 +862,7 @@ wt_gen_hy2_outbound() {
 	if [ "${hy2_ai}" != "1" ];then
 		cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
 						,"pinnedPeerCertSha256": $(wt_get_value_empty ${hy2_pcs})
-						,"verifyPeerCertByName": $(wt_get_value_empty ${hy2_svn})
+						,"verifyPeerCertByName": $(wt_get_value_empty ${hy2_vcn})
 		EOF
 	else
 		cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF

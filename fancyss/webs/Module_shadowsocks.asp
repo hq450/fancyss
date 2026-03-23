@@ -39,6 +39,7 @@ var PKG_TYPE="full"
 var PKG_EXTA="_debug"
 var pkg_name=PKG_NAME + "_" + PKG_ARCH + "_" + PKG_TYPE + PKG_EXTA
 var db_ss = {};
+var db_fss = {};
 var dbus = {};
 var confs = {};
 var dns_log = {};
@@ -97,20 +98,72 @@ var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
 var ads_url_1
-var ws_enable = 0;
+var ws_enable = 1;
 var node_form_defaults = null;
 var single_test_wait = {};
 var single_test_running = false;
 var single_test_node = null;
 var batch_test_running = false;
-if(PKG_ARCH == "hnd"){
-	if(PKG_TYPE == "full"){
-		var ws_enable = 1;
+var fss_nodes_raw = {};
+var node_auto_migrate_attempted = false;
+var node_auto_migrate_layer = null;
+var prepared_route_files = {};
+var pending_route_callbacks = {};
+var NODE_BOOL_FIELDS = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "trojan_ai", "trojan_tfo", "hy2_ai", "hy2_tfo"];
+var NODE_B64_FIELDS = ["password", "naive_pass", "v2ray_json", "xray_json", "tuic_json"];
+var NODE_RUNTIME_FIELDS = ["server_ip", "latency", "ping"];
+var NODE_STORAGE_COMMON_FIELDS = ["group", "name", "mode", "type"];
+var NODE_STORAGE_FIELDS_BY_TYPE = {
+	"0": ["server", "port", "method", "password", "ss_obfs", "ss_obfs_host"],
+	"1": ["server", "port", "method", "password", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"],
+	"3": ["server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable"],
+	"4": ["server", "port", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "xray_use_json"],
+	"5": ["server", "port", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "trojan_plugin", "trojan_obfs", "trojan_obfshost", "trojan_obfsuri"],
+	"6": ["naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass"],
+	"7": ["tuic_json"],
+	"8": ["hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"]
+};
+var ALLOW_INSECURE_NOTICE = "已勾选允许不安全；Xray-core 计划于 2026 年 6 月 1 日移除 allowInsecure，建议尽快迁移服务端配置，并改用 pinnedPeerCertSha256 / verifyPeerCertByName。";
+var NODE_COMMON_FIELDS = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
+var NODE_FIELD_REWRITE_LIST = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
+function refresh_ws_enable(){
+	ws_enable = 1;
+	if(PKG_TYPE == "lite" && (PKG_ARCH == "hnd" || PKG_ARCH == "ipq32")){
+		ws_enable = 0;
 	}
 }
-if(PKG_ARCH == "mtk" || PKG_ARCH == "qca" || PKG_ARCH == "hnd_v8" || PKG_ARCH == "ipq64"){
-	var ws_enable = 1;
+
+function sync_pkg_runtime_meta(){
+	var changed = false;
+	var nextName = db_ss["ss_basic_pkg_name"];
+	var nextArch = db_ss["ss_basic_pkg_arch"];
+	var nextType = db_ss["ss_basic_pkg_type"];
+	var nextExta = db_ss["ss_basic_pkg_exta"];
+	if (nextName && nextName != PKG_NAME) {
+		PKG_NAME = nextName;
+		changed = true;
+	}
+	if (nextArch && nextArch != PKG_ARCH) {
+		PKG_ARCH = nextArch;
+		changed = true;
+	}
+	if (nextType && nextType != PKG_TYPE) {
+		PKG_TYPE = nextType;
+		changed = true;
+	}
+	if (typeof nextExta != "undefined" && nextExta != PKG_EXTA) {
+		PKG_EXTA = nextExta;
+		changed = true;
+	}
+	pkg_name = PKG_NAME + "_" + PKG_ARCH + "_" + PKG_TYPE + PKG_EXTA;
+	refresh_ws_enable();
+	if (changed && E("title_name")) {
+		var modelName = (typeof MODEL !== "undefined" && MODEL) ? MODEL : ('<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>');
+		$("#title_name").html(modelName + " 科学上网插件 - " + pkg_name);
+	}
 }
+
+refresh_ws_enable();
 String.prototype.myReplace = function(f, e){
 	var reg = new RegExp(f, "g"); 
 	return this.replace(reg, e); 
@@ -118,7 +171,775 @@ String.prototype.myReplace = function(f, e){
 function init() {
 	show_menu(menu_hook);
 	get_dbus_data(function() {
+		check_node_migration_notice();
 		try_ws_connect();
+	});
+}
+function get_fss_data(cb) {
+	return $.ajax({
+		type: "GET",
+		url: "/_api/fss_data",
+		dataType: "json",
+		cache: false,
+		success: function(data) {
+			var result = (data && data.result && data.result[0]) ? data.result[0] : {};
+			db_fss = $.extend({}, db_fss, result);
+			if (typeof cb === "function") {
+				cb(db_fss);
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb(db_fss);
+			}
+		}
+	});
+}
+function get_fss_node_data(cb) {
+	return $.ajax({
+		type: "GET",
+		url: "/_api/fss_node",
+		dataType: "json",
+		cache: false,
+		success: function(data) {
+			var result = (data && data.result && data.result[0]) ? data.result[0] : {};
+			db_fss = $.extend({}, db_fss, result);
+			if (typeof cb === "function") {
+				cb(db_fss);
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb(db_fss);
+			}
+		}
+	});
+}
+function refresh_fss_bundle(cb) {
+	get_fss_data(function() {
+		get_fss_node_data(function() {
+			if (typeof cb === "function") {
+				cb(db_fss);
+			}
+		});
+	});
+}
+function get_node_storage_schema() {
+	var hasNodes = !!db_fss["fss_node_order"] || Object.keys(fss_nodes_raw).length > 0;
+	return (db_fss["fss_data_schema"] == "2" && hasNodes) ? 2 : 1;
+}
+function get_compare_store() {
+	return $.extend({}, db_ss, db_fss);
+}
+var fssUtf8Decoder = (window.TextDecoder ? new TextDecoder("utf-8") : null);
+var fssUtf8Encoder = (window.TextEncoder ? new TextEncoder() : null);
+function base64_decode_utf8(value) {
+	if (!value) {
+		return "";
+	}
+	try {
+		if (fssUtf8Decoder && window.atob) {
+			var binary = window.atob(value);
+			var bytes = new Uint8Array(binary.length);
+			for (var i = 0; i < binary.length; i++) {
+				bytes[i] = binary.charCodeAt(i);
+			}
+			return fssUtf8Decoder.decode(bytes);
+		}
+	} catch (e) {}
+	return Base64.decode(value);
+}
+function base64_encode_utf8(value) {
+	value = (value === null || typeof value == "undefined") ? "" : String(value);
+	try {
+		if (fssUtf8Encoder && window.btoa) {
+			var bytes = fssUtf8Encoder.encode(value);
+			var chunkSize = 0x8000;
+			var binary = "";
+			for (var i = 0; i < bytes.length; i += chunkSize) {
+				binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+			}
+			return window.btoa(binary);
+		}
+	} catch (e) {}
+	return Base64.encode(value);
+}
+function is_node_bool_field(field) {
+	return $.inArray(field, NODE_BOOL_FIELDS) !== -1;
+}
+function is_node_b64_field(field) {
+	return $.inArray(field, NODE_B64_FIELDS) !== -1;
+}
+function is_node_runtime_field(field) {
+	return $.inArray(field, NODE_RUNTIME_FIELDS) !== -1;
+}
+function get_schema2_allowed_field_map(type) {
+	var map = {};
+	var nodeType = String(type || "");
+	for (var i = 0; i < NODE_STORAGE_COMMON_FIELDS.length; i++) {
+		map[NODE_STORAGE_COMMON_FIELDS[i]] = true;
+	}
+	var typeFields = NODE_STORAGE_FIELDS_BY_TYPE[nodeType] || [];
+	for (var j = 0; j < typeFields.length; j++) {
+		map[typeFields[j]] = true;
+	}
+	return map;
+}
+function prune_schema2_node_payload(payload) {
+	var pruned = {};
+	var allowed = get_schema2_allowed_field_map(payload["type"]);
+	for (var key in payload) {
+		if (key.indexOf("_") === 0 || allowed[key]) {
+			pruned[key] = payload[key];
+		}
+	}
+	if (pruned["type"] == "4" && !pruned["xray_prot"]) {
+		pruned["xray_prot"] = "vless";
+	}
+	for (var i = 0; i < NODE_BOOL_FIELDS.length; i++) {
+		var boolField = NODE_BOOL_FIELDS[i];
+		if (allowed[boolField]) {
+			pruned[boolField] = pruned[boolField] == "1" ? "1" : "0";
+		} else {
+			delete pruned[boolField];
+		}
+	}
+	return pruned;
+}
+function get_fss_node_ids() {
+	if (db_fss["fss_node_order"]) {
+		return db_fss["fss_node_order"].split(",").filter(function(item) {
+			return item !== "";
+		});
+	}
+	if (Object.keys(fss_nodes_raw).length > 0) {
+		return Object.keys(fss_nodes_raw).sort(compare);
+	}
+	return Object.keys(db_fss).filter(function(key) {
+		return key.indexOf("fss_node_") === 0 && key != "fss_node_order" && key != "fss_node_current" && key != "fss_node_failover_backup" && key != "fss_node_next_id";
+	}).map(function(key) {
+		return key.replace("fss_node_", "");
+	});
+}
+function get_first_node_id() {
+	return ss_nodes.length ? String(ss_nodes[0]) : "";
+}
+function resolve_node_id(nodeId, allowBlank) {
+	nodeId = nodeId ? String(nodeId) : "";
+	if (nodeId && $.inArray(nodeId, ss_nodes) !== -1) {
+		return nodeId;
+	}
+	return allowBlank ? "" : get_first_node_id();
+}
+function get_fss_raw_node(nodeId) {
+	if (!nodeId) {
+		return null;
+	}
+	if (fss_nodes_raw[nodeId]) {
+		return $.extend(true, {}, fss_nodes_raw[nodeId]);
+	}
+	var blob = db_fss["fss_node_" + nodeId];
+	if (!blob) {
+		return null;
+	}
+	try {
+		var raw = JSON.parse(base64_decode_utf8(blob));
+		fss_nodes_raw[nodeId] = raw;
+		return $.extend(true, {}, raw);
+	} catch (e) {
+		return null;
+	}
+}
+function schema2_b64_value_for_ui(raw, field, value) {
+	if (!value) {
+		return "";
+	}
+	if (raw && (raw["_b64_mode"] == "raw" || (raw["_source"] && raw["_source"] != "subscribe"))) {
+		return Base64.encode(value);
+	}
+	return value;
+}
+function build_node_derived_info(obj) {
+	if (!obj) {
+		return obj;
+	}
+	if (obj["type"] == "7" && obj["tuic_json"]) {
+		try {
+			var tuicJson = JSON.parse(Base64.decode(obj["tuic_json"]));
+			if (tuicJson.relay && tuicJson.relay.server) {
+				obj["server"] = tuicJson.relay.server;
+			}
+		} catch (e) {}
+	}
+	var jsonField = "";
+	if (obj["v2ray_use_json"] == "1" && obj["v2ray_json"]) {
+		jsonField = obj["v2ray_json"];
+	}
+	if (obj["xray_use_json"] == "1" && obj["xray_json"]) {
+		jsonField = obj["xray_json"];
+	}
+	if (jsonField) {
+		try {
+			var json = JSON.parse(Base64.decode(jsonField));
+			var serverAddr = "";
+			var serverProt = "";
+			function parseOutbound(target) {
+				if (!target) {
+					return;
+				}
+				if (target.settings && target.settings.servers && isArray(target.settings.servers)) {
+					serverAddr = target.settings.servers[0].address || serverAddr;
+				}
+				if (target.settings && target.settings.vnext && isArray(target.settings.vnext)) {
+					serverAddr = target.settings.vnext[0].address || serverAddr;
+				}
+				serverProt = target.protocol || serverProt;
+			}
+			if ("outbound" in json) {
+				if (isArray(json.outbound)) {
+					parseOutbound(json.outbound[0]);
+				} else {
+					parseOutbound(json.outbound);
+				}
+			}
+			if ("outbounds" in json) {
+				if (isArray(json.outbounds)) {
+					parseOutbound(json.outbounds[0]);
+				} else {
+					parseOutbound(json.outbounds);
+				}
+			}
+			if (serverProt == "shadowsocks") {
+				serverProt = "ss";
+			}
+			obj["server"] = serverAddr;
+			obj["protoc"] = serverProt;
+		} catch (e) {}
+	}
+	return obj;
+}
+function normalize_fss_node_for_ui(nodeId, raw) {
+	var obj = {};
+	if (!raw) {
+		return null;
+	}
+	obj["node"] = String(nodeId);
+	obj["type"] = String(raw["type"] || "");
+	for (var field in raw) {
+		if (field.indexOf("_") === 0 || is_node_runtime_field(field)) {
+			continue;
+		}
+		var value = typeof raw[field] == "undefined" || raw[field] === null ? "" : String(raw[field]);
+		if (is_node_b64_field(field) && value) {
+			obj[field] = schema2_b64_value_for_ui(raw, field, value);
+		} else if (is_node_bool_field(field)) {
+			obj[field] = value == "1" ? "1" : "0";
+		} else {
+			obj[field] = value;
+		}
+	}
+	for (var i = 0; i < NODE_BOOL_FIELDS.length; i++) {
+		var boolField = NODE_BOOL_FIELDS[i];
+		obj[boolField] = obj[boolField] == "1" ? "1" : "0";
+	}
+	obj["server"] = typeof raw["server"] == "undefined" ? "" : String(raw["server"]);
+	if (!obj["xray_prot"] && obj["type"] == "4") {
+		obj["xray_prot"] = "vless";
+	}
+	return build_node_derived_info(obj);
+}
+function get_saved_current_node_id() {
+	if (get_node_storage_schema() == 2) {
+		return resolve_node_id(db_fss["fss_node_current"] || "");
+	}
+	return resolve_node_id(db_ss["ssconf_basic_node"] || "");
+}
+function get_current_node_id() {
+	if (E("ssconf_basic_node")) {
+		return resolve_node_id(E("ssconf_basic_node").value);
+	}
+	return get_saved_current_node_id();
+}
+function get_failover_node_id() {
+	if (get_node_storage_schema() == 2) {
+		return resolve_node_id(db_fss["fss_node_failover_backup"] || "", true);
+	}
+	return resolve_node_id(db_ss["ss_failover_s4_3"] || "", true);
+}
+function get_node_type(nodeId) {
+	if (!nodeId) {
+		return "";
+	}
+	if (confs[nodeId] && typeof confs[nodeId]["type"] != "undefined") {
+		return String(confs[nodeId]["type"]);
+	}
+	if (typeof db_ss["ssconf_basic_type_" + nodeId] != "undefined") {
+		return String(db_ss["ssconf_basic_type_" + nodeId]);
+	}
+	return "";
+}
+function get_node_type_title_tag(c) {
+	if (!c || typeof c["type"] == "undefined") {
+		return "";
+	}
+	switch (String(c["type"])) {
+		case "0":
+			if (c["ss_obfs"] == "http" || c["ss_obfs"] == "tls") {
+				return "ss[obfs]";
+			}
+			return "ss";
+		case "1":
+			return "ssr";
+		case "3":
+			return c["protoc"] ? String(c["protoc"]) : "vmess";
+		case "4":
+			return c["protoc"] ? String(c["protoc"]) : (c["xray_prot"] ? String(c["xray_prot"]) : "xray");
+		case "5":
+			return "trojan";
+		case "6":
+			return "Naïve";
+		case "7":
+			return "tuic";
+		case "8":
+			return "hy2";
+		default:
+			return "";
+	}
+}
+function build_qrcode_title_html(c) {
+	var typeTag = get_node_type_title_tag(c);
+	var name = escape_acl_html(c && c["name"] ? c["name"] : "");
+	if (!typeTag) {
+		return name;
+	}
+	var badge = '<span style="display:inline-block;vertical-align:middle;margin-right:8px;padding:2px 9px;border-radius:5px;background:linear-gradient(135deg,#1e88e5 0%,#26c6da 100%);color:#fff;font-size:12px;font-weight:700;line-height:18px;box-shadow:0 2px 8px rgba(30,136,229,.25);">' + escape_acl_html(typeTag) + '</span>';
+	var title = '<span style="display:inline-block;vertical-align:middle;color:#111;font-size:16px;font-weight:600;line-height:20px;max-width:260px;word-break:break-all;">' + name + '</span>';
+	return badge + title;
+}
+function get_next_node_id() {
+	if (get_node_storage_schema() == 2) {
+		var nextId = parseInt(db_fss["fss_node_next_id"] || "0", 10);
+		if (!nextId) {
+			nextId = node_max ? (parseInt(node_max, 10) + 1) : 1;
+		}
+		return String(nextId);
+	}
+	return String(node_max + 1);
+}
+function sanitize_node_payload_value(field, value) {
+	if (value === null || typeof value == "undefined") {
+		value = "";
+	}
+	value = String(value);
+	if (is_node_b64_field(field) && value) {
+		try {
+			return Base64.decode(value);
+		} catch (e) {
+			return value;
+		}
+	}
+	if (is_node_bool_field(field)) {
+		return value == "1" ? "1" : "0";
+	}
+	return value;
+}
+function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting) {
+	var payload = {};
+	var raw = get_fss_raw_node(nodeId);
+	if (raw) {
+		for (var key in raw) {
+			if (key.indexOf("_") === 0 || (preserveExisting && !is_node_runtime_field(key))) {
+				payload[key] = raw[key];
+			}
+		}
+	}
+	payload["_schema"] = 2;
+	payload["_id"] = String(nodeId);
+	payload["_rev"] = raw && raw["_rev"] ? parseInt(raw["_rev"], 10) + 1 : 1;
+	payload["_b64_mode"] = "raw";
+	payload["_source"] = source || payload["_source"] || "manual";
+	payload["_updated_at"] = Math.floor(Date.now() / 1000);
+	if (!payload["_created_at"]) {
+		payload["_created_at"] = payload["_updated_at"];
+	}
+	var suffix = "_" + nodeId;
+	for (var key2 in fieldBag) {
+		if (key2.indexOf("ssconf_basic_") !== 0 || key2.slice(-suffix.length) !== suffix) {
+			continue;
+		}
+		var field = key2.substring("ssconf_basic_".length, key2.length - suffix.length);
+		if (is_node_runtime_field(field)) {
+			continue;
+		}
+		var rawValue = fieldBag[key2];
+		if (rawValue === "" || typeof rawValue == "undefined" || rawValue === null) {
+			if (is_node_bool_field(field)) {
+				payload[field] = "0";
+			} else {
+				delete payload[field];
+			}
+			continue;
+		}
+		payload[field] = sanitize_node_payload_value(field, rawValue);
+	}
+	if (payload["type"] == "4" && !payload["xray_prot"]) {
+		payload["xray_prot"] = "vless";
+	}
+	return prune_schema2_node_payload(payload);
+}
+function encode_schema2_node_payload(payload) {
+	return base64_encode_utf8(JSON.stringify(payload));
+}
+function build_schema2_upsert_fields(fieldBag, nodeId, source, preserveExisting) {
+	var payload = build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting);
+	var result = {};
+	result["fss_node_" + nodeId] = encode_schema2_node_payload(payload);
+	return result;
+}
+function strip_legacy_node_fields(fieldBag, nodeId) {
+	var suffix = "_" + nodeId;
+	for (var key in fieldBag) {
+		if (key == "ssconf_basic_node") {
+			delete fieldBag[key];
+			continue;
+		}
+		if (key.indexOf("ssconf_basic_") === 0 && key.slice(-suffix.length) === suffix) {
+			delete fieldBag[key];
+		}
+	}
+	return fieldBag;
+}
+function close_node_migration_notice() {
+	if (db_fss["fss_data_migration_notice"] != "1") {
+		return;
+	}
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": {"fss_data_migration_notice": "0"} };
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function() {
+			db_fss["fss_data_migration_notice"] = "0";
+		}
+	});
+}
+function pad_route_file_number(num) {
+	return num < 10 ? "0" + num : "" + num;
+}
+function build_route_file_name(baseName, extName) {
+	var modelName = (typeof MODEL !== "undefined" && MODEL) ? MODEL : ('<% nvram_get("odmpid"); %>' || '<% nvram_get("productid"); %>' || "ROUTER");
+	modelName = modelName.replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "ROUTER";
+	var now = new Date();
+	var timeTag = now.getFullYear()
+		+ pad_route_file_number(now.getMonth() + 1)
+		+ pad_route_file_number(now.getDate())
+		+ "-"
+		+ pad_route_file_number(now.getHours())
+		+ pad_route_file_number(now.getMinutes());
+	return modelName + "_" + baseName + "_" + timeTag + "." + extName;
+}
+function get_route_file_meta(arg) {
+	var meta = {
+		1: { url: "_root/files/ssconf_backup.sh", fileName: build_route_file_name("Fancyss_conf_backup", "sh"), probeDelay: 1200, retryDelay: 500, maxRetry: 120, logDelay: 1200 },
+		12: { url: "_root/files/ssconf_backup_v2.json", fileName: build_route_file_name("Fancyss_conf_backup", "json"), probeDelay: 600, retryDelay: 300, maxRetry: 60, logDelay: 600 },
+		13: { url: "_root/files/ssconf_legacy_migration.sh", fileName: build_route_file_name("Fancyss_legacy_migration", "sh"), probeDelay: 600, retryDelay: 300, maxRetry: 60, logDelay: 600 }
+	};
+	return meta[arg] || null;
+}
+function direct_download_file(url, fileName) {
+	var a = document.createElement("a");
+	a.href = url + (url.indexOf("?") === -1 ? "?" : "&") + "_ts=" + new Date().getTime();
+	a.download = fileName;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+}
+function flush_route_file_callbacks(arg, ok) {
+	prepared_route_files[arg] = ok ? true : false;
+	var callbacks = pending_route_callbacks[arg] || [];
+	pending_route_callbacks[arg] = [];
+	for (var i = 0; i < callbacks.length; i++) {
+		if (typeof callbacks[i] === "function") {
+			callbacks[i](!!ok);
+		}
+	}
+}
+function poll_route_file_ready(arg, meta, retry) {
+	var xhr = new XMLHttpRequest();
+	var url = meta.url;
+	var maxRetry = typeof meta.maxRetry == "number" ? meta.maxRetry : 20;
+	var retryDelay = typeof meta.retryDelay == "number" ? meta.retryDelay : 300;
+	xhr.open("GET", url + (url.indexOf("?") === -1 ? "?" : "&") + "_probe=" + new Date().getTime(), true);
+	xhr.responseType = "blob";
+	xhr.onload = function() {
+		if (xhr.status >= 200 && xhr.status < 300) {
+			flush_route_file_callbacks(arg, true);
+			return;
+		}
+		if (retry >= maxRetry) {
+			flush_route_file_callbacks(arg, false);
+			return;
+		}
+		setTimeout(function() {
+			poll_route_file_ready(arg, meta, retry + 1);
+		}, retryDelay);
+	};
+	xhr.onerror = function() {
+		if (retry >= maxRetry) {
+			flush_route_file_callbacks(arg, false);
+			return;
+		}
+		setTimeout(function() {
+			poll_route_file_ready(arg, meta, retry + 1);
+		}, retryDelay);
+	};
+	xhr.send();
+}
+function prepare_route_file(arg, cb) {
+	var meta = get_route_file_meta(arg);
+	if (!meta) {
+		if (typeof cb === "function") {
+			cb(false);
+		}
+		return;
+	}
+	if (prepared_route_files[arg] === true) {
+		if (typeof cb === "function") {
+			cb(true);
+		}
+		return;
+	}
+	if (!pending_route_callbacks[arg]) {
+		pending_route_callbacks[arg] = [];
+	}
+	if (typeof cb === "function") {
+		pending_route_callbacks[arg].push(cb);
+	}
+	if (prepared_route_files[arg] === "pending") {
+		return;
+	}
+	prepared_route_files[arg] = "pending";
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params":[arg], "fields": {}};
+	$.ajax({
+		type: "POST",
+		url: "/_api/",
+		async: true,
+		cache:false,
+		data: JSON.stringify(postData),
+		dataType: "json"
+	});
+	setTimeout(function() {
+		poll_route_file_ready(arg, meta, 0);
+	}, typeof meta.probeDelay == "number" ? meta.probeDelay : 800);
+}
+function download_prepared_route_file(arg, cb) {
+	var meta = get_route_file_meta(arg);
+	if (meta && prepared_route_files[arg] === true) {
+		download_blob_file(meta.url, meta.fileName, cb);
+		return;
+	}
+	prepare_route_file(arg, function(ok) {
+		if (ok && meta) {
+			download_blob_file(meta.url, meta.fileName, cb);
+		} else if (typeof cb === "function") {
+			cb(false);
+		}
+	});
+}
+function prepare_migration_notice_downloads(snapshotReady, cb) {
+	prepare_route_file(1, function(ok1) {
+		if (!snapshotReady) {
+			if (typeof cb === "function") {
+				cb(ok1);
+			}
+			return;
+		}
+		prepare_route_file(13, function(ok2) {
+			if (typeof cb === "function") {
+				cb(ok1 && ok2);
+			}
+		});
+	});
+}
+function show_node_migration_notice() {
+	var snapshotReady = !!db_fss["fss_data_legacy_snapshot"];
+	var tip = [
+		"检测到本次版本已完成节点数据结构升级：",
+		"1. 老版本 fancyss 无法直接识别新的节点存储结构；",
+		"2. 如果未来需要回退旧版本，请先下载“旧版兼容备份”；",
+		"3. 迁移时旧快照只代表升级当时的旧数据，不包含升级后的新增/修改节点；",
+		"4. 关闭此窗口后，可到【附加功能】 - 【备份/恢复】继续导出“旧版兼容配置”和“新版本JSON配置”；",
+		"5. 建议回退旧版本前先导出当前配置。"
+	].join("<br>");
+	prepare_migration_notice_downloads(snapshotReady, function() {
+		layer.open({
+			type: 1,
+			title: "节点数据升级提醒",
+			area: ["640px", "auto"],
+			shadeClose: false,
+			closeBtn: 1,
+			content: '<div style="padding:18px 22px;line-height:1.8;font-size:13px;color:#111;background:#fff;">' + tip + '</div>',
+			btn: snapshotReady ? ["下载旧版兼容备份", "下载迁移快照", "我已经备份"] : ["下载旧版兼容备份", "我已经备份"],
+			yes: function(index) {
+				close_node_migration_notice();
+				layer.close(index);
+				download_prepared_route_file(1, function(ok) {
+					if (!ok) {
+						layer.msg("旧版兼容备份下载失败，请重试");
+					}
+				});
+				return false;
+			},
+			btn2: function(index) {
+				if (snapshotReady) {
+					download_prepared_route_file(13, function(ok) {
+						if (!ok) {
+							layer.msg("迁移快照下载失败，请重试");
+						}
+					});
+					return false;
+				}
+				close_node_migration_notice();
+				layer.close(index);
+			},
+			btn3: function(index) {
+				close_node_migration_notice();
+				layer.close(index);
+			},
+			cancel: function() {
+				return true;
+			}
+		});
+	});
+}
+function trigger_iframe_download(url) {
+	var frame = document.getElementById("fancyss_download_frame");
+	if (!frame) {
+		frame = document.createElement("iframe");
+		frame.id = "fancyss_download_frame";
+		frame.style.display = "none";
+		document.body.appendChild(frame);
+	}
+	frame.src = url + (url.indexOf("?") === -1 ? "?" : "&") + "_ts=" + new Date().getTime();
+}
+function download_blob_file(url, fileName, cb) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("GET", url + (url.indexOf("?") === -1 ? "?" : "&") + "_ts=" + new Date().getTime(), true);
+	xhr.responseType = "blob";
+	xhr.onload = function() {
+		if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
+			var URLApi = window.URL || window.webkitURL;
+			if (URLApi && URLApi.createObjectURL) {
+				var blobUrl = URLApi.createObjectURL(xhr.response);
+				var a = document.createElement("a");
+				a.href = blobUrl;
+				a.download = fileName;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				setTimeout(function() {
+					URLApi.revokeObjectURL(blobUrl);
+				}, 1000);
+				if (typeof cb === "function") {
+					cb(true);
+				}
+				return;
+			}
+		}
+		trigger_iframe_download(url);
+		if (typeof cb === "function") {
+			cb(true);
+		}
+	};
+	xhr.onerror = function() {
+		trigger_iframe_download(url);
+		if (typeof cb === "function") {
+			cb(true);
+		}
+	};
+	xhr.send();
+}
+function check_node_migration_notice() {
+	get_fss_data(function(data) {
+		if (data["fss_data_schema"] == "2" && data["fss_data_migration_notice"] == "1") {
+			show_node_migration_notice();
+		}
+	});
+}
+function get_legacy_node_ids() {
+	var ids = [];
+	for (var field in db_ss) {
+		if (field.indexOf("ssconf_basic_name_") === 0) {
+			ids.push(field.replace("ssconf_basic_name_", ""));
+		}
+	}
+	return ids.sort(compare);
+}
+function need_auto_migrate_nodes() {
+	return !node_auto_migrate_attempted && get_node_storage_schema() != 2 && get_legacy_node_ids().length > 0;
+}
+function close_auto_migrate_layer() {
+	if (node_auto_migrate_layer !== null) {
+		layer.close(node_auto_migrate_layer);
+		node_auto_migrate_layer = null;
+	}
+}
+function poll_auto_migrate_status(retry, cb) {
+	refresh_fss_bundle(function() {
+		if (get_node_storage_schema() == 2) {
+			if (typeof cb === "function") {
+				cb(true);
+			}
+			return;
+		}
+		if (retry >= 40) {
+			if (typeof cb === "function") {
+				cb(false);
+			}
+			return;
+		}
+		setTimeout(function() {
+			poll_auto_migrate_status(retry + 1, cb);
+		}, 500);
+	});
+}
+function auto_migrate_node_storage(cb) {
+	node_auto_migrate_attempted = true;
+	close_auto_migrate_layer();
+	node_auto_migrate_layer = layer.msg("检测到旧版节点数据，正在升级到新结构...", {
+		icon: 16,
+		shade: 0.2,
+		time: 0
+	});
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params": ["migrate_schema2"], "fields": ""};
+	$.ajax({
+		type: "POST",
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function() {
+			poll_auto_migrate_status(0, function(done) {
+				close_auto_migrate_layer();
+				if (!done) {
+					layer.msg("节点数据自动升级失败，暂时继续使用旧版结构");
+				}
+				if (typeof cb === "function") {
+					cb(done);
+				}
+			});
+		},
+		error: function() {
+			close_auto_migrate_layer();
+			layer.msg("节点数据自动升级失败，暂时继续使用旧版结构");
+			if (typeof cb === "function") {
+				cb(false);
+			}
+		}
 	});
 }
 function try_ws_connect(){
@@ -210,11 +1031,14 @@ function refresh_dbss(cb) {
 		dataType: "json",
 		success: function(data) {
 			db_ss = data.result[0];
+			sync_pkg_runtime_meta();
 			normalize_latency_val();
-			generate_node_info();
-			if (typeof cb === "function") {
-				cb();
-			}
+			refresh_fss_bundle(function() {
+				generate_node_info();
+				if (typeof cb === "function") {
+					cb();
+				}
+			});
 		},
 		error: function() {
 			if (typeof cb === "function") {
@@ -231,28 +1055,44 @@ function get_dbus_data(cb) {
 		cache: false,
 		success: function(data) {
 			db_ss = data.result[0];
+			sync_pkg_runtime_meta();
 			normalize_latency_val();
-			// basic conf to fill element
-			conf2obj(db_ss);
-			// generate node info (obj confs) for node table 
-			generate_node_info();
-			// generate options for node select
-			refresh_options();
-			// generate node table
-			refresh_html();
-			// fill node value
-			ss_node_sel();
-			// define click action
-			toggle_func();
-			// try to get latest version of fancyss
-			version_show();
-			message_show();
-			if (!node_form_defaults) {
-				capture_node_form_defaults();
-			}
-			if (typeof cb === "function") {
-				cb(true);
-			}
+			refresh_fss_bundle(function() {
+				function render_page_data() {
+					// basic conf to fill element
+					conf2obj(db_ss);
+					// generate node info (obj confs) for node table
+					generate_node_info();
+					// generate options for node select
+					refresh_options();
+					// generate node table
+					refresh_html();
+					// fill node value
+					ss_node_sel();
+					// define click action
+					toggle_func();
+					// try to get latest version of fancyss
+					version_show();
+					message_show();
+					if (!node_form_defaults) {
+						capture_node_form_defaults();
+					}
+					if (typeof cb === "function") {
+						cb(true);
+					}
+				}
+				if (need_auto_migrate_nodes()) {
+					auto_migrate_node_storage(function(done) {
+						if (done) {
+							get_dbus_data(cb);
+						} else {
+							render_page_data();
+						}
+					});
+					return;
+				}
+				render_page_data();
+			});
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			console.log(XmlHttpRequest.responseText);
@@ -308,26 +1148,40 @@ function conf2obj(obj, action) {
 }
 function ssconf_node2obj(node_sel) {
 	obj_node = {};
-	var p = "ssconf_basic";
-	var params_tt_0 = ["ss_obfs", "v2ray_use_json", "v2ray_network_security_ai", "v2ray_mux_enable", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "hy2_ai", "hy2_tfo"];
-	var params_tt_1 = ["type" ,"server", "mode", "port", "password", "method", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_json", "tuic_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg"];
-	for (var i = 0; i < params_tt_0.length; i++) {
-		obj_node["ss_basic_" + params_tt_0[i]] = db_ss[p + "_" + params_tt_0[i] + "_" + node_sel] || "0";
-	}
-	for (var i = 0; i < params_tt_1.length; i++) {
-		obj_node["ss_basic_" + params_tt_1[i]] = db_ss[p + "_" + params_tt_1[i] + "_" + node_sel] || "";
+	if (get_node_storage_schema() == 2) {
+		var conf = confs[node_sel] || {};
+		var nodeFields = NODE_FIELD_REWRITE_LIST.filter(function(field) {
+			return !is_node_runtime_field(field);
+		});
+		for (var i = 0; i < nodeFields.length; i++) {
+			var baseField = nodeFields[i];
+			obj_node["ss_basic_" + baseField] = is_node_bool_field(baseField) ? "0" : "";
+		}
+		for (var field in conf) {
+			if (field == "node" || field == "protoc" || field.indexOf("_") === 0 || is_node_runtime_field(field)) {
+				continue;
+			}
+			obj_node["ss_basic_" + field] = is_node_bool_field(field) ? (conf[field] || "0") : (conf[field] || "");
+		}
+	} else {
+		var nodeFields = NODE_FIELD_REWRITE_LIST.filter(function(field) {
+			return !is_node_runtime_field(field);
+		});
+		var p = "ssconf_basic";
+		for (var j = 0; j < nodeFields.length; j++) {
+			var legacyField = nodeFields[j];
+			obj_node["ss_basic_" + legacyField] = is_node_bool_field(legacyField) ? (db_ss[p + "_" + legacyField + "_" + node_sel] || "0") : (db_ss[p + "_" + legacyField + "_" + node_sel] || "");
+		}
 	}
 	obj_node["ssconf_basic_node"] = node_sel;
 	return obj_node;
 }
 function ss_node_sel() {
-	var node_sel = E("ssconf_basic_node").value;
-	if (!node_sel){
-		node_sel = node_max; 
+	var node_sel = resolve_node_id(E("ssconf_basic_node").value);
+	if (!node_sel) {
+		return;
 	}
-	if (node_sel > node_max){
-		node_sel = node_max;
-	}
+	E("ssconf_basic_node").value = node_sel;
 	var obj = ssconf_node2obj(node_sel);
 	conf2obj(obj, 1);
 	verifyFields();
@@ -342,7 +1196,8 @@ function refresh_options() {
 	option0.find('option').remove().end();
 	option3.find('option').remove().end();
 
-	for (var field in confs) {
+	for (var i = 0; i < ss_nodes.length; i++) {
+		var field = ss_nodes[i];
 		var c = confs[field];
 		option3.append('<option value="' + field + '">' + c["name"] + '</option>');
 		if (c.group) {
@@ -370,14 +1225,14 @@ function refresh_options() {
 			//vmess
 			option0.append($("<option>", {
 				value: field,
-				text: c.use_json == "1" ? "【json】" + group_tag + c.name : "【Vmess】" + group_tag + c.name
+				text: c["v2ray_use_json"] == "1" ? "【json】" + group_tag + c.name : "【Vmess】" + group_tag + c.name
 			}));
 		}
 		else if(c.type == "4"){
 			//vless
 			option0.append($("<option>", {
 				value: field,
-				text: c.use_json == "1" ? "【json】" + group_tag + c.name : "【Vless】" + group_tag + c.name
+				text: c["xray_use_json"] == "1" ? "【json】" + group_tag + c.name : "【Vless】" + group_tag + c.name
 			}));
 		}
 		else if(c.type == "5"){
@@ -409,8 +1264,8 @@ function refresh_options() {
 			}));
 		}
 	}
-	option0.val(db_ss["ssconf_basic_node"]||"1");
-	option3.val((db_ss["ss_failover_s4_3"])||"1");
+	option0.val(get_saved_current_node_id() || get_first_node_id());
+	option3.val(get_failover_node_id() || get_first_node_id());
 	// refresh node dns resolv option
 	if (db_ss["ss_basic_server_resolv"] <= "0"){
 		var option_value = db_ss["ss_basic_lastru"];
@@ -428,11 +1283,19 @@ function refresh_options() {
 	E("ss_basic_row").value = db_ss["ss_basic_row"]||15;
 }
 function save() {
-	var node_sel = E("ssconf_basic_node").value;
+	var dbus = {};
+	var node_sel = resolve_node_id(E("ssconf_basic_node").value);
+	if (node_sel) {
+		E("ssconf_basic_node").value = node_sel;
+	}
+	var node_type = get_node_type(node_sel);
 	submit_flag="1";
-	dbus["ssconf_basic_node"] = node_sel;
-	E("ss_state2").innerHTML = "国外连接 - " + "Waiting....";
-	E("ss_state3").innerHTML = "国内连接 - " + "Waiting....";
+	if (get_node_storage_schema() == 2) {
+		dbus["fss_node_current"] = node_sel;
+	} else {
+		dbus["ssconf_basic_node"] = node_sel;
+	}
+	set_ss_status_waiting("Waiting....");
 	// key define
 	var params_input = [
 	  "ss_failover_s1",
@@ -565,7 +1428,8 @@ function save() {
 	  "ss_basic_block_quic",
 	  "ss_acl_default_udp",
 	  "ss_acl_default_quic",
-	  "ss_basic_sub_ai"
+	  "ss_basic_sub_ai",
+	  "ss_basic_sub_node_log"
 	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
@@ -613,7 +1477,7 @@ function save() {
 	// node data: write node data under using from the main pannel incase of data change
 	dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value;
 	// ss
-	if (db_ss["ssconf_basic_type_" + node_sel] =="0" ){
+	if (node_type == "0" ){
 		var params_ssi_1 = ["mode", "server", "port", "method", "ss_obfs_host"];
 		var params_ssi_2 = ["ss_obfs"];
 		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
@@ -631,7 +1495,7 @@ function save() {
 		}
 	}
 	// ssr
-	if (db_ss["ssconf_basic_type_" + node_sel] =="1" ){
+	if (node_type == "1" ){
 		var params_sri_1 = ["mode", "server", "port", "method", "rss_obfs", "rss_protocol", "rss_obfs_param", "rss_protocol_param"];
 		dbus["ssconf_basic_password_" + node_sel] = Base64.encode(E("ss_basic_password").value);
 		for (var i = 0; i < params_sri_1.length; i++) {
@@ -639,10 +1503,10 @@ function save() {
 		}
 	}
 	//v2ray
-	if (db_ss["ssconf_basic_type_" + node_sel] =="3" ){
+	if (node_type == "3" ){
 		// for v2ray json, we need to encode json format
 		if (E("ss_basic_v2ray_use_json").checked == true){
-			var params_vr_more = ["server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
+			var params_vr_more = ["server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 			for (var i = 0; i < params_vr_more.length; i++) {
 				dbus["ssconf_basic_" + params_vr_more[i] + "_" + node_sel] = "";
 			}
@@ -689,6 +1553,7 @@ function save() {
 			}
 			if(E("ss_basic_v2ray_network").value == "grpc"){
 				dbus["ssconf_basic_v2ray_grpc_mode_" + node_sel] = E("ss_basic_v2ray_grpc_mode").value;
+				dbus["ssconf_basic_v2ray_grpc_authority_" + node_sel] = E("ss_basic_v2ray_grpc_authority").value;
 				dbus["ssconf_basic_v2ray_network_path_" + node_sel] = E("ss_basic_v2ray_network_path").value;
 			}
 			if(E("ss_basic_v2ray_network").value == "httpupgrade"){
@@ -716,10 +1581,10 @@ function save() {
 		}
 	}
 	//xray
-	if (db_ss["ssconf_basic_type_" + node_sel] =="4" ){
+	if (node_type == "4" ){
 		// for xray json, we need to encode json format
 		if (E("ss_basic_xray_use_json").checked == true){
-			var params_xr_more = ["server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_network_security_sni", "xray_fingerprint", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
+			var params_xr_more = ["server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http"];
 			for (var i = 0; i < params_xr_more.length; i++) {
 				dbus["ssconf_basic_" + params_xr_more[i] + "_" + node_sel] = "";
 			}
@@ -765,6 +1630,7 @@ function save() {
 			}
 			if(E("ss_basic_xray_network").value == "grpc"){
 				dbus["ssconf_basic_xray_grpc_mode_" + node_sel] = E("ss_basic_xray_grpc_mode").value;
+				dbus["ssconf_basic_xray_grpc_authority_" + node_sel] = E("ss_basic_xray_grpc_authority").value;
 				dbus["ssconf_basic_xray_network_path_" + node_sel] = E("ss_basic_xray_network_path").value;
 			}
 			if(E("ss_basic_xray_network").value == "httpupgrade"){
@@ -811,7 +1677,7 @@ function save() {
 		}
 	}
 	// trojan
-	if (db_ss["ssconf_basic_type_" + node_sel] =="5" ){
+	if (node_type == "5" ){
 		var params_tj_1 = ["mode", "server", "port", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn"];
 		dbus["ssconf_basic_trojan_ai_" + node_sel] = E("ss_basic_trojan_ai").checked ? '1' : '';
 		dbus["ssconf_basic_trojan_tfo_" + node_sel] = E("ss_basic_trojan_tfo").checked ? '1' : '';
@@ -821,7 +1687,7 @@ function save() {
 	}
 	// fancyss_full_1
 	// naive
-	if (db_ss["ssconf_basic_type_" + node_sel] =="6" ){
+	if (node_type == "6" ){
 		dbus["ssconf_basic_naive_pass_" + node_sel] = Base64.encode(E("ss_basic_naive_pass").value);
 		var params_naive_1 = ["mode", "naive_prot", "naive_server", "naive_port", "naive_user"];
 		for (var i = 0; i < params_naive_1.length; i++) {
@@ -829,7 +1695,7 @@ function save() {
 		}
 	}
 	// tuic
-	if (db_ss["ssconf_basic_type_" + node_sel] =="7" ){
+	if (node_type == "7" ){
 		dbus["ssconf_basic_naive_pass_" + node_sel] = Base64.encode(E("ss_basic_naive_pass").value);
 		var params_tuic_1 = ["mode"];
 		for (var i = 0; i < params_tuic_1.length; i++) {
@@ -849,7 +1715,7 @@ function save() {
 	}
 	// fancyss_full_2
 	// hysteria2
-	if (db_ss["ssconf_basic_type_" + node_sel] =="8" ){
+	if (node_type == "8" ){
 		var params_hy2_1 = ["mode", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg"];
 		for (var i = 0; i < params_hy2_1.length; i++) {
 			dbus["ssconf_basic_" + params_hy2_1[i] + "_" + node_sel] = E("ss_basic_" + params_hy2_1[i]).value;
@@ -875,7 +1741,13 @@ function save() {
 		db_ss["ss_basic_action"] = "0";
 	}
 	//---------------------------------------------------------------
-	var post_dbus = compfilter(db_ss, dbus);
+	if (get_node_storage_schema() == 2) {
+		dbus["fss_node_failover_backup"] = E("ss_failover_s4_3").value || "";
+		delete dbus["ss_failover_s4_3"];
+		dbus = $.extend(dbus, build_schema2_upsert_fields(dbus, node_sel, "manual", true));
+		strip_legacy_node_fields(dbus, node_sel);
+	}
+	var post_dbus = compfilter(get_compare_store(), dbus);
 	//console.log("post_dbus", post_dbus);
 
 	if(dbus["ss_basic_enable"] == "1"){
@@ -1058,10 +1930,13 @@ function getNodeCtx() {
 	ctx.x_tls_on = getFieldValue("ss_node_table_xray_network_security") == "tls";
 	ctx.x_real_on = getFieldValue("ss_node_table_xray_network_security") == "reality";
 	ctx.x_ai_off = !getFieldChecked("ss_node_table_xray_network_security_ai");
+	ctx.x_ai_on = getFieldChecked("ss_node_table_xray_network_security_ai");
 	ctx.x_flow_on = ctx.x_net_tcp && (ctx.x_tls_on || ctx.x_real_on);
 
 	ctx.trojan_ai_off = !getFieldChecked("ss_node_table_trojan_ai");
+	ctx.trojan_ai_on = getFieldChecked("ss_node_table_trojan_ai");
 	ctx.hy2_ai_off = !getFieldChecked("ss_node_table_hy2_ai");
+	ctx.hy2_ai_on = getFieldChecked("ss_node_table_hy2_ai");
 	ctx.hy2_obfs_on = getFieldValue("ss_node_table_hy2_obfs") != "0";
 
 	ctx.ss_obfs_allowed = ctx.ss_on && getFieldValue("ss_node_table_mode") != "3";
@@ -1102,7 +1977,7 @@ function verifyFields(r) {
 	var naive_on = false;	//fancyss-full
 	var tuic_on = false;	//fancyss-full
 	var hy2_on = false;
-	var node_type = db_ss["ssconf_basic_type_" + node_sel] || "0";
+	var node_type = get_node_type(node_sel) || "0";
 	if (node_type == "0") {
 		// ss
 		var ss_on = true;
@@ -1211,8 +2086,11 @@ function verifyFields(r) {
 	var x_grpc_on = E("ss_basic_xray_network").value == "grpc";
 	var x_xhttp_on = E("ss_basic_xray_network").value == "xhttp";
 	var x_ai_off = E("ss_basic_xray_network_security_ai").checked == false;
+	var x_ai_on = E("ss_basic_xray_network_security_ai").checked == true;
 	var trojan_ai_off = E("ss_basic_trojan_ai").checked == false;
+	var trojan_ai_on = E("ss_basic_trojan_ai").checked == true;
 	var hy2_ai_off = E("ss_basic_hy2_ai").checked == false;
+	var hy2_ai_on = E("ss_basic_hy2_ai").checked == true;
 	var v_net = E("ss_basic_v2ray_network").value;
 	var x_net = E("ss_basic_xray_network").value;
 	var ctx = {
@@ -1248,11 +2126,14 @@ function verifyFields(r) {
 		x_tls_on: x_tls_on,
 		x_real_on: x_real_on,
 		x_ai_off: x_ai_off,
+		x_ai_on: x_ai_on,
 		x_flow_on: x_tcp_on && (x_tls_on || x_real_on),
 		x_xhttp_on: x_xhttp_on,
 		trojan_ai_off: trojan_ai_off,
+		trojan_ai_on: trojan_ai_on,
 		hy2_obfs_on: hy2_on && E("ss_basic_hy2_obfs").value != "0",
-		hy2_ai_off: hy2_ai_off
+		hy2_ai_off: hy2_ai_off,
+		hy2_ai_on: hy2_ai_on
 	};
 	applyVisibility("#table_basic", ctx);
 	if(v_grpc_on){
@@ -1293,6 +2174,7 @@ function verifyFields(r) {
 		$("#ss_basic_hy2_up_speed").parent().parent().hide();
 		$("#ss_basic_online_links_proxy").parent().parent().hide();
 		$("#ss_basic_sub_ai").parent().parent().hide();
+		$("#ss_basic_sub_node_log").parent().parent().hide();
 		$("#ss_basic_online_ua").parent().parent().hide();
 		$("#ss_basic_node_update").parent().parent().hide();
 		$("#ss_basic_exclude").parent().parent().hide();
@@ -1304,6 +2186,7 @@ function verifyFields(r) {
 		$("#ss_basic_hy2_up_speed").parent().parent().show();
 		$("#ss_basic_online_links_proxy").parent().parent().show();
 		$("#ss_basic_sub_ai").parent().parent().show();
+		$("#ss_basic_sub_node_log").parent().parent().show();
 		$("#ss_basic_online_ua").parent().parent().show();
 		$("#ss_basic_node_update").parent().parent().show();
 		$("#ss_basic_exclude").parent().parent().show();
@@ -1332,7 +2215,9 @@ function verifyFields(r) {
 		}
 	}
 	sync_chinadns_ipv6_drop_proxy_ui();
-	refresh_acl_table();
+	if (E("ACL_table")) {
+		sync_acl_udp_quic_labels();
+	}
 }
 function sync_chinadns_ipv6_drop_proxy_ui() {
 	var dropProxy = E("ss_basic_chng_ipv6_drop_proxy");
@@ -1539,7 +2424,7 @@ function tabclickhandler(_type) {
 function add_ss_node_conf(flag) {
 	var ns = {};
 	var p = "ssconf_basic";
-	node_max += 1;
+	var node_id = get_next_node_id();
 
 	if(!$.trim($('#ss_node_table_name').val())){
 		alert("节点名不能为空！！");
@@ -1548,28 +2433,28 @@ function add_ss_node_conf(flag) {
 	if (flag == 'shadowsocks') {
 		var params1 = ["mode", "name", "server", "port", "method", "ss_obfs", "ss_obfs_host"]; //ss
 		for (var i = 0; i < params1.length; i++) {
-			ns[p + "_" + params1[i] + "_" + node_max] = $.trim($("#ss_node_table_" + params1[i]).val());
+			ns[p + "_" + params1[i] + "_" + node_id] = $.trim($("#ss_node_table_" + params1[i]).val());
 		}
-		ns[p + "_password_" + node_max] = Base64.encode($.trim($("#ss_node_table_password").val()));
-		ns[p + "_type_" + node_max] = "0";
+		ns[p + "_password_" + node_id] = Base64.encode($.trim($("#ss_node_table_password").val()));
+		ns[p + "_type_" + node_id] = "0";
 	} else if (flag == 'shadowsocksR') {
 		var params2 = ["mode", "name", "server", "port", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param"]; //ssr
 		for (var i = 0; i < params2.length; i++) {
-			ns[p + "_" + params2[i] + "_" + node_max] = $.trim($("#ss_node_table_" + params2[i]).val());
+			ns[p + "_" + params2[i] + "_" + node_id] = $.trim($("#ss_node_table_" + params2[i]).val());
 		}
-		ns[p + "_password_" + node_max] = Base64.encode($.trim($("#ss_node_table_password").val()));
-		ns[p + "_type_" + node_max] = "1";
+		ns[p + "_password_" + node_id] = Base64.encode($.trim($("#ss_node_table_password").val()));
+		ns[p + "_type_" + node_id] = "1";
 	} else if (flag == 'v2ray') {
-		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
+		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray
 		var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 		if (E("ss_node_table_v2ray_use_json").checked == true){
-			ns[p + "_mode_" + node_max] = $.trim($("#ss_node_table_mode").val());
-			ns[p + "_name_" + node_max] = $.trim($("#ss_node_table_name").val());
-			ns[p + "_v2ray_use_json_" + node_max] = "1";
+			ns[p + "_mode_" + node_id] = $.trim($("#ss_node_table_mode").val());
+			ns[p + "_name_" + node_id] = $.trim($("#ss_node_table_name").val());
+			ns[p + "_v2ray_use_json_" + node_id] = "1";
 			if($("#ss_node_table_v2ray_json").val()){
 				if(isJSON(E("ss_node_table_v2ray_json").value)){
 					if(E("ss_node_table_v2ray_json").value.indexOf("outbound") != -1){
-						ns[p + "_v2ray_json_" + node_max] = Base64.encode(pack_js(E("ss_node_table_v2ray_json").value));
+						ns[p + "_v2ray_json_" + node_id] = Base64.encode(pack_js(E("ss_node_table_v2ray_json").value));
 					}else{
 						alert("错误！你的json配置文件有误！\n正确格式请参考:https://www.v2ray.com/chapter_02/01_overview.html");
 						return false;
@@ -1584,24 +2469,24 @@ function add_ss_node_conf(flag) {
 			}
 		}else{
 			for (var i = 0; i < params4_1.length; i++) {
-				ns[p + "_" + params4_1[i] + "_" + node_max] = $.trim($("#ss_node_table_" + params4_1[i]).val());
+				ns[p + "_" + params4_1[i] + "_" + node_id] = $.trim($("#ss_node_table_" + params4_1[i]).val());
 			}
 			for (var i = 0; i < params4_2.length; i++) {
-				ns[p + "_" + params4_2[i] + "_" + node_max] = E("ss_node_table_" + params4_2[i]).checked ? "1" : "";
+				ns[p + "_" + params4_2[i] + "_" + node_id] = E("ss_node_table_" + params4_2[i]).checked ? "1" : "";
 			}
 		}
-		ns[p + "_type_" + node_max] = "3";
+		ns[p + "_type_" + node_id] = "3";
 	} else if (flag == 'xray') {
-		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
+		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
 		var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show"];
 		if (E("ss_node_table_xray_use_json").checked == true){
-			ns[p + "_mode_" + node_max] = $.trim($("#ss_node_table_mode").val());
-			ns[p + "_name_" + node_max] = $.trim($("#ss_node_table_name").val());
-			ns[p + "_xray_use_json_" + node_max] = "1";
+			ns[p + "_mode_" + node_id] = $.trim($("#ss_node_table_mode").val());
+			ns[p + "_name_" + node_id] = $.trim($("#ss_node_table_name").val());
+			ns[p + "_xray_use_json_" + node_id] = "1";
 			if ($("#ss_node_table_xray_json").val()){
 				if(isJSON(E('ss_node_table_xray_json').value)){
 					if(E('ss_node_table_xray_json').value.indexOf("outbound") != -1){
-						ns[p + "_xray_json_" + node_max] = Base64.encode(pack_js(E('ss_node_table_xray_json').value));
+						ns[p + "_xray_json_" + node_id] = Base64.encode(pack_js(E('ss_node_table_xray_json').value));
 					}else{
 						alert("错误！你的json配置文件有误！");
 						return false;
@@ -1616,41 +2501,41 @@ function add_ss_node_conf(flag) {
 			}
 		}else{
 			for (var i = 0; i < params5_1.length; i++) {
-				ns[p + "_" + params5_1[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params5_1[i]).val());
+				ns[p + "_" + params5_1[i] + "_" + node_id] = $.trim($('#ss_node_table' + "_" + params5_1[i]).val());
 			}
 			for (var i = 0; i < params5_2.length; i++) {
-				ns[p + "_" + params5_2[i] + "_" + node_max] = E("ss_node_table_" + params5_2[i]).checked ? '1' : '';
+				ns[p + "_" + params5_2[i] + "_" + node_id] = E("ss_node_table_" + params5_2[i]).checked ? '1' : '';
 			}
-			ns[p + "_xray_prot_" + node_max] = "vless";
+			ns[p + "_xray_prot_" + node_id] = "vless";
 		}
-		ns[p + "_type_" + node_max] = "4";
+		ns[p + "_type_" + node_id] = "4";
 	} else if (flag == 'trojan') {
 		var params6 = ["mode", "name", "server", "port", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn"]; //trojan
 		for (var i = 0; i < params6.length; i++) {
-			ns[p + "_" + params6[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params6[i]).val());
+			ns[p + "_" + params6[i] + "_" + node_id] = $.trim($('#ss_node_table' + "_" + params6[i]).val());
 		}
-		ns[p + "_trojan_ai_" + node_max] = E("ss_node_table_trojan_ai").checked ? '1' : '';
-		ns[p + "_trojan_tfo_" + node_max] = E("ss_node_table_trojan_tfo").checked ? '1' : '';
-		ns[p + "_type_" + node_max] = "5";
+		ns[p + "_trojan_ai_" + node_id] = E("ss_node_table_trojan_ai").checked ? '1' : '';
+		ns[p + "_trojan_tfo_" + node_id] = E("ss_node_table_trojan_tfo").checked ? '1' : '';
+		ns[p + "_type_" + node_id] = "5";
 	}
 	//fancyss_naive_1
 	else if (flag == 'naive') {
 		var params7 = ["mode", "name", "naive_prot", "naive_server", "naive_port", "naive_user"]; //naive
 		for (var i = 0; i < params7.length; i++) {
-			ns[p + "_" + params7[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params7[i]).val());
+			ns[p + "_" + params7[i] + "_" + node_id] = $.trim($('#ss_node_table' + "_" + params7[i]).val());
 		}
-		ns[p + "_naive_pass_" + node_max] = Base64.encode($.trim($("#ss_node_table_naive_pass").val()));
-		ns[p + "_type_" + node_max] = "6";
+		ns[p + "_naive_pass_" + node_id] = Base64.encode($.trim($("#ss_node_table_naive_pass").val()));
+		ns[p + "_type_" + node_id] = "6";
 	}
 	//fancyss_naive_2
 	//fancyss_tuic_1
 	else if (flag == 'tuic') {
-		ns[p + "_mode_" + node_max] = $.trim($("#ss_node_table_mode").val());
-		ns[p + "_name_" + node_max] = $.trim($("#ss_node_table_name").val());
+		ns[p + "_mode_" + node_id] = $.trim($("#ss_node_table_mode").val());
+		ns[p + "_name_" + node_id] = $.trim($("#ss_node_table_name").val());
 		if ($("#ss_node_table_tuic_json").val()){
 			if(isJSON(E('ss_node_table_tuic_json').value)){
 				if(E('ss_node_table_tuic_json').value.indexOf("relay") != -1){
-					ns[p + "_tuic_json_" + node_max] = Base64.encode(pack_js(E('ss_node_table_tuic_json').value));
+					ns[p + "_tuic_json_" + node_id] = Base64.encode(pack_js(E('ss_node_table_tuic_json').value));
 				}else{
 					alert("错误！你的json配置文件有误！");
 					return false;
@@ -1663,21 +2548,35 @@ function add_ss_node_conf(flag) {
 			alert("错误！你的json配置为空！");
 			return false;
 		}
-		ns[p + "_type_" + node_max] = "7";
+		ns[p + "_type_" + node_id] = "7";
 	}
 	//fancyss_tuic_2
 	else if (flag == 'hysteria2') {
 		var params8 = ["mode", "name", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg"];
 		for (var i = 0; i < params8.length; i++) {
-			ns[p + "_" + params8[i] + "_" + node_max] = $.trim($('#ss_node_table' + "_" + params8[i]).val());
+			ns[p + "_" + params8[i] + "_" + node_id] = $.trim($('#ss_node_table' + "_" + params8[i]).val());
 		}
-		ns[p + "_hy2_ai_" + node_max] = E("ss_node_table_hy2_ai").checked ? '1' : '';
-		ns[p + "_hy2_tfo_" + node_max] = E("ss_node_table_hy2_tfo").checked ? '1' : '';
-		ns[p + "_type_" + node_max] = "8";
+		ns[p + "_hy2_ai_" + node_id] = E("ss_node_table_hy2_ai").checked ? '1' : '';
+		ns[p + "_hy2_tfo_" + node_id] = E("ss_node_table_hy2_tfo").checked ? '1' : '';
+		ns[p + "_type_" + node_id] = "8";
+	}
+	if (get_node_storage_schema() == 2) {
+		var order = get_fss_node_ids();
+		order.push(String(node_id));
+		ns = $.extend(ns, build_schema2_upsert_fields(ns, node_id, "manual"));
+		ns["fss_node_order"] = order.join(",");
+		ns["fss_node_next_id"] = String(parseInt(node_id, 10) + 1);
+		if (!get_saved_current_node_id()) {
+			ns["fss_node_current"] = String(node_id);
+		}
+		strip_legacy_node_fields(ns, node_id);
+	}
+	if (get_node_storage_schema() == 1) {
+		node_max = parseInt(node_id, 10);
 	}
 	//push data to add new node
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
+	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": compfilter(get_compare_store(), ns) };
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -1701,9 +2600,11 @@ function add_ss_node_conf(flag) {
 				E("ss_node_table_rss_obfs_param").value = "";
 				E("ss_node_table_v2ray_uuid").value = "";
 				E("ss_node_table_v2ray_alterid").value = "0";
+				E("ss_node_table_v2ray_grpc_authority").value = "";
 				E("ss_node_table_v2ray_json").value = "";
 				E("ss_node_table_xray_uuid").value = "";
 				E("ss_node_table_xray_encryption").value = "none";
+				E("ss_node_table_xray_grpc_authority").value = "";
 				E("ss_node_table_xray_json").value = "";
 				E("ss_node_table_trojan_ai").checked = false;
 				E("ss_node_table_trojan_uuid").value = "";
@@ -1727,14 +2628,44 @@ function remove_conf_table(o) {
 	var ids = id.split("_");
 	var p = "ssconf_basic";
 	id = ids[ids.length - 1];
-	if((parseInt(db_ss["ssconf_basic_node"]) == id) && db_ss["ss_basic_enable"] == "1"){
+	if((String(get_saved_current_node_id()) == String(id)) && db_ss["ss_basic_enable"] == "1"){
 		alert("警告：这个节点正在运行，无法删除！")
 		return false;
+	}
+	if (get_node_storage_schema() == 2) {
+		var nodeTableScrollTop = get_node_table_scroll_top();
+		var new_nodes_v2 = ss_nodes.concat();
+		new_nodes_v2.splice(new_nodes_v2.indexOf(String(id)), 1);
+		var fields_v2 = {};
+		fields_v2["fss_node_" + id] = "";
+		fields_v2["fss_node_order"] = new_nodes_v2.join(",");
+		if (get_saved_current_node_id() == String(id)) {
+			fields_v2["fss_node_current"] = new_nodes_v2.length ? new_nodes_v2[0] : "";
+		}
+		if (get_failover_node_id() == String(id)) {
+			fields_v2["fss_node_failover_backup"] = "";
+		}
+		var post_data_v2 = compfilter(get_compare_store(), fields_v2);
+		var id_2 = parseInt(Math.random() * 100000000);
+		var postData_v2 = {"id": id_2, "method": "dummy_script.sh", "params":[], "fields": post_data_v2 };
+		$.ajax({
+			type: "POST",
+			cache:false,
+			url: "/_api/",
+			data: JSON.stringify(postData_v2),
+			dataType: "json",
+			success: function(response) {
+				refresh_table(function() {
+					set_node_table_scroll_top(nodeTableScrollTop);
+				});
+			}
+		});
+		return;
 	}
 	//console.log("删除第", id, "个节点！！！")
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
 	var new_nodes = ss_nodes.concat()
 	new_nodes.splice(new_nodes.indexOf(id), 1);
 	//first: mark all node from ss_nodes data as empty
@@ -1780,13 +2711,13 @@ function edit_conf_table(o) {
 	var p = "ssconf_basic";
 	id = ids[ids.length - 1];
 	edit_id = id;
-	if((parseInt(db_ss["ssconf_basic_node"]) == id) && db_ss["ss_basic_enable"] == "1"){
+	if((String(get_saved_current_node_id()) == String(id)) && db_ss["ss_basic_enable"] == "1"){
 		alert("提醒：这个节点正在运行！\n如果更改了其中的参数，需要重新点击【保存&应用】才能生效！")
 	}
 	var c = confs[id];
 	var params1_base64 = ["password", "naive_pass"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "trojan_ai", "xray_show", "hy2_ai", "hy2_tfo"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -1942,7 +2873,7 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_type_" + edit_id] = "1";
 	}
 	else if (flag == 'v2ray') {
-		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray non json
+		var params4_1 = ["mode", "name", "server", "port", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency"]; //for v2ray non json
 		var params4_2 = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http"];
 		if (E("ss_node_table_v2ray_use_json").checked == true){
 			ns[p + "_mode_" + edit_id] = $.trim($("#ss_node_table_mode").val());
@@ -1975,7 +2906,7 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_type_" + edit_id] = "3";
 	}
 	else if (flag == 'xray') {
-		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
+		var params5_1 = ["mode", "name", "server", "port", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx"]; //for xray
 		var params5_2 = ["xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show"];
 		if (E("ss_node_table_xray_use_json").checked == true){
 			ns[p + "_mode_" + edit_id] = $.trim($("#ss_node_table_mode").val());
@@ -2059,8 +2990,13 @@ function edit_ss_node_conf(flag) {
 		ns[p + "_hy2_tfo_" + edit_id] = E("ss_node_table_hy2_tfo").checked ? "1" : "";
 		ns[p + "_type_" + edit_id] = "8";
 	}
+	if (get_node_storage_schema() == 2) {
+		ns = $.extend(ns, build_schema2_upsert_fields(ns, edit_id, "manual", true));
+		strip_legacy_node_fields(ns, edit_id);
+	}
+	var nodeTableScrollTop = get_node_table_scroll_top();
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": ns };
+	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": compfilter(get_compare_store(), ns) };
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -2083,9 +3019,11 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_rss_obfs_param").value = "";
 			E("ss_node_table_v2ray_uuid").value = "";
 			E("ss_node_table_v2ray_alterid").value = "0";
+			E("ss_node_table_v2ray_grpc_authority").value = "";
 			E("ss_node_table_v2ray_json").value = "";
 			E("ss_node_table_xray_uuid").value = "";
 			E("ss_node_table_xray_encryption").value = "0";
+			E("ss_node_table_xray_grpc_authority").value = "";
 			E("ss_node_table_xray_json").value = "";
 			E("ss_node_table_trojan_ai").checked = false;
 			E("ss_node_table_trojan_uuid").value = "";
@@ -2111,7 +3049,9 @@ function edit_ss_node_conf(flag) {
 			E("ss_node_table_hy2_ai").checked = true;
 			E("ss_node_table_hy2_cg").value = "brutal";
 			// refresh panel
-			refresh_node_panel();
+			refresh_node_panel(function() {
+				set_node_table_scroll_top(nodeTableScrollTop);
+			});
 		}
 	});
 	cancel_add_node();
@@ -2124,10 +3064,14 @@ function refresh_node_panel(cb) {
 		success: function(data) {
 			db_ss = data.result[0];
 			normalize_latency_val();
-			ss_node_sel();
-			if (typeof cb === "function") {
-				cb();
-			}
+			refresh_fss_bundle(function() {
+				generate_node_info();
+				refresh_options();
+				ss_node_sel();
+				if (typeof cb === "function") {
+					cb();
+				}
+			});
 		},
 		error: function() {
 			if (typeof cb === "function") {
@@ -2137,6 +3081,26 @@ function refresh_node_panel(cb) {
 	});
 }
 function generate_node_info() {
+	if (get_node_storage_schema() == 2) {
+		ss_nodes = get_fss_node_ids();
+		node_nu = ss_nodes.length;
+		node_max = ss_nodes.length > 0 ? Math.max.apply(null, ss_nodes.map(function(item) { return parseInt(item, 10); })) : 0;
+		node_idx = $.inArray(get_saved_current_node_id(), ss_nodes) + 1;
+		confs = {};
+		fss_nodes_raw = {};
+		for (var j = 0; j < ss_nodes.length; j++) {
+			var idx = ss_nodes[j];
+			var raw = get_fss_raw_node(idx);
+			if (!raw) {
+				continue;
+			}
+			var obj = normalize_fss_node_for_ui(idx, raw);
+			if (obj != null) {
+				confs[idx] = obj;
+			}
+		}
+		return;
+	}
 	// 统计节点信息
 	ss_nodes = [];
 	for (var field in db_ss) {
@@ -2170,7 +3134,7 @@ function generate_node_info() {
 			obj["type"] = db_ss["ssconf_basic_type_" + idx];
 		}
 		//这些值统一处理
-		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
+		var params = ["group", "name", "port", "method", "password", "mode", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "xray_show", "xray_json", "tuic_json", "xray_use_json", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
 		for (var i = 0; i < params.length; i++) {
 			var ofield = p + "_" + params[i] + "_" + idx;
 			if (typeof db_ss[ofield] == "undefined") {
@@ -2363,12 +3327,14 @@ function refresh_table(cb) {
 		success: function(data) {
 			db_ss = data.result[0];
 			normalize_latency_val();
-			generate_node_info();
-			refresh_options();
-			refresh_html();
-			if (typeof cb === "function") {
-				cb();
-			}
+			refresh_fss_bundle(function() {
+				generate_node_info();
+				refresh_options();
+				refresh_html();
+				if (typeof cb === "function") {
+					cb();
+				}
+			});
 		},
 		error: function() {
 			if (typeof cb === "function") {
@@ -2376,6 +3342,18 @@ function refresh_table(cb) {
 			}
 		}
 	});
+}
+function get_node_table_scroll_top() {
+	var el = E("ss_node_list_table_main");
+	return el ? el.scrollTop : 0;
+}
+function set_node_table_scroll_top(scrollTop) {
+	var el = E("ss_node_list_table_main");
+	if (!el) {
+		return;
+	}
+	var maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+	el.scrollTop = Math.min(Math.max(parseInt(scrollTop || 0, 10), 0), maxScroll);
 }
 function refresh_html() {
 	var pageH = parseInt(E("FormTitle").style.height.split("px")[0]);
@@ -2444,6 +3422,8 @@ function refresh_html() {
 	html += '<table id="ss_node_list_table" style="margin:-1px 0px 0px 0px;" width="750px" border="0" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="list_table">'
 	for (var i = 0; i < ss_nodes.length; i++) {
 		var c = confs[ss_nodes[i]];
+		var qrcodeEnabled = E("ss_basic_qrcode").checked;
+		var serverDragable = !qrcodeEnabled && E("ss_basic_dragable").checked;
 	//for (var field in confs) {
 		//var c = confs[field];
 		html += '<tr id="node_' + c["node"] + '">';
@@ -2459,22 +3439,36 @@ function refresh_html() {
 			//server
 			if(c["type"] == 8)
 			{
-				html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';
+				if(qrcodeEnabled){
+					html += '<td style="width:' + width[3] + ';cursor:pointer" class="node_server" id="server_' + c["node"] + '" title="' + c["hy2_server"] + '" onclick="makeQRcode(this)">';
+				}else if(serverDragable){
+					html += '<td style="width:' + width[3] + ';cursor:move" class="dragHandle node_server" id="server_' + c["node"] + '" title="' + c["hy2_server"] + '&#10;拖拽此处可移动节点">';
+				}else{
+					html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';
+				}
 				html += '<div style="display: none;" class="shadow2"></div>';
 				html += '<div class="server">' + c["hy2_server"] + '</div>';
 				html += '</td>';
 			}
 			else if(c["type"] == 6)																					//fancyss-full
 			{																										//fancyss-full
-				html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';	//fancyss-full
+				if(qrcodeEnabled){
+					html += '<td style="width:' + width[3] + ';cursor:pointer" class="node_server" id="server_' + c["node"] + '" title="' + c["naive_server"] + '" onclick="makeQRcode(this)">';	//fancyss-full
+				}else if(serverDragable){
+					html += '<td style="width:' + width[3] + ';cursor:move" class="dragHandle node_server" id="server_' + c["node"] + '" title="' + c["naive_server"] + '&#10;拖拽此处可移动节点">';	//fancyss-full
+				}else{
+					html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';	//fancyss-full
+				}
 				html += '<div style="display: none;" class="shadow2"></div>';										//fancyss-full
 				html += '<div class="server">' + c["naive_server"] + '</div>';										//fancyss-full
 				html += '</td>';																					//fancyss-full
 			}																										//fancyss-full
 			else
 			{
-				if(E("ss_basic_qrcode").checked){
+				if(qrcodeEnabled){
 					html += '<td style="width:' + width[3] + ';cursor:pointer" class="node_server" id="server_' + c["node"] + '" title="' + c["server"] + '" onclick="makeQRcode(this)">';
+				}else if(serverDragable){
+					html += '<td style="width:' + width[3] + ';cursor:move" class="dragHandle node_server" id="server_' + c["node"] + '" title="' + c["server"] + '&#10;拖拽此处可移动节点">';
 				}else{
 					html += '<td style="width:' + width[3] + ';" class="node_server" id="server_' + c["node"] + '">';
 				}
@@ -2577,7 +3571,7 @@ function refresh_html() {
 	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
 		load_latency_cache();
 	}
-	if(node_max != 0 && node_max != node_nu ){
+	if(get_node_storage_schema() == 1 && node_max != 0 && node_max != node_nu ){
 		console.log("自动调整顺序！")
 		save_new_order();
 		//ss_node_sel();
@@ -2650,20 +3644,42 @@ function order_adjustment(){
 		}
 	});
 	$("#ss_node_list_table tr").hover(function() {
-		  $(this.cells[0]).addClass('showDragHandle');
-		  $(this.cells[1]).addClass('showDragHandle');
+		  $(this).find('td.dragHandle').addClass('showDragHandle');
 	}, function() {
-		  $(this.cells[0]).removeClass('showDragHandle');
-		  $(this.cells[1]).removeClass('showDragHandle');
+		  $(this).find('td.dragHandle').removeClass('showDragHandle');
 	});
 }
 function save_new_order(){
 	getNowFormatDate();
 	var table = E("ss_node_list_table");
 	var tr = table.getElementsByTagName("tr");
+	if (get_node_storage_schema() == 2) {
+		var order = [];
+		for (var k = 0; k < tr.length; k++) {
+			order.push(tr[k].getAttribute("id").split("_")[1]);
+		}
+		var fields = {"fss_node_order": order.join(",")};
+		var post_data_v2 = compfilter(get_compare_store(), fields);
+		var id_v2 = parseInt(Math.random() * 100000000);
+		var postData_v2 = {"id": id_v2, "method": "dummy_script.sh", "params":[], "fields": post_data_v2 };
+		$.ajax({
+			type: "POST",
+			cache:false,
+			url: "/_api/",
+			data: JSON.stringify(postData_v2),
+			dataType: "json",
+			success: function(response) {
+				refresh_table(function() {
+					getNowFormatDate();
+					ss_node_sel();
+				});
+			}
+		});
+		return;
+	}
 	var dbus_tmp = {};
 	var perf = "ssconf_basic_"
-	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_headtype_quic", "xray_grpc_mode", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
+	var temp = ["name", "server", "server_ip", "mode", "port", "password", "method", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "ss_obfs", "ss_obfs_host", "latency", "group", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "v2ray_network_security_sni", "v2ray_mux_concurrency", "v2ray_json", "v2ray_use_json", "v2ray_mux_enable", "xray_uuid", "xray_alterid", "xray_prot", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx","xray_show", "xray_json", "tuic_json", "xray_use_json", "type", "trojan_ai", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "naive_pass", "hy2_server", "hy2_port", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_ai", "hy2_tfo", "hy2_cg"];
 	//first: mark all node from ss_nodes data as empty
 	for (var i = 0; i < tr.length; i++) {
 		var rowid = tr[i].getAttribute("id").split("_")[1];
@@ -2714,6 +3730,15 @@ function save_new_order(){
 	});
 }
 function reorder_trs(){
+	if (get_node_storage_schema() == 2) {
+		var trs = $("#ss_node_list_table tr");
+		for (var i = 0; i < trs.length; i++) {
+			var new_nu = i + 1;
+			var $row = $('#ss_node_list_table tr:nth-child(' + new_nu + ')');
+			$row.find('td:nth-child(1)').html(String(new_nu));
+		}
+		return;
+	}
 	var trs = $("#ss_node_list_table tr");
 	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
 	var has_latency = node_nu && db_ss["ss_basic_latency_val"] != "0";
@@ -2754,10 +3779,13 @@ function reorder_trs(){
 	//console.log("更改顺序OK");
 }
 function select_default_node(o){
-	var sel_node = E("ssconf_basic_node").value||"1";
+	var sel_node = resolve_node_id(E("ssconf_basic_node").value);
+	if (sel_node) {
+		E("ssconf_basic_node").value = sel_node;
+	}
 	$(".activate_icon").addClass("deactivate_icon");
 	$(".activate_icon").removeClass("activate_icon");
-	if (sel_node != db_ss["ssconf_basic_node"]){
+	if (sel_node != get_saved_current_node_id()){
 		E("reset_select").style.display = "";
 	}else{
 		E("reset_select").style.display = "none";
@@ -2770,8 +3798,8 @@ function select_default_node(o){
 		if(db_ss["ss_basic_enable"] == "1"){
 			//开启开关，节点选择为db_ss["ssconf_basic_node"]
 			E("ss_basic_enable").checked = true;
-			$("#apply_ss_node_" + db_ss["ssconf_basic_node"]).addClass("activate_icon");
-			$("#apply_ss_node_" + db_ss["ssconf_basic_node"]).removeClass("deactivate_icon");
+			$("#apply_ss_node_" + get_saved_current_node_id()).addClass("activate_icon");
+			$("#apply_ss_node_" + get_saved_current_node_id()).removeClass("deactivate_icon");
 			if(node_idx && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
@@ -2821,8 +3849,12 @@ function apply_this_ss_node(rowdata) {
 	}else {
 		$activateItem.addClass("activate_icon");
 		$activateItem.removeClass("deactivate_icon");
-		dbus["ssconf_basic_node"] = enable_id;
-		if(db_ss["ssconf_basic_node"] != enable_id){
+		if (get_node_storage_schema() == 2) {
+			dbus["fss_node_current"] = enable_id;
+		} else {
+			dbus["ssconf_basic_node"] = enable_id;
+		}
+		if(get_saved_current_node_id() != enable_id){
 			E("reset_select").style.display = ""
 		}else{
 			E("reset_select").style.display = "none"
@@ -2831,6 +3863,318 @@ function apply_this_ss_node(rowdata) {
 	}
 	E("ssconf_basic_node").value = enable_id;
 	ss_node_sel();
+}
+function render_allow_insecure_notice(showExpr) {
+	return '<tr data-show="' + showExpr + '"><td></td><td style="font-size:11px;color:#FFB300;line-height:1.8;">' + ALLOW_INSECURE_NOTICE + '</td></tr>';
+}
+var current_qrcode_share_uri = "";
+function get_node_share_field(nodeId, conf, field) {
+	if (conf && typeof conf[field] != "undefined" && conf[field] !== "") {
+		return conf[field];
+	}
+	if (get_node_storage_schema() == 2) {
+		var raw = get_fss_raw_node(String(nodeId));
+		if (raw && typeof raw[field] != "undefined") {
+			return schema2_b64_value_for_ui(raw, field, raw[field]);
+		}
+	}
+	var legacyKey = "ssconf_basic_" + field + "_" + nodeId;
+	if (typeof db_ss[legacyKey] != "undefined") {
+		return db_ss[legacyKey];
+	}
+	return "";
+}
+function is_truthy_share_value(value) {
+	value = (value === null || typeof value == "undefined") ? "" : String(value).toLowerCase();
+	return value == "1" || value == "true" || value == "yes" || value == "on";
+}
+function append_share_query_param(params, key, value) {
+	if (value === null || typeof value == "undefined") {
+		return;
+	}
+	value = String(value);
+	if (value === "") {
+		return;
+	}
+	params.push(key + "=" + encodeURIComponent(value));
+}
+function format_share_remote_host(host) {
+	host = (host === null || typeof host == "undefined") ? "" : String(host);
+	if (host && host.indexOf(":") != -1 && host.indexOf("[") == -1 && host.indexOf("]") == -1) {
+		return "[" + host + "]";
+	}
+	return host;
+}
+function split_share_host_port(server) {
+	server = (server === null || typeof server == "undefined") ? "" : String(server);
+	var host = "";
+	var port = "";
+	if (/^\[[^\]]+\]:/.test(server)) {
+		var matchV6 = server.match(/^\[([^\]]+)\]:(.+)$/);
+		if (matchV6) {
+			host = matchV6[1];
+			port = matchV6[2];
+		}
+	} else if (/^\[[^\]]+\]$/.test(server)) {
+		host = server.slice(1, -1);
+	} else {
+		var parts = server.split(":");
+		if (parts.length == 2) {
+			host = parts[0];
+			port = parts[1];
+		} else {
+			host = server;
+		}
+	}
+	return {
+		host: host,
+		port: port
+	};
+}
+function build_xray_standard_link(c) {
+	if (!c || c["xray_use_json"] == "1") {
+		return 2;
+	}
+	var protocol = c["xray_prot"] || "vless";
+	if (protocol != "vless" && protocol != "vmess") {
+		return 2;
+	}
+	if (!c["server"] || !c["port"] || !c["xray_uuid"]) {
+		return 2;
+	}
+	if (protocol == "vmess" && c["xray_alterid"] && c["xray_alterid"] != "0") {
+		return 2;
+	}
+	var network = c["xray_network"] || "tcp";
+	if (network == "quic") {
+		return 2;
+	}
+	if (network == "tcp" && c["xray_headtype_tcp"] == "http") {
+		return 2;
+	}
+	var security = c["xray_network_security"] || "none";
+	if (security == "reality" && !c["xray_publickey"]) {
+		return 2;
+	}
+	var params = [];
+	var shareType = network == "h2" ? "http" : network;
+	append_share_query_param(params, "type", shareType);
+	append_share_query_param(params, "encryption", c["xray_encryption"] || (protocol == "vmess" ? "auto" : "none"));
+	append_share_query_param(params, "flow", c["xray_flow"]);
+	if (shareType == "grpc") {
+		append_share_query_param(params, "serviceName", c["xray_network_path"]);
+		append_share_query_param(params, "authority", c["xray_grpc_authority"]);
+		append_share_query_param(params, "mode", c["xray_grpc_mode"]);
+	} else {
+		if (shareType == "tcp" && c["xray_headtype_tcp"] && c["xray_headtype_tcp"] != "none") {
+			append_share_query_param(params, "headerType", c["xray_headtype_tcp"]);
+		}
+		if (shareType == "kcp") {
+			if (c["xray_headtype_kcp"] && c["xray_headtype_kcp"] != "none") {
+				append_share_query_param(params, "headerType", c["xray_headtype_kcp"]);
+			}
+			append_share_query_param(params, "seed", c["xray_kcp_seed"]);
+		}
+		if (shareType == "quic" && c["xray_headtype_quic"] && c["xray_headtype_quic"] != "none") {
+			append_share_query_param(params, "headerType", c["xray_headtype_quic"]);
+		}
+		if (shareType == "ws" || shareType == "http" || shareType == "quic" || shareType == "httpupgrade" || shareType == "xhttp") {
+			append_share_query_param(params, "host", c["xray_network_host"]);
+			append_share_query_param(params, "path", c["xray_network_path"]);
+		}
+		if (shareType == "xhttp") {
+			append_share_query_param(params, "mode", c["xray_xhttp_mode"]);
+		}
+	}
+	if (security != "none") {
+		append_share_query_param(params, "security", security);
+	}
+	if (security == "tls" || security == "reality") {
+		append_share_query_param(params, "sni", c["xray_network_security_sni"]);
+		append_share_query_param(params, "fp", c["xray_fingerprint"] || (security == "reality" ? "chrome" : ""));
+	}
+	if (security == "tls") {
+		if (is_truthy_share_value(c["xray_network_security_ai"])) {
+			// Compatibility fallback for clients still using non-standard allowInsecure links.
+			append_share_query_param(params, "allowInsecure", "1");
+		} else {
+			append_share_query_param(params, "pcs", c["xray_pcs"]);
+			append_share_query_param(params, "vcn", c["xray_vcn"]);
+		}
+	}
+	if (security == "tls") {
+		var alpn = [];
+		if (is_truthy_share_value(c["xray_network_security_alpn_h2"])) {
+			alpn.push("h2");
+		}
+		if (is_truthy_share_value(c["xray_network_security_alpn_http"])) {
+			alpn.push("http/1.1");
+		}
+		if (alpn.length) {
+			append_share_query_param(params, "alpn", alpn.join(","));
+		}
+	}
+	if (security == "reality") {
+		append_share_query_param(params, "pbk", c["xray_publickey"]);
+		append_share_query_param(params, "sid", c["xray_shortid"]);
+		append_share_query_param(params, "spx", c["xray_spiderx"]);
+	}
+	var uri = protocol + "://" + encodeURIComponent(c["xray_uuid"]) + "@" + format_share_remote_host(c["server"]) + ":" + c["port"];
+	if (params.length) {
+		uri += "?" + params.join("&");
+	}
+	if (c["name"]) {
+		uri += "#" + encodeURIComponent(c["name"]);
+	}
+	return uri;
+}
+function build_trojan_standard_link(nodeId, c) {
+	if (!c || !c["server"] || !c["port"] || !c["trojan_uuid"]) {
+		return 3;
+	}
+	var params = [];
+	var plugin = get_node_share_field(nodeId, c, "trojan_plugin");
+	var obfs = get_node_share_field(nodeId, c, "trojan_obfs");
+	var obfsHost = get_node_share_field(nodeId, c, "trojan_obfshost");
+	var obfsUri = get_node_share_field(nodeId, c, "trojan_obfsuri");
+	append_share_query_param(params, "security", "tls");
+	append_share_query_param(params, "sni", c["trojan_sni"]);
+	if (is_truthy_share_value(c["trojan_ai"])) {
+		append_share_query_param(params, "allowInsecure", "1");
+	} else {
+		append_share_query_param(params, "pcs", c["trojan_pcs"]);
+		append_share_query_param(params, "vcn", c["trojan_vcn"]);
+	}
+	if (is_truthy_share_value(c["trojan_tfo"])) {
+		append_share_query_param(params, "tfo", "1");
+	}
+	if (obfs == "websocket") {
+		append_share_query_param(params, "type", "ws");
+		append_share_query_param(params, "host", obfsHost);
+		append_share_query_param(params, "path", obfsUri);
+	} else if (plugin) {
+		append_share_query_param(params, "plugin", plugin);
+		append_share_query_param(params, "obfs", obfs);
+		append_share_query_param(params, "obfs-host", obfsHost);
+		append_share_query_param(params, "obfs-uri", obfsUri);
+	}
+	var uri = "trojan://" + encodeURIComponent(c["trojan_uuid"]) + "@" + format_share_remote_host(c["server"]) + ":" + c["port"];
+	if (params.length) {
+		uri += "?" + params.join("&");
+	}
+	if (c["name"]) {
+		uri += "#" + encodeURIComponent(c["name"]);
+	}
+	return uri;
+}
+function build_naive_standard_link(c) {
+	if (!c || !c["naive_server"] || !c["naive_user"] || !c["naive_pass"]) {
+		return 7;
+	}
+	var prot = c["naive_prot"] || "https";
+	if (prot != "https" && prot != "quic") {
+		return 7;
+	}
+	var password = "";
+	try {
+		password = Base64.decode(c["naive_pass"]);
+	} catch (e) {
+		password = "";
+	}
+	if (!password) {
+		return 7;
+	}
+	var uri = "naive+" + prot + "://" + encodeURIComponent(c["naive_user"]) + ":" + encodeURIComponent(password) + "@" + format_share_remote_host(c["naive_server"]);
+	if (c["naive_port"]) {
+		uri += ":" + c["naive_port"];
+	}
+	if (c["name"]) {
+		uri += "#" + encodeURIComponent(c["name"]);
+	}
+	return uri;
+}
+function build_tuic_standard_link(c) {
+	if (!c || !c["tuic_json"]) {
+		return 6;
+	}
+	var json;
+	try {
+		json = JSON.parse(Base64.decode(c["tuic_json"]));
+	} catch (e) {
+		return 6;
+	}
+	if (!json || !json["relay"] || !json["relay"]["server"] || !json["relay"]["uuid"] || !json["relay"]["password"]) {
+		return 6;
+	}
+	var relay = json["relay"];
+	var serverInfo = split_share_host_port(relay["server"]);
+	if (!serverInfo["host"]) {
+		return 6;
+	}
+	var params = [];
+	if (relay["skip_cert_verify"] === true || is_truthy_share_value(relay["skip_cert_verify"])) {
+		append_share_query_param(params, "allow_insecure", "1");
+	}
+	if ($.isArray(relay["alpn"])) {
+		append_share_query_param(params, "alpn", relay["alpn"].join(","));
+	} else {
+		append_share_query_param(params, "alpn", relay["alpn"]);
+	}
+	append_share_query_param(params, "congestion_control", relay["congestion_control"]);
+	append_share_query_param(params, "udp_relay_mode", relay["udp_relay_mode"]);
+	append_share_query_param(params, "sni", relay["sni"] || relay["server_name"]);
+	if (relay["disable_sni"] === true || is_truthy_share_value(relay["disable_sni"])) {
+		append_share_query_param(params, "disable_sni", "1");
+	}
+	if (relay["zero_rtt_handshake"] === true || is_truthy_share_value(relay["zero_rtt_handshake"])) {
+		append_share_query_param(params, "zero_rtt_handshake", "1");
+	}
+	append_share_query_param(params, "ip", relay["ip"]);
+	var uri = "tuic://" + encodeURIComponent(relay["uuid"]) + ":" + encodeURIComponent(relay["password"]) + "@" + format_share_remote_host(serverInfo["host"]);
+	if (serverInfo["port"]) {
+		uri += ":" + serverInfo["port"];
+	}
+	if (params.length) {
+		uri += "?" + params.join("&");
+	}
+	if (c["name"]) {
+		uri += "#" + encodeURIComponent(c["name"]);
+	}
+	return uri;
+}
+function build_hy2_standard_link(c) {
+	if (!c || !c["hy2_server"] || !c["hy2_pass"]) {
+		return 5;
+	}
+	var params = [];
+	var host = format_share_remote_host(c["hy2_server"]);
+	var auth = encodeURIComponent(c["hy2_pass"]);
+	var port = c["hy2_port"] || "";
+	var obfs = c["hy2_obfs"];
+	if (obfs == "1") {
+		obfs = "salamander";
+	} else if (obfs == "0") {
+		obfs = "";
+	}
+	append_share_query_param(params, "obfs", obfs);
+	append_share_query_param(params, "obfs-password", c["hy2_obfs_pass"]);
+	append_share_query_param(params, "sni", c["hy2_sni"]);
+	if (is_truthy_share_value(c["hy2_ai"])) {
+		append_share_query_param(params, "insecure", "1");
+	}
+	append_share_query_param(params, "pinSHA256", c["hy2_pcs"]);
+	var uri = "hysteria2://" + auth + "@" + host;
+	if (port && port != "443") {
+		uri += ":" + port;
+	}
+	uri += "/";
+	if (params.length) {
+		uri += "?" + params.join("&");
+	}
+	if (c["name"]) {
+		uri += "#" + encodeURIComponent(c["name"]);
+	}
+	return uri;
 }
 function makeQRcode(node){
 	var id = $(node).attr("id");
@@ -2880,32 +4224,107 @@ function makeQRcode(node){
 		}
 	}
 	else if(c["type"] == "4"){
-		var code = 2;
+		var code = build_xray_standard_link(c);
 	}
 	else if(c["type"] == "5"){
-		var code = 3;
+		var code = build_trojan_standard_link(id, c);
+	}
+	else if(c["type"] == "6"){
+		var code = build_naive_standard_link(c);
+	}
+	else if(c["type"] == "7"){
+		var code = build_tuic_standard_link(c);
+	}
+	else if(c["type"] == "8"){
+		var code = build_hy2_standard_link(c);
 	}
 	else{
 		var code = 4;
 	}
-	$("#qrtitle").html(c["name"]);
+	$("#qrtitle").html(build_qrcode_title_html(c));
 	$("#qrcode_show").css("top", "240px");
 
 	showQRcode(code);
 }
+function qrcode_uri_copyable(data) {
+	return typeof data == "string" && data.indexOf("://") > 0;
+}
+function update_qrcode_copy_button(data) {
+	var copyable = qrcode_uri_copyable(data);
+	current_qrcode_share_uri = copyable ? data : "";
+	if (E("qr_copy_btn")) {
+		E("qr_copy_btn").disabled = !copyable;
+		E("qr_copy_btn").style.opacity = copyable ? "1" : "0.55";
+		E("qr_copy_btn").style.cursor = copyable ? "pointer" : "not-allowed";
+	}
+}
+function fallback_copy_text(text) {
+	var textarea = document.createElement("textarea");
+	textarea.value = text;
+	textarea.setAttribute("readonly", "readonly");
+	textarea.style.position = "fixed";
+	textarea.style.top = "-1000px";
+	textarea.style.left = "-1000px";
+	textarea.style.opacity = "0";
+	document.body.appendChild(textarea);
+	textarea.focus();
+	textarea.select();
+	textarea.setSelectionRange(0, textarea.value.length);
+	var copied = false;
+	try {
+		copied = document.execCommand("copy");
+	} catch (e) {
+		copied = false;
+	}
+	document.body.removeChild(textarea);
+	return copied;
+}
+function copy_qrcode_share_uri() {
+	if (!current_qrcode_share_uri) {
+		layer.msg("当前节点暂不支持复制标准 URI");
+		return;
+	}
+	if (navigator.clipboard && window.isSecureContext) {
+		navigator.clipboard.writeText(current_qrcode_share_uri).then(function() {
+			layer.msg("节点 URI 已复制");
+		}).catch(function() {
+			if (fallback_copy_text(current_qrcode_share_uri)) {
+				layer.msg("节点 URI 已复制");
+			} else {
+				layer.msg("复制失败，请手动重试");
+			}
+		});
+		return;
+	}
+	if (fallback_copy_text(current_qrcode_share_uri)) {
+		layer.msg("节点 URI 已复制");
+	} else {
+		layer.msg("复制失败，请手动重试");
+	}
+}
 function showQRcode(data) {
+	update_qrcode_copy_button(data);
 	$("#qrcode").html("");
 	if(data == 1){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持v2ray json配置的二维码生成！</span>')
 	}
 	else if(data == 2){
-		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持xray节点的二维码生成！</span>')
+		$("#qrcode").html('<span style="font-size:15px;color:#000;line-height:1.7;">暂不支持当前xray节点配置的标准二维码生成！<br />json配置、旧版VMess(alterId)、TCP+HTTP伪装、QUIC等场景请改用原始配置分享。</span>')
 	}
 	else if(data == 3){
-		$("#qrcode").html('<span style="font-size:16px;color:#000;">暂不支持trojan节点的二维码生成！</span>')
+		$("#qrcode").html('<span style="font-size:15px;color:#000;line-height:1.7;">当前trojan节点缺少生成标准二维码所需的基础信息。<br />请检查服务器、端口、密码等配置是否完整。</span>')
 	}
 	else if(data == 4){
 		$("#qrcode").html('<span style="font-size:16px;color:#000;">错误！！节点类型位置！！<br />请检查你的节点！</span>')
+	}
+	else if(data == 5){
+		$("#qrcode").html('<span style="font-size:15px;color:#000;line-height:1.7;">当前hysteria2节点缺少生成标准二维码所需的基础信息。<br />请检查服务器、认证密码等配置是否完整。</span>')
+	}
+	else if(data == 6){
+		$("#qrcode").html('<span style="font-size:15px;color:#000;line-height:1.7;">当前tuic节点缺少生成标准二维码所需的基础信息。<br />请检查tuic json中的relay.server / relay.uuid / relay.password。</span>')
+	}
+	else if(data == 7){
+		$("#qrcode").html('<span style="font-size:15px;color:#000;line-height:1.7;">当前Naïve节点缺少生成标准二维码所需的基础信息。<br />请检查协议、服务器、账户和密码是否完整。</span>')
 	}
 	else
 	{
@@ -3172,8 +4591,7 @@ function latency_test(action) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			//console.log(response.result)
-			$(".latency .latency_val").html("waiting...");
+			// 保留已有测速结果，避免刷新页面时单节点测速结果被 "waiting..." 覆盖。
 			get_latency_data(action);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
@@ -3310,12 +4728,14 @@ function load_latency_cache(){
 			const data = parse_webtest_complete(res);
 			const usable = count_usable_webtest(data.list);
 			const threshold = Math.max(1, Math.floor(node_nu * 0.5));
+			if(usable > 0){
+				write_webtest(data.list);
+			}
 			if(data.complete && usable >= threshold){
 				batch_test_running = false;
-				write_webtest(data.list);
-			}else{
-				load_latency_backup(usable);
+				return;
 			}
+			load_latency_backup(usable);
 		}
 	});
 }
@@ -3449,7 +4869,52 @@ function save_row(action) {
 		}
 	});
 }
-function download_route_file(arg) {
+function download_route_file(arg, cb) {
+	var routeMeta = get_route_file_meta(arg);
+	if (routeMeta) {
+		var showRouteLog = (arg == 1 || arg == 12 || arg == 13);
+		if (prepared_route_files[arg] === "pending") {
+			if (showRouteLog) {
+				E("log_content3").value += (E("log_content3").value ? "\n" : "") + "已有导出任务正在进行，请等待当前导出完成。";
+				E("log_content3").scrollTop = E("log_content3").scrollHeight;
+			}
+			if (typeof cb === "function") {
+				cb(false);
+			}
+			return;
+		}
+		if (showRouteLog) {
+			prepared_route_files[arg] = false;
+			db_ss["ss_basic_action"] = (arg == 1 ? "25" : (arg == 12 ? "26" : "27"));
+			_responseLen = 0;
+			noChange = 0;
+			x = 5;
+			E("log_content3").value = "";
+			E("ok_button").style.display = "none";
+			showSSLoadingBar();
+			setTimeout(get_realtime_log, routeMeta.logDelay || 800);
+		}
+		prepare_route_file(arg, function(ok) {
+			if (ok) {
+				download_blob_file(routeMeta.url, routeMeta.fileName, function(done) {
+					prepared_route_files[arg] = false;
+					if (typeof cb === "function") {
+						cb(done);
+					}
+				});
+			} else {
+				prepared_route_files[arg] = false;
+				if (typeof cb === "function") {
+					cb(false);
+				}
+			}
+			if (!ok && showRouteLog) {
+				E("log_content3").value += (E("log_content3").value ? "\n" : "") + "导出文件准备失败，请重试。";
+				E("ok_button").style.display = "";
+			}
+		});
+		return;
+	}
 	var dbus_tmp={};
 	if(arg == 2){
 		db_ss["ss_basic_action"] = "11";
@@ -3470,21 +4935,16 @@ function download_route_file(arg) {
 		dataType: "json",
 		success: function(response){
 			if(response.result == id){
-				if(arg == 1){
-					var a = document.createElement('A');
-					a.href = "_root/files/ssconf_backup.sh";
-					a.download = 'ssconf_backup.sh';
-					document.body.appendChild(a);
-					a.click();
-					document.body.removeChild(a);
-				}
-				else if(arg == 2){
+				if(arg == 2){
 					var b = document.createElement('A')
 					b.href = "_root/files/" + pkg_name + "_" + db_ss["ss_basic_version_local"] + ".tar.gz"
 					b.download = pkg_name + "_" + db_ss["ss_basic_version_local"] + ".tar.gz"
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+					if (typeof cb === "function") {
+						cb(true);
+					}
 				}
 				else if(arg == 6){
 					var b = document.createElement('A')
@@ -3493,6 +4953,9 @@ function download_route_file(arg) {
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+					if (typeof cb === "function") {
+						cb(true);
+					}
 				}
 				else if(arg == 7){
 					var b = document.createElement('A')
@@ -3501,6 +4964,9 @@ function download_route_file(arg) {
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+					if (typeof cb === "function") {
+						cb(true);
+					}
 				}
 				else if(arg == 10){
 					var b = document.createElement('A')
@@ -3509,6 +4975,9 @@ function download_route_file(arg) {
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+					if (typeof cb === "function") {
+						cb(true);
+					}
 				}
 				else if(arg == 11){
 					var b = document.createElement('A')
@@ -3517,7 +4986,18 @@ function download_route_file(arg) {
 					document.body.appendChild(b);
 					b.click();
 					document.body.removeChild(b);
+					if (typeof cb === "function") {
+						cb(true);
+					}
 				}
+			}
+			else if (typeof cb === "function") {
+				cb(false);
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb(false);
 			}
 		}
 	});
@@ -3556,6 +5036,10 @@ function upload_ss_backup() {
 	});
 }
 function restore_ss_conf() {
+	if(ws_flag == 1){
+		push_data_ws("ss_conf.sh", "4", {});
+		return;
+	}
 	showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_conf.sh", "params": ["4"], "fields": ""};
@@ -3571,22 +5055,19 @@ function restore_ss_conf() {
 }
 function remove_SS_node() {
 	db_ss["ss_basic_action"] = "10";
-	push_data("ss_conf.sh", "3",  "");
+	if(ws_flag == 1){
+		push_data_ws("ss_conf.sh", "3", {});
+	}else{
+		push_data("ss_conf.sh", "3",  "");
+	}
 }
 function restart_dnsmaq() {
 	db_ss["ss_basic_action"] = "21";
-	showSSLoadingBar();
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_conf.sh", "params": ["8"], "fields": ""};
-	$.ajax({
-		type: "POST",
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		success: function(response) {
-			get_realtime_log();
-		}
-	});
+	if(ws_flag == 1){
+		push_data_ws("ss_conf.sh", "8", {});
+	}else{
+		push_data("ss_conf.sh", "8", "");
+	}
 }
 function updatelist(arg) {
 	var dbus_post = {};
@@ -3970,24 +5451,105 @@ function change_select_width(o, p, cfg) {
 	}).trigger("change");
 }
 
-function set_ss_status_waiting(text) {
-	E("ss_state2").innerHTML = "国外连接 - " + text;
-	E("ss_state3").innerHTML = "国内连接 - " + text;
+function status_ipv6_enabled() {
+	if (E("ss_basic_proxy_ipv6")) {
+		return !!E("ss_basic_proxy_ipv6").checked;
+	}
+	return db_ss["ss_basic_proxy_ipv6"] == "1";
 }
 
-function apply_ss_status(res, with_heartbeat) {
+function set_ss_status_layout(ipv6Mode) {
+	if (typeof ipv6Mode == "undefined") {
+		ipv6Mode = status_ipv6_enabled();
+	}
+	if (E("ss_state4")) {
+		E("ss_state4").style.display = ipv6Mode ? "" : "none";
+	}
+	if (E("ss_state4_break")) {
+		E("ss_state4_break").style.display = ipv6Mode ? "" : "none";
+	}
+}
+
+function set_ss_status_tip(message) {
+	if (!E("ss_state_tip")) {
+		return;
+	}
+	if (message) {
+		E("ss_state_tip").innerHTML = message;
+		E("ss_state_tip").style.display = "block";
+	} else {
+		E("ss_state_tip").innerHTML = "";
+		E("ss_state_tip").style.display = "none";
+	}
+}
+
+function update_ss_status_tip(ipv4Line, ipv6Line, ipv6Mode) {
+	if (!ipv6Mode) {
+		set_ss_status_tip("");
+		return;
+	}
+	var ipv4Ok = ipv4Line && ipv4Line.indexOf("✓") != -1;
+	var ipv6Fail = ipv6Line
+		&& ipv6Line.indexOf("✓") == -1
+		&& ipv6Line.indexOf("Waiting") == -1
+		&& ipv6Line.indexOf("等待") == -1;
+	if (ipv4Ok && ipv6Fail) {
+		set_ss_status_tip("你的代理节点可能不支持ipv6，建议关闭ipv6代理。");
+	} else {
+		set_ss_status_tip("");
+	}
+}
+
+function set_ss_status_waiting(text) {
+	var ipv6Mode = status_ipv6_enabled();
+	set_ss_status_layout(ipv6Mode);
+	E("ss_state2").innerHTML = (ipv6Mode ? "国外IPv4 - " : "国外连接 - ") + text;
+	if (E("ss_state4")) {
+		E("ss_state4").innerHTML = "国外IPv6 - " + text;
+	}
+	E("ss_state3").innerHTML = "国内连接 - " + text;
+	update_ss_status_tip("", "", ipv6Mode);
+}
+
+function handle_ss_status_heartbeat(showRefreshPrompt) {
+	var dbus_post = {};
+	dbus_post["ss_heart_beat"] = "0";
+	push_data("dummy_script.sh", "", dbus_post, "2");
+	if (showRefreshPrompt) {
+		layer.confirm('<li>科学上网插件页面需要刷新！</li><br /><li>由于故障转移功能已经在后台切换了节点，为了保证页面显示正确配置！需要刷新此页面！</li><br /><li>确定现在刷新吗？</li>', {
+			time: 3e4,
+			shade: 0.8
+		}, function(index) {
+			layer.close(index);
+			refreshpage();
+		}, function(index) {
+			layer.close(index);
+			return false;
+		});
+	}
+}
+
+function apply_ss_status(res, with_heartbeat, showRefreshPrompt) {
 	if (res && res.indexOf("@@") != -1){
 		var arr = res.split("@@");
-		if (arr[0] == "" || arr[1] == "") {
+		var ipv6Mode = with_heartbeat ? (arr.length >= 4) : (arr.length >= 3);
+		var expect = ipv6Mode ? 3 : 2;
+		if (arr.length < expect || arr[0] == "" || arr[expect - 1] == "") {
 			set_ss_status_waiting("Waiting for first refresh...");
 		} else {
+			set_ss_status_layout(ipv6Mode);
 			E("ss_state2").innerHTML = arr[0];
-			E("ss_state3").innerHTML = arr[1];
+			if (ipv6Mode) {
+				E("ss_state4").innerHTML = arr[1];
+				E("ss_state3").innerHTML = arr[2];
+				update_ss_status_tip(arr[0], arr[1], true);
+			} else {
+				E("ss_state3").innerHTML = arr[1];
+				update_ss_status_tip("", "", false);
+			}
 		}
-		if (with_heartbeat && arr[2] == "1") {
-			var dbus_post = {};
-			dbus_post["ss_heart_beat"] = "0";
-			push_data("dummy_script.sh", "", dbus_post, "2");
+		if (with_heartbeat && arr[expect] == "1") {
+			handle_ss_status_heartbeat(showRefreshPrompt);
 		}
 		return true;
 	}
@@ -4111,14 +5673,7 @@ function get_ss_status_front_httpd() {
 		cache: false,
 		data: JSON.stringify(postData),
 		success: function(response) {
-			var arr = response.result.split("@@");
-			if (arr[0] == "" || arr[1] == "") {
-				E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-				E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-			} else {
-				E("ss_state2").innerHTML = arr[0];
-				E("ss_state3").innerHTML = arr[1];
-			}
+			apply_ss_status(response.result, false);
 		}
 	});
 	//refreshRate = Math.floor(Math.random() * 4000) + 4000;
@@ -4175,8 +5730,7 @@ function get_ss_status_back_websocket() {
 }
 function get_ss_status_back_httpd() {
 	if (db_ss['ss_basic_enable'] != "1") {
-		E("ss_state2").innerHTML = "国外连接 - " + "Waiting.....";
-		E("ss_state3").innerHTML = "国内连接 - " + "Waiting.....";
+		set_ss_status_waiting("Waiting.....");
 		return false;
 	}
 	$.ajax({
@@ -4187,35 +5741,10 @@ function get_ss_status_back_httpd() {
 		cache: false,
 		success: function(response) {
 			var res = response.trim();
-			if(res.indexOf("@@") != -1){
-				var arr = res.split("@@");
-				if (arr[0] == "" || arr[1] == "") {
-					E("ss_state2").innerHTML = "国外连接 - " + "Waiting for first refresh...";
-					E("ss_state3").innerHTML = "国内连接 - " + "Waiting for first refresh...";
-				} else {
-					E("ss_state2").innerHTML = arr[0];
-					E("ss_state3").innerHTML = arr[1];
-				}
-				if (arr[2] == "1") {
-					var dbus_post = {};
-					dbus_post["ss_heart_beat"] = "0";
-					push_data("dummy_script.sh", "", dbus_post, "2");
-					layer.confirm('<li>科学上网插件页面需要刷新！</li><br /><li>由于故障转移功能已经在后台切换了节点，为了保证页面显示正确配置！需要刷新此页面！</li><br /><li>确定现在刷新吗？</li>', {
-						time: 3e4,
-						shade: 0.8
-					}, function(index) {
-						layer.close(index);
-						refreshpage();
-					}, function(index) {
-						layer.close(index);
-						return false;
-					});
-				}
-			}
+			apply_ss_status(res, true, true);
 		},
 		error: function(xhr) {
-			E("ss_state2").innerHTML = "国外连接 - " + "Waiting....";
-			E("ss_state3").innerHTML = "国内连接 - " + "Waiting....";
+			set_ss_status_waiting("Waiting....");
 		}
 	});
 	if (E("ss_basic_interval").value == "1"){
@@ -4693,18 +6222,11 @@ function acl_ipv6_proxy_enabled() {
 }
 
 function get_acl_current_node_id() {
-	if (E("ssconf_basic_node") && E("ssconf_basic_node").value) {
-		return E("ssconf_basic_node").value;
-	}
-	return db_ss["ssconf_basic_node"] || "";
+	return get_current_node_id();
 }
 
 function get_acl_current_node_type() {
-	var currentNode = get_acl_current_node_id();
-	if (currentNode && typeof db_ss["ssconf_basic_type_" + currentNode] != "undefined") {
-		return String(db_ss["ssconf_basic_type_" + currentNode]);
-	}
-	return "";
+	return get_node_type(get_acl_current_node_id());
 }
 
 function acl_current_node_supports_udp() {
@@ -4911,28 +6433,34 @@ function refresh_acl_table(q, cb) {
 			} else if ($('#ss_acl_default_mode option[value="2"]').length) {
 				$('#ss_acl_default_mode').val("2");
 			}
+			var defaultMode = $('#ss_acl_default_mode').val() || "2";
 			//write default rule port
-			if (typeof db_acl["ss_acl_default_ports"] != "undefined") {
+			if (typeof db_acl["ss_acl_default_ports"] != "undefined" && $('#ss_acl_default_ports option[value="' + db_acl["ss_acl_default_ports"] + '"]').length) {
 				$('#ss_acl_default_ports').val(db_acl["ss_acl_default_ports"]);
 			} else {
-				$('#ss_acl_default_ports').val("22,80,443,8080,8443");
+				$('#ss_acl_default_ports').val(get_acl_port_by_mode(defaultMode));
 			}
-			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value($('#ss_acl_default_mode').val() || "2", db_acl["ss_acl_default_udp"], false));
+			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value(defaultMode, db_acl["ss_acl_default_udp"], false));
 			set_acl_checkbox_state("ss_acl_default_quic", get_acl_quic_value(db_acl["ss_acl_default_quic"], true));
 			//write dynamic table value
 				for (var i = 1; i < acl_node_max + 1; i++) {
-					$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
-					$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
+					var rowMode = db_acl["ss_acl_mode_" + i];
+					$('#ss_acl_mode_' + i).val(rowMode);
+					if (typeof db_acl["ss_acl_port_" + i] != "undefined" && $('#ss_acl_port_' + i + ' option[value="' + db_acl["ss_acl_port_" + i] + '"]').length) {
+						$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
+					} else {
+						$('#ss_acl_port_' + i).val(get_acl_port_by_mode(rowMode));
+					}
 					$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
-					sync_acl_port_state("ss_acl_port_" + i, db_acl["ss_acl_mode_" + i]);
-					set_acl_checkbox_state("ss_acl_udp_" + i, get_acl_udp_value(db_acl["ss_acl_mode_" + i], db_acl["ss_acl_udp_" + i]));
+					sync_acl_port_state("ss_acl_port_" + i, rowMode);
+					set_acl_checkbox_state("ss_acl_udp_" + i, get_acl_udp_value(rowMode, db_acl["ss_acl_udp_" + i]));
 					set_acl_checkbox_state("ss_acl_quic_" + i, get_acl_quic_value(db_acl["ss_acl_quic_" + i]));
 				}
-			//set default rule port to all when game mode enabled
-			set_default_port();
+			sync_acl_port_state("ss_acl_default_ports", defaultMode);
+			update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
 				//after table generated and value filled, set default value for first line_image1
 				$('#ss_acl_mode').val("1");
-				$('#ss_acl_port').val("80,443");
+				$('#ss_acl_port').val(get_acl_port_by_mode($('#ss_acl_mode').val()));
 				sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
 				set_acl_checkbox_state("ss_acl_udp", false);
 				set_acl_checkbox_state("ss_acl_quic", true);
@@ -4949,15 +6477,18 @@ function refresh_acl_table(q, cb) {
 		}
 	});
 }
+function get_acl_port_by_mode(mode) {
+	if (String(mode) == "0" || String(mode) == "3") {
+		return "all";
+	}
+	if (String(mode) == "1") {
+		return "80,443";
+	}
+	return "22,80,443,8080,8443";
+}
 function set_mode_1() {
 	//set the first line of the table, if mode is gfwlist mode or game mode,set the port to all
-	if ($('#ss_acl_mode').val() == 0 || $('#ss_acl_mode').val() == 3) {
-		$("#ss_acl_port").val("all");
-	} else if ($('#ss_acl_mode').val() == 1) {
-		$("#ss_acl_port").val("80,443");
-	} else if ($('#ss_acl_mode').val() == 2 || $('#ss_acl_mode').val() == 5) {
-		$("#ss_acl_port").val("22,80,443,8080,8443");
-	}
+	$("#ss_acl_port").val(get_acl_port_by_mode($('#ss_acl_mode').val()));
 	sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_udp", "ss_acl_quic");
 }
@@ -4965,24 +6496,12 @@ function set_mode_2(o) {
 	var id2 = $(o).attr("id");
 	var ids2 = id2.split("_");
 	id2 = ids2[ids2.length - 1];
-	if ($(o).val() == 0 || $(o).val() == 3) {
-		$("#ss_acl_port_" + id2).val("all");
-	} else if ($(o).val() == 1) {
-		$("#ss_acl_port_" + id2).val("80,443");
-	} else if ($(o).val() == 2 || $(o).val() == 5) {
-		$("#ss_acl_port_" + id2).val("22,80,443,8080,8443");
-	}
+	$("#ss_acl_port_" + id2).val(get_acl_port_by_mode($(o).val()));
 	sync_acl_port_state("ss_acl_port_" + id2, $(o).val());
 	update_acl_udp_quic_label_pair("ss_acl_udp_" + id2, "ss_acl_quic_" + id2);
 }
 function set_default_port() {
-	if ($('#ss_acl_default_mode').val() == 0 || $('#ss_acl_default_mode').val() == 3) {
-		$("#ss_acl_default_ports").val("all");
-	} else if ($('#ss_acl_default_mode').val() == 1) {
-		$("#ss_acl_default_ports").val("80,443");
-	} else if ($('#ss_acl_default_mode').val() == 2 || $('#ss_acl_default_mode').val() == 5) {
-		$("#ss_acl_default_ports").val("22,80,443,8080,8443");
-	}
+	$("#ss_acl_default_ports").val(get_acl_port_by_mode($('#ss_acl_default_mode').val()));
 	sync_acl_port_state("ss_acl_default_ports", $('#ss_acl_default_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
 }
@@ -5497,6 +7016,7 @@ function save_online_nodes(action) {
 		dbus_post["ssr_subscribe_mode"] = E("ssr_subscribe_mode").value;
 		dbus_post["ss_basic_online_links_proxy"] = E("ss_basic_online_links_proxy").value;
 		dbus_post["ss_basic_sub_ai"] = E("ss_basic_sub_ai").checked ? "1":"0";
+		dbus_post["ss_basic_sub_node_log"] = E("ss_basic_sub_node_log").checked ? "1":"0";
 		dbus_post["ss_basic_online_ua"] = E("ss_basic_online_ua").value;
 		dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
 		dbus_post["ss_basic_node_update_day"] = E("ss_basic_node_update_day").value;
@@ -5737,8 +7257,8 @@ function toggleKeyMask(o, show){
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
 								$('#table_test').forms([
 									{ title: '延迟测试设置', thead:'1'},
-									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试域名 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
-									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试域名 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
+									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
+									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
 									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
@@ -5751,7 +7271,7 @@ function toggleKeyMask(o, show){
 				</td>
 			</tr>
 		</table>
-		<span style="margin-left:30px">【web延迟测试】中设置的国外域名，同样会用于插件顶部[插件运行状态]中的国外链接延迟测试</span>
+		<span style="margin-left:30px">【web延迟测试】中设置的国外网址，同样会用于插件顶部[插件运行状态]中的国外链接延迟测试</span>
 		<div style="padding-top:10px;padding-bottom:10px;width:100%;text-align:center;">
 			<input id="save_latency_sett" class="button_gen" type="button" onclick="save_latency_sett();" value="保存">
 			<input id="leav_test_sett" class="button_gen" type="button" onclick="leav_test_sett();" value="返回">
@@ -5863,6 +7383,7 @@ function toggleKeyMask(o, show){
 												<div id="qrcode" style="margin: 10px 50px 10px 50px;width:256px;height:256px;text-align:center;overflow:hidden">
 												</div>
 												<div style="margin-top:15px;padding-bottom:10px;width:100%;text-align:center;">
+													<input id="qr_copy_btn" class="button_gen" type="button" onclick="copy_qrcode_share_uri();" value="复制节点">
 													<input class="button_gen" type="button" onclick="cleanCode();" value="返回">
 												</div>
 											</div>
@@ -5922,7 +7443,10 @@ function toggleKeyMask(o, show){
 																<a class="hintstyle" href="javascript:void(0);" onclick="openssHint(0)">
 																	<span id="ss_state2">国外连接 - Waiting</span>
 																	<br/>
+																	<span id="ss_state4" style="display:none;">国外IPv6 - Waiting</span>
+																	<br id="ss_state4_break" style="display:none;"/>
 																	<span id="ss_state3">国内连接 - Waiting</span>
+																	<span id="ss_state_tip" style="display:none;color:#FFB300;font-size:11px;padding-top:2px;"></span>
 																</a>
 															</div>
 															<div style="display:table-cell;float: left;margin-left:270px;position: absolute;padding: 10.5px 0px;">
@@ -6008,6 +7532,7 @@ function toggleKeyMask(o, show){
 																		{ title: '* kcp伪装类型 (type)', data:{show:'v2ray_on v_json_off v_net_kcp'}, id:'ss_node_table_v2ray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
 																		{ title: '* quic伪装类型 (type)', data:{show:'v2ray_on v_json_off v_net_quic'}, id:'ss_node_table_v2ray_headtype_quic', type:'select', options:option_headquic, value: "none"},
 																		{ title: '* grpc模式', data:{show:'v2ray_on v_json_off v_net_grpc'}, id:'ss_node_table_v2ray_grpc_mode', type:'select', options:option_grpcmode, value: ""},
+																		{ title: '* authority', data:{show:'v2ray_on v_json_off v_net_grpc'}, id:'ss_node_table_v2ray_grpc_authority', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* 伪装域名 (host)', data:{show:'v2ray_on v_json_off v_host_on'}, id:'ss_node_table_v2ray_network_host', type:'text', maxlen:'300', style:'width:400px'},
 																		{ title: '* 路径 (path)', data:{show:'v2ray_on v_json_off v_path_on'}, id:'ss_node_table_v2ray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* kcp seed', data:{show:'v2ray_on v_json_off v_net_kcp'}, id:'ss_node_table_v2ray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
@@ -6032,12 +7557,14 @@ function toggleKeyMask(o, show){
 																		{ title: '* 伪装类型 (type)', data:{show:'xray_on x_json_off x_net_kcp'}, id:'ss_node_table_xray_headtype_kcp', type:'select', func:'v', options:option_headkcp, style:'width:412px', value: "none"},
 																		{ title: '* quic伪装类型 (type)', data:{show:'xray_on x_json_off x_net_quic'}, id:'ss_node_table_xray_headtype_quic', type:'select', options:option_headquic, value: "none"},
 																		{ title: '* grpc模式', data:{show:'xray_on x_json_off x_net_grpc'}, id:'ss_node_table_xray_grpc_mode', type:'select', options:option_grpcmode, value: "multi"},
+																		{ title: '* authority', data:{show:'xray_on x_json_off x_net_grpc'}, id:'ss_node_table_xray_grpc_authority', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* xhttp模式', data:{show:'xray_on x_json_off x_xhttp_on'}, id:'ss_node_table_xray_xhttp_mode', type:'select', options:option_xhttpmode, value: "auto"},
 																		{ title: '* 伪装域名 (host)', data:{show:'xray_on x_json_off x_host_on'}, id:'ss_node_table_xray_network_host', type:'text', maxlen:'300', style:'width:400px'},
 																		{ title: '* 路径 (path)', data:{show:'xray_on x_json_off x_path_on'}, id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* kcp seed', data:{show:'xray_on x_json_off x_net_kcp'}, id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '底层传输安全', data:{show:'xray_on x_json_off'}, id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]], style:'width:412px', value: "none"},
 																		{ title: '* 跳过证书验证 (AllowInsecure)', data:{show:'xray_on x_json_off x_tls_on'}, id:'ss_node_table_xray_network_security_ai', type:'checkbox', func:'v', hint:'56', value: "false"},
+																		{ td: render_allow_insecure_notice('xray_on x_json_off x_tls_on x_ai_on') },
 																		{ title: '* pinnedPeerCertSha256', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, id:'ss_node_table_xray_pcs', type:'text', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* verifyPeerCertByName', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, id:'ss_node_table_xray_vcn', type:'text', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* alpn', data:{show:'xray_on x_json_off x_tls_on'}, multi: [
@@ -6054,6 +7581,7 @@ function toggleKeyMask(o, show){
 																		// trojan
 																		{ title: 'trojan 密码', data:{show:'trojan_on'}, id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
 																		{ title: '跳过证书验证 (AllowInsecure)', data:{show:'trojan_on'}, id:'ss_node_table_trojan_ai', type:'checkbox', func:'v', value: "false"},
+																		{ td: render_allow_insecure_notice('trojan_on trojan_ai_on') },
 																		{ title: 'pinnedPeerCertSha256', data:{show:'trojan_on trojan_ai_off'}, id:'ss_node_table_trojan_pcs', type:'text', style:'width:400px'},
 																		{ title: 'verifyPeerCertByName', data:{show:'trojan_on trojan_ai_off'}, id:'ss_node_table_trojan_vcn', type:'text', style:'width:400px'},
 																		{ title: 'SNI', data:{show:'trojan_on'}, id:'ss_node_table_trojan_sni', type:'text', style:'width:400px'},
@@ -6077,6 +7605,7 @@ function toggleKeyMask(o, show){
 																		{ title: '混淆密码', data:{show:'hy2_on hy2_obfs_on'}, id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
 																		{ title: 'SNI（域名）', data:{show:'hy2_on'}, id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
 																		{ title: '允许不安全', data:{show:'hy2_on'}, id:'ss_node_table_hy2_ai', type:'checkbox', func:'v', class:'hy2_elem', value: "false"},
+																		{ td: render_allow_insecure_notice('hy2_on hy2_ai_on') },
 																		{ title: 'pinnedPeerCertSha256', data:{show:'hy2_on hy2_ai_off'}, id:'ss_node_table_hy2_pcs', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: 'verifyPeerCertByName', data:{show:'hy2_on hy2_ai_off'}, id:'ss_node_table_hy2_vcn', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: 'congestion', data:{show:'hy2_on'}, id:'ss_node_table_hy2_cg', type:'select', class:'hy2_elem', func:'v', options:option_hy2_cg, maxlen:'300', style:'width:412px', value: "brutal"},
@@ -6124,6 +7653,7 @@ function toggleKeyMask(o, show){
 															{ title: '* kcp伪装类型 (type)', id:'ss_basic_v2ray_headtype_kcp', data:{show:'v2ray_on v_json_off v_net_kcp'}, type:'select', func:'v', hint:'37', options:option_headkcp},
 															{ title: '* quic伪装类型 (type)', id:'ss_basic_v2ray_headtype_quic', data:{show:'v2ray_on v_json_off v_net_quic'}, type:'select', options:option_headquic},
 															{ title: '* grpc模式', id:'ss_basic_v2ray_grpc_mode', data:{show:'v2ray_on v_json_off v_net_grpc'}, type:'select', options:option_grpcmode},
+															{ title: '* authority', id:'ss_basic_v2ray_grpc_authority', data:{show:'v2ray_on v_json_off v_net_grpc'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* 伪装域名 (host)', id:'ss_basic_v2ray_network_host', data:{show:'v2ray_on v_json_off v_host_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* 路径 (path)', rid:'ss_basic_v2ray_network_path_tr', id:'ss_basic_v2ray_network_path', data:{show:'v2ray_on v_json_off v_path_on'}, type:'text', hint:'29', maxlen:'300', ph:'没有请留空'},
 															{ title: '* kcp seed', id:'ss_basic_v2ray_kcp_seed', data:{show:'v2ray_on v_json_off v_net_kcp'}, type:'text', maxlen:'300', ph:'没有请留空'},
@@ -6146,12 +7676,14 @@ function toggleKeyMask(o, show){
 															{ title: '* kcp伪装类型 (type)', id:'ss_basic_xray_headtype_kcp', data:{show:'xray_on x_json_off x_net_kcp'}, type:'select', func:'v', hint:'37', options:option_headkcp},
 															{ title: '* quic伪装类型 (type)', id:'ss_basic_xray_headtype_quic', data:{show:'xray_on x_json_off x_net_quic'}, type:'select', options:option_headquic},
 															{ title: '* grpc模式', id:'ss_basic_xray_grpc_mode', data:{show:'xray_on x_json_off x_net_grpc'}, type:'select', options:option_grpcmode},
+															{ title: '* authority', id:'ss_basic_xray_grpc_authority', data:{show:'xray_on x_json_off x_net_grpc'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* xhttp模式', id:'ss_basic_xray_xhttp_mode', data:{show:'xray_on x_json_off x_xhttp_on'}, type:'select', options:option_xhttpmode, value: "auto"},
 															{ title: '* 伪装域名 (host)', id:'ss_basic_xray_network_host', data:{show:'xray_on x_json_off x_host_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', data:{show:'xray_on x_json_off x_path_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', data:{show:'xray_on x_json_off x_net_kcp'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '底层传输安全', id:'ss_basic_xray_network_security', data:{show:'xray_on x_json_off'}, type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]]},
 															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', data:{show:'xray_on x_json_off x_tls_on'}, type:'checkbox', func:'v', hint:'56'},
+															{ td: render_allow_insecure_notice('xray_on x_json_off x_tls_on x_ai_on') },
 															{ title: '* pinnedPeerCertSha256', id:'ss_basic_xray_pcs', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
 															{ title: '* verifyPeerCertByName', id:'ss_basic_xray_vcn', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, type:'text', ph:'没有请留空'},
 															{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', data:{show:'xray_on x_json_off x_tls_on'}, multi: [
@@ -6169,6 +7701,7 @@ function toggleKeyMask(o, show){
 															//trojan
 															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', data:{show:'trojan_on'}, type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
 															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai', data:{show:'trojan_on'}, type:'checkbox', func:'v'},
+															{ td: render_allow_insecure_notice('trojan_on trojan_ai_on') },
 															{ title: 'pinnedPeerCertSha256', id:'ss_basic_trojan_pcs', data:{show:'trojan_on trojan_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
 															{ title: 'verifyPeerCertByName', id:'ss_basic_trojan_vcn', data:{show:'trojan_on trojan_ai_off'}, type:'text', ph:'没有请留空'},
 															{ title: 'SNI', id:'ss_basic_trojan_sni', data:{show:'trojan_on'}, type:'text'},
@@ -6192,6 +7725,7 @@ function toggleKeyMask(o, show){
 															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', data:{show:'hy2_on hy2_obfs_on'}, type:'text', maxlen:'300'},
 															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', data:{show:'hy2_on'}, type:'text'},
 															{ title: '允许不安全', id:'ss_basic_hy2_ai', data:{show:'hy2_on'}, type:'checkbox', func:'v'},
+															{ td: render_allow_insecure_notice('hy2_on hy2_ai_on') },
 															{ title: 'pinnedPeerCertSha256', id:'ss_basic_hy2_pcs', data:{show:'hy2_on hy2_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
 															{ title: 'verifyPeerCertByName', id:'ss_basic_hy2_vcn', data:{show:'hy2_on hy2_ai_off'}, type:'text', ph:'没有请留空'},
 															{ title: 'congestion', id:'ss_basic_hy2_cg', data:{show:'hy2_on'}, type:'select', func:'v', options:option_hy2_cg, maxlen:'300', value: "brutal"},
@@ -6802,6 +8336,7 @@ function toggleKeyMask(o, show){
 																{ id:'ss_basic_hy2_cg_opt', type:'select', style:'width:70px', options:option_hy2_cg, value:'brutal'},
 															]},
 															{ title: '订阅节点允许不安全', id:'ss_basic_sub_ai', hint:'113', type:'checkbox', value:true},
+															{ title: '显示逐节点订阅日志', id:'ss_basic_sub_node_log', type:'checkbox', value:false},
 															{ title: '下载订阅时走代理网络', id:'ss_basic_online_links_proxy', type:'select', style:'width:auto', options:[["0", "自动判断"], ["1", "走代理"], ["2", "不走代理"]], value:'0'},
 															{ title: '自定义UserAgent', id:'ss_basic_online_ua', type:'select', style:'width:auto', hint:'112', options:[["0", "fancyss默认（≥3.3.9）"], ["1", "curl/wget（≤3.3.8）"], ["2", "V2rayN"], ["3", "V2rayNG"], ["4", "Shadowrocket"]], value:'0'},
 															{ title: '订阅计划任务', multi: [
@@ -6827,10 +8362,10 @@ function toggleKeyMask(o, show){
 												</table>
 												<table id="table_link" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 													<script type="text/javascript">
-														var ph1 = "填入以ss://或者ssr://或者vmess://或者vless://开头的链接，多个链接请分行填写";
+														var ph1 = "填入以ss://、ssr://、vmess://、vless://、trojan://、hysteria2://、hy2://、tuic://、naive+https://、naive+quic://开头的链接，多个链接请分行填写";
 														$('#table_subscribe').forms([
-															{ title: '通过ss/ssr/vmess/vless链接添加节点', thead:'1'},
-															{ title: 'ss/ssr/vmess/vless链接', id:'ss_base64_links', type:'textarea', hint:117, rows:'11', ph:ph1},
+															{ title: '通过分享链接添加节点', thead:'1'},
+															{ title: '分享链接', id:'ss_base64_links', type:'textarea', hint:117, rows:'11', ph:ph1},
 															{ title: '操作', suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(4)">解析并保存为节点</a>'},
 														]);
 													</script>
@@ -6887,10 +8422,12 @@ function toggleKeyMask(o, show){
 														$('#table_addons').forms([
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
 															{ title: '导出fancyss配置', hint:'24', multi: [
-																{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(1);" value="导出配置">'},
+																{ suffix:'<input type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:148px;padding:5px 12px;" onclick="download_route_file(1);" value="导出旧版兼容配置">'},
+																{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:148px;padding:5px 12px;" onclick="download_route_file(12);" value="导出新版本JSON配置">'},
 																{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="remove_SS_node();" value="清空配置">'},
 																{ suffix:'&nbsp;<input type="button" class="ss_btn" style="cursor:pointer;" onclick="download_route_file(2);" value="打包插件">'},
 															]},
+															{ td: '<tr><td></td><td style="font-size:11px;color:#A0A0A0;line-height:1.8;">旧版兼容配置：用于回退旧版 fancyss 恢复；新版本JSON配置：用于当前新版本原生恢复。</td></tr>'},
 															{ title: '恢复fancyss配置', hint:'24', multi: [
 																{ suffix:'<input style="color:#FFCC00;*color:#000;width: 200px;" id="ss_file" type="file" name="file"/>'},
 																{ suffix:'<img id="loadingicon" style="margin-left:5px;margin-right:5px;display:none;" src="/images/InternetScan.gif"/>'},

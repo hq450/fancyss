@@ -147,7 +147,7 @@ gen_folder(){
 		mv ./shadowsocks/bin-mtk ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		rm -rf ./shadowsocks/bin/README.md
-		echo mtk > ./shadowsocks/.valid
+		echo ipq64 > ./shadowsocks/.valid
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"mtk\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "ipq32" ];then

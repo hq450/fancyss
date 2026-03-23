@@ -2,6 +2,7 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 source /koolshare/scripts/base.sh
+source /koolshare/scripts/ss_node_common.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
 LC_ALL=C
@@ -11,19 +12,51 @@ LOG_FILE=/tmp/upload/ss_log.txt
 DIR="/tmp/fancyss_subs"
 LOCAL_NODES_SPL="$DIR/ss_nodes_spl.txt"
 LOCAL_NODES_BAK="$DIR/ss_nodes_bak.txt"
-NODES_SEQ=$(dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
-NODE_INDEX=$(echo ${NODES_SEQ} | sed 's/.*[[:space:]]//')
+LOCAL_SPLIT_META="$DIR/local_split_meta.tsv"
+ACTIVE_SOURCE_TAGS="$DIR/active_source_tags.txt"
+SCHEMA2_RAW_JSONL="$DIR/schema2_nodes_raw.txt"
+SCHEMA2_EXPORT_JSONL="$DIR/schema2_nodes_export.txt"
+SUB_RAW_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/raw"
+SUB_PARSED_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/parsed"
+# 订阅缓存的 raw / parsed / meta 都放在持久化目录。
+# 每次调整 meta 结构或比对语义时，只需要递增 schema，
+# 下次订阅就会自动判定旧 meta 失效并重建缓存。
+SUB_PARSED_CACHE_META_SCHEMA="2"
+SUB_STORAGE_SCHEMA=$(dbus get fss_data_schema)
+[ "${SUB_STORAGE_SCHEMA}" = "2" ] || SUB_STORAGE_SCHEMA="1"
+NODES_SEQ=""
+NODE_INDEX=""
+SEQ_NU="0"
 SUB_MODE=$(dbus get ssr_subscribe_mode)
 [ -z "${SUB_MODE}" ] && SUB_MODE=2
 HY2_UP_SPEED=$(dbus get ss_basic_hy2_up_speed)
 HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
 HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)
-CURR_NODE=$(dbus get ssconf_basic_node)
+CURR_NODE=""
+FAILOVER_NODE=""
+CURR_NODE_NAME=""
+CURR_NODE_TYPE=""
+CURR_NODE_SERVER=""
+CURR_NODE_PORT=""
+FAILOVER_NODE_NAME=""
+FAILOVER_NODE_TYPE=""
+FAILOVER_NODE_SERVER=""
+FAILOVER_NODE_PORT=""
+SUB_REWRITE_ALL=0
+SUB_LOCAL_CHANGED=0
+SUB_HAS_FAILURE=0
 SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
 SUB_AI=$(dbus get ss_basic_sub_ai)
 [ -z "${SUB_BY_PROXY}" ] && SUB_BY_PROXY=0
 KEY_WORDS_1=$(dbus get ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(dbus get ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
+KEY_WORDS_1_RAW=$(dbus get ss_basic_exclude | sed 's/,$//g')
+KEY_WORDS_2_RAW=$(dbus get ss_basic_include | sed 's/,$//g')
+SUB_ONLINE_URLS=""
+SUB_ONLINE_URLS_READY=0
+SUB_VERBOSE_NODE_LOG=$(dbus get ss_basic_sub_node_log)
+[ -n "${SUB_VERBOSE_NODE_LOG}" ] || SUB_VERBOSE_NODE_LOG=0
+LOCAL_SPLIT_META_VALID=0
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
 
 # 20230701, some vairiable should be unset
@@ -63,6 +96,937 @@ unset PERP_BASE
 unset HOME
 unset PWD
 
+sub_list_node_ids(){
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		printf '%s' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d'
+	else
+		dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n
+	fi
+}
+
+sub_get_online_urls(){
+	if [ "${SUB_ONLINE_URLS_READY}" = "1" ];then
+		printf '%s\n' "${SUB_ONLINE_URLS}" | sed '/^$/d'
+		return 0
+	fi
+	SUB_ONLINE_URLS=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
+	SUB_ONLINE_URLS_READY=1
+	printf '%s\n' "${SUB_ONLINE_URLS}" | sed '/^$/d'
+}
+
+sub_get_online_url_count(){
+	sub_get_online_urls | wc -l
+}
+
+sub_get_source_domain_from_url(){
+	local sub_url="$1"
+	[ -n "${sub_url}" ] || return 1
+	sub_url=$(echo "${sub_url}" | sed 's/%20/ /g')
+	get_domain_name "${sub_url}"
+}
+
+sub_get_source_tag_from_domain(){
+	local domain_name="$1"
+	[ -n "${domain_name}" ] || return 1
+	printf '%s' "${domain_name}" | md5sum | awk '{print substr($1, 1, 4)}'
+}
+
+sub_get_source_alias_tag(){
+	local source_tag="$1"
+	local alias_tag=""
+	[ -n "${source_tag}" ] || return 1
+	alias_tag=$(dbus get ss_online_hash_${source_tag})
+	if [ -n "${alias_tag}" ];then
+		echo "${alias_tag}"
+	else
+		echo "${source_tag}"
+	fi
+}
+
+sub_get_source_tag_from_url(){
+	local domain_name
+	domain_name=$(sub_get_source_domain_from_url "$1")
+	[ -n "${domain_name}" ] || return 1
+	sub_get_source_alias_tag "$(sub_get_source_tag_from_domain "${domain_name}")"
+}
+
+sub_get_legacy_tag_from_url(){
+	local sub_url="$1"
+	[ -n "${sub_url}" ] || return 1
+	sub_url=$(echo "${sub_url}" | sed 's/%20/ /g')
+	printf '%s' "${sub_url}" | md5sum | awk '{print substr($1, 1, 4)}'
+}
+
+sub_reset_schema2_cache(){
+	rm -f "${SCHEMA2_RAW_JSONL}" "${SCHEMA2_EXPORT_JSONL}"
+}
+
+sub_mark_active_source_tag(){
+	local source_tag="$1"
+	[ -n "${source_tag}" ] || return 1
+	mkdir -p "${DIR}" >/dev/null 2>&1
+	touch "${ACTIVE_SOURCE_TAGS}"
+	grep -Fxq "${source_tag}" "${ACTIVE_SOURCE_TAGS}" 2>/dev/null || echo "${source_tag}" >> "${ACTIVE_SOURCE_TAGS}"
+}
+
+sub_find_group_hash_by_label(){
+	local group_label="$1"
+	local local_match=""
+	local dbus_match=""
+	local match_count
+
+	[ -n "${group_label}" ] || return 1
+	if [ -s "${LOCAL_SPLIT_META}" ];then
+		local_match=$(awk -F '\t' -v label="${group_label}" '$4 == label && $3 != "" && $3 != "null" && $3 != "user" {print $3}' "${LOCAL_SPLIT_META}" | sort -u)
+		match_count=$(printf '%s\n' "${local_match}" | sed '/^$/d' | wc -l)
+		if [ "${match_count}" = "1" ];then
+			printf '%s\n' "${local_match}" | sed -n '1p'
+			return 0
+		fi
+	fi
+	dbus_match=$(dbus list ss_online_group_ 2>/dev/null | while IFS='=' read -r key value
+	do
+		[ -n "${key}" ] || continue
+		[ "${value}" = "${group_label}" ] && echo "${key#ss_online_group_}"
+	done | sort -u)
+	match_count=$(printf '%s\n' "${dbus_match}" | sed '/^$/d' | wc -l)
+	if [ "${match_count}" = "1" ];then
+		printf '%s\n' "${dbus_match}" | sed -n '1p'
+		return 0
+	fi
+	return 1
+}
+
+sub_register_source_identity(){
+	local raw_tag="$1"
+	local canonical_tag="$2"
+	local group_label="$3"
+	[ -n "${raw_tag}" ] || return 1
+	[ -n "${canonical_tag}" ] || return 1
+	dbus set ss_online_hash_${raw_tag}="${canonical_tag}"
+	[ -n "${group_label}" ] && dbus set ss_online_group_${canonical_tag}="${group_label}"
+}
+
+sub_prune_source_identity(){
+	local active_file="$1"
+	local line key value canonical_tag
+	[ -s "${active_file}" ] || return 0
+	while IFS= read -r line
+	do
+		key="${line%%=*}"
+		[ -n "${key}" ] || continue
+		canonical_tag="${key#ss_online_group_}"
+		grep -Fxq "${canonical_tag}" "${active_file}" || dbus remove "${key}"
+	done <<-EOF
+$(dbus list ss_online_group_ 2>/dev/null)
+EOF
+	while IFS= read -r line
+	do
+		key="${line%%=*}"
+		value="${line#*=}"
+		[ -n "${key}" ] || continue
+		[ -n "${value}" ] || {
+			dbus remove "${key}"
+			continue
+		}
+		grep -Fxq "${value}" "${active_file}" || dbus remove "${key}"
+	done <<-EOF
+$(dbus list ss_online_hash_ 2>/dev/null)
+	EOF
+}
+
+sub_collect_active_link_hashes(){
+	local output_file="$1"
+	local online_urls="$2"
+	local url
+
+	[ -n "${output_file}" ] || return 1
+	: > "${output_file}"
+	printf '%s\n' "${online_urls}" | sed '/^$/d' | while IFS= read -r url
+	do
+		[ -n "${url}" ] || continue
+		echo "${url}" | md5sum | awk '{print $1}'
+	done | sort -u > "${output_file}"
+}
+
+sub_prune_subscribe_cache(){
+	local keep_hash_file="$1"
+	local raw_removed=0 parsed_removed=0 cache_path cache_name cache_hash
+
+	[ -s "${keep_hash_file}" ] || return 0
+	mkdir -p "${SUB_RAW_CACHE_DIR}" "${SUB_PARSED_CACHE_DIR}" >/dev/null 2>&1
+
+	for cache_path in "${SUB_RAW_CACHE_DIR}"/sub_*.txt
+	do
+		[ -e "${cache_path}" ] || continue
+		cache_name=$(basename "${cache_path}")
+		cache_hash="${cache_name#sub_}"
+		cache_hash="${cache_hash%.txt}"
+		if ! grep -Fxq "${cache_hash}" "${keep_hash_file}";then
+			rm -f "${cache_path}"
+			raw_removed=$((raw_removed + 1))
+		fi
+	done
+
+	for cache_path in "${SUB_PARSED_CACHE_DIR}"/sub_*
+	do
+		[ -e "${cache_path}" ] || continue
+		cache_name=$(basename "${cache_path}")
+		cache_hash="${cache_name#sub_}"
+		cache_hash="${cache_hash%.txt}"
+		cache_hash="${cache_hash%.meta}"
+		if ! grep -Fxq "${cache_hash}" "${keep_hash_file}";then
+			rm -f "${SUB_PARSED_CACHE_DIR}/sub_${cache_hash}.txt" "${SUB_PARSED_CACHE_DIR}/sub_${cache_hash}.meta"
+			parsed_removed=$((parsed_removed + 1))
+		fi
+	done
+
+	if [ "${raw_removed}" -gt "0" ] || [ "${parsed_removed}" -gt "0" ];then
+		echo_date "🧹清理过期订阅缓存：raw ${raw_removed} 份，parsed ${parsed_removed} 份。"
+	fi
+}
+
+sub_clear_subscribe_cache(){
+	local raw_removed parsed_removed
+	mkdir -p "${SUB_RAW_CACHE_DIR}" "${SUB_PARSED_CACHE_DIR}" >/dev/null 2>&1
+	raw_removed=$(find "${SUB_RAW_CACHE_DIR}" -type f -name 'sub_*.txt' | wc -l)
+	parsed_removed=$(find "${SUB_PARSED_CACHE_DIR}" -type f \( -name 'sub_*.txt' -o -name 'sub_*.meta' \) | wc -l)
+	rm -f "${SUB_RAW_CACHE_DIR}"/sub_*.txt "${SUB_PARSED_CACHE_DIR}"/sub_*.txt "${SUB_PARSED_CACHE_DIR}"/sub_*.meta 2>/dev/null
+	if [ "${raw_removed}" -gt "0" ] || [ "${parsed_removed}" -gt "0" ];then
+		echo_date "🧹已清空订阅缓存：raw ${raw_removed} 份，parsed ${parsed_removed} 个文件。"
+	fi
+}
+
+sub_retag_online_file(){
+	local file_path="$1"
+	local old_tag="$2"
+	local new_tag="$3"
+	local tmp_file
+
+	[ -f "${file_path}" ] || return 1
+	[ -n "${old_tag}" ] || return 1
+	[ -n "${new_tag}" ] || return 1
+	[ "${old_tag}" = "${new_tag}" ] && return 0
+	tmp_file="${file_path}.tmp"
+	jq -c --arg old "_${old_tag}" --arg new "_${new_tag}" '
+		if ((.group // "") | endswith($old)) then
+			.group |= sub(($old + "$"); $new)
+		else
+			.
+		end
+	' "${file_path}" > "${tmp_file}" || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${file_path}"
+}
+
+sub_canonicalize_online_source(){
+	local sub_count="$1"
+	local raw_tag="$2"
+	local online_group="$3"
+	local old_file new_file canonical_tag
+
+	[ -n "${sub_count}" ] || return 1
+	[ -n "${raw_tag}" ] || return 1
+	canonical_tag=$(sub_find_group_hash_by_label "${online_group}" 2>/dev/null)
+	[ -n "${canonical_tag}" ] || canonical_tag="${raw_tag}"
+	old_file="${DIR}/online_${sub_count}_${raw_tag}.txt"
+	if [ "${canonical_tag}" != "${raw_tag}" ] && [ -f "${old_file}" ];then
+		sub_retag_online_file "${old_file}" "${raw_tag}" "${canonical_tag}" || return 1
+		new_file="${DIR}/online_${sub_count}_${canonical_tag}.txt"
+		rm -f "${new_file}"
+		mv -f "${old_file}" "${new_file}"
+	fi
+	echo "${canonical_tag}"
+}
+
+sub_get_raw_cache_file(){
+	local sub_hash="$1"
+	[ -n "${sub_hash}" ] || return 1
+	mkdir -p "${SUB_RAW_CACHE_DIR}" >/dev/null 2>&1
+	echo "${SUB_RAW_CACHE_DIR}/sub_${sub_hash}.txt"
+}
+
+sub_get_parsed_cache_file(){
+	local sub_hash="$1"
+	[ -n "${sub_hash}" ] || return 1
+	mkdir -p "${SUB_PARSED_CACHE_DIR}" >/dev/null 2>&1
+	echo "${SUB_PARSED_CACHE_DIR}/sub_${sub_hash}.txt"
+}
+
+sub_get_parsed_cache_meta_file(){
+	local sub_hash="$1"
+	[ -n "${sub_hash}" ] || return 1
+	mkdir -p "${SUB_PARSED_CACHE_DIR}" >/dev/null 2>&1
+	echo "${SUB_PARSED_CACHE_DIR}/sub_${sub_hash}.meta"
+}
+
+sub_get_effective_sub_ai(){
+	local raw_sub_ai="$1"
+	[ -n "${raw_sub_ai}" ] || raw_sub_ai="0"
+	echo "${raw_sub_ai}"
+}
+
+sub_get_effective_hy2_context(){
+	local raw_hy2_up="$1"
+	local raw_hy2_dl="$2"
+	local raw_hy2_tfo="$3"
+	local raw_hy2_cg="$4"
+	local eff_hy2_up eff_hy2_dl eff_hy2_tfo eff_hy2_cg
+
+	eff_hy2_up="${raw_hy2_up}"
+	eff_hy2_dl="${raw_hy2_dl}"
+	eff_hy2_tfo="${raw_hy2_tfo}"
+	[ -n "${eff_hy2_tfo}" ] || eff_hy2_tfo="2"
+
+	# hy2 只有同时配置上下行带宽时，这两个值和 congestion 才真正影响最终节点内容。
+	if [ -z "${eff_hy2_up}" ] && [ -n "${eff_hy2_dl}" ];then
+		eff_hy2_dl=""
+	elif [ -n "${eff_hy2_up}" ] && [ -z "${eff_hy2_dl}" ];then
+		eff_hy2_up=""
+	fi
+
+	if [ -z "${eff_hy2_up}" ] && [ -z "${eff_hy2_dl}" ];then
+		eff_hy2_cg="bbr"
+	else
+		eff_hy2_cg="${raw_hy2_cg}"
+	fi
+
+	printf '%s\n%s\n%s\n%s\n' "${eff_hy2_up}" "${eff_hy2_dl}" "${eff_hy2_tfo}" "${eff_hy2_cg}"
+}
+
+sub_get_filter_signature(){
+	# 这里虽然函数名还叫 filter_signature，但实际表示的是“影响订阅解析结果的上下文签名”。
+	# 这里记录的是“最终会影响订阅节点内容”的有效上下文，而不是原始 dbus 输入值。
+	# 这样可以避免某些等价配置（例如 hy2 只填了单边带宽）导致的误判重解析。
+	local effective_sub_ai effective_hy2_up effective_hy2_dl effective_hy2_tfo effective_hy2_cg
+	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
+	{
+		read -r effective_hy2_up
+		read -r effective_hy2_dl
+		read -r effective_hy2_tfo
+		read -r effective_hy2_cg
+	} <<-EOF
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	EOF
+	printf '%s\n' \
+		"exclude=${KEY_WORDS_1_RAW}" \
+		"include=${KEY_WORDS_2_RAW}" \
+		"sub_mode=${SUB_MODE}" \
+		"sub_ai=${effective_sub_ai}" \
+		"hy2_up=${effective_hy2_up}" \
+		"hy2_dl=${effective_hy2_dl}" \
+		"hy2_tfo_switch=${effective_hy2_tfo}" \
+		"hy2_cg_opt=${effective_hy2_cg}" \
+		| md5sum | awk '{print $1}'
+}
+
+sub_update_parsed_cache_meta(){
+	local sub_hash="$1"
+	local parsed_file="$2"
+	local meta_file filter_sig effective_sub_ai effective_hy2_up effective_hy2_dl effective_hy2_tfo effective_hy2_cg
+	local has_ai_sensitive has_hy2_sensitive
+	[ -n "${sub_hash}" ] || return 1
+	meta_file=$(sub_get_parsed_cache_meta_file "${sub_hash}") || return 1
+	filter_sig=$(sub_get_filter_signature)
+	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
+	{
+		read -r effective_hy2_up
+		read -r effective_hy2_dl
+		read -r effective_hy2_tfo
+		read -r effective_hy2_cg
+	} <<-EOF
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	EOF
+	has_ai_sensitive="0"
+	has_hy2_sensitive="0"
+	if [ -f "${parsed_file}" ];then
+		if grep -q '"type":"8"' "${parsed_file}" 2>/dev/null;then
+			has_hy2_sensitive="1"
+		fi
+		if grep -Eq '"type":"(3|4|5|8)"' "${parsed_file}" 2>/dev/null;then
+			has_ai_sensitive="1"
+		fi
+	fi
+	cat > "${meta_file}" <<-EOF
+	schema_version=${SUB_PARSED_CACHE_META_SCHEMA}
+	filter_signature=${filter_sig}
+	exclude_keywords=${KEY_WORDS_1_RAW}
+	include_keywords=${KEY_WORDS_2_RAW}
+	sub_mode=${SUB_MODE}
+	sub_ai=${effective_sub_ai}
+	hy2_up=${effective_hy2_up}
+	hy2_dl=${effective_hy2_dl}
+	hy2_tfo_switch=${effective_hy2_tfo}
+	hy2_cg_opt=${effective_hy2_cg}
+	has_ai_sensitive=${has_ai_sensitive}
+	has_hy2_sensitive=${has_hy2_sensitive}
+	EOF
+}
+
+sub_parsed_cache_meta_matches(){
+	local sub_hash="$1"
+	local meta_file cached_schema cached_exclude cached_include cached_sub_mode cached_sub_ai
+	local cached_hy2_up cached_hy2_dl cached_hy2_tfo cached_hy2_cg has_ai_sensitive has_hy2_sensitive
+	local current_sub_ai current_hy2_up current_hy2_dl current_hy2_tfo current_hy2_cg
+	[ -n "${sub_hash}" ] || return 1
+	meta_file=$(sub_get_parsed_cache_meta_file "${sub_hash}") || return 1
+	[ -f "${meta_file}" ] || return 1
+	cached_schema=$(sed -n 's/^schema_version=//p' "${meta_file}" | sed -n '1p')
+	cached_exclude=$(sed -n 's/^exclude_keywords=//p' "${meta_file}" | sed -n '1p')
+	cached_include=$(sed -n 's/^include_keywords=//p' "${meta_file}" | sed -n '1p')
+	cached_sub_mode=$(sed -n 's/^sub_mode=//p' "${meta_file}" | sed -n '1p')
+	cached_sub_ai=$(sed -n 's/^sub_ai=//p' "${meta_file}" | sed -n '1p')
+	cached_hy2_up=$(sed -n 's/^hy2_up=//p' "${meta_file}" | sed -n '1p')
+	cached_hy2_dl=$(sed -n 's/^hy2_dl=//p' "${meta_file}" | sed -n '1p')
+	cached_hy2_tfo=$(sed -n 's/^hy2_tfo_switch=//p' "${meta_file}" | sed -n '1p')
+	cached_hy2_cg=$(sed -n 's/^hy2_cg_opt=//p' "${meta_file}" | sed -n '1p')
+	has_ai_sensitive=$(sed -n 's/^has_ai_sensitive=//p' "${meta_file}" | sed -n '1p')
+	has_hy2_sensitive=$(sed -n 's/^has_hy2_sensitive=//p' "${meta_file}" | sed -n '1p')
+	current_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
+	{
+		read -r current_hy2_up
+		read -r current_hy2_dl
+		read -r current_hy2_tfo
+		read -r current_hy2_cg
+	} <<-EOF
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	EOF
+	[ "${cached_schema}" = "${SUB_PARSED_CACHE_META_SCHEMA}" ] || return 1
+	[ -n "${cached_sub_mode}" ] || return 1
+	[ "${cached_exclude}" = "${KEY_WORDS_1_RAW}" ] || return 1
+	[ "${cached_include}" = "${KEY_WORDS_2_RAW}" ] || return 1
+	[ "${cached_sub_mode}" = "${SUB_MODE}" ] || return 1
+	if [ "${has_ai_sensitive}" = "1" ];then
+		[ "${cached_sub_ai}" = "${current_sub_ai}" ] || return 1
+	fi
+	if [ "${has_hy2_sensitive}" = "1" ];then
+		[ "${cached_hy2_up}" = "${current_hy2_up}" ] || return 1
+		[ "${cached_hy2_dl}" = "${current_hy2_dl}" ] || return 1
+		[ "${cached_hy2_tfo}" = "${current_hy2_tfo}" ] || return 1
+		[ "${cached_hy2_cg}" = "${current_hy2_cg}" ] || return 1
+	fi
+	return 0
+}
+
+sub_file_md5(){
+	local file_path="$1"
+	[ -f "${file_path}" ] || return 1
+	md5sum "${file_path}" | awk '{print $1}'
+}
+
+sub_log_node_success(){
+	[ "${SUB_VERBOSE_NODE_LOG}" = "1" ] || return 0
+	echo_date "$1"
+}
+
+sub_prepare_decoded_file(){
+	local short_hash="$1"
+	local encoded_file="${DIR}/sub_file_encode_${short_hash}.txt"
+	local decoded_file="${DIR}/sub_file_decode_${short_hash}.txt"
+	local head_count="0"
+
+	[ -f "${encoded_file}" ] || return 1
+	head_count=$(grep -Ec "^ss://|^ssr://|^vmess://|^vless://|^trojan://|^hysteria2://|^hy2://|^tuic://|^naive\\+https://|^naive\\+quic://" "${encoded_file}")
+	if [ "${head_count}" -gt "0" ];then
+		echo_date "📄检测到明文的订阅格式，无需解码，继续！"
+		cp -f "${encoded_file}" "${decoded_file}"
+	else
+		tr -d '\n' < "${encoded_file}" | sed 's/-/+/g;s/_/\//g' | sed 's/$/===/' | base64 -d > "${decoded_file}"
+		if [ "$?" != "0" ];then
+			echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
+			return 1
+		fi
+	fi
+
+	if [ -n "$(which dos2unix)" ];then
+		dos2unix -u "${decoded_file}"
+	else
+		tr -d '\r' < "${decoded_file}" | sponge "${decoded_file}"
+	fi
+
+	return 0
+}
+
+sub_update_raw_cache(){
+	local sub_hash="$1"
+	local decoded_file="$2"
+	local cache_file
+	[ -n "${sub_hash}" ] || return 1
+	[ -f "${decoded_file}" ] || return 1
+	cache_file=$(sub_get_raw_cache_file "${sub_hash}") || return 1
+	cp -f "${decoded_file}" "${cache_file}"
+}
+
+sub_update_parsed_cache(){
+	local sub_hash="$1"
+	local parsed_file="$2"
+	local cache_file
+	[ -n "${sub_hash}" ] || return 1
+	[ -f "${parsed_file}" ] || return 1
+	cache_file=$(sub_get_parsed_cache_file "${sub_hash}") || return 1
+	cp -f "${parsed_file}" "${cache_file}"
+	sub_update_parsed_cache_meta "${sub_hash}" "${parsed_file}"
+}
+
+sub_raw_cache_same_as_current(){
+	local sub_hash="$1"
+	local short_hash="$2"
+	local decoded_file="$3"
+	local cache_file local_file
+
+	[ -n "${sub_hash}" ] || return 1
+	[ -n "${short_hash}" ] || return 1
+	[ -f "${decoded_file}" ] || return 1
+	cache_file=$(sub_get_raw_cache_file "${sub_hash}") || return 1
+	[ -f "${cache_file}" ] || return 1
+	local_file=$(find "${DIR}" -name "local_*_${short_hash}.txt" | head -n1)
+	[ -n "${local_file}" ] || return 1
+	[ "$(sub_file_md5 "${decoded_file}")" = "$(sub_file_md5 "${cache_file}")" ]
+}
+
+sub_restore_from_parsed_cache(){
+	local sub_hash="$1"
+	local short_hash="$2"
+	local sub_count="$3"
+	local parsed_cache local_file parsed_md5 local_md5
+
+	[ -n "${sub_hash}" ] || return 1
+	[ -n "${short_hash}" ] || return 1
+	[ -n "${sub_count}" ] || return 1
+	parsed_cache=$(sub_get_parsed_cache_file "${sub_hash}") || return 1
+	[ -f "${parsed_cache}" ] || return 1
+	if ! sub_parsed_cache_meta_matches "${sub_hash}";then
+		echo_date "♻️检测到订阅筛选条件或默认参数发生变化，需要重新解析并重写节点。"
+		return 1
+	fi
+	local_file=$(find "${DIR}" -name "local_*_${short_hash}.txt" | head -n1)
+	parsed_md5=$(sub_nodes_file_md5 "${parsed_cache}")
+	[ -n "${local_file}" ] && local_md5=$(sub_nodes_file_md5 "${local_file}")
+	if [ -n "${local_md5}" ] && [ "${local_md5}" = "${parsed_md5}" ];then
+		echo_date "♻️原始订阅内容和上次成功订阅一致，跳过解析和写入。"
+		sub_mark_active_source_tag "${short_hash}"
+		return 0
+	fi
+	echo_date "♻️原始订阅内容未变化，但当前订阅来源的本地节点被修改/删除，正在用上次成功解析结果恢复。"
+	[ -n "${local_file}" ] && rm -f "${local_file}"
+	cp -f "${parsed_cache}" "${DIR}/local_${sub_count}_${short_hash}.txt"
+	sub_mark_active_source_tag "${short_hash}"
+	SUB_LOCAL_CHANGED=1
+	return 0
+}
+
+sub_prepare_schema2_raw_jsonl(){
+	local blob_file order_file
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
+	[ -s "${SCHEMA2_RAW_JSONL}" ] && return 0
+	mkdir -p "${DIR}"
+	blob_file="${DIR}/schema2_node_blobs.txt"
+	order_file="${DIR}/schema2_node_order.txt"
+	dbus list fss_node_ 2>/dev/null | while IFS= read -r line
+	do
+		case "${line}" in
+		fss_node_[0-9]*=*)
+			local key="${line%%=*}"
+			local node_id="${key#fss_node_}"
+			local blob="${line#*=}"
+			printf '%s\t%s\n' "${node_id}" "${blob}"
+			;;
+		esac
+	done > "${blob_file}"
+	printf '%s' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d' > "${order_file}"
+	: > "${SCHEMA2_RAW_JSONL}"
+	if [ -s "${order_file}" ];then
+		awk -F '\t' '
+			NR == FNR { order[++count] = $1; next }
+			{ blob[$1] = $2 }
+			END {
+				for (i = 1; i <= count; i++) {
+					if (order[i] in blob) {
+						print blob[order[i]]
+					}
+				}
+			}
+		' "${order_file}" "${blob_file}" | while IFS= read -r blob
+		do
+			[ -n "${blob}" ] || continue
+			fss_b64_decode "${blob}"
+			echo
+		done > "${SCHEMA2_RAW_JSONL}"
+	else
+		awk -F '\t' '{print $2}' "${blob_file}" | while IFS= read -r blob
+		do
+			[ -n "${blob}" ] || continue
+			fss_b64_decode "${blob}"
+			echo
+		done > "${SCHEMA2_RAW_JSONL}"
+	fi
+	rm -f "${blob_file}" "${order_file}"
+	return 0
+}
+
+sub_prepare_schema2_export_jsonl(){
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
+	[ -f "${SCHEMA2_EXPORT_JSONL}" ] && return 0
+	sub_prepare_schema2_raw_jsonl || return 1
+	if [ ! -s "${SCHEMA2_RAW_JSONL}" ];then
+		: > "${SCHEMA2_EXPORT_JSONL}"
+		return 0
+	fi
+	jq -c '
+		def normalize_json_config:
+			. as $raw
+			| if (($raw | type) != "string") or $raw == "" then
+				$raw
+			else
+				(
+					try ($raw | fromjson | tojson)
+					catch (
+						try ($raw | gsub("\\\\\""; "\"") | fromjson | tojson)
+						catch $raw
+					)
+				)
+			end;
+		with_entries(select(.value != "" and .value != null))
+		| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
+		| if has("xray_json") then .xray_json |= normalize_json_config else . end
+		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
+		| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+	' "${SCHEMA2_RAW_JSONL}" > "${SCHEMA2_EXPORT_JSONL}" || return 1
+	return 0
+}
+
+sub_extract_groups_from_file(){
+	local file_path="$1"
+	[ -f "${file_path}" ] || return 0
+	jq -r '.group // "null"' "${file_path}" 2>/dev/null
+}
+
+sub_refresh_node_state(){
+	NODES_SEQ=$(sub_list_node_ids | tr '\n' ' ' | sed 's/[[:space:]]$//')
+	NODE_INDEX=$(sub_list_node_ids | sed -n '$p')
+	SEQ_NU=$(sub_list_node_ids | sed '/^$/d' | wc -l)
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		CURR_NODE=$(dbus get fss_node_current)
+		FAILOVER_NODE=$(dbus get fss_node_failover_backup)
+	else
+		CURR_NODE=$(dbus get ssconf_basic_node)
+		FAILOVER_NODE=$(dbus get ss_failover_s4_3)
+	fi
+	[ -z "${CURR_NODE}" ] && CURR_NODE=$(sub_list_node_ids | sed -n '1p')
+	if [ -n "${CURR_NODE}" ] && ! sub_node_exists_in_order "${CURR_NODE}";then
+		CURR_NODE=$(sub_list_node_ids | sed -n '1p')
+	fi
+}
+
+sub_resolve_field_name(){
+	fss_resolve_node_field_name "$1"
+}
+
+sub_get_node_field_plain(){
+	local node_id="$1"
+	local field="$2"
+	local store_field value=""
+
+	[ -z "${node_id}" ] && return 1
+	[ -z "${field}" ] && return 1
+	store_field=$(sub_resolve_field_name "${field}")
+
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		value=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null | jq -r --arg k "${store_field}" '.[$k] // empty')
+	else
+		value=$(dbus get ssconf_basic_${store_field}_${node_id})
+		if [ -n "${value}" ] && fss_is_b64_field "${store_field}"; then
+			value=$(fss_b64_decode "${value}")
+		fi
+	fi
+
+	printf '%s' "${value}"
+}
+
+sub_get_node_server_plain(){
+	local node_id="$1"
+	local server
+	server=$(sub_get_node_field_plain "${node_id}" server)
+	[ -z "${server}" ] && server=$(sub_get_node_field_plain "${node_id}" hy2_server)
+	printf '%s' "${server}"
+}
+
+sub_get_node_port_plain(){
+	local node_id="$1"
+	local port
+	port=$(sub_get_node_field_plain "${node_id}" port)
+	[ -z "${port}" ] && port=$(sub_get_node_field_plain "${node_id}" hy2_port)
+	printf '%s' "${port}"
+}
+
+sub_node_exists_in_order(){
+	local node_id="$1"
+	[ -z "${node_id}" ] && return 1
+	sub_list_node_ids | grep -Fxq "${node_id}"
+}
+
+sub_capture_active_nodes(){
+	sub_refresh_node_state
+	CURR_NODE_NAME=$(sub_get_node_field_plain "${CURR_NODE}" name)
+	CURR_NODE_TYPE=$(sub_get_node_field_plain "${CURR_NODE}" type)
+	CURR_NODE_SERVER=$(sub_get_node_server_plain "${CURR_NODE}")
+	CURR_NODE_PORT=$(sub_get_node_port_plain "${CURR_NODE}")
+	FAILOVER_NODE_NAME=$(sub_get_node_field_plain "${FAILOVER_NODE}" name)
+	FAILOVER_NODE_TYPE=$(sub_get_node_field_plain "${FAILOVER_NODE}" type)
+	FAILOVER_NODE_SERVER=$(sub_get_node_server_plain "${FAILOVER_NODE}")
+	FAILOVER_NODE_PORT=$(sub_get_node_port_plain "${FAILOVER_NODE}")
+}
+
+sub_find_node_id_in_file(){
+	local file="$1"
+	local name="$2"
+	local type="$3"
+	local server="$4"
+	local port="$5"
+	[ -f "${file}" ] || return 1
+	jq -r \
+		--arg name "${name}" \
+		--arg type "${type}" \
+		--arg server "${server}" \
+		--arg port "${port}" \
+		'select((.name // "") == $name and (.type // "") == $type and ((.server // .hy2_server // "") == $server) and ((.port // .hy2_port // "") == $port)) | ._id // empty' \
+		"${file}" 2>/dev/null | sed -n '1p'
+}
+
+sub_export_local_node_json(){
+	local node_id="$1"
+	[ -z "${node_id}" ] && return 1
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null | jq -c '
+			def normalize_json_config:
+				. as $raw
+				| if (($raw | type) != "string") or $raw == "" then
+					$raw
+				else
+					(
+						try ($raw | fromjson | tojson)
+						catch (
+							try ($raw | gsub("\\\\\""; "\"") | fromjson | tojson)
+							catch $raw
+						)
+					)
+				end;
+			with_entries(select(.value != "" and .value != null))
+			| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
+			| if has("xray_json") then .xray_json |= normalize_json_config else . end
+			| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
+			| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+		'
+	else
+		fss_build_legacy_node_json "${node_id}" | jq -c .
+	fi
+}
+
+sub_nodes_file_md5(){
+	local file="$1"
+	[ -f "${file}" ] || return 1
+	jq -S -c '
+		def normalize_json_config:
+			. as $raw
+			| if (($raw | type) != "string") or $raw == "" then
+				$raw
+			else
+				(
+					try ($raw | fromjson | tojson)
+					catch (
+						try ($raw | gsub("\\\\\""; "\"") | fromjson | tojson)
+						catch $raw
+					)
+				)
+			end;
+		def legacy_b64_mode:
+			((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+		def decode_b64_field($field):
+			if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+				.[$field] |= (try @base64d catch .)
+			else
+				.
+			end;
+		decode_b64_field("password")
+		| decode_b64_field("naive_pass")
+		| decode_b64_field("v2ray_json")
+		| decode_b64_field("xray_json")
+		| decode_b64_field("tuic_json")
+		| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
+		| if has("xray_json") then .xray_json |= normalize_json_config else . end
+		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
+		| del(._id, ._schema, ._rev, ._source, ._updated_at, ._migrated_from, ._b64_mode, .server_ip, .latency, .ping)
+	' "${file}" 2>/dev/null | md5sum | awk '{print $1}'
+}
+
+sub_validate_jsonl_file(){
+	local file="$1"
+	local total=0 valid=0
+	[ -f "${file}" ] || return 1
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		total=$((total + 1))
+		printf '%s\n' "${line}" | jq -c . >/dev/null 2>&1 || {
+			echo_date "⚠️检测到无效的节点JSON，第${total}行校验失败！"
+			return 1
+		}
+		valid=$((valid + 1))
+	done < "${file}"
+	[ "${total}" -gt 0 ] || return 1
+	[ "${valid}" = "${total}" ]
+}
+
+sub_count_group_nodes(){
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
+		sub_extract_groups_from_file "${SCHEMA2_EXPORT_JSONL}" | while IFS= read -r raw_group
+		do
+			local group_name
+			group_name=$(normalize_group_name "${raw_group}" 2>/dev/null) || true
+			[ -n "${group_name}" ] && echo "${group_name}"
+		done | sed '/^$/d' | wc -l
+	else
+		dbus list ssconf_basic_group_ | sed '/^ssconf_basic_group_[0-9]\+=$/d' | wc -l
+	fi
+}
+
+sub_count_unique_groups(){
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
+		sub_extract_groups_from_file "${SCHEMA2_EXPORT_JSONL}" | while IFS= read -r raw_group
+		do
+			local group_name
+			group_name=$(normalize_group_name "${raw_group}" 2>/dev/null) || true
+			[ -n "${group_name}" ] && echo "${group_name}"
+		done | sed '/^$/d' | sort -u | wc -l
+	else
+		dbus list ssconf_basic_group_ | cut -d "=" -f2 | sort -u | wc -l
+	fi
+}
+
+sub_write_nodes_schema2(){
+	local input_file="$1"
+	local order_csv next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts
+	local node_id stored_b64 export_b64 export_json
+
+	[ -f "${input_file}" ] || return 1
+	mapped_file="${input_file}.mapped"
+	meta_file="${input_file}.meta"
+	: > "${mapped_file}"
+	order_csv=$(dbus get fss_node_order)
+	next_id=$(dbus get fss_node_next_id)
+	[ -n "${next_id}" ] || next_id=1
+	max_id=$(printf '%s' "${order_csv}" | tr ',' '\n' | sed '/^$/d' | sort -n | tail -n1)
+	[ -n "${max_id}" ] || max_id=0
+	reserved_max=$(jq -r '._id // empty' "${input_file}" 2>/dev/null | sed '/^$/d' | sort -n | tail -n1)
+	if [ -n "${reserved_max}" ] && [ "${reserved_max}" -gt "${max_id}" ] 2>/dev/null;then
+		max_id="${reserved_max}"
+	fi
+	if [ "${next_id}" -le "${max_id}" ] 2>/dev/null;then
+		next_id=$((max_id + 1))
+	fi
+	now_ts=$(date +%s)
+		jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" '
+			def legacy_b64_mode:
+				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+			def decode_b64_field($field):
+				if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+					.[$field] |= (try @base64d catch .)
+				else
+					.
+			end;
+		def clean:
+			with_entries(select(.value != "" and .value != null))
+			| decode_b64_field("password")
+			| decode_b64_field("naive_pass")
+			| decode_b64_field("v2ray_json")
+			| decode_b64_field("xray_json")
+			| decode_b64_field("tuic_json")
+			| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end;
+		reduce inputs as $node (
+			{next: $next, rows: []};
+			($node | clean) as $clean
+			| ($clean._id // "" | tostring) as $raw_id
+			| (if ($raw_id | test("^[0-9]+$")) then ($raw_id | tonumber) else .next end) as $id
+			| .rows += [[
+				($id | tostring),
+				(($clean + {
+					"_schema": 2,
+					"_id": ($id | tostring),
+					"_rev": 1,
+					"_b64_mode": "raw",
+					"_source": "subscribe",
+					"_updated_at": $ts
+				}) | tojson | @base64),
+				($clean | tojson | @base64)
+			]]
+			| .next = (if ($raw_id | test("^[0-9]+$")) then .next else (.next + 1) end)
+		)
+		| .rows[]
+		| @tsv
+	' "${input_file}" > "${meta_file}" 2>/dev/null || {
+		rm -f "${mapped_file}" "${meta_file}"
+		return 1
+	}
+
+	while IFS='	' read -r node_id stored_b64 export_b64
+	do
+		[ -n "${node_id}" ] || continue
+		[ -n "${stored_b64}" ] || continue
+		dbus set fss_node_${node_id}="${stored_b64}"
+		export_json=$(fss_b64_decode "${export_b64}")
+		printf '%s\n' "${export_json}" >> "${mapped_file}"
+		imported_order="${imported_order}${imported_order:+,}${node_id}"
+		if [ "${node_id}" -gt "${max_id}" ] 2>/dev/null;then
+			max_id="${node_id}"
+		fi
+	done < "${meta_file}"
+	rm -f "${meta_file}"
+
+	if [ -z "${imported_order}" ];then
+		rm -f "${mapped_file}"
+		return 1
+	fi
+	if [ -n "${order_csv}" ];then
+		dbus set fss_node_order="${order_csv},${imported_order}"
+	else
+		dbus set fss_node_order="${imported_order}"
+	fi
+	dbus set fss_data_schema=2
+	dbus set fss_node_next_id="$((max_id + 1))"
+	mv "${mapped_file}" "${input_file}"
+	return 0
+}
+
+sub_restore_active_nodes_after_rewrite(){
+	local input_file="$1"
+	local restore_current="" restore_failover="" first_id=""
+
+	first_id=$(sub_list_node_ids | sed -n '1p')
+
+	if sub_node_exists_in_order "${CURR_NODE}";then
+		restore_current="${CURR_NODE}"
+	else
+		restore_current=$(sub_find_node_id_in_file "${input_file}" "${CURR_NODE_NAME}" "${CURR_NODE_TYPE}" "${CURR_NODE_SERVER}" "${CURR_NODE_PORT}")
+	fi
+	[ -z "${restore_current}" ] && restore_current="${first_id}"
+
+	if sub_node_exists_in_order "${FAILOVER_NODE}";then
+		restore_failover="${FAILOVER_NODE}"
+	else
+		restore_failover=$(sub_find_node_id_in_file "${input_file}" "${FAILOVER_NODE_NAME}" "${FAILOVER_NODE_TYPE}" "${FAILOVER_NODE_SERVER}" "${FAILOVER_NODE_PORT}")
+	fi
+
+	[ -n "${restore_current}" ] && dbus set fss_node_current="${restore_current}" || dbus remove fss_node_current
+	[ -n "${restore_failover}" ] && dbus set fss_node_failover_backup="${restore_failover}" || dbus remove fss_node_failover_backup
+}
+
+sub_refresh_node_state
+
 # 一个节点里可能有的所有信息，记录用
 # ssconf_basic_name_
 # ssconf_basic_server_
@@ -92,6 +1056,7 @@ unset PWD
 # ssconf_basic_v2ray_kcp_seed
 # ssconf_basic_v2ray_headtype_quic_
 # ssconf_basic_v2ray_grpc_mode_
+# ssconf_basic_v2ray_grpc_authority_
 # ssconf_basic_v2ray_network_path_
 # ssconf_basic_v2ray_network_host_
 # ssconf_basic_v2ray_network_security_
@@ -114,6 +1079,7 @@ unset PWD
 # ssconf_basic_xray_kcp_seed
 # ssconf_basic_xray_headtype_quic_
 # ssconf_basic_xray_grpc_mode_
+# ssconf_basic_xray_grpc_authority_
 # ssconf_basic_xray_xhttp_mode_
 # ssconf_basic_xray_network_path_
 # ssconf_basic_xray_network_host_
@@ -373,6 +1339,20 @@ decode_urllink(){
 
 json2skipd(){
 	local file_name=$1
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_write_nodes_schema2 "${DIR}/${file_name}.txt" || return 1
+		if [ "${SUB_REWRITE_ALL}" = "1" ];then
+			sub_restore_active_nodes_after_rewrite "${DIR}/${file_name}.txt"
+			SUB_REWRITE_ALL=0
+		elif [ -z "$(dbus get fss_node_current)" ];then
+			local first_id=$(sub_list_node_ids | sed -n '1p')
+			[ -n "${first_id}" ] && dbus set fss_node_current="${first_id}"
+		fi
+		echo_date "😀节点信息写入成功！"
+		sync
+		sub_refresh_node_state
+		return 0
+	fi
 	cat > $DIR/${file_name}.sh <<-EOF
 		#!/bin/sh
 		source /koolshare/scripts/base.sh
@@ -425,7 +1405,23 @@ get_group_hash_value(){
 }
 
 sanitize_invalid_local_groups(){
-	local key value node
+	local key value node changed=0 invalid_file
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_prepare_schema2_raw_jsonl >/dev/null 2>&1 || return 0
+		invalid_file="${DIR}/schema2_invalid_groups.txt"
+		jq -r 'select(has("group")) | [._id // empty, (.group // "")] | @tsv' "${SCHEMA2_RAW_JSONL}" > "${invalid_file}" 2>/dev/null
+		while IFS='	' read -r node value
+		do
+			[ -z "${node}" ] && continue
+			if ! normalize_group_name "${value}" >/dev/null 2>&1;then
+				echo_date "🧹检测到第${node}个节点的group值无效，已移除该group标记。"
+				fss_set_node_field_plain "${node}" group ""
+				changed=1
+			fi
+		done < "${invalid_file}"
+		[ "${changed}" = "1" ] && sub_reset_schema2_cache
+		return 0
+	fi
 	while IFS='=' read -r key value
 	do
 		[ -z "${key}" ] && continue
@@ -442,13 +1438,14 @@ EOF
 get_sub_group_fallback_by_hash(){
 	local sub_hash="$1"
 	[ -z "${sub_hash}" ] && return 1
-	local online_sub_urls=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
-	local online_sub_url sublink_url sublink_hash
+	local online_sub_urls=$(sub_get_online_urls)
+	local online_sub_url sublink_url source_tag legacy_tag
 	for online_sub_url in ${online_sub_urls}
 	do
 		sublink_url=$(echo "${online_sub_url}" | sed 's/%20/ /g')
-		sublink_hash=$(echo "${sublink_url}" | md5sum | awk '{print $1}')
-		if [ "${sublink_hash:0:4}" == "${sub_hash}" ];then
+		source_tag=$(sub_get_source_tag_from_url "${sublink_url}")
+		legacy_tag=$(sub_get_legacy_tag_from_url "${sublink_url}")
+		if [ "${source_tag}" = "${sub_hash}" ] || [ "${legacy_tag}" = "${sub_hash}" ];then
 			get_domain_name "${sublink_url}"
 			return 0
 		fi
@@ -477,7 +1474,7 @@ get_group_label_from_file(){
 	local file_path="$1"
 	local fallback_name="$2"
 	[ -z "${file_path}" -o ! -f "${file_path}" ] && echo -n "${fallback_name}" && return 0
-	local group_label=$(cat "${file_path}" | run jq -r '.group' | while IFS= read -r raw_group
+	local group_label=$(sub_extract_groups_from_file "${file_path}" | while IFS= read -r raw_group
 	do
 		local real_group=$(normalize_group_name "${raw_group}")
 		[ -n "${real_group}" ] && echo "${real_group}"
@@ -494,7 +1491,24 @@ skipdb2json(){
 		return
 	fi
 	echo_date "➡️开始整理本地节点到文件，请稍等..."
+	rm -f "${LOCAL_SPLIT_META}"
+	LOCAL_SPLIT_META_VALID=0
 	sanitize_invalid_local_groups
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_prepare_schema2_export_jsonl || {
+			echo_date "⚠️节点文件处理失败！请重启路由器后重试！"
+			exit 1
+		}
+		cp -f "${SCHEMA2_EXPORT_JSONL}" "${LOCAL_NODES_SPL}"
+		if [ -f "${LOCAL_NODES_SPL}" ];then
+			echo_date "📁所有本地节点成功整理到文件：${LOCAL_NODES_SPL}"
+			cp -rf ${LOCAL_NODES_SPL} ${LOCAL_NODES_BAK}
+		else
+			echo_date "⚠️节点文件处理失败！请重启路由器后重试！"
+			exit 1
+		fi
+		return 0
+	fi
 	# 将所有节点数据储存到文件，顺便清理掉空值的key
 	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >${DIR}/ssconf_keyval.txt
 	NODES_SEQ=$(cat ${DIR}/ssconf_keyval.txt | sed -n 's/name_\([0-9]\+\)=.*/\1/p'| sort -n)
@@ -516,50 +1530,140 @@ nodes2files(){
 	if [ "${SEQ_NU}" == "0" ];then
 		return
 	fi
-	rm -rf $DIR/local_*.txt
-	local SP_NAME
-	local SP_NUBS
-	local SP_COUN=0
-	local SP_STAT=$(cat ${LOCAL_NODES_SPL} | run jq -r '.group' | while IFS= read -r raw_group
-	do
-		local group_hash=$(get_group_hash_value "${raw_group}")
-		[ -n "${group_hash}" ] && echo "${group_hash}" || echo "null"
-	done | uniq -c | sed 's/^[[:space:]]\+//g' | sed 's/[[:space:]]/|/g')
-	for SP_LINE in ${SP_STAT}
-	do
-		SP_NAME=$(echo ${SP_LINE} | awk -F"|" '{print $2}')
-		SP_NUBS=$(echo ${SP_LINE} | awk -F"|" '{print $1}')
-		if [ "${SP_NAME}" == "null" -o -z "${SP_NAME}" ];then
-			# echo_date "📂拆分：local_0_user.txt，共计${SP_NUBS}个节点！"
-			sed -n "1,${SP_NUBS}p" ${LOCAL_NODES_SPL} >>$DIR/local_0_user.txt
-		else
-			local EXIST_FILE=$(ls -l $DIR/local_*_${SP_NAME}.txt 2>/dev/null)
-			if [ -n "${EXIST_FILE}" ];then
-				local EXIST_NU=$(echo $EXIST_FILE|head -n1|awk -F "/" '{print $NF}'|awk -F "_" '{print $2}')
-				# echo_date "📂拆分：local_${EXIST_NU}_${SP_NAME}.txt，共计${SP_NUBS}个节点！"
-				sed -n "1,${SP_NUBS}p" ${LOCAL_NODES_SPL} >>$DIR/local_${EXIST_NU}_${SP_NAME}.txt
+	rm -rf "$DIR"/local_*.txt "${LOCAL_SPLIT_META}"
+	[ -f "${LOCAL_NODES_SPL}" ] || return 0
+	local split_total
+	: > "${LOCAL_SPLIT_META}"
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		jq -r '
+			def raw_group: (.group // "null");
+			def trimmed_group:
+				(raw_group | sub("^\\s+"; "") | sub("\\s+$"; ""));
+			def group_label:
+				if (trimmed_group == "" or trimmed_group == "null" or trimmed_group == "_") then
+					""
+				else
+					(trimmed_group | sub("_[^_]+$"; ""))
+				end;
+			def group_hash:
+				raw_group as $raw
+				| if (group_label == "") then
+					"user"
+				elif ($raw | contains("_")) then
+					($raw | sub("^.*_"; ""))
+				else
+					$raw
+				end;
+			"\(group_hash)\u001f\(group_label)\u001f\(.)"
+		' "${LOCAL_NODES_SPL}" 2>/dev/null | awk -F '\037' -v dir="${DIR}" -v meta="${LOCAL_SPLIT_META}" '
+			BEGIN {
+				next_idx = 0
+			}
+			{
+				hash = $1
+				label = $2
+				json = $3
+				if (hash == "" || hash == "null") {
+					hash = "user"
+				}
+				if (!(hash in file_path)) {
+					if (hash == "user") {
+						file_path[hash] = dir "/local_0_user.txt"
+						order[++order_count] = hash
+						group_value[hash] = "user"
+						group_label[hash] = ""
+					} else {
+						next_idx++
+						file_path[hash] = dir "/local_" next_idx "_" hash ".txt"
+						order[++order_count] = hash
+						group_value[hash] = hash
+						group_label[hash] = label
+					}
+				}
+				print json >> file_path[hash]
+				count[hash]++
+			}
+			END {
+				for (i = 1; i <= order_count; i++) {
+					hash = order[i]
+					printf "%s\t%s\t%s\t%s\n", file_path[hash], count[hash] + 0, group_value[hash], group_label[hash] >> meta
+				}
+			}
+		' || {
+			echo_date "⚠节点文件处理失败！请重启路由器后重试！"
+			exit 1
+		}
+	else
+		local map_file="${DIR}/local_split_map.tsv"
+		local next_idx=0
+		local raw_group group_hash group_label file_path key map_line
+		: > "${map_file}"
+		while IFS= read -r node_json
+		do
+			[ -n "${node_json}" ] || continue
+			raw_group=$(printf '%s\n' "${node_json}" | jq -r '.group // "null"' 2>/dev/null)
+			group_hash=$(get_group_hash_value "${raw_group}" 2>/dev/null)
+			group_label=$(normalize_group_name "${raw_group}" 2>/dev/null)
+			if [ -z "${group_hash}" ] || [ "${group_hash}" = "null" ];then
+				key="user"
+				file_path="${DIR}/local_0_user.txt"
+				map_line=$(grep -F "user	" "${map_file}" 2>/dev/null | sed -n '1p')
+				if [ -z "${map_line}" ];then
+					printf '%s\t%s\t%s\n' "user" "${file_path}" "" >> "${map_file}"
+				fi
 			else
-				let SP_COUN+=1
-				# echo_date "📂拆分：local_${SP_COUN}_${SP_NAME}.txt，共计${SP_NUBS}个节点！"
-				sed -n "1,${SP_NUBS}p" ${LOCAL_NODES_SPL} >>$DIR/local_${SP_COUN}_${SP_NAME}.txt
+				key="${group_hash}"
+				map_line=$(grep -F "${key}	" "${map_file}" 2>/dev/null | sed -n '1p')
+				if [ -n "${map_line}" ];then
+					file_path=$(printf '%s' "${map_line}" | awk -F '\t' '{print $2}')
+				else
+					next_idx=$((next_idx + 1))
+					file_path="${DIR}/local_${next_idx}_${group_hash}.txt"
+					printf '%s\t%s\t%s\n' "${group_hash}" "${file_path}" "${group_label}" >> "${map_file}"
+				fi
 			fi
-		fi
-		sed -i "1,${SP_NUBS}d" ${LOCAL_NODES_SPL}
-	done
+			printf '%s\n' "${node_json}" >> "${file_path}"
+		done < "${LOCAL_NODES_SPL}"
 
-	if [ "$(ls -l ${LOCAL_NODES_SPL} |awk '{print $5}')" != "0" ];then
+		while IFS='	' read -r group_hash file_path group_label
+		do
+			[ -n "${file_path}" ] || continue
+			printf '%s\t%s\t%s\t%s\n' "${file_path}" "$(wc -l < "${file_path}")" "${group_hash}" "${group_label}" >> "${LOCAL_SPLIT_META}"
+		done < "${map_file}"
+		rm -f "${map_file}"
+	fi
+
+	split_total=$(awk -F '\t' '{total += $2} END {print total + 0}' "${LOCAL_SPLIT_META}" 2>/dev/null)
+	if [ "${split_total}" != "$(wc -l < "${LOCAL_NODES_SPL}")" ];then
 		echo_date "⚠节点文件处理失败！请重启路由器后重试！"
 		exit 1
 	fi
+	LOCAL_SPLIT_META_VALID=1
 }
 
 nodes_stats(){
 	echo_date "-----------------------------------"
 	local GROP
 	local NUBS
-	local TTNODE=$(cat ${LOCAL_NODES_BAK} 2>/dev/null| wc -l)
+	local TTNODE
 	local NFILES=$(find $DIR -name "local_*.txt" | sort -n)
-	if [ -n "${NFILES}" ];then
+	if [ "${LOCAL_SPLIT_META_VALID}" = "1" ] && [ -s "${LOCAL_SPLIT_META}" ];then
+		TTNODE=$(awk -F '\t' '{total += $2} END {print total + 0}' "${LOCAL_SPLIT_META}" 2>/dev/null)
+		echo_date "📢当前节点统计信息：共有节点${TTNODE}个，其中："
+		while IFS='	' read -r file count group_hash group_label
+		do
+			[ -n "${file}" ] || continue
+			NUBS="${count}"
+			if [ "$(basename "${file}")" == "local_0_user.txt" ];then
+				GROP_NAME="😛【用户自添加】节点"
+			else
+				[ -n "${group_label}" ] || group_label=$(get_group_label_from_file "${file}" "$(get_sub_group_fallback_by_hash "${group_hash}")")
+				GROP_NAME="🚀【${group_label}】机场节点"
+			fi
+			echo_date ${GROP_NAME}: ${NUBS}个
+		done < "${LOCAL_SPLIT_META}"
+	elif [ -n "${NFILES}" ];then
+		TTNODE=$(cat ${LOCAL_NODES_BAK} 2>/dev/null| wc -l)
 		echo_date "📢当前节点统计信息：共有节点${TTNODE}个，其中："
 		for file in ${NFILES}
 		do
@@ -584,41 +1688,50 @@ remove_null(){
 		# 没有节点，不进行检查
 		return
 	fi
-	if [ "$(dbus list ssconf_|grep _group|wc -l)" == "0" ];then
-		# 没有订阅节点，不进行检查
-		return
-	fi
-	local online_sub_urls=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d'| sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
-	for online_sub_url in ${online_sub_urls}
+	[ "${LOCAL_SPLIT_META_VALID}" = "1" ] && [ -s "${LOCAL_SPLIT_META}" ] || return
+	[ -s "${ACTIVE_SOURCE_TAGS}" ] || return
+	local keep_hash_file tmp_meta removed_any=0
+	keep_hash_file="${ACTIVE_SOURCE_TAGS}"
+	tmp_meta="${LOCAL_SPLIT_META}.tmp"
+	: > "${tmp_meta}"
+	while IFS='	' read -r file count group_hash group_label
 	do
-		local sublink_hash=$(echo ${online_sub_url} | sed 's/%20/ /g' | md5sum | awk '{print $1}')
-		echo ${sublink_hash:0:4} >> $DIR/sublink_hash.txt
-	done
-
-	local local_hashs=$(find $DIR -name "local_*.txt" | sort -n | xargs cat | run jq -r '.group' | while IFS= read -r raw_group
-	do
-		get_group_hash_value "${raw_group}"
-		echo
-	done | sed '/^$/d' | sort -u)
-	for local_hash in $local_hashs
-	do
-		local match_hash=$(cat $DIR/sublink_hash.txt | grep -Eo "${local_hash}")
-		if [ -z "${match_hash}" ];then
-			# remove node
-			local local_group_file=$(find $DIR -name "local_*_${local_hash}.txt" | head -n1)
-			local _local_group=$(get_group_label_from_file "${local_group_file}" "$(get_sub_group_fallback_by_hash "${local_hash}")")
-			echo_date "⚠️检测到【${_local_group}】机场已经不再订阅！尝试删除该订阅的节点！"
-			rm -rf $DIR/local_*_${local_hash}.txt
+		[ -n "${file}" ] || continue
+		case "${group_hash}" in
+		""|"null"|"user")
+			printf '%s\t%s\t%s\t%s\n' "${file}" "${count}" "${group_hash}" "${group_label}" >> "${tmp_meta}"
+			continue
+			;;
+		esac
+		if grep -Fxq "${group_hash}" "${keep_hash_file}";then
+			printf '%s\t%s\t%s\t%s\n' "${file}" "${count}" "${group_hash}" "${group_label}" >> "${tmp_meta}"
+			continue
 		fi
-	done
+		[ -n "${group_label}" ] || group_label=$(get_sub_group_fallback_by_hash "${group_hash}")
+		echo_date "⚠️检测到【${group_label}】机场已经不再订阅！尝试删除该订阅的节点！"
+		rm -rf "${file}"
+		removed_any=1
+	done < "${LOCAL_SPLIT_META}"
+	mv -f "${tmp_meta}" "${LOCAL_SPLIT_META}"
+	if [ "${removed_any}" = "1" ];then
+		SUB_LOCAL_CHANGED=1
+	fi
 }
 
 clear_nodes(){
 	# 写入节点钱需要清空所有ssconf配置
+	echo_date "⌛节点写入前准备..."
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_capture_active_nodes
+		SUB_REWRITE_ALL=1
+		fss_clear_v2_nodes
+		dbus set fss_data_schema=2
+		echo_date "😀准备完成！"
+		return 0
+	fi
 	if [ "${SEQ_NU}" == "0" ];then
 		return
 	fi
-	echo_date "⌛节点写入前准备..."
 	dbus list ssconf_basic_|awk -F "=" '{print "dbus remove "$1}' >$DIR/ss_nodes_remove.sh
 	chmod +x $DIR/ss_nodes_remove.sh
 	sh $DIR/ss_nodes_remove.sh
@@ -659,12 +1772,18 @@ get_type_name() {
 # 清除已有的所有旧配置的节点
 remove_all_node(){
 	echo_date "删除所有节点信息！"
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		fss_clear_v2_nodes
+		dbus set fss_data_schema=2
+		dbus set fss_node_next_id=1
+	else
 	confs=$(dbus list ssconf_basic_ | cut -d "=" -f1 | awk '{print $NF}')
 	for conf in ${confs}
 	do
 		#echo_date "移除配置：${conf}"
 		dbus remove ${conf}
 	done
+	fi
 	# remove group name
 	for conf1 in $(dbus list ss_online_group|awk -F"=" '{print $1}')
 	do
@@ -683,6 +1802,58 @@ remove_all_node(){
 remove_sub_node(){
 	echo_date "删除所有订阅节点信息...自添加的节点不受影响！"
 	#remove_node_info
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		local remove_flag=0
+		local keep_order=""
+		local first_keep=""
+		local max_keep="0"
+		local restore_current=""
+		local restore_failover=""
+		sub_capture_active_nodes
+		for remove_nu in $(sub_list_node_ids)
+		do
+			local group_value=$(sub_get_node_field_plain "${remove_nu}" group)
+			if [ -n "$(normalize_group_name "${group_value}")" ];then
+				echo_date "移除第$remove_nu节点：【$(sub_get_node_field_plain "${remove_nu}" name)】"
+				dbus remove fss_node_${remove_nu}
+				remove_flag=1
+			else
+				keep_order="${keep_order}${keep_order:+,}${remove_nu}"
+				[ -z "${first_keep}" ] && first_keep="${remove_nu}"
+				if [ "${remove_nu}" -gt "${max_keep}" ] 2>/dev/null;then
+					max_keep="${remove_nu}"
+				fi
+			fi
+		done
+		if [ "${remove_flag}" = "0" ];then
+			echo_date "节点列表内不存在任何订阅来源节点，退出！"
+			return 1
+		fi
+		[ -n "${keep_order}" ] && dbus set fss_node_order="${keep_order}" || dbus remove fss_node_order
+		if sub_node_exists_in_order "${CURR_NODE}";then
+			restore_current="${CURR_NODE}"
+		else
+			restore_current="${first_keep}"
+		fi
+		if sub_node_exists_in_order "${FAILOVER_NODE}";then
+			restore_failover="${FAILOVER_NODE}"
+		fi
+		[ -n "${restore_current}" ] && dbus set fss_node_current="${restore_current}" || dbus remove fss_node_current
+		[ -n "${restore_failover}" ] && dbus set fss_node_failover_backup="${restore_failover}" || dbus remove fss_node_failover_backup
+		dbus set fss_data_schema=2
+		dbus set fss_node_next_id="$((max_keep + 1))"
+		for conf1 in $(dbus list ss_online_group|awk -F"=" '{print $1}')
+		do
+			dbus remove ${conf1}
+		done
+		for conf2 in $(dbus list ss_online_hash|awk -F"=" '{print $1}')
+		do
+			dbus remove ${conf2}
+		done
+		echo_date "所有订阅节点信息已经成功删除！"
+		sub_refresh_node_state
+		return 0
+	fi
 	remove_nus=$(dbus list ssconf_basic_group_ | sed -n 's/ssconf_basic_group_\([0-9]\+\)=.\+$/\1/p' | sort -n)
 	if [ -z "${remove_nus}" ]; then
 		echo_date "节点列表内不存在任何订阅来源节点，退出！"
@@ -697,6 +1868,14 @@ remove_sub_node(){
 			dbus remove $key
 		done
 	done
+	for conf1 in $(dbus list ss_online_group|awk -F"=" '{print $1}')
+	do
+		dbus remove ${conf1}
+	done
+	for conf2 in $(dbus list ss_online_hash|awk -F"=" '{print $1}')
+	do
+		dbus remove ${conf2}
+	done
 
 	echo_date "所有订阅节点信息已经成功删除！"
 }
@@ -704,6 +1883,10 @@ remove_sub_node(){
 check_nodes(){
 	if [ "${SEQ_NU}" == "0" ];then
 		return
+	fi
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		echo_date "ℹ️当前为 schema 2 节点存储，跳过 legacy 节点顺序检查。"
+		return 0
 	fi
 	mkdir -p ${DIR}
 	local BACKUP_FILE=${DIR}/ss_conf.sh
@@ -940,10 +2123,10 @@ add_ss_node(){
 		fi
 	fi
 	
-	echo_date "🟢SS节点：${remarks}"
+	sub_log_node_success "🟢SS节点：${remarks}"
 	
 	json_init
-	json_add_string group "${group}_${SUB_LINK_HASH:0:4}"
+	json_add_string group "${group}_${SUB_SOURCE_TAG}"
 	json_add_string method "${encrypt_method}"
 	json_add_string mode "${SUB_MODE}"
 	json_add_string name "${remarks}"
@@ -955,7 +2138,7 @@ add_ss_node(){
 	json_add_string type "0"
 
 	if [ "${action}" == "1" ];then
-		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
 	elif [ "${action}" == "2" ]; then
 		json_write_object ${DIR}/offline_node_new.txt
 	fi
@@ -984,7 +2167,6 @@ add_ssr_node(){
 	fi
 	
 	obfs=$(echo "${decrypt_info}" | awk -F':' '{print $5}' | sed 's/_compatible//g')
-	ssr_subscribe_obfspara=$(dbus get ssr_subscribe_obfspara)
 	obfsparam_temp=$(echo "${decrypt_info}" | awk -F':' '{print $6}' | grep -Eo "obfsparam.+" | sed 's/obfsparam=//g' | awk -F'&' '{print $1}')
 	if [ -n "${obfsparam_temp}" ];then
 		obfsparam=$(dec64 ${obfsparam_temp})
@@ -1014,7 +2196,7 @@ add_ssr_node(){
 		fi
 		ssr_group=$(normalize_group_name "${ssr_group}")
 		[ -z "${ssr_group}" ] && ssr_group=${DOMAIN_NAME}
-		ssr_group_hash="${ssr_group}_${SUB_LINK_HASH:0:4}"
+		ssr_group_hash="${ssr_group}_${SUB_SOURCE_TAG}"
 	elif [ "${action}" == "2" ]; then
 		# 离线离线添加节点，group不需要
 		ssr_group=""
@@ -1048,7 +2230,7 @@ add_ssr_node(){
 		fi
 	fi
 
-	echo_date "🔵SSR节点：$remarks"
+	sub_log_node_success "🔵SSR节点：$remarks"
 	
 	json_init
 	json_add_string group "${ssr_group_hash}"
@@ -1065,7 +2247,7 @@ add_ssr_node(){
 	json_add_string type "1"
 
 	if [ "${action}" == "1" ];then
-		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
 	elif [ "${action}" == "2" ]; then
 		json_write_object ${DIR}/offline_node_new.txt
 	fi
@@ -1079,7 +2261,7 @@ add_vmess_node(){
 	local urllink="$1"
 	local action="$2"
 	unset decrypt_info v_remark_tmp v_ps v_add v_port v_id v_aid v_scy v_net v_type
-	unset v_headerType_tmp v_headtype_tcp v_headtype_kcp v_headtype_quic v_grpc_mode v_tls v_kcp_seed
+	unset v_headerType_tmp v_headtype_tcp v_headtype_kcp v_headtype_quic v_grpc_mode v_grpc_authority v_tls v_kcp_seed
 	unset v_ai_tmp v_ai v_alpn v_alpn_h2_tmp v_alpn_http_tmp v_alpn_h2 v_alpn_http v_sni v_v v_host v_path v_group v_group_hash
 	decrypt_info=$(dec64 ${urllink} | run jq -c '.')
 	# node name, could be ps/remark in sub json，必须项
@@ -1111,6 +2293,7 @@ add_vmess_node(){
 	# 伪装类型，在tcp kcp quic中使用，grpc mode借用此字段，ws和h2中不使用
 	v_type=$(json_query type "${decrypt_info}")
 	[ -z "${v_type}" ] && v_type=$(json_query headerType "${decrypt_info}")
+	v_grpc_authority=$(json_query authority "${decrypt_info}")
 
 	case ${v_net} in
 	tcp)
@@ -1119,6 +2302,7 @@ add_vmess_node(){
 		v_headtype_kcp=""
 		v_headtype_quic=""
 		v_grpc_mode=""
+		v_grpc_authority=""
 		[ -z "${v_headtype_tcp}" ] && v_headtype_tcp="none"
 		;;
 	kcp)
@@ -1127,6 +2311,7 @@ add_vmess_node(){
 		v_headtype_kcp=${v_type}
 		v_headtype_quic=""
 		v_grpc_mode=""
+		v_grpc_authority=""
 		[ -z "${v_headtype_kcp}" ] && v_headtype_kcp="none"
 		;;
 	ws|h2)
@@ -1135,6 +2320,7 @@ add_vmess_node(){
 		v_headtype_kcp=""
 		v_headtype_quic=""
 		v_grpc_mode=""
+		v_grpc_authority=""
 		;;
 	quic)
 		# quic协议设置【quic伪装类型 (type)】
@@ -1142,6 +2328,7 @@ add_vmess_node(){
 		v_headtype_kcp=""
 		v_headtype_quic=${v_type}
 		v_grpc_mode=""
+		v_grpc_authority=""
 		[ -z "${v_headtype_quic}" ] && v_headtype_quic="none"
 		;;
 	grpc)
@@ -1221,7 +2408,7 @@ add_vmess_node(){
 
 	if [ "${action}" == "1" ];then
 		v_group=${DOMAIN_NAME}
-		v_group_hash="${v_group}_${SUB_LINK_HASH:0:4}"
+		v_group_hash="${v_group}_${SUB_SOURCE_TAG}"
 	fi
 	
 	# for debug
@@ -1253,7 +2440,7 @@ add_vmess_node(){
 		fi
 	fi
 
-	echo_date "🟠vmess节点：${v_ps}"
+	sub_log_node_success "🟠vmess节点：${v_ps}"
 
 	json_init
 	json_add_string group "${v_group_hash}"
@@ -1264,6 +2451,7 @@ add_vmess_node(){
 	json_add_string type "3"
 	json_add_string v2ray_alterid "${v_aid}"
 	json_add_string v2ray_grpc_mode "${v_grpc_mode}"
+	json_add_string v2ray_grpc_authority "${v_grpc_authority}"
 	json_add_string v2ray_headtype_kcp "${v_headtype_kcp}"
 	json_add_string v2ray_headtype_quic "${v_headtype_quic}"
 	json_add_string v2ray_headtype_tcp "${v_headtype_tcp}"
@@ -1282,9 +2470,96 @@ add_vmess_node(){
 	json_add_string v2ray_uuid "${v_id}"
 
 	if [ "${action}" == "1" ];then
-		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
 	elif [ "${action}" == "2" ]; then
 		json_write_object ${DIR}/offline_node_new.txt
+	fi
+}
+
+sub_uri_query_value(){
+	local uri="$1"
+	local key="$2"
+	printf '%s' "${uri}" | awk -F"?" '{print $2}' | sed 's/&/\n/g;s/#/\n/g' | awk -F"=" -v key="${key}" '$1 == key {print substr($0, length($1) + 2); exit}'
+}
+
+sub_uri_bool_value(){
+	local value
+	value=$(printf '%s' "$1" | tr 'A-Z' 'a-z')
+	case "${value}" in
+	1|true|yes|on)
+		echo "1"
+		;;
+	*)
+		echo ""
+		;;
+	esac
+}
+
+sub_uri_query_bool(){
+	sub_uri_bool_value "$(sub_uri_query_value "$1" "$2")"
+}
+
+sub_uri_scheme(){
+	printf '%s' "${1}" | sed -n 's#^\([A-Za-z0-9+.-]\+\)://.*#\1#p'
+}
+
+sub_uri_body(){
+	printf '%s' "${1}" | sed -n 's#^[A-Za-z0-9+.-]\+://\(.*\)$#\1#p'
+}
+
+sub_uri_split_host_port(){
+	local hostport="$1"
+	local host=""
+	local port=""
+
+	case "${hostport}" in
+	\[*\]:*)
+		host=$(printf '%s' "${hostport}" | sed -n 's/^\[\([^]]\+\)\]:.*$/\1/p')
+		port=$(printf '%s' "${hostport}" | sed -n 's/^\[[^]]\+\]:\(.*\)$/\1/p')
+		;;
+	\[*\])
+		host=$(printf '%s' "${hostport}" | sed -n 's/^\[\([^]]\+\)\]$/\1/p')
+		;;
+	*:* )
+		if [ "$(printf '%s' "${hostport}" | awk -F':' '{print NF}')" -gt "2" ];then
+			host="${hostport}"
+		else
+			host="${hostport%%:*}"
+			port="${hostport#*:}"
+		fi
+		;;
+	*)
+		host="${hostport}"
+		;;
+	esac
+
+	printf '%s\t%s\n' "${host}" "${port}"
+}
+
+sub_uri_join_host_port(){
+	local host="$1"
+	local port="$2"
+	if [ -z "${host}" ];then
+		return 1
+	fi
+	if [ -n "${port}" ];then
+		case "${host}" in
+		*:* )
+			printf '[%s]:%s' "${host}" "${port}"
+			;;
+		*)
+			printf '%s:%s' "${host}" "${port}"
+			;;
+		esac
+	else
+		case "${host}" in
+		*:* )
+			printf '[%s]' "${host}"
+			;;
+		*)
+			printf '%s' "${host}"
+			;;
+		esac
 	fi
 }
 
@@ -1294,9 +2569,9 @@ add_vless_node(){
 	local action="$2"
 	local strtype="$3"
 	unset x_server_raw x_server x_server_port x_remarks x_uuid x_host x_path x_encryption x_type
-	unset x_headerType x_headtype_tcp x_headtype_kcp x_headtype_quic x_grpc_modex_security_tmp x_security
+	unset x_headerType x_headtype_tcp x_headtype_kcp x_headtype_quic x_grpc_mode x_grpc_authority x_security_tmp x_security
 	unset x_alpn x_alpn_h2_tmp x_alpn_http_tmp x_alpn_h2 x_alpn_http x_sni x_flow x_group x_group_hash x_kcp_seed
-	unset x_fp x_pbk x_sid x_spx
+	unset x_ai x_fp x_pbk x_pcs x_vcn x_sid x_spx
 
 	local _STRING_1=$(echo "${decode_link}" | awk -F"?" '{print $1}')
 	local _STRING_2=$(echo "${decode_link}" | awk -F"?" '{print $2}')
@@ -1333,10 +2608,15 @@ add_vless_node(){
 	x_mode=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "mode" | awk -F"=" '{print $2}')
 	x_security=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "security" | awk -F"=" '{print $2}')
 	x_serviceName=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "serviceName" | awk -F"=" '{print $2}' | urldecode)
+	x_grpc_authority=$(sub_uri_query_value "${decode_link}" "authority" | urldecode)
 	x_sni=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
 	x_flow=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "flow" | awk -F"=" '{print $2}')
+	x_ai=$(sub_uri_query_bool "${decode_link}" "allowInsecure")
+	[ -z "${x_ai}" ] && x_ai=$(sub_uri_query_bool "${decode_link}" "insecure")
 	x_fp=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "fp=" | awk -F"=" '{print $2}')
 	x_pbk=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "pbk=" | awk -F"=" '{print $2}')
+	x_pcs=$(sub_uri_query_value "${decode_link}" "pcs" | urldecode)
+	x_vcn=$(sub_uri_query_value "${decode_link}" "vcn" | urldecode)
 	x_sid=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "sid=" | awk -F"=" '{print $2}')
 	x_spx=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "spx=" | awk -F"=" '{print $2}' | urldecode)
 	case ${x_type} in
@@ -1346,6 +2626,7 @@ add_vless_node(){
 		x_headtype_kcp=""
 		x_headtype_quic=""
 		x_grpc_mode=""
+		x_grpc_authority=""
 		if [ -z "${x_headtype_tcp}" ];then
 			x_headtype_tcp="none"
 		fi
@@ -1356,6 +2637,7 @@ add_vless_node(){
 		x_headtype_kcp=${x_headerType}
 		x_headtype_quic=""
 		x_grpc_mode=""
+		x_grpc_authority=""
 		if [ -z "${x_headtype_kcp}" ];then
 			x_headtype_kcp="none"
 		fi
@@ -1366,6 +2648,7 @@ add_vless_node(){
 		x_headtype_kcp=""
 		x_headtype_quic=""
 		x_grpc_mode=""
+		x_grpc_authority=""
 		;;
 	h2)
 		# ws/h2协议设置【伪装域名 (host))】
@@ -1373,6 +2656,7 @@ add_vless_node(){
 		x_headtype_kcp=""
 		x_headtype_quic=""
 		x_grpc_mode=""
+		x_grpc_authority=""
 		if [ -z "${x_host}" ];then
 			x_host="${x_server}"
 		fi
@@ -1383,6 +2667,7 @@ add_vless_node(){
 		x_headtype_kcp=""
 		x_headtype_quic=${x_headerType}
 		x_grpc_mode=""
+		x_grpc_authority=""
 		if [ -z "${x_headtype_quic}" ];then
 			x_headtype_quic="none"
 		fi
@@ -1407,6 +2692,7 @@ add_vless_node(){
 		x_headtype_tcp=""
 		x_headtype_kcp=""
 		x_headtype_quic=""
+		x_grpc_authority=""
 		x_xhttp_mode=${x_mode}
 		if [ -z "${x_host}" -a -z "${x_sni}" ];then
 			x_host="${x_server}"
@@ -1452,7 +2738,7 @@ add_vless_node(){
 	
 	if [ "${action}" == "1" ];then
 		x_group=${DOMAIN_NAME}
-		x_group_hash="${x_group}_${SUB_LINK_HASH:0:4}"
+		x_group_hash="${x_group}_${SUB_SOURCE_TAG}"
 	elif [ "${action}" == "2" ]; then
 		# 离线离线添加节点，group不需要
 		x_group=""
@@ -1508,9 +2794,9 @@ add_vless_node(){
 	fi
 
 	if [ "${strtype}" == "vmess" ];then
-		echo_date "🟠vmess节点：${x_remarks}"
+		sub_log_node_success "🟠vmess节点：${x_remarks}"
 	else
-		echo_date "🟣vless节点：${x_remarks}"
+		sub_log_node_success "🟣vless节点：${x_remarks}"
 	fi
 	
 	json_init
@@ -1525,6 +2811,7 @@ add_vless_node(){
 	json_add_string xray_fingerprint "${x_fp}"
 	json_add_string xray_flow "${x_flow}"
 	json_add_string xray_grpc_mode "${x_grpc_mode}"
+	json_add_string xray_grpc_authority "${x_grpc_authority}"
 	json_add_string xray_xhttp_mode "${x_xhttp_mode}"
 	json_add_string xray_headtype_kcp "${x_headtype_kcp}"
 	json_add_string xray_headtype_quic "${x_headtype_quic}"
@@ -1538,7 +2825,9 @@ add_vless_node(){
 	json_add_string xray_network_security_alpn_h2 "${x_alpn_h2}"
 	json_add_string xray_network_security_alpn_http "${x_alpn_http}"
 	json_add_string xray_network_security_sni "${x_sni}"
+	json_add_string xray_pcs "${x_pcs}"
 	json_add_string xray_prot "${strtype}"
+	json_add_string xray_vcn "${x_vcn}"
 	json_add_string xray_publickey "${x_pbk}"
 	json_add_string xray_shortid "${x_sid}"
 	json_add_string xray_show "0"
@@ -1547,7 +2836,7 @@ add_vless_node(){
 	json_add_string xray_uuid "${x_uuid}"
 
 	if [ "${action}" == "1" ];then
-		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
 	elif [ "${action}" == "2" ]; then
 		json_write_object ${DIR}/offline_node_new.txt
 	fi
@@ -1565,7 +2854,7 @@ add_trojan_node(){
 	local decode_link="$1"
 	local decode_link=$(echo "$1" | urldecode)
 	local action="$2"
-	unset t_server t_server_port t_remarks t_uuid t_ai t_tfo t_sni_tmp t_peer_tmp t_sni t_group t_group_hash t_plugin t_obfs t_obfshost t_obfsuri
+	unset t_server t_server_port t_remarks t_uuid t_ai t_tfo t_sni_tmp t_peer_tmp t_sni t_group t_group_hash t_plugin t_obfs t_obfshost t_obfsuri t_pcs t_vcn
 	
 	t_uuid=$(echo "${decode_link}" | awk -F"@" '{print $1}')
 	t_server=$(echo "${decode_link}" | sed 's/@/ /g;s/:/ /g;s/?/ /g;s/#/ /g' | awk '{print $2}')
@@ -1578,10 +2867,13 @@ add_trojan_node(){
 		t_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}')
 	fi
 
-	t_ai=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "allowInsecure" | awk -F"=" '{print $2}')
+	t_ai=$(sub_uri_query_bool "${decode_link}" "allowInsecure")
+	[ -z "${t_ai}" ] && t_ai=$(sub_uri_query_bool "${decode_link}" "insecure")
 	t_tfo=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "tfo" | awk -F"=" '{print $2}')
 	t_sni_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
 	t_peer_tmp=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "peer" | awk -F"=" '{print $2}')
+	t_pcs=$(sub_uri_query_value "${decode_link}" "pcs" | urldecode)
+	t_vcn=$(sub_uri_query_value "${decode_link}" "vcn" | urldecode)
 	if [ -n "${t_sni_tmp}" ];then
 		t_sni=${t_sni_tmp}
 	else
@@ -1593,12 +2885,18 @@ add_trojan_node(){
 	t_obfs=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs=" | awk -F"=" '{print $2}')
 	t_obfshost=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs-host=" | awk -F"=" '{print $2}')
 	t_obfsuri=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g;s/;/\n/g' | grep -E "^obfs-uri=" | awk -F"=" '{print $2}')
+	if [ -z "${t_plugin}" -a "$(sub_uri_query_value "${decode_link}" "type" | tr 'A-Z' 'a-z')" == "ws" ];then
+		t_plugin="obfs-local"
+		t_obfs="websocket"
+		t_obfshost=$(sub_uri_query_value "${decode_link}" "host" | urldecode)
+		t_obfsuri=$(sub_uri_query_value "${decode_link}" "path" | urldecode)
+	fi
 
 	[ "${SUB_AI}" == "1" ] && t_ai="1"
 	
 	if [ "${action}" == "1" ];then
 		t_group=${DOMAIN_NAME}
-		t_group_hash="${t_group}_${SUB_LINK_HASH:0:4}"
+		t_group_hash="${t_group}_${SUB_SOURCE_TAG}"
 	elif [ "${action}" == "2" ]; then
 		# 离线离线添加节点，group不需要
 		t_group=""
@@ -1634,7 +2932,7 @@ add_trojan_node(){
 		fi
 	fi
 
-	echo_date "🟡trojan节点：${t_remarks}"
+	sub_log_node_success "🟡trojan节点：${t_remarks}"
 	
 	json_init
 	json_add_string group "${t_group_hash}"
@@ -1643,9 +2941,11 @@ add_trojan_node(){
 	json_add_string port "${t_server_port}"
 	json_add_string server "${t_server}"
 	json_add_string trojan_ai "${t_ai}"
+	json_add_string trojan_pcs "${t_pcs}"
 	json_add_string trojan_sni "${t_sni}"
 	json_add_string trojan_tfo "${t_tfo}"
 	json_add_string trojan_uuid "${t_uuid}"
+	json_add_string trojan_vcn "${t_vcn}"
 	json_add_string trojan_plugin "${t_plugin}"
 	json_add_string trojan_obfs "${t_obfs}"
 	json_add_string trojan_obfshost "${t_obfshost}"
@@ -1653,7 +2953,233 @@ add_trojan_node(){
 	json_add_string type "5"
 
 	if [ "${action}" == "1" ];then
-		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
+	elif [ "${action}" == "2" ]; then
+		json_write_object ${DIR}/offline_node_new.txt
+	fi
+}
+
+add_naive_node(){
+	local scheme="$1"
+	local decode_link="$2"
+	local action="$3"
+	local decode_link=$(printf '%s' "${decode_link}" | urldecode)
+	unset naive_main naive_authority naive_query naive_auth naive_hostport naive_user naive_pass naive_server naive_port naive_remarks naive_group naive_group_hash naive_prot
+
+	naive_main="${decode_link%%#*}"
+	if [ "${naive_main#*\?}" != "${naive_main}" ];then
+		naive_authority="${naive_main%%\?*}"
+		naive_query="${naive_main#*\?}"
+	else
+		naive_authority="${naive_main}"
+		naive_query=""
+	fi
+	naive_authority="${naive_authority%/}"
+
+	if [ "${decode_link#*#}" != "${decode_link}" ];then
+		naive_remarks=$(printf '%s' "${decode_link#*#}" | urldecode)
+	fi
+
+	if [ "${naive_authority##*@}" != "${naive_authority}" ];then
+		naive_auth="${naive_authority%@*}"
+		naive_hostport="${naive_authority##*@}"
+	else
+		naive_auth=""
+		naive_hostport="${naive_authority}"
+	fi
+
+	if [ "${naive_auth#*:}" != "${naive_auth}" ];then
+		naive_user=$(printf '%s' "${naive_auth%%:*}" | urldecode)
+		naive_pass=$(printf '%s' "${naive_auth#*:}" | urldecode)
+	else
+		naive_user=""
+		naive_pass=""
+	fi
+
+	local hostinfo
+	hostinfo=$(sub_uri_split_host_port "${naive_hostport}")
+	naive_server=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $1}')
+	naive_port=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $2}')
+	[ -z "${naive_port}" ] && naive_port="443"
+	[ -z "${naive_remarks}" ] && naive_remarks="${naive_server}"
+
+	naive_prot="${scheme#naive+}"
+	case "${naive_prot}" in
+	https|quic)
+		:
+		;;
+	*)
+		echo_date "🔴Naïve节点：暂不支持协议：${naive_prot}，跳过！"
+		return 1
+		;;
+	esac
+
+	if [ -n "$(sub_uri_query_value "${decode_link}" "extra-headers")" ];then
+		echo_date "⚠️Naïve节点：检测到extra-headers参数，当前订阅解析暂未纳入该参数。"
+	fi
+
+	if [ "${action}" == "1" ];then
+		naive_group=${DOMAIN_NAME}
+		naive_group_hash="${naive_group}_${SUB_SOURCE_TAG}"
+	elif [ "${action}" == "2" ]; then
+		naive_group=""
+		naive_group_hash=""
+	fi
+
+	if [ -z "${naive_server}" -o -z "${naive_port}" -o -z "${naive_user}" -o -z "${naive_pass}" ];then
+		echo_date "🔴Naïve节点：检测到一个错误节点，跳过！"
+		return 1
+	fi
+
+	if [ "${action}" == "1" ]; then
+		filter_nodes "naive" "${naive_remarks}" "${naive_server}"
+		if [ "$?" != "0" ];then
+			return 1
+		fi
+	fi
+
+	sub_log_node_success "🟧Naïve节点：${naive_remarks}"
+
+	naive_pass=$(printf '%s' "${naive_pass}" | base64_encode | sed 's/[[:space:]]//g')
+
+	json_init
+	json_add_string group "${naive_group_hash}"
+	json_add_string mode "${SUB_MODE}"
+	json_add_string name "${naive_remarks}"
+	json_add_string naive_prot "${naive_prot}"
+	json_add_string naive_server "${naive_server}"
+	json_add_string naive_port "${naive_port}"
+	json_add_string naive_user "${naive_user}"
+	json_add_string naive_pass "${naive_pass}"
+	json_add_string type "6"
+
+	if [ "${action}" == "1" ];then
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
+	elif [ "${action}" == "2" ]; then
+		json_write_object ${DIR}/offline_node_new.txt
+	fi
+}
+
+add_tuic_node(){
+	local decode_link="$1"
+	local action="$2"
+	unset tuic_main tuic_authority tuic_query tuic_auth tuic_hostport tuic_uuid tuic_pass tuic_server tuic_port tuic_server_full tuic_remarks tuic_group tuic_group_hash
+	unset tuic_ip tuic_alpn tuic_cc tuic_skip_verify tuic_server_override
+
+	tuic_main="${decode_link%%#*}"
+	if [ "${tuic_main#*\?}" != "${tuic_main}" ];then
+		tuic_authority="${tuic_main%%\?*}"
+		tuic_query="${tuic_main#*\?}"
+	else
+		tuic_authority="${tuic_main}"
+		tuic_query=""
+	fi
+	tuic_authority="${tuic_authority%/}"
+
+	if [ "${decode_link#*#}" != "${decode_link}" ];then
+		tuic_remarks=$(printf '%s' "${decode_link#*#}" | urldecode)
+	fi
+
+	if [ "${tuic_authority##*@}" != "${tuic_authority}" ];then
+		tuic_auth="${tuic_authority%@*}"
+		tuic_hostport="${tuic_authority##*@}"
+	else
+		tuic_auth=""
+		tuic_hostport="${tuic_authority}"
+	fi
+
+	if [ "${tuic_auth#*:}" != "${tuic_auth}" ];then
+		tuic_uuid=$(printf '%s' "${tuic_auth%%:*}" | urldecode)
+		tuic_pass=$(printf '%s' "${tuic_auth#*:}" | urldecode)
+	else
+		tuic_uuid=""
+		tuic_pass=""
+	fi
+
+	local hostinfo
+	hostinfo=$(sub_uri_split_host_port "${tuic_hostport}")
+	tuic_server=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $1}')
+	tuic_port=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $2}')
+	[ -z "${tuic_port}" ] && tuic_port="443"
+	[ -z "${tuic_remarks}" ] && tuic_remarks="${tuic_server}"
+
+	tuic_ip=$(sub_uri_query_value "${decode_link}" "ip" | urldecode)
+	tuic_alpn=$(sub_uri_query_value "${decode_link}" "alpn" | urldecode)
+	tuic_cc=$(sub_uri_query_value "${decode_link}" "congestion_control" | urldecode)
+	tuic_skip_verify=$(sub_uri_query_bool "${decode_link}" "allow_insecure")
+	[ -z "${tuic_skip_verify}" ] && tuic_skip_verify=$(sub_uri_query_bool "${decode_link}" "allowInsecure")
+	[ -z "${tuic_skip_verify}" ] && tuic_skip_verify=$(sub_uri_query_bool "${decode_link}" "insecure")
+	[ -z "${tuic_skip_verify}" ] && tuic_skip_verify=$(sub_uri_query_bool "${decode_link}" "skip_cert_verify")
+	tuic_server_override=$(sub_uri_query_value "${decode_link}" "sni" | urldecode)
+
+	if [ -n "${tuic_server_override}" -a -n "$(__valid_ip "${tuic_server}")" ];then
+		tuic_ip="${tuic_server}"
+		tuic_server="${tuic_server_override}"
+	fi
+	tuic_server_full=$(sub_uri_join_host_port "${tuic_server}" "${tuic_port}")
+
+	if [ "${action}" == "1" ];then
+		tuic_group=${DOMAIN_NAME}
+		tuic_group_hash="${tuic_group}_${SUB_SOURCE_TAG}"
+	elif [ "${action}" == "2" ]; then
+		tuic_group=""
+		tuic_group_hash=""
+	fi
+
+	if [ -z "${tuic_server}" -o -z "${tuic_port}" -o -z "${tuic_uuid}" -o -z "${tuic_pass}" ];then
+		echo_date "🔴tuic节点：检测到一个错误节点，跳过！"
+		return 1
+	fi
+
+	if [ "${action}" == "1" ]; then
+		filter_nodes "tuic" "${tuic_remarks}" "${tuic_server}"
+		if [ "$?" != "0" ];then
+			return 1
+		fi
+	fi
+
+	sub_log_node_success "🟫tuic节点：${tuic_remarks}"
+
+	local tuic_json
+	tuic_json=$(run jq -cn \
+		--arg server "${tuic_server_full}" \
+		--arg uuid "${tuic_uuid}" \
+		--arg password "${tuic_pass}" \
+		--arg ip "${tuic_ip}" \
+		--arg alpn "${tuic_alpn}" \
+		--arg cc "${tuic_cc}" \
+		--arg skip_verify "${tuic_skip_verify}" '
+		{
+			relay: (
+				{
+					server: $server,
+					uuid: $uuid,
+					password: $password
+				}
+				+ (if $ip != "" then {ip: $ip} else {} end)
+				+ (if $alpn != "" then {alpn: ($alpn | split(",") | map(gsub("^[[:space:]]+|[[:space:]]+$"; "") | select(. != "")))} else {} end)
+				+ (if $cc != "" then {congestion_control: $cc} else {} end)
+				+ (if $skip_verify == "1" then {skip_cert_verify: true} else {} end)
+			)
+		}
+	') || tuic_json=""
+
+	if [ -z "${tuic_json}" ];then
+		echo_date "🔴tuic节点：生成tuic配置失败，跳过！"
+		return 1
+	fi
+
+	tuic_json=$(printf '%s' "${tuic_json}" | base64_encode | sed 's/[[:space:]]//g')
+
+	json_init
+	json_add_string group "${tuic_group_hash}"
+	json_add_string mode "${SUB_MODE}"
+	json_add_string name "${tuic_remarks}"
+	json_add_string tuic_json "${tuic_json}"
+	json_add_string type "7"
+
+	if [ "${action}" == "1" ];then
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
 	elif [ "${action}" == "2" ]; then
 		json_write_object ${DIR}/offline_node_new.txt
 	fi
@@ -1662,7 +3188,7 @@ add_trojan_node(){
 add_hy2_node(){
 	local decode_link="$1"
 	local action="$2"
-	unset hy2_server hy2_server_port hy2_remarks hy2_uuid hy2_ai hy2_tfo hy2_sni_tmp hy2_peer_tmp hy2_sni hy2_group hy2_group_hash
+	unset hy2_authority hy2_hostport hy2_server hy2_port hy2_query hy2_remarks hy2_ai hy2_tfo hy2_sni hy2_group hy2_group_hash hy2_pcs hy2_vcn
 
 	if [ -z "${HY2_UP_SPEED}" -a -n "${HY2_DL_SPEED}" ];then
 		unset HY2_DL_SPEED
@@ -1678,29 +3204,61 @@ add_hy2_node(){
 		HY2_CG_OPT=$(dbus get ss_basic_hy2_cg_opt)
 	fi
 
-	hy2_server=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
-	hy2_pass=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '1p')
-	hy2_port=$(echo "${decode_link}" | sed 's/[@:/?#]/\n/g' | sed -n '3p')
-
-	echo "${decode_link}" | grep -Eqo "#"
-	if [ "$?" != "0" ];then
-		hy2_remarks=${hy2_server}
+	local hy2_main="${decode_link%%#*}"
+	if [ "${hy2_main#*\?}" != "${hy2_main}" ];then
+		hy2_authority="${hy2_main%%\?*}"
+		hy2_query="${hy2_main#*\?}"
 	else
-		hy2_remarks=$(echo "${decode_link}" | awk -F"#" '{print $NF}' | urldecode)
+		hy2_authority="${hy2_main}"
+		hy2_query=""
+	fi
+	hy2_authority="${hy2_authority%/}"
+	if [ "${decode_link#*#}" != "${decode_link}" ];then
+		hy2_remarks=$(printf '%s' "${decode_link#*#}" | urldecode)
 	fi
 
-	hy2_sni=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "sni" | awk -F"=" '{print $2}')
-	hy2_obfs=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "obfs" | grep -v "obfs-password" | awk -F"=" '{print $2}')
+	if [ "${hy2_authority##*@}" != "${hy2_authority}" ];then
+		hy2_pass=$(printf '%s' "${hy2_authority%@*}" | urldecode)
+		hy2_hostport="${hy2_authority##*@}"
+	else
+		hy2_pass=""
+		hy2_hostport="${hy2_authority}"
+	fi
+
+	case "${hy2_hostport}" in
+	\[*\]*)
+		hy2_server=$(printf '%s' "${hy2_hostport}" | sed -n 's/^\[\([^]]\+\)\].*/\1/p')
+		hy2_port=$(printf '%s' "${hy2_hostport}" | sed -n 's/^\[[^]]\+\]:\(.*\)$/\1/p')
+		;;
+	*)
+		hy2_server="${hy2_hostport%%:*}"
+		if [ "${hy2_hostport#*:}" != "${hy2_hostport}" ];then
+			hy2_port="${hy2_hostport#*:}"
+		else
+			hy2_port=""
+		fi
+		;;
+	esac
+
+	[ -z "${hy2_port}" ] && hy2_port="443"
+	[ -z "${hy2_remarks}" ] && hy2_remarks="${hy2_server}"
+
+	hy2_sni=$(sub_uri_query_value "${decode_link}" "sni" | urldecode)
+	hy2_obfs=$(sub_uri_query_value "${decode_link}" "obfs")
 	if [ -z "${hy2_obfs}" -o "${hy2_obfs}" == "none" ];then
 		hy2_obfs="0"
 	fi
 	if [ "${hy2_obfs}" == "salamander" ];then
 		hy2_obfs="1"
 	fi
-	hy2_obfs_pass=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "obfs-password" | awk -F"=" '{print $2}')
-	hy2_ai=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "insecure" | awk -F"=" '{print $2}')
-	hy2_tfo=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "tfo" | awk -F"=" '{print $2}')
-	hy2_mport=$(echo "${decode_link}" | awk -F"?" '{print $2}'|sed 's/&/\n/g;s/#/\n/g' | grep "mport" | awk -F"=" '{print $2}')
+	hy2_obfs_pass=$(sub_uri_query_value "${decode_link}" "obfs-password" | urldecode)
+	hy2_ai=$(sub_uri_query_bool "${decode_link}" "insecure")
+	[ -z "${hy2_ai}" ] && hy2_ai=$(sub_uri_query_bool "${decode_link}" "allowInsecure")
+	hy2_tfo=$(sub_uri_query_value "${decode_link}" "tfo")
+	hy2_mport=$(sub_uri_query_value "${decode_link}" "mport")
+	hy2_pcs=$(sub_uri_query_value "${decode_link}" "pinSHA256" | urldecode)
+	[ -z "${hy2_pcs}" ] && hy2_pcs=$(sub_uri_query_value "${decode_link}" "pcs" | urldecode)
+	hy2_vcn=$(sub_uri_query_value "${decode_link}" "vcn" | urldecode)
 	if [ -n "${hy2_mport}" ];then
 		hy2_port=${hy2_mport}
 	fi
@@ -1709,7 +3267,7 @@ add_hy2_node(){
 
 	if [ "${action}" == "1" ];then
 		hy2_group=${DOMAIN_NAME}
-		hy2_group_hash="${hy2_group}_${SUB_LINK_HASH:0:4}"
+		hy2_group_hash="${hy2_group}_${SUB_SOURCE_TAG}"
 	elif [ "${action}" == "2" ]; then
 		# 离线离线添加节点，group不需要
 		hy2_group=""
@@ -1744,7 +3302,7 @@ add_hy2_node(){
 		fi
 	fi
 
-	echo_date "🟤hysteria2节点：${hy2_remarks}"
+	sub_log_node_success "🟤hysteria2节点：${hy2_remarks}"
 	
 	json_init
 	json_add_string group "${hy2_group_hash}"
@@ -1754,7 +3312,9 @@ add_hy2_node(){
 	json_add_string hy2_port "${hy2_port}"
 	json_add_string hy2_pass "${hy2_pass}"
 	json_add_string hy2_ai "${hy2_ai}"
+	json_add_string hy2_pcs "${hy2_pcs}"
 	json_add_string hy2_sni "${hy2_sni}"
+	json_add_string hy2_vcn "${hy2_vcn}"
 	json_add_string hy2_obfs "${hy2_obfs}"
 	json_add_string hy2_obfs_pass "${hy2_obfs_pass}"
 	json_add_string hy2_up "${HY2_UP_SPEED}"
@@ -1772,7 +3332,7 @@ add_hy2_node(){
 	json_add_string type "8"
 
 	if [ "${action}" == "1" ];then
-		json_write_object ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
 	elif [ "${action}" == "2" ]; then
 		json_write_object ${DIR}/offline_node_new.txt
 	fi
@@ -1879,9 +3439,12 @@ get_ua(){
 	get_fw_type
 	get_model
 	get_fw_ver
-	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_name=$(dbus get ss_basic_pkg_name)
+	local pkg_arch=$(dbus get ss_basic_pkg_arch)
+	local pkg_type=$(dbus get ss_basic_pkg_type)
+	[ -n "${pkg_name}" ] || pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	[ -n "${pkg_arch}" ] || pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_vers=$(dbus get ss_basic_version_local)
 	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN|Shadowrocket"
 	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
@@ -1937,11 +3500,11 @@ download_by_curl(){
 		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
-			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
-			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，结束curl订阅下载！"
+			echo_date "⚠️当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点工作异常，结束curl订阅下载！"
 			return 1
 		fi
 	elif [ "${SUB_BY_PROXY}" == "1" ]; then
@@ -1949,12 +3512,12 @@ download_by_curl(){
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
-			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			local EXT_ARG=""
-			echo_date "⚠️当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点工作异常，改用常规网络下载..."
+			echo_date "⚠️当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点工作异常，改用常规网络下载..."
 			return 1
 		fi
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
@@ -2001,7 +3564,7 @@ download_by_wget(){
 		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
-			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			run5 wget -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		else
 			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
@@ -2012,7 +3575,7 @@ download_by_wget(){
 		# 代理下载
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
-			echo_date "✈️使用当前$(get_type_name $(dbus get ssconf_basic_type_${CURR_NODE}))节点：[$(dbus get ssconf_basic_name_${CURR_NODE})]提供的网络下载..."
+			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			run5 wget -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		else
 			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
@@ -2030,6 +3593,9 @@ download_by_wget(){
 get_online_rule_now(){
 	# 0. variable define
 	local SUB_LINK="$1"
+	local RAW_SOURCE_TAG=""
+	local CANONICAL_SOURCE_TAG=""
+	local SUB_SOURCE_TAG=""
 
 	# 1. get domain name of node subscribe link
 	local DOMAIN_NAME="$(get_domain_name ${SUB_LINK})"
@@ -2041,6 +3607,12 @@ get_online_rule_now(){
 
 	# 2. detect duplitcate sub
 	local SUB_LINK_HASH=$(echo "${SUB_LINK}" | md5sum | awk '{print $1}')
+	RAW_SOURCE_TAG=$(sub_get_source_tag_from_domain "${DOMAIN_NAME}")
+	SUB_SOURCE_TAG=$(sub_get_source_alias_tag "${RAW_SOURCE_TAG}")
+	if [ -z "${SUB_SOURCE_TAG}" ];then
+		echo_date "⚠️无法识别当前订阅来源域名，跳过此订阅！"
+		return 1
+	fi
 	if [ -f "/$DIR/sublink_md5.txt" ];then
 		local IS_ADD=$(cat /$DIR/sublink_md5.txt | grep -Eo ${SUB_LINK_HASH})
 		if [ -n "${IS_ADD}" ];then
@@ -2048,7 +3620,15 @@ get_online_rule_now(){
 			return 1
 		fi
 	fi
+	if [ -f "/$DIR/subsource_md5.txt" ];then
+		local IS_SAME_SOURCE=$(grep -Fx "${SUB_SOURCE_TAG}" "/$DIR/subsource_md5.txt")
+		if [ -n "${IS_SAME_SOURCE}" ];then
+			echo_date "⚠️检测到相同域名的多个订阅链接，本次仅保留一个来源：${DOMAIN_NAME}"
+			return 1
+		fi
+	fi
 	echo ${SUB_LINK_HASH} >>/$DIR/sublink_md5.txt
+	echo ${SUB_SOURCE_TAG} >>/$DIR/subsource_md5.txt
 
 	# 3. try to delete some file left by last sublink subscribe
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
@@ -2146,30 +3726,15 @@ get_online_rule_now(){
 	fi
 	
 	echo_date "😀下载内容检测完成！"
+	local decoded_hash="${SUB_LINK_HASH:0:4}"
+	local source_hash="${SUB_SOURCE_TAG}"
+	local decoded_file="${DIR}/sub_file_decode_${decoded_hash}.txt"
+	sub_prepare_decoded_file "${decoded_hash}" || return 1
+	if sub_raw_cache_same_as_current "${SUB_LINK_HASH}" "${source_hash}" "${decoded_file}";then
+		sub_restore_from_parsed_cache "${SUB_LINK_HASH}" "${source_hash}" "${sub_count}" && return 0
+	fi
 	echo_date "🔍开始解析节点信息..."
 
-	# 8. 解析订阅原始文本
-	local _head=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ss://|^ssr://|^vmess://|^vless://|^trojan://|^hysteria2://")
-	# 检测是否明文内容
-	if [ "${_head}" -gt "1" ];then
-		echo_date "📄检测到明文的订阅格式，无需解码，继续！"
-		cp -r ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
-	else
-		# xargs --show-limits </dev/null to get arg_max, GT-AX6000 is 131072, which means 128kb
-		# 如果订阅原始文本超过128kb，会导致echo，printf命令无法完整输出，所以直接对文件操作即可
-		cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | tr -d '\n' | sed 's/-/+/g;s/_/\//g' | sed 's/$/===/' | base64 -d > ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
-		if [ "$?" != "0" ]; then
-			echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
-		fi
-	fi
-	# 9. 一些机场使用的换行符是dos格式（\r\n\)，在路由Linux下会出问题！转换成unix格式
-	if [ -n "$(which dos2unix)" ];then
-		dos2unix -u ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
-	else
-		tr -d '\r' < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | sponge ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
-	fi
-	
-	echo "" >> ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	local NODE_NU_RAW=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -c "://")
 	echo_date "😀初步解析成功！共获得${NODE_NU_RAW}个节点！"
 
@@ -2179,19 +3744,32 @@ get_online_rule_now(){
 	NODE_FORMAT3=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vmess://")
 	NODE_FORMAT4=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vless://")
 	NODE_FORMAT5=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^trojan://")
-	NODE_FORMAT6=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^hysteria2://")
-	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT5}" -a -z "${NODE_FORMAT6}" ];then
-		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2节点，退出！"
-		return 1
-	fi
-	
+	NODE_FORMAT6=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^hysteria2://|^hy2://")
+	NODE_FORMAT7=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^tuic://")
+	NODE_FORMAT8=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^naive\\+https://|^naive\\+quic://")
+
 	local NODE_NU_SS=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ss://") || "0"
 	local NODE_NU_SR=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ssr://") || "0"
 	local NODE_NU_VM=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vmess://") || "0"
 	local NODE_NU_VL=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vless://") || "0"
 	local NODE_NU_TJ=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^trojan://") || "0"
-	local NODE_NU_H2=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^hysteria2://") || "0"
+	local NODE_NU_H2=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^hysteria2://|^hy2://") || "0"
+	local NODE_NU_TC=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^tuic://") || "0"
+	local NODE_NU_NV=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^naive\\+https://|^naive\\+quic://") || "0"
+	local pkg_type=$(dbus get ss_basic_pkg_type)
+	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_VM} + ${NODE_NU_VL} + ${NODE_NU_TJ} + ${NODE_NU_H2}))
+	if [ "${pkg_type}" == "full" ];then
+		NODE_NU_TT=$((${NODE_NU_TT} + ${NODE_NU_TC} + ${NODE_NU_NV}))
+	fi
+	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT5}" -a -z "${NODE_FORMAT6}" -a -z "${NODE_FORMAT7}" -a -z "${NODE_FORMAT8}" ];then
+		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
+		return 1
+	fi
+	if [ "${NODE_NU_TT}" -eq "0" -a "${pkg_type}" != "full" -a $((${NODE_NU_TC} + ${NODE_NU_NV})) -gt "0" ];then
+		echo_date "⚠️当前插件为lite版本，订阅中的TUIC/NaïveProxy节点均为full版专属，无法导入！"
+		return 1
+	fi
 	if [ "${NODE_NU_TT}" -lt "${NODE_NU_RAW}" ];then
 		echo_date "ℹ️${NODE_NU_RAW}个节点中，一共检测到${NODE_NU_TT}个支持节点！"
 	fi
@@ -2202,13 +3780,17 @@ get_online_rule_now(){
 	[ "${NODE_NU_VL}" -gt "0" ] && echo_date "🟣vless节点：${NODE_NU_VL}个"
 	[ "${NODE_NU_TJ}" -gt "0" ] && echo_date "🟡trojan节点：${NODE_NU_TJ}个"
 	[ "${NODE_NU_H2}" -gt "0" ] && echo_date "🟤hysteria2节点：${NODE_NU_H2}个"
+	[ "${NODE_NU_TC}" -gt "0" ] && echo_date "🟫tuic节点：${NODE_NU_TC}个"
+	[ "${NODE_NU_NV}" -gt "0" ] && echo_date "🟧Naïve节点：${NODE_NU_NV}个"
+	if [ "${pkg_type}" != "full" -a $((${NODE_NU_TC} + ${NODE_NU_NV})) -gt "0" ];then
+		echo_date "⚠️当前插件为lite版本，TUIC/NaïveProxy节点会被跳过。"
+	fi
 	echo_date "-------------------------------------------------------------------"
-	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 
 	# 12. 开始解析并写入节点
-	while read node; do
-		local node_type=$(echo ${node} | sed -n 's/^\(\w\+\):\/\/.*/\1/p')
-		local node_info=$(echo ${node} | sed -n 's/.\+:\/\/\(.*\)$/\1/p')
+	while IFS= read -r node || [ -n "${node}" ]; do
+		local node_type=$(sub_uri_scheme "${node}")
+		local node_info=$(sub_uri_body "${node}")
 		case ${node_type} in
 		ss)
 			add_ss_node "${node_info}" 1
@@ -2232,8 +3814,22 @@ get_online_rule_now(){
 		trojan)
 			add_trojan_node "${node_info}" 1
 			;;
-		hysteria2)
+		hysteria2|hy2)
 			add_hy2_node "${node_info}" 1
+			;;
+		tuic)
+			if [ "${pkg_type}" == "full" ];then
+				add_tuic_node "${node_info}" 1
+			else
+				echo_date "⛔当前为lite版本，跳过tuic节点！"
+			fi
+			;;
+		naive+https|naive+quic)
+			if [ "${pkg_type}" == "full" ];then
+				add_naive_node "${node_type}" "${node_info}" 1
+			else
+				echo_date "⛔当前为lite版本，跳过Naïve节点！"
+			fi
 			;;
 		*)
 			if [ -n "${node_type}" ];then
@@ -2252,15 +3848,28 @@ get_online_rule_now(){
 		esac
 	done < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	echo_date "-------------------------------------------------------------------"
-	if [ -f "${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt" ];then
+	local ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}")
+	CANONICAL_SOURCE_TAG=$(sub_canonicalize_online_source "${sub_count}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" 2>/dev/null)
+	[ -n "${CANONICAL_SOURCE_TAG}" ] || CANONICAL_SOURCE_TAG="${SUB_SOURCE_TAG}"
+	if [ "${CANONICAL_SOURCE_TAG}" != "${SUB_SOURCE_TAG}" ];then
+		echo_date "♻️检测到订阅域名已变更，但机场分组保持为【${ONLINE_GROUP}】，沿用原机场身份处理。"
+		SUB_SOURCE_TAG="${CANONICAL_SOURCE_TAG}"
+	fi
+	sub_register_source_identity "${RAW_SOURCE_TAG}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" >/dev/null 2>&1
+	if [ -s "${ACTIVE_SOURCE_TAGS}" ] && grep -Fxq "${SUB_SOURCE_TAG}" "${ACTIVE_SOURCE_TAGS}";then
+		echo_date "⚠️检测到多个订阅链接属于同一机场【${ONLINE_GROUP}】，本次仅保留第一个来源。"
+		rm -f "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
+		return 0
+	fi
+	sub_mark_active_source_tag "${SUB_SOURCE_TAG}"
+	if [ -f "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" ];then
 		echo_date "ℹ️在线节点解析完毕，开始将订阅节点和和本地节点进行对比！"
 	else
 		echo_date "ℹ️在线节点解析失败！跳过此订阅！"
 	fi
 
 	# 14. print INFO
-	local ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt" "${DOMAIN_NAME}")
-	local md5_new=$(md5sum ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt | awk '{print $1}')
+	local md5_new=$(sub_nodes_file_md5 ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt)
 	echo_date "🌎订阅节点信息："
 	echo_date "🔷当前订阅来源【${ONLINE_GROUP}】，共有节点${NODE_NU_TT}个。"
 	if [ "${exclude}" != "0" ];then
@@ -2268,27 +3877,36 @@ get_online_rule_now(){
 	fi
 	echo_date "🔷订阅节点校验：${md5_new}"
 	echo_date "💾本地节点信息："
-	local ISLOCALFILE=$(find ${DIR} -name "local_*_${SUB_LINK_HASH:0:4}.txt")
+	local ISLOCALFILE=$(find ${DIR} -name "local_*_${SUB_SOURCE_TAG}.txt")
 	if [ -n "${ISLOCALFILE}" ];then
-		local md5_loc=$(md5sum ${ISLOCALFILE} | awk '{print $1}')
+		local md5_loc=$(sub_nodes_file_md5 ${ISLOCALFILE})
 		local LOCAL_GROUP=$(get_group_label_from_file "${ISLOCALFILE}" "${DOMAIN_NAME}")
 		local LOCAL_NODES=$(cat $ISLOCALFILE | wc -l)
 		echo_date "🔶当前订阅来源【${LOCAL_GROUP}】，在本地已有节点${LOCAL_NODES}个。"
 		echo_date "🔶本地节点校验：${md5_loc}"
 		if [ "${md5_loc}" == "${md5_new}" ];then
 			echo_date "🆚对比结果：本地节点已经是最新，跳过！"
+			rm -rf ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
+			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
+			sub_update_parsed_cache "${SUB_LINK_HASH}" "${ISLOCALFILE}"
 		else
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
+			# 将订阅后的文件，覆盖为本地的相同link hash的文件
+			rm -rf ${ISLOCALFILE}
+			cp -rf ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt
+			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
+			sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			SUB_LOCAL_CHANGED=1
 		fi
-		# 将订阅后的文件，覆盖为本地的相同link hash的文件
-		rm -rf ${ISLOCALFILE}
-		cp -rf ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt ${DIR}/local_${sub_count}_${SUB_LINK_HASH:0:4}.txt
 		return 0
 	else
 		echo_date "🔶当前订阅链来源【${ONLINE_GROUP}】在本地尚无节点！"
 		echo_date "🆚对比结果：检测到新的订阅节点，生成节点添加文件！"
 		# 将订阅后的文件，覆盖为本地的相同link hash的文件
-		cp -rf ${DIR}/online_${sub_count}_${SUB_LINK_HASH:0:4}.txt ${DIR}/local_${sub_count}_${SUB_LINK_HASH:0:4}.txt
+		cp -rf ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt
+		sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
+		sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+		SUB_LOCAL_CHANGED=1
 		return 0
 	fi
 }
@@ -2299,6 +3917,7 @@ exit_sub(){
 }
 
 start_node_subscribe(){
+	local online_url_nu online_urls active_hash_file
 	echo_date "==================================================================="
 	echo_date "                服务器订阅程序(Shell by stones & sadog)"
 	echo_date "==================================================================="
@@ -2307,27 +3926,39 @@ start_node_subscribe(){
 	# echo_date "⚙️test: 脚本环境变量：$(env | wc -l)个"
 	
 	# 0. var define
-	NODES_SEQ=$(dbus list ssconf_basic_name_ | grep -E "_[0-9]+=" | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n)
-	SEQ_NU=$(echo ${NODES_SEQ} | tr ' ' '\n' | sed '/^$/d' | wc -l)
+	sub_refresh_node_state
 
-	# 1. 如果本地没有订阅的节点，同时没有订阅链接，则退出订阅
-	local online_sub_nu=$(dbus list ssconf_basic_group_ | sed '/^ssconf_basic_group_[0-9]\+=$/d' | wc -l)
-	if [ "${online_sub_nu}" == "0" ];then
-		if [ -z "$(dbus get ss_online_links)" ];then
-			echo_date "🈳订阅地址输入框为空，请输入订阅链接后重试！"
-			exit_sub
-		fi
-		local online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | wc -l)
-		if [ "${online_url_nu}" == "0" ];then
-			echo_date "🈳未发现任何有效的订阅地址，请检查你的订阅链接！"
-			exit_sub
-		fi
+	# 1. 检查订阅链接是否有效
+	if [ -z "$(dbus get ss_online_links)" ];then
+		echo_date "🈳订阅地址输入框为空，准备清理现有订阅节点..."
+		remove_sub_node
+		sub_clear_subscribe_cache
+		echo_date "🎉订阅节点清理完成！"
+		echo_date "==================================================================="
+		return 0
+	fi
+	online_urls=$(sub_get_online_urls)
+	online_url_nu=$(printf '%s\n' "${online_urls}" | sed '/^$/d' | wc -l)
+	if [ "${online_url_nu}" == "0" ];then
+		echo_date "🈳未发现任何有效的订阅地址，准备清理现有订阅节点..."
+		remove_sub_node
+		sub_clear_subscribe_cache
+		echo_date "🎉订阅节点清理完成！"
+		echo_date "==================================================================="
+		return 0
 	fi
 	echo_date "✈️开始订阅！"
+	SUB_LOCAL_CHANGED=0
+	SUB_HAS_FAILURE=0
 
 	# 2. 创建临时文件夹，用于存放订阅过程中的临时文件
 	mkdir -p $DIR
 	rm -rf $DIR/*
+	sub_reset_schema2_cache
+	: > "${ACTIVE_SOURCE_TAGS}"
+	active_hash_file="${DIR}/active_link_hashes.txt"
+	sub_collect_active_link_hashes "${active_hash_file}" "${online_urls}"
+	sub_prune_subscribe_cache "${active_hash_file}"
 
 	# 3.订阅前检查节点是否储存正常，不需要了
 	# check_nodes
@@ -2337,19 +3968,15 @@ start_node_subscribe(){
 
 	# 4. 储存的节点文件，按照不通机场拆分
 	nodes2files
-	
+
 	# 5. 用拆分文件统计节点
 	nodes_stats
-
-	# 6. 移除没有订阅的节点
-	remove_null
 	
-	# 7. 下载/解析订阅节点
+	# 6. 下载/解析订阅节点
 	sub_count=0
-	online_url_nu=$(dbus get ss_online_links | base64 -d | sed 's/$/\n/' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | wc -l)
 	until [ "${sub_count}" == "${online_url_nu}" ]; do
 		let sub_count+=1
-		url=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed -n "$sub_count p" | sed 's/[[:space:]]/%20/g')
+		url=$(printf '%s\n' "${online_urls}" | sed -n "${sub_count}p")
 		[ -z "${url}" ] && continue
 		echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
 		[ "${online_url_nu}" -gt "1" ] && echo_date "📢开始第【${sub_count}】个订阅！订阅链接如下："
@@ -2362,30 +3989,49 @@ start_node_subscribe(){
 			continue
 			;;
 		*)
+			SUB_HAS_FAILURE=1
 			subscribe_failed
 			;;
 		esac
 	done
 	echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
+	if [ "${SUB_HAS_FAILURE}" = "1" ];then
+		echo_date "⚠️本次订阅存在失败任务，跳过过期订阅来源清理，保留现有本地订阅节点。"
+	else
+		remove_null
+		sub_prune_source_identity "${ACTIVE_SOURCE_TAGS}"
+	fi
 
 	# 5. 写入所有节点
+	if [ "${SUB_LOCAL_CHANGED}" != "1" ];then
+		echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
+		echo_date "🧹一点点清理工作..."
+		echo_date "🎉所有订阅任务完成，请等待6秒，或者手动关闭本窗口！"
+		echo_date "==================================================================="
+		return 0
+	fi
 	local ISNEW=$(find $DIR -name "local_*_*.txt")
 	if [ -n "${ISNEW}" ];then
 		find $DIR -name "local_*.txt" | sort -n | xargs cat >$DIR/ss_nodes_new.txt
-		local md5sum_old=$(md5sum ${LOCAL_NODES_BAK} 2>/dev/null | awk '{print $1}')
-		local md5sum_new=$(md5sum $DIR/ss_nodes_new.txt 2>/dev/null | awk '{print $1}')
+		local md5sum_old=$(sub_nodes_file_md5 ${LOCAL_NODES_BAK})
+		local md5sum_new=$(sub_nodes_file_md5 $DIR/ss_nodes_new.txt)
 		if [ "${md5sum_new}" != "${md5sum_old}" ];then
+			if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+				if ! sub_validate_jsonl_file "$DIR/ss_nodes_new.txt"; then
+					echo_date "❌节点写入文件校验失败，已终止本次订阅，原有节点保持不变！"
+					exit_sub
+				fi
+			fi
 			clear_nodes
 			echo_date "ℹ️开始写入节点..."
-			json2skipd "ss_nodes_new"
+			if ! json2skipd "ss_nodes_new"; then
+				echo_date "❌节点信息写入失败！"
+				exit_sub
+			fi
 		else
 			echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
 		fi
-		# 订阅完成，再次统计
-		SEQ_NU=$(dbus list ssconf_basic_name_|wc -l)
-		skipdb2json
-		nodes2files
-		nodes_stats
+		cp -f "$DIR/ss_nodes_new.txt" "${LOCAL_NODES_BAK}"
 		echo_date "🧹一点点清理工作..."
 		echo_date "🎉所有订阅任务完成，请等待6秒，或者手动关闭本窗口！"
 	else
@@ -2401,17 +4047,19 @@ subscribe_failed(){
 	#echo ""
 }
 
-# 添加ss:// ssr:// vmess:// vless://离线节点
+# 添加ss:// ssr:// vmess:// vless:// trojan:// hysteria2:// hy2:// tuic:// naive+https:// naive+quic://离线节点
 start_offline_update() {
 	echo_date "==================================================================="
-	echo_date "ℹ️通过ss/ssr/vmess/vless链接添加节点..."
+	echo_date "ℹ️通过ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive链接添加节点..."
 	mkdir -p $DIR
 	rm -rf $DIR/*
 	local nodes=$(dbus get ss_base64_links | base64 -d | urldecode)
+	local pkg_type=$(dbus get ss_basic_pkg_type)
+	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	for node in $nodes
 	do
-		local node_type=$(echo ${node} | sed -n 's/^\(\w\+\):\/\/.*/\1/p')
-		local node_info=$(echo ${node} | sed -n 's/.\+:\/\/\(.*\)$/\1/p')
+		local node_type=$(sub_uri_scheme "${node}")
+		local node_info=$(sub_uri_body "${node}")
 		case $node_type in
 		ss)
 			add_ss_node "${node_info}" 2
@@ -2435,8 +4083,22 @@ start_offline_update() {
 		trojan)
 			add_trojan_node "${node_info}" 2
 			;;
-		hysteria2)
+		hysteria2|hy2)
 			add_hy2_node "${node_info}" 2
+			;;
+		tuic)
+			if [ "${pkg_type}" == "full" ];then
+				add_tuic_node "${node_info}" 2
+			else
+				echo_date "⚠️当前为lite版本，跳过tuic离线节点。"
+			fi
+			;;
+		naive+https|naive+quic)
+			if [ "${pkg_type}" == "full" ];then
+				add_naive_node "${node_type}" "${node_info}" 2
+			else
+				echo_date "⚠️当前为lite版本，跳过Naïve离线节点。"
+			fi
 			;;
 		*)
 			echo_date "⚠️尚不支持${node_type}格式的节点，跳过！"
@@ -2489,7 +4151,7 @@ case $SH_ARG in
 	set_lock
 	true > $LOG_FILE
 	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
-	local_groups=$(dbus list ssconf_basic_group_ | cut -d "=" -f2 | sort -u | wc -l)
+	local_groups=$(sub_count_unique_groups)
 	online_group=$(dbus get ss_online_links | base64 -d | awk '{print $1}' | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -Ec "^http")
 	echo_date "保存订阅节点成功！" | tee -a $LOG_FILE
 	echo_date "现共有 $online_group 组订阅来源" | tee -a $LOG_FILE

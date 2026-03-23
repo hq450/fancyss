@@ -1,0 +1,1911 @@
+#!/bin/sh
+
+# fancyss node helper functions
+
+[ -z "${KSROOT}" ] && export KSROOT=/koolshare
+[ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
+
+FSS_NODE_BOOL_FIELDS="
+v2ray_use_json
+v2ray_mux_enable
+v2ray_network_security_ai
+v2ray_network_security_alpn_h2
+v2ray_network_security_alpn_http
+xray_use_json
+xray_network_security_ai
+xray_network_security_alpn_h2
+xray_network_security_alpn_http
+xray_show
+trojan_ai
+trojan_tfo
+hy2_ai
+hy2_tfo
+"
+
+FSS_NODE_B64_FIELDS="
+password
+naive_pass
+v2ray_json
+xray_json
+tuic_json
+"
+
+FSS_NODE_RUNTIME_FIELDS="
+server_ip
+latency
+ping
+"
+
+FSS_NODE_MIGRATION_DIR="/koolshare/configs/fancyss/migration"
+FSS_NODE_MIGRATION_LOCK="/var/lock/fss_node_migrate.lock"
+FSS_NODE_MIGRATION_KEEP=3
+
+fss_get_acl_default_ports_value() {
+	local modern legacy
+	modern=$(dbus get ss_acl_default_ports)
+	if [ -n "${modern}" ]; then
+		printf '%s' "${modern}"
+		return 0
+	fi
+	legacy=$(dbus get ss_acl_default_port)
+	if [ -n "${legacy}" ]; then
+		printf '%s' "${legacy}"
+		return 0
+	fi
+	return 1
+}
+
+fss_cleanup_acl_default_port_keys() {
+	local modern legacy
+	modern=$(dbus get ss_acl_default_ports)
+	legacy=$(dbus get ss_acl_default_port)
+	if [ -z "${modern}" ] && [ -n "${legacy}" ]; then
+		dbus set ss_acl_default_ports="${legacy}"
+		modern="${legacy}"
+	fi
+	if [ -n "${legacy}" ]; then
+		dbus remove ss_acl_default_port
+	fi
+	[ -n "${modern}" ]
+}
+
+fss_b64_encode() {
+	printf '%s' "$1" | base64 | tr -d '\n'
+}
+
+fss_b64_decode() {
+	printf '%s' "$1" | base64 -d 2>/dev/null || printf '%s' "$1" | base64 --decode 2>/dev/null
+}
+
+fss_v2_field_plain_value() {
+	local node_json="$1"
+	local field="$2"
+	local value="$3"
+	local mode source decoded
+
+	[ -n "${field}" ] || return 1
+	if ! fss_is_b64_field "${field}"; then
+		printf '%s' "${value}"
+		return 0
+	fi
+
+	mode=$(printf '%s' "${node_json}" | jq -r '._b64_mode // empty' 2>/dev/null)
+	source=$(printf '%s' "${node_json}" | jq -r '._source // empty' 2>/dev/null)
+	if [ "${mode}" = "raw" ] || [ "${source}" != "subscribe" ]; then
+		printf '%s' "${value}"
+		return 0
+	fi
+
+	decoded=$(fss_b64_decode "${value}")
+	if [ "$?" = "0" ]; then
+		printf '%s' "${decoded}"
+	else
+		printf '%s' "${value}"
+	fi
+}
+
+fss_shell_quote() {
+	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+fss_is_bool_field() {
+	printf '%s\n' ${FSS_NODE_BOOL_FIELDS} | grep -Fxq "$1"
+}
+
+fss_is_b64_field() {
+	printf '%s\n' ${FSS_NODE_B64_FIELDS} | grep -Fxq "$1"
+}
+
+fss_is_runtime_field() {
+	printf '%s\n' ${FSS_NODE_RUNTIME_FIELDS} | grep -Fxq "$1"
+}
+
+fss_resolve_node_field_name() {
+	case "$1" in
+	xray_svn)
+		echo "xray_vcn"
+		;;
+	hy2_svn)
+		echo "hy2_vcn"
+		;;
+	*)
+		echo "$1"
+		;;
+	esac
+}
+
+fss_prune_node_json() {
+	if [ "$#" -gt 0 ]; then
+		printf '%s' "$1"
+	else
+		cat
+	fi | jq -c '
+		def keep_common($k):
+			$k == "group"
+			or $k == "name"
+			or $k == "mode"
+			or $k == "type";
+		def keep_type($type; $k):
+			if $type == "0" then
+				$k == "server"
+				or $k == "port"
+				or $k == "method"
+				or $k == "password"
+				or $k == "ss_obfs"
+				or $k == "ss_obfs_host"
+			elif $type == "1" then
+				$k == "server"
+				or $k == "port"
+				or $k == "method"
+				or $k == "password"
+				or $k == "rss_protocol"
+				or $k == "rss_protocol_param"
+				or $k == "rss_obfs"
+				or $k == "rss_obfs_param"
+			elif $type == "3" then
+				$k == "server"
+				or $k == "port"
+				or $k == "v2ray_uuid"
+				or $k == "v2ray_alterid"
+				or $k == "v2ray_security"
+				or $k == "v2ray_network"
+				or $k == "v2ray_headtype_tcp"
+				or $k == "v2ray_headtype_kcp"
+				or $k == "v2ray_kcp_seed"
+				or $k == "v2ray_headtype_quic"
+				or $k == "v2ray_grpc_mode"
+				or $k == "v2ray_grpc_authority"
+				or $k == "v2ray_network_path"
+				or $k == "v2ray_network_host"
+				or $k == "v2ray_network_security"
+				or $k == "v2ray_network_security_ai"
+				or $k == "v2ray_network_security_alpn_h2"
+				or $k == "v2ray_network_security_alpn_http"
+				or $k == "v2ray_network_security_sni"
+				or $k == "v2ray_mux_concurrency"
+				or $k == "v2ray_json"
+				or $k == "v2ray_use_json"
+				or $k == "v2ray_mux_enable"
+			elif $type == "4" then
+				$k == "server"
+				or $k == "port"
+				or $k == "xray_uuid"
+				or $k == "xray_alterid"
+				or $k == "xray_prot"
+				or $k == "xray_encryption"
+				or $k == "xray_flow"
+				or $k == "xray_network"
+				or $k == "xray_headtype_tcp"
+				or $k == "xray_headtype_kcp"
+				or $k == "xray_kcp_seed"
+				or $k == "xray_headtype_quic"
+				or $k == "xray_grpc_mode"
+				or $k == "xray_grpc_authority"
+				or $k == "xray_xhttp_mode"
+				or $k == "xray_network_path"
+				or $k == "xray_network_host"
+				or $k == "xray_network_security"
+				or $k == "xray_network_security_ai"
+				or $k == "xray_network_security_alpn_h2"
+				or $k == "xray_network_security_alpn_http"
+				or $k == "xray_network_security_sni"
+				or $k == "xray_pcs"
+				or $k == "xray_vcn"
+				or $k == "xray_fingerprint"
+				or $k == "xray_publickey"
+				or $k == "xray_shortid"
+				or $k == "xray_spiderx"
+				or $k == "xray_show"
+				or $k == "xray_json"
+				or $k == "xray_use_json"
+			elif $type == "5" then
+				$k == "server"
+				or $k == "port"
+				or $k == "trojan_ai"
+				or $k == "trojan_uuid"
+				or $k == "trojan_sni"
+				or $k == "trojan_pcs"
+				or $k == "trojan_vcn"
+				or $k == "trojan_tfo"
+				or $k == "trojan_plugin"
+				or $k == "trojan_obfs"
+				or $k == "trojan_obfshost"
+				or $k == "trojan_obfsuri"
+			elif $type == "6" then
+				$k == "naive_prot"
+				or $k == "naive_server"
+				or $k == "naive_port"
+				or $k == "naive_user"
+				or $k == "naive_pass"
+			elif $type == "7" then
+				$k == "tuic_json"
+			elif $type == "8" then
+				$k == "hy2_server"
+				or $k == "hy2_port"
+				or $k == "hy2_pass"
+				or $k == "hy2_up"
+				or $k == "hy2_dl"
+				or $k == "hy2_obfs"
+				or $k == "hy2_obfs_pass"
+				or $k == "hy2_sni"
+				or $k == "hy2_pcs"
+				or $k == "hy2_vcn"
+				or $k == "hy2_ai"
+				or $k == "hy2_tfo"
+				or $k == "hy2_cg"
+			else
+				false
+			end;
+		. as $root
+		| (($root.type // "") | tostring) as $type
+		| with_entries(select((.key | startswith("_")) or keep_common(.key) or keep_type($type; .key)))
+	'
+}
+
+fss_prepare_backup_node_json() {
+	if [ "$#" -gt 0 ]; then
+		printf '%s' "$1"
+	else
+		cat
+	fi | jq -c '
+		with_entries(select(.value != "" and .value != null))
+		| del(
+			.server_ip,
+			.latency,
+			.ping,
+			._schema,
+			._rev,
+			._source,
+			._updated_at,
+			._migrated_from,
+			._b64_mode,
+			._created_at
+		)
+		| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
+	' | fss_prune_node_json
+}
+
+fss_get_plugin_version() {
+	local version
+	version=$(dbus get ss_basic_version_local)
+	[ -n "${version}" ] && {
+		echo "${version}"
+		return
+	}
+	[ -f "${KSROOT}/ss/version" ] && cat ${KSROOT}/ss/version
+}
+
+fss_detect_storage_schema() {
+	local schema
+	schema=$(dbus get fss_data_schema)
+	if [ "${schema}" = "2" ];then
+		echo "2"
+	else
+		echo "1"
+	fi
+}
+
+fss_legacy_node_count() {
+	fss_list_legacy_node_indices | sed '/^$/d' | wc -l
+}
+
+fss_v2_node_count() {
+	local order
+	order=$(dbus get fss_node_order)
+	[ -z "${order}" ] && {
+		echo 0
+		return
+	}
+	printf '%s' "${order}" | tr ',' '\n' | sed '/^$/d' | wc -l
+}
+
+fss_kv_lines_to_json() {
+	jq -Rs '
+		split("\u0000") as $kv
+		| reduce range(0; ($kv | length) - 1; 2) as $i ({};
+			if ($kv[$i] // "") == "" then
+				.
+			else
+				. + {($kv[$i]): ($kv[$i + 1] // "")}
+			end
+		)
+	'
+}
+
+fss_emit_kv_lines() {
+	while IFS= read -r line
+	do
+		[ -z "${line}" ] && continue
+		local key=${line%%=*}
+		local value=${line#*=}
+		printf '%s\0%s\0' "${key}" "${value}"
+	done
+}
+
+fss_csv_to_json_array() {
+	local csv="$1"
+	if [ -z "${csv}" ];then
+		echo '[]'
+		return
+	fi
+	printf '%s' "${csv}" | tr ',' '\n' | sed '/^$/d' | jq -Rsc 'split("\n") | map(select(length > 0))'
+}
+
+fss_mktemp_dir() {
+	local prefix="$1"
+	local base_dir="/tmp"
+	local try path
+
+	[ -n "${prefix}" ] || prefix="fss_tmp"
+	if command -v mktemp >/dev/null 2>&1;then
+		mktemp -d "${base_dir}/${prefix}.XXXXXX" 2>/dev/null && return 0
+	fi
+
+	try=0
+	while [ "${try}" -lt 16 ]
+	do
+		path="${base_dir}/${prefix}.$$.${RANDOM:-0}.${try}"
+		if mkdir -p "${path}" 2>/dev/null;then
+			echo "${path}"
+			return 0
+		fi
+		try=$((try + 1))
+	done
+
+	return 1
+}
+
+fss_list_legacy_node_indices() {
+	dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n
+}
+
+fss_clear_v2_nodes() {
+	dbus list fss_node_ | while IFS= read -r line
+	do
+		[ -z "${line}" ] && continue
+		dbus remove "${line%%=*}"
+	done
+	dbus remove fss_node_order
+	dbus remove fss_node_current
+	dbus remove fss_node_failover_backup
+	dbus remove fss_node_next_id
+	dbus remove fss_data_schema
+	dbus remove fss_data_migrated
+	dbus remove fss_data_migration_notice
+	dbus remove fss_data_migration_time
+	dbus remove fss_data_legacy_snapshot
+	dbus remove fss_data_migrating
+}
+
+fss_clear_legacy_nodes() {
+	dbus list ssconf_basic_ | grep -E '_[0-9]+=' | while IFS= read -r line
+	do
+		[ -z "${line}" ] && continue
+		dbus remove "${line%%=*}"
+	done
+	dbus remove ssconf_basic_node
+}
+
+fss_clear_all_node_storage() {
+	fss_clear_legacy_nodes
+	fss_clear_v2_nodes
+	dbus remove ss_failover_s4_3
+}
+
+fss_prepare_migration_state() {
+	if [ "$(dbus get fss_data_migrating)" = "1" ] && [ "$(fss_detect_storage_schema)" != "2" ];then
+		fss_clear_v2_nodes
+	fi
+}
+
+fss_migration_snapshot_path() {
+	local ts="$1"
+	[ -z "${ts}" ] && ts=$(date +%Y%m%d_%H%M%S)
+	mkdir -p "${FSS_NODE_MIGRATION_DIR}" >/dev/null 2>&1
+	echo "${FSS_NODE_MIGRATION_DIR}/legacy_migration_${ts}.sh"
+}
+
+fss_latest_migration_snapshot() {
+	set -- "${FSS_NODE_MIGRATION_DIR}"/legacy_migration_[0-9]*_[0-9]*.sh
+	[ -e "$1" ] || return 1
+	ls -1t "$@" 2>/dev/null | sed -n '1p'
+}
+
+fss_resolve_migration_snapshot() {
+	local snapshot_path latest_snapshot
+
+	snapshot_path=$(dbus get fss_data_legacy_snapshot)
+	if [ -n "${snapshot_path}" ] && [ -f "${snapshot_path}" ];then
+		echo "${snapshot_path}"
+		return 0
+	fi
+
+	latest_snapshot=$(fss_latest_migration_snapshot) || return 1
+	[ -n "${latest_snapshot}" ] || return 1
+	dbus set fss_data_legacy_snapshot="${latest_snapshot}"
+	echo "${latest_snapshot}"
+}
+
+fss_prune_migration_snapshots() {
+	local keep_count="$1"
+	local current_snapshot keep_file keep_sorted entry kept=0
+
+	[ -d "${FSS_NODE_MIGRATION_DIR}" ] || return 0
+	[ -n "${keep_count}" ] || keep_count="${FSS_NODE_MIGRATION_KEEP}"
+	keep_file="/tmp/fss_migration_keep.$$"
+	keep_sorted="${keep_file}.sorted"
+	: > "${keep_file}"
+
+	current_snapshot=$(fss_resolve_migration_snapshot 2>/dev/null)
+	if [ -n "${current_snapshot}" ] && [ -f "${current_snapshot}" ];then
+		echo "${current_snapshot}" >> "${keep_file}"
+	fi
+
+	set -- "${FSS_NODE_MIGRATION_DIR}"/legacy_migration_[0-9]*_[0-9]*.sh
+	if [ ! -e "$1" ];then
+		rm -f "${keep_file}" "${keep_sorted}"
+		return 0
+	fi
+
+	for entry in $(ls -1t "$@" 2>/dev/null)
+	do
+		kept=$((kept + 1))
+		[ "${kept}" -le "${keep_count}" ] && echo "${entry}" >> "${keep_file}"
+	done
+
+	sort -u "${keep_file}" > "${keep_sorted}" 2>/dev/null || cp -f "${keep_file}" "${keep_sorted}"
+	for entry in "$@"
+	do
+		[ -e "${entry}" ] || continue
+		grep -Fxq "${entry}" "${keep_sorted}" || rm -f "${entry}"
+	done
+	rm -f "${keep_file}" "${keep_sorted}"
+}
+
+fss_create_migration_snapshot() {
+	local snapshot_path="$1"
+	[ -z "${snapshot_path}" ] && snapshot_path=$(fss_migration_snapshot_path)
+	fss_export_legacy_backup "${snapshot_path}" || return 1
+	fss_prune_migration_snapshots
+}
+
+fss_validate_v2_tempdir() {
+	local tmp_dir="$1"
+	local expected_count="$2"
+	local node_id
+	local actual_count=0
+	local current_id failover_id order_csv
+
+	[ -d "${tmp_dir}" ] || return 1
+	[ -f "${tmp_dir}/order" ] || return 1
+	order_csv=$(tr '\n' ',' < "${tmp_dir}/order" | sed 's/,$//')
+	actual_count=$(printf '%s' "${order_csv}" | tr ',' '\n' | sed '/^$/d' | awk 'END{print NR}')
+	[ "${actual_count}" = "${expected_count}" ] || return 1
+
+	current_id=$(cat "${tmp_dir}/current" 2>/dev/null)
+	failover_id=$(cat "${tmp_dir}/failover" 2>/dev/null)
+	if [ -n "${current_id}" ];then
+		printf '%s\n' "${order_csv}" | tr ',' '\n' | grep -Fxq "${current_id}" || return 1
+	fi
+	if [ -n "${failover_id}" ];then
+		printf '%s\n' "${order_csv}" | tr ',' '\n' | grep -Fxq "${failover_id}" || return 1
+	fi
+
+	while IFS= read -r node_id
+	do
+		[ -z "${node_id}" ] && continue
+		[ -s "${tmp_dir}/node_${node_id}.json" ] || return 1
+		jq -e --arg id "${node_id}" '._schema == 2 and ._id == $id' "${tmp_dir}/node_${node_id}.json" >/dev/null 2>&1 || return 1
+		[ -s "${tmp_dir}/node_${node_id}.b64" ] || return 1
+	done < "${tmp_dir}/order"
+
+	return 0
+}
+
+fss_migrate_legacy_nodes() {
+	local remove_legacy="$1"
+	local ts snapshot_path
+	local tmp_dir expected_count=0
+	local node_id current_id failover_id max_id=0 order_csv=""
+	local old_current old_failover
+
+	[ "$(fss_detect_storage_schema)" = "2" ] && return 0
+	old_current=$(dbus get ssconf_basic_node)
+	old_failover=$(dbus get ss_failover_s4_3)
+	expected_count=$(fss_legacy_node_count)
+	[ "${expected_count}" -gt 0 ] || return 1
+
+	exec 234>"${FSS_NODE_MIGRATION_LOCK}"
+	flock -n 234 || return 1
+
+	tmp_dir=$(fss_mktemp_dir fss_migrate)
+	ts=$(date +%Y%m%d_%H%M%S)
+	snapshot_path=$(fss_migration_snapshot_path "${ts}")
+	dbus set fss_data_migrating=1
+
+	if ! fss_create_migration_snapshot "${snapshot_path}"; then
+		rm -rf "${tmp_dir}"
+		dbus remove fss_data_migrating
+		flock -u 234
+		return 1
+	fi
+
+	: > "${tmp_dir}/order"
+	for node_id in $(fss_list_legacy_node_indices)
+	do
+		[ -z "${node_id}" ] && continue
+		[ "${node_id}" -gt "${max_id}" ] && max_id="${node_id}"
+		fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "migration" > "${tmp_dir}/node_${node_id}.json" || {
+			rm -rf "${tmp_dir}"
+			dbus remove fss_data_migrating
+			flock -u 234
+			return 1
+		}
+		fss_b64_encode "$(cat "${tmp_dir}/node_${node_id}.json")" > "${tmp_dir}/node_${node_id}.b64"
+		echo "${node_id}" >> "${tmp_dir}/order"
+	done
+
+	current_id="${old_current}"
+	failover_id="${old_failover}"
+	[ -n "${current_id}" ] && echo "${current_id}" > "${tmp_dir}/current"
+	[ -n "${failover_id}" ] && echo "${failover_id}" > "${tmp_dir}/failover"
+
+	fss_validate_v2_tempdir "${tmp_dir}" "${expected_count}" || {
+		rm -rf "${tmp_dir}"
+		dbus remove fss_data_migrating
+		flock -u 234
+		return 1
+	}
+
+	fss_clear_v2_nodes
+	while IFS= read -r node_id
+	do
+		[ -z "${node_id}" ] && continue
+		dbus set fss_node_${node_id}="$(cat "${tmp_dir}/node_${node_id}.b64")"
+	done < "${tmp_dir}/order"
+
+	order_csv=$(tr '\n' ',' < "${tmp_dir}/order" | sed 's/,$//')
+	dbus set fss_node_order="${order_csv}"
+	[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
+	[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
+	dbus set fss_node_next_id="$((max_id + 1))"
+	dbus set fss_data_schema=2
+	dbus set fss_data_migrated=1
+	dbus set fss_data_migration_notice=1
+	dbus set fss_data_migration_time="${ts}"
+	dbus set fss_data_legacy_snapshot="${snapshot_path}"
+
+	if [ "${remove_legacy}" = "1" ];then
+		fss_clear_legacy_nodes
+	fi
+
+	dbus remove fss_data_migrating
+	rm -rf "${tmp_dir}"
+	flock -u 234
+	return 0
+}
+
+fss_auto_migrate_if_needed() {
+	local remove_legacy="$1"
+	local legacy_count=0
+
+	[ -n "${remove_legacy}" ] || remove_legacy=1
+	fss_prepare_migration_state
+	[ "$(fss_detect_storage_schema)" = "2" ] && return 0
+
+	legacy_count=$(fss_legacy_node_count)
+	[ "${legacy_count}" -gt 0 ] || return 2
+
+	fss_migrate_legacy_nodes "${remove_legacy}" || return 1
+	if [ "${remove_legacy}" = "1" ] && [ "$(fss_legacy_node_count)" -gt 0 ];then
+		fss_clear_legacy_nodes
+	fi
+	return 0
+}
+
+fss_build_legacy_node_json() {
+	local node_index="$1"
+	local dump_file="$2"
+
+	if [ -n "${dump_file}" ] && [ -f "${dump_file}" ];then
+		while IFS= read -r line
+		do
+			local key=${line%%=*}
+			local value=${line#*=}
+			case "${key}" in
+			ssconf_basic_*_"${node_index}")
+				key=${key#ssconf_basic_}
+				key=${key%_"${node_index}"}
+				[ -z "${value}" ] && continue
+				printf '%s\0%s\0' "${key}" "${value}"
+				;;
+			esac
+		done < "${dump_file}" | fss_kv_lines_to_json
+	else
+		dbus list ssconf_basic_ | while IFS= read -r line
+		do
+			local key=${line%%=*}
+			local value=${line#*=}
+			case "${key}" in
+			ssconf_basic_*_"${node_index}")
+				key=${key#ssconf_basic_}
+				key=${key%_"${node_index}"}
+				[ -z "${value}" ] && continue
+				printf '%s\0%s\0' "${key}" "${value}"
+				;;
+			esac
+		done | fss_kv_lines_to_json
+	fi
+}
+
+fss_capture_legacy_backup_sh() {
+	local script_file="$1"
+	local output_file="$2"
+
+	[ -f "${script_file}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	: > "${output_file}"
+
+	(
+		_FSS_RESTORE_CAPTURE_OUT="${output_file}"
+		dbus() {
+			[ "$1" = "set" ] || return 0
+			[ -n "$2" ] || return 0
+			printf '%s\n' "$2" >> "${_FSS_RESTORE_CAPTURE_OUT}"
+		}
+		. "${script_file}"
+	) >/dev/null 2>&1
+}
+
+fss_legacy_node_dump_to_v2_tsv() {
+	local dump_file="$1"
+	local order_file="$2"
+	local source="$3"
+	local node_ts="$4"
+
+	[ -f "${dump_file}" ] || return 1
+	[ -f "${order_file}" ] || return 1
+	[ -n "${source}" ] || source="legacy"
+	[ -n "${node_ts}" ] || node_ts="$(date +%s)"
+
+	jq -Rnrc \
+		--rawfile dump "${dump_file}" \
+		--rawfile order "${order_file}" \
+		--arg source "${source}" \
+		--argjson updated_at "${node_ts}" \
+		'
+		def valid_ids:
+			$order | split("\n") | map(select(length > 0));
+		def keep_common($k):
+			$k == "group"
+			or $k == "name"
+			or $k == "mode"
+			or $k == "type";
+		def keep_type($type; $k):
+			if $type == "0" then
+				$k == "server" or $k == "port" or $k == "method" or $k == "password" or $k == "ss_obfs" or $k == "ss_obfs_host"
+			elif $type == "1" then
+				$k == "server" or $k == "port" or $k == "method" or $k == "password" or $k == "rss_protocol" or $k == "rss_protocol_param" or $k == "rss_obfs" or $k == "rss_obfs_param"
+			elif $type == "3" then
+				$k == "server" or $k == "port" or $k == "v2ray_uuid" or $k == "v2ray_alterid" or $k == "v2ray_security" or $k == "v2ray_network" or $k == "v2ray_headtype_tcp" or $k == "v2ray_headtype_kcp" or $k == "v2ray_kcp_seed" or $k == "v2ray_headtype_quic" or $k == "v2ray_grpc_mode" or $k == "v2ray_grpc_authority" or $k == "v2ray_network_path" or $k == "v2ray_network_host" or $k == "v2ray_network_security" or $k == "v2ray_network_security_ai" or $k == "v2ray_network_security_alpn_h2" or $k == "v2ray_network_security_alpn_http" or $k == "v2ray_network_security_sni" or $k == "v2ray_mux_concurrency" or $k == "v2ray_json" or $k == "v2ray_use_json" or $k == "v2ray_mux_enable"
+			elif $type == "4" then
+				$k == "server" or $k == "port" or $k == "xray_uuid" or $k == "xray_alterid" or $k == "xray_prot" or $k == "xray_encryption" or $k == "xray_flow" or $k == "xray_network" or $k == "xray_headtype_tcp" or $k == "xray_headtype_kcp" or $k == "xray_kcp_seed" or $k == "xray_headtype_quic" or $k == "xray_grpc_mode" or $k == "xray_grpc_authority" or $k == "xray_xhttp_mode" or $k == "xray_network_path" or $k == "xray_network_host" or $k == "xray_network_security" or $k == "xray_network_security_ai" or $k == "xray_network_security_alpn_h2" or $k == "xray_network_security_alpn_http" or $k == "xray_network_security_sni" or $k == "xray_pcs" or $k == "xray_vcn" or $k == "xray_fingerprint" or $k == "xray_publickey" or $k == "xray_shortid" or $k == "xray_spiderx" or $k == "xray_show" or $k == "xray_json" or $k == "xray_use_json"
+			elif $type == "5" then
+				$k == "server" or $k == "port" or $k == "trojan_ai" or $k == "trojan_uuid" or $k == "trojan_sni" or $k == "trojan_pcs" or $k == "trojan_vcn" or $k == "trojan_tfo" or $k == "trojan_plugin" or $k == "trojan_obfs" or $k == "trojan_obfshost" or $k == "trojan_obfsuri"
+			elif $type == "6" then
+				$k == "naive_prot" or $k == "naive_server" or $k == "naive_port" or $k == "naive_user" or $k == "naive_pass"
+			elif $type == "7" then
+				$k == "tuic_json"
+			elif $type == "8" then
+				$k == "hy2_server" or $k == "hy2_port" or $k == "hy2_pass" or $k == "hy2_up" or $k == "hy2_dl" or $k == "hy2_obfs" or $k == "hy2_obfs_pass" or $k == "hy2_sni" or $k == "hy2_pcs" or $k == "hy2_vcn" or $k == "hy2_ai" or $k == "hy2_tfo" or $k == "hy2_cg"
+			else
+				false
+			end;
+		def prune:
+			. as $root
+			| (($root.type // "") | tostring) as $type
+			| with_entries(select((.key | startswith("_")) or keep_common(.key) or keep_type($type; .key)));
+		def is_b64_field($key):
+			$key == "password"
+			or $key == "naive_pass"
+			or $key == "v2ray_json"
+			or $key == "xray_json"
+			or $key == "tuic_json";
+		def decode_value($key; $value):
+			if is_b64_field($key) and ($value != "" and $value != null) then
+				try ($value | @base64d) catch $value
+			else
+				$value
+			end;
+		def bool_value($value):
+			if $value == "1" then "1" else "0" end;
+		($dump | split("\u0000")) as $items
+		| (valid_ids) as $valid
+		| reduce range(0; ($items | length) - 2; 3) as $i ({};
+			($items[$i] // "") as $id
+			| ($items[$i + 1] // "") as $key
+			| ($items[$i + 2] // "") as $value
+			| if $id == "" or $key == "" or (($valid | index($id)) == null) then
+				.
+			else
+				.[$id] = ((.[$id] // {}) + {($key): decode_value($key; $value)})
+			end
+		)
+		| to_entries[]
+		| . as $entry
+		| (
+			$entry.value
+			| .v2ray_use_json = bool_value(.v2ray_use_json // "")
+			| .v2ray_mux_enable = bool_value(.v2ray_mux_enable // "")
+			| .v2ray_network_security_ai = bool_value(.v2ray_network_security_ai // "")
+			| .v2ray_network_security_alpn_h2 = bool_value(.v2ray_network_security_alpn_h2 // "")
+			| .v2ray_network_security_alpn_http = bool_value(.v2ray_network_security_alpn_http // "")
+			| .xray_use_json = bool_value(.xray_use_json // "")
+			| .xray_network_security_ai = bool_value(.xray_network_security_ai // "")
+			| .xray_network_security_alpn_h2 = bool_value(.xray_network_security_alpn_h2 // "")
+			| .xray_network_security_alpn_http = bool_value(.xray_network_security_alpn_http // "")
+			| .xray_show = bool_value(.xray_show // "")
+			| .trojan_ai = bool_value(.trojan_ai // "")
+			| .trojan_tfo = bool_value(.trojan_tfo // "")
+			| .hy2_ai = bool_value(.hy2_ai // "")
+			| .hy2_tfo = bool_value(.hy2_tfo // "")
+			| with_entries(select(.value != "" and .value != null))
+			| del(.server_ip, .latency, .ping)
+			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
+			| . + {
+				"_schema": 2,
+				"_id": $entry.key,
+				"_rev": 1,
+				"_b64_mode": "raw",
+				"_source": $source,
+				"_updated_at": $updated_at,
+				"_migrated_from": $entry.key
+			}
+			| prune
+		) as $node
+		| [$entry.key, ($node | @base64)] | @tsv
+		'
+}
+
+fss_node_legacy_to_v2_json() {
+	local node_index="$1"
+	local node_id="$2"
+	local source="$3"
+	local dump_file="$4"
+	local node_json=""
+	local node_ts="$(date +%s)"
+	local key value
+
+	[ -z "${node_id}" ] && node_id="${node_index}"
+	[ -z "${source}" ] && source="legacy"
+	if [ -n "${dump_file}" ] && [ -f "${dump_file}" ];then
+		node_json=$(
+			while IFS= read -r line
+			do
+				key=${line%%=*}
+				value=${line#*=}
+				case "${key}" in
+				ssconf_basic_*_"${node_index}")
+					key=${key#ssconf_basic_}
+					key=${key%_"${node_index}"}
+					[ -z "${value}" ] && continue
+					if fss_is_b64_field "${key}"; then
+						value=$(fss_b64_decode "${value}")
+					fi
+					if fss_is_bool_field "${key}"; then
+						[ "${value}" = "1" ] && value="1" || value="0"
+					fi
+					printf '%s\0%s\0' "${key}" "${value}"
+					;;
+				esac
+			done < "${dump_file}" | fss_kv_lines_to_json
+		)
+	else
+		node_json=$(fss_build_legacy_node_json "${node_index}" "${dump_file}")
+		node_json=$(printf '%s' "${node_json}" | jq -c '
+			with_entries(
+				if ((.key | IN("password"; "naive_pass"; "v2ray_json"; "xray_json"; "tuic_json")) and (.value != "" and .value != null))
+				then .value = (.value | @base64d)
+				else .
+				end
+			)
+			| .v2ray_use_json = (if .v2ray_use_json == "1" then "1" else "0" end)
+			| .v2ray_mux_enable = (if .v2ray_mux_enable == "1" then "1" else "0" end)
+			| .v2ray_network_security_ai = (if .v2ray_network_security_ai == "1" then "1" else "0" end)
+			| .v2ray_network_security_alpn_h2 = (if .v2ray_network_security_alpn_h2 == "1" then "1" else "0" end)
+			| .v2ray_network_security_alpn_http = (if .v2ray_network_security_alpn_http == "1" then "1" else "0" end)
+			| .xray_use_json = (if .xray_use_json == "1" then "1" else "0" end)
+			| .xray_network_security_ai = (if .xray_network_security_ai == "1" then "1" else "0" end)
+			| .xray_network_security_alpn_h2 = (if .xray_network_security_alpn_h2 == "1" then "1" else "0" end)
+			| .xray_network_security_alpn_http = (if .xray_network_security_alpn_http == "1" then "1" else "0" end)
+			| .xray_show = (if .xray_show == "1" then "1" else "0" end)
+			| .trojan_ai = (if .trojan_ai == "1" then "1" else "0" end)
+			| .trojan_tfo = (if .trojan_tfo == "1" then "1" else "0" end)
+			| .hy2_ai = (if .hy2_ai == "1" then "1" else "0" end)
+			| .hy2_tfo = (if .hy2_tfo == "1" then "1" else "0" end)
+		')
+	fi
+
+	printf '%s' "${node_json}" | jq -c \
+		--arg id "${node_id}" \
+		--arg source "${source}" \
+		--arg migrated_from "${node_index}" \
+		--argjson updated_at "${node_ts}" \
+		'
+		with_entries(select(.value != "" and .value != null))
+		| del(.server_ip, .latency, .ping)
+		| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
+		'"${jq_bool_fix}"'
+		| . + {
+			"_schema": 2,
+			"_id": $id,
+			"_rev": 1,
+			"_b64_mode": "raw",
+			"_source": $source,
+			"_updated_at": $updated_at,
+			"_migrated_from": $migrated_from
+		}
+		' | fss_prune_node_json
+}
+
+fss_compact_json_value() {
+	printf '%s' "$1" | jq -c . 2>/dev/null || printf '%s' "$1"
+}
+
+fss_node_v2_to_legacy_script_lines() {
+	local node_index="$1"
+	local node_json
+
+	node_json=$(cat)
+	[ -z "${node_json}" ] && return 0
+
+	printf '%s' "${node_json}" | jq -r --arg idx "${node_index}" '
+		def is_runtime: . == "server_ip" or . == "latency" or . == "ping";
+		def is_bool: . == "v2ray_use_json" or . == "v2ray_mux_enable" or . == "v2ray_network_security_ai" or . == "v2ray_network_security_alpn_h2" or . == "v2ray_network_security_alpn_http" or . == "xray_use_json" or . == "xray_network_security_ai" or . == "xray_network_security_alpn_h2" or . == "xray_network_security_alpn_http" or . == "xray_show" or . == "trojan_ai" or . == "trojan_tfo" or . == "hy2_ai" or . == "hy2_tfo";
+		def is_b64: . == "password" or . == "naive_pass" or . == "v2ray_json" or . == "xray_json" or . == "tuic_json";
+		def need_compact_json: . == "v2ray_json" or . == "xray_json" or . == "tuic_json";
+		def compact_json_string: try (fromjson | tojson) catch .;
+		to_entries[]
+		| select(.key | startswith("_") | not)
+		| select(.key | is_runtime | not)
+		| .key as $k
+		| (.value | if type == "string" then . else tostring end) as $v0
+		| select($v0 != "")
+		| select(($k | is_bool | not) or $v0 == "1")
+		| (
+			if ($k | is_b64) then
+				(if ($k | need_compact_json) then ($v0 | compact_json_string) else $v0 end) | @base64
+			else
+				$v0
+			end
+		  ) as $v
+		| "dbus set ssconf_basic_\($k)_\($idx)=\($v | @sh)"
+	'
+}
+
+fss_export_global_json() {
+	dbus list ss | grep -v '^ssconf_basic_' | grep -v '^ss_acl_' | grep -v '^ssid_' | grep -v '^ss_failover_s4_3=' | fss_emit_kv_lines | fss_kv_lines_to_json
+}
+
+fss_export_acl_json() {
+	local acl_default_ports=""
+	acl_default_ports=$(fss_get_acl_default_ports_value)
+	{
+		dbus list ss_acl_ | grep -v '^ss_acl_default_port=' | grep -v '^ss_acl_default_ports='
+		[ -n "${acl_default_ports}" ] && printf 'ss_acl_default_ports=%s\n' "${acl_default_ports}"
+	} | fss_emit_kv_lines | fss_kv_lines_to_json
+}
+
+fss_v2_get_node_json_by_id() {
+	local node_id="$1"
+	local blob
+	blob=$(dbus get fss_node_${node_id})
+	[ -z "${blob}" ] && return 1
+	fss_b64_decode "${blob}"
+}
+
+fss_dump_v2_node_json_dir() {
+	local output_dir="$1"
+	local dump_file=""
+	local line key value node_id
+
+	[ -n "${output_dir}" ] || return 1
+	mkdir -p "${output_dir}" || return 1
+	dump_file="/tmp/fss_nodes_dump.$$.$RANDOM"
+	dbus list fss_node_ > "${dump_file}" 2>/dev/null || {
+		rm -f "${dump_file}"
+		return 1
+	}
+
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		key=${line%%=*}
+		value=${line#*=}
+		case "${key}" in
+		fss_node_[0-9]*)
+			node_id=${key#fss_node_}
+			printf '%s' "${node_id}" | grep -Eq '^[0-9]+$' || continue
+			fss_b64_decode "${value}" > "${output_dir}/${node_id}.json" 2>/dev/null || {
+				rm -f "${dump_file}"
+				return 1
+			}
+			;;
+		esac
+	done < "${dump_file}"
+	rm -f "${dump_file}"
+}
+
+fss_list_node_ids() {
+	local schema
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		printf '%s' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d'
+	else
+		fss_list_legacy_node_indices
+	fi
+}
+
+fss_get_node_count() {
+	fss_list_node_ids | sed '/^$/d' | wc -l
+}
+
+fss_get_first_node_id() {
+	fss_list_node_ids | sed -n '1p'
+}
+
+fss_get_current_node_id() {
+	local schema current_id
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		current_id=$(dbus get fss_node_current)
+	else
+		current_id=$(dbus get ssconf_basic_node)
+	fi
+	if [ -z "${current_id}" ];then
+		current_id=$(fss_get_first_node_id)
+	fi
+	echo "${current_id}"
+}
+
+fss_get_failover_node_id() {
+	local schema
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		dbus get fss_node_failover_backup
+	else
+		dbus get ss_failover_s4_3
+	fi
+}
+
+fss_get_next_node_id_in_order() {
+	local current_id="$1"
+	local first_id=""
+	local hit="0"
+	local node_id=""
+
+	while IFS= read -r node_id
+	do
+		[ -z "${node_id}" ] && continue
+		[ -z "${first_id}" ] && first_id="${node_id}"
+		if [ "${hit}" = "1" ];then
+			echo "${node_id}"
+			return 0
+		fi
+		[ "${node_id}" = "${current_id}" ] && hit="1"
+	done <<EOF
+$(fss_list_node_ids)
+EOF
+
+	echo "${first_id}"
+}
+
+fss_get_node_field_plain() {
+	local node_id="$1"
+	local field="$2"
+	local store_field=""
+	local schema value="" node_json=""
+
+	[ -z "${node_id}" ] && return 1
+	[ -z "${field}" ] && return 1
+	store_field=$(fss_resolve_node_field_name "${field}")
+
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+		value=$(printf '%s' "${node_json}" | jq -r --arg k "${store_field}" '.[$k] // empty')
+		[ -n "${value}" ] && value=$(fss_v2_field_plain_value "${node_json}" "${store_field}" "${value}")
+	else
+		value=$(dbus get ssconf_basic_${store_field}_${node_id})
+		if [ -n "${value}" ] && fss_is_b64_field "${store_field}"; then
+			value=$(fss_b64_decode "${value}")
+		fi
+	fi
+
+	printf '%s' "${value}"
+}
+
+fss_get_node_field_legacy() {
+	local node_id="$1"
+	local field="$2"
+	local store_field=""
+	local schema value=""
+
+	[ -z "${node_id}" ] && return 1
+	[ -z "${field}" ] && return 1
+	store_field=$(fss_resolve_node_field_name "${field}")
+
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" != "2" ];then
+		value=$(dbus get ssconf_basic_${store_field}_${node_id})
+		[ -z "${value}" ] && [ "${store_field}" != "${field}" ] && value=$(dbus get ssconf_basic_${field}_${node_id})
+		printf '%s' "${value}"
+		return 0
+	fi
+
+	value=$(fss_get_node_field_plain "${node_id}" "${field}")
+	if [ -z "${value}" ];then
+		return 0
+	fi
+
+	if fss_is_bool_field "${store_field}"; then
+		[ "${value}" = "1" ] || return 0
+	fi
+
+	if fss_is_b64_field "${store_field}"; then
+		case "${store_field}" in
+		v2ray_json|xray_json|tuic_json)
+			value=$(fss_compact_json_value "${value}")
+			;;
+		esac
+		value=$(fss_b64_encode "${value}")
+	fi
+
+	printf '%s' "${value}"
+}
+
+fss_export_current_node_env() {
+	local node_id="$1"
+	shift
+	local field value schema node_json meta_file encoded_value
+
+	[ -z "${node_id}" ] && node_id=$(fss_get_current_node_id)
+	[ -z "${node_id}" ] && return 1
+
+	export FSS_NODE_CURRENT_ID="${node_id}"
+	export ssconf_basic_node="${node_id}"
+
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json=$(fss_v2_get_node_json_by_id "${node_id}") || return 1
+		meta_file="/tmp/fss_export_env.${node_id}.$$.$RANDOM"
+		: > "${meta_file}" || return 1
+		for field in "$@"
+		do
+			[ -z "${field}" ] && continue
+			printf '%s\t%s\n' "${field}" "$(fss_resolve_node_field_name "${field}")" >> "${meta_file}"
+		done
+
+		while IFS='	' read -r field encoded_value
+		do
+			[ -n "${field}" ] || continue
+			[ -n "${encoded_value}" ] || continue
+			value=$(fss_b64_decode "${encoded_value}")
+			[ -n "${value}" ] && export ss_basic_${field}="${value}"
+		done <<EOF
+$(printf '%s' "${node_json}" | jq -r --rawfile meta "${meta_file}" '
+	def is_bool($f):
+		$f == "v2ray_use_json"
+		or $f == "v2ray_mux_enable"
+		or $f == "v2ray_network_security_ai"
+		or $f == "v2ray_network_security_alpn_h2"
+		or $f == "v2ray_network_security_alpn_http"
+		or $f == "xray_use_json"
+		or $f == "xray_network_security_ai"
+		or $f == "xray_network_security_alpn_h2"
+		or $f == "xray_network_security_alpn_http"
+		or $f == "xray_show"
+		or $f == "trojan_ai"
+		or $f == "trojan_tfo"
+		or $f == "hy2_ai"
+		or $f == "hy2_tfo";
+	def is_b64($f):
+		$f == "password"
+		or $f == "naive_pass"
+		or $f == "v2ray_json"
+		or $f == "xray_json"
+		or $f == "tuic_json";
+	def need_compact_json($f):
+		$f == "v2ray_json"
+		or $f == "xray_json"
+		or $f == "tuic_json";
+	def compact_json_string:
+		try (fromjson | tojson) catch .;
+	def to_plain_value($root; $field; $value):
+		if is_b64($field) then
+			if (($root._b64_mode // "") == "raw") or (($root._source // "") != "subscribe") then
+				$value
+			else
+				(try ($value | @base64d) catch $value)
+			end
+		else
+			$value
+		end;
+	. as $root
+	| ($meta | split("\n") | map(select(length > 0) | split("\t")))[] as $item
+	| ($item[0]) as $field
+	| ($item[1]) as $store_field
+	| ($root[$store_field] // empty | if type == "string" then . else tostring end) as $raw_value
+	| select($raw_value != "")
+	| (to_plain_value($root; $store_field; $raw_value)) as $plain_value
+	| select((is_bool($store_field) | not) or $plain_value == "1")
+	| (
+		if is_b64($store_field) then
+			(if need_compact_json($store_field) then ($plain_value | compact_json_string) else $plain_value end) | @base64
+		else
+			$plain_value
+		end
+	  ) as $legacy_value
+	| "\($field)\t\($legacy_value | @base64)"
+')
+EOF
+		rm -f "${meta_file}"
+		return 0
+	fi
+
+	for field in "$@"
+	do
+		[ -z "${field}" ] && continue
+		value=$(fss_get_node_field_legacy "${node_id}" "${field}")
+		[ -z "${value}" ] && continue
+		export ss_basic_${field}="${value}"
+	done
+}
+
+fss_set_current_node_id() {
+	local node_id="$1"
+	[ -z "${node_id}" ] && return 1
+	if [ "$(fss_detect_storage_schema)" = "2" ];then
+		dbus set fss_node_current="${node_id}"
+	else
+		dbus set ssconf_basic_node="${node_id}"
+	fi
+}
+
+fss_set_failover_node_id() {
+	local node_id="$1"
+	if [ "$(fss_detect_storage_schema)" = "2" ];then
+		[ -n "${node_id}" ] && dbus set fss_node_failover_backup="${node_id}" || dbus remove fss_node_failover_backup
+	else
+		[ -n "${node_id}" ] && dbus set ss_failover_s4_3="${node_id}" || dbus remove ss_failover_s4_3
+	fi
+}
+
+fss_set_node_field_plain() {
+	local node_id="$1"
+	local field="$2"
+	local value="$3"
+	local schema node_json updated_json
+
+	[ -z "${node_id}" ] && return 1
+	[ -z "${field}" ] && return 1
+
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" != "2" ];then
+		dbus set ssconf_basic_${field}_${node_id}="${value}"
+		return 0
+	fi
+
+	node_json=$(fss_v2_get_node_json_by_id "${node_id}") || return 1
+	if fss_is_bool_field "${field}"; then
+		[ "${value}" = "1" ] && value="1" || value="0"
+	fi
+	updated_json=$(printf '%s' "${node_json}" | jq -c --arg k "${field}" --arg v "${value}" '
+		if $v == "" then
+			del(.[$k])
+		else
+			.[$k] = $v
+		end
+		| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+		| ._updated_at = (now | floor)
+	') || return 1
+	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
+}
+
+fss_clear_node_runtime_fields() {
+	local node_id="$1"
+	local schema node_json updated_json
+
+	[ -z "${node_id}" ] && return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" != "2" ];then
+		dbus remove ssconf_basic_server_ip_${node_id}
+		dbus remove ssconf_basic_latency_${node_id}
+		dbus remove ssconf_basic_ping_${node_id}
+		return 0
+	fi
+
+	node_json=$(fss_v2_get_node_json_by_id "${node_id}") || return 1
+	updated_json=$(printf '%s' "${node_json}" | jq -c '
+		del(.server_ip, .latency, .ping)
+		| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+		| ._updated_at = (now | floor)
+	') || return 1
+	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
+}
+
+fss_clear_all_runtime_fields() {
+	local node_id
+
+	if [ "$(fss_detect_storage_schema)" = "2" ];then
+		for node_id in $(fss_list_node_ids)
+		do
+			[ -z "${node_id}" ] && continue
+			fss_clear_node_runtime_fields "${node_id}" >/dev/null 2>&1
+		done
+	else
+		dbus list ssconf_basic_server_ip_ | sort -n -t "_" -k 4 | cut -d "=" -f 1 | while IFS= read -r key
+		do
+			[ -z "${key}" ] && continue
+			dbus remove "${key}"
+		done
+		dbus list ssconf_basic_latency_ | sort -n -t "_" -k 4 | cut -d "=" -f 1 | while IFS= read -r key
+		do
+			[ -z "${key}" ] && continue
+			dbus remove "${key}"
+		done
+		dbus list ssconf_basic_ping_ | sort -n -t "_" -k 4 | cut -d "=" -f 1 | while IFS= read -r key
+		do
+			[ -z "${key}" ] && continue
+			dbus remove "${key}"
+		done
+	fi
+}
+
+fss_set_current_node_field_plain() {
+	local field="$1"
+	local value="$2"
+	local node_id
+
+	node_id=$(fss_get_current_node_id)
+	[ -z "${node_id}" ] && return 1
+	fss_set_node_field_plain "${node_id}" "${field}" "${value}"
+}
+
+fss_export_native_backup() {
+	local output_file="$1"
+	local schema=$(fss_detect_storage_schema)
+	local tmp_dir
+	local global_json acl_json order_json
+	local node_current="" node_failover="" node_next_id=""
+	local plugin_version created_at
+	local dump_file="" node_cache_dir=""
+
+	[ -z "${output_file}" ] && return 1
+	tmp_dir=$(fss_mktemp_dir fss_backup)
+	created_at=$(date '+%Y-%m-%dT%H:%M:%S%z')
+	plugin_version=$(fss_get_plugin_version)
+	global_json=$(fss_export_global_json)
+	acl_json=$(fss_export_acl_json)
+	printf '%s' "${global_json}" > "${tmp_dir}/global.json"
+	printf '%s' "${acl_json}" > "${tmp_dir}/acl.json"
+
+	if [ "${schema}" = "2" ];then
+		local node_order_csv
+		local node_id
+		node_order_csv=$(dbus get fss_node_order)
+		order_json=$(fss_csv_to_json_array "${node_order_csv}")
+		node_current=$(dbus get fss_node_current)
+		node_failover=$(dbus get fss_node_failover_backup)
+		node_next_id=$(dbus get fss_node_next_id)
+		node_cache_dir="${tmp_dir}/nodes_v2"
+		fss_dump_v2_node_json_dir "${node_cache_dir}" || {
+			rm -rf "${tmp_dir}"
+			return 1
+		}
+		printf '%s' "${order_json}" > "${tmp_dir}/order.json"
+		: > "${tmp_dir}/nodes.jsonl"
+		for node_id in $(printf '%s' "${node_order_csv}" | tr ',' ' ')
+		do
+			fss_prepare_backup_node_json "$(cat "${node_cache_dir}/${node_id}.json")" >> "${tmp_dir}/nodes.jsonl" || {
+				rm -rf "${tmp_dir}"
+				return 1
+			}
+			printf '\n' >> "${tmp_dir}/nodes.jsonl"
+		done
+	else
+		local node_ids
+		local max_node=0
+		node_current=$(dbus get ssconf_basic_node)
+		node_failover=$(dbus get ss_failover_s4_3)
+		dump_file="${tmp_dir}/legacy_nodes.txt"
+		dbus list ssconf_basic_ | grep -E '_[0-9]+=' | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' > "${dump_file}"
+		node_ids=$(fss_list_legacy_node_indices)
+		order_json=$(printf '%s\n' ${node_ids} | sed '/^$/d' | jq -Rsc 'split("\n")[:-1]')
+		printf '%s' "${order_json}" > "${tmp_dir}/order.json"
+		: > "${tmp_dir}/nodes.jsonl"
+		for node_id in ${node_ids}
+		do
+			[ "${node_id}" -gt "${max_node}" ] && max_node="${node_id}"
+			fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-export" "${dump_file}" | fss_prepare_backup_node_json >> "${tmp_dir}/nodes.jsonl" || {
+				rm -rf "${tmp_dir}"
+				return 1
+			}
+			printf '\n' >> "${tmp_dir}/nodes.jsonl"
+		done
+		node_next_id=$((max_node + 1))
+	fi
+
+	jq -s '.' "${tmp_dir}/nodes.jsonl" > "${tmp_dir}/nodes.json"
+	jq -n \
+		--arg created_at "${created_at}" \
+		--arg plugin_version "${plugin_version}" \
+		--arg node_current "${node_current}" \
+		--arg node_failover "${node_failover}" \
+		--arg node_next_id "${node_next_id}" \
+		--arg storage_schema "${schema}" \
+		--slurpfile global "${tmp_dir}/global.json" \
+		--slurpfile acl "${tmp_dir}/acl.json" \
+		--slurpfile nodes "${tmp_dir}/nodes.json" \
+		--slurpfile order "${tmp_dir}/order.json" \
+		'
+		{
+			format: "fancyss-backup",
+			schema_version: 2,
+			created_at: $created_at,
+			plugin_version: $plugin_version,
+			storage_schema: $storage_schema,
+			global: $global[0],
+			nodes: $nodes[0],
+			node_order: $order[0],
+			node_current: $node_current,
+			node_failover_backup: $node_failover,
+			node_next_id: $node_next_id,
+			acl: $acl[0]
+		}
+		' > "${output_file}"
+
+	rm -rf "${tmp_dir}"
+}
+
+fss_export_legacy_backup() {
+	local output_file="$1"
+	local progress_cb="$2"
+	local schema=$(fss_detect_storage_schema)
+	local key value idx node_id node_json
+	local node_order_csv node_current node_failover current_pos="" failover_pos=""
+	local tmp_dir="" node_cache_dir="" node_total=0
+	local acl_default_ports=""
+
+	[ -z "${output_file}" ] && return 1
+	if [ "${schema}" = "2" ];then
+		tmp_dir=$(fss_mktemp_dir fss_legacy) || return 1
+		node_cache_dir="${tmp_dir}/nodes_v2"
+		if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
+			"${progress_cb}" "阶段1/4：批量读取节点数据..."
+		fi
+		fss_dump_v2_node_json_dir "${node_cache_dir}" || {
+			rm -rf "${tmp_dir}"
+			return 1
+		}
+	fi
+	{
+	cat <<-EOF
+#!/bin/sh
+source /koolshare/scripts/base.sh
+EOF
+
+	if [ "${schema}" = "2" ];then
+		if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
+			"${progress_cb}" "阶段2/4：导出全局配置..."
+		fi
+		dbus list ss | grep -v '^ssconf_basic_' | grep -v '^ss_acl_' | grep -v '^ss_basic_enable=' | grep -v '^ssid_' | grep -v '^ss_failover_s4_3=' | while IFS= read -r line
+		do
+			[ -z "${line}" ] && continue
+			key=${line%%=*}
+			value=${line#*=}
+			printf 'dbus set %s=%s\n' "${key}" "$(fss_shell_quote "${value}")"
+		done
+
+		if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
+			"${progress_cb}" "阶段3/4：导出访问控制配置..."
+		fi
+		acl_default_ports=$(fss_get_acl_default_ports_value)
+		{
+		dbus list ss_acl_ | grep -v '^ss_acl_default_port=' | grep -v '^ss_acl_default_ports='
+		[ -n "${acl_default_ports}" ] && printf 'ss_acl_default_ports=%s\n' "${acl_default_ports}"
+		[ -n "${acl_default_ports}" ] && printf 'ss_acl_default_port=%s\n' "${acl_default_ports}"
+		} | while IFS= read -r line
+		do
+			[ -z "${line}" ] && continue
+			key=${line%%=*}
+			value=${line#*=}
+			printf 'dbus set %s=%s\n' "${key}" "$(fss_shell_quote "${value}")"
+		done
+
+		node_order_csv=$(dbus get fss_node_order)
+		node_current=$(dbus get fss_node_current)
+		node_failover=$(dbus get fss_node_failover_backup)
+		node_total=$(printf '%s' "${node_order_csv}" | tr ',' '\n' | sed '/^$/d' | awk 'END{print NR + 0}')
+		if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
+			"${progress_cb}" "阶段4/4：导出节点配置，共 ${node_total} 个节点..."
+		fi
+		idx=0
+		for node_id in $(printf '%s' "${node_order_csv}" | tr ',' ' ')
+		do
+			idx=$((idx + 1))
+			[ "${node_current}" = "${node_id}" ] && current_pos="${idx}"
+			[ "${node_failover}" = "${node_id}" ] && failover_pos="${idx}"
+			node_json=$(cat "${node_cache_dir}/${node_id}.json" 2>/dev/null)
+			[ -z "${node_json}" ] && node_json=$(fss_v2_get_node_json_by_id "${node_id}")
+			printf '%s' "${node_json}" | fss_node_v2_to_legacy_script_lines "${idx}"
+			if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
+				if [ "${idx}" = "1" ] || [ $((idx % 20)) -eq 0 ] || [ "${idx}" = "${node_total}" ];then
+					"${progress_cb}" "节点配置导出进度：${idx}/${node_total}"
+				fi
+			fi
+		done
+
+		[ -n "${current_pos}" ] && printf 'dbus set ssconf_basic_node=%s\n' "$(fss_shell_quote "${current_pos}")"
+		[ -n "${failover_pos}" ] && printf 'dbus set ss_failover_s4_3=%s\n' "$(fss_shell_quote "${failover_pos}")"
+	else
+		dbus list ss | grep -v '^ss_basic_enable=' | grep -v '^ssid_' | while IFS= read -r line
+		do
+			[ -z "${line}" ] && continue
+			key=${line%%=*}
+			value=${line#*=}
+			printf 'dbus set %s=%s\n' "${key}" "$(fss_shell_quote "${value}")"
+		done
+		acl_default_ports=$(fss_get_acl_default_ports_value)
+		[ -n "${acl_default_ports}" ] && printf 'dbus set ss_acl_default_ports=%s\n' "$(fss_shell_quote "${acl_default_ports}")"
+		[ -n "${acl_default_ports}" ] && printf 'dbus set ss_acl_default_port=%s\n' "$(fss_shell_quote "${acl_default_ports}")"
+	fi
+	} > "${output_file}"
+
+	chmod +x "${output_file}"
+	rm -rf "${tmp_dir}"
+}
+
+fss_restore_native_backup_to_legacy() {
+	local json_file="$1"
+	local script_file="$2"
+	local idx=0
+	local node_id="" node_json=""
+	local node_order_count=0
+	local node_current_id="" node_failover_id="" current_pos="" failover_pos=""
+	local key value
+	local acl_default_ports=""
+
+	[ -f "${json_file}" ] || return 1
+	[ -z "${script_file}" ] && return 1
+	jq -e '.format == "fancyss-backup" and (.schema_version | tostring) == "2"' "${json_file}" >/dev/null 2>&1 || return 1
+
+	cat > "${script_file}" <<-EOF
+#!/bin/sh
+source /koolshare/scripts/base.sh
+EOF
+
+	jq -r '.global | to_entries[] | @base64' "${json_file}" | while IFS= read -r entry
+	do
+		[ -z "${entry}" ] && continue
+		key=$(printf '%s' "${entry}" | base64 -d 2>/dev/null | jq -r '.key')
+		value=$(printf '%s' "${entry}" | base64 -d 2>/dev/null | jq -r '.value')
+		printf 'dbus set %s=%s\n' "${key}" "$(fss_shell_quote "${value}")" >> "${script_file}"
+	done
+
+	jq -r '.acl | to_entries[] | @base64' "${json_file}" | while IFS= read -r entry
+	do
+		[ -z "${entry}" ] && continue
+		key=$(printf '%s' "${entry}" | base64 -d 2>/dev/null | jq -r '.key')
+		value=$(printf '%s' "${entry}" | base64 -d 2>/dev/null | jq -r '.value')
+		[ "${key}" = "ss_acl_default_port" ] && continue
+		printf 'dbus set %s=%s\n' "${key}" "$(fss_shell_quote "${value}")" >> "${script_file}"
+	done
+	acl_default_ports=$(jq -r '.acl.ss_acl_default_ports // .acl.ss_acl_default_port // empty' "${json_file}")
+	[ -n "${acl_default_ports}" ] && printf 'dbus set ss_acl_default_port=%s\n' "$(fss_shell_quote "${acl_default_ports}")" >> "${script_file}"
+
+	node_current_id=$(jq -r '.node_current // empty' "${json_file}")
+	node_failover_id=$(jq -r '.node_failover_backup // empty' "${json_file}")
+	node_order_count=$(jq '.node_order | length' "${json_file}" 2>/dev/null)
+	if [ -z "${node_order_count}" ] || [ "${node_order_count}" = "0" ];then
+		jq -r '.nodes[]._id' "${json_file}" > "${script_file}.order"
+	else
+		jq -r '.node_order[]' "${json_file}" > "${script_file}.order"
+	fi
+
+	while IFS= read -r node_id
+	do
+		[ -z "${node_id}" ] && continue
+		idx=$((idx + 1))
+		[ "${node_current_id}" = "${node_id}" ] && current_pos="${idx}"
+		[ "${node_failover_id}" = "${node_id}" ] && failover_pos="${idx}"
+		node_json=$(jq -c --arg id "${node_id}" '.nodes[] | select(._id == $id)' "${json_file}" | sed -n '1p')
+		[ -z "${node_json}" ] && continue
+		printf '%s' "${node_json}" | fss_node_v2_to_legacy_script_lines "${idx}" >> "${script_file}"
+	done < "${script_file}.order"
+
+	[ -n "${current_pos}" ] && printf 'dbus set ssconf_basic_node=%s\n' "$(fss_shell_quote "${current_pos}")" >> "${script_file}"
+	[ -n "${failover_pos}" ] && printf 'dbus set ss_failover_s4_3=%s\n' "$(fss_shell_quote "${failover_pos}")" >> "${script_file}"
+
+	chmod +x "${script_file}"
+	rm -f "${script_file}.order"
+}
+
+fss_restore_legacy_backup_sh_fast() {
+	local script_file="$1"
+	local tmp_dir capture_file global_file order_file node_dump_file
+	local line payload key value field
+	local node_id order_csv="" node_ts=""
+	local node_b64=""
+	local current_id="" failover_id="" next_id=1 max_id=0
+	local global_count=0 acl_count=0 node_count=0 restored_nodes=0
+	local acl_default_port_legacy=""
+	local acl_default_ports_seen=0
+
+	[ -f "${script_file}" ] || return 1
+	tmp_dir=$(fss_mktemp_dir fss_restore_sh) || return 1
+	capture_file="${tmp_dir}/kv.txt"
+	global_file="${tmp_dir}/global.txt"
+	order_file="${tmp_dir}/order.txt"
+	node_dump_file="${tmp_dir}/nodes.dump"
+	: > "${capture_file}"
+	: > "${global_file}"
+	: > "${order_file}"
+	: > "${node_dump_file}"
+
+	fss_capture_legacy_backup_sh "${script_file}" "${capture_file}" || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+	[ -s "${capture_file}" ] || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+
+	while IFS= read -r payload
+	do
+		[ -n "${payload}" ] || continue
+		key=${payload%%=*}
+		value=${payload#*=}
+		[ -n "${key}" ] || continue
+		[ "${payload}" != "${key}" ] || continue
+		case "${key}" in
+		ssconf_basic_name_*)
+			node_id=${key##*_}
+			field=${key#ssconf_basic_}
+			field=${field%_"${node_id}"}
+			printf '%s\0%s\0%s\0' "${node_id}" "${field}" "${value}" >> "${node_dump_file}"
+			printf '%s\n' "${node_id}" >> "${order_file}"
+			node_count=$((node_count + 1))
+			;;
+		ssconf_basic_node)
+			current_id="${value}"
+			;;
+		ss_failover_s4_3)
+			failover_id="${value}"
+			;;
+		ss_acl_default_ports)
+			printf '%s=%s\n' "${key}" "${value}" >> "${global_file}"
+			acl_default_ports_seen=1
+			acl_count=$((acl_count + 1))
+			;;
+		ss_acl_default_port)
+			acl_default_port_legacy="${value}"
+			;;
+		ssconf_basic_*_[0-9]*)
+			node_id=${key##*_}
+			field=${key#ssconf_basic_}
+			field=${field%_"${node_id}"}
+			printf '%s\0%s\0%s\0' "${node_id}" "${field}" "${value}" >> "${node_dump_file}"
+			:
+			;;
+		ss_acl_*)
+			printf '%s=%s\n' "${key}" "${value}" >> "${global_file}"
+			acl_count=$((acl_count + 1))
+			;;
+		ss*)
+			printf '%s=%s\n' "${key}" "${value}" >> "${global_file}"
+			global_count=$((global_count + 1))
+			;;
+		esac
+	done < "${capture_file}"
+
+	if [ "${acl_default_ports_seen}" != "1" ] && [ -n "${acl_default_port_legacy}" ]; then
+		printf 'ss_acl_default_ports=%s\n' "${acl_default_port_legacy}" >> "${global_file}"
+		acl_count=$((acl_count + 1))
+	fi
+
+	if [ -s "${order_file}" ];then
+		sort -n -u "${order_file}" -o "${order_file}"
+		node_count=$(wc -l < "${order_file}")
+	fi
+
+	echo_date "检测到兼容SH备份：普通配置${global_count}项，ACL配置${acl_count}项，节点${node_count}个。"
+	echo_date "开始恢复普通配置和ACL配置..."
+
+	fss_clear_all_node_storage
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		key=${line%%=*}
+		value=${line#*=}
+		dbus set "${key}=${value}"
+	done < "${global_file}"
+	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
+	echo_date "普通配置和ACL配置恢复完成！"
+
+	if [ ! -s "${order_file}" ];then
+		dbus set fss_data_schema=2
+		dbus set fss_node_next_id=1
+		dbus set fss_data_migrated=1
+		dbus remove fss_data_migration_notice
+		dbus remove fss_data_migration_time
+		dbus remove fss_data_legacy_snapshot
+		dbus remove fss_data_migrating
+		rm -rf "${tmp_dir}"
+		return 0
+	fi
+
+	echo_date "开始恢复节点到新存储结构..."
+	node_ts="$(date +%s)"
+	fss_legacy_node_dump_to_v2_tsv "${node_dump_file}" "${order_file}" "restore-sh" "${node_ts}" > "${tmp_dir}/nodes.tsv" || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+	while IFS='	' read -r node_id node_b64
+	do
+		[ -n "${node_id}" ] || continue
+		[ -n "${node_b64}" ] || continue
+		dbus set "fss_node_${node_id}=${node_b64}"
+		restored_nodes=$((restored_nodes + 1))
+		if [ "${restored_nodes}" = "${node_count}" ] || [ $((restored_nodes % 50)) = 0 ];then
+			echo_date "恢复节点进度：${restored_nodes}/${node_count}"
+		fi
+	done < "${tmp_dir}/nodes.tsv" || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+
+	order_csv=$(tr '\n' ',' < "${order_file}" | sed 's/,$//')
+	max_id=$(sed -n '$p' "${order_file}")
+	[ -n "${max_id}" ] || max_id=0
+
+	next_id=$((max_id + 1))
+	dbus set fss_node_order="${order_csv}"
+	if [ -n "${current_id}" ];then
+		grep -Fxq "${current_id}" "${order_file}" || current_id="$(sed -n '1p' "${order_file}")"
+	else
+		current_id="$(sed -n '1p' "${order_file}")"
+	fi
+	if [ -n "${failover_id}" ];then
+		grep -Fxq "${failover_id}" "${order_file}" || failover_id=""
+	fi
+	[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
+	[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
+	dbus set fss_node_next_id="${next_id}"
+	dbus set fss_data_schema=2
+	dbus set fss_data_migrated=1
+	dbus remove fss_data_migration_notice
+	dbus remove fss_data_migration_time
+	dbus remove fss_data_legacy_snapshot
+	dbus remove fss_data_migrating
+	echo_date "节点恢复完成：${restored_nodes}个节点。"
+
+	rm -rf "${tmp_dir}"
+	return 0
+}
+
+fss_restore_native_backup_v2() {
+	local json_file="$1"
+	local tmp_dir node_order_file global_tsv acl_tsv nodes_tsv
+	local node_id node_b64 current_id failover_id next_id max_id=0 restored_nodes=0
+	local key value_b64 value
+	local node_count=0 global_count=0 acl_count=0 node_ts=0
+
+	[ -f "${json_file}" ] || return 1
+	jq -e '.format == "fancyss-backup" and (.schema_version | tostring) == "2"' "${json_file}" >/dev/null 2>&1 || return 1
+
+	tmp_dir=$(fss_mktemp_dir fss_restore) || return 1
+	node_order_file="${tmp_dir}/order"
+	global_tsv="${tmp_dir}/global.tsv"
+	acl_tsv="${tmp_dir}/acl.tsv"
+	nodes_tsv="${tmp_dir}/nodes.tsv"
+
+	echo_date "JSON备份节点较多时可能耗时较长，请耐心等待..."
+	echo_date "阶段1/4：校验备份结构..."
+	jq -r '
+		if ((.node_order // []) | length) > 0 then
+			.node_order[]
+		else
+			.nodes[]._id // empty
+		end
+	' "${json_file}" | sed '/^$/d' | awk '!seen[$0]++' > "${node_order_file}" || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+	node_count=$(wc -l < "${node_order_file}" 2>/dev/null)
+	global_count=$(jq '(.global // {}) | length' "${json_file}" 2>/dev/null)
+	acl_count=$(jq '(.acl // {}) | length' "${json_file}" 2>/dev/null)
+	[ -n "${global_count}" ] || global_count=0
+	[ -n "${acl_count}" ] || acl_count=0
+	[ -n "${node_count}" ] || node_count=0
+	echo_date "检测到JSON备份：普通配置${global_count}项，ACL配置${acl_count}项，节点${node_count}个。"
+
+	echo_date "阶段2/4：恢复普通配置和ACL配置..."
+	jq -r '
+		.global // {}
+		| to_entries[]?
+		| [.key, ((.value | if type == "string" then . else tostring end) | @base64)]
+		| @tsv
+	' "${json_file}" > "${global_tsv}" || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+	jq -r '
+		.acl // {}
+		| to_entries[]?
+		| [.key, ((.value | if type == "string" then . else tostring end) | @base64)]
+		| @tsv
+	' "${json_file}" > "${acl_tsv}" || {
+		rm -rf "${tmp_dir}"
+		return 1
+	}
+
+	fss_clear_all_node_storage
+
+	while IFS='	' read -r key value_b64
+	do
+		[ -n "${key}" ] || continue
+		value=$(fss_b64_decode "${value_b64}")
+		dbus set "${key}=${value}"
+	done < "${global_tsv}"
+
+	while IFS='	' read -r key value_b64
+	do
+		[ -n "${key}" ] || continue
+		value=$(fss_b64_decode "${value_b64}")
+		dbus set "${key}=${value}"
+	done < "${acl_tsv}"
+	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
+	echo_date "普通配置和ACL配置恢复完成！"
+
+	current_id=$(jq -r '.node_current // empty' "${json_file}")
+	failover_id=$(jq -r '.node_failover_backup // empty' "${json_file}")
+	next_id=$(jq -r '.node_next_id // empty' "${json_file}")
+	node_ts=$(date +%s)
+
+	if [ "${node_count}" -gt 0 ];then
+		echo_date "阶段3/4：准备节点数据，共 ${node_count} 个节点..."
+		jq -r \
+			--argjson ts "${node_ts}" '
+			def keep_common($k):
+				$k == "group"
+				or $k == "name"
+				or $k == "mode"
+				or $k == "type";
+			def keep_type($type; $k):
+				if $type == "0" then
+					$k == "server" or $k == "port" or $k == "method" or $k == "password" or $k == "ss_obfs" or $k == "ss_obfs_host"
+				elif $type == "1" then
+					$k == "server" or $k == "port" or $k == "method" or $k == "password" or $k == "rss_protocol" or $k == "rss_protocol_param" or $k == "rss_obfs" or $k == "rss_obfs_param"
+				elif $type == "3" then
+					$k == "server" or $k == "port" or $k == "v2ray_uuid" or $k == "v2ray_alterid" or $k == "v2ray_security" or $k == "v2ray_network" or $k == "v2ray_headtype_tcp" or $k == "v2ray_headtype_kcp" or $k == "v2ray_kcp_seed" or $k == "v2ray_headtype_quic" or $k == "v2ray_grpc_mode" or $k == "v2ray_grpc_authority" or $k == "v2ray_network_path" or $k == "v2ray_network_host" or $k == "v2ray_network_security" or $k == "v2ray_network_security_ai" or $k == "v2ray_network_security_alpn_h2" or $k == "v2ray_network_security_alpn_http" or $k == "v2ray_network_security_sni" or $k == "v2ray_mux_concurrency" or $k == "v2ray_json" or $k == "v2ray_use_json" or $k == "v2ray_mux_enable"
+				elif $type == "4" then
+					$k == "server" or $k == "port" or $k == "xray_uuid" or $k == "xray_alterid" or $k == "xray_prot" or $k == "xray_encryption" or $k == "xray_flow" or $k == "xray_network" or $k == "xray_headtype_tcp" or $k == "xray_headtype_kcp" or $k == "xray_kcp_seed" or $k == "xray_headtype_quic" or $k == "xray_grpc_mode" or $k == "xray_grpc_authority" or $k == "xray_xhttp_mode" or $k == "xray_network_path" or $k == "xray_network_host" or $k == "xray_network_security" or $k == "xray_network_security_ai" or $k == "xray_network_security_alpn_h2" or $k == "xray_network_security_alpn_http" or $k == "xray_network_security_sni" or $k == "xray_pcs" or $k == "xray_vcn" or $k == "xray_fingerprint" or $k == "xray_publickey" or $k == "xray_shortid" or $k == "xray_spiderx" or $k == "xray_show" or $k == "xray_json" or $k == "xray_use_json"
+				elif $type == "5" then
+					$k == "server" or $k == "port" or $k == "trojan_ai" or $k == "trojan_uuid" or $k == "trojan_sni" or $k == "trojan_pcs" or $k == "trojan_vcn" or $k == "trojan_tfo" or $k == "trojan_plugin" or $k == "trojan_obfs" or $k == "trojan_obfshost" or $k == "trojan_obfsuri"
+				elif $type == "6" then
+					$k == "naive_prot" or $k == "naive_server" or $k == "naive_port" or $k == "naive_user" or $k == "naive_pass"
+				elif $type == "7" then
+					$k == "tuic_json"
+				elif $type == "8" then
+					$k == "hy2_server" or $k == "hy2_port" or $k == "hy2_pass" or $k == "hy2_up" or $k == "hy2_dl" or $k == "hy2_obfs" or $k == "hy2_obfs_pass" or $k == "hy2_sni" or $k == "hy2_pcs" or $k == "hy2_vcn" or $k == "hy2_ai" or $k == "hy2_tfo" or $k == "hy2_cg"
+				else
+					false
+				end;
+			def prune:
+				. as $root
+				| (($root.type // "") | tostring) as $type
+				| with_entries(select((.key | startswith("_")) or keep_common(.key) or keep_type($type; .key)));
+			(.nodes | map({key: ((._id // "") | tostring), value: .}) | from_entries) as $nodes_map
+			| ((.node_order // []) | map(tostring) | map(select(length > 0))) as $order0
+			| ($order0 | if length > 0 then . else (.nodes | map((._id // "") | tostring) | map(select(length > 0))) end) as $order
+			| $order[]
+			| . as $id
+			| ($nodes_map[$id] // empty)
+			| with_entries(select(.value != "" and .value != null))
+			| del(.server_ip, .latency, .ping)
+			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
+			| ._schema = 2
+			| ._id = $id
+			| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+			| ._updated_at = $ts
+			| if ((._source // "") == "") then ._source = "restore" else . end
+			| prune
+			| [$id, (tojson | @base64)] | @tsv
+		' "${json_file}" > "${nodes_tsv}" || {
+			rm -rf "${tmp_dir}"
+			return 1
+		}
+		restored_nodes=$(wc -l < "${nodes_tsv}" 2>/dev/null)
+		[ -n "${restored_nodes}" ] || restored_nodes=0
+		[ "${restored_nodes}" = "${node_count}" ] || {
+			rm -rf "${tmp_dir}"
+			return 1
+		}
+	else
+		: > "${nodes_tsv}"
+	fi
+
+	echo_date "阶段4/4：写入节点数据..."
+	restored_nodes=0
+	max_id=0
+	while IFS='	' read -r node_id node_b64
+	do
+		[ -n "${node_id}" ] || continue
+		[ -n "${node_b64}" ] || continue
+		dbus set "fss_node_${node_id}=${node_b64}"
+		restored_nodes=$((restored_nodes + 1))
+		if [ "${node_id}" -gt "${max_id}" ] 2>/dev/null;then
+			max_id="${node_id}"
+		fi
+		if [ "${restored_nodes}" = "1" ] || [ $((restored_nodes % 25)) = 0 ] || [ "${restored_nodes}" = "${node_count}" ];then
+			echo_date "JSON节点恢复进度：${restored_nodes}/${node_count}"
+		fi
+	done < "${nodes_tsv}"
+
+	if [ -z "${next_id}" ] || [ "${next_id}" -le "${max_id}" ] 2>/dev/null;then
+		next_id=$((max_id + 1))
+	fi
+	[ "${node_count}" -gt 0 ] || next_id=1
+
+	dbus set fss_data_schema=2
+	if [ "${node_count}" -gt 0 ];then
+		dbus set fss_node_order="$(tr '\n' ',' < "${node_order_file}" | sed 's/,$//')"
+		if [ -n "${current_id}" ];then
+			grep -Fxq "${current_id}" "${node_order_file}" || current_id=$(sed -n '1p' "${node_order_file}")
+		else
+			current_id=$(sed -n '1p' "${node_order_file}")
+		fi
+		if [ -n "${failover_id}" ];then
+			grep -Fxq "${failover_id}" "${node_order_file}" || failover_id=""
+		fi
+		[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
+		[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
+	else
+		dbus remove fss_node_order
+		dbus remove fss_node_current
+		dbus remove fss_node_failover_backup
+	fi
+	dbus set fss_node_next_id="${next_id}"
+	dbus set fss_data_migrated=1
+	dbus remove fss_data_migration_notice
+	dbus remove fss_data_migration_time
+	dbus remove fss_data_legacy_snapshot
+	dbus remove fss_data_migrating
+	dbus set ss_basic_enable="0"
+	echo_date "节点恢复完成：${restored_nodes}个节点。"
+
+	rm -rf "${tmp_dir}"
+	return 0
+}

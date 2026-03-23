@@ -7,6 +7,18 @@ source /koolshare/scripts/ss_webtest_gen.sh
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 TMP2=/tmp/fancyss_webtest
 
+wt_node_get() {
+	fss_get_node_field_legacy "$2" "$1"
+}
+
+wt_node_get_plain() {
+	fss_get_node_field_plain "$2" "$1"
+}
+
+wt_node_count() {
+	fss_get_node_count
+}
+
 run(){
 	env -i PATH=${PATH} "$@"
 }
@@ -70,6 +82,18 @@ update_webtest_file(){
 	fi
 }
 
+get_webtest_usable_count(){
+	local webtest_file="$1"
+	[ -f "${webtest_file}" ] || {
+		echo 0
+		return 0
+	}
+	awk -F '>' '
+		$1 != "stop" && ($2 == "failed" || $2 == "timeout" || $2 == "ns" || $2 ~ /^[0-9]+$/) {count++}
+		END {print count + 0}
+	' "${webtest_file}" 2>/dev/null
+}
+
 # ----------------------------------------------------------------------
 # webtest
 # 0: ss: ss, ss + simpple obfs, ss + v2ray plugin
@@ -97,6 +121,11 @@ webtest_web(){
 	fi
 	# 1. 如果没有结果文件，需要去获取webtest
 	if [ ! -f "/tmp/upload/webtest.txt" ];then
+		local backup_usable=$(get_webtest_usable_count /tmp/upload/webtest_bakcup.txt)
+		if [ "${backup_usable}" -gt "0" ];then
+			http_response "ok3, partial cache exists, keep it"
+			return 0
+		fi
 		clean_webtest
 		start_webtest
 		return 0
@@ -110,8 +139,13 @@ webtest_web(){
 
 	# 3. 如果有结果该文件，且没有lock（webtest完成了的），需要检测下节点数量和webtest数量是否一致，避免新增节点没有webtest
 	local webtest_nu=$(cat /tmp/upload/webtest.txt | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
-	local node_nu=$(dbus list ssconf_basic_ | grep _name_ | wc -l)
+	local node_nu=$(wt_node_count)
 	if [ "${webtest_nu}" -ne "${node_nu}" ];then
+		local backup_usable=$(get_webtest_usable_count /tmp/upload/webtest_bakcup.txt)
+		if [ "${backup_usable}" -gt "0" ];then
+			http_response "ok3, partial cache exists, keep it"
+			return 0
+		fi
 		clean_webtest
 		start_webtest
 		return 0
@@ -173,7 +207,13 @@ sort_nodes(){
 
 	# sort by type first
 	local count=1
-	dbus list ssconf_basic_type_|sort -t "_" -nk4|sed 's/^ssconf_basic_type_//'|awk -F"=" '{printf $1 " "; printf "%02d\n", $2}' >${TMP2}/nodes_index.txt
+	: >${TMP2}/nodes_index.txt
+	fss_list_node_ids | while read node_id
+	do
+		[ -z "${node_id}" ] && continue
+		printf "%s %02d\n" "${node_id}" "$(wt_node_get type ${node_id})" >>${TMP2}/nodes_index.txt
+	done
+	sort -t " " -nk1 ${TMP2}/nodes_index.txt -o ${TMP2}/nodes_index.txt
 	cat ${TMP2}/nodes_index.txt|awk '{print $2}'|uniq -c|sed 's/^[[:space:]]\+//g' | while read gp
 	do
 		local _type=$(echo "$gp" | awk '{print $2}')
@@ -199,8 +239,8 @@ sort_nodes(){
 			cat $file | while read ss_nu
 			do
 				# echo $ss_nu
-				local _obfs=$(dbus get ssconf_basic_ss_obfs_${ss_nu})
-				local _method=$(dbus get ssconf_basic_method_${ss_nu})
+				local _obfs=$(wt_node_get ss_obfs ${ss_nu})
+				local _method=$(wt_node_get method ${ss_nu})
 				local ss_2022=$(echo ${_method} | grep "2022-blake")
 				if [ -z "${_obfs}" -o "${_obfs}" == "0" ];then
 					local _obfs_enable="0"
@@ -232,8 +272,8 @@ test_nodes(){
 	detect_perf
 
 	# 优先测试当前节点及其附近的同类型节点，重排生成节点序号储存文件
-	local CURR_NODE=$(dbus get ssconf_basic_node)
-	[ -z "${CURR_NODE}" ] && CURR_NODE=1
+	local CURR_NODE=$(fss_get_current_node_id)
+	[ -z "${CURR_NODE}" ] && CURR_NODE=$(fss_get_first_node_id)
 	MAX_SHOW=$(dbus get ss_basic_row)
 	if [ "${MAX_SHOW}" -gt "1" ];then 
 		BEGN_NODE=$(awk -v x=${CURR_NODE} -v y=${MAX_SHOW} 'BEGIN { printf "%.0f\n", (x-y/2)}')
@@ -401,7 +441,7 @@ test_xray_group(){
 
 	# gen xray json for all nodes
 	cat ${TMP2}/${file} | while read nu; do
-		local node_type=$(dbus get ssconf_basic_type_${nu})
+		local node_type=$(wt_node_get type ${nu})
 		case ${node_type} in
 		0)
 			wt_gen_ss_outbound ${nu} ${mark}
@@ -542,10 +582,10 @@ test_07_sr(){
 				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
 				
 				# 1. resolve server
-				local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_server_${nu}))
+				local _server_ip=$(_get_server_ip $(wt_node_get server ${nu}))
 				if [ -z "${_server_ip}" ];then
 					# use domain
-					_server_ip=$(dbus get ssconf_basic_server_${nu})
+					_server_ip=$(wt_node_get server ${nu})
 				fi
 
 				# 2. gen json conf
@@ -553,16 +593,16 @@ test_07_sr(){
 				cat >${TMP2}/conf_${mark}/${nu}.json <<-EOF
 					{
 					    "server":"${_server_ip}",
-					    "server_port":$(dbus get ssconf_basic_port_${nu}),
+					    "server_port":$(wt_node_get port ${nu}),
 					    "local_address":"0.0.0.0",
 					    "local_port":${socks5_port},
-					    "password":"$(dbus get ssconf_basic_password_${nu} | base64_decode)",
+					    "password":"$(wt_node_get password ${nu} | base64_decode)",
 					    "timeout":600,
-					    "protocol":"$(dbus get ssconf_basic_rss_protocol_${nu})",
-					    "protocol_param":"$(dbus get ssconf_basic_rss_protocol_param_${nu})",
-					    "obfs":"$(dbus get ssconf_basic_rss_obfs_${nu})",
-					    "obfs_param":"$(dbus get ssconf_basic_rss_obfs_param_${nu})",
-					    "method":"$(dbus get ssconf_basic_method_${nu})"
+					    "protocol":"$(wt_node_get rss_protocol ${nu})",
+					    "protocol_param":"$(wt_node_get rss_protocol_param ${nu})",
+					    "obfs":"$(wt_node_get rss_obfs ${nu})",
+					    "obfs_param":"$(wt_node_get rss_obfs_param ${nu})",
+					    "method":"$(wt_node_get method ${nu})"
 					}
 				EOF
 
@@ -599,14 +639,14 @@ test_11_nv(){
 		for nu in $nus; do
 			{
 				# 1. resolve server
-				local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_naive_server_${nu}))
+				local _server_ip=$(_get_server_ip $(wt_node_get naive_server ${nu}))
 
 				# 2. start naiveproxy
 				local socks5_port=$(get_rand_port)
 				if [ -z "${_server_ip}" ];then
-					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(dbus get ssconf_basic_naive_prot_${nu})://$(dbus get ssconf_basic_naive_user_${nu}):$(dbus get ssconf_basic_naive_pass_${nu} | base64_decode)@$(dbus get ssconf_basic_naive_server_${nu}):$(dbus get ssconf_basic_naive_port_${nu}) >/dev/null 2>&1 &
+					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) >/dev/null 2>&1 &
 				else
-					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(dbus get ssconf_basic_naive_prot_${nu})://$(dbus get ssconf_basic_naive_user_${nu}):$(dbus get ssconf_basic_naive_pass_${nu} | base64_decode)@$(dbus get ssconf_basic_naive_server_${nu}):$(dbus get ssconf_basic_naive_port_${nu}) --host-resolver-rules="MAP $(dbus get ssconf_basic_naive_server_${nu}) ${_server_ip}" >/dev/null 2>&1 &
+					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) --host-resolver-rules="MAP $(wt_node_get naive_server ${nu}) ${_server_ip}" >/dev/null 2>&1 &
 				fi
 
 				sleep 2
@@ -644,7 +684,7 @@ test_12_tc(){
 				# 1. gen json
 				local socks5_port=$(get_rand_port)
 				local new_addr="127.0.0.1:${socks5_port}"
-				dbus get ssconf_basic_tuic_json_${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${TMP2}/conf/tuic-${socks5_port}.json
+				wt_node_get tuic_json ${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${TMP2}/conf/tuic-${socks5_port}.json
 
 				# 2. start tuic
 				run ${TMP2}/wt-tuic -c ${TMP2}/conf/tuic-${socks5_port}.json >/dev/null 2>&1 &
@@ -673,16 +713,16 @@ test_12_tc(){
 
 creat_trojan_json(){
 	local nu=$1
-	local trojan_server=$(dbus get ssconf_basic_server_${nu})
-	local trojan_port=$(dbus get ssconf_basic_port_${nu})
-	local trojan_uuid=$(dbus get ssconf_basic_trojan_uuid_${nu})
-	local trojan_sni=$(dbus get ssconf_basic_trojan_sni_${nu})
-	local trojan_ai=$(dbus get ssconf_basic_trojan_ai_${nu})
+	local trojan_server=$(wt_node_get server ${nu})
+	local trojan_port=$(wt_node_get port ${nu})
+	local trojan_uuid=$(wt_node_get trojan_uuid ${nu})
+	local trojan_sni=$(wt_node_get trojan_sni ${nu})
+	local trojan_ai=$(wt_node_get trojan_ai ${nu})
 	local trojan_ai_global=$(dbus get ss_basic_tjai${nu})
 	if [ "${trojan_ai_global}" == "1" ];then
 		local trojan_ai="1"
 	fi
-	local trojan_tfo=$(dbus get ssconf_basic_trojan_tfo_${nu})
+	local trojan_tfo=$(wt_node_get trojan_tfo ${nu})
 	local _server_ip=$(_get_server_ip ${trojan_server})
 	if [ -z "${_server_ip}" ];then
 		_server_ip=${trojan_server}
@@ -756,54 +796,54 @@ creat_trojan_json(){
 creat_hy2_yaml(){
 	local nu=$1
 	local mark=$2
-	if [ -z "$(dbus get ssconf_basic_hy2_sni_${nu})" ];then
-		__valid_ip_silent "$(dbus get ssconf_basic_hy2_server_${nu})"
+	if [ -z "$(wt_node_get hy2_sni ${nu})" ];then
+		__valid_ip_silent "$(wt_node_get hy2_server ${nu})"
 		if [ "$?" != "0" ];then
 			# not ip, should be a domain
-			local hy2_sni=$(dbus get ssconf_basic_hy2_server_${nu})
+			local hy2_sni=$(wt_node_get hy2_server ${nu})
 		else
 			local hy2_sni=""
 		fi
 	else
-		local hy2_sni="$(dbus get ssconf_basic_hy2_sni_${nu})"
+		local hy2_sni="$(wt_node_get hy2_sni ${nu})"
 	fi
 
-	local _server_ip=$(_get_server_ip $(dbus get ssconf_basic_hy2_server_${nu}))
+	local _server_ip=$(_get_server_ip $(wt_node_get hy2_server ${nu}))
 	if [ -z "${_server_ip}" ];then
 		# use domain
-		_server_ip=$(dbus get ssconf_basic_hy2_server_${nu})
+		_server_ip=$(wt_node_get hy2_server ${nu})
 		#echo -en "${nu}:\t解析失败！\n"
 		#continue
 	fi
 
 	cat >> ${TMP2}/conf_${mark}/${nu}.yaml <<-EOF
-		server: ${_server_ip}:$(dbus get ssconf_basic_hy2_port_${nu})
+		server: ${_server_ip}:$(wt_node_get hy2_port ${nu})
 		
-		auth: $(dbus get ssconf_basic_hy2_pass_${nu})
+		auth: $(wt_node_get hy2_pass ${nu})
 
 		tls:
 		  sni: ${hy2_sni}
-		  insecure: $(get_function_switch $(dbus get ssconf_basic_hy2_ai_${nu}))
+		  insecure: $(get_function_switch $(wt_node_get hy2_ai ${nu}))
 		
-		fastOpen: $(get_function_switch $(dbus get ssconf_basic_hy2_tfo_${nu}))
+		fastOpen: $(get_function_switch $(wt_node_get hy2_tfo ${nu}))
 		
 	EOF
 	
-	if [ -n "$(dbus get ssconf_basic_hy2_up_${nu})" -o -n "$(dbus get ssconf_basic_hy2_dl_${nu})" ];then
+	if [ -n "$(wt_node_get hy2_up ${nu})" -o -n "$(wt_node_get hy2_dl ${nu})" ];then
 		cat >> ${TMP2}/conf_${mark}/${nu}.yaml <<-EOF
 			bandwidth: 
-			  up: $(dbus get ssconf_basic_hy2_up_${nu}) mbps
-			  down: $(dbus get ssconf_basic_hy2_dl_${nu}) mbps
+			  up: $(wt_node_get hy2_up ${nu}) mbps
+			  down: $(wt_node_get hy2_dl ${nu}) mbps
 			
 		EOF
 	fi
 
-	if [ "$(dbus get ssconf_basic_hy2_obfs_${nu})" == "1" -a -n "$(dbus get ssconf_basic_hy2_obfs_pass_${nu})" ];then
+	if [ "$(wt_node_get hy2_obfs ${nu})" == "1" -a -n "$(wt_node_get hy2_obfs_pass ${nu})" ];then
 		cat >> ${TMP2}/conf_${mark}/${nu}.yaml <<-EOF
 			obfs:
 			  type: salamander
 			  salamander:
-			    password: "$(dbus get ssconf_basic_hy2_obfs_pass_${nu})"
+			    password: "$(wt_node_get hy2_obfs_pass ${nu})"
 			
 		EOF
 	fi
@@ -908,8 +948,8 @@ curl_test(){
 }
 
 single_test_node(){
-	local nu="$1"
-	if [ -z "${nu}" ];then
+	local test_node="$1"
+	if [ -z "${test_node}" ];then
 		return 1
 	fi
 
@@ -928,11 +968,11 @@ single_test_node(){
 	rm -rf ${TMP2}/results/*
 	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
 
-	echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+	echo -en "${test_node}>testing...\n" >>/tmp/upload/webtest.txt
 
-	local single_file="wt_single_${nu}.txt"
-	echo "${nu}" > ${TMP2}/${single_file}
-	local node_type=$(dbus get ssconf_basic_type_${nu})
+	local single_file="wt_single_${test_node}.txt"
+	echo "${test_node}" > ${TMP2}/${single_file}
+	local node_type=$(wt_node_get type ${test_node})
 	case ${node_type} in
 	0|3|4|5|8)
 		test_xray_group ${single_file} xg
@@ -947,12 +987,12 @@ single_test_node(){
 		test_12_tc ${single_file}
 		;;
 	*)
-		echo -en "${nu}>failed\n" >>/tmp/upload/webtest.txt
+		echo -en "${test_node}>failed\n" >>/tmp/upload/webtest.txt
 		;;
 	esac
 
-	# update backup with latest single test result
-	update_single_backup "${nu}"
+	# 避免内部测速函数复用局部变量名后把原节点序号冲掉。
+	update_single_backup "${test_node}"
 	echo -en "stop>stop\n" >>/tmp/upload/webtest.txt
 }
 
@@ -961,11 +1001,13 @@ update_single_backup(){
 	[ -z "${nu}" ] && return 0
 	local new_line=$(grep "^${nu}>" /tmp/upload/webtest.txt | tail -n 1)
 	[ -z "${new_line}" ] && return 0
+	mkdir -p /tmp/upload ${TMP2}
 	local tmp_file="${TMP2}/webtest_bakcup.tmp"
+	: > ${tmp_file}
 	if [ -f "/tmp/upload/webtest_bakcup.txt" ];then
-		grep -v -E "^${nu}>|^stop>" /tmp/upload/webtest_bakcup.txt > ${tmp_file}
+		grep -v -E "^${nu}>|^stop>" /tmp/upload/webtest_bakcup.txt > ${tmp_file} || true
 	else
-		grep -v -E "^stop>" /tmp/upload/webtest.txt > ${tmp_file}
+		grep -v -E "^${nu}>|^stop>" /tmp/upload/webtest.txt > ${tmp_file} || true
 	fi
 	echo "${new_line}" >> ${tmp_file}
 	echo "stop>stop" >> ${tmp_file}
@@ -1255,7 +1297,6 @@ set_latency_job() {
 		cru a sslatencyjob "*/${ss_basic_lt_cru_time} * * * * /koolshare/scripts/ss_webtest.sh 2"
 	fi
 }
-# ----------------------------------------------------------------------
 
 case $1 in
 2)

@@ -368,13 +368,15 @@ ipv6_proxy_enabled() {
 
 ipv6_proxy_supported() {
 	case "${ss_basic_type}" in
-	0|1|3|4|5|6|7|8)
+	0|1|3|4|5|6|7|8|9)
 		return 0
 		;;
-	*)
-		return 1
-		;;
 	esac
+
+	[ "${ss_basic_v2ray_use_json}" == "1" ] && return 0
+	[ "${ss_basic_xray_use_json}" == "1" ] && return 0
+
+	return 1
 }
 
 check_ipv6_proxy_prerequisites() {
@@ -382,10 +384,12 @@ check_ipv6_proxy_prerequisites() {
 	echo_date "➡️ IPv6透明代理预检查..."
 	if ! ipv6_proxy_supported; then
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "+ 当前节点类型暂不支持IPv6透明代理，请关闭【开启ipv6代理】开关！ +"
-		echo_date "+ 或切换到SS/SSR/VMess/VLESS/Trojan/Naive/TUIC/HY2等支持IPv6透明代理的节点！ +"
+		echo_date "+ 当前节点类型暂不支持IPv6透明代理，本次将自动回退到IPv4模式！ +"
+		echo_date "+ 并强制开启代理域名IPv6过滤，避免代理域名解析到IPv6后直连。 +"
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		close_in_five flag
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
 	fi
 
 	if [ "$(nvram get ipv6_service)" == "disabled" ];then
@@ -413,7 +417,9 @@ check_ipv6_proxy_prerequisites() {
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		echo_date "+ 检测到路由器当前没有可用的IPv6全局地址，无法开启IPv6透明代理！ +"
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		close_in_five flag
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
 	fi
 
 	check_internet6
@@ -421,20 +427,28 @@ check_ipv6_proxy_prerequisites() {
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		echo_date "+ 检测到路由器当前无法正常访问IPv6公网，无法开启IPv6透明代理！ +"
 		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		close_in_five flag
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
 	fi
 
 	if ! ip6tables -t nat -L PREROUTING >/dev/null 2>&1; then
 		echo_date "错误：当前系统不支持ip6tables nat表，无法开启IPv6透明代理！"
-		close_in_five flag
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
 	fi
 	if ! ip6tables -t mangle -L PREROUTING >/dev/null 2>&1; then
 		echo_date "错误：当前系统不支持ip6tables mangle表，无法开启IPv6透明代理！"
-		close_in_five flag
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
 	fi
 	if ! ip6tables -t filter -L FORWARD >/dev/null 2>&1; then
 		echo_date "错误：当前系统不支持ip6tables filter表，无法开启IPv6透明代理！"
-		close_in_five flag
+		disable_ipv6_proxy_runtime
+		echo_date "↪ 已自动关闭IPv6代理开关，回退到纯IPv4代理模式继续运行。"
+		return 0
 	fi
 
 	echo_date "✅️ IPv6透明代理预检查通过，继续！"
@@ -740,7 +754,7 @@ prepare_system() {
 		echo_date "NaïveProxy不支持udp代理，因此不支持游戏模式，自动切换为大陆白名单模式！"
 		ss_basic_mode="2"
 		ss_acl_default_mode="2"
-		dbus set ssconf_basic_mode_${ssconf_basic_node}="2"
+		fss_set_current_node_field_plain mode "2"
 	fi
 
 	if [ "${ss_basic_type}" == "6" -a "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "udp" ]; then
@@ -2868,6 +2882,7 @@ creat_vmess_json() {
 		grpc)
 			local gr="{
 				\"serviceName\": $(get_value_empty $ss_basic_v2ray_network_path),
+				\"authority\": $(get_value_empty $ss_basic_v2ray_grpc_authority),
 				\"multiMode\": $(get_grpc_multimode ${ss_basic_v2ray_grpc_mode})
 				}"
 			;;
@@ -2953,7 +2968,7 @@ creat_vmess_json() {
 			}
 		EOF
 		echo_date "解析vmess协议配置文件..."
-		sed -i '/null/d' ${VMESS_CONFIG_TEMP} 2>/dev/null
+		run jq 'del(.. | nulls)' ${VMESS_CONFIG_TEMP} > /tmp/jq_strip_tmp.txt 2>/dev/null && mv /tmp/jq_strip_tmp.txt ${VMESS_CONFIG_TEMP}
 		run jq --tab . ${VMESS_CONFIG_TEMP} >/tmp/jq_para_tmp.txt 2>&1
 		if [ "$?" != "0" ];then
 			echo_date "json配置解析错误，错误信息如下："
@@ -3076,7 +3091,7 @@ creat_vmess_json() {
 				esac
 			fi
 			# write v2ray server
-			dbus set ssconf_basic_server_${ssconf_basic_node}=${v2ray_server}
+			fss_set_current_node_field_plain server "${v2ray_server}"
 		else
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo_date "+       没有检测到你的${VCORE_NAME}服务器地址，如果你确定你的配置是正确的        +"
@@ -3254,7 +3269,7 @@ creat_xray_ss_json() {
 	fi
 	
 	echo_date "解析Xray配置文件..."
-	sed -i '/null/d' ${SS_CONFIG_TEMP} 2>/dev/null
+	run jq 'del(.. | nulls)' ${SS_CONFIG_TEMP} > /tmp/jq_strip_tmp.txt 2>/dev/null && mv /tmp/jq_strip_tmp.txt ${SS_CONFIG_TEMP}
 	if [ "${LINUX_VER}" == "26" ]; then
 		sed -i '/tcpFastOpen/d' ${SS_CONFIG_TEMP} 2>/dev/null
 	fi
@@ -3354,16 +3369,16 @@ creat_vless_json() {
 			if [ -z "${ss_basic_xray_fingerprint}" ];then
 				echo_date "fingerprint为空，默认使用chrome作为指纹"
 				ss_basic_xray_fingerprint="chrome"
-				dbus set ssconf_basic_xray_fingerprint_${cur_node}="chrome"
+				fss_set_current_node_field_plain xray_fingerprint "chrome"
 			fi
-			# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and svn as soon as possible.
+			# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and vcn as soon as possible.
 			if [ "${ss_basic_xray_network_security_ai}" != "1" ];then
 				local tls="{
 						\"alpn\": ${apln}
 						,\"serverName\": $(get_value_null ${ss_basic_xray_network_security_sni})
 						,\"fingerprint\": $(get_value_empty ${ss_basic_xray_fingerprint})
 						,\"pinnedPeerCertSha256\": $(get_value_empty ${ss_basic_xray_pcs})
-						,\"verifyPeerCertByName\": $(get_value_empty ${ss_basic_xray_svn})
+						,\"verifyPeerCertByName\": $(get_value_empty ${ss_basic_xray_vcn})
 						}"
 			else
 				local tls="{
@@ -3472,6 +3487,7 @@ creat_vless_json() {
 		grpc)
 			local gr="{
 				\"serviceName\": $(get_value_empty $ss_basic_xray_network_path),
+				\"authority\": $(get_value_empty $ss_basic_xray_grpc_authority),
 				\"multiMode\": $(get_grpc_multimode ${ss_basic_xray_grpc_mode})
 				}"
 			;;
@@ -3580,7 +3596,7 @@ creat_vless_json() {
 			}
 		EOF
 		echo_date "解析Xray配置文件..."
-		sed -i '/null/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
+		run jq 'del(.. | nulls)' ${VLESS_CONFIG_TEMP} > /tmp/jq_strip_tmp.txt 2>/dev/null && mv /tmp/jq_strip_tmp.txt ${VLESS_CONFIG_TEMP}
 		if [ "${ss_basic_xray_prot}" == "vless" ];then
 			sed -i '/alterId/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 		fi
@@ -3705,7 +3721,7 @@ creat_vless_json() {
 				esac
 			fi
 			# write xray server
-			dbus set ssconf_basic_server_${ssconf_basic_node}=${xray_server}
+			fss_set_current_node_field_plain server "${xray_server}"
 		else
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo_date "+       没有检测到你的Xray服务器地址，如果你确定你的配置是正确的        +"
@@ -3853,6 +3869,8 @@ creat_trojan_json(){
 					"security": "tls",
 					"tlsSettings": {
 						"serverName": $(get_value_null ${ss_basic_trojan_sni}),
+						"pinnedPeerCertSha256": $(get_value_empty ${ss_basic_trojan_pcs}),
+						"verifyPeerCertByName": $(get_value_empty ${ss_basic_trojan_vcn}),
 						"allowInsecure": $(get_function_switch ${ss_basic_trojan_ai})
 					}
 					,"wsSettings": ${_trojan_ws}
@@ -4030,11 +4048,11 @@ creat_hy2_json(){
 						"serverName": "${ss_basic_hy2_sni}"
 	EOF
 
-	# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and svn as soon as possible.
+	# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and vcn as soon as possible.
 	if [ "${ss_basic_hy2_ai}" != "1" ];then
 		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
 							,"pinnedPeerCertSha256": $(get_value_empty ${ss_basic_hy2_pcs})
-							,"verifyPeerCertByName": $(get_value_empty ${ss_basic_hy2_svn})
+							,"verifyPeerCertByName": $(get_value_empty ${ss_basic_hy2_vcn})
 		EOF
 	else
 		cat >>"${HY2_CONFIG_TEMP}" <<-EOF

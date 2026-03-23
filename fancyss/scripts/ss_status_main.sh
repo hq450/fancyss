@@ -8,10 +8,14 @@ LOGFILE_F=/tmp/upload/ssf_status.txt
 LOGFILE_C=/tmp/upload/ssc_status.txt
 #LOGTIME1=📅$(TZ=UTC-8 date -R "+%m-%d/%H:%M:%S")
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
-CURRENT=$(dbus get ssconf_basic_node)
+CURRENT=$(fss_get_current_node_id)
 CHK_INTER=$(dbus get ss_basic_interval)
 COUNT=1
 rm -rf /tmp/upload/test.txt
+
+get_node_name_by_id() {
+	fss_get_node_field_plain "$1" name
+}
 
 clean_f_log() {
 	[ $(wc -l "$LOGFILE_F" | awk '{print $1}') -le "$LOG_MAX" ] && return
@@ -55,6 +59,8 @@ _get_interval() {
 failover_action(){
 	FLAG=$1
 	PING=$2
+	local current_id=$(fss_get_current_node_id)
+	local current_name=$(get_node_name_by_id "${current_id}")
 	if [ "$ss_failover_s4_1" == "0" ];then
 		[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，关闭插件！"
 		[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，关闭插件！"
@@ -75,7 +81,7 @@ failover_action(){
 				LOGM "$LOGTIME1 fancyss：没有找到web延迟测试结果，采取切换到下个节点的策略..."
 				ss_failover_s4_1="2"
 			fi
-			local CURR_NODE=${ssconf_basic_node}
+			local CURR_NODE=${current_id}
 			local FAST_NODE=$(cat /tmp/upload/webtest_bakcup.txt|sed '/failed/d;/stop/d;/ns/d' | sort -t">" -nk2 | sed "/^${CURR_NODE}>/d" | head -n1 | awk -F ">" '{print $1}')
 			if [ -z "${FAST_NODE}" ];then
 				LOGM "$LOGTIME1 fancyss：没有找到web延迟测试最低的节点，采取切换到下个节点的策略..."
@@ -84,30 +90,32 @@ failover_action(){
 		fi
 	
 		if [ "$ss_failover_s4_2" == "1" ];then
-			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
-			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
-			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到备用节点：[$(dbus get ssconf_basic_name_$ss_failover_s4_3)]！同时把主节点降级为备用节点！"
+			local backup_id=$(fss_get_failover_node_id)
+			local backup_name=$(get_node_name_by_id "${backup_id}")
+			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到备用节点：[${backup_name}]！同时把主节点降级为备用节点！"
+			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到备用节点：[${backup_name}]！同时把主节点降级为备用节点！"
+			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到备用节点：[${backup_name}]！同时把主节点降级为备用节点！"
 			# 切换
-			dbus set ssconf_basic_node=$ss_failover_s4_3
+			fss_set_current_node_id "${backup_id}"
 			# 降级
-			dbus set ss_failover_s4_3=$CURRENT
+			fss_set_failover_node_id "${current_id}"
 			# 重启
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 			dbus set ss_heart_beat="1"
 		elif [ "$ss_failover_s4_2" == "2" ];then
-			NEXT_NODE=$(($CURRENT + 1))
-			MAXT_NODE=$(dbus list ssconf_basic_|grep _name_ | cut -d "=" -f1|cut -d "_" -f4|sort -rn|head -n1)
-			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到节点列表的下个节点：[$(dbus get ssconf_basic_name_$NEXT_NODE)]！"
-			if [ "$MAXT_NODE" == "1" ];then
+			NEXT_NODE=$(fss_get_next_node_id_in_order "${current_id}")
+			local NEXT_NAME=$(get_node_name_by_id "${NEXT_NODE}")
+			local NODE_COUNT=$(fss_get_node_count)
+			[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，切换到节点列表的下个节点：[${NEXT_NAME}]！"
+			[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，切换到节点列表的下个节点：[${NEXT_NAME}]！"
+			[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，切换到节点列表的下个节点：[${NEXT_NAME}]！"
+			if [ "${NODE_COUNT}" -le "1" ];then
 				LOGM "$LOGTIME1 fancyss：检测到你只有一个节点！无法切换到下一个节点！只好关闭插件了！"
 				dbus set ss_basic_enable="0"
 				start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
 			fi
-			[ "$NEXT_NODE" -gt "$MAXT_NODE" ] && NEXT_NODE="1"
 			# 切换
-			dbus set ssconf_basic_node=$NEXT_NODE
+			fss_set_current_node_id "${NEXT_NODE}"
 			# 重启
 			#start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 			echo_date "========================================================================" >/tmp/upload/ss_log.txt
@@ -119,8 +127,8 @@ failover_action(){
 			
 			dbus set ss_heart_beat="1"
 		elif [ "$ss_failover_s4_2" == "3" ];then
-			LOGM "$LOGTIME1 fancyss：切换到web延迟最低节点：[$(dbus get ssconf_basic_name_${FAST_NODE})]..."
-			dbus set ssconf_basic_node=$FAST_NODE
+			LOGM "$LOGTIME1 fancyss：切换到web延迟最低节点：[$(get_node_name_by_id "${FAST_NODE}")]..."
+			fss_set_current_node_id "${FAST_NODE}"
 			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 			dbus set ss_heart_beat="1"
 		fi
@@ -204,14 +212,14 @@ main(){
 		
 		if [ "$(ps|grep ssconfig.sh|grep -v grep)" ];then
 			# wait until ssconfig.sh finished running
-			echo ${LOGTIME1} ssconfig.sh running "[$(dbus get ssconf_basic_name_${CURRENT})]" >> $LOGFILE_F
+			echo ${LOGTIME1} ssconfig.sh running "[$(get_node_name_by_id "$(fss_get_current_node_id)")]" >> $LOGFILE_F
 			#continue
 		else
 			# kill the last status script if exist
 			killall curl-status >/dev/null 2>&1
 			if [ -n "$(pidof ss_status.sh)" ];then
 				kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
-				echo ${LOGTIME1} script run time out "[$(dbus get ssconf_basic_name_${CURRENT})]" >> $LOGFILE_F
+				echo ${LOGTIME1} script run time out "[$(get_node_name_by_id "$(fss_get_current_node_id)")]" >> $LOGFILE_F
 			fi
 			# call ss_status.sh to get status, start-stop-daemon consume more cpu, use sh instead.
 			# start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status.sh

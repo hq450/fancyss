@@ -1,12 +1,27 @@
 fancyss Changelog
 
-3.5.6（todo）
-   - fix	修复full版本刷lite版本时，lite版本不支持的节点移除不干净的问题
-   - fix	修复订阅节点时产生"null" "_"类型的节点的问题
+3.5.6（20260323）
+   - note	本次更新解决了fancyss长期存在的一个底层设计问题：旧版节点按字段拆分为大量dbus KV，节点数量一多，会同时加重前端节点列表渲染、节点排序/移动、订阅整理，以及后端脚本取值和维护的负担；3.5.6起改为schema 2单节点单KV（JSON + Base64）存储。
+			此次升级对日常使用的感知可能不强，但这是fancyss后续继续维护、扩展协议字段和优化性能的必要基础改动；现有用户升级后，旧版节点会自动迁移到新结构。
+			由于旧版fancyss无法直接识别新节点结构，如需回退旧版本，请先在新版本导出一份【旧版兼容配置】；新版本则同时支持导出/恢复JSON配置，以及恢复旧版`.sh`配置，方便新旧版本之间切换。
+   - add	节点存储结构升级到schema 2，节点改为单节点单KV（JSON + Base64）存储，并支持旧版节点自动迁移、迁移提示和旧版配置恢复。
+   - add	新增新版本JSON配置与旧版兼容配置双格式备份/恢复能力，并补充新旧键值映射、节点数据结构和协议配置文档。
+   - update	围绕schema 2重写前后端节点读写、编辑、切换、排序、删除、测速与状态展示逻辑，减少节点较多时的页面渲染和脚本处理负担。
+   - update	重构订阅流程，新增订阅来源元数据与原始/解析结果缓存，支持更快的变更判断与恢复，并正确处理多订阅源、同机场订阅链接变更、关键词/订阅模式变化、本地节点保留、emoji节点名、无效group清理和过期缓存回收。
+   - update	优化配置导出/恢复流程：导出文件名统一为机型 + 时间格式，旧版兼容备份改为原子生成，JSON/SH恢复增加阶段和进度日志，并保留emoji节点名称；迁移快照自动仅保留最近几份，避免长期累积占用JFFS空间。
+   - update	优化插件运行状态、详细状态和web延迟测试：开启IPv6代理时支持拆分国外IPv4/IPv6状态检测，补充节点数量、节点类型、IPv6代理、iptables/ip6tables、ipt2socks等运行信息，并完善包架构识别和相关页面展示。
+   - update	完善二维码和订阅解析能力：补充Xray/Hysteria2相关URI字段解析与二维码生成，新增TUIC、NaiveProxy订阅解析支持；二维码功能默认开启，弹窗支持协议类型标识和复制节点链接，关闭二维码时服务器地址列可直接作为拖拽手柄移动节点。
+   - update	优化NaiveProxy/TUIC等协议支持和相关交互：修正Naive进程状态识别，Naive下自动约束UDP/QUIC行为，并补充TUIC、NaiveProxy配置实践文档。
+   - update	规范访问控制默认端口历史键兼容逻辑：新版本运行态统一使用ss_acl_default_ports，并自动清理旧版遗留的ss_acl_default_port；导出旧版兼容配置时会同时写入新旧键，兼容回退到3.5.4及更早版本。
+   - fix	修复full版本刷lite版本时，lite版本不支持的节点移除不干净的问题（保留hysteria2节点）。
+   - fix	修复订阅节点时产生"null" "_"类型group的问题。
+   - fix	修复Xray节点在生成配置文件时，因直接删除null字段导致json结构损坏的问题，影响部分VLESS/VMess等节点启用。
+   - fix	修复部分机型包架构识别错误导致页面标题、详细状态、包名显示异常的问题，安装时同步包元数据到运行环境，并修复安装脚本存在误删/tmp目录的风险。
+   - fix	修复访问控制页面在非ACL标签页切换时重复请求ss_acl接口、默认规则/单主机代理端口保存后前端被错误回填旧值，以及节点列表在中部编辑/删除后滚动位置丢失的问题。
 
 3.5.5（20260319）
    - add	新增MTK平台机型：GS7_Air支持。
-   - add	全面支持ipv6透明代理，开关位于附件功能-代理行为-开启ipv6代理，可加载ipv6的tcp/udp透明代理规则（其中NaiveProxy仅支持tcp）。
+   - add	全面支持ipv6透明代理，开关位于附加功能-代理行为-开启ipv6代理，可加载ipv6的tcp/udp透明代理规则（其中NaiveProxy仅支持tcp）。
    - add	访问控制新增MAC匹配能力，普通主机规则会优先按MAC匹配，CIDR规则继续按IP/CIDR匹配，并支持通过ARP自动补全MAC地址。
    - add	ipv6 ACL支持复用现有访问控制规则，可按设备控制ipv6流量的代理模式、udp代理和quic屏蔽，并新增ipv6 DNS劫持。
    - add	新增tuic协议配置实践文档，在doc目录下，并在README中增加TUIC协议文档入口。
@@ -15,12 +30,12 @@ fancyss Changelog
    - update	Xray配置文件生成逻辑更新，开启ipv6代理时会自动追加ipv6透明代理inbound。
    - update	TUIC节点现已支持ipv6透明代理，优化TUIC配置解析和状态展示，可在运行检测中显示relay.server对应的解析地址。
    - update	NaiveProxy节点现已支持ipv6透明代理（仅tcp，udp仍不支持）。
-   - update	SSR节点现已支持ipv6透明代理，开启ipv6代理时rss-redir将监听在ipv6地址上以接管透明代理流量。
+   - update	SSR节点现已支持ipv6透明代理，开启ipv6代理时ssr-redir将监听在ipv6地址上以接管透明代理流量。
    - update	优化DNS设定中AAAA过滤逻辑：开启ipv6代理后，前端会自动取消并禁用chinadns-ng的【过滤代理】开关；未开启ipv6代理时，后端会自动纠正chinadns-ng配置，smartdns继续保持代理域名默认屏蔽AAAA解析。
    - update	优化访问控制前端显示，客户端地址支持悬浮显示MAC信息，并根据是否启用ipv6代理显示不同提示。
    - fix	修复开启ipv6代理后，代理出口IP检测和国外状态检测仍强制使用ipv4的问题。
    - fix	优化ipv6透明代理的预检查和回退逻辑：当系统未开启ipv6、固件缺少libip6t_REDIRECT扩展，或ip6tables规则写入失败时，将自动关闭ipv6代理开关并回退到纯ipv4代理模式继续运行。
-   - update	ipt2socks更新到v1.1.4，新增二进制自动获取/打包同步逻辑，并调整透明代理启动参数以适配新版本。
+   - update	ipt2socks更新到v1.14，新增二进制自动获取/打包同步逻辑，并调整透明代理启动参数以适配新版本。
    - update	tuic-client更新到v1.7.1，full版本默认提供对应平台的二进制，并新增二进制自动获取/打包同步逻辑。
    - update	安装脚本补充ss_basic_proxy_ipv6默认值写入。
 

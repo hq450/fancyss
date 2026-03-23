@@ -9,9 +9,11 @@
 
 export KSROOT=/koolshare
 source $KSROOT/scripts/base.sh
+source $KSROOT/scripts/ss_node_common.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
 source helper.sh
+fss_cleanup_acl_default_port_keys >/dev/null 2>&1
 eval $(dbus export ss | sed 's/export //' | sed 's/;export /\n/g;' | sed '/ssconf_.*$/d'|sed 's/^/export /' | tr '\n' ';')
 unset usb2jffs_time_hour
 unset usb2jffs_week
@@ -46,6 +48,52 @@ unset TERM
 
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
 
+get_fancyss_default_furl() {
+	echo "http://www.google.com/generate_204"
+}
+
+get_fancyss_default_curl() {
+	echo "http://connectivitycheck.platform.hicloud.com/generate_204"
+}
+
+get_pkg_meta_from_file() {
+	local file_path="$1"
+	local field="$2"
+	[ -f "${file_path}" ] || return 1
+	tr -d '\r' < "${file_path}" | grep -Eo "PKG_${field}=.+" | awk -F "=" '{print $2}' | sed 's/"//g' | sed -n '1p'
+}
+
+get_pkg_meta() {
+	local field="$1"
+	local dbus_key="ss_basic_pkg_$(echo "${field}" | tr 'A-Z' 'a-z')"
+	local value=""
+	value="$(dbus get "${dbus_key}")"
+	if [ -z "${value}" ];then
+		value="$(get_pkg_meta_from_file /koolshare/webs/Module_shadowsocks.asp "${field}")"
+	fi
+	echo "${value}"
+}
+
+get_pkg_name() {
+	get_pkg_meta "NAME"
+}
+
+get_pkg_arch() {
+	get_pkg_meta "ARCH"
+}
+
+get_pkg_type() {
+	get_pkg_meta "TYPE"
+}
+
+get_pkg_exta() {
+	get_pkg_meta "EXTA"
+}
+
+get_pkg_full_name() {
+	echo "$(get_pkg_name)_$(get_pkg_arch)_$(get_pkg_type)$(get_pkg_exta)"
+}
+
 # ss_basic_type
 # 0	ss
 # 1 ssr
@@ -58,20 +106,15 @@ alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
 # 8 hysteria
 # 9 json（user added, run by xray）
 
-cur_node=$(dbus get ssconf_basic_node)
-base_1="name type mode server port method password ss_obfs ss_obfs_host rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_xhttp_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_pcs xray_svn xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_prot xray_alterid xray_json tuic_json"
-base_2="v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_tfo trojan_plugin trojan_obfs trojan_obfshost trojan_obfsuri naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_pcs hy2_svn hy2_ai hy2_tfo hy2_cg"
-for config in ${base_1} ${base_2}
-do
-	key_1=$(dbus get ssconf_basic_${config}_${cur_node})
-	if [ -n "$key_1" ];then
-		key_2=ss_basic_${config}
-		tmp="export $key_2=\"$key_1\""
-		eval ${tmp}
-	fi
-	unset key_1 key_2
-done
+cur_node=$(fss_get_current_node_id)
+base_1="name type mode server port method password ss_obfs ss_obfs_host rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_grpc_authority v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_grpc_authority xray_xhttp_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_pcs xray_vcn xray_svn xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_prot xray_alterid xray_json tuic_json"
+base_2="v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_pcs trojan_vcn trojan_tfo trojan_plugin trojan_obfs trojan_obfshost trojan_obfsuri naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_pcs hy2_vcn hy2_svn hy2_ai hy2_tfo hy2_cg"
+fss_export_current_node_env "${cur_node}" ${base_1} ${base_2}
 ssconf_basic_node=${cur_node}
+if [ "$(fss_detect_storage_schema)" = "2" ];then
+	ss_failover_s4_3=$(fss_get_failover_node_id)
+	export ss_failover_s4_3
+fi
 # ------------------------------------------------
 mangle=0
 
@@ -315,8 +358,8 @@ fi
 
 ss_basic_server_orig=${ss_basic_server}
 
-[ -z "$(dbus get ss_basic_furl)" ] && ss_basic_furl="http://www.google.com.tw"
-[ -z "$(dbus get ss_basic_curl)" ] && ss_basic_curl="http://www.baidu.com"
+[ -z "$(dbus get ss_basic_furl)" ] && ss_basic_furl="$(get_fancyss_default_furl)"
+[ -z "$(dbus get ss_basic_curl)" ] && ss_basic_curl="$(get_fancyss_default_curl)"
 
 #----------------------------
 number_test(){

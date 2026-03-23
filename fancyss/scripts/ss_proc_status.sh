@@ -62,7 +62,7 @@ GET_FW_VER(){
 }
 
 GET_PROXY_TOOL(){
-	case "${ss_basic_type}" in
+	case "$(GET_CURRENT_NODE_TYPE_ID)" in
 	0)
 		echo "xray-core"
 		;;
@@ -89,6 +89,9 @@ GET_PROXY_TOOL(){
 		echo "tuic"
 		;;
 	8)
+		echo "xray-core"
+		;;
+	9)
 		echo "xray-core"
 		;;
 	esac
@@ -120,21 +123,59 @@ GET_TYPE_NAME(){
 	8)
 		echo "hysteria2"
 		;;
+	9)
+		echo "xray(json)"
+		;;
+	*)
+		echo "未知"
+		;;
 	esac
 }
 
+GET_CURRENT_NODE_TYPE_ID(){
+	local current_id="$(fss_get_current_node_id)"
+	local current_type=""
+	if [ -n "${current_id}" ];then
+		current_type="$(fss_get_node_field_plain "${current_id}" "type")"
+	fi
+	[ -n "${current_type}" ] || current_type="${ss_basic_type}"
+	echo "${current_type}"
+}
+
 GET_NODES_TYPE(){
-	local TYPE
-	local NUBS
-	local STATUS=$(dbus list ssconf|grep _type_|awk -F "=" '{print $NF}' | sort -n | uniq -c | sed 's/^[[:space:]]\+//g' | sed 's/[[:space:]]/|/g')
-	for line in ${STATUS}
+	local status=""
+	local line=""
+	local type=""
+	local nums=""
+	local result=""
+	local node_id=""
+
+	status=$(
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			type="$(fss_get_node_field_plain "${node_id}" "type")"
+			[ -n "${type}" ] && echo "${type}"
+		done <<EOF
+$(fss_list_node_ids)
+EOF
+	)
+	status=$(printf '%s\n' "${status}" \
+		| sed '/^$/d' \
+		| sort -n \
+		| uniq -c \
+		| sed 's/^[[:space:]]\+//g' \
+		| sed 's/[[:space:]]\+/|/g')
+
+	for line in ${status}
 	do
-		TYPE=$(echo $line | awk -F"|" '{print $2}')
-		NUBS=$(echo $line | awk -F"|" '{print $1}')
-		RESULT="${RESULT}$(GET_TYPE_NAME ${TYPE})节点 ${NUBS}个 | "
+		type="$(echo "${line}" | awk -F"|" '{print $2}')"
+		nums="$(echo "${line}" | awk -F"|" '{print $1}')"
+		result="${result}$(GET_TYPE_NAME "${type}")节点 ${nums}个 | "
 	done
-	RESULT=$(echo ${RESULT} | sed 's/|$//g')
-	echo ${RESULT}
+
+	result="$(echo "${result}" | sed 's/ | $//g' | sed 's/| $//g')"
+	[ -n "${result}" ] && echo "${result}" || echo "无"
 }
 
 GET_INTERVAL() {
@@ -186,13 +227,112 @@ GET_SUBS_UPDATE(){
 }
 
 GET_CURRENT_NODE_TYPE(){
-	#local TYPE=$(dbus get ss_node_${ssconf_basic_node} | base64_decode | run jq '.type')
-	echo "$(GET_TYPE_NAME ${ss_basic_type})节点"
+	local current_type="$(GET_CURRENT_NODE_TYPE_ID)"
+	case "${current_type}" in
+	0)
+		if [ "${ss_basic_ss_obfs}" = "http" -o "${ss_basic_ss_obfs}" = "tls" ];then
+			echo "SS[obfs]节点"
+		else
+			echo "SS节点"
+		fi
+		;;
+	3)
+		echo "vmess节点"
+		;;
+	4)
+		if [ "${ss_basic_xray_use_json}" = "1" -o -n "${ss_basic_xray_json}" ];then
+			echo "xray(json)节点"
+		elif [ -n "${ss_basic_xray_prot}" ];then
+			echo "${ss_basic_xray_prot}节点"
+		else
+			echo "xray节点"
+		fi
+		;;
+	9)
+		echo "xray(json)节点"
+		;;
+	*)
+		echo "$(GET_TYPE_NAME "${current_type}")节点"
+		;;
+	esac
 }
 
 GET_CURRENT_NODE_NAME(){
 	#local NAME=$(dbus get ss_node_${ssconf_basic_node} | base64_decode | run jq '.name')
-	echo "${ss_basic_name}"
+	[ -n "${ss_basic_name}" ] && echo "${ss_basic_name}" || echo "-"
+}
+
+GET_DNS_PLAN_NAME(){
+	if [ "${ss_basic_dns_plan}" == "1" ];then
+		echo "chinadns-ng"
+	else
+		echo "smartdns"
+	fi
+}
+
+GET_SWITCH_NAME(){
+	if [ "$1" = "1" ];then
+		echo "开启"
+	else
+		echo "关闭"
+	fi
+}
+
+chain_exists() {
+	local tool="$1"
+	local table="$2"
+	local chain="$3"
+	"${tool}" -t "${table}" -S "${chain}" >/dev/null 2>&1
+}
+
+print_chain_dump() {
+	local tool="$1"
+	local table="$2"
+	local chain="$3"
+
+	if chain_exists "${tool}" "${table}" "${chain}";then
+		echo "------------------------------------------------------ ${table}表 ${chain} 链 ------------------------------------------------------"
+		"${tool}" -nvL "${chain}" -t "${table}"
+		echo
+	fi
+}
+
+list_shadow_chains() {
+	local tool="$1"
+	local table="$2"
+	local prefix="$3"
+	"${tool}" -t "${table}" -S 2>/dev/null | awk -v p="${prefix}" '$1 == "-N" && $2 ~ ("^" p "($|_)") {print $2}'
+}
+
+print_table_dump() {
+	local tool="$1"
+	local table="$2"
+	local prefix="$3"
+	local builtins="$4"
+	local chain=""
+
+	for chain in ${builtins}
+	do
+		print_chain_dump "${tool}" "${table}" "${chain}"
+	done
+
+	for chain in $(list_shadow_chains "${tool}" "${table}" "${prefix}")
+	do
+		case " ${builtins} " in
+		*" ${chain} "*)
+			continue
+			;;
+		esac
+		print_chain_dump "${tool}" "${table}" "${chain}"
+	done
+}
+
+has_filter_table4() {
+	chain_exists iptables filter SHADOWSOCKS
+}
+
+has_filter_table6() {
+	chain_exists ip6tables filter SHADOWSOCKS6
 }
 
 GET_VM_RSS(){
@@ -250,13 +390,14 @@ GET_VM_RSS_MULTI() {
 }
 
 GET_PROG_STAT(){
+	local current_type="$(GET_CURRENT_NODE_TYPE_ID)"
 	echo
 	echo "1️⃣ 检测当前相关进程工作状态："
 	echo "--------------------------------------------------------------------------------------------------------"
 	echo "程序		状态		作用		PID		内存"
 
 	# proxy core program
-if [ "${ss_basic_type}" == "1" ]; then
+if [ "${current_type}" == "1" ]; then
 		# ssr
 		local SSR_REDIR_PID=$(pidof rss-redir)
 		local SSR_REDIR_RSS=$(GET_VM_RSS_MULTI ${SSR_REDIR_PID})
@@ -265,7 +406,7 @@ if [ "${ss_basic_type}" == "1" ]; then
 		else
 			echo "ssr-redir	未运行🔴		透明代理"
 		fi
-	elif [ "${ss_basic_type}" == "0" -o "${ss_basic_type}" == "3" -o "${ss_basic_type}" == "4" -o "${ss_basic_type}" == "5" -o "${ss_basic_type}" == "8" ]; then
+	elif [ "${current_type}" == "0" -o "${current_type}" == "3" -o "${current_type}" == "4" -o "${current_type}" == "5" -o "${current_type}" == "8" -o "${current_type}" == "9" ]; then
 		# xray
 		local XRAY_PID=$(pidof xray)
 		local XRAY_RSS=$(GET_VM_RSS_MULTI ${XRAY_PID})
@@ -274,7 +415,7 @@ if [ "${ss_basic_type}" == "1" ]; then
 		else
 			echo "Xray	未运行🔴"
 		fi
-		local OBFS_SWITCH=$(dbus get ssconf_basic_ss_obfs_${ssconf_basic_node})
+		local OBFS_SWITCH="${ss_basic_ss_obfs}"
 		if [ -n "${OBFS_SWITCH}" -a "${OBFS_SWITCH}" != "0" ]; then
 			local SIMPLEOBFS_PID=$(pidof obfs-local)
 			local SIMPLEOBFS_RSS=$(GET_VM_RSS_MULTI ${SIMPLEOBFS_PID})
@@ -284,7 +425,7 @@ if [ "${ss_basic_type}" == "1" ]; then
 				echo "obfs-local	未运行🔴		混淆插件"
 			fi
 		fi
-	elif [ "${ss_basic_type}" == "6" ]; then
+	elif [ "${current_type}" == "6" ]; then
 		# naive
 		local NAIVE_PID=$(pidof naive)
 		local NAIVE_RSS=$(GET_VM_RSS_MULTI ${NAIVE_PID})
@@ -300,7 +441,7 @@ if [ "${ss_basic_type}" == "1" ]; then
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
-	elif [ "${ss_basic_type}" == "7" ]; then
+	elif [ "${current_type}" == "7" ]; then
 		# tuic
 		local TUIC_PID=$(pidof tuic-client)
 		local TUIC_RSS=$(GET_VM_RSS_MULTI ${TUIC_PID})
@@ -369,6 +510,9 @@ ECHO_VERSION(){
 	if [ -x "/koolshare/bin/tuic-client" ];then
 		echo "tuic-client		$(run tuic-client -V|awk '{print $NF}')			https://github.com/Itsusinn/tuic"
 	fi
+	if [ -x "/koolshare/bin/ipt2socks" ];then
+		echo "ipt2socks		$(run /koolshare/bin/ipt2socks -V|awk '{print $2}')			https://github.com/zfl9/ipt2socks"
+	fi
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
 		if [ -n "${SSRUST_VER}" ];then
@@ -389,58 +533,27 @@ ECHO_VERSION(){
 
 ECHO_IPTABLES(){
 	echo
-	echo "3️⃣检测iptbales工作状态："
-	echo "----------------------------------------------------- nat表 PREROUTING 链 -------------------------------------------------------"
-	iptables -nvL PREROUTING -t nat
+	echo "3️⃣检测iptables工作状态："
+	print_table_dump iptables nat SHADOWSOCKS "PREROUTING OUTPUT"
+	if [ "${mangle}" = "1" ];then
+		print_table_dump iptables mangle SHADOWSOCKS "PREROUTING OUTPUT"
+	fi
+	if has_filter_table4;then
+		print_table_dump iptables filter SHADOWSOCKS "FORWARD"
+	fi
+	echo "---------------------------------------------------------------------------------------------------------------------------------"
 	echo
-	echo "----------------------------------------------------- nat表 OUTPUT 链 -----------------------------------------------------------"
-	iptables -nvL OUTPUT -t nat
+}
+
+ECHO_IP6TABLES(){
 	echo
-	echo "----------------------------------------------------- nat表 SHADOWSOCKS 链 ------------------------------------------------------"
-	iptables -nvL SHADOWSOCKS -t nat
-	echo
-	echo "----------------------------------------------------- nat表 SHADOWSOCKS_EXT 链 --------------------------------------------------"
-	iptables -nvL SHADOWSOCKS_EXT -t nat
-	echo
-	if [ "${ss_basic_dns_hijack}" == "1" ];then
-		echo "----------------------------------------------------- nat表 SHADOWSOCKS_DNS 链 --------------------------------------------------"
-		iptables -nvL SHADOWSOCKS_DNS -t nat
-		echo
+	echo "4️⃣检测ip6tables工作状态："
+	print_table_dump ip6tables nat SHADOWSOCKS6 "PREROUTING OUTPUT"
+	if [ "${mangle}" = "1" ];then
+		print_table_dump ip6tables mangle SHADOWSOCKS6 "PREROUTING OUTPUT"
 	fi
-	if [ "${ss_basic_mode}" == "1" -o -n "${gfw_on}" ];then
-		echo "----------------------------------------------------- nat表 SHADOWSOCKS_GFW 链 --------------------------------------------------"
-		iptables -nvL SHADOWSOCKS_GFW -t nat
-		echo
-	fi
-	if [ "${ss_basic_mode}" == "2" -o -n "${chn_on}" ];then
-		echo "----------------------------------------------------- nat表 SHADOWSOCKS_CHN 链 ---------------------------------------------------"
-		iptables -nvL SHADOWSOCKS_CHN -t nat
-		echo
-	fi
-	if [ "${ss_basic_mode}" == "3" -o -n "${game_on}" ];then
-		echo "----------------------------------------------------- nat表 SHADOWSOCKS_GAM 链 ---------------------------------------------------"
-		iptables -nvL SHADOWSOCKS_GAM -t nat
-		echo
-	fi
-	if [ "${ss_basic_mode}" == "5" -o -n "${all_on}" ];then
-		echo "----------------------------------------------------- nat表 SHADOWSOCKS_GLO 链 ---------------------------------------------------"
-		iptables -nvL SHADOWSOCKS_GLO -t nat
-		echo
-	fi
-	if [ "${ss_basic_mode}" == "6" ];then
-		echo "----------------------------------------------------- nat表 SHADOWSOCKS_HOM 链 ---------------------------------------------------"
-		iptables -nvL SHADOWSOCKS_HOM -t nat
-		echo
-	fi
-	if [ "${ss_basic_mode}" == "3" -o -n "${game_on}" ];then
-		echo "------------------------------------------------------ mangle表 PREROUTING 链 ----------------------------------------------------"
-		iptables -nvL PREROUTING -t mangle
-		echo
-		echo "------------------------------------------------------ mangle表 SHADOWSOCKS 链 ---------------------------------------------------"
-		iptables -nvL SHADOWSOCKS -t mangle
-		echo
-		echo "------------------------------------------------------ mangle表 SHADOWSOCKS_GAM 链 -----------------------------------------------"
-		iptables -nvL SHADOWSOCKS_GAM -t mangle
+	if has_filter_table6;then
+		print_table_dump ip6tables filter SHADOWSOCKS6 "FORWARD"
 	fi
 	echo "---------------------------------------------------------------------------------------------------------------------------------"
 	echo
@@ -448,10 +561,10 @@ ECHO_IPTABLES(){
 
 check_status() {
 	local LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
-	local pkg_name=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_NAME=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local pkg_exta=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_EXTA=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+	local pkg_name=$(get_pkg_name)
+	local pkg_arch=$(get_pkg_arch)
+	local pkg_type=$(get_pkg_type)
+	local pkg_exta=$(get_pkg_exta)
 	local pkg_vers=$(dbus get ss_basic_version_local)
 	local CURR_NAME=${pkg_name}_${pkg_arch}_${pkg_type}${pkg_exta}
 	local CURR_VERS=$(cat /koolshare/ss/version)
@@ -460,7 +573,8 @@ check_status() {
 	local CURR_WHTD=$(echo ${ss_wan_white_domain} | base64_decode |sed '/^#/d'|sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_WHTI=$(echo ${ss_wan_white_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | sed 's/^[[:space:]]//g' | grep -Ec "^http")
-	local CURR_NODE=$(dbus list ssconf | grep "_name_" | wc -l)
+	local CURR_NODE=$(fss_list_node_ids | awk 'NF{c++} END{print c+0}')
+	local CURR_NODE_ID=$(fss_get_current_node_id)
 	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.gfwlist.date')
 	local CHNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnroute.date')
 	local CDNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnlist.date')
@@ -471,14 +585,19 @@ check_status() {
 	echo "🟠 路由时间：$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")"
 	echo "🟠 插件版本：${CURR_NAME} ${CURR_VERS}"
 	echo "🟠 代理模式：$(GET_MODE_NAME)"
+	echo "🟠 当前节点ID：${CURR_NODE_ID}"
 	echo "🟠 当前节点：$(GET_CURRENT_NODE_NAME)"
 	echo "🟠 节点类型：$(GET_CURRENT_NODE_TYPE)"
 	echo "🟠 程序核心：$(GET_PROXY_TOOL)"
+	echo "🟠 DNS方案：$(GET_DNS_PLAN_NAME)"
+	echo "🟠 DNS劫持：$(GET_SWITCH_NAME "${ss_basic_dns_hijack}")"
+	echo "🟠 UDP透明代理：$(GET_SWITCH_NAME "${mangle}")"
+	echo "🟠 IPv6代理：$(GET_SWITCH_NAME "${ss_basic_proxy_ipv6}")"
 	echo "🟠 黑名单数：域名 ${CURR_BAKD}条，IP/CIDR ${CURR_BAKI}条"
 	echo "🟠 白名单数：域名 ${CURR_WHTD}条，IP/CIDR ${CURR_WHTI}条"
 	echo "🟠 订阅数量：${CURR_SUBS}个"
 	echo "🟠 节点数量：${CURR_NODE}个"
-	echo "🟠 节点类型：$(GET_NODES_TYPE)"
+	echo "🟠 节点分布：$(GET_NODES_TYPE)"
 	echo "🟠 规则版本：gfwlist ${GFWVERSIN} | chnlist ${CDNVERSIN} | chnroute ${CHNVERSIN}"
 	echo "🟠 规则更新：$(GET_RULE_UPDATE)"
 	echo "🟠 订阅更新：$(GET_SUBS_UPDATE)"
@@ -489,6 +608,10 @@ check_status() {
 	ECHO_VERSION
 
 	ECHO_IPTABLES
+
+	if [ "${ss_basic_proxy_ipv6}" = "1" ];then
+		ECHO_IP6TABLES
+	fi
 }
 
 true > /tmp/upload/ss_proc_status.txt
