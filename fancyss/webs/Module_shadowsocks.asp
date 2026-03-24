@@ -1823,8 +1823,7 @@ function save() {
 	  "ss_basic_block_quic",
 	  "ss_acl_default_udp",
 	  "ss_acl_default_quic",
-	  "ss_basic_sub_ai",
-	  "ss_basic_sub_node_log"
+		  "ss_basic_sub_ai"
 	];
 	var params_base64 = ["ss_dnsmasq", "ss_wan_white_ip", "ss_wan_white_domain", "ss_wan_black_ip", "ss_wan_black_domain", "ss_online_links", "ss_basic_custom"];
 	var params_no_store = ["ss_base64_links"];
@@ -1839,18 +1838,19 @@ function save() {
 	dbus["ss_basic_exclude"] = E("ss_basic_exclude").value.replace(pattern,"") || "";
 	dbus["ss_basic_include"] = E("ss_basic_include").value.replace(pattern,"") || "";
 	// collect data from checkbox
-	for (var i = 0; i < params_check.length; i++) {
-		if (E(params_check[i])) {
-			if (!aclNodeSupportsUdp && (params_check[i] == "ss_acl_default_udp" || params_check[i] == "ss_acl_default_quic")) {
-				dbus[params_check[i]] = get_acl_checkbox_save_value(params_check[i]);
-			} else {
-				dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
+		for (var i = 0; i < params_check.length; i++) {
+			if (E(params_check[i])) {
+				if (!aclNodeSupportsUdp && (params_check[i] == "ss_acl_default_udp" || params_check[i] == "ss_acl_default_quic")) {
+					dbus[params_check[i]] = get_acl_checkbox_save_value(params_check[i]);
+				} else {
+					dbus[params_check[i]] = E(params_check[i]).checked ? '1' : '0';
+				}
 			}
 		}
-	}
-	if (E("ss_acl_default_ports")) {
-		dbus["ss_acl_default_ports"] = get_acl_port_save_value("ss_acl_default_ports");
-	}
+		dbus["ss_basic_sub_node_log"] = "1";
+		if (E("ss_acl_default_ports")) {
+			dbus["ss_acl_default_ports"] = get_acl_port_save_value("ss_acl_default_ports");
+		}
 	if (E("ss_acl_default_udp")) {
 		dbus["ss_acl_default_udp"] = get_acl_checkbox_save_value("ss_acl_default_udp");
 	}
@@ -2580,8 +2580,7 @@ function verifyFields(r) {
 		$("#ss_basic_hy2_up_speed").parent().parent().hide();
 		$("#ss_basic_online_links_proxy").parent().parent().hide();
 		$("#ss_basic_sub_ai").parent().parent().hide();
-		$("#ss_basic_sub_node_log").parent().parent().hide();
-		$("#ss_basic_online_ua").parent().parent().hide();
+			$("#ss_basic_online_ua").parent().parent().hide();
 		$("#ss_basic_node_update").parent().parent().hide();
 		$("#ss_basic_exclude").parent().parent().hide();
 		$("#ss_basic_include").parent().parent().hide();
@@ -2592,8 +2591,7 @@ function verifyFields(r) {
 		$("#ss_basic_hy2_up_speed").parent().parent().show();
 		$("#ss_basic_online_links_proxy").parent().parent().show();
 		$("#ss_basic_sub_ai").parent().parent().show();
-		$("#ss_basic_sub_node_log").parent().parent().show();
-		$("#ss_basic_online_ua").parent().parent().show();
+			$("#ss_basic_online_ua").parent().parent().show();
 		$("#ss_basic_node_update").parent().parent().show();
 		$("#ss_basic_exclude").parent().parent().show();
 		$("#ss_basic_include").parent().parent().show();
@@ -7577,13 +7575,13 @@ function save_online_nodes(action) {
 	if (action == "4"){
 		dbus_post["ss_base64_links"] = Base64.encode(encodeURIComponent(E("ss_base64_links").value));
 	}
-	if (action == "2"||action == "3"){
-		dbus_post["ss_online_links"] = Base64.encode(E("ss_online_links").value);
-		dbus_post["ssr_subscribe_mode"] = E("ssr_subscribe_mode").value;
-		dbus_post["ss_basic_online_links_proxy"] = E("ss_basic_online_links_proxy").value;
-		dbus_post["ss_basic_sub_ai"] = E("ss_basic_sub_ai").checked ? "1":"0";
-		dbus_post["ss_basic_sub_node_log"] = E("ss_basic_sub_node_log").checked ? "1":"0";
-		dbus_post["ss_basic_online_ua"] = E("ss_basic_online_ua").value;
+		if (action == "2"||action == "3"){
+			dbus_post["ss_online_links"] = Base64.encode(E("ss_online_links").value);
+			dbus_post["ssr_subscribe_mode"] = E("ssr_subscribe_mode").value;
+			dbus_post["ss_basic_online_links_proxy"] = E("ss_basic_online_links_proxy").value;
+			dbus_post["ss_basic_sub_ai"] = E("ss_basic_sub_ai").checked ? "1":"0";
+			dbus_post["ss_basic_sub_node_log"] = "1";
+			dbus_post["ss_basic_online_ua"] = E("ss_basic_online_ua").value;
 		dbus_post["ss_basic_node_update"] = E("ss_basic_node_update").value;
 		dbus_post["ss_basic_node_update_day"] = E("ss_basic_node_update_day").value;
 		dbus_post["ss_basic_node_update_hr"] = E("ss_basic_node_update_hr").value;
@@ -8795,8 +8793,7 @@ function toggleKeyMask(o, show){
 																{ suffix: '&nbsp;congestion:' },
 																{ id:'ss_basic_hy2_cg_opt', type:'select', style:'width:70px', options:option_hy2_cg, value:'brutal'},
 															]},
-															{ title: '订阅节点允许不安全', id:'ss_basic_sub_ai', hint:'113', type:'checkbox', value:true},
-															{ title: '显示逐节点订阅日志', id:'ss_basic_sub_node_log', type:'checkbox', value:false},
+																{ title: '订阅节点允许不安全', id:'ss_basic_sub_ai', hint:'113', type:'checkbox', value:true},
 															{ title: '下载订阅时走代理网络', id:'ss_basic_online_links_proxy', type:'select', style:'width:auto', options:[["0", "自动判断"], ["1", "走代理"], ["2", "不走代理"]], value:'0'},
 															{ title: '自定义UserAgent', id:'ss_basic_online_ua', type:'select', style:'width:auto', hint:'112', options:[["0", "fancyss默认（≥3.3.9）"], ["1", "curl/wget（≤3.3.8）"], ["2", "V2rayN"], ["3", "V2rayNG"], ["4", "Shadowrocket"]], value:'0'},
 															{ title: '订阅计划任务', multi: [

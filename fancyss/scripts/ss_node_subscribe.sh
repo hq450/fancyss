@@ -54,8 +54,7 @@ KEY_WORDS_1_RAW=$(dbus get ss_basic_exclude | sed 's/,$//g')
 KEY_WORDS_2_RAW=$(dbus get ss_basic_include | sed 's/,$//g')
 SUB_ONLINE_URLS=""
 SUB_ONLINE_URLS_READY=0
-SUB_VERBOSE_NODE_LOG=$(dbus get ss_basic_sub_node_log)
-[ -n "${SUB_VERBOSE_NODE_LOG}" ] || SUB_VERBOSE_NODE_LOG=0
+SUB_VERBOSE_NODE_LOG=1
 LOCAL_SPLIT_META_VALID=0
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
 
