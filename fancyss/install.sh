@@ -885,6 +885,7 @@ install_now(){
 	#local PKG_ARCH_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 	#local PKG_TYPE_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_TYPE=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 	local TITLE_OLD=$(dbus get softcenter_module_shadowsocks_title)
+	local PKG_TYPE_OLD=""
 
 	# print message
 	local TITLE_NEW="科学上网 ${PKG_TYPE}"
@@ -907,9 +908,10 @@ install_now(){
 
 	# check old version type
 	if [ -f "/koolshare/webs/Module_shadowsocks.asp" ];then
-		local IS_LITE=$(cat /koolshare/webs/Module_shadowsocks.asp | grep "lite")
+		PKG_TYPE_OLD="$(get_pkg_field_from_file /koolshare/webs/Module_shadowsocks.asp "TYPE")"
+		[ -z "${PKG_TYPE_OLD}" ] && PKG_TYPE_OLD="$(dbus get ss_basic_pkg_type)"
 		# 已经安装，此次为升级
-		if [ -n "${IS_LITE}" ];then
+		if [ "${PKG_TYPE_OLD}" = "lite" ];then
 			OLD_TYPE="lite"
 		else
 			OLD_TYPE="full"
