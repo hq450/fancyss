@@ -475,6 +475,87 @@ resolve_acl_udp_flag() {
 	echo "${udp_flag}"
 }
 
+normalize_acl_default_mode_raw() {
+	case "$1" in
+	follow | "")
+		echo "follow"
+		;;
+	0)
+		echo "0"
+		;;
+	2)
+		# default ACL rule only supports follow-current-mode or no-proxy
+		echo "follow"
+		;;
+	1 | 3 | 5 | 6)
+		# legacy default-rule proxy modes are normalized to follow-current-mode
+		echo "follow"
+		;;
+	*)
+		echo "follow"
+		;;
+	esac
+}
+
+resolve_acl_default_mode() {
+	local has_custom_rules="$1"
+	local raw_mode
+	raw_mode=$(normalize_acl_default_mode_raw "${ss_acl_default_mode}")
+	if [ "${has_custom_rules}" = "1" ];then
+		if [ "${raw_mode}" = "follow" ];then
+			echo "${ss_basic_mode}"
+		else
+			echo "${raw_mode}"
+		fi
+	else
+		echo "${ss_basic_mode}"
+	fi
+}
+
+is_legacy_acl_default_follow_profile() {
+	[ "$(normalize_acl_default_mode_raw "${ss_acl_default_mode}")" = "follow" ] || return 1
+	[ "${ss_acl_default_mode_format}" != "2" ]
+}
+
+resolve_acl_default_udp_raw() {
+	if is_legacy_acl_default_follow_profile;then
+		echo "0"
+	else
+		echo "${ss_acl_default_udp}"
+	fi
+}
+
+resolve_acl_default_ports_raw() {
+	if is_legacy_acl_default_follow_profile;then
+		echo "22,80,443,8080,8443"
+	else
+		echo "${ss_acl_default_ports}"
+	fi
+}
+
+resolve_acl_ports() {
+	local raw_ports="$1"
+	local proxy_mode="$2"
+	if [ -z "${raw_ports}" ];then
+		case "${proxy_mode}" in
+		0 | 3)
+			raw_ports="all"
+			;;
+		1)
+			raw_ports="80,443"
+			;;
+		*)
+			raw_ports="22,80,443,8080,8443"
+			;;
+		esac
+	fi
+	if [ "${proxy_mode}" = "0" ] || [ "${proxy_mode}" = "3" ];then
+		echo "all"
+	else
+		echo "${raw_ports}"
+	fi
+}
+
 cleanup_acl_rule() {
 	local acl="$1"
 	local field=""
@@ -659,14 +740,12 @@ get_acl_rule_indexes() {
 }
 
 acl_nu=$(get_acl_rule_indexes)
-if [ -n "${ss_acl_default_mode}" ];then
-	default_mode="${ss_acl_default_mode}"
-elif [ -n "${acl_nu}" ];then
-	default_mode="2"
+if [ -n "${acl_nu}" ];then
+	default_mode=$(resolve_acl_default_mode 1)
 else
-	default_mode="${ss_basic_mode}"
+	default_mode=$(resolve_acl_default_mode 0)
 fi
-default_udp_flag=$(resolve_acl_udp_flag "${ss_acl_default_udp:-0}" "${default_mode}")
+default_udp_flag=$(resolve_acl_udp_flag "$(resolve_acl_default_udp_raw)" "${default_mode}")
 if [ "${default_mode}" != "0" -a "${default_udp_flag}" == "1" ];then
 	mangle=1
 fi

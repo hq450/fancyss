@@ -753,7 +753,6 @@ prepare_system() {
 	if [ "${ss_basic_type}" == "6" -a "${ss_basic_mode}" == "3" ];then
 		echo_date "NaïveProxy不支持udp代理，因此不支持游戏模式，自动切换为大陆白名单模式！"
 		ss_basic_mode="2"
-		ss_acl_default_mode="2"
 		fss_set_current_node_field_plain mode "2"
 	fi
 
@@ -1163,8 +1162,6 @@ kill_process() {
 		killall smartdns >/dev/null 2>&1
 	fi
 
-	stop_dns_udp_relay_sidecar
-
 	# only close haveged form fancyss, not haveged from system
 	local haveged_pid=$(ps |grep "/koolshare/bin/haveged"|grep -v grep|awk '{print $1}')
 	if [ -n "${haveged_pid}" ]; then
@@ -1374,9 +1371,6 @@ start_dns_x(){
 		if [ -n "$(smartdns_iter_gfw_udp_relays 2>/dev/null | sed -n '1p')" ];then
 			echo_date "⚠️检测到 NaïveProxy 不支持 UDP 代理，smartdns gfw 组中的 UDP DNS 将在运行时按 TCP 上游处理。"
 		fi
-	fi
-	if ! start_dns_udp_relay_sidecar; then
-		close_in_five flag
 	fi
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
@@ -1806,18 +1800,27 @@ start_chinadns_ng(){
 		local dns_para=$1
 		local dns_seq=$2
 		local dns_default=$3
+		local dns_addr dns_port dns_explicit
 
 		if [ "${dns_para}" == "99" ];then
 			return 0
 		fi
+
+		{
+			read -r dns_addr
+			read -r dns_port
+			read -r dns_explicit
+		} <<-EOF
+		$(parse_dns_addr_port "${dns_para}")
+		EOF
 		
-		__valid_ip46 ${dns_para}
+		__valid_ip46 "${dns_addr}"
 		if [ "$?" == "0" ]; then
 			# ipv4
-			ipset test chnroute ${dns_para} >/dev/null 2>&1
+			ipset test chnroute "${dns_addr}" >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				ipset test ignlist ${dns_para} >/dev/null 2>&1
+				ipset test ignlist "${dns_addr}" >/dev/null 2>&1
 				if [ "$?" != "0" ]; then
 					# 不是局域网地址
 					echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
@@ -1827,10 +1830,10 @@ start_chinadns_ng(){
 			fi
 		elif [ "$?" == "1" ]; then
 			# ipv6
-			ipset test chnroute6 ${dns_para} >/dev/null 2>&1
+			ipset test chnroute6 "${dns_addr}" >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				ipset test ignlist6 ${dns_para} >/dev/null 2>&1
+				ipset test ignlist6 "${dns_addr}" >/dev/null 2>&1
 				if [ "$?" != "0" ]; then
 					echo_date "⚠️ 检测到中国DNS-${dns_seq}的udp DNS：${dns_para}不是国内ip，切换为${dns_default}！"
 					eval "ss_basic_chng_china_udp_${dns_seq}_opt=\$dns_default"
@@ -1863,25 +1866,23 @@ start_chinadns_ng(){
 		local dns_seq=$2
 		local dns_default=$3
 		local dns_type=$4
+		local addr port explicit_port
 
-		local _match=$(echo ${dns_para} | grep -E ":|#")
-		if [ -n "${_match}" ];then
-			# ip + port
-			local addr=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $1}')
-			local port=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $2}')
-		else
-			# only ip
-			local addr=${dns_para}
-			local port="53"
-		fi
+		{
+			read -r addr
+			read -r port
+			read -r explicit_port
+		} <<-EOF
+		$(parse_dns_addr_port "${dns_para}")
+		EOF
 
-		__valid_ip46 ${addr}
+		__valid_ip46 "${addr}"
 		if [ "$?" == "0" ]; then
 			# ipv4
 			ipset test chnroute ${addr} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				ipset test ignlist ${dns_para} >/dev/null 2>&1
+				ipset test ignlist ${addr} >/dev/null 2>&1
 				if [ "$?" != "0" ]; then
 					echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
 					eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
@@ -1893,14 +1894,14 @@ start_chinadns_ng(){
 			ipset test chnroute6 ${addr} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 不是国内ip
-				ipset test ignlist6 ${dns_para} >/dev/null 2>&1
+				ipset test ignlist6 ${addr} >/dev/null 2>&1
 				if [ "$?" != "0" ]; then
 					echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是国内ip，切换为${dns_default}！"
 					eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
 					dbus set "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=$dns_default"
 				fi
 			fi
-		elif [ "$?" == "1" ]; then
+		else
 			# 不是ip，帮忙纠正
 			echo_date "⚠️ 检测到中国DNS-${dns_seq}的${dns_type} DNS：${dns_para}不是正确的ip，切换为${dns_default}！"
 			eval "ss_basic_chng_china_${dns_type}_${dns_seq}_usr=\$dns_default"
@@ -2346,6 +2347,68 @@ start_chinadns_ng(){
 	echo_date "---------------------------------------------------------"
 }
 
+parse_dns_addr_port(){
+	local dns_raw="$1"
+	local default_port="${2:-53}"
+	local addr=""
+	local port="${default_port}"
+	local explicit_port="0"
+
+	case "${dns_raw}" in
+	*#*)
+		addr="${dns_raw%#*}"
+		port="${dns_raw##*#}"
+		explicit_port="1"
+		;;
+	\[*\]:*)
+		addr="${dns_raw%\]:*}"
+		addr="${addr#\[}"
+		port="${dns_raw##*\]:}"
+		explicit_port="1"
+		;;
+	*)
+		if echo "${dns_raw}" | grep -Eq '^([0-9]{1,3}[.]){3}[0-9]{1,3}:[0-9]+$'; then
+			addr="${dns_raw%:*}"
+			port="${dns_raw##*:}"
+			explicit_port="1"
+		else
+			addr="${dns_raw}"
+		fi
+		;;
+	esac
+
+	addr="${addr#\[}"
+	addr="${addr%\]}"
+	printf '%s\n%s\n%s\n' "${addr}" "${port}" "${explicit_port}"
+}
+
+format_dns_endpoint(){
+	local dns_raw="$1"
+	local default_port="${2:-53}"
+	local addr port explicit_port
+
+	{
+		read -r addr
+		read -r port
+		read -r explicit_port
+	} <<-EOF
+	$(parse_dns_addr_port "${dns_raw}" "${default_port}")
+	EOF
+
+	__valid_ip46 "${addr}"
+	case "$?" in
+	0)
+		[ "${explicit_port}" = "1" ] && echo "${addr}#${port}" || echo "${addr}"
+		;;
+	1)
+		[ "${explicit_port}" = "1" ] && echo "${addr}#${port}" || echo "${addr}"
+		;;
+	*)
+		echo "${dns_raw}"
+		;;
+	esac
+}
+
 detect_domain() {
 	domain1=$(echo $1 | grep -E "^https://|^http://|/")
 	domain2=$(echo $1 | grep -E "\.")
@@ -2396,6 +2459,7 @@ get_dns_para(){
 	local para=$3
 	local addr="8.8.8.8"
 	local port="53"
+	local explicit_port=""
 
 	# udp, tcp, dot
 	local net="$(get_dns_selected_net "${type}" "${numb}")"
@@ -2404,18 +2468,14 @@ get_dns_para(){
 	local dns_usr=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_usr)
 	
 	if [ "${dns_opt}" == "99" ];then
-		local _match=$(echo ${dns_usr} | grep -E ":|#")
-		if [ -n "${_match}" ];then
-			# ip + port
-			local addr=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $1}')
-			local port=$(echo ${dns_usr} | sed 's/:/#/g' | awk -F "#" '{print $2}')
-		else
-			# only ip
-			local addr=$(__valid_ip ${dns_opt})
-			if [ -z "${xray_server_tmp}" ]; then
-				local addr="8.8.8.8"
-			fi
-		fi
+		{
+			read -r addr
+			read -r port
+			read -r explicit_port
+		} <<-EOF
+		$(parse_dns_addr_port "${dns_usr}")
+		EOF
+		[ -n "${addr}" ] || addr="8.8.8.8"
 	else
 		local addr="${dns_opt}"
 	fi
@@ -2449,120 +2509,110 @@ has_dns_udp_relay_targets(){
 	[ -n "$(iter_dns_udp_relay_targets | sed -n '1p')" ]
 }
 
-stop_dns_udp_relay_sidecar(){
-	local relay_pid
-	relay_pid="$(ps | grep "xray run -c /koolshare/ss/xray_dns_relay.json" | grep -v grep | awk '{print $1}')"
-	if [ -n "${relay_pid}" ];then
-		echo_date "关闭DNS UDP relay sidecar..."
-		kill -9 ${relay_pid} >/dev/null 2>&1
-	fi
-	rm -rf /koolshare/ss/xray_dns_relay.json /tmp/xray_dns_relay_tmp.json >/dev/null 2>&1
+gen_xray_dns_inbound(){
+	local config_file="$1"
+	local sep="$(printf '\037')"
+	local relay_port addr port provider description
+
+	[ -n "${config_file}" ] || return 1
+	has_dns_udp_relay_targets || return 0
+
+	while IFS="${sep}" read -r relay_port addr port provider description
+	do
+		[ -n "${relay_port}" ] || continue
+		cat >>"${config_file}" <<-EOF
+			{
+				"tag": "dns_udp_${relay_port}",
+				"listen": "127.0.0.1",
+				"port": ${relay_port},
+				"protocol": "dokodemo-door",
+				"settings": {
+					"address": "${addr}",
+					"port": ${port},
+					"network": "udp",
+					"timeout": 0,
+					"followRedirect": false
+				}
+			},
+		EOF
+	done <<-EOF
+$(iter_dns_udp_relay_targets)
+EOF
+	return 0
 }
 
-generate_dns_udp_relay_sidecar_conf(){
-	local tmp_conf="/tmp/xray_dns_relay_tmp.json"
-	local final_conf="/koolshare/ss/xray_dns_relay.json"
+append_xray_dns_relay_inbounds(){
+	local config_file="$1"
+	local tmp_file="${config_file}.dnsrelay"
+	local add_file="${config_file}.dnsrelay.add"
 	local sep="$(printf '\037')"
+	local relay_port addr port provider description
 	local entry_count=0
-	cat > "${tmp_conf}" <<-'EOF'
-{
-  "log": {
-    "access": "none",
-    "error": "none",
-    "loglevel": "none"
-  },
-  "inbounds": [
+
+	[ -f "${config_file}" ] || return 1
+	has_dns_udp_relay_targets || return 0
+
+	cat > "${add_file}" <<-'EOF'
+[]
 EOF
 	while IFS="${sep}" read -r relay_port addr port provider description
 	do
 		[ -n "${relay_port}" ] || continue
-		entry_count=$((entry_count + 1))
-		[ "${entry_count}" -gt 1 ] && echo "," >> "${tmp_conf}"
-		cat >> "${tmp_conf}" <<-EOF
-    {
-      "tag": "dns_udp_${relay_port}",
-      "listen": "127.0.0.1",
-      "port": ${relay_port},
-      "protocol": "dokodemo-door",
-      "settings": {
-        "address": "${addr}",
-        "port": ${port},
-        "network": "udp",
-        "timeout": 0,
-        "followRedirect": false
-      }
+		if cat "${config_file}" | run jq -e --argjson port "${relay_port}" '.inbounds[]? | select(.protocol == "dokodemo-door" and .port == $port)' >/dev/null 2>&1; then
+			continue
+		fi
+		if [ "${entry_count}" -eq 0 ];then
+			cat > "${add_file}" <<-EOF
+[
+  {
+    "tag": "dns_udp_${relay_port}",
+    "listen": "127.0.0.1",
+    "port": ${relay_port},
+    "protocol": "dokodemo-door",
+    "settings": {
+      "address": "${addr}",
+      "port": ${port},
+      "network": "udp",
+      "timeout": 0,
+      "followRedirect": false
     }
+  }
+]
 EOF
+		else
+			if ! cat "${add_file}" | run jq '. += [{
+				"tag": "dns_udp_'"${relay_port}"'",
+				"listen": "127.0.0.1",
+				"port": '"${relay_port}"',
+				"protocol": "dokodemo-door",
+				"settings": {
+					"address": "'"${addr}"'",
+					"port": '"${port}"',
+					"network": "udp",
+					"timeout": 0,
+					"followRedirect": false
+				}
+			}]' > "${add_file}.tmp"; then
+				rm -rf "${add_file}" "${add_file}.tmp" >/dev/null 2>&1
+				return 1
+			fi
+			mv -f "${add_file}.tmp" "${add_file}"
+		fi
+		entry_count=$((entry_count + 1))
 	done <<-EOF
 $(iter_dns_udp_relay_targets)
 EOF
-	cat >> "${tmp_conf}" <<-'EOF'
-  ],
-  "outbounds": [
-    {
-      "tag": "dns_relay_out",
-      "protocol": "socks",
-      "settings": {
-        "servers": [
-          {
-            "address": "127.0.0.1",
-            "port": 23456
-          }
-        ]
-      }
-    }
-  ]
-}
-EOF
-	if [ "${entry_count}" -eq 0 ];then
-		rm -rf "${tmp_conf}" >/dev/null 2>&1
-		return 1
-	fi
-	if ! test_xray_conf "${tmp_conf}" >/dev/null 2>&1; then
-		echo_date "错误：DNS UDP relay sidecar 配置校验失败：${_test_ret}"
-		rm -rf "${tmp_conf}" >/dev/null 2>&1
-		return 1
-	fi
-	mv -f "${tmp_conf}" "${final_conf}"
-	return 0
-}
 
-start_dns_udp_relay_sidecar(){
-	stop_dns_udp_relay_sidecar
-	if ! has_dns_udp_relay_targets; then
+	if [ "${entry_count}" -eq 0 ];then
+		rm -rf "${add_file}" >/dev/null 2>&1
 		return 0
 	fi
-	echo_date "检测到当前DNS方案需要UDP DNS relay sidecar..."
-	if ! generate_dns_udp_relay_sidecar_conf; then
+	if ! cat "${config_file}" | run jq --slurpfile relays "${add_file}" '.inbounds += $relays[0]' > "${tmp_file}"; then
+		rm -rf "${tmp_file}" "${add_file}" >/dev/null 2>&1
 		return 1
 	fi
-	echo_date "开启DNS UDP relay sidecar..."
-	run_bg xray run -c /koolshare/ss/xray_dns_relay.json
-	local sep="$(printf '\037')"
-	local first_port=""
-	while IFS="${sep}" read -r relay_port addr port provider description
-	do
-		first_port="${relay_port}"
-		break
-	done <<-EOF
-$(iter_dns_udp_relay_targets)
-EOF
-	[ -n "${first_port}" ] || return 0
-	local i=20
-	until netstat -nlp 2>/dev/null | grep -w "${first_port}" | grep -q "xray"
-	do
-		i=$((i - 1))
-		if [ "${i}" -lt 1 ];then
-			echo_date "错误：DNS UDP relay sidecar 启动失败！"
-			return 1
-		fi
-		usleep 250000
-	done
-	echo_date "DNS UDP relay sidecar 启动成功！"
-	return 0
-}
-
-gen_xray_dns_inbound(){
+	mv -f "${tmp_file}" "${config_file}"
+	rm -rf "${add_file}" >/dev/null 2>&1
 	return 0
 }
 
@@ -2606,10 +2656,7 @@ get_dns(){
 	fi
 	
 	if [ "${dns_opt}" == "99" ];then
-		local _match=$(echo ${dns_usr} | grep ":")
-		if [ -n "${_match}" ];then
-			dns_usr=$(echo ${dns_usr} | sed 's/:/#/g')
-		fi
+		dns_usr=$(format_dns_endpoint "${dns_usr}")
 
 		if [ "${eff_net}" == "udp" ];then
 			if [ "${type}" == "trust" ];then
@@ -3343,6 +3390,10 @@ creat_vmess_json() {
 		echo_date "解析${VCORE_NAME}配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$VMESS_CONFIG_FILE"
 		echo_date "${VCORE_NAME}配置文件写入成功到$VMESS_CONFIG_FILE"
+		if ! append_xray_dns_relay_inbounds "${VMESS_CONFIG_FILE}"; then
+			echo_date "错误：追加DNS UDP relay入口到${VCORE_NAME}配置文件失败！"
+			close_in_five flag
+		fi
 		if ! append_xray_ipv6_tproxy_inbound "${VMESS_CONFIG_FILE}"; then
 			echo_date "错误：追加IPv6透明代理入口到${VCORE_NAME}配置文件失败！"
 			close_in_five flag
@@ -3978,6 +4029,10 @@ creat_vless_json() {
 		echo_date "解析Xray配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${VLESS_CONFIG_FILE}"
 		echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
+		if ! append_xray_dns_relay_inbounds "${VLESS_CONFIG_FILE}"; then
+			echo_date "错误：追加DNS UDP relay入口到Xray配置文件失败！"
+			close_in_five flag
+		fi
 		if ! append_xray_ipv6_tproxy_inbound "${VLESS_CONFIG_FILE}"; then
 			echo_date "错误：追加IPv6透明代理入口到Xray配置文件失败！"
 			close_in_five flag
@@ -4860,7 +4915,7 @@ get_acl_udp_flag() {
 	if [ -n "${acl}" ];then
 		eval udp_flag=\$ss_acl_udp_${acl}
 	else
-		udp_flag="${ss_acl_default_udp}"
+		udp_flag="$(resolve_acl_default_udp_raw)"
 	fi
 	if [ -z "${udp_flag}" ];then
 		if [ -n "${acl}" ];then
@@ -5013,10 +5068,7 @@ resolve_ipv6_default_acl() {
 
 	if [ -n "${acl_nu}" ]; then
 		IPV6_ACL_HAS_CUSTOM="1"
-		IPV6_ACL_DEFAULT_MODE="${ss_acl_default_mode}"
-		if [ -z "${IPV6_ACL_DEFAULT_MODE}" ];then
-			IPV6_ACL_DEFAULT_MODE="2"
-		fi
+		IPV6_ACL_DEFAULT_MODE="$(resolve_acl_default_mode 1)"
 		for acl in ${acl_nu}
 		do
 			ipaddr=$(eval echo \$ss_acl_ip_${acl})
@@ -5041,12 +5093,9 @@ resolve_ipv6_default_acl() {
 	else
 		IPV6_ACL_DEFAULT_LABEL="全部IPv6主机"
 		IPV6_ACL_HAS_CUSTOM="0"
-		IPV6_ACL_DEFAULT_MODE="${ss_basic_mode}"
+		IPV6_ACL_DEFAULT_MODE="$(resolve_acl_default_mode 0)"
 	fi
-	IPV6_ACL_DEFAULT_PORTS="${ss_acl_default_ports}"
-	if [ -z "${IPV6_ACL_DEFAULT_PORTS}" ];then
-		IPV6_ACL_DEFAULT_PORTS="22,80,443,8080,8443"
-	fi
+	IPV6_ACL_DEFAULT_PORTS="$(resolve_acl_ports "$(resolve_acl_default_ports_raw)" "${IPV6_ACL_DEFAULT_MODE}")"
 }
 
 apply_acl_udp_rule6() {
@@ -5101,6 +5150,7 @@ apply_acl_quic_filter_rule6() {
 
 apply_quic_block() {
 	# lan access control
+	local default_mode=""
 	acl_nu=$(get_acl_rule_indexes)
 	if [ -n "$acl_nu" ]; then
 		# 先设定访问控制内的主机
@@ -5111,18 +5161,22 @@ apply_quic_block() {
 			quic_flag=$(get_acl_quic_flag ${acl} ${proxy_mode} "${udp_flag}")
 			apply_acl_quic_filter_rule "${ipaddr}" "$(get_acl_source_rule4 ${acl})" "${proxy_mode}" "${quic_flag}"
 		done
-		udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
-		quic_flag=$(get_acl_quic_flag "" "${ss_acl_default_mode}" "${udp_flag}")
-		apply_acl_quic_filter_rule "剩余主机" "" "${ss_acl_default_mode}" "${quic_flag}"
+		default_mode="$(resolve_acl_default_mode 1)"
+		udp_flag=$(get_acl_udp_flag "" "${default_mode}")
+		quic_flag=$(get_acl_quic_flag "" "${default_mode}" "${udp_flag}")
+		apply_acl_quic_filter_rule "剩余主机" "" "${default_mode}" "${quic_flag}"
 	else
-		udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
-		quic_flag=$(get_acl_quic_flag "" "${ss_acl_default_mode}" "${udp_flag}")
-		apply_acl_quic_filter_rule "全部主机" "" "${ss_acl_default_mode}" "${quic_flag}"
+		default_mode="$(resolve_acl_default_mode 0)"
+		udp_flag=$(get_acl_udp_flag "" "${default_mode}")
+		quic_flag=$(get_acl_quic_flag "" "${default_mode}" "${udp_flag}")
+		apply_acl_quic_filter_rule "全部主机" "" "${default_mode}" "${quic_flag}"
 	fi
 }
 
 lan_access_control() {
 	# lan access control
+	local default_mode=""
+	local default_ports=""
 	acl_nu=$(get_acl_rule_indexes)
 	if [ -n "$acl_nu" ]; then
 		acl_default_label="剩余主机"
@@ -5130,8 +5184,8 @@ lan_access_control() {
 			ipaddr=$(eval echo \$ss_acl_ip_$acl)
 			ipaddr_hex=$(get_acl_ip_mark "${ipaddr}")
 			source_rule=$(get_acl_source_rule4 ${acl})
-			ports=$(eval echo \$ss_acl_port_$acl)
 			proxy_mode=$(eval echo \$ss_acl_mode_$acl)
+			ports=$(resolve_acl_ports "$(eval echo \$ss_acl_port_$acl)" "${proxy_mode}")
 			proxy_name=$(eval echo \$ss_acl_name_$acl)
 			udp_flag=$(get_acl_udp_flag ${acl} ${proxy_mode})
 			quic_flag=$(get_acl_quic_flag ${acl} ${proxy_mode} "${udp_flag}")
@@ -5151,32 +5205,23 @@ lan_access_control() {
 			apply_acl_udp_rule "${ipaddr}" "${source_rule}" "${ports}" "${proxy_mode}" "${udp_flag}" "${quic_flag}"
 		done
 
-		if [ -z "$ss_acl_default_mode" ];then
-			dbus set ss_acl_default_mode="2"
-			ss_acl_default_mode="2"
-		fi
-		if [ -z "${ss_acl_default_ports}" ];then
-			dbus set ss_acl_default_ports="22,80,443,8080,8443"
-			ss_acl_default_ports="22,80,443,8080,8443"
-		fi
-		if [ "$ss_acl_default_ports" == "all" ]; then
-			ss_acl_default_ports=""
-			echo_date "加载ACL规则：【${acl_default_label}】【全部端口】模式为：$(get_mode_name $ss_acl_default_mode)"
+		default_mode="$(resolve_acl_default_mode 1)"
+		default_ports="$(resolve_acl_ports "$(resolve_acl_default_ports_raw)" "${default_mode}")"
+		if [ "${default_ports}" == "all" ]; then
+			default_ports=""
+			echo_date "加载ACL规则：【${acl_default_label}】【全部端口】模式为：$(get_mode_name ${default_mode})"
 		else
-			echo_date "加载ACL规则：【${acl_default_label}】【$ss_acl_default_ports】模式为：$(get_mode_name $ss_acl_default_mode)"
+			echo_date "加载ACL规则：【${acl_default_label}】【${default_ports}】模式为：$(get_mode_name ${default_mode})"
 		fi
 	else
 		acl_default_label="全部主机"
-		ss_acl_default_mode="$ss_basic_mode"
-		if [ -z "${ss_acl_default_ports}" ];then
-			dbus set ss_acl_default_ports="22,80,443,8080,8443"
-			ss_acl_default_ports="22,80,443,8080,8443"
-		fi
-		if [ "$ss_acl_default_ports" == "all" ]; then
-			ss_acl_default_ports=""
-			echo_date "加载ACL规则：【${acl_default_label}】【全部端口】模式为：$(get_mode_name $ss_acl_default_mode)"
+		default_mode="$(resolve_acl_default_mode 0)"
+		default_ports="$(resolve_acl_ports "$(resolve_acl_default_ports_raw)" "${default_mode}")"
+		if [ "${default_ports}" == "all" ]; then
+			default_ports=""
+			echo_date "加载ACL规则：【${acl_default_label}】【全部端口】模式为：$(get_mode_name ${default_mode})"
 		else
-			echo_date "加载ACL规则：【${acl_default_label}】【$ss_acl_default_ports】模式为：$(get_mode_name $ss_acl_default_mode)"
+			echo_date "加载ACL规则：【${acl_default_label}】【${default_ports}】模式为：$(get_mode_name ${default_mode})"
 		fi
 	fi
 	dbus remove ss_acl_ip
@@ -5392,7 +5437,6 @@ stop_dns_process() {
 		killall smartdns >/dev/null 2>&1
 	fi
 
-	stop_dns_udp_relay_sidecar
 }
 
 flush_ip6tables() {
@@ -5794,13 +5838,17 @@ _start_iptables() {
 	append_if_not_exists nat -A OUTPUT -p tcp -m mark --mark "$ip_prefix_hex" -j SHADOWSOCKS_EXT
 
 	# 把最后剩余流量重定向到相应模式的nat表中对应的主模式的链
-	append_if_not_exists nat -A SHADOWSOCKS -p tcp $(factor $ss_acl_default_ports "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	local acl_default_mode_runtime="$(resolve_acl_default_mode "$(if [ -n "${acl_nu}" ];then echo 1; else echo 0; fi)")"
+	local acl_default_ports_runtime="$(resolve_acl_ports "$(resolve_acl_default_ports_raw)" "${acl_default_mode_runtime}")"
+	local acl_default_ports_match="${acl_default_ports_runtime}"
+	[ "${acl_default_ports_match}" = "all" ] && acl_default_ports_match=""
+	append_if_not_exists nat -A SHADOWSOCKS -p tcp $(factor ${acl_default_ports_match} "-m multiport --dport") -j $(get_action_chain ${acl_default_mode_runtime})
 	
-	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp $(factor $ss_acl_default_ports "-m multiport --dport") -j $(get_action_chain $ss_acl_default_mode)
+	append_if_not_exists nat -A SHADOWSOCKS_EXT -p tcp $(factor ${acl_default_ports_match} "-m multiport --dport") -j $(get_action_chain ${acl_default_mode_runtime})
 
-	local default_udp_flag=$(get_acl_udp_flag "" "${ss_acl_default_mode}")
-	local default_quic_flag=$(get_acl_quic_flag "" "${ss_acl_default_mode}" "${default_udp_flag}")
-	apply_acl_udp_rule "${acl_default_label}" "" "${ss_acl_default_ports}" "${ss_acl_default_mode}" "${default_udp_flag}" "${default_quic_flag}"
+	local default_udp_flag=$(get_acl_udp_flag "" "${acl_default_mode_runtime}")
+	local default_quic_flag=$(get_acl_quic_flag "" "${acl_default_mode_runtime}" "${default_udp_flag}")
+	apply_acl_udp_rule "${acl_default_label}" "" "${acl_default_ports_match}" "${acl_default_mode_runtime}" "${default_udp_flag}" "${default_quic_flag}"
 	
 	# 重定所有流量到 SHADOWSOCKS
 	KP_NU=$(iptables -nvL PREROUTING -t nat | sed 1,2d | sed -n '/KOOLPROXY/=' | head -n1)
@@ -5983,8 +6031,8 @@ _start_ipv6_iptables() {
 				continue
 			fi
 
-			ports=$(eval echo \$ss_acl_port_${acl})
 			proxy_mode=$(eval echo \$ss_acl_mode_${acl})
+			ports=$(resolve_acl_ports "$(eval echo \$ss_acl_port_${acl})" "${proxy_mode}")
 			udp_flag=$(get_acl_udp_flag ${acl} ${proxy_mode})
 			quic_flag=$(get_acl_quic_flag ${acl} ${proxy_mode} "${udp_flag}")
 			if [ "${ports}" == "all" ]; then

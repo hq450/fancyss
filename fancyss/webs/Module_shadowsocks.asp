@@ -109,6 +109,7 @@ var node_auto_migrate_attempted = false;
 var node_auto_migrate_layer = null;
 var prepared_route_files = {};
 var pending_route_callbacks = {};
+var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
 var SMARTDNS_GROUP_LIMIT = 16;
 var SMARTDNS_LEGACY_MODE_MAP = {"4": "1", "5": "2", "6": "3"};
@@ -1847,6 +1848,19 @@ function save() {
 			}
 		}
 	}
+	if (E("ss_acl_default_ports")) {
+		dbus["ss_acl_default_ports"] = get_acl_port_save_value("ss_acl_default_ports");
+	}
+	if (E("ss_acl_default_udp")) {
+		dbus["ss_acl_default_udp"] = get_acl_checkbox_save_value("ss_acl_default_udp");
+	}
+	if (E("ss_acl_default_quic")) {
+		dbus["ss_acl_default_quic"] = get_acl_checkbox_save_value("ss_acl_default_quic");
+	}
+	if (E("ss_acl_default_mode")) {
+		dbus["ss_acl_default_mode"] = $('#ss_acl_default_mode').val();
+		dbus[ACL_DEFAULT_MODE_FORMAT_KEY] = "2";
+	}
 	if (!collect_smartdns_dns_groups_for_save(dbus)) {
 		return false;
 	}
@@ -1861,14 +1875,9 @@ function save() {
 			var rowid = tr[i].getAttribute("id").split("_")[2];
 			dbus["ss_acl_name_" + rowid] = E("ss_acl_name_" + rowid).value;
 			dbus["ss_acl_mode_" + rowid] = E("ss_acl_mode_" + rowid).value;
-			dbus["ss_acl_port_" + rowid] = E("ss_acl_port_" + rowid).value;
-			if (!aclNodeSupportsUdp) {
-				dbus["ss_acl_udp_" + rowid] = get_acl_checkbox_save_value("ss_acl_udp_" + rowid);
-				dbus["ss_acl_quic_" + rowid] = get_acl_checkbox_save_value("ss_acl_quic_" + rowid);
-			} else {
-				dbus["ss_acl_udp_" + rowid] = E("ss_acl_udp_" + rowid).checked ? '1' : '0';
-				dbus["ss_acl_quic_" + rowid] = E("ss_acl_quic_" + rowid).checked ? '1' : '0';
-			}
+			dbus["ss_acl_port_" + rowid] = get_acl_port_save_value("ss_acl_port_" + rowid);
+			dbus["ss_acl_udp_" + rowid] = get_acl_checkbox_save_value("ss_acl_udp_" + rowid);
+			dbus["ss_acl_quic_" + rowid] = get_acl_checkbox_save_value("ss_acl_quic_" + rowid);
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
@@ -6541,13 +6550,13 @@ function addTr() {
 	var acls = {};
 	var p = "ss_acl";
 	acl_node_max += 1;
-	var params = ["ip", "name", "port", "mode"];
-	for (var i = 0; i < params.length; i++) {
-		acls[p + "_" + params[i] + "_" + acl_node_max] = $('#' + p + "_" + params[i]).val();
-	}
+	acls[p + "_ip_" + acl_node_max] = $('#' + p + "_ip").val();
+	acls[p + "_name_" + acl_node_max] = $('#' + p + "_name").val();
+	acls[p + "_mode_" + acl_node_max] = $('#' + p + "_mode").val();
+	acls[p + "_port_" + acl_node_max] = get_acl_port_save_value("ss_acl_port");
 	acls[p + "_mac_" + acl_node_max] = E("ss_acl_mac").value || "";
-	acls[p + "_udp_" + acl_node_max] = E("ss_acl_udp").checked ? "1" : "0";
-	acls[p + "_quic_" + acl_node_max] = E("ss_acl_quic").checked ? "1" : "0";
+	acls[p + "_udp_" + acl_node_max] = get_acl_checkbox_save_value("ss_acl_udp");
+	acls[p + "_quic_" + acl_node_max] = get_acl_checkbox_save_value("ss_acl_quic");
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": acls};
 	$.ajax({
@@ -6628,6 +6637,125 @@ function get_acl_current_node_type() {
 
 function acl_current_node_supports_udp() {
 	return get_acl_current_node_type() != "6";
+}
+
+function get_acl_main_mode() {
+	if (E("ss_basic_mode")) {
+		return String(E("ss_basic_mode").value || "2");
+	}
+	if (typeof db_ss["ss_basic_mode"] != "undefined") {
+		return String(db_ss["ss_basic_mode"]);
+	}
+	return "2";
+}
+
+function get_acl_mode_name(mode) {
+	switch (String(mode)) {
+	case "0":
+		return "不通过代理";
+	case "1":
+		return "gfw黑名单模式";
+	case "2":
+		return "大陆白名单模式";
+	case "3":
+		return "游戏模式";
+	case "5":
+		return "全局代理模式";
+	case "6":
+		return "回国模式";
+	default:
+		return String(mode || "");
+	}
+}
+
+function is_acl_follow_mode(mode) {
+	return String(mode) == "follow";
+}
+
+function normalize_acl_default_raw_mode(mode) {
+	var raw = String(mode || "");
+	if (raw == "0" || raw == "follow") {
+		return raw;
+	}
+	if (raw == "1" || raw == "2" || raw == "3" || raw == "5" || raw == "6" || raw === "") {
+		return "follow";
+	}
+	return "follow";
+}
+
+function get_acl_effective_mode(rawMode, isDefaultRule, forceFollow) {
+	var mode = String(rawMode || "");
+	if (forceFollow || (isDefaultRule && is_acl_follow_mode(mode))) {
+		return get_acl_main_mode();
+	}
+	return mode;
+}
+
+function get_acl_follow_mode_option_text() {
+	return get_acl_mode_name(get_acl_main_mode());
+}
+
+function set_acl_raw_bool_state(id, value) {
+	var box = E(id);
+	if (!box) {
+		return;
+	}
+	box.setAttribute("data-raw-checked", String(value) == "1" ? "1" : "0");
+}
+
+function get_acl_raw_bool_state(id, fallbackValue) {
+	var box = E(id);
+	if (!box) {
+		return String(fallbackValue) == "1" ? "1" : "0";
+	}
+	var raw = box.getAttribute("data-raw-checked");
+	if (raw === "1" || raw === "0") {
+		return raw;
+	}
+	return String(fallbackValue) == "1" ? "1" : "0";
+}
+
+function set_acl_raw_port_state(id, value) {
+	var select = E(id);
+	if (!select) {
+		return;
+	}
+	select.setAttribute("data-raw-port", value || "");
+}
+
+function get_acl_raw_port_state(id, fallbackValue) {
+	var select = E(id);
+	if (!select) {
+		return fallbackValue || "";
+	}
+	var raw = select.getAttribute("data-raw-port");
+	if (raw !== null && typeof raw != "undefined" && raw !== "") {
+		return raw;
+	}
+	return fallbackValue || "";
+}
+
+function get_acl_default_raw_mode_from_dbus() {
+	return normalize_acl_default_raw_mode(db_acl["ss_acl_default_mode"]);
+}
+
+function is_legacy_acl_default_follow_profile() {
+	var rawMode = String(db_acl["ss_acl_default_mode"] || "");
+	return rawMode != "0" && String(db_acl[ACL_DEFAULT_MODE_FORMAT_KEY] || "") != "2" && get_acl_default_raw_mode_from_dbus() == "follow";
+}
+
+function get_acl_default_raw_udp_from_dbus() {
+	if (is_legacy_acl_default_follow_profile()) {
+		return "0";
+	}
+	return typeof db_acl["ss_acl_default_udp"] != "undefined" ? db_acl["ss_acl_default_udp"] : "0";
+}
+
+function get_acl_default_raw_port_from_dbus() {
+	if (is_legacy_acl_default_follow_profile()) {
+		return "22,80,443,8080,8443";
+	}
+	return typeof db_acl["ss_acl_default_ports"] != "undefined" ? db_acl["ss_acl_default_ports"] : "22,80,443,8080,8443";
 }
 
 function get_acl_source_meta(ip, mac) {
@@ -6822,47 +6950,8 @@ function refresh_acl_table(q, cb) {
 		success: function(data) {
 			db_acl = data.result[0];
 			refresh_acl_html();
-			//write defaut rule mode when switching ss mode
-			if (typeof db_acl["ss_acl_default_mode"] != "undefined") {
-				if ($('#ss_acl_default_mode option[value="' + db_acl["ss_acl_default_mode"] + '"]').length) {
-					$('#ss_acl_default_mode').val(db_acl["ss_acl_default_mode"]);
-				}
-			} else if ($('#ss_acl_default_mode option[value="2"]').length) {
-				$('#ss_acl_default_mode').val("2");
-			}
-			var defaultMode = $('#ss_acl_default_mode').val() || "2";
-			//write default rule port
-			if (typeof db_acl["ss_acl_default_ports"] != "undefined" && $('#ss_acl_default_ports option[value="' + db_acl["ss_acl_default_ports"] + '"]').length) {
-				$('#ss_acl_default_ports').val(db_acl["ss_acl_default_ports"]);
-			} else {
-				$('#ss_acl_default_ports').val(get_acl_port_by_mode(defaultMode));
-			}
-			set_acl_checkbox_state("ss_acl_default_udp", get_acl_udp_value(defaultMode, db_acl["ss_acl_default_udp"], false));
-			set_acl_checkbox_state("ss_acl_default_quic", get_acl_quic_value(db_acl["ss_acl_default_quic"], true));
-			//write dynamic table value
-				for (var i = 1; i < acl_node_max + 1; i++) {
-					var rowMode = db_acl["ss_acl_mode_" + i];
-					$('#ss_acl_mode_' + i).val(rowMode);
-					if (typeof db_acl["ss_acl_port_" + i] != "undefined" && $('#ss_acl_port_' + i + ' option[value="' + db_acl["ss_acl_port_" + i] + '"]').length) {
-						$('#ss_acl_port_' + i).val(db_acl["ss_acl_port_" + i]);
-					} else {
-						$('#ss_acl_port_' + i).val(get_acl_port_by_mode(rowMode));
-					}
-					$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
-					sync_acl_port_state("ss_acl_port_" + i, rowMode);
-					set_acl_checkbox_state("ss_acl_udp_" + i, get_acl_udp_value(rowMode, db_acl["ss_acl_udp_" + i]));
-					set_acl_checkbox_state("ss_acl_quic_" + i, get_acl_quic_value(db_acl["ss_acl_quic_" + i]));
-				}
-			sync_acl_port_state("ss_acl_default_ports", defaultMode);
-			update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
-				//after table generated and value filled, set default value for first line_image1
-				$('#ss_acl_mode').val("1");
-				$('#ss_acl_port').val(get_acl_port_by_mode($('#ss_acl_mode').val()));
-				sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
-				set_acl_checkbox_state("ss_acl_udp", false);
-				set_acl_checkbox_state("ss_acl_quic", true);
-				set_acl_input_mac("");
-			sync_acl_udp_quic_labels();
+			apply_acl_form_states();
+			bind_acl_mode_sync();
 			if (typeof cb === "function") {
 				cb();
 			}
@@ -6875,6 +6964,9 @@ function refresh_acl_table(q, cb) {
 	});
 }
 function get_acl_port_by_mode(mode) {
+	if (is_acl_follow_mode(mode)) {
+		mode = get_acl_main_mode();
+	}
 	if (String(mode) == "0" || String(mode) == "3") {
 		return "all";
 	}
@@ -6884,8 +6976,6 @@ function get_acl_port_by_mode(mode) {
 	return "22,80,443,8080,8443";
 }
 function set_mode_1() {
-	//set the first line of the table, if mode is gfwlist mode or game mode,set the port to all
-	$("#ss_acl_port").val(get_acl_port_by_mode($('#ss_acl_mode').val()));
 	sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_udp", "ss_acl_quic");
 }
@@ -6893,12 +6983,11 @@ function set_mode_2(o) {
 	var id2 = $(o).attr("id");
 	var ids2 = id2.split("_");
 	id2 = ids2[ids2.length - 1];
-	$("#ss_acl_port_" + id2).val(get_acl_port_by_mode($(o).val()));
 	sync_acl_port_state("ss_acl_port_" + id2, $(o).val());
 	update_acl_udp_quic_label_pair("ss_acl_udp_" + id2, "ss_acl_quic_" + id2);
 }
 function set_default_port() {
-	$("#ss_acl_default_ports").val(get_acl_port_by_mode($('#ss_acl_default_mode').val()));
+	sync_acl_default_mode_follow_option();
 	sync_acl_port_state("ss_acl_default_ports", $('#ss_acl_default_mode').val());
 	update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
 }
@@ -6908,6 +6997,21 @@ function is_acl_game_mode(mode) {
 function is_acl_no_proxy_mode(mode) {
 	return String(mode) == "0";
 }
+function is_acl_force_port_mode(mode) {
+	return is_acl_no_proxy_mode(mode) || is_acl_game_mode(mode);
+}
+function acl_control_is_default(udpId) {
+	return udpId == "ss_acl_default_udp";
+}
+function acl_control_is_input(udpId) {
+	return udpId == "ss_acl_udp";
+}
+function get_acl_effective_mode_by_udp_id(udpId) {
+	var rawMode = get_acl_mode_value_by_udp_id(udpId);
+	var isDefault = acl_control_is_default(udpId);
+	var forceFollow = isDefault && !E("ss_acl_default_mode");
+	return get_acl_effective_mode(rawMode, isDefault, forceFollow);
+}
 function get_acl_mode_value_by_udp_id(udpId) {
 	if (udpId == "ss_acl_udp") {
 		return $('#ss_acl_mode').val();
@@ -6916,7 +7020,7 @@ function get_acl_mode_value_by_udp_id(udpId) {
 		if (E("ss_acl_default_mode")) {
 			return $('#ss_acl_default_mode').val();
 		}
-		return E("ss_basic_mode").value;
+		return "follow";
 	}
 	var ids = udpId.split("_");
 	var rowid = ids[ids.length - 1];
@@ -6948,71 +7052,32 @@ function sync_acl_port_state(portId, mode) {
 	if (!portSelect) {
 		return;
 	}
-	var noProxy = is_acl_no_proxy_mode(mode);
-	if (noProxy) {
+	var effectiveMode = get_acl_effective_mode(mode, portId == "ss_acl_default_ports", portId == "ss_acl_default_ports" && !E("ss_acl_default_mode"));
+	var rawPort = get_acl_raw_port_state(portId, get_acl_port_by_mode(mode));
+	if (is_acl_force_port_mode(effectiveMode)) {
 		portSelect.value = "all";
+	} else {
+		portSelect.value = rawPort;
 	}
-	portSelect.disabled = noProxy;
-	portSelect.title = noProxy ? "不通过代理时，目标端口将全部走本地网络直连" : "";
-	portSelect.style.cursor = noProxy ? "not-allowed" : "pointer";
+	portSelect.disabled = is_acl_force_port_mode(effectiveMode);
+	if (is_acl_no_proxy_mode(effectiveMode)) {
+		portSelect.title = "不通过代理时，目标端口将全部走本地网络直连";
+	} else if (is_acl_game_mode(effectiveMode)) {
+		portSelect.title = "游戏模式下代理端口固定为all，无法修改";
+	} else {
+		portSelect.title = "";
+	}
+	portSelect.style.cursor = portSelect.disabled ? "not-allowed" : "pointer";
 }
 function get_acl_checkbox_save_value(id) {
-	var currentMode = "";
-	if (id == "ss_acl_default_udp") {
-		currentMode = E("ss_acl_default_mode") ? $('#ss_acl_default_mode').val() : (E("ss_basic_mode") ? E("ss_basic_mode").value : "2");
-		if (typeof db_acl["ss_acl_default_udp"] != "undefined") {
-			return db_acl["ss_acl_default_udp"];
-		}
-		return get_acl_udp_value(currentMode, undefined, false) ? "1" : "0";
-	}
-	if (id == "ss_acl_default_quic") {
-		if (typeof db_acl["ss_acl_default_quic"] != "undefined") {
-			return db_acl["ss_acl_default_quic"];
-		}
-		return get_acl_quic_value(undefined, true) ? "1" : "0";
-	}
-	if (id.indexOf("ss_acl_udp_") === 0) {
-		var udpRowid = id.split("_").pop();
-		currentMode = E("ss_acl_mode_" + udpRowid) ? $('#ss_acl_mode_' + udpRowid).val() : "";
-		if (typeof db_acl["ss_acl_udp_" + udpRowid] != "undefined") {
-			return db_acl["ss_acl_udp_" + udpRowid];
-		}
-		return get_acl_udp_value(currentMode, undefined, false) ? "1" : "0";
-	}
-	if (id.indexOf("ss_acl_quic_") === 0) {
-		var quicRowid = id.split("_").pop();
-		if (typeof db_acl["ss_acl_quic_" + quicRowid] != "undefined") {
-			return db_acl["ss_acl_quic_" + quicRowid];
-		}
-		return get_acl_quic_value(undefined, true) ? "1" : "0";
+	var raw = get_acl_raw_bool_state(id, E(id) && E(id).checked ? "1" : "0");
+	if (raw === "1" || raw === "0") {
+		return raw;
 	}
 	return E(id) && E(id).checked ? "1" : "0";
 }
-function sync_acl_checkbox_state_by_mode(udpId, quicId, mode) {
-	var udpBox = E(udpId);
-	var quicBox = E(quicId);
-	if (!udpBox || !quicBox) {
-		return;
-	}
-	if (is_acl_no_proxy_mode(mode)) {
-		udpBox.checked = false;
-		quicBox.checked = false;
-		sync_acl_checkbox_ui(udpId, "不通过代理时，udp将走本地网络直连", true);
-		sync_acl_checkbox_ui(quicId, "不通过代理时，quic流量将走本地网络直连", true);
-		return;
-	}
-	if (!acl_current_node_supports_udp()) {
-		udpBox.checked = false;
-		quicBox.checked = true;
-		sync_acl_checkbox_ui(udpId, "当前Naïve节点不支持UDP代理，已忽略此开关", true);
-		sync_acl_checkbox_ui(quicId, "当前Naïve节点不支持UDP代理，默认屏蔽QUIC流量", true);
-		return;
-	}
-	if (is_acl_game_mode(mode)) {
-		udpBox.checked = true;
-	}
-	sync_acl_checkbox_ui(udpId, is_acl_game_mode(mode) ? "游戏模式下UDP默认开启，无法关闭" : "勾选后开启此设备的UDP代理", is_acl_game_mode(mode));
-	sync_acl_checkbox_ui(quicId, "勾选后屏蔽此设备的海外QUIC流量", false);
+function get_acl_port_save_value(id) {
+	return get_acl_raw_port_state(id, E(id) ? E(id).value : "");
 }
 function get_acl_udp_value(mode, value, fallbackValue) {
 	if (is_acl_game_mode(mode)) {
@@ -7038,60 +7103,108 @@ function get_acl_quic_value(value, fallbackValue) {
 	}
 	return true;
 }
+function sync_acl_checkbox_state_by_mode(udpId, quicId, mode) {
+	var udpBox = E(udpId);
+	var quicBox = E(quicId);
+	if (!udpBox || !quicBox) {
+		return;
+	}
+	var effectiveMode = get_acl_effective_mode_by_udp_id(udpId);
+	var rawUdp = get_acl_raw_bool_state(udpId, "0") == "1";
+	var rawQuic = get_acl_raw_bool_state(quicId, "1") == "1";
+	if (is_acl_no_proxy_mode(effectiveMode)) {
+		udpBox.checked = false;
+		quicBox.checked = false;
+		sync_acl_checkbox_ui(udpId, "不通过代理时，udp将走本地网络直连", true);
+		sync_acl_checkbox_ui(quicId, "不通过代理时，quic流量将走本地网络直连", true);
+		return;
+	}
+	if (!acl_current_node_supports_udp()) {
+		udpBox.checked = false;
+		quicBox.checked = true;
+		sync_acl_checkbox_ui(udpId, "当前Naïve节点不支持UDP代理，已忽略此开关", true);
+		sync_acl_checkbox_ui(quicId, "当前Naïve节点不支持UDP代理，默认屏蔽QUIC流量", true);
+		return;
+	}
+	if (is_acl_game_mode(effectiveMode)) {
+		udpBox.checked = true;
+		quicBox.checked = rawQuic;
+		sync_acl_checkbox_ui(udpId, "游戏模式下UDP默认开启，无法关闭", true);
+		sync_acl_checkbox_ui(quicId, "勾选后屏蔽此设备的海外QUIC流量", false);
+		return;
+	}
+	udpBox.checked = rawUdp;
+	quicBox.checked = rawQuic;
+	sync_acl_checkbox_ui(udpId, "勾选后开启此设备的UDP代理", false);
+	sync_acl_checkbox_ui(quicId, "勾选后屏蔽此设备的海外QUIC流量", false);
+}
 function set_acl_checkbox_state(id, checked) {
 	if (E(id)) {
 		E(id).checked = !!checked;
 	}
 }
 function handle_acl_udp_toggle(udpId, quicId) {
-	var mode = get_acl_mode_value_by_udp_id(udpId);
 	var udpBox = E(udpId);
 	var quicBox = E(quicId);
 	if (!udpBox || !quicBox) {
 		return;
 	}
-	sync_acl_checkbox_state_by_mode(udpId, quicId, mode);
-	if (acl_current_node_supports_udp() && !is_acl_no_proxy_mode(mode) && !udpBox.checked && !quicBox.checked) {
-		quicBox.checked = true;
+	var effectiveMode = get_acl_effective_mode_by_udp_id(udpId);
+	if (udpBox.disabled) {
+		update_acl_udp_quic_label_pair(udpId, quicId);
+		return;
+	}
+	set_acl_raw_bool_state(udpId, udpBox.checked ? "1" : "0");
+	if (acl_current_node_supports_udp() && !is_acl_no_proxy_mode(effectiveMode) && !udpBox.checked && !quicBox.checked) {
+		set_acl_raw_bool_state(quicId, "1");
 	}
 	update_acl_udp_quic_label_pair(udpId, quicId);
 }
 function handle_acl_quic_toggle(udpId, quicId) {
-	var mode = get_acl_mode_value_by_udp_id(udpId);
 	var udpBox = E(udpId);
 	var quicBox = E(quicId);
 	if (!udpBox || !quicBox) {
 		return;
 	}
-	sync_acl_checkbox_state_by_mode(udpId, quicId, mode);
-	if (!acl_current_node_supports_udp() || is_acl_no_proxy_mode(mode) || quicBox.checked) {
+	var effectiveMode = get_acl_effective_mode_by_udp_id(udpId);
+	if (quicBox.disabled || !acl_current_node_supports_udp() || is_acl_no_proxy_mode(effectiveMode)) {
+		update_acl_udp_quic_label_pair(udpId, quicId);
+		return;
+	}
+	if (quicBox.checked) {
+		set_acl_raw_bool_state(quicId, "1");
 		update_acl_udp_quic_label_pair(udpId, quicId);
 		return;
 	}
 	var confirmMsg = udpBox.checked
 		? '代理quic流量可能导致youtube视频速度慢等问题，请确认是否要启用quic代理？'
 		: '不代理udp的情况下，如果不屏蔽quic流量会导致访问http3网站走直连，导致chatgpt,gemini等网站检测到国内ip而不可用，请确认是否要关闭quic屏蔽？';
-	quicBox.checked = true;
-	update_acl_udp_quic_label_pair(udpId, quicId);
 	layer.confirm(confirmMsg, {
 		shade: 0.8,
 	}, function(index) {
 		layer.close(index);
-		quicBox.checked = false;
+		set_acl_raw_bool_state(quicId, "0");
 		update_acl_udp_quic_label_pair(udpId, quicId);
 	}, function(index) {
 		layer.close(index);
-		quicBox.checked = true;
+		set_acl_raw_bool_state(quicId, "1");
 		update_acl_udp_quic_label_pair(udpId, quicId);
 		return false;
 	});
 }
+function handle_acl_port_change(portId) {
+	var portSelect = E(portId);
+	if (!portSelect || portSelect.disabled) {
+		return;
+	}
+	set_acl_raw_port_state(portId, portSelect.value);
+}
 function update_acl_udp_quic_label_pair(udpId, quicId) {
-	var mode = get_acl_mode_value_by_udp_id(udpId);
-	sync_acl_checkbox_state_by_mode(udpId, quicId, mode);
+	var effectiveMode = get_acl_effective_mode_by_udp_id(udpId);
+	sync_acl_checkbox_state_by_mode(udpId, quicId, get_acl_mode_value_by_udp_id(udpId));
 	var udpLabel = E(udpId + "_label");
 	var quicLabel = E(quicId + "_label");
-	if (is_acl_no_proxy_mode(mode)) {
+	if (is_acl_no_proxy_mode(effectiveMode)) {
 		if (udpLabel) {
 			udpLabel.style.textDecoration = "none";
 			udpLabel.style.color = "#999999";
@@ -7130,6 +7243,66 @@ function sync_acl_udp_quic_labels() {
 		}
 	}
 }
+function sync_acl_default_mode_follow_option() {
+	var select = E("ss_acl_default_mode");
+	if (!select) {
+		var text = E("ss_acl_default_mode_text");
+		if (text) {
+			text.innerHTML = get_acl_mode_name(get_acl_main_mode());
+		}
+		return;
+	}
+	for (var i = 0; i < select.options.length; i++) {
+		if (String(select.options[i].value) == "follow") {
+			select.options[i].text = get_acl_follow_mode_option_text();
+			break;
+		}
+	}
+}
+function apply_acl_form_states() {
+	var defaultRawMode = get_acl_default_raw_mode_from_dbus();
+	if (E("ss_acl_default_mode")) {
+		$('#ss_acl_default_mode').val(defaultRawMode);
+	}
+	set_acl_raw_port_state("ss_acl_default_ports", get_acl_default_raw_port_from_dbus());
+	set_acl_raw_bool_state("ss_acl_default_udp", get_acl_default_raw_udp_from_dbus());
+	set_acl_raw_bool_state("ss_acl_default_quic", typeof db_acl["ss_acl_default_quic"] != "undefined" ? db_acl["ss_acl_default_quic"] : "1");
+
+	for (var i = 1; i < acl_node_max + 1; i++) {
+		if (!E("ss_acl_mode_" + i)) {
+			continue;
+		}
+		$('#ss_acl_mode_' + i).val(db_acl["ss_acl_mode_" + i]);
+		$('#ss_acl_name_' + i).val(db_acl["ss_acl_name_" + i]);
+		set_acl_raw_port_state("ss_acl_port_" + i, typeof db_acl["ss_acl_port_" + i] != "undefined" ? db_acl["ss_acl_port_" + i] : get_acl_port_by_mode(db_acl["ss_acl_mode_" + i]));
+		set_acl_raw_bool_state("ss_acl_udp_" + i, typeof db_acl["ss_acl_udp_" + i] != "undefined" ? db_acl["ss_acl_udp_" + i] : "0");
+		set_acl_raw_bool_state("ss_acl_quic_" + i, typeof db_acl["ss_acl_quic_" + i] != "undefined" ? db_acl["ss_acl_quic_" + i] : "1");
+		sync_acl_port_state("ss_acl_port_" + i, db_acl["ss_acl_mode_" + i]);
+		update_acl_udp_quic_label_pair("ss_acl_udp_" + i, "ss_acl_quic_" + i);
+	}
+
+	$('#ss_acl_mode').val("1");
+	set_acl_raw_port_state("ss_acl_port", "80,443");
+	set_acl_raw_bool_state("ss_acl_udp", "0");
+	set_acl_raw_bool_state("ss_acl_quic", "1");
+	set_acl_input_mac("");
+
+	sync_acl_default_mode_follow_option();
+	sync_acl_port_state("ss_acl_default_ports", E("ss_acl_default_mode") ? $('#ss_acl_default_mode').val() : "follow");
+	update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
+	sync_acl_port_state("ss_acl_port", $('#ss_acl_mode').val());
+	update_acl_udp_quic_label_pair("ss_acl_udp", "ss_acl_quic");
+	sync_acl_udp_quic_labels();
+}
+function bind_acl_mode_sync() {
+	$("#ss_basic_mode").off("change.acl_sync").on("change.acl_sync", function() {
+		if (E("ACL_table")) {
+			sync_acl_default_mode_follow_option();
+			sync_acl_port_state("ss_acl_default_ports", E("ss_acl_default_mode") ? $('#ss_acl_default_mode').val() : "follow");
+			update_acl_udp_quic_label_pair("ss_acl_default_udp", "ss_acl_default_quic");
+		}
+	});
+}
 function render_acl_port_select(id, className, style) {
 	var code = '';
 	code += '<select id="' + id + '"';
@@ -7139,6 +7312,7 @@ function render_acl_port_select(id, className, style) {
 	if (style) {
 		code += ' style="' + style + '"';
 	}
+	code += ' onchange="handle_acl_port_change(\'' + id + '\')"';
 	code += '>';
 	code += '<option value="80,443">80,443</option>';
 	code += '<option value="22,80,443">22,80,443</option>';
@@ -7277,20 +7451,20 @@ function refresh_acl_html() {
 	}
 	code += '<td width="20%">默认规则</td>';
 	ssmode = E("ss_basic_mode").value;
-	var defaultMode = typeof db_acl["ss_acl_default_mode"] != "undefined" ? db_acl["ss_acl_default_mode"] : "2";
-	var defaultUdp = get_acl_udp_value(defaultMode, db_acl["ss_acl_default_udp"], false);
+	var defaultMode = get_acl_default_raw_mode_from_dbus();
+	var defaultUdp = get_acl_udp_value(defaultMode, get_acl_default_raw_udp_from_dbus(), false);
 	var defaultQuic = get_acl_quic_value(db_acl["ss_acl_default_quic"], true);
 	if (n == 0) {
 		if (ssmode == 0) {
-			code += '<td width="18%">插件未启用</td>';
+			code += '<td width="18%"><span id="ss_acl_default_mode_text">插件未启用</span></td>';
 		} else if (ssmode == 1) {
-			code += '<td width="18%">gfw黑名单模式</td>';
+			code += '<td width="18%"><span id="ss_acl_default_mode_text">gfw黑名单模式</span></td>';
 		} else if (ssmode == 2) {
-			code += '<td width="18%">大陆白名单模式</td>';
+			code += '<td width="18%"><span id="ss_acl_default_mode_text">大陆白名单模式</span></td>';
 		} else if (ssmode == 3) {
-			code += '<td width="18%">游戏模式</td>';
+			code += '<td width="18%"><span id="ss_acl_default_mode_text">游戏模式</span></td>';
 		} else if (ssmode == 5) {
-			code += '<td width="18%">全局模式</td>';
+			code += '<td width="18%"><span id="ss_acl_default_mode_text">全局代理模式</span></td>';
 		} else if (ssmode == 6) {
 			//code += '<td width="18%">回国模式</td>';
 		}
@@ -7300,17 +7474,8 @@ function refresh_acl_html() {
 		if (ssmode == 0) {
 			code += '<td>插件未启用</td>';
 		} else {
+			code += '<option value="follow"' + (String(defaultMode) == "follow" ? ' selected' : '') + '>' + get_acl_follow_mode_option_text() + '</option>';
 			code += '<option value="0"' + (String(defaultMode) == "0" ? ' selected' : '') + '>不通过代理</option>';
-			code += '<option value="2"' + (String(defaultMode) == "2" ? ' selected' : '') + '>大陆白名单模式</option>';
-			if (ssmode == 1) {
-				code += '<option value="1"' + (String(defaultMode) == "1" ? ' selected' : '') + '>gfw黑名单模式</option>';
-			} else if (ssmode == 3) {
-				code += '<option value="3"' + (String(defaultMode) == "3" ? ' selected' : '') + '>游戏模式</option>';
-			} else if (ssmode == 5) {
-				code += '<option value="5"' + (String(defaultMode) == "5" ? ' selected' : '') + '>全局代理模式</option>';
-			} else if (ssmode == 6) {
-				//code += '<option value="6"' + (String(defaultMode) == "6" ? ' selected' : '') + '>回国模式</option>';
-			}
 		}
 		code += '</select>';
 		code += '</td>';

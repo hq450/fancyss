@@ -1212,14 +1212,15 @@ install_now(){
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
 	[ -z "${ss_basic_noruncheck}" ] && dbus set ss_basic_noruncheck=1
 	[ -z "${ss_basic_qrcode}" ] && dbus set ss_basic_qrcode=1
-	
+
 	[ -z "${ss_basic_chng_xact}" ] && dbus set ss_basic_chng_xact=0
 	[ -z "${ss_basic_chng_xgt}" ] && dbus set ss_basic_chng_xgt=1
 	[ -z "${ss_basic_chng_xmc}" ] && dbus set ss_basic_chng_xmc=0
 	
 	# others
 	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
-	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=2
+	[ -z "$(dbus get ss_acl_default_mode)" ] && dbus set ss_acl_default_mode=follow
+	[ -z "$(dbus get ss_acl_default_mode_format)" ] && dbus set ss_acl_default_mode_format=2
 	[ -z "$(dbus get ss_acl_default_udp)" ] && dbus set ss_acl_default_udp=0
 	[ -z "$(dbus get ss_acl_default_quic)" ] && dbus set ss_acl_default_quic=1
 	[ -z "$(dbus get ss_acl_default_ports)" ] && dbus set ss_acl_default_ports="22,80,443,8080,8443"
