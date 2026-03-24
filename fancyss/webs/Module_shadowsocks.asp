@@ -4271,7 +4271,7 @@ function apply_this_ss_node(rowdata) {
 	ss_node_sel();
 }
 function render_allow_insecure_notice(showExpr) {
-	return '<tr data-show="' + showExpr + '"><td></td><td style="font-size:11px;color:#FFB300;line-height:1.8;">' + ALLOW_INSECURE_NOTICE + '</td></tr>';
+	return '&nbsp;&nbsp;<span data-show="' + showExpr + '" style="font-size:11px;color:#FFB300;line-height:1.8;">' + ALLOW_INSECURE_NOTICE + '</span>';
 }
 var current_qrcode_share_uri = "";
 function get_node_share_field(nodeId, conf, field) {
@@ -8027,8 +8027,7 @@ function toggleKeyMask(o, show){
 																		{ title: '* 路径 (path)', data:{show:'xray_on x_json_off x_path_on'}, id:'ss_node_table_xray_network_path', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* kcp seed', data:{show:'xray_on x_json_off x_net_kcp'}, id:'ss_node_table_xray_kcp_seed', type:'text', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: '底层传输安全', data:{show:'xray_on x_json_off'}, id:'ss_node_table_xray_network_security', type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]], style:'width:412px', value: "none"},
-																		{ title: '* 跳过证书验证 (AllowInsecure)', data:{show:'xray_on x_json_off x_tls_on'}, id:'ss_node_table_xray_network_security_ai', type:'checkbox', func:'v', hint:'56', value: "false"},
-																		{ td: render_allow_insecure_notice('xray_on x_json_off x_tls_on x_ai_on') },
+																		{ title: '* 跳过证书验证 (AllowInsecure)', data:{show:'xray_on x_json_off x_tls_on'}, id:'ss_node_table_xray_network_security_ai', type:'checkbox', func:'v', hint:'56', value: "false", suffix: render_allow_insecure_notice('xray_on x_json_off x_tls_on x_ai_on')},
 																		{ title: '* pinnedPeerCertSha256', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, id:'ss_node_table_xray_pcs', type:'text', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* verifyPeerCertByName', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, id:'ss_node_table_xray_vcn', type:'text', style:'width:400px', ph:'没有请留空'},
 																		{ title: '* alpn', data:{show:'xray_on x_json_off x_tls_on'}, multi: [
@@ -8044,8 +8043,7 @@ function toggleKeyMask(o, show){
 																		{ title: 'xray json', data:{show:'xray_on x_json_on'}, id:'ss_node_table_xray_json', type:'textarea', rows:'32', ph:ph_xray, style:'width:400px'},
 																		// trojan
 																		{ title: 'trojan 密码', data:{show:'trojan_on'}, id:'ss_node_table_trojan_uuid', type:'text', maxlen:'300', style:'width:400px'},
-																		{ title: '跳过证书验证 (AllowInsecure)', data:{show:'trojan_on'}, id:'ss_node_table_trojan_ai', type:'checkbox', func:'v', value: "false"},
-																		{ td: render_allow_insecure_notice('trojan_on trojan_ai_on') },
+																		{ title: '跳过证书验证 (AllowInsecure)', data:{show:'trojan_on'}, id:'ss_node_table_trojan_ai', type:'checkbox', func:'v', value: "false", suffix: render_allow_insecure_notice('trojan_on trojan_ai_on')},
 																		{ title: 'pinnedPeerCertSha256', data:{show:'trojan_on trojan_ai_off'}, id:'ss_node_table_trojan_pcs', type:'text', style:'width:400px'},
 																		{ title: 'verifyPeerCertByName', data:{show:'trojan_on trojan_ai_off'}, id:'ss_node_table_trojan_vcn', type:'text', style:'width:400px'},
 																		{ title: 'SNI', data:{show:'trojan_on'}, id:'ss_node_table_trojan_sni', type:'text', style:'width:400px'},
@@ -8068,8 +8066,7 @@ function toggleKeyMask(o, show){
 																		{ title: '混淆类型', data:{show:'hy2_on'}, id:'ss_node_table_hy2_obfs', type:'select', class:'hy2_elem', func:'v', options:option_hy2_obfs, maxlen:'300', style:'width:412px', value: "0"},
 																		{ title: '混淆密码', data:{show:'hy2_on hy2_obfs_on'}, id:'ss_node_table_hy2_obfs_pass', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
 																		{ title: 'SNI（域名）', data:{show:'hy2_on'}, id:'ss_node_table_hy2_sni', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px'},
-																		{ title: '允许不安全', data:{show:'hy2_on'}, id:'ss_node_table_hy2_ai', type:'checkbox', func:'v', class:'hy2_elem', value: "false"},
-																		{ td: render_allow_insecure_notice('hy2_on hy2_ai_on') },
+																		{ title: '允许不安全', data:{show:'hy2_on'}, id:'ss_node_table_hy2_ai', type:'checkbox', func:'v', class:'hy2_elem', value: "false", suffix: render_allow_insecure_notice('hy2_on hy2_ai_on')},
 																		{ title: 'pinnedPeerCertSha256', data:{show:'hy2_on hy2_ai_off'}, id:'ss_node_table_hy2_pcs', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: 'verifyPeerCertByName', data:{show:'hy2_on hy2_ai_off'}, id:'ss_node_table_hy2_vcn', type:'text', class:'hy2_elem', maxlen:'300', style:'width:400px', ph:'没有请留空'},
 																		{ title: 'congestion', data:{show:'hy2_on'}, id:'ss_node_table_hy2_cg', type:'select', class:'hy2_elem', func:'v', options:option_hy2_cg, maxlen:'300', style:'width:412px', value: "brutal"},
@@ -8146,8 +8143,7 @@ function toggleKeyMask(o, show){
 															{ title: '* 路径 (path)', rid:'ss_basic_xray_network_path_tr', id:'ss_basic_xray_network_path', data:{show:'xray_on x_json_off x_path_on'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '* kcp seed', id:'ss_basic_xray_kcp_seed', data:{show:'xray_on x_json_off x_net_kcp'}, type:'text', maxlen:'300', ph:'没有请留空'},
 															{ title: '底层传输安全', id:'ss_basic_xray_network_security', data:{show:'xray_on x_json_off'}, type:'select', func:'v', options:[["none", "关闭"], ["tls", "tls"], ["reality", "reality"]]},
-															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', data:{show:'xray_on x_json_off x_tls_on'}, type:'checkbox', func:'v', hint:'56'},
-															{ td: render_allow_insecure_notice('xray_on x_json_off x_tls_on x_ai_on') },
+															{ title: '* 跳过证书验证 (AllowInsecure)', id:'ss_basic_xray_network_security_ai', data:{show:'xray_on x_json_off x_tls_on'}, type:'checkbox', func:'v', hint:'56', suffix: render_allow_insecure_notice('xray_on x_json_off x_tls_on x_ai_on')},
 															{ title: '* pinnedPeerCertSha256', id:'ss_basic_xray_pcs', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
 															{ title: '* verifyPeerCertByName', id:'ss_basic_xray_vcn', data:{show:'xray_on x_json_off x_tls_on x_ai_off'}, type:'text', ph:'没有请留空'},
 															{ title: '* alpn', id:'ss_basic_xray_network_security_alpn', data:{show:'xray_on x_json_off x_tls_on'}, multi: [
@@ -8164,8 +8160,7 @@ function toggleKeyMask(o, show){
 															{ title: '其它', rid:'xray_binary_update_tr', data:{show:'xray_on'}, prefix: '<a type="button" class="ss_btn" style="cursor:pointer" onclick="xray_binary_update(2)">更新xray程序</a>'},
 															//trojan
 															{ title: 'trojan 密码', id:'ss_basic_trojan_uuid', data:{show:'trojan_on'}, type:'password', maxlen:'300', style:'width:280px;', peekaboo:'1'},
-															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai', data:{show:'trojan_on'}, type:'checkbox', func:'v'},
-															{ td: render_allow_insecure_notice('trojan_on trojan_ai_on') },
+															{ title: '跳过证书验证 (AllowInsecure)', id:'ss_basic_trojan_ai', data:{show:'trojan_on'}, type:'checkbox', func:'v', suffix: render_allow_insecure_notice('trojan_on trojan_ai_on')},
 															{ title: 'pinnedPeerCertSha256', id:'ss_basic_trojan_pcs', data:{show:'trojan_on trojan_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
 															{ title: 'verifyPeerCertByName', id:'ss_basic_trojan_vcn', data:{show:'trojan_on trojan_ai_off'}, type:'text', ph:'没有请留空'},
 															{ title: 'SNI', id:'ss_basic_trojan_sni', data:{show:'trojan_on'}, type:'text'},
@@ -8188,8 +8183,7 @@ function toggleKeyMask(o, show){
 															{ title: '混淆类型', id:'ss_basic_hy2_obfs', data:{show:'hy2_on'}, type:'select', func:'v', options:option_hy2_obfs, maxlen:'300', value: "0"},
 															{ title: '混淆密码', id:'ss_basic_hy2_obfs_pass', data:{show:'hy2_on hy2_obfs_on'}, type:'text', maxlen:'300'},
 															{ title: 'SNI（域名）', id:'ss_basic_hy2_sni', data:{show:'hy2_on'}, type:'text'},
-															{ title: '允许不安全', id:'ss_basic_hy2_ai', data:{show:'hy2_on'}, type:'checkbox', func:'v'},
-															{ td: render_allow_insecure_notice('hy2_on hy2_ai_on') },
+															{ title: '允许不安全', id:'ss_basic_hy2_ai', data:{show:'hy2_on'}, type:'checkbox', func:'v', suffix: render_allow_insecure_notice('hy2_on hy2_ai_on')},
 															{ title: 'pinnedPeerCertSha256', id:'ss_basic_hy2_pcs', data:{show:'hy2_on hy2_ai_off'}, type:'text', style:'width:440px', ph:'没有请留空'},
 															{ title: 'verifyPeerCertByName', id:'ss_basic_hy2_vcn', data:{show:'hy2_on hy2_ai_off'}, type:'text', ph:'没有请留空'},
 															{ title: 'congestion', id:'ss_basic_hy2_cg', data:{show:'hy2_on'}, type:'select', func:'v', options:option_hy2_cg, maxlen:'300', value: "brutal"},
