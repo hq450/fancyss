@@ -951,3 +951,116 @@ body .layui-layer-lan .layui-layer-title {background: #1678ff;}
 body .layui-layer-lan .layui-layer-btn a{margin:8px 8px 0;padding:5px 18px;}
 body .layui-layer-lan .layui-layer-btn {text-align:center}
 
+.smartdns-chip-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-height: 24px;
+	padding: 4px 0;
+}
+
+.smartdns-dns-select {
+	margin: 0 0 0 2px;
+	min-width: 320px;
+	max-width: 320px;
+	text-align: left;
+	text-align-last: left;
+}
+
+.smartdns-add-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px !important;
+	min-width: 30px;
+	height: 30px;
+	padding: 0 !important;
+	border-radius: 8px !important;
+	vertical-align: middle;
+}
+
+.smartdns-add-icon {
+	position: relative;
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+}
+
+.smartdns-add-icon:before,
+.smartdns-add-icon:after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	background: currentColor;
+	border-radius: 2px;
+	transform: translate(-50%, -50%);
+}
+
+.smartdns-add-icon:before {
+	width: 14px;
+	height: 2px;
+}
+
+.smartdns-add-icon:after {
+	width: 2px;
+	height: 14px;
+}
+
+.smartdns-chip {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	padding: 4px 10px;
+	border-radius: 5px;
+	border: 1px solid rgba(92, 132, 197, 0.4);
+	background: linear-gradient(135deg, rgba(48, 66, 93, 0.92) 0%, rgba(28, 39, 55, 0.96) 100%);
+	color: #f3f7ff;
+	font-size: 12px;
+	line-height: 1.35;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+	cursor: default;
+}
+
+.smartdns-chip-isp {
+	border-color: rgba(255, 196, 70, 0.48);
+	background: linear-gradient(135deg, rgba(96, 74, 20, 0.94) 0%, rgba(58, 43, 9, 0.98) 100%);
+}
+
+.smartdns-chip-label {
+	display: inline-block;
+	max-width: 100%;
+	word-break: break-all;
+}
+
+.smartdns-chip-remove {
+	position: absolute;
+	right: -7px;
+	top: -7px;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	color: #ffffff;
+	font-size: 11px;
+	line-height: 1;
+	cursor: pointer;
+	border-radius: 50%;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	background: linear-gradient(135deg, rgba(244, 86, 120, 0.98) 0%, rgba(202, 54, 86, 1) 100%);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+}
+
+.smartdns-chip:hover .smartdns-chip-remove {
+	display: inline-flex;
+}
+
+.smartdns-chip-empty {
+	display: inline-block;
+	padding: 4px 0;
+	color: #b5c0d3;
+	font-size: 12px;
+}
+

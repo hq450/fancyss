@@ -80,6 +80,32 @@ sync_pkg_meta_runtime() {
 	fi
 }
 
+version_to_num() {
+	local version="$1"
+	echo "${version}" | awk -F'[^0-9]+' '{printf("%d%03d%03d\n", $1+0, $2+0, $3+0)}'
+}
+
+version_lt() {
+	local left="$1"
+	local right="$2"
+	[ -n "${left}" ] || return 0
+	[ "$(version_to_num "${left}")" -lt "$(version_to_num "${right}")" ]
+}
+
+cleanup_legacy_smartdns_user_configs() {
+	local old_ver="$1"
+	[ -n "${old_ver}" ] || return 0
+	if ! version_lt "${old_ver}" "3.5.6"; then
+		return 0
+	fi
+	if [ -n "$(find /koolshare/ss/rules -maxdepth 1 -type f -name 'smartdns_smrt_*_user.conf' 2>/dev/null)" ];then
+		echo_date "检测到旧版 fancyss（${old_ver}）的自定义 smartdns 配置。"
+		echo_date "3.5.6 起 smartdns 改为由 fancyss 按前端设置动态生成配置。"
+		echo_date "旧版 smartdns 自定义模板将被移除，升级后请在 smartdns 的 chn / gfw DNS 选择界面重新调整上游。"
+		find /koolshare/ss/rules -maxdepth 1 -type f -name 'smartdns_smrt_*_user.conf' -delete 2>/dev/null
+	fi
+}
+
 platform_test(){
 	# 带koolshare文件夹，有httpdb和skipdb的固件位支持固件
 	if [ -d "/koolshare" -a -x "/koolshare/bin/httpdb" -a -x "/usr/bin/skipd" ];then
@@ -849,6 +875,8 @@ check_device(){
 install_now(){
 	# default value
 	local PLVER=$(cat ${DIR}/ss/version)
+	local OLD_VER="$(dbus get ss_basic_version_local)"
+	[ -z "${OLD_VER}" -a -f "/koolshare/ss/version" ] && OLD_VER="$(cat /koolshare/ss/version 2>/dev/null)"
 
 	#local PKG_ARCH_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 	#local PKG_TYPE_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_TYPE=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
@@ -902,6 +930,7 @@ install_now(){
 
 	# check empty node
 	check_empty_node
+	cleanup_legacy_smartdns_user_configs "${OLD_VER}"
 
 	# remove some file first
 	echo_date "清理旧文件"

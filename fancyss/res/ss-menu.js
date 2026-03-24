@@ -986,6 +986,55 @@ function openssHint(itemNum, flag) {
 		statusmenu += "4. 当udp代理关闭时，关闭此处后海外udp 443流量将直连，可能导致chatgpt等http3网站检测到国内ip而不可用。<br /><br />";
 		statusmenu += "总之，除非你特别了解这个功能，否则请默认勾选屏蔽quic流量，以保证http3/quic协议网站的正确访问。";
 		_caption = "说明：";
+	} else if (itemNum == 153) {
+		width = "760px";
+		statusmenu = "<div style='padding-left:16px;padding-right:16px;line-height:1.6'>";
+		statusmenu += "<b>主DNS方案用于决定 fancyss 采用哪套 DNS 分流内核。</b><br /><br />";
+		statusmenu += "<b><font color='#CC0066'>chinadns-ng：</font></b>链路更直接，中国DNS和可信DNS分别控制，排错也更直观。<br />";
+		statusmenu += "优点：分流逻辑清晰、资源占用较低、适合需要精细控制国内/国外上游DNS的场景。<br />";
+		statusmenu += "缺点：更依赖上游DNS本身质量，缓存、测速、双栈优选能力不如 smartdns 丰富。<br /><br />";
+		statusmenu += "<b><font color='#CC0066'>smartdns：</font></b>更擅长多上游并发、缓存、测速和双栈优选，综合体验更偏向“自动择优”。<br />";
+		statusmenu += "优点：对多DNS混合使用更友好，国内外解析体验通常更平滑，适合大多数日常使用场景。<br />";
+		statusmenu += "缺点：运行逻辑相对更复杂，遇到问题时不如 chinadns-ng 那样容易逐层排查。<br /><br />";
+		statusmenu += "<font color='#00F'>建议：</font>追求可控、好排错、想明确区分国内/国外DNS时选 <b>chinadns-ng</b>；希望少折腾、让系统自动做缓存和择优时选 <b>smartdns</b>。";
+		statusmenu += "</div>";
+		_caption = "说明：";
+	} else if (itemNum == 154) {
+		width = "760px";
+		statusmenu = "<div style='padding-left:16px;padding-right:16px;line-height:1.6'>";
+		statusmenu += "<b>smartdns 策略用于决定 chn 组 / gfw 组 / default 组三者如何参与解析。</b><br /><br />";
+		statusmenu += "<b><font color='#CC0066'>1.【国内优先】</font></b><br />";
+		statusmenu += "适用：日常上网以国内站点稳定性优先，希望国内网站/CDN命中更稳。<br />";
+		statusmenu += "优点：国内站点更稳妥，白名单/GFW 黑名单场景下行为直观。<br />";
+		statusmenu += "缺点：对部分更依赖海外解析质量的站点，不如国外优先激进。<br /><br />";
+		statusmenu += "<b><font color='#CC0066'>2.【国外优先】</font></b><br />";
+		statusmenu += "适用：更看重代理站点、海外服务、AI/流媒体等站点的解析质量。<br />";
+		statusmenu += "优点：海外域名更容易优先命中 gfw 组，代理域名体验更积极。<br />";
+		statusmenu += "缺点：少数边缘国内站点更依赖白名单和规则正确性。<br /><br />";
+		statusmenu += "<b><font color='#CC0066'>3.【智能判断】</font></b><br />";
+		statusmenu += "适用：大多数用户默认选择。<br />";
+		statusmenu += "优点：综合 chn 组和 gfw 组能力，尽量在国内直连稳定性与海外解析质量之间取得平衡。<br />";
+		statusmenu += "缺点：行为最灵活，但排错时也相对不如前两种直观。";
+		statusmenu += "</div>";
+		_caption = "说明：";
+	} else if (itemNum == 155) {
+		width = "760px";
+		statusmenu = "<div style='padding-left:16px;padding-right:16px;line-height:1.6'>";
+		statusmenu += "<b>chinadns-ng 策略用于决定中国DNS与可信DNS的判定优先级。</b><br /><br />";
+		statusmenu += "<b><font color='#CC0066'>1.【国内优先】</font></b><br />";
+		statusmenu += "适用：国内网站访问稳定性优先，适合大多数宽带、校园网和家庭环境。<br />";
+		statusmenu += "优点：国内域名更偏向直连解析，国内站点/CDN命中更稳。<br />";
+		statusmenu += "缺点：部分更适合走海外解析的站点，切换没有国外优先那么激进。<br /><br />";
+		statusmenu += "<b><font color='#CC0066'>2.【国外优先】</font></b><br />";
+		statusmenu += "适用：更重视代理域名的解析质量，常访问海外网站、流媒体、AI 服务。<br />";
+		statusmenu += "优点：可信DNS结果优先度更高，海外域名通常更容易拿到更合适的解析结果。<br />";
+		statusmenu += "缺点：少数国内域名更依赖白名单和规则准确性。<br /><br />";
+		statusmenu += "<b><font color='#CC0066'>3.【智能判断】</font></b><br />";
+		statusmenu += "适用：希望兼顾国内稳定和海外可用性，推荐作为默认值。<br />";
+		statusmenu += "优点：在国内DNS和可信DNS之间做平衡，整体兼容性最好。<br />";
+		statusmenu += "缺点：行为相对复杂，遇到边缘问题时排查不如前两者直接。";
+		statusmenu += "</div>";
+		_caption = "说明：";
 	}
 	return overlib(statusmenu, OFFSETX, 30, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

@@ -9,6 +9,10 @@ fancyss Changelog
    - update	围绕schema 2重写前后端节点读写、编辑、切换、排序、删除、测速与状态展示逻辑，减少节点较多时的页面渲染和脚本处理负担。
    - update	重构订阅流程，新增订阅来源元数据与原始/解析结果缓存，支持更快的变更判断与恢复，并正确处理多订阅源、同机场订阅链接变更、关键词/订阅模式变化、本地节点保留、emoji节点名、无效group清理和过期缓存回收。
    - update	优化配置导出/恢复流程：导出文件名统一为机型 + 时间格式，旧版兼容备份改为原子生成，JSON/SH恢复增加阶段和进度日志，并保留emoji节点名称；迁移快照自动仅保留最近几份，避免长期累积占用JFFS空间。
+   - update	重构SmartDNS实现：1-3号配置由fancyss按当前模式和DNS组设置动态生成，不再依赖可编辑模板；同步移除SmartDNS/ChinaDNS-ng单独重启入口，避免DNS与代理配置状态脱节。
+   - update	SmartDNS新增chn组/gfw组上游DNS图形化配置，支持udp/tcp/dot三类上游、运营商DNS默认注入、每组最多16个DNS，并改为JSON + Base64单值存储，便于后续扩展和维护。
+   - update	为chinadns-ng可信UDP DNS与SmartDNS gfw组UDP DNS新增统一的xray DNS UDP relay sidecar；NaïveProxy场景下自动在运行时回退为TCP上游，避免UDP能力缺失导致DNS启动异常。
+   - update	优化DNS设定页面交互：统一chinadns-ng/smartdns“策略”命名，收敛主DNS与策略下拉框宽度，新增主DNS方案及三种策略说明提示，并调整SmartDNS DNS组选择器、标签样式和添加/删除交互。
    - update	优化插件运行状态、详细状态和web延迟测试：开启IPv6代理时支持拆分国外IPv4/IPv6状态检测，补充节点数量、节点类型、IPv6代理、iptables/ip6tables、ipt2socks等运行信息，并完善包架构识别和相关页面展示。
    - update	完善二维码和订阅解析能力：补充Xray/Hysteria2相关URI字段解析与二维码生成，新增TUIC、NaiveProxy订阅解析支持；二维码功能默认开启，弹窗支持协议类型标识和复制节点链接，关闭二维码时服务器地址列可直接作为拖拽手柄移动节点。
    - update	优化NaiveProxy/TUIC等协议支持和相关交互：修正Naive进程状态识别，Naive下自动约束UDP/QUIC行为，并补充TUIC、NaiveProxy配置实践文档。
@@ -18,6 +22,7 @@ fancyss Changelog
    - fix	修复Xray节点在生成配置文件时，因直接删除null字段导致json结构损坏的问题，影响部分VLESS/VMess等节点启用。
    - fix	修复部分机型包架构识别错误导致页面标题、详细状态、包名显示异常的问题，安装时同步包元数据到运行环境，并修复安装脚本存在误删/tmp目录的风险。
    - fix	修复访问控制页面在非ACL标签页切换时重复请求ss_acl接口、默认规则/单主机代理端口保存后前端被错误回填旧值，以及节点列表在中部编辑/删除后滚动位置丢失的问题。
+   - fix	修复部分精简固件环境缺少`seq`命令时，插件重启/保存&应用阶段报错的问题。
 
 3.5.5（20260319）
    - add	新增MTK平台机型：GS7_Air支持。

@@ -472,9 +472,9 @@ sync_dns_ipv6_policy() {
 
 	if [ "${ss_basic_dns_plan}" == "2" ];then
 		if ipv6_proxy_enabled; then
-			echo_date "ℹ️检测到当前使用smartdns且已开启IPv6代理，代理域名的IPv6解析将按需放开。"
+			echo_date "ℹ️检测到当前使用smartdns且已开启IPv6代理，SmartDNS将保留代理域名的AAAA解析。"
 		else
-			echo_date "ℹ️检测到当前使用smartdns且未开启IPv6代理，保持代理域名默认屏蔽IPv6解析。"
+			echo_date "ℹ️检测到当前使用smartdns且未开启IPv6代理，SmartDNS将按当前代理模式动态抑制需要代理域名的AAAA解析。"
 		fi
 	fi
 }
@@ -637,7 +637,7 @@ prepare_system() {
 	fi
 	
 	# 检查端口占用情况
-	# 3333 3334 23456 7913 1051 1052 2055 2056 1091 1092 1093
+	# 3333 3334 23456 7913 1051 1052 1055-1070 2055 2056 1091 1092 1093
 	kill_used_port
 
 	# 3. internet detect
@@ -755,12 +755,6 @@ prepare_system() {
 		ss_basic_mode="2"
 		ss_acl_default_mode="2"
 		fss_set_current_node_field_plain mode "2"
-	fi
-
-	if [ "${ss_basic_type}" == "6" -a "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "udp" ]; then
-		echo_date "[可信DNS-1]: NaïveProxy不支持udp代理，将可信DNS-1自动切换为tcp协议！"
-		ss_basic_chng_trust_net_1_typ="tcp"
-		dbus set ss_basic_chng_trust_net_1_typ="tcp"
 	fi
 
 	# 把当前节点名写入文件，下次启动进行对比就知道是否更换了节点
@@ -1169,6 +1163,8 @@ kill_process() {
 		killall smartdns >/dev/null 2>&1
 	fi
 
+	stop_dns_udp_relay_sidecar
+
 	# only close haveged form fancyss, not haveged from system
 	local haveged_pid=$(ps |grep "/koolshare/bin/haveged"|grep -v grep|awk '{print $1}')
 	if [ -n "${haveged_pid}" ]; then
@@ -1363,6 +1359,25 @@ dbus_eset(){
 start_dns_x(){
 	set_default "ss_basic_dns_plan" "1"
 	set_default "ss_basic_dns_serverx" "0"
+	if [ "${ss_basic_type}" = "6" ];then
+		local trust_udp_fallback=""
+		local n=""
+		for n in 1 2 3
+		do
+			if [ "$(eval echo \$ss_basic_chng_trust_dns_${n}_chk)" = "1" ] && [ "$(get_dns_selected_net trust "${n}")" = "udp" ];then
+				trust_udp_fallback="1"
+			fi
+		done
+		if [ -n "${trust_udp_fallback}" ];then
+			echo_date "⚠️检测到 NaïveProxy 不支持 UDP 代理，chinadns-ng 的可信 UDP DNS 将在运行时按 TCP 上游处理。"
+		fi
+		if [ -n "$(smartdns_iter_gfw_udp_relays 2>/dev/null | sed -n '1p')" ];then
+			echo_date "⚠️检测到 NaïveProxy 不支持 UDP 代理，smartdns gfw 组中的 UDP DNS 将在运行时按 TCP 上游处理。"
+		fi
+	fi
+	if ! start_dns_udp_relay_sidecar; then
+		close_in_five flag
+	fi
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
 		if [ "$ss_basic_mode" == "1" ];then
@@ -1405,30 +1420,268 @@ start_dns_x(){
 	fi
 }
 
+smartdns_format_addr() {
+	local addr="$1"
+	local port="$2"
+	if [ -z "${port}" ] || [ "${port}" = "53" ];then
+		echo "${addr}"
+		return
+	fi
+	case "${addr}" in
+	*:* )
+		echo "[${addr}]:${port}"
+		;;
+	*)
+		echo "${addr}:${port}"
+		;;
+	esac
+}
+
+smartdns_server_flags() {
+	local mode="$1"
+	local scope="$2"
+	case "${mode}_${scope}" in
+	1_chn_group)
+		echo "-group chn -blacklist-ip"
+		;;
+	1_gfw_group)
+		echo "-group gfw -exclude-default-group"
+		;;
+	2_chn_group)
+		echo "-group chn -blacklist-ip -exclude-default-group"
+		;;
+	2_gfw_group)
+		echo "-group gfw"
+		;;
+	3_chn_group)
+		echo "-group chn -blacklist-ip -exclude-default-group"
+		;;
+	3_gfw_group)
+		echo "-group gfw -blacklist-ip -exclude-default-group"
+		;;
+	3_chn_default)
+		echo "-whitelist-ip -blacklist-ip"
+		;;
+	3_gfw_default)
+		echo "-blacklist-ip"
+		;;
+	esac
+}
+
+smartdns_append_server_line() {
+	local outfile="$1"
+	local proto="$2"
+	local addr="$3"
+	local port="$4"
+	local host="$5"
+	local host_ip="$6"
+	local flags="$7"
+	local use_proxy="$8"
+	local line=""
+	local extras="${flags}"
+	if [ "${use_proxy}" = "1" ];then
+		extras="${extras} -proxy fancy_proxy"
+	fi
+	case "${proto}" in
+	udp)
+		line="server $(smartdns_format_addr "${addr}" "${port}")"
+		;;
+	tcp)
+		line="server-tcp $(smartdns_format_addr "${addr}" "${port}")"
+		;;
+	dot)
+		line="server-tls ${host}"
+		;;
+	*)
+		return 0
+		;;
+	esac
+	[ -n "${extras}" ] && line="${line} ${extras}"
+	if [ "${proto}" = "dot" ];then
+		line="${line} -host-ip ${host_ip}"
+		if [ -n "${port}" ] && [ "${port}" != "853" ];then
+			line="${line} -port ${port}"
+		fi
+	fi
+	echo "${line}" >> "${outfile}"
+}
+
+smartdns_append_group_servers() {
+	local outfile="$1"
+	local mode="$2"
+	local group="$3"
+	local scope="$4"
+	local relay_idx=0
+	local flags="$(smartdns_server_flags "${mode}" "${scope}")"
+	local use_proxy="0"
+	local sep="$(printf '\037')"
+	[ "${group}" = "gfw" ] && use_proxy="1"
+	while IFS="${sep}" read -r id proto provider description kind slot addr port host host_ip isp net
+	do
+		if [ "${group}" = "gfw" ] && [ "${ss_basic_type}" = "6" ] && [ "${proto}" = "udp" ];then
+			proto="tcp"
+		fi
+		local target_addr="${addr}"
+		local target_port="${port}"
+		local target_proxy="${use_proxy}"
+		if [ "${group}" = "gfw" ] && [ "${proto}" = "udp" ];then
+			relay_idx=$((relay_idx + 1))
+			target_addr="127.0.0.1"
+			target_port=$((SMARTDNS_RELAY_PORT_BASE + relay_idx - 1))
+			target_proxy="0"
+		fi
+		smartdns_append_server_line "${outfile}" "${proto}" "${target_addr}" "${target_port}" "${host}" "${host_ip}" "${flags}" "${target_proxy}"
+	done <<-EOF
+$(smartdns_group_items_tsv "${group}")
+EOF
+}
+
+smartdns_append_ipv6_policy() {
+	local outfile="$1"
+	local mode="$2"
+	if [ "${ss_basic_proxy_ipv6}" = "1" ];then
+		cat >> "${outfile}" <<-'EOF'
+force-AAAA-SOA no
+EOF
+		return
+	fi
+	case "${mode}" in
+	1)
+		cat >> "${outfile}" <<-'EOF'
+force-AAAA-SOA no
+address /domain-set:gfwlist/#6
+address /domain-set:black_list/#6
+address /domain-set:rotlist/#6
+EOF
+		;;
+	2|3)
+		cat >> "${outfile}" <<-'EOF'
+force-AAAA-SOA yes
+address /domain-set:chnlist/-6
+address /domain-set:white_list/-6
+EOF
+		;;
+	5)
+		cat >> "${outfile}" <<-'EOF'
+force-AAAA-SOA yes
+address /domain-set:white_list/-6
+EOF
+		;;
+	*)
+		cat >> "${outfile}" <<-'EOF'
+force-AAAA-SOA no
+EOF
+		;;
+	esac
+}
+
+smartdns_generate_runtime_conf() {
+	local outfile="$1"
+	local mode="$2"
+	local listen_port="7913"
+	[ "${ss_basic_dns_serverx}" = "1" ] && listen_port="53"
+	: > "${outfile}"
+	[ "${mode}" = "3" ] && generate_smartdns_whitelist_file /tmp/whitelist_ip.txt
+	cat > "${outfile}" <<-EOF
+# Auto-generated by fancyss.
+bind [::]:${listen_port}
+
+domain-set -name chnlist -file /tmp/chnlist.txt
+domain-set -name gfwlist -file /tmp/gfwlist.txt
+domain-set -name rotlist -file /koolshare/ss/rules/rotlist.txt
+domain-set -name white_list -file /tmp/white_list.txt
+domain-set -name black_list -file /tmp/black_list.txt
+EOF
+	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
+	[ "${mode}" = "3" ] && echo "conf-file /tmp/whitelist_ip.txt" >> "${outfile}"
+	cat >> "${outfile}" <<-'EOF'
+
+domain-rules /domain-set:chnlist/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn
+domain-rules /domain-set:white_list/ -p #4:white_list,#6:white_list6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn
+domain-rules /domain-set:gfwlist/ -p #4:gfwlist,#6:gfwlist6 -c none -n gfw
+domain-rules /domain-set:black_list/ -p #4:black_list,#6:black_list6 -c none -n gfw
+domain-rules /domain-set:rotlist/ -p #4:router,#6:router6 -c none -n gfw
+EOF
+	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-rules /domain-set:block_list/ -a #" >> "${outfile}"
+	case "${mode}" in
+	1)
+		cat >> "${outfile}" <<-'EOF'
+speed-check-mode ping,tcp:80,tcp:443
+response-mode first-ping
+dualstack-ip-selection yes
+dualstack-ip-selection-threshold 10
+EOF
+		;;
+	2)
+		cat >> "${outfile}" <<-'EOF'
+speed-check-mode none
+EOF
+		;;
+	3)
+		cat >> "${outfile}" <<-'EOF'
+speed-check-mode ping,tcp:80,tcp:443
+response-mode fastest-ip
+dualstack-ip-selection yes
+dualstack-ip-selection-threshold 10
+EOF
+		;;
+	esac
+	cat >> "${outfile}" <<-EOF
+cache-persist yes
+cache-file /tmp/smartdns_${mode}.cache
+prefetch-domain yes
+EOF
+	if [ "${mode}" = "3" ];then
+		echo "serve-expired no" >> "${outfile}"
+	else
+		echo "serve-expired yes" >> "${outfile}"
+	fi
+	cat >> "${outfile}" <<-'EOF'
+serve-expired-ttl 259200
+serve-expired-reply-ttl 3
+cache-checkpoint-time 86400
+EOF
+	smartdns_append_ipv6_policy "${outfile}" "${mode}"
+	cat >> "${outfile}" <<-'EOF'
+force-qtype-SOA 65
+log-level info
+log-file /tmp/smartdns_log.txt
+log-size 2M
+log-num 1
+audit-enable yes
+audit-file /tmp/smartdns_audit.txt
+audit-size 2M
+audit-num 1
+ca-file /etc/ssl/certs/ca-certificates.crt
+blacklist-ip 10.0.0.0/8
+proxy-server socks5://127.0.0.1:23456 -name fancy_proxy
+EOF
+	echo "" >> "${outfile}"
+	echo "# chn group upstreams" >> "${outfile}"
+	smartdns_append_group_servers "${outfile}" "${mode}" "chn" "chn_group"
+	echo "" >> "${outfile}"
+	echo "# gfw group upstreams" >> "${outfile}"
+	smartdns_append_group_servers "${outfile}" "${mode}" "gfw" "gfw_group"
+	if [ "${mode}" = "3" ];then
+		echo "" >> "${outfile}"
+		echo "# default group upstreams" >> "${outfile}"
+		smartdns_append_group_servers "${outfile}" "${mode}" "chn" "chn_default"
+		smartdns_append_group_servers "${outfile}" "${mode}" "gfw" "gfw_default"
+	fi
+}
+
 start_smartdns(){
 	local idx=$1
-	local conf_name=smartdns_smrt_$idx
-	local save_path=/koolshare/ss/rules
-	local show_path=/tmp/upload
-	local conf_path=/tmp
-	local smartdns_conf
-	local ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
-	local ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+	local smartdns_conf=/tmp/smartdns_fancyss.conf
 
-	# remove previous file
 	rm -rf /tmp/smartdns_log.txt
 	rm -rf /tmp/smartdns_audit.txt
 
-	# do something with smartdns cache
 	if [ "${_node_change_status}" == "1" ];then
-		# 切换节点，上个节点使用的缓存备份进行保存
 		if [ -f "/tmp/smartdns_${last_node_indx}.cache" ];then
-			# 检测到上次节点使用的缓存，将其更名保留
 			echo_date "smartdns缓存：检测到上次节点【${last_node_name}】上次使用的缓存，备份以备下次切换回使用。"
 			mv /tmp/smartdns_${last_node_indx}.cache /tmp/smartdns_${last_node_indx}_${last_node_hash}.cache
 		fi
-
-		# 如果本节点之前使用过，则会留下备份，检测到则使用
 		if [ -f "/tmp/smartdns_${idx}_${curr_node_hash}.cache" ];then
 			echo_date "smartdns缓存：检测到节点【${ss_basic_name}】上次使用的缓存，加载到/tmp/smartdns_${idx}.cache..."
 			mv /tmp/smartdns_${idx}_${curr_node_hash}.cache /tmp/smartdns_${idx}.cache
@@ -1436,15 +1689,12 @@ start_smartdns(){
 			echo_date "smartdns缓存：没有检测到节点【${ss_basic_name}】上次使用的缓存"
 		fi
 	elif [ "${_node_change_status}" == "0" ];then
-		# 节点不变，可能换了配置文件，缓存也可能变化
 		if [ -f "/tmp/smartdns_${last_node_indx}.cache" ];then
 			echo_date "smartdns缓存：检测到节点未切换，保留smartdns缓存文件..."
 		else
 			echo_date "smartdns缓存：检测到节点未切换，新建smartdns缓存文件..."
 		fi
 	elif [ "${_node_change_status}" == "2" ];then
-		# 启用节点
-		# 检测下新节点是否有之前保存的缓存文件
 		if [ -f "/tmp/smartdns_${idx}_${curr_node_hash}.cache" ];then
 			echo_date "smartdns缓存：检测到节点【${ss_basic_name}】上次使用的缓存，加载到/tmp/smartdns_${idx}.cache...."
 			mv /tmp/smartdns_${idx}_${curr_node_hash}.cache /tmp/smartdns_${idx}.cache
@@ -1453,56 +1703,13 @@ start_smartdns(){
 		fi
 	fi
 
-	# gen list for smartdns conf
-	cat /koolshare/ss/rules/chnroute.txt | sed 's/^/whitelist-ip /g' >/tmp/whitelist_ip.txt
+	echo_date "生成smartdns运行时配置：${smartdns_conf}"
+	smartdns_generate_runtime_conf "${smartdns_conf}" "${idx}"
 
-	# copy smartdns conf file
-	if [ -f ${save_path}/${conf_name}_user.conf ];then
-		local smartdns_conf=${conf_path}/${conf_name}_user.conf
-		echo_date "复制smartdns配置文件：${save_path}/${conf_name}_user.conf → ${conf_path}"
-		cp -rf ${save_path}/${conf_name}_user.conf ${smartdns_conf}
-	else
-		echo_date "复制smartdns配置文件：${save_path}/${conf_name}.conf → ${conf_path}"
-		local smartdns_conf=${conf_path}/${conf_name}.conf
-		cp -rf ${save_path}/${conf_name}.conf ${smartdns_conf}
-	fi
-
-	# modify smartdns conf file
-	if [ "${ss_basic_dns_serverx}" == "1" ];then
-		echo_date "编辑smartdns配置文件：${smartdns_conf}，监听端口7913 → 53"
-		sed -i 's/7913/53/g' ${smartdns_conf}
-	fi
-
-	if [ "${ss_basic_add_ispdns}" == "1" ];then
-		if [ -n "${ISP_DNS1}" ]; then
-			echo_date "编辑smartdns配置文件：${smartdns_conf}，追加ISP DNS: ${ISP_DNS1}"
-			sed -i "s/117.50.10.10/${ISP_DNS1}/g" ${smartdns_conf} 2>/dev/null
-		fi
-		
-		if [ -n "${ISP_DNS2}" ]; then
-			echo_date "编辑smartdns配置文件：${smartdns_conf}，追加ISP DNS: ${ISP_DNS2}"
-			sed -i "s/117.50.60.30/${ISP_DNS2}/g" ${smartdns_conf} 2>/dev/null
-		fi
-	fi
-
-	if [ "${ss_basic_block_resov}" != "1" ]; then
-		echo_date "编辑smartdns配置文件：${smartdns_conf}，移除block list域名解析屏蔽！"
-		sed -i "/block_list/d" ${smartdns_conf} 2>/dev/null
-	fi
-
-	if ipv6_proxy_enabled; then
-		echo_date "编辑smartdns配置文件：${smartdns_conf}，为代理域名开启IPv6解析..."
-		sed -i 's/#4:gfwlist,#6:- -c none -a #6 -n gfw/#4:gfwlist,#6:gfwlist6 -c none -n gfw/g' ${smartdns_conf} 2>/dev/null
-		sed -i 's/#4:black_list,#6:- -c none -a #6 -n gfw/#4:black_list,#6:black_list6 -c none -n gfw/g' ${smartdns_conf} 2>/dev/null
-		sed -i 's/#4:router,#6:- -c none -a #6 -n gfw/#4:router,#6:router6 -c none -n gfw/g' ${smartdns_conf} 2>/dev/null
-	fi
-
-	# start smartdns	
 	echo_date "启动smartdns，使用smartdns配置文件：${smartdns_conf}"
 	run_bg smartdns -c ${smartdns_conf}
 	detect_running_status3 "smartdns" "53|7913" "0"
 
-	# detect process by binary name and key word
 	local caches=$(head /tmp/smartdns_log.txt 2>/dev/null | grep "load cache file" | awk '{print $(NF-1)}')
 	if [ -n "${caches}" ];then
 		echo_date "smartdns启动成功，成功加载缓存：${caches}条"
@@ -1829,9 +2036,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" ];then
 		local FDNS_1=$(get_dns trust 1)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1%%\?*}"
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 1)") → ${FDNS_1%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_1_typ}) → ${FDNS_1%%\?*}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 1)") → ${FDNS_1%%\?*}"
 		fi
 	fi
 
@@ -1839,9 +2046,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" ];then
 		local FDNS_2=$(get_dns trust 2)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2%%\?*}"
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 2)") → ${FDNS_2%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_2_typ}) → ${FDNS_2%%\?*}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 2)") → ${FDNS_2%%\?*}"
 		fi
 	fi
 
@@ -1849,9 +2056,9 @@ start_chinadns_ng(){
 	if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" ];then
 		local FDNS_3=$(get_dns trust 3)
 		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3%%\?*}"
+			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 3)") → ${FDNS_3%%\?*}"
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type ${ss_basic_chng_trust_net_3_typ}) → ${FDNS_3%%\?*}"
+			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 3)") → ${FDNS_3%%\?*}"
 		fi
 	fi
 
@@ -2158,12 +2365,29 @@ is_domain(){
 get_proxy_type(){
 	case "$1" in
 	udp)
-		echo "xray"
+		echo "udp-relay"
 		;;
 	tcp|dot)
 		echo "socks5"
 		;;
 	esac
+}
+
+get_dns_selected_net(){
+	local type="$1"
+	local numb="$2"
+	eval echo \$ss_basic_chng_${type}_net_${numb}_typ
+}
+
+get_dns_effective_net(){
+	local type="$1"
+	local numb="$2"
+	local net="$(get_dns_selected_net "${type}" "${numb}")"
+	if [ "${type}" = "trust" ] && [ "${ss_basic_type}" = "6" ] && [ "${net}" = "udp" ];then
+		echo "tcp"
+	else
+		echo "${net}"
+	fi
 }
 
 get_dns_para(){
@@ -2174,7 +2398,7 @@ get_dns_para(){
 	local port="53"
 
 	# udp, tcp, dot
-	local net=$(eval echo \$ss_basic_chng_${type}_net_${numb}_typ)
+	local net="$(get_dns_selected_net "${type}" "${numb}")"
 	
 	local dns_opt=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_opt)
 	local dns_usr=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_usr)
@@ -2204,55 +2428,142 @@ get_dns_para(){
 	
 }
 
-gen_xray_dns_inbound(){
-	local config_file=$1
-	if [ "${ss_basic_dns_plan}" == "1" ];then
-		if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" -a "${ss_basic_chng_trust_net_1_typ}" == "udp" ];then
-			cat >>"${config_file}" <<-EOF
-					{
-					"protocol": "dokodemo-door",
-					"port": 1055,
-					"settings": {
-						"address": "$(get_dns_para trust 1 addr)",
-						"port": $(get_dns_para trust 1 port),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-			EOF
-		fi
-		if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" -a "${ss_basic_chng_trust_net_2_typ}" == "udp" ];then
-			cat >>"${config_file}" <<-EOF
-					{
-					"protocol": "dokodemo-door",
-					"port": 1056,
-					"settings": {
-						"address": "$(get_dns_para trust 2 addr)",
-						"port": $(get_dns_para trust 2 port),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-			EOF
-		fi
-		if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" -a "${ss_basic_chng_trust_net_3_typ}" == "udp" ];then
-			cat >>"${config_file}" <<-EOF
-					{
-					"protocol": "dokodemo-door",
-					"port": 1057,
-					"settings": {
-						"address": "$(get_dns_para trust 3 addr)",
-						"port": $(get_dns_para trust 3 port),
-						"network": "udp",
-						"timeout": 0,
-						"followRedirect": false
-						}
-					},
-			EOF
-		fi
+iter_dns_udp_relay_targets(){
+	local sep="$(printf '\037')"
+	if [ "${ss_basic_dns_plan}" = "1" ];then
+		local numb=""
+		for numb in 1 2 3
+		do
+			local chk="$(eval echo \$ss_basic_chng_trust_dns_${numb}_chk)"
+			local net="$(get_dns_selected_net trust "${numb}")"
+			if [ "${chk}" = "1" ] && [ "${net}" = "udp" ] && [ "${ss_basic_type}" != "6" ];then
+				printf '%s\037%s\037%s\037%s\037%s\n' "$((SMARTDNS_RELAY_PORT_BASE + numb - 1))" "$(get_dns_para trust "${numb}" addr)" "$(get_dns_para trust "${numb}" port)" "chinadns-ng trust DNS ${numb}" ""
+			fi
+		done
+	elif [ "${ss_basic_dns_plan}" = "2" ] && [ "${ss_basic_type}" != "6" ];then
+		smartdns_iter_gfw_udp_relays
 	fi
+}
+
+has_dns_udp_relay_targets(){
+	[ -n "$(iter_dns_udp_relay_targets | sed -n '1p')" ]
+}
+
+stop_dns_udp_relay_sidecar(){
+	local relay_pid
+	relay_pid="$(ps | grep "xray run -c /koolshare/ss/xray_dns_relay.json" | grep -v grep | awk '{print $1}')"
+	if [ -n "${relay_pid}" ];then
+		echo_date "关闭DNS UDP relay sidecar..."
+		kill -9 ${relay_pid} >/dev/null 2>&1
+	fi
+	rm -rf /koolshare/ss/xray_dns_relay.json /tmp/xray_dns_relay_tmp.json >/dev/null 2>&1
+}
+
+generate_dns_udp_relay_sidecar_conf(){
+	local tmp_conf="/tmp/xray_dns_relay_tmp.json"
+	local final_conf="/koolshare/ss/xray_dns_relay.json"
+	local sep="$(printf '\037')"
+	local entry_count=0
+	cat > "${tmp_conf}" <<-'EOF'
+{
+  "log": {
+    "access": "none",
+    "error": "none",
+    "loglevel": "none"
+  },
+  "inbounds": [
+EOF
+	while IFS="${sep}" read -r relay_port addr port provider description
+	do
+		[ -n "${relay_port}" ] || continue
+		entry_count=$((entry_count + 1))
+		[ "${entry_count}" -gt 1 ] && echo "," >> "${tmp_conf}"
+		cat >> "${tmp_conf}" <<-EOF
+    {
+      "tag": "dns_udp_${relay_port}",
+      "listen": "127.0.0.1",
+      "port": ${relay_port},
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "${addr}",
+        "port": ${port},
+        "network": "udp",
+        "timeout": 0,
+        "followRedirect": false
+      }
+    }
+EOF
+	done <<-EOF
+$(iter_dns_udp_relay_targets)
+EOF
+	cat >> "${tmp_conf}" <<-'EOF'
+  ],
+  "outbounds": [
+    {
+      "tag": "dns_relay_out",
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "127.0.0.1",
+            "port": 23456
+          }
+        ]
+      }
+    }
+  ]
+}
+EOF
+	if [ "${entry_count}" -eq 0 ];then
+		rm -rf "${tmp_conf}" >/dev/null 2>&1
+		return 1
+	fi
+	if ! test_xray_conf "${tmp_conf}" >/dev/null 2>&1; then
+		echo_date "错误：DNS UDP relay sidecar 配置校验失败：${_test_ret}"
+		rm -rf "${tmp_conf}" >/dev/null 2>&1
+		return 1
+	fi
+	mv -f "${tmp_conf}" "${final_conf}"
+	return 0
+}
+
+start_dns_udp_relay_sidecar(){
+	stop_dns_udp_relay_sidecar
+	if ! has_dns_udp_relay_targets; then
+		return 0
+	fi
+	echo_date "检测到当前DNS方案需要UDP DNS relay sidecar..."
+	if ! generate_dns_udp_relay_sidecar_conf; then
+		return 1
+	fi
+	echo_date "开启DNS UDP relay sidecar..."
+	run_bg xray run -c /koolshare/ss/xray_dns_relay.json
+	local sep="$(printf '\037')"
+	local first_port=""
+	while IFS="${sep}" read -r relay_port addr port provider description
+	do
+		first_port="${relay_port}"
+		break
+	done <<-EOF
+$(iter_dns_udp_relay_targets)
+EOF
+	[ -n "${first_port}" ] || return 0
+	local i=20
+	until netstat -nlp 2>/dev/null | grep -w "${first_port}" | grep -q "xray"
+	do
+		i=$((i - 1))
+		if [ "${i}" -lt 1 ];then
+			echo_date "错误：DNS UDP relay sidecar 启动失败！"
+			return 1
+		fi
+		usleep 250000
+	done
+	echo_date "DNS UDP relay sidecar 启动成功！"
+	return 0
+}
+
+gen_xray_dns_inbound(){
+	return 0
 }
 
 append_xray_ipv6_tproxy_inbound() {
@@ -2276,13 +2587,14 @@ get_dns(){
 	local numb=$2
 
 	# udp, tcp, dot
-	local net=$(eval echo \$ss_basic_chng_${type}_net_${numb}_typ)
+	local net="$(get_dns_selected_net "${type}" "${numb}")"
+	local eff_net="$(get_dns_effective_net "${type}" "${numb}")"
 	
 	local dns_opt=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_opt)
 	local dns_usr=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_usr)
 
-	if [ "${net}" == "dot" ];then
-		net=tls
+	if [ "${eff_net}" == "dot" ];then
+		eff_net=tls
 	fi
 
 	if [ "${net}_${type}_${numb}" == "udp_trust_1" ];then
@@ -2299,24 +2611,24 @@ get_dns(){
 			dns_usr=$(echo ${dns_usr} | sed 's/:/#/g')
 		fi
 
-		if [ "${net}" == "udp" ];then
+		if [ "${eff_net}" == "udp" ];then
 			if [ "${type}" == "trust" ];then
 				echo "udp://127.0.0.1#${_port}?count=0?life=0"
 			else
 				echo "udp://${dns_usr}?count=0?life=0"
 			fi
 		else
-			echo "${net}://${dns_usr}"
+			echo "${eff_net}://${dns_usr}"
 		fi
 	else
-		if [ "${net}" == "udp" ];then
+		if [ "${eff_net}" == "udp" ];then
 			if [ "${type}" == "trust" ];then
 				echo "udp://127.0.0.1#${_port}?count=0?life=0"
 			else
 				echo "udp://${dns_opt}?count=0?life=0"
 			fi
 		else
-			echo "${net}://${dns_opt}"
+			echo "${eff_net}://${dns_opt}"
 		fi
 	fi
 }
@@ -5079,6 +5391,8 @@ stop_dns_process() {
 		echo_date "关闭smartdns进程..."
 		killall smartdns >/dev/null 2>&1
 	fi
+
+	stop_dns_udp_relay_sidecar
 }
 
 flush_ip6tables() {
