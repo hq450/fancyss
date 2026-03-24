@@ -824,7 +824,16 @@ fss_node_legacy_to_v2_json() {
 		node_json=$(fss_build_legacy_node_json "${node_index}" "${dump_file}")
 		node_json=$(printf '%s' "${node_json}" | jq -c '
 			with_entries(
-				if ((.key | IN("password"; "naive_pass"; "v2ray_json"; "xray_json"; "tuic_json")) and (.value != "" and .value != null))
+				if (
+					(
+						.key == "password"
+						or .key == "naive_pass"
+						or .key == "v2ray_json"
+						or .key == "xray_json"
+						or .key == "tuic_json"
+					)
+					and (.value != "" and .value != null)
+				)
 				then .value = (.value | @base64d)
 				else .
 				end
