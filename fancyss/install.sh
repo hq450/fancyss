@@ -17,6 +17,10 @@ run_bg(){
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
+report_install_migration_progress() {
+	echo_date "$1"
+}
+
 get_model(){
 	local ODMPID=$(nvram get odmpid)
 	local PRODUCTID=$(nvram get productid)
@@ -1272,7 +1276,7 @@ install_now(){
 
 	# 节点存储自动迁移：升级到支持 schema 2 的版本后，直接切换到新结构。
 	export PATH=/koolshare/bin:${PATH}
-	fss_auto_migrate_if_needed 1
+	fss_auto_migrate_if_needed 1 report_install_migration_progress
 	case "$?" in
 	0)
 		if [ "$(dbus get fss_data_schema)" = "2" ];then

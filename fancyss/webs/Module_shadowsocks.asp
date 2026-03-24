@@ -1060,8 +1060,7 @@ function build_route_file_name(baseName, extName) {
 function get_route_file_meta(arg) {
 	var meta = {
 		1: { url: "_root/files/ssconf_backup.sh", fileName: build_route_file_name("Fancyss_conf_backup", "sh"), probeDelay: 1200, retryDelay: 500, maxRetry: 120, logDelay: 1200 },
-		12: { url: "_root/files/ssconf_backup_v2.json", fileName: build_route_file_name("Fancyss_conf_backup", "json"), probeDelay: 600, retryDelay: 300, maxRetry: 60, logDelay: 600 },
-		13: { url: "_root/files/ssconf_legacy_migration.sh", fileName: build_route_file_name("Fancyss_legacy_migration", "sh"), probeDelay: 600, retryDelay: 300, maxRetry: 60, logDelay: 600 }
+		12: { url: "_root/files/ssconf_backup_v2.json", fileName: build_route_file_name("Fancyss_conf_backup", "json"), probeDelay: 600, retryDelay: 300, maxRetry: 60, logDelay: 600 }
 	};
 	return meta[arg] || null;
 }
@@ -1166,32 +1165,22 @@ function download_prepared_route_file(arg, cb) {
 		}
 	});
 }
-function prepare_migration_notice_downloads(snapshotReady, cb) {
-	prepare_route_file(1, function(ok1) {
-		if (!snapshotReady) {
-			if (typeof cb === "function") {
-				cb(ok1);
-			}
-			return;
+function prepare_migration_notice_downloads(cb) {
+	prepare_route_file(1, function(ok) {
+		if (typeof cb === "function") {
+			cb(ok);
 		}
-		prepare_route_file(13, function(ok2) {
-			if (typeof cb === "function") {
-				cb(ok1 && ok2);
-			}
-		});
 	});
 }
 function show_node_migration_notice() {
-	var snapshotReady = !!db_fss["fss_data_legacy_snapshot"];
 	var tip = [
 		"检测到本次版本已完成节点数据结构升级：",
 		"1. 老版本 fancyss 无法直接识别新的节点存储结构；",
 		"2. 如果未来需要回退旧版本，请先下载“旧版兼容备份”；",
-		"3. 迁移时旧快照只代表升级当时的旧数据，不包含升级后的新增/修改节点；",
-		"4. 关闭此窗口后，可到【附加功能】 - 【备份/恢复】继续导出“旧版兼容配置”和“新版本JSON配置”；",
-		"5. 建议回退旧版本前先导出当前配置。"
+		"3. 关闭此窗口后，可到【附加功能】 - 【备份/恢复】继续导出“旧版兼容配置”和“新版本JSON配置”；",
+		"4. 建议回退旧版本前，先在当前新版本导出一次最新配置。"
 	].join("<br>");
-	prepare_migration_notice_downloads(snapshotReady, function() {
+	prepare_migration_notice_downloads(function() {
 		layer.open({
 			type: 1,
 			title: "节点数据升级提醒",
@@ -1199,7 +1188,7 @@ function show_node_migration_notice() {
 			shadeClose: false,
 			closeBtn: 1,
 			content: '<div style="padding:18px 22px;line-height:1.8;font-size:13px;color:#111;background:#fff;">' + tip + '</div>',
-			btn: snapshotReady ? ["下载旧版兼容备份", "下载迁移快照", "我已经备份"] : ["下载旧版兼容备份", "我已经备份"],
+			btn: ["下载旧版兼容备份", "我已经备份"],
 			yes: function(index) {
 				close_node_migration_notice();
 				layer.close(index);
@@ -1211,18 +1200,6 @@ function show_node_migration_notice() {
 				return false;
 			},
 			btn2: function(index) {
-				if (snapshotReady) {
-					download_prepared_route_file(13, function(ok) {
-						if (!ok) {
-							layer.msg("迁移快照下载失败，请重试");
-						}
-					});
-					return false;
-				}
-				close_node_migration_notice();
-				layer.close(index);
-			},
-			btn3: function(index) {
 				close_node_migration_notice();
 				layer.close(index);
 			},
@@ -5292,7 +5269,7 @@ function save_row(action) {
 function download_route_file(arg, cb) {
 	var routeMeta = get_route_file_meta(arg);
 	if (routeMeta) {
-		var showRouteLog = (arg == 1 || arg == 12 || arg == 13);
+		var showRouteLog = (arg == 1 || arg == 12);
 		if (prepared_route_files[arg] === "pending") {
 			if (showRouteLog) {
 				E("log_content3").value += (E("log_content3").value ? "\n" : "") + "已有导出任务正在进行，请等待当前导出完成。";

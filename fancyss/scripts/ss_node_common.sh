@@ -482,9 +482,19 @@ fss_prune_migration_snapshots() {
 	rm -f "${keep_file}" "${keep_sorted}"
 }
 
+fss_report_progress() {
+	local progress_cb="$1"
+	shift
+	[ -n "${progress_cb}" ] || return 0
+	type "${progress_cb}" >/dev/null 2>&1 || return 0
+	"${progress_cb}" "$@"
+}
+
 fss_create_migration_snapshot() {
 	local snapshot_path="$1"
+	local progress_cb="$2"
 	[ -z "${snapshot_path}" ] && snapshot_path=$(fss_migration_snapshot_path)
+	fss_report_progress "${progress_cb}" "阶段1/4：生成旧版兼容快照..."
 	fss_export_legacy_backup "${snapshot_path}" || return 1
 	fss_prune_migration_snapshots
 }
@@ -524,10 +534,13 @@ fss_validate_v2_tempdir() {
 
 fss_migrate_legacy_nodes() {
 	local remove_legacy="$1"
+	local progress_cb="$2"
 	local ts snapshot_path
-	local tmp_dir expected_count=0
-	local node_id current_id failover_id max_id=0 order_csv=""
+	local tmp_dir expected_count=0 actual_count=0 migrated_nodes=0
+	local node_id node_b64 current_id failover_id max_id=0 order_csv=""
+	local order_file="" node_dump_file="" nodes_tsv="" node_ts=""
 	local old_current old_failover
+	local key value field
 
 	[ "$(fss_detect_storage_schema)" = "2" ] && return 0
 	old_current=$(dbus get ssconf_basic_node)
@@ -541,36 +554,68 @@ fss_migrate_legacy_nodes() {
 	tmp_dir=$(fss_mktemp_dir fss_migrate)
 	ts=$(date +%Y%m%d_%H%M%S)
 	snapshot_path=$(fss_migration_snapshot_path "${ts}")
+	order_file="${tmp_dir}/order"
+	node_dump_file="${tmp_dir}/nodes.dump"
+	nodes_tsv="${tmp_dir}/nodes.tsv"
 	dbus set fss_data_migrating=1
+	fss_report_progress "${progress_cb}" "节点数据配置升级中，此步耗时可能较长，请耐心等待..."
 
-	if ! fss_create_migration_snapshot "${snapshot_path}"; then
+	if ! fss_create_migration_snapshot "${snapshot_path}" "${progress_cb}"; then
 		rm -rf "${tmp_dir}"
 		dbus remove fss_data_migrating
 		flock -u 234
 		return 1
 	fi
 
-	: > "${tmp_dir}/order"
-	for node_id in $(fss_list_legacy_node_indices)
+	fss_report_progress "${progress_cb}" "阶段2/4：批量读取旧版节点数据..."
+	: > "${order_file}"
+	: > "${node_dump_file}"
+	dbus list ssconf_basic_ | while IFS= read -r line
 	do
-		[ -z "${node_id}" ] && continue
-		[ "${node_id}" -gt "${max_id}" ] && max_id="${node_id}"
-		fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "migration" > "${tmp_dir}/node_${node_id}.json" || {
-			rm -rf "${tmp_dir}"
-			dbus remove fss_data_migrating
-			flock -u 234
-			return 1
-		}
-		fss_b64_encode "$(cat "${tmp_dir}/node_${node_id}.json")" > "${tmp_dir}/node_${node_id}.b64"
-		echo "${node_id}" >> "${tmp_dir}/order"
+		[ -n "${line}" ] || continue
+		node_id=""
+		key=${line%%=*}
+		value=${line#*=}
+		case "${key}" in
+		ssconf_basic_name_*)
+			node_id=${key##*_}
+			field=${key#ssconf_basic_}
+			field=${field%_"${node_id}"}
+			printf '%s\0%s\0%s\0' "${node_id}" "${field}" "${value}" >> "${node_dump_file}"
+			printf '%s\n' "${node_id}" >> "${order_file}"
+			;;
+		ssconf_basic_*_[0-9]*)
+			node_id=${key##*_}
+			field=${key#ssconf_basic_}
+			field=${field%_"${node_id}"}
+			printf '%s\0%s\0%s\0' "${node_id}" "${field}" "${value}" >> "${node_dump_file}"
+			;;
+		esac
 	done
+	sort -n -u "${order_file}" -o "${order_file}"
+	actual_count=$(awk 'END{print NR + 0}' "${order_file}")
+	[ "${actual_count}" = "${expected_count}" ] || {
+		rm -rf "${tmp_dir}"
+		dbus remove fss_data_migrating
+		flock -u 234
+		return 1
+	}
 
 	current_id="${old_current}"
 	failover_id="${old_failover}"
-	[ -n "${current_id}" ] && echo "${current_id}" > "${tmp_dir}/current"
-	[ -n "${failover_id}" ] && echo "${failover_id}" > "${tmp_dir}/failover"
+	[ -n "${current_id}" ] && grep -Fxq "${current_id}" "${order_file}" || current_id="$(sed -n '1p' "${order_file}")"
+	[ -n "${failover_id}" ] && grep -Fxq "${failover_id}" "${order_file}" || failover_id=""
 
-	fss_validate_v2_tempdir "${tmp_dir}" "${expected_count}" || {
+	fss_report_progress "${progress_cb}" "阶段3/4：转换节点到新存储结构，共 ${expected_count} 个节点..."
+	node_ts="$(date +%s)"
+	fss_legacy_node_dump_to_v2_tsv "${node_dump_file}" "${order_file}" "migration" "${node_ts}" > "${nodes_tsv}" || {
+		rm -rf "${tmp_dir}"
+		dbus remove fss_data_migrating
+		flock -u 234
+		return 1
+	}
+	actual_count=$(awk 'END{print NR + 0}' "${nodes_tsv}")
+	[ "${actual_count}" = "${expected_count}" ] || {
 		rm -rf "${tmp_dir}"
 		dbus remove fss_data_migrating
 		flock -u 234
@@ -578,13 +623,28 @@ fss_migrate_legacy_nodes() {
 	}
 
 	fss_clear_v2_nodes
-	while IFS= read -r node_id
+	fss_report_progress "${progress_cb}" "阶段4/4：写入新存储结构，共 ${expected_count} 个节点..."
+	while IFS='	' read -r node_id node_b64
 	do
 		[ -z "${node_id}" ] && continue
-		dbus set fss_node_${node_id}="$(cat "${tmp_dir}/node_${node_id}.b64")"
-	done < "${tmp_dir}/order"
+		[ -n "${node_b64}" ] || continue
+		dbus set "fss_node_${node_id}=${node_b64}"
+		migrated_nodes=$((migrated_nodes + 1))
+		if [ "${node_id}" -gt "${max_id}" ] 2>/dev/null;then
+			max_id="${node_id}"
+		fi
+		if [ "${migrated_nodes}" = "1" ] || [ $((migrated_nodes % 20)) -eq 0 ] || [ "${migrated_nodes}" = "${expected_count}" ];then
+			fss_report_progress "${progress_cb}" "节点数据升级进度：${migrated_nodes}/${expected_count}"
+		fi
+	done < "${nodes_tsv}"
+	[ "${migrated_nodes}" = "${expected_count}" ] || {
+		rm -rf "${tmp_dir}"
+		dbus remove fss_data_migrating
+		flock -u 234
+		return 1
+	}
 
-	order_csv=$(tr '\n' ',' < "${tmp_dir}/order" | sed 's/,$//')
+	order_csv=$(tr '\n' ',' < "${order_file}" | sed 's/,$//')
 	dbus set fss_node_order="${order_csv}"
 	[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
 	[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
@@ -607,6 +667,7 @@ fss_migrate_legacy_nodes() {
 
 fss_auto_migrate_if_needed() {
 	local remove_legacy="$1"
+	local progress_cb="$2"
 	local legacy_count=0
 
 	[ -n "${remove_legacy}" ] || remove_legacy=1
@@ -616,7 +677,7 @@ fss_auto_migrate_if_needed() {
 	legacy_count=$(fss_legacy_node_count)
 	[ "${legacy_count}" -gt 0 ] || return 2
 
-	fss_migrate_legacy_nodes "${remove_legacy}" || return 1
+	fss_migrate_legacy_nodes "${remove_legacy}" "${progress_cb}" || return 1
 	if [ "${remove_legacy}" = "1" ] && [ "$(fss_legacy_node_count)" -gt 0 ];then
 		fss_clear_legacy_nodes
 	fi

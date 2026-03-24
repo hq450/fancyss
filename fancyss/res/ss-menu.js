@@ -587,9 +587,6 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 26) {
 		document.getElementById("loading_block3").innerHTML = "生成新版本JSON配置 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在整理新版本JSON配置...</font></li>");
-	} else if (action == 27) {
-		document.getElementById("loading_block3").innerHTML = "生成旧版迁移快照 ..."
-		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在整理迁移快照...</font></li>");
 	}
 }
 function hideSSLoadingBar() {

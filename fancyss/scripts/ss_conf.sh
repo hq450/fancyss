@@ -75,24 +75,6 @@ generate_native_backup_file(){
 	echo_date "新版本JSON配置生成完成，准备下载..." >&2
 }
 
-generate_migration_snapshot_file(){
-	local output_file="$1"
-	local snapshot_file
-	echo_date "开始整理旧版迁移快照..." >&2
-	fss_prune_migration_snapshots
-	snapshot_file=$(fss_resolve_migration_snapshot)
-	if [ -f "${snapshot_file}" ];then
-		cp -f "${snapshot_file}" "${output_file}"
-	else
-		cat > "${output_file}" <<-EOF
-#!/bin/sh
-# migration snapshot not found
-EOF
-	fi
-	chmod +x "${output_file}"
-	echo_date "旧版迁移快照已生成，准备下载..." >&2
-}
-
 backup_conf(){
 	prepare_download_dir
 	with_download_job_lock "fancyss_export_legacy" \
@@ -109,15 +91,6 @@ backup_conf_json(){
 			"/tmp/files/ssconf_backup_v2.json" \
 			"/tmp/files/.ssconf_backup_v2.json.tmp.$$" \
 			generate_native_backup_file
-}
-
-download_migration_snapshot(){
-	prepare_download_dir
-	with_download_job_lock "fancyss_export_migration" \
-		generate_download_file_atomically \
-			"/tmp/files/ssconf_legacy_migration.sh" \
-			"/tmp/files/.ssconf_legacy_migration.sh.tmp.$$" \
-			generate_migration_snapshot_file
 }
 
 backup_tar(){
@@ -346,9 +319,13 @@ reomve_ping(){
 	fss_clear_all_runtime_fields
 }
 
+report_migration_progress(){
+	echo_date "$1"
+}
+
 migrate_schema2_now(){
 	echo_date "检测到旧版节点数据，开始升级到 schema 2 存储..."
-	fss_auto_migrate_if_needed 1
+	fss_auto_migrate_if_needed 1 report_migration_progress
 	local rc=$?
 	case "${rc}" in
 	0)
@@ -474,17 +451,6 @@ case $act in
 		http_response "$1"
 	else
 		backup_conf_json 2>&1 | tee -a ${LOG_FILE}
-		echo XU6J03M6 | tee -a ${LOG_FILE}
-	fi
-	;;
-13)
-	if [ "${ws_flag}" == "0" ];then
-		download_migration_snapshot >> ${LOG_FILE} 2>&1
-		ret=$?
-		[ "${ret}" != "2" ] && echo XU6J03M6 >> ${LOG_FILE}
-		http_response "$1"
-	else
-		download_migration_snapshot 2>&1 | tee -a ${LOG_FILE}
 		echo XU6J03M6 | tee -a ${LOG_FILE}
 	fi
 	;;
