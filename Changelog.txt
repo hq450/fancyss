@@ -18,7 +18,7 @@ fancyss Changelog
    - update	优化NaiveProxy/TUIC等协议支持和相关交互：修正Naive进程状态识别，Naive下自动约束UDP/QUIC行为，并补充TUIC、NaiveProxy配置实践文档。
    - update	调整访问控制默认规则语义：默认规则统一为“当前节点模式 / 不通过代理”二选一，游戏模式下端口与UDP展示会强制匹配实际生效值，同时保留切回其它模式后的原始设置。
    - update	规范访问控制默认端口历史键兼容逻辑：新版本运行态统一使用ss_acl_default_ports，并自动清理旧版遗留的ss_acl_default_port；导出旧版兼容配置时会同时写入新旧键，兼容回退到3.5.4及更早版本。
-   - update	由于xray-core将于2026年6月1日起正式取消允许不安全想想，因此插件在用户勾选允许不安全后予以提醒用户尽快升级服务器端。
+   - update	由于xray-core将于2026年6月1日起正式取消allowInsecure，因此插件在用户勾选允许不安全后予以提醒用户尽快升级服务器端。
    - fix	修复full版本刷lite版本时，lite版本不支持的节点移除不干净的问题（保留hysteria2节点）。
    - fix	修复订阅节点时产生"null" "_"类型group的问题。
    - fix	修复Xray节点在生成配置文件时，因直接删除null字段导致json结构损坏的问题，影响部分VLESS/VMess等节点启用。
