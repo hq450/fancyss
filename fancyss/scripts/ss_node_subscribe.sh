@@ -841,14 +841,14 @@ sub_nodes_file_md5(){
 					)
 				)
 			end;
-		def legacy_b64_mode:
-			((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
-		def decode_b64_field($field):
-			if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
-				.[$field] |= (try @base64d catch .)
-			else
-				.
-			end;
+			def legacy_b64_mode:
+				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+			def decode_b64_field($field):
+				if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+					.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
+				else
+					.
+				end;
 		decode_b64_field("password")
 		| decode_b64_field("naive_pass")
 		| decode_b64_field("v2ray_json")
@@ -934,10 +934,10 @@ sub_write_nodes_schema2(){
 				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
 			def decode_b64_field($field):
 				if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
-					.[$field] |= (try @base64d catch .)
+					.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
 				else
 					.
-			end;
+				end;
 		def clean:
 			with_entries(select(.value != "" and .value != null))
 			| decode_b64_field("password")

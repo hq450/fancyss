@@ -278,7 +278,6 @@ fss_prepare_backup_node_json() {
 			._source,
 			._updated_at,
 			._migrated_from,
-			._b64_mode,
 			._created_at
 		)
 		| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
@@ -881,25 +880,25 @@ fss_node_legacy_to_v2_json() {
 				esac
 			done < "${dump_file}" | fss_kv_lines_to_json
 		)
-	else
-		node_json=$(fss_build_legacy_node_json "${node_index}" "${dump_file}")
-		node_json=$(printf '%s' "${node_json}" | jq -c '
-			with_entries(
-				if (
-					(
-						.key == "password"
-						or .key == "naive_pass"
-						or .key == "v2ray_json"
-						or .key == "xray_json"
-						or .key == "tuic_json"
+		else
+			node_json=$(fss_build_legacy_node_json "${node_index}" "${dump_file}")
+			node_json=$(printf '%s' "${node_json}" | jq -c '
+				with_entries(
+					if (
+						(
+							.key == "password"
+							or .key == "naive_pass"
+							or .key == "v2ray_json"
+							or .key == "xray_json"
+							or .key == "tuic_json"
+						)
+						and (.value != "" and .value != null)
 					)
-					and (.value != "" and .value != null)
+					then . as $entry | .value = (try (.value | @base64d) catch $entry.value)
+					else .
+					end
 				)
-				then .value = (.value | @base64d)
-				else .
-				end
-			)
-			| .v2ray_use_json = (if .v2ray_use_json == "1" then "1" else "0" end)
+				| .v2ray_use_json = (if .v2ray_use_json == "1" then "1" else "0" end)
 			| .v2ray_mux_enable = (if .v2ray_mux_enable == "1" then "1" else "0" end)
 			| .v2ray_network_security_ai = (if .v2ray_network_security_ai == "1" then "1" else "0" end)
 			| .v2ray_network_security_alpn_h2 = (if .v2ray_network_security_alpn_h2 == "1" then "1" else "0" end)
@@ -1905,15 +1904,16 @@ fss_restore_native_backup_v2() {
 			| ($nodes_map[$id] // empty)
 			| with_entries(select(.value != "" and .value != null))
 			| del(.server_ip, .latency, .ping)
-			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
-			| ._schema = 2
-			| ._id = $id
-			| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
-			| ._updated_at = $ts
-			| if ((._source // "") == "") then ._source = "restore" else . end
-			| prune
-			| [$id, (tojson | @base64)] | @tsv
-		' "${json_file}" > "${nodes_tsv}" || {
+				| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
+				| ._schema = 2
+				| ._id = $id
+				| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+				| ._b64_mode = ((._b64_mode // "") | if . == "" then "raw" else . end)
+				| ._updated_at = $ts
+				| if ((._source // "") == "") then ._source = "restore" else . end
+				| prune
+				| [$id, (tojson | @base64)] | @tsv
+			' "${json_file}" > "${nodes_tsv}" || {
 			rm -rf "${tmp_dir}"
 			return 1
 		}

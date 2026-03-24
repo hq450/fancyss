@@ -305,14 +305,32 @@ restore_json(){
 }
 
 restore_now(){
-	if [ -f "/tmp/upload/ssconf_backup.json" ];then
-		restore_json
-	elif [ -f "/tmp/upload/ssconf_backup.sh" ];then
-		restore_sh
+	local json_file="/tmp/upload/ssconf_backup.json"
+	local sh_file="/tmp/upload/ssconf_backup.sh"
+	local latest_file="" restore_rc=0
+
+	if [ -f "${json_file}" ] && [ -f "${sh_file}" ];then
+		latest_file=$(ls -1t "${json_file}" "${sh_file}" 2>/dev/null | sed -n '1p')
+		if [ "${latest_file}" = "${sh_file}" ];then
+			echo_date "同时检测到JSON和兼容SH备份文件，按最新上传的兼容SH备份处理..."
+			restore_sh || restore_rc=$?
+		else
+			echo_date "同时检测到JSON和兼容SH备份文件，按最新上传的JSON备份处理..."
+			restore_json || restore_rc=$?
+		fi
+	elif [ -f "${json_file}" ];then
+		restore_json || restore_rc=$?
+	elif [ -f "${sh_file}" ];then
+		restore_sh || restore_rc=$?
+	else
+		echo_date "没有检测到可恢复的备份文件！"
+		restore_rc=1
 	fi
 	echo_date "一点点清理工作..."
 	rm -rf /tmp/ss_conf_*
+	rm -f "${json_file}" "${sh_file}"
 	echo_date "完成！"
+	return "${restore_rc}"
 }
 
 reomve_ping(){
