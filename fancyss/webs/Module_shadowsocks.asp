@@ -3856,6 +3856,7 @@ function refresh_html() {
 				html += '<div class="server">' + c["hy2_server"] + '</div>';
 				html += '</td>';
 			}
+			//fancyss_naive_1
 			else if(c["type"] == 6)																					//fancyss-full
 			{																										//fancyss-full
 				if(qrcodeEnabled){
@@ -3869,6 +3870,7 @@ function refresh_html() {
 				html += '<div class="server">' + c["naive_server"] + '</div>';										//fancyss-full
 				html += '</td>';																					//fancyss-full
 			}																										//fancyss-full
+			//fancyss_naive_2
 			else
 			{
 				if(qrcodeEnabled){
