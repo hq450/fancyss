@@ -1056,7 +1056,7 @@ function build_route_file_name(baseName, extName) {
 		+ "-"
 		+ pad_route_file_number(now.getHours())
 		+ pad_route_file_number(now.getMinutes());
-	return modelName + "_" + baseName + "_" + timeTag + "." + extName;
+	return baseName + "_" + modelName + "_" + timeTag + "." + extName;
 }
 function get_route_file_meta(arg) {
 	var meta = {
