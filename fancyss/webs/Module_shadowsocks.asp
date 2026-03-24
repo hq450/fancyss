@@ -5670,6 +5670,7 @@ var tab_actions = {
 	7: function() {
 		$('#apply_button').hide();
 		$('#ss_failover_save').hide();
+		verifyFields();
 		update_visibility();
 	},
 	8: function() {
@@ -5680,6 +5681,7 @@ var tab_actions = {
 	9: function() {
 		$('#apply_button').show();
 		$('#ss_failover_save').hide();
+		verifyFields();
 		update_visibility();
 	},
 	10: function() {
