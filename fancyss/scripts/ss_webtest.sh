@@ -1347,13 +1347,14 @@ curl_test(){
 	local nu=$1
 	local port=$2
 	local tdir="${TMP2}/curl_${nu}"
-	local warm_file="${tdir}/warm.txt"
-	local score1_file="${tdir}/score1.txt"
-	local score2_file="${tdir}/score2.txt"
+	local series_cfg="${tdir}/series.cfg"
+	local series_out="${tdir}/series.out"
+	local retry_cfg="${tdir}/retry.cfg"
+	local retry_out="${tdir}/retry.out"
 	local history_ms=""
 	local best_ms=""
 	local has_timeout=0
-	local need_score2=0
+	local inline_score2=0
 	local proto="socks5h"
 	local warm_timeout=3
 	local score_timeout=3
@@ -1372,39 +1373,72 @@ curl_test(){
 		' "${WT_WEBTEST_BACKUP}" 2>/dev/null
 	}
 
-	wt_run_curl_once(){
-		local result_file="$1"
-		local timeout_sec="$2"
-		local out=""
-		local rc=""
+	wt_write_curl_transfer(){
+		local cfg_file="$1"
+		local tag="$2"
+		local timeout_sec="$3"
+		local add_next="$4"
 
-		out=$(__timeout_run ${timeout_sec} ${TMP2}/curl-webtest -o /dev/null -s -I -x ${proto}://127.0.0.1:${port} --connect-timeout ${timeout_sec} -m ${timeout_sec} -w "%{time_total}|%{response_code}\n" ${ss_basic_furl} 2>/dev/null)
-		rc=$?
-		printf '%s|%s\n' "${rc}" "${out}" > "${result_file}"
+		cat >>"${cfg_file}" <<-EOF
+			silent
+			head
+			output = "/dev/null"
+			proxy = "${proto}://127.0.0.1:${port}"
+			connect-timeout = "${timeout_sec}"
+			max-time = "${timeout_sec}"
+			url = "${ss_basic_furl}"
+			write-out = "${tag}|%{exitcode}|%{response_code}|%{time_total}\\n"
+		EOF
+		[ "${add_next}" = "1" ] && echo "next" >>"${cfg_file}"
 	}
 
-	wt_result_timeout(){
-		local result_file="$1"
-		local rc=""
-		[ -f "${result_file}" ] || return 1
-		rc=$(cut -d"|" -f1 "${result_file}" 2>/dev/null)
-		[ "${rc}" = "124" -o "${rc}" = "28" ]
+	wt_run_curl_series(){
+		local cfg_file="$1"
+		local out_file="$2"
+
+		: >"${out_file}"
+		run ${TMP2}/curl-webtest -q -K "${cfg_file}" >"${out_file}" 2>/dev/null
 	}
 
-	wt_result_ms(){
-		local result_file="$1"
-		local rc=""
-		local time_total=""
+	wt_get_series_field(){
+		local out_file="$1"
+		local tag="$2"
+		local col="$3"
+		[ -f "${out_file}" ] || return 1
+		awk -F '|' -v t="${tag}" -v c="${col}" '
+			$1 == t {
+				print $c
+				exit
+			}
+		' "${out_file}" 2>/dev/null
+	}
+
+	wt_series_timeout(){
+		local out_file="$1"
+		local tag="$2"
+		local exitcode=""
+
+		exitcode=$(wt_get_series_field "${out_file}" "${tag}" 2)
+		[ "${exitcode}" = "28" ]
+	}
+
+	wt_series_result_ms(){
+		local out_file="$1"
+		local tag="$2"
+		local exitcode=""
 		local resp_code=""
 		local ms=""
 
-		[ -f "${result_file}" ] || return 1
-		rc=$(cut -d"|" -f1 "${result_file}" 2>/dev/null)
-		time_total=$(cut -d"|" -f2 "${result_file}" 2>/dev/null)
-		resp_code=$(cut -d"|" -f3 "${result_file}" 2>/dev/null)
-		[ "${rc}" = "0" ] || return 1
+		exitcode=$(wt_get_series_field "${out_file}" "${tag}" 2)
+		resp_code=$(wt_get_series_field "${out_file}" "${tag}" 3)
+		[ "${exitcode}" = "0" ] || return 1
 		[ "${resp_code}" = "200" -o "${resp_code}" = "204" ] || return 1
-		ms=$(awk -F "|" '{printf "%.0f", $2 * 1000}' "${result_file}" 2>/dev/null)
+		ms=$(awk -F '|' -v t="${tag}" '
+			$1 == t {
+				printf "%.0f", $4 * 1000
+				exit
+			}
+		' "${out_file}" 2>/dev/null)
 		[ -n "${ms}" ] || return 1
 		[ "${ms}" -le "5000" ] || {
 			echo "timeout"
@@ -1461,35 +1495,45 @@ curl_test(){
 	mkdir -p ${tdir}
 	history_ms=$(wt_get_history_latency "${nu}")
 
-	# First request only warms the remote DNS and proxy session; it is not scored.
-	wt_run_curl_once "${warm_file}" "${warm_timeout}"
-	if wt_result_timeout "${warm_file}";then
-		has_timeout=1
-	fi
-
-	# The first scored request is usually already much closer to the stable latency.
-	wt_run_curl_once "${score1_file}" "${score_timeout}"
-	if wt_result_timeout "${score1_file}";then
-		has_timeout=1
-	fi
-	best_ms=$(wt_result_ms "${score1_file}")
-
 	if [ "${WT_SINGLE}" = "1" ];then
 		# Manual single-node test prefers accuracy over total duration.
-		need_score2=1
+		inline_score2=1
 	elif [ -z "${history_ms}" ];then
 		# No historical baseline: take one extra scored sample and keep the better one.
-		need_score2=1
-	elif wt_score_needs_retry "${best_ms}" "${history_ms}";then
-		need_score2=1
+		inline_score2=1
 	fi
 
-	if [ "${need_score2}" = "1" ];then
-		wt_run_curl_once "${score2_file}" "${score_timeout}"
-		if wt_result_timeout "${score2_file}";then
+	: >"${series_cfg}"
+	wt_write_curl_transfer "${series_cfg}" "warm" "${warm_timeout}" 1
+	if [ "${inline_score2}" = "1" ];then
+		wt_write_curl_transfer "${series_cfg}" "score1" "${score_timeout}" 1
+		wt_write_curl_transfer "${series_cfg}" "score2" "${score_timeout}" 0
+	else
+		wt_write_curl_transfer "${series_cfg}" "score1" "${score_timeout}" 0
+	fi
+	wt_run_curl_series "${series_cfg}" "${series_out}"
+
+	if wt_series_timeout "${series_out}" "warm";then
+		has_timeout=1
+	fi
+	if wt_series_timeout "${series_out}" "score1";then
+		has_timeout=1
+	fi
+	best_ms=$(wt_series_result_ms "${series_out}" "score1")
+
+	if [ "${inline_score2}" = "1" ];then
+		if wt_series_timeout "${series_out}" "score2";then
 			has_timeout=1
 		fi
-		best_ms=$(wt_pick_better_ms "${best_ms}" "$(wt_result_ms "${score2_file}")")
+		best_ms=$(wt_pick_better_ms "${best_ms}" "$(wt_series_result_ms "${series_out}" "score2")")
+	elif wt_score_needs_retry "${best_ms}" "${history_ms}";then
+		: >"${retry_cfg}"
+		wt_write_curl_transfer "${retry_cfg}" "score2" "${score_timeout}" 0
+		wt_run_curl_series "${retry_cfg}" "${retry_out}"
+		if wt_series_timeout "${retry_out}" "score2";then
+			has_timeout=1
+		fi
+		best_ms=$(wt_pick_better_ms "${best_ms}" "$(wt_series_result_ms "${retry_out}" "score2")")
 	fi
 
 	rm -rf ${tdir}

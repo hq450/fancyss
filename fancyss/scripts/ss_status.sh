@@ -18,6 +18,7 @@ PROXY_IPV6=$(dbus get ss_basic_proxy_ipv6)
 [ -z "${FRN_TEST_SITE}" ] && FRN_TEST_SITE="$(get_fancyss_default_furl)"
 SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic|hysteria"|head -n1)
 REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal|v2ray|xray|trojan|ipt2socks|hysteria"|head -n1)
+STATUS_HISTORY_DIR=/tmp/upload/ss_status_history
 
 run(){
 	env -i PATH=${PATH} "$@"
@@ -67,12 +68,246 @@ prepare_status_probes(){
 	FOREIGN6_PROBE_FILE="${STATUS_PROBE_DIR}/foreign6"
 }
 
+status_history_file(){
+	printf '%s/%s.ms\n' "${STATUS_HISTORY_DIR}" "$1"
+}
+
+read_status_history_ms(){
+	local history_file="$(status_history_file "$1")"
+	[ -f "${history_file}" ] || return 0
+	cat "${history_file}" 2>/dev/null
+}
+
+write_status_history_ms(){
+	local key="$1"
+	local ms="$2"
+	[ -n "${key}" ] || return 0
+	[ -n "${ms}" ] || return 0
+	echo "${ms}" | grep -Eq '^[0-9]+$' || return 0
+	mkdir -p "${STATUS_HISTORY_DIR}" >/dev/null 2>&1
+	echo "${ms}" >"$(status_history_file "${key}")"
+}
+
+status_escape_curl_cfg_value(){
+	printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+status_code_ok(){
+	case "$1" in
+	200|204|301|302)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+status_probe_needs_retry(){
+	local current_ms="$1"
+	local prev_ms="$2"
+	local limit_a=""
+	local limit_b=""
+	local limit=""
+
+	[ -n "${current_ms}" ] || return 0
+	[ -n "${prev_ms}" ] || return 0
+	echo "${current_ms}" | grep -Eq '^[0-9]+$' || return 0
+	echo "${prev_ms}" | grep -Eq '^[0-9]+$' || return 0
+	limit_a=$((prev_ms + 100))
+	limit_b=$((prev_ms * 3 / 2))
+	limit="${limit_a}"
+	[ "${limit_b}" -gt "${limit}" ] && limit="${limit_b}"
+	[ "${current_ms}" -gt "${limit}" ]
+}
+
+status_write_transfer_cfg(){
+	local cfg_file="$1"
+	local tag="$2"
+	local url="$3"
+	local family="$4"
+	local timeout_sec="$5"
+	local proxy_uri="$6"
+	local esc_url=""
+	local esc_proxy=""
+
+	esc_url=$(status_escape_curl_cfg_value "${url}")
+	cat >>"${cfg_file}" <<-EOF
+		silent
+		insecure
+		head
+		output = "/dev/null"
+		connect-timeout = "${timeout_sec}"
+		max-time = "${timeout_sec}"
+		url = "${esc_url}"
+		write-out = "${tag}|%{exitcode}|%{response_code}|%{time_total}|%{remote_ip}\\n"
+	EOF
+	[ "${family}" = "4" ] && echo "ipv4" >>"${cfg_file}"
+	[ "${family}" = "6" ] && echo "ipv6" >>"${cfg_file}"
+	if [ -n "${proxy_uri}" ];then
+		esc_proxy=$(status_escape_curl_cfg_value "${proxy_uri}")
+		echo "proxy = \"${esc_proxy}\"" >>"${cfg_file}"
+	fi
+}
+
+status_run_series(){
+	local cfg_file="$1"
+	local out_file="$2"
+	: >"${out_file}"
+	run /tmp/curl-status -q -K "${cfg_file}" >"${out_file}" 2>/dev/null
+}
+
+status_get_series_field(){
+	local out_file="$1"
+	local tag="$2"
+	local col="$3"
+	[ -f "${out_file}" ] || return 1
+	awk -F '|' -v t="${tag}" -v c="${col}" '
+		$1 == t {
+			print $c
+			exit
+		}
+	' "${out_file}" 2>/dev/null
+}
+
+status_get_series_line(){
+	local out_file="$1"
+	local tag="$2"
+	[ -f "${out_file}" ] || return 1
+	awk -F '|' -v t="${tag}" '
+		$1 == t {
+			print
+			exit
+		}
+	' "${out_file}" 2>/dev/null
+}
+
+status_series_timeout(){
+	local out_file="$1"
+	local tag="$2"
+	local exitcode=""
+	exitcode=$(status_get_series_field "${out_file}" "${tag}" 2)
+	[ "${exitcode}" = "28" ]
+}
+
+status_series_ms(){
+	local out_file="$1"
+	local tag="$2"
+	local exitcode=""
+	local resp_code=""
+	local ms=""
+
+	exitcode=$(status_get_series_field "${out_file}" "${tag}" 2)
+	resp_code=$(status_get_series_field "${out_file}" "${tag}" 3)
+	[ "${exitcode}" = "0" ] || return 1
+	status_code_ok "${resp_code}" || return 1
+	ms=$(awk -F '|' -v t="${tag}" '
+		$1 == t {
+			printf "%.0f", $4 * 1000
+			exit
+		}
+	' "${out_file}" 2>/dev/null)
+	[ -n "${ms}" ] || return 1
+	echo "${ms}"
+}
+
+status_pick_better_tag(){
+	local out_file="$1"
+	local lhs_tag="$2"
+	local rhs_tag="$3"
+	local lhs_ms=""
+	local rhs_ms=""
+
+	lhs_ms=$(status_series_ms "${out_file}" "${lhs_tag}")
+	rhs_ms=$(status_series_ms "${out_file}" "${rhs_tag}")
+	if [ -z "${lhs_ms}" ];then
+		printf '%s\n' "${rhs_tag}"
+		return 0
+	fi
+	if [ -z "${rhs_ms}" ];then
+		printf '%s\n' "${lhs_tag}"
+		return 0
+	fi
+	if [ "${lhs_ms}" -le "${rhs_ms}" ];then
+		printf '%s\n' "${lhs_tag}"
+	else
+		printf '%s\n' "${rhs_tag}"
+	fi
+}
+
+status_line_to_legacy(){
+	printf '%s' "$1" | awk -F '|' '{print $4 "|" $3 "|" $5}'
+}
+
 launch_probe(){
-	local outfile="$1"
-	local url="$2"
-	shift 2
+	local key="$1"
+	local outfile="$2"
+	local url="$3"
+	local family="$4"
+	local proxy_uri="$5"
 	(
-		run /tmp/curl-status -o /dev/null "$@" --connect-timeout 5 -m 5 -w "%{time_total}|%{response_code}|%{remote_ip}\n" "${url}" 2>/dev/null >"${outfile}"
+		local probe_dir="${STATUS_PROBE_DIR}/${key}_dir"
+		local series_cfg="${probe_dir}/series.cfg"
+		local series_out="${probe_dir}/series.out"
+		local retry_cfg="${probe_dir}/retry.cfg"
+		local retry_out="${probe_dir}/retry.out"
+		local history_ms=""
+		local best_tag="score1"
+		local best_ms=""
+		local score2_ms=""
+		local fallback_tag="score1"
+		local inline_score2=0
+
+		rm -rf "${probe_dir}" >/dev/null 2>&1
+		mkdir -p "${probe_dir}"
+		history_ms=$(read_status_history_ms "${key}")
+		[ -z "${history_ms}" ] && inline_score2=1
+
+		: >"${series_cfg}"
+		status_write_transfer_cfg "${series_cfg}" "warm" "${url}" "${family}" 3 "${proxy_uri}"
+		echo "next" >>"${series_cfg}"
+		status_write_transfer_cfg "${series_cfg}" "score1" "${url}" "${family}" 3 "${proxy_uri}"
+		if [ "${inline_score2}" = "1" ];then
+			echo "next" >>"${series_cfg}"
+			status_write_transfer_cfg "${series_cfg}" "score2" "${url}" "${family}" 3 "${proxy_uri}"
+			fallback_tag="score2"
+		fi
+		status_run_series "${series_cfg}" "${series_out}"
+
+		best_ms=$(status_series_ms "${series_out}" "score1")
+		if [ "${inline_score2}" = "1" ];then
+			best_tag=$(status_pick_better_tag "${series_out}" "score1" "score2")
+			best_ms=$(status_series_ms "${series_out}" "${best_tag}")
+		elif status_probe_needs_retry "${best_ms}" "${history_ms}";then
+			: >"${retry_cfg}"
+			status_write_transfer_cfg "${retry_cfg}" "score2" "${url}" "${family}" 3 "${proxy_uri}"
+			status_run_series "${retry_cfg}" "${retry_out}"
+			score2_ms=$(status_series_ms "${retry_out}" "score2")
+			if [ -n "${score2_ms}" ] && { [ -z "${best_ms}" ] || [ "${score2_ms}" -lt "${best_ms}" ]; };then
+				best_tag="score2"
+				best_ms="${score2_ms}"
+			else
+				best_tag="score1"
+			fi
+			fallback_tag="score2"
+		fi
+
+		if [ -n "${best_ms}" ];then
+			write_status_history_ms "${key}" "${best_ms}"
+			if [ "${best_tag}" = "score2" -a -f "${retry_out}" ];then
+				status_line_to_legacy "$(status_get_series_line "${retry_out}" "score2")" >"${outfile}"
+			else
+				status_line_to_legacy "$(status_get_series_line "${series_out}" "${best_tag}")" >"${outfile}"
+			fi
+		else
+			if [ "${fallback_tag}" = "score2" -a -f "${retry_out}" ] && [ -n "$(status_get_series_line "${retry_out}" "score2")" ];then
+				status_line_to_legacy "$(status_get_series_line "${retry_out}" "score2")" >"${outfile}"
+			elif [ "${fallback_tag}" = "score2" ] && [ -n "$(status_get_series_line "${series_out}" "score2")" ];then
+				status_line_to_legacy "$(status_get_series_line "${series_out}" "score2")" >"${outfile}"
+			elif [ -n "$(status_get_series_line "${series_out}" "score1")" ];then
+				status_line_to_legacy "$(status_get_series_line "${series_out}" "score1")" >"${outfile}"
+			else
+				echo "0|000|" >"${outfile}"
+			fi
+		fi
 	) &
 	echo $!
 }
@@ -83,19 +318,19 @@ mark_probe_unavailable(){
 
 start_status_probes(){
 	prepare_status_probes
-	CHINA_PROBE_PID=$(launch_probe "${CHINA_PROBE_FILE}" "${CHN_TEST_SITE}" -4 -sk -I)
+	CHINA_PROBE_PID=$(launch_probe "china" "${CHINA_PROBE_FILE}" "${CHN_TEST_SITE}" "4" "")
 
 	if [ "${PROXY_IPV6}" == "1" ];then
 		if [ -n "${REDIRC_OPEN}" ];then
-			FOREIGN4_PROBE_PID=$(launch_probe "${FOREIGN4_PROBE_FILE}" "${FRN_TEST_SITE}" -4 -sk -I)
-			FOREIGN6_PROBE_PID=$(launch_probe "${FOREIGN6_PROBE_FILE}" "${FRN_TEST_SITE}" -6 -sk -I)
+			FOREIGN4_PROBE_PID=$(launch_probe "foreign4" "${FOREIGN4_PROBE_FILE}" "${FRN_TEST_SITE}" "4" "")
+			FOREIGN6_PROBE_PID=$(launch_probe "foreign6" "${FOREIGN6_PROBE_FILE}" "${FRN_TEST_SITE}" "6" "")
 		else
 			mark_probe_unavailable "${FOREIGN4_PROBE_FILE}"
 			mark_probe_unavailable "${FOREIGN6_PROBE_FILE}"
 		fi
 	else
 		if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" ];then
-			FOREIGN4_PROBE_PID=$(launch_probe "${FOREIGN4_PROBE_FILE}" "${FRN_TEST_SITE}" -4 -sk -I -x socks5://127.0.0.1:23456)
+			FOREIGN4_PROBE_PID=$(launch_probe "foreign4" "${FOREIGN4_PROBE_FILE}" "${FRN_TEST_SITE}" "4" "socks5://127.0.0.1:23456")
 		else
 			mark_probe_unavailable "${FOREIGN4_PROBE_FILE}"
 		fi
