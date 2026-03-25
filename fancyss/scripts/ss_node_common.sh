@@ -1031,7 +1031,7 @@ fss_list_node_ids() {
 	local schema
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
-		printf '%s' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d'
+		printf '%s\n' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d'
 	else
 		fss_list_legacy_node_indices
 	fi

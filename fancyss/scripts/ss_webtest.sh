@@ -236,6 +236,8 @@ sort_nodes(){
 
 	# sort by type first
 	local count=1
+	local prev_type=""
+	local group_file=""
 	: >${TMP2}/nodes_index.txt
 	fss_list_node_ids | while read node_id
 	do
@@ -243,14 +245,18 @@ sort_nodes(){
 		printf "%s %02d\n" "${node_id}" "$(wt_node_get type ${node_id})" >>${TMP2}/nodes_index.txt
 	done
 	sort -t " " -nk1 ${TMP2}/nodes_index.txt -o ${TMP2}/nodes_index.txt
-	cat ${TMP2}/nodes_index.txt|awk '{print $2}'|uniq -c|sed 's/^[[:space:]]\+//g' | while read gp
+	while read node_id node_type
 	do
-		local _type=$(echo "$gp" | awk '{print $2}')
-		local _line=$(echo "$gp" | awk '{print $1}')
-		sed -n "1,${_line}p" ${TMP2}/nodes_index.txt | awk '{print $1}' >>${TMP2}/wt_${count}_${_type}.txt
-		sed -i "1,${_line}d" ${TMP2}/nodes_index.txt
-		let count++
-	done
+		[ -z "${node_id}" ] && continue
+		[ -z "${node_type}" ] && continue
+		if [ "${node_type}" != "${prev_type}" ];then
+			group_file="${TMP2}/wt_${count}_${node_type}.txt"
+			: > "${group_file}"
+			count=$((count + 1))
+			prev_type="${node_type}"
+		fi
+		echo "${node_id}" >> "${group_file}"
+	done < ${TMP2}/nodes_index.txt
 
 	# then sort shadowsocks
 	local wt_flies=$(find ${TMP2}/wt_*.txt|sort -t "/" -nk5)

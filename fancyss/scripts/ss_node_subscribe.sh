@@ -97,7 +97,7 @@ unset PWD
 
 sub_list_node_ids(){
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		printf '%s' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d'
+		printf '%s\n' "$(dbus get fss_node_order)" | tr ',' '\n' | sed '/^$/d'
 	else
 		dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n
 	fi
