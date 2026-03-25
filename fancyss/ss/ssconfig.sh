@@ -1037,8 +1037,8 @@ current_node_server_uses_runtime_dns() {
 }
 
 refresh_node_direct_domain_file() {
-	fss_refresh_node_direct_cache
 	if server_resolv_mode_is_dynamic; then
+		fss_refresh_node_direct_cache
 		fss_sync_node_direct_runtime
 	else
 		rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"

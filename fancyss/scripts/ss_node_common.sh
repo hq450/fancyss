@@ -1272,7 +1272,15 @@ fss_get_node_server_host_port() {
 	printf '%s\n%s\n' "${host}" "${port}"
 }
 
-fss_list_node_server_domains() {
+fss_pick_jq_bin() {
+	if [ -x "/koolshare/bin/jq" ]; then
+		printf '%s\n' "/koolshare/bin/jq"
+		return 0
+	fi
+	command -v jq 2>/dev/null
+}
+
+fss_list_node_server_domains_slow() {
 	local node_id="" host="" port=""
 	while IFS= read -r node_id
 	do
@@ -1289,6 +1297,90 @@ fss_list_node_server_domains() {
 	done <<-EOF
 	$(fss_list_node_ids)
 	EOF
+}
+
+fss_list_node_server_domains_v2_fast() {
+	local jq_bin="" line="" key="" value=""
+
+	jq_bin=$(fss_pick_jq_bin)
+	[ -n "${jq_bin}" ] || return 1
+
+	dbus list fss_node_ 2>/dev/null | while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		key=${line%%=*}
+		value=${line#*=}
+		case "${key}" in
+		fss_node_[0-9]*)
+			fss_b64_decode "${value}" 2>/dev/null || true
+			printf '\n'
+			;;
+		esac
+	done | "${jq_bin}" -Rnr '
+		def parse_embedded_json:
+			if type != "string" or . == "" then
+				{}
+			else
+				(try fromjson catch {})
+			end;
+		def xray_like_host($root):
+			($root.outbound // ($root.outbounds[0] // {})) as $ob
+			| ($ob.protocol // "") as $protocol
+			| if ($protocol == "vmess" or $protocol == "vless") then
+				($ob.settings.vnext[0].address // "")
+			elif ($protocol == "socks" or $protocol == "shadowsocks" or $protocol == "trojan") then
+				($ob.settings.servers[0].address // "")
+			else
+				""
+			end;
+		def tuic_host:
+			if . == "" then
+				""
+			elif startswith("[") then
+				(try capture("^\\[(?<host>[^\\]]+)\\](?::.*)?$").host catch "")
+			else
+				sub(":.*$"; "")
+			end;
+		inputs
+		| (try fromjson catch null)
+		| select(type == "object")
+		| (.type // "") as $type
+		| if ($type == "0" or $type == "1" or $type == "5") then
+			(.server // "")
+		elif $type == "6" then
+			(.naive_server // "")
+		elif $type == "8" then
+			(.hy2_server // "")
+		elif $type == "3" then
+			if (.v2ray_use_json // "0") == "1" then
+				(.v2ray_json | parse_embedded_json | xray_like_host(.))
+			else
+				(.server // "")
+			end
+		elif $type == "4" then
+			if (.xray_use_json // "0") == "1" then
+				(.xray_json | parse_embedded_json | xray_like_host(.))
+			else
+				(.server // "")
+			end
+		elif $type == "7" then
+			(.tuic_json | parse_embedded_json | .relay.server // "" | tuic_host)
+		else
+			(.server // "")
+		end
+	' 2>/dev/null | while IFS= read -r host
+	do
+		[ -n "${host}" ] || continue
+		[ -n "$(fss_is_domain_name "${host}")" ] || continue
+		printf '%s\n' "${host}"
+	done
+}
+
+fss_list_node_server_domains() {
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		fss_list_node_server_domains_v2_fast && return 0
+	fi
+	fss_list_node_server_domains_slow
 }
 
 fss_refresh_node_direct_cache() {
@@ -1312,6 +1404,9 @@ fss_sync_node_direct_runtime() {
 
 	rm -f "${tmp_file}"
 	if [ -s "${FSS_NODE_DIRECT_CACHE_FILE}" ]; then
+		if [ -s "${runtime_file}" ] && cmp -s "${FSS_NODE_DIRECT_CACHE_FILE}" "${runtime_file}" >/dev/null 2>&1; then
+			return 0
+		fi
 		cat "${FSS_NODE_DIRECT_CACHE_FILE}" > "${tmp_file}" || {
 			rm -f "${tmp_file}"
 			return 1

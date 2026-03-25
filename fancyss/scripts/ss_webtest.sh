@@ -6,15 +6,180 @@ source /koolshare/scripts/ss_base.sh
 source /koolshare/scripts/ss_webtest_gen.sh
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 TMP2=/tmp/fancyss_webtest
+WT_WEBTEST_FILE=/tmp/upload/webtest.txt
+WT_WEBTEST_STREAM=/tmp/upload/webtest.stream
+WT_WEBTEST_BACKUP=/tmp/upload/webtest_bakcup.txt
 WT_SERVER_RESOLV_MODE=$(dbus get ss_basic_server_resolv_mode)
 [ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
+WT_NODE_CACHE_DIR=""
+WT_NODE_ENV_DIR=""
+WT_NODE_ACTIVE_ID=""
+WT_NODE_ACTIVE_FIELDS=""
+WT_PREVIEW_READY=0
+
+wt_ensure_webtest_dir() {
+	mkdir -p /tmp/upload
+}
+
+wt_reset_webtest_output() {
+	wt_ensure_webtest_dir
+	: >"${WT_WEBTEST_FILE}"
+	: >"${WT_WEBTEST_STREAM}"
+}
+
+wt_append_webtest_line() {
+	local line="$1"
+
+	[ -n "${line}" ] || return 0
+	wt_ensure_webtest_dir
+	printf '%s\n' "${line}" >>"${WT_WEBTEST_FILE}"
+	printf '%s\n' "${line}" >>"${WT_WEBTEST_STREAM}"
+}
+
+wt_append_webtest_file() {
+	local src="$1"
+
+	[ -f "${src}" ] || return 0
+	wt_ensure_webtest_dir
+	cat "${src}" >>"${WT_WEBTEST_FILE}"
+	cat "${src}" >>"${WT_WEBTEST_STREAM}"
+}
+
+wt_write_webtest_snapshot() {
+	local src="$1"
+
+	wt_ensure_webtest_dir
+	if [ -f "${src}" ]; then
+		cp -f "${src}" "${WT_WEBTEST_FILE}"
+	else
+		: >"${WT_WEBTEST_FILE}"
+	fi
+}
+
+wt_reset_active_node_env() {
+	local field=""
+
+	for field in ${WT_NODE_ACTIVE_FIELDS}
+	do
+		unset WTN_${field}
+	done
+	unset WT_NODE_ENV_FIELDS
+	WT_NODE_ACTIVE_ID=""
+	WT_NODE_ACTIVE_FIELDS=""
+}
+
+wt_build_node_env_file() {
+	local node_id="$1"
+	local json_file=""
+	local env_file=""
+	local jq_bin=""
+
+	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
+	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
+	[ -n "${node_id}" ] || return 1
+	json_file="${WT_NODE_CACHE_DIR}/${node_id}.json"
+	env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
+	[ -f "${json_file}" ] || return 1
+	jq_bin=$(fss_pick_jq_bin)
+	[ -n "${jq_bin}" ] || return 1
+
+	"${jq_bin}" -r '
+		def is_b64_field($key):
+			$key == "password"
+			or $key == "naive_pass"
+			or $key == "v2ray_json"
+			or $key == "xray_json"
+			or $key == "tuic_json";
+		def decode_value($key; $value):
+			if is_b64_field($key) and ((._b64_mode // "") != "raw") and ((._source // "") == "subscribe") then
+				(try ($value | @base64d) catch $value)
+			else
+				$value
+			end;
+		[
+			to_entries[]
+			| select(.key | startswith("_") | not)
+			| .key as $k
+			| (.value | if type == "string" then . else tostring end) as $v
+			| select($v != "")
+			| {key: $k, value: decode_value($k; $v)}
+		] as $entries
+		| "WT_NODE_ENV_FIELDS=" + (($entries | map(.key) | join(" ")) | @sh),
+		  ($entries[] | "WTN_" + .key + "=" + (.value | @sh))
+	' "${json_file}" > "${env_file}.tmp" 2>/dev/null || {
+		rm -f "${env_file}.tmp"
+		return 1
+	}
+	mv -f "${env_file}.tmp" "${env_file}"
+}
+
+wt_load_node_env() {
+	local node_id="$1"
+	local env_file=""
+
+	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
+	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
+	[ -n "${node_id}" ] || return 1
+	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
+	env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
+	[ -f "${env_file}" ] || wt_build_node_env_file "${node_id}" || return 1
+	wt_reset_active_node_env
+	. "${env_file}" || return 1
+	WT_NODE_ACTIVE_ID="${node_id}"
+	WT_NODE_ACTIVE_FIELDS="${WT_NODE_ENV_FIELDS}"
+}
+
+wt_node_get_plain_from_cache() {
+	local node_id="$1"
+	local field="$2"
+	local store_field=""
+	local value=""
+
+	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
+	[ -n "${node_id}" ] || return 1
+	[ -n "${field}" ] || return 1
+	store_field=$(fss_resolve_node_field_name "${field}")
+	wt_load_node_env "${node_id}" || return 1
+	eval "value=\${WTN_${store_field}-}"
+	printf '%s' "${value}"
+}
 
 wt_node_get() {
-	fss_get_node_field_legacy "$2" "$1"
+	local field="$1"
+	local node_id="$2"
+	local store_field=""
+	local value=""
+
+	if value=$(wt_node_get_plain_from_cache "${node_id}" "${field}" 2>/dev/null); then
+		store_field=$(fss_resolve_node_field_name "${field}")
+		[ -n "${value}" ] || return 0
+		if fss_is_bool_field "${store_field}"; then
+			[ "${value}" = "1" ] || return 0
+		fi
+		if fss_is_b64_field "${store_field}"; then
+			case "${store_field}" in
+			v2ray_json|xray_json|tuic_json)
+				value=$(fss_compact_json_value "${value}")
+				;;
+			esac
+			value=$(fss_b64_encode "${value}")
+		fi
+		printf '%s' "${value}"
+		return 0
+	fi
+	fss_get_node_field_legacy "${node_id}" "${field}"
 }
 
 wt_node_get_plain() {
-	fss_get_node_field_plain "$2" "$1"
+	local field="$1"
+	local node_id="$2"
+	local value=""
+
+	if value=$(wt_node_get_plain_from_cache "${node_id}" "${field}" 2>/dev/null); then
+		printf '%s' "${value}"
+		return 0
+	fi
+	fss_get_node_field_plain "${node_id}" "${field}"
 }
 
 wt_node_count() {
@@ -33,10 +198,131 @@ wt_server_resolv_mode_is_preresolve() {
 	[ "${WT_SERVER_RESOLV_MODE}" = "2" ]
 }
 
+wt_prepare_node_cache() {
+	local node_id=""
+	local blob=""
+
+	wt_reset_active_node_env
+	WT_NODE_CACHE_DIR=""
+	WT_NODE_ENV_DIR=""
+	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
+	WT_NODE_CACHE_DIR="${TMP2}/node_cache"
+	WT_NODE_ENV_DIR="${TMP2}/node_env"
+	mkdir -p "${WT_NODE_CACHE_DIR}" || {
+		WT_NODE_CACHE_DIR=""
+		return 1
+	}
+	mkdir -p "${WT_NODE_ENV_DIR}" || {
+		WT_NODE_CACHE_DIR=""
+		WT_NODE_ENV_DIR=""
+		return 1
+	}
+	rm -f ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1
+	rm -f ${WT_NODE_ENV_DIR}/*.env >/dev/null 2>&1
+	fss_list_node_ids | while read node_id
+	do
+		[ -n "${node_id}" ] || continue
+		blob=$(dbus get fss_node_${node_id})
+		[ -n "${blob}" ] || continue
+		fss_b64_decode "${blob}" > "${WT_NODE_CACHE_DIR}/${node_id}.json" 2>/dev/null || {
+			rm -f "${WT_NODE_CACHE_DIR}/${node_id}.json"
+		}
+	done
+	ls ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1 || {
+		WT_NODE_CACHE_DIR=""
+		WT_NODE_ENV_DIR=""
+		return 1
+	}
+}
+
+wt_list_group_files() {
+	find ${TMP2} -name "wt_*.txt" 2>/dev/null | sed 's#^.*/##' | grep -v '^wt_xray_group\.txt$' | sort -t '_' -k2,2n -k3,3n
+}
+
+wt_build_nodes_index() {
+	local jq_bin=""
+	local json_files=""
+
+	if [ -n "${WT_NODE_CACHE_DIR}" ];then
+		jq_bin=$(fss_pick_jq_bin)
+		if [ -n "${jq_bin}" ];then
+			json_files=$(find "${WT_NODE_CACHE_DIR}" -name "*.json" | sort -t "/" -nk5)
+			[ -n "${json_files}" ] && "${jq_bin}" -r '
+				[
+					(input_filename | split("/")[-1] | rtrimstr(".json")),
+					(
+						((.type // "") | tostring) as $type
+						| if ($type | length) == 1 then "0" + $type else $type end
+					),
+					((.ss_obfs // "") | tostring),
+					((.method // "") | tostring)
+				] | join("|")
+			' ${json_files} 2>/dev/null > ${TMP2}/nodes_index.txt && {
+				sort -t "|" -nk1 ${TMP2}/nodes_index.txt -o ${TMP2}/nodes_index.txt
+				return 0
+			}
+		fi
+	fi
+
+	: >${TMP2}/nodes_index.txt
+	fss_list_node_ids | while read node_id
+	do
+		[ -z "${node_id}" ] && continue
+		printf "%s|%02d|%s|%s\n" \
+			"${node_id}" \
+			"$(wt_node_get type ${node_id})" \
+			"$(wt_node_get ss_obfs ${node_id})" \
+			"$(wt_node_get method ${node_id})" \
+			>>${TMP2}/nodes_index.txt
+	done
+	sort -t "|" -nk1 ${TMP2}/nodes_index.txt -o ${TMP2}/nodes_index.txt
+}
+
+wt_group_type_is_xray_like() {
+	case "$1" in
+	00_01|00_02|00_04|00_05|03|04|05|08)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+wt_group_preview_count() {
+	case "$1" in
+	00_01|00_02|00_04|00_05|03|04|05|08)
+		printf '%s\n' "${WT_XRAY_THREADS:-1}"
+		;;
+	01)
+		printf '%s\n' "${WT_SSR_THREADS:-1}"
+		;;
+	06|07)
+		printf '%s\n' 9999
+		;;
+	*)
+		printf '%s\n' 4
+		;;
+	esac
+}
+
+wt_show_current_group_preview() {
+	local preview_file="$1"
+	local node_type="$2"
+	local preview_lines=""
+	local nu=""
+
+	[ -f "${preview_file}" ] || return 0
+	preview_lines=$(wt_group_preview_count "${node_type}")
+	[ -n "${preview_lines}" ] || preview_lines=1
+	sed -n "1,${preview_lines}p" ${preview_file} | while read nu
+	do
+		[ -n "${nu}" ] || continue
+		wt_append_webtest_line "${nu}>testing..."
+	done
+}
+
 wt_refresh_node_direct_dns_if_needed() {
 	local dns_plan=""
 
-	fss_refresh_node_direct_cache >/dev/null 2>&1
 	wt_server_resolv_mode_is_dynamic || return 0
 	[ "$(dbus get ss_basic_enable)" = "1" ] || return 0
 	dns_plan=$(dbus get ss_basic_dns_plan)
@@ -47,8 +333,80 @@ wt_refresh_node_direct_dns_if_needed() {
 		return 0
 		;;
 	esac
+	fss_refresh_node_direct_cache >/dev/null 2>&1
 	fss_node_direct_cache_differs_from_runtime || return 0
 	/bin/sh /koolshare/ss/ssconfig.sh refresh_node_direct_dns >/dev/null 2>&1
+}
+
+wt_prepare_webtest_preview() {
+	local curr_node=""
+	local curr_file=""
+	local curr_file_name=""
+	local curr_type=""
+	local preview_file=""
+	local max_show=""
+	local begn_node=""
+	local first_bgn=""
+	local xray_group_file="${TMP2}/wt_xray_group.txt"
+
+	WT_PREVIEW_READY=0
+	detect_perf
+	curr_node=$(fss_get_current_node_id)
+	[ -z "${curr_node}" ] && curr_node=$(fss_get_first_node_id)
+	[ -n "${curr_node}" ] || return 1
+
+	max_show=$(dbus get ss_basic_row)
+	if [ "${max_show}" -gt "1" ]; then
+		begn_node=$(awk -v x=${curr_node} -v y=${max_show} 'BEGIN { printf "%.0f\n", (x-y/2)}')
+	else
+		begn_node=$((${curr_node} - 10))
+	fi
+
+	curr_file=$(find ${TMP2}/ -name "wt_*.txt" | xargs grep -Ew "^${curr_node}" | awk -F ":" '{print $1}')
+	[ -f "${curr_file}" ] || return 1
+	curr_file_name=${curr_file##*/}
+	curr_type=${curr_file_name#wt_*_}
+	curr_type=${curr_type%%.*}
+
+	first_bgn=$(sed -n '1p' ${curr_file})
+	if [ -n "${first_bgn}" ] && [ "${begn_node}" -gt "${first_bgn}" ]; then
+		sed -n "/${begn_node}/,\$p" ${curr_file} > ${TMP2}/re-arrange-1.txt
+		sed -n "1,/^${begn_node}\$/p" ${curr_file} | sed '$d' > ${TMP2}/re-arrange-2.txt
+		cat ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt > ${curr_file}
+		rm -rf ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt
+	fi
+
+	if wt_group_type_is_xray_like "${curr_type}"; then
+		rm -rf ${xray_group_file}
+		wt_list_group_files | while read xfile_name
+		do
+			[ -n "${xfile_name}" ] || continue
+			local xfile="${TMP2}/${xfile_name}"
+			local xnode_type=${xfile_name#wt_*_}
+			xnode_type=${xnode_type%%.*}
+			case ${xnode_type} in
+			00_01|00_02|00_04|00_05|03|04|05|08)
+				cat ${xfile} >> ${xray_group_file}
+				;;
+			esac
+		done
+		if [ -s "${xray_group_file}" ] && grep -Ew "^${curr_node}$" ${xray_group_file} >/dev/null 2>&1; then
+			first_bgn=$(sed -n '1p' ${xray_group_file})
+			if [ -n "${first_bgn}" ] && [ "${begn_node}" -gt "${first_bgn}" ]; then
+				sed -n "/${begn_node}/,\$p" ${xray_group_file} > ${TMP2}/re-arrange-1.txt
+				sed -n "1,/^${begn_node}\$/p" ${xray_group_file} | sed '$d' > ${TMP2}/re-arrange-2.txt
+				cat ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt > ${xray_group_file}
+				rm -rf ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt
+			fi
+			preview_file="${xray_group_file}"
+		fi
+	fi
+
+	[ -n "${preview_file}" ] || preview_file="${curr_file}"
+	wt_reset_webtest_output
+	http_response "ok4, webtest.txt generating..."
+	wt_show_current_group_preview "${preview_file}" "${curr_type}"
+	WT_PREVIEW_READY=1
 }
 
 detect_perf(){
@@ -72,19 +430,23 @@ detect_perf(){
 	if [ "${WT_LOW_END}" == "1" ];then
 		WT_XRAY_THREADS=1
 		WT_SSR_THREADS=1
+		WT_XRAY_BATCH_SIZE=1
 		if [ "$(nvram get odmpid)" == "RT-AX89X" ];then
 			WT_XRAY_THREADS=4
 			WT_SSR_THREADS=2
+			WT_XRAY_BATCH_SIZE=4
 		fi
 	else
 		if [ "${WT_CPU_CORES}" -ge 3 -a "${WT_MEM_MB}" -ge 1024 ];then
 			# aarch64 4cores + 2G内存
 			WT_XRAY_THREADS=8
 			WT_SSR_THREADS=4
+			WT_XRAY_BATCH_SIZE=8
 		else
 			# aarch64 4cores + 1G内存
 			WT_XRAY_THREADS=4
 			WT_SSR_THREADS=2
+			WT_XRAY_BATCH_SIZE=4
 		fi
 	fi
 }
@@ -103,11 +465,17 @@ ensure_latency_batch(){
 }
 
 update_webtest_file(){
+	local snapshot_file="${TMP2}/webtest.snapshot"
+
+	rm -f "${snapshot_file}"
 	if [ "${WT_SINGLE}" == "1" ];then
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat >> /tmp/upload/webtest.txt
+		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > "${snapshot_file}"
+		cat "${snapshot_file}" >> "${WT_WEBTEST_FILE}"
 	else
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > "${snapshot_file}"
+		wt_write_webtest_snapshot "${snapshot_file}"
 	fi
+	rm -f "${snapshot_file}"
 }
 
 get_webtest_usable_count(){
@@ -148,10 +516,10 @@ webtest_web(){
 		return 0
 	fi
 	# 1. 如果没有结果文件，需要去获取webtest
-	if [ ! -f "/tmp/upload/webtest.txt" ];then
-		local backup_usable=$(get_webtest_usable_count /tmp/upload/webtest_bakcup.txt)
+	if [ ! -f "${WT_WEBTEST_FILE}" ];then
+		local backup_usable=$(get_webtest_usable_count "${WT_WEBTEST_BACKUP}")
 		if [ "${backup_usable}" -gt "0" ];then
-			cp -f /tmp/upload/webtest_bakcup.txt /tmp/upload/webtest.txt >/dev/null 2>&1
+			cp -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_FILE}" >/dev/null 2>&1
 			http_response "ok3, partial cache exists, keep it"
 			return 0
 		fi
@@ -167,12 +535,12 @@ webtest_web(){
 	fi
 
 	# 3. 如果有结果该文件，且没有lock（webtest完成了的），需要检测下节点数量和webtest数量是否一致，避免新增节点没有webtest
-	local webtest_nu=$(cat /tmp/upload/webtest.txt | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
+	local webtest_nu=$(cat "${WT_WEBTEST_FILE}" | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
 	local node_nu=$(wt_node_count)
 	if [ "${webtest_nu}" -ne "${node_nu}" ];then
-		local backup_usable=$(get_webtest_usable_count /tmp/upload/webtest_bakcup.txt)
+		local backup_usable=$(get_webtest_usable_count "${WT_WEBTEST_BACKUP}")
 		if [ "${backup_usable}" -gt "0" ];then
-			cp -f /tmp/upload/webtest_bakcup.txt /tmp/upload/webtest.txt >/dev/null 2>&1
+			cp -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_FILE}" >/dev/null 2>&1
 			http_response "ok3, partial cache exists, keep it"
 			return 0
 		fi
@@ -182,7 +550,7 @@ webtest_web(){
 	fi
 
 	# 4. 如果有结果该文件，且没有lock（webtest完成了的），且节点数和webtest结果数一致，比较下上次webtest结果生成的时间，如果是15分钟以内，则不需要重新webtest
-	TS_LST=$(/bin/date -r /tmp/upload/webtest.txt "+%s")
+	TS_LST=$(/bin/date -r "${WT_WEBTEST_FILE}" "+%s")
 	TS_NOW=$(/bin/date +%s)
 	TS_DUR=$((${TS_NOW} - ${TS_LST}))
 	if [ "${TS_DUR}" -lt "1800" ];then
@@ -198,8 +566,8 @@ start_webtest(){
 	touch /tmp/webtest.lock
 	WT_SINGLE=0
 	WT_SKIP_DNS=0
-	wt_refresh_node_direct_dns_if_needed
-	ensure_latency_batch
+	WT_PREVIEW_READY=0
+	wt_reset_webtest_output
 	
 	# 1. prepare
 	mkdir -p ${TMP2}
@@ -208,14 +576,20 @@ start_webtest(){
 	mkdir -p ${TMP2}/pids
 	mkdir -p ${TMP2}/results
 	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
+	wt_prepare_node_cache >/dev/null 2>&1
 
 	# 2. 分类
 	sort_nodes
+	wt_prepare_webtest_preview
 
-	# 3. 测试
+	# 3. 批量测速前，同步全量节点域名直连解析缓存
+	wt_refresh_node_direct_dns_if_needed
+	ensure_latency_batch
+
+	# 4. 测试
 	test_nodes
 
-	# 4. remove lock
+	# 5. remove lock
 	rm -rf /tmp/webtest.lock
 }
 
@@ -240,67 +614,49 @@ sort_nodes(){
 	local count=1
 	local prev_type=""
 	local group_file=""
-	: >${TMP2}/nodes_index.txt
-	fss_list_node_ids | while read node_id
-	do
-		[ -z "${node_id}" ] && continue
-		printf "%s %02d\n" "${node_id}" "$(wt_node_get type ${node_id})" >>${TMP2}/nodes_index.txt
-	done
-	sort -t " " -nk1 ${TMP2}/nodes_index.txt -o ${TMP2}/nodes_index.txt
-	while read node_id node_type
+	local group_prefix=""
+	local ss_variant=""
+	local ss_2022=""
+	local _obfs_enable=""
+	wt_build_nodes_index || return 1
+	while IFS='|' read node_id node_type ss_obfs ss_method
 	do
 		[ -z "${node_id}" ] && continue
 		[ -z "${node_type}" ] && continue
 		if [ "${node_type}" != "${prev_type}" ];then
-			group_file="${TMP2}/wt_${count}_${node_type}.txt"
-			: > "${group_file}"
+			group_prefix="${TMP2}/wt_${count}_${node_type}"
+			if [ "${node_type}" != "00" ];then
+				group_file="${group_prefix}.txt"
+				: > "${group_file}"
+			fi
 			count=$((count + 1))
 			prev_type="${node_type}"
 		fi
+		if [ "${node_type}" = "00" ];then
+			if [ -z "${ss_obfs}" -o "${ss_obfs}" = "0" ];then
+				_obfs_enable="0"
+			else
+				_obfs_enable="1"
+			fi
+			ss_2022=$(echo ${ss_method} | grep "2022-blake")
+			if [ -z "${ss_2022}" ];then
+				if [ "${_obfs_enable}" = "0" ];then
+					ss_variant="01"
+				else
+					ss_variant="02"
+				fi
+			else
+				if [ "${_obfs_enable}" = "0" ];then
+					ss_variant="04"
+				else
+					ss_variant="05"
+				fi
+			fi
+			group_file="${group_prefix}_${ss_variant}.txt"
+			[ -f "${group_file}" ] || : > "${group_file}"
+		fi
 		echo "${node_id}" >> "${group_file}"
 	done < ${TMP2}/nodes_index.txt
-
-	# then sort shadowsocks
-	local wt_flies=$(find ${TMP2}/wt_*.txt|sort -t "/" -nk5)
-	for file in ${wt_flies}
-	do
-		local file_name=${file##*/}
-		local node_type=${file_name##*_}
-		local node_type=${node_type%%.*}
-		local pref_name=${file_name%_*}
-		if [ ${node_type} == "00" ];then
-			# echo $file
-			# echo $file_name
-			# echo $node_type
-			# echo $pref_name
-			cat $file | while read ss_nu
-			do
-				# echo $ss_nu
-				local _obfs=$(wt_node_get ss_obfs ${ss_nu})
-				local _method=$(wt_node_get method ${ss_nu})
-				local ss_2022=$(echo ${_method} | grep "2022-blake")
-				if [ -z "${_obfs}" -o "${_obfs}" == "0" ];then
-					local _obfs_enable="0"
-				else
-					local _obfs_enable="1"
-				fi
-				if [ -z "${ss_2022}" ];then
-					if [ "${_obfs_enable}" == "0" ];then
-						echo ${ss_nu} >>${TMP2}/${pref_name}_00_01.txt
-					elif [ "${_obfs_enable}" == "1" ];then
-						echo ${ss_nu} >>${TMP2}/${pref_name}_00_02.txt
-					fi
-				else
-					if [ "${_obfs_enable}" == "0" ];then
-						echo ${ss_nu} >>${TMP2}/${pref_name}_00_04.txt
-					elif [ "${_obfs_enable}" == "1" ];then
-						echo ${ss_nu} >>${TMP2}/${pref_name}_00_05.txt
-					fi
-				fi
-			done
-			rm -rf $file
-		fi
-	done
 }
 
 test_nodes(){
@@ -311,6 +667,15 @@ test_nodes(){
 	# 优先测试当前节点及其附近的同类型节点，重排生成节点序号储存文件
 	local CURR_NODE=$(fss_get_current_node_id)
 	[ -z "${CURR_NODE}" ] && CURR_NODE=$(fss_get_first_node_id)
+	local CURR_FILE=""
+	local CURR_FILE_NAME=""
+	local FIRST_EFFECTIVE_FILE=""
+	local FIRST_EFFECTIVE_NAME=""
+	local FIRST_EFFECTIVE_TYPE=""
+	local PREVIEW_FILE=""
+	local PREVIEW_TYPE=""
+	local XRAY_GROUP_FILE="${TMP2}/wt_xray_group.txt"
+	local XRAY_GROUP_NAME="wt_xray_group.txt"
 	MAX_SHOW=$(dbus get ss_basic_row)
 	if [ "${MAX_SHOW}" -gt "1" ];then 
 		BEGN_NODE=$(awk -v x=${CURR_NODE} -v y=${MAX_SHOW} 'BEGIN { printf "%.0f\n", (x-y/2)}')
@@ -318,7 +683,7 @@ test_nodes(){
 		BEGN_NODE=$((${CURR_NODE} - 10))
 	fi
 
-	local CURR_FILE=$(find ${TMP2}/ -name "wt_*.txt" | xargs grep -Ew "^${CURR_NODE}" | awk -F ":" '{print $1}')
+	CURR_FILE=$(find ${TMP2}/ -name "wt_*.txt" | xargs grep -Ew "^${CURR_NODE}" | awk -F ":" '{print $1}')
 	if [ -f "${CURR_FILE}" ];then
 		local FIRST_BGN=$(cat ${CURR_FILE}|sed -n '1p')
 		if [ -f "${CURR_FILE}" -a "${BEGN_NODE}" -gt "${FIRST_BGN}" ];then
@@ -329,17 +694,16 @@ test_nodes(){
 		fi
 	fi
 
-	# tell web, you can start to get result now...
-	true >/tmp/upload/webtest.txt
-	http_response "ok4, webtest.txt generating..."
-
 	# 优先测试当前节点所属的节点类型
-	find ${TMP2}/wt_*.txt|sort -t"/" -n > ${TMP2}/nodes_file_name.txt
-	local CURR_FILE=$(find ${TMP2} -name "wt_*.txt" | xargs grep -Ew "^${CURR_NODE}" | awk -F ":" '{print $1}')
-	local CURR_FILE=${CURR_FILE##*/}
-	local CURR_FILE=${CURR_FILE%%.*}
-	local TOTA_LINE=$(cat ${TMP2}/nodes_file_name.txt | wc -l)
-	local CURR_LINE=$(sed -n "/${CURR_FILE}/=" ${TMP2}/nodes_file_name.txt)
+	wt_list_group_files | while read file_name
+	do
+		[ -n "${file_name}" ] || continue
+		echo "${TMP2}/${file_name}"
+	done > ${TMP2}/nodes_file_name.txt
+	CURR_FILE_NAME=${CURR_FILE##*/}
+	CURR_FILE_NAME=${CURR_FILE_NAME%%.*}
+	local CURR_LINE=$(sed -n "/${CURR_FILE_NAME}/=" ${TMP2}/nodes_file_name.txt)
+	[ -n "${CURR_LINE}" ] || CURR_LINE=1
 	if [ "${CURR_LINE}" -gt "1" ];then
 		sed -n "${CURR_LINE},\$p" ${TMP2}/nodes_file_name.txt > ${TMP2}/nodes_file_name-1.txt
 		sed -n "1,${CURR_LINE}p" ${TMP2}/nodes_file_name.txt | sed '$d' > ${TMP2}/nodes_file_name-2.txt
@@ -352,11 +716,10 @@ test_nodes(){
 	#echo BEGN_NODE $BEGN_NODE
 
 	# merge all xray-core capable nodes into one file for batch testing
-	local XRAY_GROUP_FILE="${TMP2}/wt_xray_group.txt"
-	local XRAY_GROUP_NAME="wt_xray_group.txt"
 	rm -rf ${XRAY_GROUP_FILE}
-	find ${TMP2}/wt_*.txt|sort -t"/" -n | while read xfile; do
-		local xfile_name=${xfile##*/}
+	wt_list_group_files | while read xfile_name; do
+		[ -n "${xfile_name}" ] || continue
+		local xfile="${TMP2}/${xfile_name}"
 		local xnode_type=${xfile_name#wt_*_}
 		local xnode_type=${xnode_type%%.*}
 		case ${xnode_type} in
@@ -376,6 +739,23 @@ test_nodes(){
 				rm -rf ${TMP2}/re-arrange-1.txt ${TMP2}/re-arrange-2.txt
 			fi
 		fi
+	fi
+
+	if [ "${WT_PREVIEW_READY}" != "1" ];then
+		wt_reset_webtest_output
+		http_response "ok4, webtest.txt generating..."
+		FIRST_EFFECTIVE_FILE=$(sed -n '1p' ${TMP2}/nodes_file_name.txt)
+		FIRST_EFFECTIVE_NAME=${FIRST_EFFECTIVE_FILE##*/}
+		FIRST_EFFECTIVE_TYPE=${FIRST_EFFECTIVE_NAME#wt_*_}
+		FIRST_EFFECTIVE_TYPE=${FIRST_EFFECTIVE_TYPE%%.*}
+		if wt_group_type_is_xray_like "${FIRST_EFFECTIVE_TYPE}" && [ -s "${XRAY_GROUP_FILE}" ];then
+			PREVIEW_FILE="${XRAY_GROUP_FILE}"
+			PREVIEW_TYPE="${FIRST_EFFECTIVE_TYPE}"
+		else
+			PREVIEW_FILE="${FIRST_EFFECTIVE_FILE}"
+			PREVIEW_TYPE="${FIRST_EFFECTIVE_TYPE}"
+		fi
+		wt_show_current_group_preview "${PREVIEW_FILE}" "${PREVIEW_TYPE}"
 	fi
 	
 	local xray_group_done=0
@@ -426,15 +806,15 @@ test_nodes(){
 	done
 	
 	# finish mark
-	find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
-	echo -en "stop>stop\n" >>/tmp/upload/webtest.txt
+	find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > "${WT_WEBTEST_FILE}"
+	wt_append_webtest_line "stop>stop"
 
 	# record timestamp
-	local TS_LOG=$(date -r /tmp/upload/webtest.txt "+%Y/%m/%d %X")
+	local TS_LOG=$(date -r "${WT_WEBTEST_FILE}" "+%Y/%m/%d %X")
 	dbus set ss_basic_webtest_ts="${TS_LOG}"
 
 	# copy webtest.txt for other useage
-	cp -rf /tmp/upload/webtest.txt /tmp/upload/webtest_bakcup.txt
+	cp -rf "${WT_WEBTEST_FILE}" "${WT_WEBTEST_BACKUP}"
 
 	# we shold remove test tmp file
 	
@@ -444,10 +824,44 @@ test_xray_group(){
 	# test nodes by single xray instance
 	local file=$1
 	local mark=$2
+	local batch_size=""
+	local file_path=""
 	[ -z "${WT_XRAY_THREADS}" ] && WT_XRAY_THREADS=1
-	[ ! -f "${TMP2}/${file}" ] && return 0
-	local count=$(cat ${TMP2}/${file} | wc -l)
+	case "${file}" in
+	/*)
+		file_path="${file}"
+		;;
+	*)
+		file_path="${TMP2}/${file}"
+		;;
+	esac
+	[ ! -f "${file_path}" ] && return 0
+	local count=$(cat ${file_path} | wc -l)
 	[ "${count}" -lt 1 ] && return 0
+	batch_size="${WT_XRAY_BATCH_SIZE}"
+	[ -n "${batch_size}" ] || batch_size="${WT_XRAY_THREADS}"
+	if [ "${batch_size}" -lt "${WT_XRAY_THREADS}" ];then
+		batch_size="${WT_XRAY_THREADS}"
+	fi
+	if [ "${count}" -gt "${batch_size}" ];then
+		local chunk_dir="${TMP2}/chunks_${mark}"
+		local chunk_idx=0
+		mkdir -p "${chunk_dir}"
+		rm -f "${chunk_dir}"/*.txt
+		awk -v n="${batch_size}" -v dir="${chunk_dir}" '
+			{
+				file = sprintf("%s/chunk_%03d.txt", dir, int((NR - 1) / n) + 1);
+				print > file;
+			}
+		' ${file_path}
+		for chunk_file in $(find "${chunk_dir}" -name "chunk_*.txt" | sort)
+		do
+			chunk_idx=$((chunk_idx + 1))
+			test_xray_group "${chunk_file}" "${mark}_${chunk_idx}"
+		done
+		rm -rf "${chunk_dir}"
+		return 0
+	fi
 	local JQ_BIN="/koolshare/bin/jq"
 	if [ ! -x "${JQ_BIN}" ];then
 		JQ_BIN="$(command -v jq 2>/dev/null)"
@@ -455,9 +869,9 @@ test_xray_group(){
 	[ -z "${JQ_BIN}" ] && JQ_BIN="/usr/bin/jq"
 
 	# show info to web as soon as possible
-	cat ${TMP2}/${file} | xargs -n ${WT_XRAY_THREADS} | sed -n '1p' | while read nus; do
+	cat ${file_path} | xargs -n ${WT_XRAY_THREADS} | sed -n '1p' | while read nus; do
 		for nu in $nus; do
-			echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+			wt_append_webtest_line "${nu}>testing..."
 		done
 	done
 
@@ -477,7 +891,7 @@ test_xray_group(){
 	rm -f ${TMP2}/socsk5_ports.txt
 
 	# gen xray json for all nodes
-	cat ${TMP2}/${file} | while read nu; do
+	cat ${file_path} | while read nu; do
 		local node_type=$(wt_node_get type ${nu})
 		case ${node_type} in
 		0)
@@ -504,8 +918,9 @@ test_xray_group(){
 	find ${TMP2}/conf_${mark} -name "*_outbounds.json" | sort -t "/" -nk5 | xargs cat | run ${JQ_BIN} -n '{ outbounds: [ inputs.outbounds[0] ] }' >${TMP2}/json_${mark}/01_outbounds.json
 	find ${TMP2}/conf_${mark} -name "*_routing.json" | sort -t "/" -nk5 | xargs cat | run ${JQ_BIN} -n '{routing: { rules: [ inputs.routing.rules[0] ] }}' >${TMP2}/json_${mark}/02_routing.json
 	if [ ! -s "${TMP2}/json_${mark}/00_inbounds.json" -o ! -s "${TMP2}/json_${mark}/01_outbounds.json" -o ! -s "${TMP2}/json_${mark}/02_routing.json" ];then
-		cat ${TMP2}/${file} | while read nu; do
+		cat ${file_path} | while read nu; do
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+			wt_append_webtest_file "${TMP2}/results/${nu}.txt"
 		done
 		update_webtest_file
 		return 0
@@ -518,8 +933,9 @@ test_xray_group(){
 	# make sure xray is runing, otherwise output error
 	wait_program2 wt-xray ${TMP2}/logs_${mark}/log.txt started
 	if ! pidof wt-xray >/dev/null 2>&1;then
-		cat ${TMP2}/${file} | while read nu; do
+		cat ${file_path} | while read nu; do
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+			wt_append_webtest_file "${TMP2}/results/${nu}.txt"
 		done
 		update_webtest_file
 		return 0
@@ -530,7 +946,7 @@ test_xray_group(){
 	fi
 
 	# test in multiple process (FIFO semaphore)
-	local count=$(cat ${TMP2}/${file} | wc -l)
+	local count=$(cat ${file_path} | wc -l)
 	[ "${count}" -lt 1 ] && return 0
 	if [ "${WT_XRAY_THREADS}" -gt "${count}" ];then
 		WT_XRAY_THREADS=${count}
@@ -554,7 +970,7 @@ test_xray_group(){
 		{
 			trap 'echo >&3' EXIT
 			# 0. testing info
-			echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+			wt_append_webtest_line "${nu}>testing..."
 
 			# 1. start obfs-local if needed
 			if [ -x "${TMP2}/bash_${mark}/start_${nu}.sh" ];then
@@ -566,7 +982,7 @@ test_xray_group(){
 			if [ -z "${socks5_port}" ];then
 				echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 				# 4. update result to web file
-				cat ${TMP2}/results/${nu}.txt >> /tmp/upload/webtest.txt
+				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
 				exit 0
 			fi
 			curl_test ${nu} ${socks5_port}
@@ -578,11 +994,11 @@ test_xray_group(){
 
 			# 4. update result to web file
 			if [ -f "${TMP2}/results/${nu}.txt" ];then
-				cat ${TMP2}/results/${nu}.txt >> /tmp/upload/webtest.txt
+				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
 			fi
 		} &
 		pids="${pids} $!"
-	done < ${TMP2}/${file}
+	done < ${file_path}
 	if [ -n "${pids}" ]; then
 		wait ${pids}
 	fi
@@ -616,7 +1032,7 @@ test_07_sr(){
 		for nu in $nus; do
 			{
 				# 0. testing info
-				echo -en "${nu}>testing...\n" >>/tmp/upload/webtest.txt
+				wt_append_webtest_line "${nu}>testing..."
 				
 				# 1. resolve server
 				local _server_ip=$(_get_server_ip $(wt_node_get server ${nu}))
@@ -649,6 +1065,9 @@ test_07_sr(){
 
 				# 4. start curl test
 				curl_test ${nu} ${socks5_port}
+				if [ -f "${TMP2}/results/${nu}.txt" ];then
+					wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+				fi
 
 				# 5. stop rss-local
 				if [ -f "${TMP2}/pids/${nu}.pid" ];then
@@ -659,7 +1078,7 @@ test_07_sr(){
 		wait
 
 		# merge all curl test result
-		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > /tmp/upload/webtest.txt
+		update_webtest_file
 	done
 
 	rm -rf ${TMP2}/wt-ss-local
@@ -675,6 +1094,8 @@ test_11_nv(){
 	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
 		for nu in $nus; do
 			{
+				wt_append_webtest_line "${nu}>testing..."
+
 				# 1. resolve server
 				local _server_ip=$(_get_server_ip $(wt_node_get naive_server ${nu}))
 
@@ -690,6 +1111,9 @@ test_11_nv(){
 
 				# 4. start curl test
 				curl_test ${nu} ${socks5_port}
+				if [ -f "${TMP2}/results/${nu}.txt" ];then
+					wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+				fi
 
 				# 5. stop naive
 				local _pid=$(ps | grep wt-naive | grep ${socks5_port} | awk '{print $1}')
@@ -718,6 +1142,8 @@ test_12_tc(){
 	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
 		for nu in $nus; do
 			{
+				wt_append_webtest_line "${nu}>testing..."
+
 				# 1. gen json
 				local socks5_port=$(get_rand_port)
 				local new_addr="127.0.0.1:${socks5_port}"
@@ -747,6 +1173,9 @@ test_12_tc(){
 
 				# 4. start curl test
 				curl_test ${nu} ${socks5_port}
+				if [ -f "${TMP2}/results/${nu}.txt" ];then
+					wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+				fi
 
 				# 5. stop tuic
 				local _pid=$(ps | grep "wt-tuic" | grep -v grep | grep ${socks5_port} | awk '{print $1}')
@@ -917,80 +1346,159 @@ creat_hy2_yaml(){
 curl_test(){
 	local nu=$1
 	local port=$2
-
-	# curl-fancyss -o /dev/null -s -I -x socks5h://127.0.0.1:23456 --connect-timeout 5 -m 10 -w "%{time_total}|%{response_code}\n" http://www.google.com.tw
-
-	# single node: dual-protocol staggered test
-	# round1: socks5h + socks5 (5s timeout), round2 after 1s: socks5h + socks5 (4s timeout)
-	# pick the best result, max wait about 5s
-	# multi node: sequential 4 runs (4s/4s/3s/3s), pick the best result
-	local ret=""
-	local has_timeout=0
 	local tdir="${TMP2}/curl_${nu}"
-	rm -rf ${tdir}
-	mkdir -p ${tdir}
+	local warm_file="${tdir}/warm.txt"
+	local score1_file="${tdir}/score1.txt"
+	local score2_file="${tdir}/score2.txt"
+	local history_ms=""
+	local best_ms=""
+	local has_timeout=0
+	local need_score2=0
+	local proto="socks5h"
+	local warm_timeout=3
+	local score_timeout=3
 
-	run_curl_once(){
-		local idx=$1
-		local t=$2
-		local proto=$3
-		local out=$(__timeout_run ${t} ${TMP2}/curl-webtest -o /dev/null -s -I -x ${proto}://127.0.0.1:${port} --connect-timeout ${t} -m ${t} -w "%{time_total}|%{response_code}\n" ${ss_basic_furl} 2>/dev/null)
-		local rc=$?
-		echo "${rc}|${out}" > ${tdir}/run${idx}.txt
+	wt_get_history_latency(){
+		local node_id="$1"
+		[ -n "${node_id}" ] || return 0
+		[ -f "${WT_WEBTEST_BACKUP}" ] || return 0
+		awk -F '>' -v nu="${node_id}" '
+			$1 == nu && $2 ~ /^[0-9]+$/ {lat=$2}
+			END {
+				if (lat != "") {
+					print lat
+				}
+			}
+		' "${WT_WEBTEST_BACKUP}" 2>/dev/null
 	}
 
-	if [ "${WT_SINGLE}" == "1" ];then
-		local pids=""
-		run_curl_once 1a 3 socks5h &
-		pids="${pids} $!"
-		run_curl_once 1b 3 socks5 &
-		pids="${pids} $!"
-		sleep 2
-		run_curl_once 2a 3 socks5h &
-		pids="${pids} $!"
-		run_curl_once 2b 3 socks5 &
-		pids="${pids} $!"
+	wt_run_curl_once(){
+		local result_file="$1"
+		local timeout_sec="$2"
+		local out=""
+		local rc=""
 
-		wait ${pids}
-		set -- ${tdir}/run1a.txt ${tdir}/run1b.txt ${tdir}/run2a.txt ${tdir}/run2b.txt
+		out=$(__timeout_run ${timeout_sec} ${TMP2}/curl-webtest -o /dev/null -s -I -x ${proto}://127.0.0.1:${port} --connect-timeout ${timeout_sec} -m ${timeout_sec} -w "%{time_total}|%{response_code}\n" ${ss_basic_furl} 2>/dev/null)
+		rc=$?
+		printf '%s|%s\n' "${rc}" "${out}" > "${result_file}"
+	}
 
-	else
-		run_curl_once 1a 3 socks5h
-		run_curl_once 1b 3 socks5
-		run_curl_once 2a 3 socks5h
-		run_curl_once 2b 3 socks5
-		set -- ${tdir}/run1a.txt ${tdir}/run1b.txt ${tdir}/run2a.txt ${tdir}/run2b.txt
+	wt_result_timeout(){
+		local result_file="$1"
+		local rc=""
+		[ -f "${result_file}" ] || return 1
+		rc=$(cut -d"|" -f1 "${result_file}" 2>/dev/null)
+		[ "${rc}" = "124" -o "${rc}" = "28" ]
+	}
+
+	wt_result_ms(){
+		local result_file="$1"
+		local rc=""
+		local time_total=""
+		local resp_code=""
+		local ms=""
+
+		[ -f "${result_file}" ] || return 1
+		rc=$(cut -d"|" -f1 "${result_file}" 2>/dev/null)
+		time_total=$(cut -d"|" -f2 "${result_file}" 2>/dev/null)
+		resp_code=$(cut -d"|" -f3 "${result_file}" 2>/dev/null)
+		[ "${rc}" = "0" ] || return 1
+		[ "${resp_code}" = "200" -o "${resp_code}" = "204" ] || return 1
+		ms=$(awk -F "|" '{printf "%.0f", $2 * 1000}' "${result_file}" 2>/dev/null)
+		[ -n "${ms}" ] || return 1
+		[ "${ms}" -le "5000" ] || {
+			echo "timeout"
+			return 0
+		}
+		echo "${ms}"
+		return 0
+	}
+
+	wt_pick_better_ms(){
+		local lhs="$1"
+		local rhs="$2"
+		if [ -z "${lhs}" ];then
+			echo "${rhs}"
+			return 0
+		fi
+		if [ -z "${rhs}" ];then
+			echo "${lhs}"
+			return 0
+		fi
+		if [ "${lhs}" = "timeout" ];then
+			echo "${rhs}"
+			return 0
+		fi
+		if [ "${rhs}" = "timeout" ];then
+			echo "${lhs}"
+			return 0
+		fi
+		if [ "${lhs}" -le "${rhs}" ];then
+			echo "${lhs}"
+		else
+			echo "${rhs}"
+		fi
+	}
+
+	wt_score_needs_retry(){
+		local current_ms="$1"
+		local prev_ms="$2"
+		local limit_a=""
+		local limit_b=""
+		local limit=""
+
+		[ -n "${current_ms}" ] || return 0
+		[ "${current_ms}" = "timeout" ] && return 0
+		[ -n "${prev_ms}" ] || return 0
+		limit_a=$((prev_ms + 100))
+		limit_b=$((prev_ms * 3 / 2))
+		limit="${limit_a}"
+		[ "${limit_b}" -gt "${limit}" ] && limit="${limit_b}"
+		[ "${current_ms}" -gt "${limit}" ]
+	}
+
+	rm -rf ${tdir}
+	mkdir -p ${tdir}
+	history_ms=$(wt_get_history_latency "${nu}")
+
+	# First request only warms the remote DNS and proxy session; it is not scored.
+	wt_run_curl_once "${warm_file}" "${warm_timeout}"
+	if wt_result_timeout "${warm_file}";then
+		has_timeout=1
 	fi
 
-	for f in "$@"; do
-		[ -f "${f}" ] || continue
-		local rc=$(cut -d"|" -f1 ${f})
-		local out=$(cut -d"|" -f2- ${f})
-		if [ "${rc}" = "124" -o "${rc}" = "28" ];then
+	# The first scored request is usually already much closer to the stable latency.
+	wt_run_curl_once "${score1_file}" "${score_timeout}"
+	if wt_result_timeout "${score1_file}";then
+		has_timeout=1
+	fi
+	best_ms=$(wt_result_ms "${score1_file}")
+
+	if [ "${WT_SINGLE}" = "1" ];then
+		# Manual single-node test prefers accuracy over total duration.
+		need_score2=1
+	elif [ -z "${history_ms}" ];then
+		# No historical baseline: take one extra scored sample and keep the better one.
+		need_score2=1
+	elif wt_score_needs_retry "${best_ms}" "${history_ms}";then
+		need_score2=1
+	fi
+
+	if [ "${need_score2}" = "1" ];then
+		wt_run_curl_once "${score2_file}" "${score_timeout}"
+		if wt_result_timeout "${score2_file}";then
 			has_timeout=1
-			continue
 		fi
-		if echo "${out}" | grep -q "|"; then
-			if [ -n "${ret}" ];then
-				ret="${ret}@${out}"
-			else
-				ret="${out}"
-			fi
-		fi
-	done
+		best_ms=$(wt_pick_better_ms "${best_ms}" "$(wt_result_ms "${score2_file}")")
+	fi
+
 	rm -rf ${tdir}
-	if [ -n "${ret}" ];then
-		local best=$(echo ${ret} | sed 's/@/\n/g' | sort -n | sed -n '1p')
-		local ret_time=$(echo $best | awk -F "|" '{printf "%.0f\n", $1 * 1000}')
-		local ret_code=$(echo $best | awk -F "|" '{print $2}')
-		if [ "${ret_code}" == "200" -o "${ret_code}" == "204" ];then
-			if [ "${ret_time}" -gt 5000 ];then
-				echo -en "${nu}>timeout\n" >>${TMP2}/results/${nu}.txt
-			else
-				echo -en "${nu}>${ret_time}\n" >>${TMP2}/results/${nu}.txt
-			fi
+
+	if [ -n "${best_ms}" ];then
+		if [ "${best_ms}" = "timeout" ];then
+			echo -en "${nu}>timeout\n" >>${TMP2}/results/${nu}.txt
 		else
-			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+			echo -en "${nu}>${best_ms}\n" >>${TMP2}/results/${nu}.txt
 		fi
 	else
 		if [ "${has_timeout}" = "1" ];then
@@ -1022,8 +1530,9 @@ single_test_node(){
 	rm -rf ${TMP2}/pids/*
 	rm -rf ${TMP2}/results/*
 	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
+	wt_prepare_node_cache >/dev/null 2>&1
 
-	echo -en "${test_node}>testing...\n" >>/tmp/upload/webtest.txt
+	wt_append_webtest_line "${test_node}>testing..."
 
 	local single_file="wt_single_${test_node}.txt"
 	echo "${test_node}" > ${TMP2}/${single_file}
@@ -1042,31 +1551,31 @@ single_test_node(){
 		test_12_tc ${single_file}
 		;;
 	*)
-		echo -en "${test_node}>failed\n" >>/tmp/upload/webtest.txt
+		wt_append_webtest_line "${test_node}>failed"
 		;;
 	esac
 
 	# 避免内部测速函数复用局部变量名后把原节点序号冲掉。
 	update_single_backup "${test_node}"
-	echo -en "stop>stop\n" >>/tmp/upload/webtest.txt
+	wt_append_webtest_line "stop>stop"
 }
 
 update_single_backup(){
 	local nu="$1"
 	[ -z "${nu}" ] && return 0
-	local new_line=$(grep "^${nu}>" /tmp/upload/webtest.txt | tail -n 1)
+	local new_line=$(grep "^${nu}>" "${WT_WEBTEST_FILE}" | tail -n 1)
 	[ -z "${new_line}" ] && return 0
 	mkdir -p /tmp/upload ${TMP2}
 	local tmp_file="${TMP2}/webtest_bakcup.tmp"
 	: > ${tmp_file}
-	if [ -f "/tmp/upload/webtest_bakcup.txt" ];then
-		grep -v -E "^${nu}>|^stop>" /tmp/upload/webtest_bakcup.txt > ${tmp_file} || true
+	if [ -f "${WT_WEBTEST_BACKUP}" ];then
+		grep -v -E "^${nu}>|^stop>" "${WT_WEBTEST_BACKUP}" > ${tmp_file} || true
 	else
-		grep -v -E "^${nu}>|^stop>" /tmp/upload/webtest.txt > ${tmp_file} || true
+		grep -v -E "^${nu}>|^stop>" "${WT_WEBTEST_FILE}" > ${tmp_file} || true
 	fi
 	echo "${new_line}" >> ${tmp_file}
 	echo "stop>stop" >> ${tmp_file}
-	mv -f ${tmp_file} /tmp/upload/webtest_bakcup.txt
+	mv -f ${tmp_file} "${WT_WEBTEST_BACKUP}"
 }
 
 _get_server_ip() {
@@ -1421,7 +1930,8 @@ clean_webtest(){
 	rm -rf /tmp/webtest.lock >/dev/null 2>&1
 
 	# 4. remove webtest result file
-	rm -rf /tmp/upload/webtest.txt
+	rm -rf "${WT_WEBTEST_FILE}"
+	rm -rf "${WT_WEBTEST_STREAM}"
 	rm -rf ${TMP2}/*
 }
 
@@ -1467,7 +1977,7 @@ clear_webtest)
 	http_response $1
 	clean_webtest
 	dbus remove ss_basic_webtest_ts
-	rm -f /tmp/upload/webtest_bakcup.txt
+	rm -f "${WT_WEBTEST_BACKUP}"
 	;;
 single_test)
 	if [ -f "/tmp/webtest.lock" ];then
@@ -1484,7 +1994,7 @@ manual_webtest)
 		exit 0
 	fi
 	clean_webtest
-	rm -f /tmp/upload/webtest_bakcup.txt
+	rm -f "${WT_WEBTEST_BACKUP}"
 	dbus remove ss_basic_webtest_ts
 	http_response $1
 	;;

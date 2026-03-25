@@ -68,6 +68,23 @@ do
 		else
 			echo "${_log}"
 		fi
+	elif [ "${MSG}" == "follow_webtest" ]; then
+		WEBTEST_FILE=/tmp/upload/webtest.txt
+		WEBTEST_STREAM=/tmp/upload/webtest.stream
+		[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
+		[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
+		STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
+		[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
+		cat "${WEBTEST_FILE}"
+		if grep -q '^stop>stop$' "${WEBTEST_FILE}" 2>/dev/null; then
+			exit 0
+		fi
+		tail -n +"$((STREAM_LINES + 1))" -f "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
+		do
+			echo "${line}"
+			[ "${line}" = "stop>stop" ] && break
+		done
+		exit 0
 	elif [ -n "${RET_3}" -o -n "${RET_4}" ]; then
 		echo "不允许命令：${MSG}"
 		exit

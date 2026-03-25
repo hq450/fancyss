@@ -94,6 +94,7 @@ var ws;
 var ws_flag;
 var wss_open;
 var wss;
+var wswt;
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -104,6 +105,8 @@ var single_test_wait = {};
 var single_test_running = false;
 var single_test_node = null;
 var batch_test_running = false;
+var batch_ws_fallback_started = false;
+var batch_ws_completed = false;
 var fss_nodes_raw = {};
 var node_auto_migrate_attempted = false;
 var node_auto_migrate_layer = null;
@@ -4823,6 +4826,123 @@ function save_latency_sett(){
 		leav_test_sett();
 	}
 }
+function close_latency_ws(resetState) {
+	if (wswt) {
+		var socket = wswt;
+		wswt = null;
+		socket.onopen = null;
+		socket.onmessage = null;
+		socket.onerror = null;
+		socket.onclose = null;
+		try {
+			socket.close();
+		} catch (e) {}
+	}
+	if (resetState !== false) {
+		batch_ws_fallback_started = false;
+		batch_ws_completed = false;
+	}
+}
+function update_latency_finish_time() {
+	$.ajax({
+		type: "GET",
+		url: "/_api/ss_basic_webtest_ts",
+		dataType: "json",
+		success: function(data) {
+			db_get = data.result[0];
+			if(db_get["ss_basic_webtest_ts"]){
+				$("#ss_wts_show").html("<em>【上次完成时间: " + db_get["ss_basic_webtest_ts"] + "】</em>");
+				$("#dropdown").width(370);
+			}
+		}
+	});
+}
+function finish_latency_batch() {
+	batch_test_running = false;
+	update_latency_finish_time();
+}
+function parse_webtest_lines(res){
+	const array = [];
+	(res || "").split(/\r?\n/).forEach(function(line) {
+		if(!line){
+			return;
+		}
+		var idx = line.indexOf(">");
+		if(idx === -1){
+			return;
+		}
+		var key = line.substring(0, idx).trim();
+		var val = line.substring(idx + 1).trim();
+		if(!key){
+			return;
+		}
+		array.push([key, val]);
+	});
+	return array;
+}
+function handle_latency_ws_payload(payload) {
+	var array = parse_webtest_lines(payload);
+	if(!array.length){
+		return;
+	}
+	write_webtest(array);
+	var hasStop = array.some(function(item) {
+		return item[0] == "stop";
+	});
+	if(hasStop){
+		batch_ws_completed = true;
+		close_latency_ws(false);
+		finish_latency_batch();
+	}
+}
+function fallback_latency_ws(action) {
+	if(batch_ws_fallback_started || batch_ws_completed){
+		return;
+	}
+	batch_ws_fallback_started = true;
+	close_latency_ws(false);
+	get_latency_data(action);
+}
+function start_latency_ws(action) {
+	if (ws_flag != 1){
+		return false;
+	}
+	close_latency_ws();
+	batch_ws_fallback_started = false;
+	batch_ws_completed = false;
+	wswt = new WebSocket("ws://" + hostname + ":803/");
+	var ws_opened = false;
+	var ws_open_timer = setTimeout(function() {
+		if (!ws_opened) {
+			fallback_latency_ws(action);
+		}
+	}, 1200);
+	wswt.onopen = function() {
+		ws_opened = true;
+		clearTimeout(ws_open_timer);
+		try {
+			wswt.send("follow_webtest");
+		} catch (ex) {
+			fallback_latency_ws(action);
+		}
+	};
+	wswt.onerror = function() {
+		clearTimeout(ws_open_timer);
+		if(batch_test_running){
+			fallback_latency_ws(action);
+		}
+	};
+	wswt.onclose = function() {
+		clearTimeout(ws_open_timer);
+		if(batch_test_running && !batch_ws_completed){
+			fallback_latency_ws(action);
+		}
+	};
+	wswt.onmessage = function(event) {
+		handle_latency_ws_payload(event.data);
+	};
+	return true;
+}
 function test_latency_now(test_flag) {
 	if(test_flag == 2 && db_ss["ss_basic_latency_batch"] != "1"){
 		layer.msg("批量测速已关闭");
@@ -4852,6 +4972,7 @@ function test_latency_now(test_flag) {
 			if (response.result == id){
 				$(".show-btn1").trigger("click");
 				if(test_flag == 0){
+					close_latency_ws();
 					refresh_table(function() {
 						close_latency_flag = 1;
 						batch_test_running = false;
@@ -4859,6 +4980,7 @@ function test_latency_now(test_flag) {
 						$("#dropdown").width(150);
 					});
 				}else if(test_flag == 2){
+					close_latency_ws();
 					close_latency_flag = 0;
 					batch_test_running = true;
 					refresh_table(function() {
@@ -4886,6 +5008,7 @@ function clear_latency_cache() {
 				return;
 			}
 			if (response.result == id){
+				close_latency_ws();
 				$(".latency .latency_val").html("");
 				$("#ss_wts_show").html("");
 				$("#dropdown").width(150);
@@ -5007,6 +5130,8 @@ function latency_test(action) {
 	if(action == "2"){
 		var bash_para = "web_webtest";
 		batch_test_running = true;
+		batch_ws_fallback_started = false;
+		batch_ws_completed = false;
 	}
 	//now post
 	var id = parseInt(Math.random() * 100000000);
@@ -5020,11 +5145,15 @@ function latency_test(action) {
 		dataType: "json",
 		success: function(response) {
 			// 保留已有测速结果，避免刷新页面时单节点测速结果被 "waiting..." 覆盖。
+			if(action == "2" && start_latency_ws(action)){
+				return;
+			}
 			get_latency_data(action);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			$(".latency .latency_val").html("失败!");
 			batch_test_running = false;
+			close_latency_ws();
 		},
 		timeout: 60000
 	});
@@ -5110,34 +5239,16 @@ function get_latency_data(action){
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
-			// getting webtest results
-			const lines = res.split('\n');
-			const array = [];
-			lines.forEach(line => {
-				const parts = line.split('>').map(part => part.trim());
-				const item = [parts[0], parts[1]];
-				array.push(item);
-			});
+			const array = parse_webtest_lines(res);
 			write_webtest(array);
-			const hasStop = array.some(subArray => subArray.includes('stop'));
+			const hasStop = array.some(function(item) {
+				return item[0] == "stop";
+			});
 			if(hasStop){
-				batch_test_running = false;
-				//console.log("stop getting webtest result!");
-					$.ajax({
-						type: "GET",
-						url: "/_api/ss_basic_webtest_ts",
-						dataType: "json",
-						success: function(data) {
-							db_get = data.result[0];
-							if(db_get["ss_basic_webtest_ts"]){
-							$("#ss_wts_show").html("<em>【上次完成时间: " + db_get["ss_basic_webtest_ts"] + "】</em>")
-							$("#dropdown").width(370);
-						}
-					}
-				});
+				finish_latency_batch();
 			}else{
 				//console.log("getting webtest result...");
-					setTimeout(function() { get_latency_data(2); }, 1000);
+					setTimeout(function() { get_latency_data(action); }, 1000);
 			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
