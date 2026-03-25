@@ -2511,6 +2511,39 @@ sub_log_unsupported_scheme_once(){
 	fi
 }
 
+sub_log_unsupported_scheme_summary(){
+	local file="$1"
+	[ -s "${file}" ] || return 0
+	awk -F '://' '
+		BEGIN {
+			supported["ss"] = 1
+			supported["ssr"] = 1
+			supported["vmess"] = 1
+			supported["vless"] = 1
+			supported["trojan"] = 1
+			supported["hysteria2"] = 1
+			supported["hy2"] = 1
+			supported["tuic"] = 1
+			supported["naive+https"] = 1
+			supported["naive+quic"] = 1
+		}
+		NF >= 2 {
+			scheme = $1
+			if (!(scheme in supported)) {
+				cnt[scheme]++
+			}
+		}
+		END {
+			for (scheme in cnt) {
+				printf "⚫%s节点：%s个（不支持）\n", scheme, cnt[scheme]
+			}
+		}
+	' "${file}" | sort | while IFS= read -r line
+	do
+		[ -n "${line}" ] && echo_date "${line}"
+	done
+}
+
 sub_uri_scheme(){
 	printf '%s' "${1}" | sed -n 's#^\([A-Za-z0-9+.-]\+\)://.*#\1#p'
 }
@@ -3126,6 +3159,7 @@ add_tuic_node(){
 		tuic_hostport="${tuic_authority}"
 	fi
 
+	tuic_auth=$(printf '%s' "${tuic_auth}" | urldecode)
 	if [ "${tuic_auth#*:}" != "${tuic_auth}" ];then
 		tuic_uuid=$(printf '%s' "${tuic_auth%%:*}" | urldecode)
 		tuic_pass=$(printf '%s' "${tuic_auth#*:}" | urldecode)
@@ -3830,6 +3864,7 @@ get_online_rule_now(){
 	[ "${NODE_NU_H2}" -gt "0" ] && echo_date "🟤hysteria2节点：${NODE_NU_H2}个"
 	[ "${NODE_NU_TC}" -gt "0" ] && echo_date "🟫tuic节点：${NODE_NU_TC}个"
 	[ "${NODE_NU_NV}" -gt "0" ] && echo_date "🟧Naïve节点：${NODE_NU_NV}个"
+	sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
 	if [ "${pkg_type}" != "full" -a $((${NODE_NU_TC} + ${NODE_NU_NV})) -gt "0" ];then
 		echo_date "⚠️当前插件为lite版本，TUIC/NaïveProxy节点会被跳过。"
 	fi
