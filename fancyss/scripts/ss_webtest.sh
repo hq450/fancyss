@@ -16,6 +16,7 @@ WT_NODE_ENV_DIR=""
 WT_NODE_ACTIVE_ID=""
 WT_NODE_ACTIVE_FIELDS=""
 WT_PREVIEW_READY=0
+WT_FORCE_PRERESOLVE=0
 
 wt_ensure_webtest_dir() {
 	mkdir -p /tmp/upload
@@ -219,6 +220,16 @@ wt_prepare_node_cache() {
 	}
 	rm -f ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1
 	rm -f ${WT_NODE_ENV_DIR}/*.env >/dev/null 2>&1
+	if type fss_dump_v2_node_json_dir >/dev/null 2>&1; then
+		fss_dump_v2_node_json_dir "${WT_NODE_CACHE_DIR}" >/dev/null 2>&1 && {
+			ls ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1 || {
+				WT_NODE_CACHE_DIR=""
+				WT_NODE_ENV_DIR=""
+				return 1
+			}
+			return 0
+		}
+	fi
 	fss_list_node_ids | while read node_id
 	do
 		[ -n "${node_id}" ] || continue
@@ -320,22 +331,94 @@ wt_show_current_group_preview() {
 	done
 }
 
-wt_refresh_node_direct_dns_if_needed() {
+wt_runtime_dns_enabled() {
 	local dns_plan=""
 
-	wt_server_resolv_mode_is_dynamic || return 0
-	[ "$(dbus get ss_basic_enable)" = "1" ] || return 0
+	wt_server_resolv_mode_is_dynamic || return 1
+	[ "$(dbus get ss_basic_enable)" = "1" ] || return 1
 	dns_plan=$(dbus get ss_basic_dns_plan)
 	case "${dns_plan}" in
 	1|2)
-			;;
-	*)
 		return 0
 		;;
 	esac
-	fss_refresh_node_direct_cache >/dev/null 2>&1
-	fss_node_direct_cache_differs_from_runtime || return 0
-	/bin/sh /koolshare/ss/ssconfig.sh refresh_node_direct_dns >/dev/null 2>&1
+	return 1
+}
+
+wt_get_node_server_host() {
+	local node_id="$1"
+	local node_type=""
+	local json_text=""
+	local relay_server_raw=""
+	local host=""
+	local jq_bin=""
+
+	[ -n "${node_id}" ] || return 1
+	node_type=$(wt_node_get_plain type "${node_id}")
+	case "${node_type}" in
+	0|1|5)
+		host=$(wt_node_get_plain server "${node_id}")
+		;;
+	3)
+		if [ "$(wt_node_get_plain v2ray_use_json "${node_id}")" = "1" ]; then
+			json_text=$(wt_node_get_plain v2ray_json "${node_id}")
+			host=$(fss_extract_xray_like_server_field_from_json_text "${json_text}" host)
+		else
+			host=$(wt_node_get_plain server "${node_id}")
+		fi
+		;;
+	4)
+		if [ "$(wt_node_get_plain xray_use_json "${node_id}")" = "1" ]; then
+			json_text=$(wt_node_get_plain xray_json "${node_id}")
+			host=$(fss_extract_xray_like_server_field_from_json_text "${json_text}" host)
+		else
+			host=$(wt_node_get_plain server "${node_id}")
+		fi
+		;;
+	6)
+		host=$(wt_node_get_plain naive_server "${node_id}")
+		;;
+	7)
+		jq_bin=$(fss_pick_jq_bin)
+		[ -n "${jq_bin}" ] || return 1
+		json_text=$(wt_node_get_plain tuic_json "${node_id}")
+		relay_server_raw=$(printf '%s' "${json_text}" | "${jq_bin}" -r '.relay.server // empty' 2>/dev/null)
+		{
+			read -r host
+			read -r _
+		} <<-EOF
+		$(fss_extract_tuic_server_host_port "${relay_server_raw}")
+		EOF
+		;;
+	8)
+		host=$(wt_node_get_plain hy2_server "${node_id}")
+		;;
+	*)
+		host=$(wt_node_get_plain server "${node_id}")
+		;;
+	esac
+
+	printf '%s' "${host}"
+}
+
+wt_set_node_resolve_policy() {
+	local node_id="$1"
+	local host=""
+
+	WT_FORCE_PRERESOLVE=0
+	wt_runtime_dns_enabled || return 0
+	host=$(wt_get_node_server_host "${node_id}")
+	[ -n "${host}" ] || return 0
+	[ -n "$(fss_is_domain_name "${host}")" ] || return 0
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_FILE}" ] || {
+		WT_FORCE_PRERESOLVE=1
+		return 0
+	}
+	grep -Fxq "${host}" "${FSS_NODE_DIRECT_RUNTIME_FILE}" || WT_FORCE_PRERESOLVE=1
+}
+
+wt_reset_node_resolve_policy() {
+	WT_FORCE_PRERESOLVE=0
 }
 
 wt_prepare_webtest_preview() {
@@ -583,7 +666,6 @@ start_webtest(){
 	wt_prepare_webtest_preview
 
 	# 3. 批量测速前，同步全量节点域名直连解析缓存
-	wt_refresh_node_direct_dns_if_needed
 	ensure_latency_batch
 
 	# 4. 测试
@@ -892,6 +974,7 @@ test_xray_group(){
 
 	# gen xray json for all nodes
 	cat ${file_path} | while read nu; do
+		wt_set_node_resolve_policy "${nu}"
 		local node_type=$(wt_node_get type ${nu})
 		case ${node_type} in
 		0)
@@ -911,6 +994,7 @@ test_xray_group(){
 			;;
 		esac
 		wt_write_inbound_routing ${nu} ${mark}
+		wt_reset_node_resolve_policy
 	done
 
 	# merge all xray json
@@ -927,11 +1011,13 @@ test_xray_group(){
 	fi
 
 	# now we can start xray to host multiple outbounds
+	local first_port=""
+	first_port=$(sed -n '1s/.*=//p' ${TMP2}/socsk5_ports.txt 2>/dev/null)
 	run ${TMP2}/wt-xray run -confdir ${TMP2}/json_${mark}/ >${TMP2}/logs_${mark}/log.txt 2>&1 &
 	local xray_pid=$!
 
 	# make sure xray is runing, otherwise output error
-	wait_program2 wt-xray ${TMP2}/logs_${mark}/log.txt started
+	wait_local_port "${first_port}" 30 100000 || wait_program2 wt-xray ${TMP2}/logs_${mark}/log.txt started
 	if ! pidof wt-xray >/dev/null 2>&1;then
 		cat ${file_path} | while read nu; do
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
@@ -969,9 +1055,6 @@ test_xray_group(){
 		read -r _ <&3
 		{
 			trap 'echo >&3' EXIT
-			# 0. testing info
-			wt_append_webtest_line "${nu}>testing..."
-
 			# 1. start obfs-local if needed
 			if [ -x "${TMP2}/bash_${mark}/start_${nu}.sh" ];then
 				sh ${TMP2}/bash_${mark}/start_${nu}.sh
@@ -1033,6 +1116,7 @@ test_07_sr(){
 			{
 				# 0. testing info
 				wt_append_webtest_line "${nu}>testing..."
+				wt_set_node_resolve_policy "${nu}"
 				
 				# 1. resolve server
 				local _server_ip=$(_get_server_ip $(wt_node_get server ${nu}))
@@ -1061,7 +1145,7 @@ test_07_sr(){
 
 				# 3. start rss-local
 				run ${TMP2}/wt-rss-local -c ${TMP2}/conf_${mark}/${nu}.json -f ${TMP2}/pids/${nu}.pid >/dev/null 2>&1
-				sleep 1
+				wait_local_port "${socks5_port}" 10 100000 || sleep 1
 
 				# 4. start curl test
 				curl_test ${nu} ${socks5_port}
@@ -1073,6 +1157,7 @@ test_07_sr(){
 				if [ -f "${TMP2}/pids/${nu}.pid" ];then
 					kill -9 $(cat ${TMP2}/pids/${nu}.pid) >/dev/null 2>&1
 				fi
+				wt_reset_node_resolve_policy
 			} &
 		done
 		wait
@@ -1095,6 +1180,7 @@ test_11_nv(){
 		for nu in $nus; do
 			{
 				wt_append_webtest_line "${nu}>testing..."
+				wt_set_node_resolve_policy "${nu}"
 
 				# 1. resolve server
 				local _server_ip=$(_get_server_ip $(wt_node_get naive_server ${nu}))
@@ -1107,7 +1193,7 @@ test_11_nv(){
 					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) --host-resolver-rules="MAP $(wt_node_get naive_server ${nu}) ${_server_ip}" >/dev/null 2>&1 &
 				fi
 
-				sleep 2
+				wait_local_port "${socks5_port}" 20 100000 || sleep 1
 
 				# 4. start curl test
 				curl_test ${nu} ${socks5_port}
@@ -1120,6 +1206,7 @@ test_11_nv(){
 				if [ -n "${_pid}" ];then
 					kill -9 ${_pid} >/dev/null 2>&1
 				fi
+				wt_reset_node_resolve_policy
 			} &
 		done
 		wait
@@ -1143,6 +1230,7 @@ test_12_tc(){
 		for nu in $nus; do
 			{
 				wt_append_webtest_line "${nu}>testing..."
+				wt_set_node_resolve_policy "${nu}"
 
 				# 1. gen json
 				local socks5_port=$(get_rand_port)
@@ -1169,7 +1257,7 @@ test_12_tc(){
 				# 2. start tuic
 				run ${TMP2}/wt-tuic -c ${tuic_json_file} >/dev/null 2>&1 &
 
-				sleep 2
+				wait_local_port "${socks5_port}" 20 100000 || sleep 1
 
 				# 4. start curl test
 				curl_test ${nu} ${socks5_port}
@@ -1182,6 +1270,7 @@ test_12_tc(){
 				if [ -n "${_pid}" ];then
 					kill -9 ${_pid} >/dev/null 2>&1
 				fi
+				wt_reset_node_resolve_policy
 			} &
 		done
 		wait
@@ -1561,7 +1650,6 @@ single_test_node(){
 
 	WT_SINGLE=1
 	WT_SKIP_DNS=0
-	wt_refresh_node_direct_dns_if_needed
 	detect_perf
 	WT_XRAY_THREADS=1
 	WT_SSR_THREADS=1
@@ -1575,8 +1663,6 @@ single_test_node(){
 	rm -rf ${TMP2}/results/*
 	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
 	wt_prepare_node_cache >/dev/null 2>&1
-
-	wt_append_webtest_line "${test_node}>testing..."
 
 	local single_file="wt_single_${test_node}.txt"
 	echo "${test_node}" > ${TMP2}/${single_file}
@@ -1649,8 +1735,10 @@ _get_server_ip() {
 	fi
 
 	wt_server_resolv_mode_is_dynamic && {
-		echo ""
-		return 0
+		if [ "${WT_FORCE_PRERESOLVE}" != "1" ];then
+			echo ""
+			return 0
+		fi
 	}
 
 	local ss_basic_server_resolv=$(dbus get ss_basic_server_resolv)
@@ -1868,7 +1956,23 @@ wait_program2(){
 			return 1
 		fi
 	done
-	usleep 500000
+	return 0
+}
+
+wait_local_port(){
+	local PORT="$1"
+	local RETRIES="${2:-20}"
+	local INTERVAL_US="${3:-100000}"
+	local MATCH=""
+
+	[ -n "${PORT}" ] || return 1
+	until [ -n "${MATCH}" ]; do
+		MATCH=$(netstat -nl 2>/dev/null | awk '{print $4}' | grep -E "[:\\.]${PORT}\$" | head -n1)
+		[ -n "${MATCH}" ] && return 0
+		RETRIES=$((RETRIES - 1))
+		[ "${RETRIES}" -lt 1 ] && return 1
+		usleep "${INTERVAL_US}"
+	done
 	return 0
 }
 
