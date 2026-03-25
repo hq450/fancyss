@@ -6,6 +6,7 @@ fancyss Changelog
    - update	chinadns-ng / smartdns 现会为当前节点服务器域名动态注入直连解析规则；动态解析模式下，客户端配置文件保留域名写入，运行中可自行跟随解析变化，并同步回填运行时解析结果用于状态展示。
    - update	动态解析模式下，节点IP变更触发重启任务会自动跳过，避免与客户端运行时解析机制冲突；对应实施方案文档已写入`doc/node-server-dynamic-resolve-design.md`。
    - fix	修复Schema 2节点切换过程中，`xray_use_json` / `v2ray_use_json`等布尔字段可能残留，导致从JSON节点切回普通节点后仍误走自定义JSON配置分支的问题。
+   - fix	修复部分Shadowrocket / sing-box风格TUIC订阅链接将`uuid`、`password`写在query参数中时，fancyss无法正确解析并导入TUIC节点的问题。
 
 3.5.6 - 3.5.7（20260324）
    - note	本次更新解决了fancyss长期存在的一个底层设计问题：旧版节点按字段拆分为大量dbus KV，节点数量一多，会同时加重前端节点列表渲染、节点排序/移动、订阅整理，以及后端脚本取值和维护的负担；3.5.6起改为schema 2单节点单KV（JSON + Base64）存储。
