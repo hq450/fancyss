@@ -3095,6 +3095,14 @@ add_tuic_node(){
 		tuic_pass=""
 	fi
 
+	# Shadowrocket / sing-box style TUIC links often place credentials in query args
+	# rather than in userinfo, e.g. tuic://host:port?uuid=...&password=...
+	[ -z "${tuic_uuid}" ] && tuic_uuid=$(sub_uri_query_value "${decode_link}" "uuid" | urldecode)
+	[ -z "${tuic_uuid}" ] && tuic_uuid=$(sub_uri_query_value "${decode_link}" "id" | urldecode)
+	[ -z "${tuic_pass}" ] && tuic_pass=$(sub_uri_query_value "${decode_link}" "password" | urldecode)
+	[ -z "${tuic_pass}" ] && tuic_pass=$(sub_uri_query_value "${decode_link}" "passwd" | urldecode)
+	[ -z "${tuic_pass}" ] && tuic_pass=$(sub_uri_query_value "${decode_link}" "token" | urldecode)
+
 	local hostinfo
 	hostinfo=$(sub_uri_split_host_port "${tuic_hostport}")
 	tuic_server=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $1}')
