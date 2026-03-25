@@ -2498,12 +2498,51 @@ sub_uri_query_bool(){
 	sub_uri_bool_value "$(sub_uri_query_value "$1" "$2")"
 }
 
+sub_log_unsupported_scheme_once(){
+	local scheme="$1"
+	local seen_file="${2:-${UNSUPPORTED_PROTO_LOG_FILE}}"
+	[ -n "${scheme}" ] || return 0
+	[ -n "${seen_file}" ] || seen_file="${DIR}/unsupported_proto_seen.txt"
+	[ -d "${DIR}" ] || mkdir -p "${DIR}" >/dev/null 2>&1
+	touch "${seen_file}" >/dev/null 2>&1
+	if ! grep -Fxq "${scheme}" "${seen_file}" 2>/dev/null; then
+		printf '%s\n' "${scheme}" >> "${seen_file}"
+		echo_date "⛔检测到不支持的${scheme}格式节点，后续同协议节点将直接跳过！"
+	fi
+}
+
 sub_uri_scheme(){
 	printf '%s' "${1}" | sed -n 's#^\([A-Za-z0-9+.-]\+\)://.*#\1#p'
 }
 
 sub_uri_body(){
 	printf '%s' "${1}" | sed -n 's#^[A-Za-z0-9+.-]\+://\(.*\)$#\1#p'
+}
+
+sub_is_ipv4_literal(){
+	printf '%s' "${1}" | awk -F'.' '
+		NF != 4 { exit 1 }
+		{
+			for (i = 1; i <= 4; i++) {
+				if ($i !~ /^[0-9]+$/ || $i < 0 || $i > 255) {
+					exit 1
+				}
+			}
+		}
+		END { exit 0 }
+	'
+}
+
+sub_is_ipv6_literal(){
+	printf '%s' "${1}" | grep -Eq '^[0-9A-Fa-f:.%]+$' && printf '%s' "${1}" | grep -q ':'
+}
+
+sub_is_ip_literal(){
+	local host="$1"
+	[ -n "${host}" ] || return 1
+	sub_is_ipv4_literal "${host}" && return 0
+	sub_is_ipv6_literal "${host}" && return 0
+	return 1
 }
 
 sub_uri_split_host_port(){
@@ -3119,7 +3158,7 @@ add_tuic_node(){
 	[ -z "${tuic_skip_verify}" ] && tuic_skip_verify=$(sub_uri_query_bool "${decode_link}" "skip_cert_verify")
 	tuic_server_override=$(sub_uri_query_value "${decode_link}" "sni" | urldecode)
 
-	if [ -n "${tuic_server_override}" -a -n "$(__valid_ip "${tuic_server}")" ];then
+	if [ -n "${tuic_server_override}" ] && sub_is_ip_literal "${tuic_server}"; then
 		tuic_ip="${tuic_server}"
 		tuic_server="${tuic_server_override}"
 	fi
@@ -3636,6 +3675,8 @@ get_online_rule_now(){
 	fi
 	echo ${SUB_LINK_HASH} >>/$DIR/sublink_md5.txt
 	echo ${SUB_SOURCE_TAG} >>/$DIR/subsource_md5.txt
+	UNSUPPORTED_PROTO_LOG_FILE="${DIR}/unsupported_proto_${SUB_SOURCE_TAG}.txt"
+	rm -f "${UNSUPPORTED_PROTO_LOG_FILE}" >/dev/null 2>&1
 
 	# 3. try to delete some file left by last sublink subscribe
 	rm -rf /tmp/ssr_subscribe_file* >/dev/null 2>&1
@@ -3840,7 +3881,7 @@ get_online_rule_now(){
 			;;
 		*)
 			if [ -n "${node_type}" ];then
-				echo_date "⛔不支持${node_type}格式的节点，跳过！"
+				sub_log_unsupported_scheme_once "${node_type}"
 			fi
 			# if [ -n "${node_info}" ];then
 			# 	local _match=$(echo "${node_info}"|grep -E "//")
@@ -4060,6 +4101,7 @@ start_offline_update() {
 	echo_date "ℹ️通过ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive链接添加节点..."
 	mkdir -p $DIR
 	rm -rf $DIR/*
+	UNSUPPORTED_PROTO_LOG_FILE="${DIR}/unsupported_proto_offline.txt"
 	local nodes=$(dbus get ss_base64_links | base64 -d | urldecode)
 	local pkg_type=$(dbus get ss_basic_pkg_type)
 	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
@@ -4108,7 +4150,7 @@ start_offline_update() {
 			fi
 			;;
 		*)
-			echo_date "⚠️尚不支持${node_type}格式的节点，跳过！"
+			sub_log_unsupported_scheme_once "${node_type}"
 			continue
 			;;
 		esac
