@@ -7,7 +7,19 @@ LOGFILE=/koolshare/logs/remote_access_record.txt
 mkdir -p /koolshare/logs
 
 cmd() {
-	"$@" 2>&1
+	local bin="$1"
+	shift
+	if ! command -v "${bin}" >/dev/null 2>&1; then
+		case "${bin}" in
+		ss_node_subscribe.sh|ss_online_update.sh)
+			echo "订阅脚本缺失：${bin}"
+			echo "可能原因：固件安全组件或其它程序删除了该脚本。"
+			echo "建议处理：重新安装 fancyss，并尽量升级到较新的无 ASD 固件。"
+			return 127
+			;;
+		esac
+	fi
+	"${bin}" "$@" 2>&1
 	# ${@%%[[:space:]]*} ${@#*[[:space:]]} 2>&1
 	# start-stop-daemon -S -b -x ${@%%[[:space:]]*} -- ${@#*[[:space:]]}
 	# start-stop-daemon -S -x ss_config.sh -- start
@@ -63,4 +75,3 @@ do
 		cmd $MSG
 	fi
 done
-

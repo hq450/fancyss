@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# fancyss script for asuswrt/merlin based router with software center
+# fancyss subscribe script for asuswrt/merlin based router with software center
 source /koolshare/scripts/base.sh
 source /koolshare/scripts/ss_node_common.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
@@ -19,8 +19,7 @@ SCHEMA2_EXPORT_JSONL="$DIR/schema2_nodes_export.txt"
 SUB_RAW_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/raw"
 SUB_PARSED_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/parsed"
 # 订阅缓存的 raw / parsed / meta 都放在持久化目录。
-# 每次调整 meta 结构或比对语义时，只需要递增 schema，
-# 下次订阅就会自动判定旧 meta 失效并重建缓存。
+# 每次调整 meta 结构或缓存判定语义时，递增 schema 即可触发重建。
 SUB_PARSED_CACHE_META_SCHEMA="2"
 SUB_STORAGE_SCHEMA=$(dbus get fss_data_schema)
 [ "${SUB_STORAGE_SCHEMA}" = "2" ] || SUB_STORAGE_SCHEMA="1"
@@ -58,7 +57,7 @@ SUB_VERBOSE_NODE_LOG=1
 LOCAL_SPLIT_META_VALID=0
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
 
-# 20230701, some vairiable should be unset
+# 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
 unset usb2jffs_week
 unset usb2jffs_title
@@ -1026,117 +1025,11 @@ sub_restore_active_nodes_after_rewrite(){
 
 sub_refresh_node_state
 
-# 一个节点里可能有的所有信息，记录用
-# ssconf_basic_name_
-# ssconf_basic_server_
-# ssconf_basic_mode_
-# ssconf_basic_method_
-# ssconf_basic_password_
-# ssconf_basic_port_
-# ssconf_basic_ss_obfs_
-# ssconf_basic_ss_obfs_host_
-# ssconf_basic_rss_obfs_
-# ssconf_basic_rss_obfs_param_
-# ssconf_basic_rss_protocol_
-# ssconf_basic_rss_protocol_param_
-# ssconf_basic_koolgame_udp_			#废弃
-# ssconf_basic_use_kcp_					#废弃
-# ssconf_basic_use_lb_					#废弃
-# ssconf_basic_lbmode_					#废弃
-# ssconf_basic_weight_					#废弃
-# ssconf_basic_group_
-# ssconf_basic_v2ray_use_json_
-# ssconf_basic_v2ray_uuid_
-# ssconf_basic_v2ray_alterid_
-# ssconf_basic_v2ray_security_
-# ssconf_basic_v2ray_network_
-# ssconf_basic_v2ray_headtype_tcp_
-# ssconf_basic_v2ray_headtype_kcp_
-# ssconf_basic_v2ray_kcp_seed
-# ssconf_basic_v2ray_headtype_quic_
-# ssconf_basic_v2ray_grpc_mode_
-# ssconf_basic_v2ray_grpc_authority_
-# ssconf_basic_v2ray_network_path_
-# ssconf_basic_v2ray_network_host_
-# ssconf_basic_v2ray_network_security_
-# ssconf_basic_v2ray_network_security_ai_
-# ssconf_basic_v2ray_network_security_alpn_h2_
-# ssconf_basic_v2ray_network_security_alpn_http_
-# ssconf_basic_v2ray_network_security_sni_
-# ssconf_basic_v2ray_mux_enable_
-# ssconf_basic_v2ray_mux_concurrency_
-# ssconf_basic_v2ray_json_
-# ssconf_basic_xray_use_json_
-# ssconf_basic_xray_uuid_
-# ssconf_basic_xray_alterid_
-# ssconf_basic_xray_prot_
-# ssconf_basic_xray_encryption_
-# ssconf_basic_xray_flow_
-# ssconf_basic_xray_network_
-# ssconf_basic_xray_headtype_tcp_
-# ssconf_basic_xray_headtype_kcp_
-# ssconf_basic_xray_kcp_seed
-# ssconf_basic_xray_headtype_quic_
-# ssconf_basic_xray_grpc_mode_
-# ssconf_basic_xray_grpc_authority_
-# ssconf_basic_xray_xhttp_mode_
-# ssconf_basic_xray_network_path_
-# ssconf_basic_xray_network_host_
-# ssconf_basic_xray_network_security_
-# ssconf_basic_xray_network_security_ai_
-# ssconf_basic_xray_network_security_alpn_h2_
-# ssconf_basic_xray_network_security_alpn_http_
-# ssconf_basic_xray_network_security_sni_
-# ssconf_basic_xray_fingerprint_
-# ssconf_basic_xray_show_
-# ssconf_basic_xray_publickey_
-# ssconf_basic_xray_shortid_
-# ssconf_basic_xray_spiderx_
-# ssconf_basic_xray_json_
-# ssconf_basic_trojan_ai_
-# ssconf_basic_trojan_uuid_
-# ssconf_basic_trojan_sni_
-# ssconf_basic_trojan_tfo_
-# ssconf_basic_trojan_plugin_
-# ssconf_basic_trojan_obfs_
-# ssconf_basic_trojan_obfshost_
-# ssconf_basic_trojan_obfsuri_
-# ssconf_basic_naive_prot_
-# ssconf_basic_naive_server_
-# ssconf_basic_naive_port_
-# ssconf_basic_naive_user_
-# ssconf_basic_naive_pass_
-# ssconf_basic_tuic_json_
-# ssconf_basic_hy2_server_
-# ssconf_basic_hy2_port_
-# ssconf_basic_hy2_pass_
-# ssconf_basic_hy2_obfs_
-# ssconf_basic_hy2_obfs_pass_
-# ssconf_basic_hy2_up_
-# ssconf_basic_hy2_dl_
-# ssconf_basic_hy2_sni_
-# ssconf_basic_hy2_tfo_
-# ssconf_basic_hy2_cg_
-# ssconf_basic_type_
-
-# 方案
-# 设计：通过操作文件实现节点的订阅
-# 1.	skipdb2json：订阅前将节点信息导出到文件，通过sed等操作将其转换为一个节点一行的压缩json格式的节点文件：fancyss_nodes_old_spl.txt，如果有有200个节点就是200行json
-# 2.	nodes2files：根据节点中的link_hash信息，将节点文件拆分为多个，usr.txt (用户节点)， local_1_xxxx.txt (机场xxxx)， local_2_yyyy.txt (机场xxxx)
-# 3.	nodes_stats：用拆分文件统计节点信息
-# 4.	remove_null：订阅钱检测下是否有机场不再订阅（用户删除了这个机场的url）
-# 5.	下载订阅
-# 6.	解析订阅
-# 7.	解析节点
-# 8.		过滤节点
-# 9.		点写入更新文件
-# 10. 	对比更新文件和本地节点文件
-# 11. 	写入/不写入节点
-# 12.	
-
-# 7. 最后改写key的顺序，写入dbus
-# 8. 如果节点数量变少了，那么还需要掐尾去尾巴
-# 优点：删除节点，节点排序很方便！
+# 订阅流程说明：
+# 1. 导出本地节点并按来源拆分为文件；
+# 2. 下载并解析每个订阅来源；
+# 3. 对比在线节点与本地节点差异；
+# 4. 生成写入文件并按需更新 dbus。
 
 set_lock(){
 	exec 233>"${LOCK_FILE}"
@@ -2014,12 +1907,6 @@ add_ss_node(){
 	local action="$2"
 	unset info_first string_nu decrypt_info server_raw encrypt_method password remarks server server_port 
 	unset plugin_support obfs_para plugin_prog ss_obfs ss_obfs_host group
-	# 目前发现4种类型的节点：
-	# 1. ss://YWVzLTEyOC1nY206RkFOQ1lTU19QQVNT@fancyss.net:111/?group=ZmFuY3lzX3Rlc3Q=#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B91%0A
-	# 2. ss://2022-blake3-aes-256-gcm:czh9CYElDUxw9Y94bzTPjx2Q8URybABYROeiFwZ3o4U=@11.22.33.44:222#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B92%0A
-	# 3. ss://MjAyMi1ibGFrZTMtYWVzLTI1Ni1nY206TWtjeGJsTkJXbUpKemRvY25ERUpOSk5BUw==@11.22.33.44:333#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B93%0A
-	# 4. ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpGQU5DWVNTX1BBU1NAdGVzdC5mYW5jeXNzLmNvbTo0NDQ=#FANCYSS%20SS%E6%B5%8B%E8%AF%95%E8%8A%82%E7%82%B94%0A
-
 	remarks=$(echo "${urllink}" | sed -n 's/.*#\(.*\).*$/\1/p' | urldecode | sed 's/^[[:space:]]//g')
 	
 	echo "${remarks}" | isutf8 -q
@@ -2916,14 +2803,6 @@ add_vless_node(){
 }
 
 add_trojan_node(){
-	# example, not real
-	# trojan://a479d06e-c8b2-4f47-8f3d-0fdda666c7fc@userm2.su.com:39718?allowInsecure=1&plugin=obfs-local;obfs=websocket;obfs-host=bing.com;obfs-uri=/&tfo=1#香港M2-5|专线|流媒体|
-	# trojan://auto@104.211.135.143:443?peer=elicense3.wawa55.workers.dev&plugin=obfs-local;obfs=websocket;obfs-host=esetsecuritylicense3.wawafec355.workers.dev;obfs-uri=/#United+States
-	# trojan://yaml77@104.121.161.173:443?peer=yaml117.ggggf.net&plugin=obfs-local;obfs=websocket;obfs-host=yaml7.ggff.net;obfs-uri=/#United+States
-	# trojan://amclubs2024@198.162.162.156:443?peer=trer.amub.us&plugin=obfs-local;obfs=websocket;obfs-host=trer.amub.us;obfs-uri=/?ed=2560#United+States
-	# trojan://37470001032741200@grateful-glowworm.treefrog761.one:443#Mexico
-	# trojan://37470001032741200@humble-rodent.treefrog761.one:443#South+Korea
-	
 	local decode_link="$1"
 	local decode_link=$(echo "$1" | urldecode)
 	local action="$2"

@@ -4067,6 +4067,7 @@ function order_adjustment(){
 }
 function save_new_order(){
 	getNowFormatDate();
+	var nodeTableScrollTop = get_node_table_scroll_top();
 	var table = E("ss_node_list_table");
 	var tr = table.getElementsByTagName("tr");
 	if (get_node_storage_schema() == 2) {
@@ -4088,6 +4089,7 @@ function save_new_order(){
 				refresh_table(function() {
 					getNowFormatDate();
 					ss_node_sel();
+					set_node_table_scroll_top(nodeTableScrollTop);
 				});
 			}
 		});
@@ -4141,6 +4143,7 @@ function save_new_order(){
 				refresh_options();
 				getNowFormatDate();
 				ss_node_sel();
+				set_node_table_scroll_top(nodeTableScrollTop);
 			});
 		}
 	});
