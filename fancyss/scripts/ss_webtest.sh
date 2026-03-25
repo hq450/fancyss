@@ -151,6 +151,7 @@ webtest_web(){
 	if [ ! -f "/tmp/upload/webtest.txt" ];then
 		local backup_usable=$(get_webtest_usable_count /tmp/upload/webtest_bakcup.txt)
 		if [ "${backup_usable}" -gt "0" ];then
+			cp -f /tmp/upload/webtest_bakcup.txt /tmp/upload/webtest.txt >/dev/null 2>&1
 			http_response "ok3, partial cache exists, keep it"
 			return 0
 		fi
@@ -171,6 +172,7 @@ webtest_web(){
 	if [ "${webtest_nu}" -ne "${node_nu}" ];then
 		local backup_usable=$(get_webtest_usable_count /tmp/upload/webtest_bakcup.txt)
 		if [ "${backup_usable}" -gt "0" ];then
+			cp -f /tmp/upload/webtest_bakcup.txt /tmp/upload/webtest.txt >/dev/null 2>&1
 			http_response "ok3, partial cache exists, keep it"
 			return 0
 		fi
@@ -1482,6 +1484,8 @@ manual_webtest)
 		exit 0
 	fi
 	clean_webtest
+	rm -f /tmp/upload/webtest_bakcup.txt
+	dbus remove ss_basic_webtest_ts
 	http_response $1
 	;;
 close_latency_test)

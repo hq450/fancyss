@@ -4845,18 +4845,27 @@ function test_latency_now(test_flag) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
+			if(response.result == "batch_disabled"){
+				layer.msg("批量测速已关闭");
+				return;
+			}
 			if (response.result == id){
 				$(".show-btn1").trigger("click");
-				refresh_table();
 				if(test_flag == 0){
-					close_latency_flag=1;
-					batch_test_running = false;
-					$("#ss_wts_show").html("");
-					$("#dropdown").width(150);
-				}
-				if(test_flag == "2"){
-					$(".latency .latency_val").html("waiting...");
+					refresh_table(function() {
+						close_latency_flag = 1;
+						batch_test_running = false;
+						$("#ss_wts_show").html("");
+						$("#dropdown").width(150);
+					});
+				}else if(test_flag == 2){
+					close_latency_flag = 0;
 					batch_test_running = true;
+					refresh_table(function() {
+						$(".latency .latency_val").html("waiting...");
+						$("#ss_wts_show").html("<em>【测速中...】</em>");
+						$("#dropdown").width(240);
+					});
 				}
 			}
 		}
@@ -5155,6 +5164,9 @@ function load_latency_cache(){
 				return;
 			}
 			load_latency_backup(usable);
+		},
+		error: function() {
+			load_latency_backup(0);
 		}
 	});
 }
