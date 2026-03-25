@@ -2662,6 +2662,11 @@ function update_visibility() {
 	showhide("server_resolve_dns_row", e0 == "2");
 	showhide("ss_basic_server_resolv_user", e0 == "2" && e == "99");
 	showhide("ss_basic_dig_opt_usr", f == "99");
+	if (e0 == "2") {
+		setTimeout(function() {
+			change_select_width('#ss_basic_server_resolv');
+		}, 0);
+	}
 
 	// china-1
 	var i  = E("ss_basic_chng_china_dns_1_chk").checked;
@@ -5852,7 +5857,14 @@ function change_select_width(o, p, cfg) {
 		var text = $(this).find("option:selected").text();
 		var className = $(this).attr("class") || "";
 		var $aux = $('<select class="' + className + '">').append($("<option/>").text(text));
-		$(this).after($aux);
+		$aux.css({
+			position: "absolute",
+			left: "-9999px",
+			top: "-9999px",
+			visibility: "hidden",
+			display: "block"
+		});
+		$("body").append($aux);
 		var aux_width = $aux.width();
 		if (aux_width < 135 && p == "1") {
 			aux_width = 135;
