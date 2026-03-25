@@ -1663,13 +1663,15 @@ function refresh_options() {
 	option0.val(get_saved_current_node_id() || get_first_node_id());
 	option3.val(get_failover_node_id() || get_first_node_id());
 	// refresh node dns resolv option
-	if (db_ss["ss_basic_server_resolv"] <= "0"){
-		var option_value = db_ss["ss_basic_lastru"];
-		var option_text = $("#ss_basic_server_resolv").find('option[value=' + option_value + ']').text();
-		$('#ss_basic_server_resolv option[value=' + option_value + ']').text(option_text + '✅');
-	}else{
-		var option_text = $("#ss_basic_server_resolv").find('option[value=' + db_ss["ss_basic_server_resolv"] + ']').text();
-		$('#ss_basic_server_resolv option[value=' + db_ss["ss_basic_server_resolv"] + ']').text(option_text + '✅');
+	if ((db_ss["ss_basic_server_resolv_mode"] || "1") == "2"){
+		if (db_ss["ss_basic_server_resolv"] <= "0"){
+			var option_value = db_ss["ss_basic_lastru"];
+			var option_text = $("#ss_basic_server_resolv").find('option[value=' + option_value + ']').text();
+			$('#ss_basic_server_resolv option[value=' + option_value + ']').text(option_text + '✅');
+		}else{
+			var option_text = $("#ss_basic_server_resolv").find('option[value=' + db_ss["ss_basic_server_resolv"] + ']').text();
+			$('#ss_basic_server_resolv option[value=' + db_ss["ss_basic_server_resolv"] + ']').text(option_text + '✅');
+		}
 	}
 	// 节点列表显示行数
 	$("#ss_basic_row").find('option').remove().end();
@@ -1773,6 +1775,7 @@ function save() {
 	  "ss_basic_time_hour",
 	  "ss_basic_time_min",
 	  "ss_basic_tri_reboot_time",
+	  "ss_basic_server_resolv_mode",
 	  "ss_basic_server_resolv",
 	  "ss_basic_server_resolv_user",
 	  "ss_basic_furl",
@@ -2647,6 +2650,7 @@ function update_visibility() {
 	var a  = E("ss_basic_rule_update").value == "1";
 	var b  = E("ss_basic_node_update").value == "1";
 	var d  = E("ss_basic_tri_reboot_time").value;
+	var e0 = E("ss_basic_server_resolv_mode").value;
 	var e = E("ss_basic_server_resolv").value;
 	var f = E("ss_basic_dig_opt").value;
 
@@ -2655,7 +2659,8 @@ function update_visibility() {
 	showhide("ss_basic_node_update_day", b);
 	showhide("ss_basic_node_update_hr", b);
 	showhide("ss_basic_tri_reboot_time_note", (d != "0"));
-	showhide("ss_basic_server_resolv_user", e == "99");
+	showhide("server_resolve_dns_row", e0 == "2");
+	showhide("ss_basic_server_resolv_user", e0 == "2" && e == "99");
 	showhide("ss_basic_dig_opt_usr", f == "99");
 
 	// china-1
@@ -5649,6 +5654,7 @@ var tab_actions = {
 		for (var i = 0; i < selects.length; i++) {
 			change_select_width(selects[i], '1');
 		}
+		change_select_width('#ss_basic_server_resolv_mode');
 		change_select_width('#ss_basic_server_resolv');
 		change_select_width('#ss_basic_dig_opt');
 		update_visibility();
@@ -8294,6 +8300,10 @@ function toggleKeyMask(o, show){
 																			 ["group", "自定义DNS"],
 																			 ["99", "自定义DNS (udp)"]
 																			 ];
+														option_server_resolve_mode = [
+																			 ["1", "动态解析"],
+																			 ["2", "预解析"]
+																			 ];
 														option_domain_for_dig = [
 																			 ["group", "国内域名"],
 																			 ["www.baidu.com", "www.baidu.com"],
@@ -8449,7 +8459,10 @@ function toggleKeyMask(o, show){
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
 															]},	
 															// server dns resolver
-																{ title: '节点域名解析DNS方案', hint:'107', multi: [
+																{ title: '节点服务器地址解析方式', multi: [
+																	{ id: 'ss_basic_server_resolv_mode', type:'select', func:'u', options:option_server_resolve_mode, style:'width:112px;', value:'1'},
+																]},
+																{ title: '预解析所用DNS方案', rid:'server_resolve_dns_row', hint:'107', multi: [
 																	{ id: 'ss_basic_server_resolv', type:'select', func:'u', options:option_server_resolve, style:'width:160px;', value:'-1'},
 																	{ id: 'ss_basic_server_resolv_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
 																]},

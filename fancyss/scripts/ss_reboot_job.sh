@@ -56,6 +56,12 @@ remove_ss_trigger_job(){
 }
 
 set_ss_trigger_job(){
+	if current_node_server_uses_runtime_dns; then
+		echo_date "检测到当前节点使用【动态解析】且服务器地址为域名，跳过触发重启任务设置。"
+		remove_ss_trigger_job
+		return 0
+	fi
+
 	if [ "$ss_basic_tri_reboot_time" == "0" ];then
 		remove_ss_trigger_job
 	else
@@ -85,6 +91,13 @@ __get_type_abbr_name() {
 
 check_ip_now(){
 	local HOST OLD_IP NEW_IP SERVER_INFO ADDR_INFO INFO_LINE tmp1
+	if current_node_server_uses_runtime_dns; then
+		logger "【科学上网插件触发重启功能】========================================================"
+		logger "【科学上网插件触发重启功能】：当前节点已启用动态解析，客户端将自行跟随域名解析，无需执行触发重启检查。"
+		logger "【科学上网插件触发重启功能】========================================================"
+		return 0
+	fi
+
 	logger "【科学上网插件触发重启功能】========================================================"
 	logger "【科学上网插件触发重启功能】：使用DNS:$(__get_server_resolver):$(__get_server_resolver_port)检查$(__get_type_abbr_name)服务器IP是否更换..."
 	if [ -f "/tmp/ss_host.conf" ];then

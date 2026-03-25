@@ -1227,7 +1227,6 @@ $(printf '%s' "${node_json}" | jq -r --rawfile meta "${meta_file}" '
 	| ($root[$store_field] // empty | if type == "string" then . else tostring end) as $raw_value
 	| select($raw_value != "")
 	| (to_plain_value($root; $store_field; $raw_value)) as $plain_value
-	| select((is_bool($store_field) | not) or $plain_value == "1")
 	| (
 		if is_b64($store_field) then
 			(if need_compact_json($store_field) then ($plain_value | compact_json_string) else $plain_value end) | @base64

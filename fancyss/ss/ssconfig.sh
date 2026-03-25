@@ -595,6 +595,7 @@ prepare_system() {
 	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
 	set_default "ss_basic_block_quic" "1"
 	set_default "ss_basic_proxy_ipv6" "0"
+	set_default "ss_basic_server_resolv_mode" "1"
 	
 	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
 	set_skin
@@ -865,6 +866,237 @@ get_tproxy_port6() {
 	echo "3333"
 }
 
+normalize_server_resolv_mode() {
+	case "${ss_basic_server_resolv_mode}" in
+	1|2)
+		;;
+	*)
+		ss_basic_server_resolv_mode="1"
+		dbus set ss_basic_server_resolv_mode="1"
+		;;
+	esac
+}
+
+server_resolv_mode_is_dynamic() {
+	[ "${ss_basic_server_resolv_mode}" = "1" ]
+}
+
+server_resolv_mode_is_preresolve() {
+	[ "${ss_basic_server_resolv_mode}" = "2" ]
+}
+
+clear_current_node_host_snapshot() {
+	rm -f /tmp/ss_host.conf
+}
+
+write_current_node_host_snapshot() {
+	[ -n "${ss_basic_server_orig}" ] || return 1
+	[ -n "${ss_basic_server_ip}" ] || return 1
+	echo "address=/${ss_basic_server_orig}/${ss_basic_server_ip}" >/tmp/ss_host.conf
+}
+
+clear_current_node_server_ip() {
+	unset ss_basic_server_ip
+	dbus remove ss_basic_server_ip
+	fss_set_current_node_field_plain server_ip ""
+}
+
+record_current_node_server_ip() {
+	local server_ip="$1"
+	[ -n "${server_ip}" ] || {
+		clear_current_node_server_ip
+		return 1
+	}
+	ss_basic_server_ip="${server_ip}"
+	dbus set ss_basic_server_ip="${server_ip}"
+	fss_set_current_node_field_plain server_ip "${server_ip}"
+	return 0
+}
+
+extract_tuic_server_host_port() {
+	local tuic_server_raw="$1"
+	local tuic_server=""
+	local tuic_port=""
+
+	case "${tuic_server_raw}" in
+	\[*\]:*)
+		tuic_server="${tuic_server_raw#\[}"
+		tuic_server="${tuic_server%\]:*}"
+		tuic_port="${tuic_server_raw##*\]:}"
+		;;
+	\[*\])
+		tuic_server="${tuic_server_raw#\[}"
+		tuic_server="${tuic_server%\]}"
+		;;
+	*:* )
+		tuic_server="${tuic_server_raw%:*}"
+		tuic_port="${tuic_server_raw##*:}"
+		;;
+	*)
+		tuic_server="${tuic_server_raw}"
+		;;
+	esac
+
+	printf '%s\n%s\n' "${tuic_server}" "${tuic_port}"
+}
+
+extract_xray_like_server_field_from_json_text() {
+	local json_text="$1"
+	local field="$2"
+
+	printf '%s' "${json_text}" | run jq -r --arg field "${field}" '
+		(.outbound // (.outbounds[0] // {})) as $ob
+		| ($ob.protocol // "") as $protocol
+		| if ($protocol == "vmess" or $protocol == "vless") then
+			if $field == "host" then
+				($ob.settings.vnext[0].address // "")
+			else
+				(($ob.settings.vnext[0].port // "") | tostring)
+			end
+		elif ($protocol == "socks" or $protocol == "shadowsocks" or $protocol == "trojan") then
+			if $field == "host" then
+				($ob.settings.servers[0].address // "")
+			else
+				(($ob.settings.servers[0].port // "") | tostring)
+			end
+		else
+			""
+		end
+	' 2>/dev/null
+}
+
+resolve_current_node_server_meta() {
+	local host="" port="" json_text="" relay_server=""
+
+	case "${ss_basic_type}" in
+	0|1|5)
+		host="${ss_basic_server}"
+		port="${ss_basic_port}"
+		;;
+	3)
+		if [ "${ss_basic_v2ray_use_json}" = "1" ]; then
+			json_text="$(printf '%s' "${ss_basic_v2ray_json}" | base64_decode 2>/dev/null)"
+			host="$(extract_xray_like_server_field_from_json_text "${json_text}" host)"
+			port="$(extract_xray_like_server_field_from_json_text "${json_text}" port)"
+		else
+			host="${ss_basic_server}"
+			port="${ss_basic_port}"
+		fi
+		;;
+	4)
+		if [ "${ss_basic_xray_use_json}" = "1" ]; then
+			json_text="$(printf '%s' "${ss_basic_xray_json}" | base64_decode 2>/dev/null)"
+			host="$(extract_xray_like_server_field_from_json_text "${json_text}" host)"
+			port="$(extract_xray_like_server_field_from_json_text "${json_text}" port)"
+		else
+			host="${ss_basic_server}"
+			port="${ss_basic_port}"
+		fi
+		;;
+	6)
+		host="${ss_basic_naive_server}"
+		port="${ss_basic_naive_port}"
+		;;
+	7)
+		json_text="$(printf '%s' "${ss_basic_tuic_json}" | base64_decode 2>/dev/null)"
+		relay_server="$(printf '%s' "${json_text}" | run jq -r '.relay.server // empty' 2>/dev/null)"
+		{
+			read -r host
+			read -r port
+		} <<-EOF
+		$(extract_tuic_server_host_port "${relay_server}")
+		EOF
+		;;
+	8)
+		host="${ss_basic_hy2_server}"
+		port="${ss_basic_hy2_port}"
+		;;
+	*)
+		host="${ss_basic_server}"
+		port="${ss_basic_port}"
+		;;
+	esac
+
+	CURRENT_NODE_SERVER_HOST="${host}"
+	CURRENT_NODE_SERVER_PORT="${port}"
+	__valid_ip46 "${host}" >/dev/null 2>&1
+	CURRENT_NODE_SERVER_IS_IP="$?"
+}
+
+current_node_server_is_domain_target() {
+	resolve_current_node_server_meta
+	[ -n "${CURRENT_NODE_SERVER_HOST}" ] || return 1
+	[ -n "$(is_domain "${CURRENT_NODE_SERVER_HOST}")" ]
+}
+
+current_node_server_uses_runtime_dns() {
+	normalize_server_resolv_mode
+	server_resolv_mode_is_dynamic || return 1
+	current_node_server_is_domain_target || return 1
+	return 0
+}
+
+refresh_node_direct_domain_file() {
+	rm -f /tmp/ss_node_domains.txt
+	server_resolv_mode_is_dynamic || return 0
+	[ -n "${ss_basic_server_orig}" ] || return 0
+	[ -n "$(is_domain "${ss_basic_server_orig}")" ] || return 0
+	printf '%s\n' "${ss_basic_server_orig}" >/tmp/ss_node_domains.txt
+}
+
+refresh_current_node_server_ip_runtime() {
+	local resolved_ip=""
+	local attempt=1
+	[ -n "${ss_basic_server_orig}" ] || return 1
+	[ -n "$(is_domain "${ss_basic_server_orig}")" ] || return 1
+	while [ "${attempt}" -le 3 ]; do
+		resolved_ip=$(run dnsclient -46 -p 53 -t 2 -i 1 @127.0.0.1 "${ss_basic_server_orig}" 2>/dev/null | head -n1)
+		__valid_ip46 "${resolved_ip}" >/dev/null 2>&1
+		if [ "$?" = "0" -o "$?" = "1" ]; then
+			break
+		fi
+		resolved_ip=""
+		[ "${attempt}" -lt 3 ] && sleep 1
+		attempt=$((attempt + 1))
+	done
+	[ -n "${resolved_ip}" ] || return 1
+	record_current_node_server_ip "${resolved_ip}" || return 1
+	echo_date "节点服务器域名运行时解析成功：${ss_basic_server_orig} -> ${resolved_ip}"
+	return 0
+}
+
+should_bootstrap_dns_before_proxy() {
+	server_resolv_mode_is_dynamic || return 1
+	[ -n "${ss_basic_server_orig}" ] || return 1
+	[ -n "$(is_domain "${ss_basic_server_orig}")" ] || return 1
+	return 0
+}
+
+rewrite_xray_like_outbound_server() {
+	local config_file="$1"
+	local target_addr="$2"
+	local tmp_file="${config_file}.server"
+	local protocol=""
+
+	[ -f "${config_file}" ] || return 1
+	[ -n "${target_addr}" ] || return 0
+
+	protocol=$(cat "${config_file}" | run jq -r '.outbounds[0].protocol // empty' 2>/dev/null)
+	case "${protocol}" in
+	vmess|vless)
+		cat "${config_file}" | run jq --arg addr "${target_addr}" '.outbounds[0].settings.vnext[0].address = $addr' > "${tmp_file}" || return 1
+		;;
+	socks|shadowsocks|trojan)
+		cat "${config_file}" | run jq --arg addr "${target_addr}" '.outbounds[0].settings.servers[0].address = $addr' > "${tmp_file}" || return 1
+		;;
+	*)
+		return 0
+		;;
+	esac
+
+	mv -f "${tmp_file}" "${config_file}"
+}
+
 __get_server_resolver() {
 	local idx=$1
 	local res
@@ -998,7 +1230,10 @@ __resolve_server_domain() {
 		until [ ${count} -eq 18 ]; do
 			echo_date "尝试解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current}):$(__get_server_resolver_port ${current})"
 			SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null | head -n1)
-			SERVER_IP=$(__valid_ip ${SERVER_IP})
+			__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
+			if [ "$?" != "0" -a "$?" != "1" ]; then
+				SERVER_IP=""
+			fi
 			if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
 				dbus set ss_basic_lastru=${current}
 				break
@@ -1038,7 +1273,10 @@ __resolve_server_domain() {
 		# 自定义udp解析服务器
 		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
 		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
-		SERVER_IP=$(__valid_ip ${SERVER_IP})
+		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
+		if [ "$?" != "0" -a "$?" != "1" ]; then
+			SERVER_IP=""
+		fi
 		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
 			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
 		fi
@@ -1057,7 +1295,10 @@ __resolve_server_domain() {
 		fi
 		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_server_resolv}：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
 		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
-		SERVER_IP=$(__valid_ip ${SERVER_IP})
+		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
+		if [ "$?" != "0" -a "$?" != "1" ]; then
+			SERVER_IP=""
+		fi
 		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
 			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
 		fi
@@ -1091,6 +1332,7 @@ restore_conf() {
 	rm -f /tmp/ss_host.conf
 	rm -f /tmp/gfwlist.txt
 	rm -f /tmp/chnlist.txt
+	rm -f /tmp/ss_node_domains.txt
 	rm -f /tmp/black_list.txt
 	rm -f /tmp/white_list.txt
 	rm -f /tmp/block_list.txt
@@ -1206,54 +1448,75 @@ kill_process() {
 }
 # ================================= ss start ==============================
 
-resolv_server_ip() {
-	local tmp server_ip
-	if [ "${ss_basic_type}" == "3" -a "${ss_basic_v2ray_use_json}" == "1" ]; then
-		#v2ray json配置在后面单独处理
-		return 1
-	elif [ "${ss_basic_type}" == "4" -a "${ss_basic_xray_use_json}" == "1" ]; then
-		#xray json配置在后面单独处理
-		return 1
-	elif [ "${ss_basic_type}" == "7" ]; then
-		#tuic节点，不需要解析
-		return 1
-	else
-		# 判断服务器域名格式
-		tmp=$(__valid_ip "${ss_basic_server}")
-		if [ $? == 0 ]; then
-			# server is ip address format, not need to resolve.
-			echo_date "检测到你的$(__get_type_abbr_name)服务器已经是IP格式：${ss_basic_server}，跳过解析... "
-			ss_basic_server_ip="${ss_basic_server}"
-			dbus set ss_basic_server_ip=${ss_basic_server}
-		else
-			echo_date "检测到你的$(__get_type_abbr_name)服务器：【${ss_basic_server}】不是ip格式！"
-			__resolve_server_domain "${ss_basic_server}"
-			case $? in
-			0)
-				echo_date "$(__get_type_abbr_name)服务器【${ss_basic_server}】的ip地址解析成功：${SERVER_IP}"
-				ss_basic_server="$SERVER_IP"
-				ss_basic_server_ip="$SERVER_IP"
-				dbus set ss_basic_server_ip="$SERVER_IP"
-				;;
-			1)
-				# server is domain format and failed to resolve.
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，这将大概率导致节点无法正常工作！"
-				echo_date "请尝试在【DNS设定】- 【节点域名解析DNS服务器】处更换节点服务器的解析方案后重试！"
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				unset ss_basic_server_ip
-				dbus remvoe ss_basic_server_ip
-				# close_in_five flag
-				;;
-			2)
-				# server is not ip either domain!
-				echo_date "错误2！！检测到你设置的服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
-				echo_date "请更正你的错误然后重试！！"
-				close_in_five flag
-				;;
-			esac
-		fi
+init_current_node_server_state() {
+	normalize_server_resolv_mode
+	clear_current_node_host_snapshot
+	clear_current_node_server_ip
+	resolve_current_node_server_meta
+
+	ss_basic_server_orig="${CURRENT_NODE_SERVER_HOST}"
+	ss_basic_server="${CURRENT_NODE_SERVER_HOST}"
+
+	if [ -n "${CURRENT_NODE_SERVER_HOST}" ]; then
+		case "${ss_basic_type}_${ss_basic_v2ray_use_json}_${ss_basic_xray_use_json}" in
+		3_1_*|4_*_1)
+			fss_set_current_node_field_plain server "${CURRENT_NODE_SERVER_HOST}"
+			;;
+		esac
 	fi
+
+	case "${CURRENT_NODE_SERVER_IS_IP}" in
+	0|1)
+		record_current_node_server_ip "${CURRENT_NODE_SERVER_HOST}"
+		;;
+	esac
+
+	return 0
+}
+
+resolv_server_ip() {
+	init_current_node_server_state
+	refresh_node_direct_domain_file
+
+	if [ -z "${ss_basic_server_orig}" ]; then
+		return 1
+	fi
+
+	case "${CURRENT_NODE_SERVER_IS_IP}" in
+	0|1)
+		echo_date "检测到你的$(__get_type_abbr_name)服务器已经是IP格式：${ss_basic_server_orig}，跳过解析... "
+		return 0
+		;;
+	esac
+
+	echo_date "检测到你的$(__get_type_abbr_name)服务器：【${ss_basic_server_orig}】不是ip格式！"
+	if server_resolv_mode_is_dynamic; then
+		echo_date "当前使用【动态解析】模式，保留域名写入配置，并交由DNS方案中的直连上游解析。"
+		return 0
+	fi
+
+	__resolve_server_domain "${ss_basic_server_orig}"
+	case $? in
+	0)
+		echo_date "$(__get_type_abbr_name)服务器【${ss_basic_server_orig}】的ip地址解析成功：${SERVER_IP}"
+		ss_basic_server="${SERVER_IP}"
+		record_current_node_server_ip "${SERVER_IP}"
+		write_current_node_host_snapshot >/dev/null 2>&1
+		;;
+	1)
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，预解析模式将回退为写入原始域名继续运行！"
+		echo_date "请尝试在【DNS设定】-【预解析所用DNS方案】处更换节点服务器的解析方案后重试！"
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		clear_current_node_server_ip
+		ss_basic_server="${ss_basic_server_orig}"
+		;;
+	2)
+		echo_date "错误2！！检测到你设置的服务器:${ss_basic_server_orig}既不是ip地址，也不是域名格式！"
+		echo_date "请更正你的错误然后重试！！"
+		close_in_five flag
+		;;
+	esac
 }
 
 # create shadowsocks config file...
@@ -1530,13 +1793,29 @@ $(smartdns_group_items_tsv "${group}")
 EOF
 }
 
+smartdns_append_node_direct_servers() {
+	local outfile="$1"
+	local sep="$(printf '\037')"
+	while IFS="${sep}" read -r id proto provider description kind slot addr port host host_ip isp net
+	do
+		smartdns_append_server_line "${outfile}" "${proto}" "${addr}" "${port}" "${host}" "${host_ip}" "-group node_direct -exclude-default-group" "0"
+	done <<-EOF
+$(smartdns_group_items_tsv chn)
+EOF
+}
+
 smartdns_append_ipv6_policy() {
 	local outfile="$1"
 	local mode="$2"
+	local has_node_direct="0"
+	[ -s /tmp/ss_node_domains.txt ] && has_node_direct="1"
 	if [ "${ss_basic_proxy_ipv6}" = "1" ];then
 		cat >> "${outfile}" <<-'EOF'
 force-AAAA-SOA no
 EOF
+		if [ "${has_node_direct}" = "1" ];then
+			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
 		return
 	fi
 	case "${mode}" in
@@ -1547,6 +1826,9 @@ address /domain-set:gfwlist/#6
 address /domain-set:black_list/#6
 address /domain-set:rotlist/#6
 EOF
+		if [ "${has_node_direct}" = "1" ];then
+			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
 		;;
 	2|3)
 		cat >> "${outfile}" <<-'EOF'
@@ -1554,17 +1836,26 @@ force-AAAA-SOA yes
 address /domain-set:chnlist/-6
 address /domain-set:white_list/-6
 EOF
+		if [ "${has_node_direct}" = "1" ];then
+			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
 		;;
 	5)
 		cat >> "${outfile}" <<-'EOF'
 force-AAAA-SOA yes
 address /domain-set:white_list/-6
 EOF
+		if [ "${has_node_direct}" = "1" ];then
+			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
 		;;
 	*)
 		cat >> "${outfile}" <<-'EOF'
 force-AAAA-SOA no
 EOF
+		if [ "${has_node_direct}" = "1" ];then
+			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
 		;;
 	esac
 }
@@ -1586,8 +1877,13 @@ domain-set -name rotlist -file /koolshare/ss/rules/rotlist.txt
 domain-set -name white_list -file /tmp/white_list.txt
 domain-set -name black_list -file /tmp/black_list.txt
 EOF
+	[ -s /tmp/ss_node_domains.txt ] && echo "domain-set -name node_direct -file /tmp/ss_node_domains.txt" >> "${outfile}"
 	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
 	[ "${mode}" = "3" ] && echo "conf-file /tmp/whitelist_ip.txt" >> "${outfile}"
+	cat >> "${outfile}" <<-'EOF'
+
+EOF
+	[ -s /tmp/ss_node_domains.txt ] && echo "domain-rules /domain-set:node_direct/ -c none -n node_direct" >> "${outfile}"
 	cat >> "${outfile}" <<-'EOF'
 
 domain-rules /domain-set:chnlist/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn
@@ -1650,6 +1946,11 @@ ca-file /etc/ssl/certs/ca-certificates.crt
 blacklist-ip 10.0.0.0/8
 proxy-server socks5://127.0.0.1:23456 -name fancy_proxy
 EOF
+	if [ -s /tmp/ss_node_domains.txt ];then
+		echo "" >> "${outfile}"
+		echo "# node direct upstreams" >> "${outfile}"
+		smartdns_append_node_direct_servers "${outfile}"
+	fi
 	echo "" >> "${outfile}"
 	echo "# chn group upstreams" >> "${outfile}"
 	smartdns_append_group_servers "${outfile}" "${mode}" "chn" "chn_group"
@@ -2218,6 +2519,18 @@ start_chinadns_ng(){
 	
 	# defalut
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
+		# 当前节点服务器域名直连解析
+	EOF
+	if [ -s /tmp/ss_node_domains.txt ];then
+		cat >>"/tmp/chinadns_ng.conf" <<-EOF
+			group node
+			group-dnl /tmp/ss_node_domains.txt
+			group-upstream ${CDNS_LINE}
+
+		EOF
+	fi
+
+	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 		# 域名白名单
 		group white
 		group-dnl /tmp/white_list.txt
@@ -2276,8 +2589,8 @@ start_chinadns_ng(){
 			EOF
 		elif [ "${chng_drop_direc}" == "1" -a "${chng_drop_proxy}" == "1" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
-				# ipv6请求行为：全部过滤
-				no-ipv6
+				# ipv6请求行为：过滤全部业务域名，保留节点服务器域名直连解析
+				no-ipv6 tag:chn,tag:white,tag:gfw,tag:router,tag:black,tag:none@ip:china,tag:none@ip:non_china
 			EOF
 		elif [ "${chng_drop_direc}" == "1" -a "${chng_drop_proxy}" == "0" ];then
 			cat >>"/tmp/chinadns_ng.conf" <<-EOF
@@ -2422,6 +2735,13 @@ detect_domain() {
 }
 
 is_domain(){
+	[ -n "$1" ] || return 1
+	__valid_ip46 "$1" >/dev/null 2>&1
+	case "$?" in
+	0|1)
+		return 1
+		;;
+	esac
 	echo $1 | awk 'BEGIN {regex = "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"} $0 ~ regex { print }'
 }
 
@@ -3390,6 +3710,9 @@ creat_vmess_json() {
 		echo_date "解析${VCORE_NAME}配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"$VMESS_CONFIG_FILE"
 		echo_date "${VCORE_NAME}配置文件写入成功到$VMESS_CONFIG_FILE"
+		if [ -n "${ss_basic_server}" ];then
+			rewrite_xray_like_outbound_server "${VMESS_CONFIG_FILE}" "${ss_basic_server}"
+		fi
 		if ! append_xray_dns_relay_inbounds "${VMESS_CONFIG_FILE}"; then
 			echo_date "错误：追加DNS UDP relay入口到${VCORE_NAME}配置文件失败！"
 			close_in_five flag
@@ -3399,62 +3722,8 @@ creat_vmess_json() {
 			close_in_five flag
 		fi
 
-		# 检测用户json的服务器ip地址
-		v2ray_protocal=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].protocol)
-		case $v2ray_protocal in
-		vmess|vless)
-			v2ray_server=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].settings.vnext[0].address)
-			;;
-		socks)
-			v2ray_server=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
-			;;
-		shadowsocks)
-			v2ray_server=$(cat "$VMESS_CONFIG_FILE" | run jq -r .outbounds[0].settings.servers[0].address)
-			;;
-		*)
-			v2ray_server=""
-			;;
-		esac
-
-		if [ -n "${v2ray_server}" -a "${v2ray_server}" != "null" ]; then
-			# 服务器地址强制由用户选择的DNS解析，以免插件还未开始工作而导致解析失败
-			# 判断服务器域名格式
-			local v2ray_server_tmp=$(__valid_ip ${v2ray_server})
-			if [ -n "${v2ray_server_tmp}" ]; then
-				# ip format
-				echo_date "检测到你的json配置的${VCORE_NAME}服务器已经是IP格式：${v2ray_server}，跳过解析... "
-				ss_basic_server_ip="${v2ray_server}"
-			else
-				echo_date "检测到你的json配置的${VCORE_NAME}服务器：【${v2ray_server}】不是ip格式！"
-				__resolve_server_domain "${v2ray_server}"
-				case $? in
-				0)
-					# server is domain format and success resolved.
-					echo_date "${VCORE_NAME}服务器的ip地址解析成功：$SERVER_IP"
-					# 解析并记录一次ip，方便插件触发重启设定工作
-					echo "address=/${v2ray_server}/${SERVER_IP}" >/tmp/ss_host.conf
-					# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
-					#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
-					ss_basic_server_orig="${v2ray_server}"
-					ss_basic_server_ip="${SERVER_IP}"
-					;;
-				1)
-					# server is domain format and failed to resolve.
-					unset ss_basic_server_ip
-					echo_date "${VCORE_NAME}服务器的ip地址解析失败!插件将继续运行，域名解析将由${VCORE_NAME}自己进行！"
-					echo_date "请自行将${VCORE_NAME}服务器的ip地址填入IP/CIDR白名单中!"
-					echo_date "为了确保${VCORE_NAME}的正常工作，建议配置ip格式的${VCORE_NAME}服务器地址！"
-					;;
-				2)
-					# server is not ip either domain!
-					echo_date "错误3！！检测到json配置内的${VCORE_NAME}服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
-					echo_date "请更正你的错误然后重试！！"
-					close_in_five flag
-					;;
-				esac
-			fi
-			# write v2ray server
-			fss_set_current_node_field_plain server "${v2ray_server}"
+		if [ -n "${ss_basic_server_orig}" ]; then
+			fss_set_current_node_field_plain server "${ss_basic_server_orig}"
 		else
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo_date "+       没有检测到你的${VCORE_NAME}服务器地址，如果你确定你的配置是正确的        +"
@@ -4029,6 +4298,9 @@ creat_vless_json() {
 		echo_date "解析Xray配置文件..."
 		echo ${TEMPLATE} | run jq --argjson args "$OUTBOUNDS" '. + {outbounds: [$args]}' >"${VLESS_CONFIG_FILE}"
 		echo_date "Xray配置文件写入成功到${VLESS_CONFIG_FILE}"
+		if [ -n "${ss_basic_server}" ];then
+			rewrite_xray_like_outbound_server "${VLESS_CONFIG_FILE}" "${ss_basic_server}"
+		fi
 		if ! append_xray_dns_relay_inbounds "${VLESS_CONFIG_FILE}"; then
 			echo_date "错误：追加DNS UDP relay入口到Xray配置文件失败！"
 			close_in_five flag
@@ -4038,57 +4310,8 @@ creat_vless_json() {
 			close_in_five flag
 		fi
 
-		# 检测用户json的服务器ip地址
-		xray_protocal=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].protocol)
-		case ${xray_protocal} in
-		vmess|vless)
-			xray_server=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].settings.vnext[0].address)
-			;;
-		socks|shadowsocks|trojan)
-			xray_server=$(cat "${VLESS_CONFIG_FILE}" | run jq -r .outbounds[0].settings.servers[0].address)
-			;;
-		*)
-			xray_server=""
-			;;
-		esac
-
-		if [ -n "${xray_server}" -a "${xray_server}" != "null" ]; then
-			# 服务器地址强制由用户选择的DNS解析，以免插件还未开始工作而导致解析失败
-			# 判断服务器域名格式
-			local xray_server_tmp=$(__valid_ip ${xray_server})
-			if [ -n "${xray_server_tmp}" ]; then
-				echo_date "检测到你的json配置的Xray服务器是已经是IP格式：${xray_server}，跳过解析... "
-				ss_basic_server_ip="${xray_server}"
-			else
-				echo_date "检测到你的json配置的Xray服务器：【${xray_server}】不是ip格式！"
-				__resolve_server_domain "${xray_server}"
-				case $? in
-				0)
-					# server is domain format and success resolved.
-					echo_date "Xray服务器的ip地址解析成功：${SERVER_IP}"
-					# 解析并记录一次ip，方便插件触发重启设定工作
-					echo "address=/${xray_server}/${SERVER_IP}" >/tmp/ss_host.conf
-					# 去掉此功能，以免ip发生变更导致问题，或者影响域名对应的其它二级域名
-					#ln -sf /tmp/ss_host.conf /jffs/configs/dnsmasq.d/ss_host.conf
-					ss_basic_server_orig="${xray_server}"
-					ss_basic_server_ip="${SERVER_IP}"
-					;;
-				1)
-					# server is domain format and failed to resolve.
-					unset ss_basic_server_ip
-					echo_date "Xray服务器的ip地址解析失败!插件将继续运行，域名解析将由Xray自己进行！"
-					echo_date "请自行将Xray服务器的ip地址填入IP/CIDR白名单中!"
-					echo_date "为了确保Xray的正常工作，建议配置ip格式的Xray服务器地址！"
-					;;
-				2)
-					echo_date "错误1！！检测到json配置内的Xray服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
-					echo_date "请更正你的错误然后重试！！"
-					close_in_five flag
-					;;
-				esac
-			fi
-			# write xray server
-			fss_set_current_node_field_plain server "${xray_server}"
+		if [ -n "${ss_basic_server_orig}" ]; then
+			fss_set_current_node_field_plain server "${ss_basic_server_orig}"
 		else
 			echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo_date "+       没有检测到你的Xray服务器地址，如果你确定你的配置是正确的        +"
@@ -4521,10 +4744,10 @@ start_naive(){
 	detect_running_status2 ipt2socks 23456
 	
 	echo_date "开启NaïveProxy主进程..."
-	if [ -n "${ss_basic_server_ip}" ];then
+	if server_resolv_mode_is_preresolve && [ -n "${ss_basic_server_ip}" ] && [ -n "$(is_domain "${ss_basic_server_orig}")" ];then
 		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server_orig}:${ss_basic_naive_port} --host-resolver-rules="MAP ${ss_basic_server_orig} ${ss_basic_server_ip}"
 	else
-		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server_orig}:${ss_basic_naive_port}
+		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server}:${ss_basic_naive_port}
 	fi
 	detect_running_status2 naive 23456
 }
@@ -4585,50 +4808,22 @@ start_tuic(){
 		close_in_five
 	fi
 
-	# tuic节点的server/ip来自relay字段，这里回填到全局变量，供后续日志展示和状态检测复用。
-	ss_basic_server="${tuic_server}"
-	ss_basic_server_orig="${tuic_server}"
-	
-	local tuic_ip=$(cat /koolshare/ss/tuic.json | run jq -r '.relay.ip')
-	local tuic_ipaddr=$(__valid_ip ${tuic_ip})
-	if [ -z "${tuic_ipaddr}" ];then
-		local tuic_server_ip=$(__valid_ip "${tuic_server}")
-		if [ -n "${tuic_server_ip}" ];then
-			echo_date "检测到tuic配置server已直接使用ip地址：${tuic_server_ip}，跳过域名解析。"
-			ss_basic_server_ip="${tuic_server_ip}"
-		else
-			echo_date "检测到你的tuic配置文件未配置ip地址，尝试解析！"
-			__resolve_server_domain "${tuic_server}"
-			case $? in
-			0)
-				echo_date "$(__get_type_abbr_name)服务器【${tuic_server}】的ip地址解析成功：${SERVER_IP}"
-				tuic_server_ip="$SERVER_IP"
-				ss_basic_server_ip="${SERVER_IP}"
-				;;
-			1)
-				# server is domain format and failed to resolve.
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，这将大概率导致节点无法正常工作！"
-				echo_date "请尝试在【DNS设定】- 【节点域名解析DNS服务器】处更换节点服务器的解析方案后重试！"
-				echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-				tuic_server_ip=""
-				unset ss_basic_server_ip
-				# close_in_five flag
-				;;
-			2)
-				# server is not ip either domain!
-				echo_date "错误2！！检测到你设置的服务器:${ss_basic_server}既不是ip地址，也不是域名格式！"
-				echo_date "请更正你的错误然后重试！！"
-				close_in_five flag
-				;;
-			esac
-		fi
-
-		if [ -n "${tuic_server_ip}" ];then
-			cat /koolshare/ss/tuic.json | run jq --arg addr "$tuic_server_ip" '.relay.ip = $addr' | run sponge /koolshare/ss/tuic.json
-		fi
+	local tuic_server_is_domain=""
+	[ -n "$(is_domain "${tuic_server}")" ] && tuic_server_is_domain="1"
+	if [ -n "${tuic_server_is_domain}" ] && server_resolv_mode_is_preresolve && [ -n "${ss_basic_server_ip}" ];then
+		echo_date "检测到tuic节点使用【预解析】模式，写入 relay.ip：${ss_basic_server_ip}"
+		cat /koolshare/ss/tuic.json | run jq --arg addr "${ss_basic_server_ip}" '.relay.ip = $addr' | run sponge /koolshare/ss/tuic.json
 	else
-		ss_basic_server_ip="${tuic_ipaddr}"
+		cat /koolshare/ss/tuic.json | run jq 'del(.relay.ip)' | run sponge /koolshare/ss/tuic.json
+		if [ -n "${tuic_server_is_domain}" ];then
+			if server_resolv_mode_is_dynamic; then
+				echo_date "检测到tuic节点使用【动态解析】模式，移除 relay.ip，保留 relay.server 域名直连解析。"
+			else
+				echo_date "检测到tuic节点未拿到有效的预解析结果，移除 relay.ip，保留 relay.server 继续启动。"
+			fi
+		else
+			echo_date "检测到tuic配置server已直接使用ip地址：${tuic_server}，跳过域名解析。"
+		fi
 	fi
 	
 	echo_date "开启ipt2socks进程..."
@@ -6177,6 +6372,12 @@ remove_ss_trigger_job() {
 }
 
 set_ss_trigger_job() {
+	if current_node_server_uses_runtime_dns; then
+		echo_date "检测到当前节点使用【动态解析】且服务器地址为域名，跳过触发重启任务设置。"
+		remove_ss_trigger_job
+		return 0
+	fi
+
 	if [ "$ss_basic_tri_reboot_time" == "0" ]; then
 		remove_ss_trigger_job
 	else
@@ -6419,6 +6620,17 @@ apply_ss() {
 	[ "${ss_basic_type}" == "4" ] && creat_vless_json
 	[ "${ss_basic_type}" == "5" ] && creat_trojan_json
 	[ "${ss_basic_type}" == "8" ] && creat_hy2_json
+
+	local bootstrap_dns_first="0"
+	if should_bootstrap_dns_before_proxy; then
+		bootstrap_dns_first="1"
+		restart_dnsmasq
+		start_dns_x
+		if ! refresh_current_node_server_ip_runtime; then
+			echo_date "节点服务器域名运行时解析失败，将继续启动代理主程序，并等待客户端后续自行解析。"
+		fi
+	fi
+
 	# 开启代理主程序
 	[ "${ss_basic_type}" == "0" ] && start_xray
 	[ "${ss_basic_type}" == "1" ] && start_ssr_redir
@@ -6428,9 +6640,13 @@ apply_ss() {
 	[ "${ss_basic_type}" == "6" ] && start_naive
 	[ "${ss_basic_type}" == "7" ] && start_tuic
 	[ "${ss_basic_type}" == "8" ] && start_hy2
+
+	if [ "${bootstrap_dns_first}" != "1" ]; then
+		restart_dnsmasq
+		start_dns_x
+	fi
+
 	get_proxy_server_ip
-	restart_dnsmasq
-	start_dns_x
 	load_iptables
 	#restart_dnsmasq
 	auto_start
