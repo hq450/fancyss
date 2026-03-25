@@ -117,6 +117,28 @@ wt_get_hy2_udphop_port() {
 	fi
 }
 
+wt_strip_null_keys() {
+	local json_file="$1"
+	local tmp_file="${json_file}.tmp"
+
+	[ -f "${json_file}" ] || return 1
+	run jq '
+		def strip_nulls:
+			if type == "object" then
+				with_entries(select(.value != null) | .value |= strip_nulls)
+			elif type == "array" then
+				map(strip_nulls)
+			else
+				.
+			end;
+		strip_nulls
+	' "${json_file}" > "${tmp_file}" || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${json_file}"
+}
+
 wt_patch_xray_like_outbound_address() {
 	local json_file="$1"
 	local target_addr="$2"
@@ -267,7 +289,7 @@ wt_gen_ss_outbound() {
 		}
 	EOF
 
-	sed -i '/null/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
+	wt_strip_null_keys ${TMP2}/conf_${mark}/${nu}_outbounds.json
 	if [ "${LINUX_VER}" == "26" ]; then
 		sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
 	fi
@@ -476,7 +498,7 @@ wt_gen_vmess_outbound() {
 			}
 		EOF
 
-		sed -i '/null/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
+		wt_strip_null_keys ${TMP2}/conf_${mark}/${nu}_outbounds.json
 	else
 		wt_node_get v2ray_json ${nu} | base64_decode >${TMP2}/v2ray_user_${nu}.json
 		local user_host=""
@@ -759,7 +781,7 @@ wt_gen_vless_outbound() {
 			}
 		EOF
 
-		sed -i '/null/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
+		wt_strip_null_keys ${TMP2}/conf_${mark}/${nu}_outbounds.json
 		if [ "${xray_prot}" == "vless" ];then
 			sed -i '/alterId/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
 		fi
