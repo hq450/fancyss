@@ -1037,11 +1037,28 @@ current_node_server_uses_runtime_dns() {
 }
 
 refresh_node_direct_domain_file() {
-	rm -f /tmp/ss_node_domains.txt
+	fss_refresh_node_direct_cache
+	if server_resolv_mode_is_dynamic; then
+		fss_sync_node_direct_runtime
+	else
+		rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
+	fi
+}
+
+refresh_node_direct_dns() {
+	refresh_node_direct_domain_file || return 1
 	server_resolv_mode_is_dynamic || return 0
-	[ -n "${ss_basic_server_orig}" ] || return 0
-	[ -n "$(is_domain "${ss_basic_server_orig}")" ] || return 0
-	printf '%s\n' "${ss_basic_server_orig}" >/tmp/ss_node_domains.txt
+	[ "${ss_basic_enable}" = "1" ] || return 0
+	case "${ss_basic_dns_plan}" in
+	1|2)
+		;;
+	*)
+		return 0
+		;;
+	esac
+	stop_dns_process
+	restart_dnsmasq
+	start_dns_x
 }
 
 refresh_current_node_server_ip_runtime() {
@@ -6773,5 +6790,10 @@ start_nat)
 	;;
 restart_chinadns_ng)
 	start_chinadns_ng
+	;;
+refresh_node_direct_dns)
+	set_lock
+	refresh_node_direct_dns
+	unset_lock
 	;;
 esac

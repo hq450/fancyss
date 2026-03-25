@@ -287,6 +287,7 @@ restore_sh(){
 	fi
 	dbus set ss_basic_enable="0"
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
+	fss_refresh_node_direct_cache >/dev/null 2>&1
 	echo_date "配置恢复成功！"
 }
 
@@ -297,6 +298,7 @@ restore_json(){
 	if fss_restore_native_backup_v2 /tmp/upload/ssconf_backup.json; then
 		dbus set ss_basic_enable="0"
 		dbus set ss_basic_version_local=$(cat /koolshare/ss/version)
+		fss_refresh_node_direct_cache >/dev/null 2>&1
 		echo_date "JSON备份恢复成功！"
 	else
 		echo_date "JSON备份恢复失败！请检查备份文件格式是否正确。"

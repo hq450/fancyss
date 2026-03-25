@@ -39,6 +39,8 @@ ping
 FSS_NODE_MIGRATION_DIR="/koolshare/configs/fancyss/migration"
 FSS_NODE_MIGRATION_LOCK="/var/lock/fss_node_migrate.lock"
 FSS_NODE_MIGRATION_KEEP=3
+FSS_NODE_DIRECT_CACHE_FILE="/koolshare/configs/fancyss/node_direct_domains.txt"
+FSS_NODE_DIRECT_RUNTIME_FILE="/tmp/ss_node_domains.txt"
 
 fss_get_acl_default_ports_value() {
 	local modern legacy
@@ -1151,6 +1153,192 @@ fss_get_node_field_legacy() {
 	fi
 
 	printf '%s' "${value}"
+}
+
+fss_extract_tuic_server_host_port() {
+	local tuic_server_raw="$1"
+	local tuic_server=""
+	local tuic_port=""
+
+	case "${tuic_server_raw}" in
+	\[*\]:*)
+		tuic_server="${tuic_server_raw#\[}"
+		tuic_server="${tuic_server%\]:*}"
+		tuic_port="${tuic_server_raw##*\]:}"
+		;;
+	\[*\])
+		tuic_server="${tuic_server_raw#\[}"
+		tuic_server="${tuic_server%\]}"
+		;;
+	*:* )
+		tuic_server="${tuic_server_raw%:*}"
+		tuic_port="${tuic_server_raw##*:}"
+		;;
+	*)
+		tuic_server="${tuic_server_raw}"
+		;;
+	esac
+
+	printf '%s\n%s\n' "${tuic_server}" "${tuic_port}"
+}
+
+fss_extract_xray_like_server_field_from_json_text() {
+	local json_text="$1"
+	local field="$2"
+
+	printf '%s' "${json_text}" | jq -r --arg field "${field}" '
+		(.outbound // (.outbounds[0] // {})) as $ob
+		| ($ob.protocol // "") as $protocol
+		| if ($protocol == "vmess" or $protocol == "vless") then
+			if $field == "host" then
+				($ob.settings.vnext[0].address // "")
+			else
+				(($ob.settings.vnext[0].port // "") | tostring)
+			end
+		elif ($protocol == "socks" or $protocol == "shadowsocks" or $protocol == "trojan") then
+			if $field == "host" then
+				($ob.settings.servers[0].address // "")
+			else
+				(($ob.settings.servers[0].port // "") | tostring)
+			end
+		else
+			""
+		end
+	' 2>/dev/null
+}
+
+fss_is_domain_name() {
+	[ -n "$1" ] || return 1
+	printf '%s' "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$|:' && return 1
+	printf '%s\n' "$1" | awk 'BEGIN {regex = "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"} $0 ~ regex { print }'
+}
+
+fss_get_node_server_host_port() {
+	local node_id="$1"
+	local node_type="" host="" port="" json_text="" relay_server=""
+
+	[ -n "${node_id}" ] || return 1
+	node_type="$(fss_get_node_field_plain "${node_id}" "type")"
+
+	case "${node_type}" in
+	0|1|5)
+		host="$(fss_get_node_field_plain "${node_id}" "server")"
+		port="$(fss_get_node_field_plain "${node_id}" "port")"
+		;;
+	3)
+		if [ "$(fss_get_node_field_plain "${node_id}" "v2ray_use_json")" = "1" ]; then
+			json_text="$(fss_get_node_field_plain "${node_id}" "v2ray_json")"
+			host="$(fss_extract_xray_like_server_field_from_json_text "${json_text}" host)"
+			port="$(fss_extract_xray_like_server_field_from_json_text "${json_text}" port)"
+		else
+			host="$(fss_get_node_field_plain "${node_id}" "server")"
+			port="$(fss_get_node_field_plain "${node_id}" "port")"
+		fi
+		;;
+	4)
+		if [ "$(fss_get_node_field_plain "${node_id}" "xray_use_json")" = "1" ]; then
+			json_text="$(fss_get_node_field_plain "${node_id}" "xray_json")"
+			host="$(fss_extract_xray_like_server_field_from_json_text "${json_text}" host)"
+			port="$(fss_extract_xray_like_server_field_from_json_text "${json_text}" port)"
+		else
+			host="$(fss_get_node_field_plain "${node_id}" "server")"
+			port="$(fss_get_node_field_plain "${node_id}" "port")"
+		fi
+		;;
+	6)
+		host="$(fss_get_node_field_plain "${node_id}" "naive_server")"
+		port="$(fss_get_node_field_plain "${node_id}" "naive_port")"
+		;;
+	7)
+		json_text="$(fss_get_node_field_plain "${node_id}" "tuic_json")"
+		relay_server="$(printf '%s' "${json_text}" | jq -r '.relay.server // empty' 2>/dev/null)"
+		{
+			read -r host
+			read -r port
+		} <<-EOF
+		$(fss_extract_tuic_server_host_port "${relay_server}")
+		EOF
+		;;
+	8)
+		host="$(fss_get_node_field_plain "${node_id}" "hy2_server")"
+		port="$(fss_get_node_field_plain "${node_id}" "hy2_port")"
+		;;
+	*)
+		host="$(fss_get_node_field_plain "${node_id}" "server")"
+		port="$(fss_get_node_field_plain "${node_id}" "port")"
+		;;
+	esac
+
+	printf '%s\n%s\n' "${host}" "${port}"
+}
+
+fss_list_node_server_domains() {
+	local node_id="" host="" port=""
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		{
+			read -r host
+			read -r port
+		} <<-EOF
+		$(fss_get_node_server_host_port "${node_id}")
+		EOF
+		[ -n "${host}" ] || continue
+		[ -n "$(fss_is_domain_name "${host}")" ] || continue
+		printf '%s\n' "${host}"
+	done <<-EOF
+	$(fss_list_node_ids)
+	EOF
+}
+
+fss_refresh_node_direct_cache() {
+	local cache_file="${FSS_NODE_DIRECT_CACHE_FILE}"
+	local cache_dir="${cache_file%/*}"
+	local tmp_file="${cache_file}.tmp.$$"
+
+	mkdir -p "${cache_dir}" || return 1
+	rm -f "${tmp_file}"
+	fss_list_node_server_domains | sort -u > "${tmp_file}"
+	if [ -s "${tmp_file}" ]; then
+		mv -f "${tmp_file}" "${cache_file}"
+	else
+		rm -f "${tmp_file}" "${cache_file}"
+	fi
+}
+
+fss_sync_node_direct_runtime() {
+	local runtime_file="${FSS_NODE_DIRECT_RUNTIME_FILE}"
+	local tmp_file="${runtime_file}.tmp.$$"
+
+	rm -f "${tmp_file}"
+	if [ -s "${FSS_NODE_DIRECT_CACHE_FILE}" ]; then
+		cat "${FSS_NODE_DIRECT_CACHE_FILE}" > "${tmp_file}" || {
+			rm -f "${tmp_file}"
+			return 1
+		}
+		mv -f "${tmp_file}" "${runtime_file}"
+	else
+		rm -f "${tmp_file}" "${runtime_file}"
+	fi
+}
+
+fss_node_direct_cache_differs_from_runtime() {
+	local cache_exists="0"
+	local runtime_exists="0"
+
+	[ -s "${FSS_NODE_DIRECT_CACHE_FILE}" ] && cache_exists="1"
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_FILE}" ] && runtime_exists="1"
+
+	if [ "${cache_exists}" = "0" ] && [ "${runtime_exists}" = "0" ]; then
+		return 1
+	fi
+
+	if [ "${cache_exists}" != "${runtime_exists}" ]; then
+		return 0
+	fi
+
+	cmp -s "${FSS_NODE_DIRECT_CACHE_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}" >/dev/null 2>&1
+	[ "$?" != "0" ]
 }
 
 fss_export_current_node_env() {

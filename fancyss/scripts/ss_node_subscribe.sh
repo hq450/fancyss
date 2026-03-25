@@ -1794,6 +1794,7 @@ remove_all_node(){
 	do
 		dbus remove ${conf2}
 	done
+	fss_refresh_node_direct_cache >/dev/null 2>&1
 	echo_date "删除成功！"
 }
 
@@ -1849,6 +1850,7 @@ remove_sub_node(){
 		do
 			dbus remove ${conf2}
 		done
+		fss_refresh_node_direct_cache >/dev/null 2>&1
 		echo_date "所有订阅节点信息已经成功删除！"
 		sub_refresh_node_state
 		return 0
@@ -1875,7 +1877,7 @@ remove_sub_node(){
 	do
 		dbus remove ${conf2}
 	done
-
+	fss_refresh_node_direct_cache >/dev/null 2>&1
 	echo_date "所有订阅节点信息已经成功删除！"
 }
 
@@ -4015,6 +4017,7 @@ start_node_subscribe(){
 	if [ -z "$(dbus get ss_online_links)" ];then
 		echo_date "🈳订阅地址输入框为空，准备清理现有订阅节点..."
 		remove_sub_node
+		fss_refresh_node_direct_cache >/dev/null 2>&1
 		sub_clear_subscribe_cache
 		echo_date "🎉订阅节点清理完成！"
 		echo_date "==================================================================="
@@ -4025,6 +4028,7 @@ start_node_subscribe(){
 	if [ "${online_url_nu}" == "0" ];then
 		echo_date "🈳未发现任何有效的订阅地址，准备清理现有订阅节点..."
 		remove_sub_node
+		fss_refresh_node_direct_cache >/dev/null 2>&1
 		sub_clear_subscribe_cache
 		echo_date "🎉订阅节点清理完成！"
 		echo_date "==================================================================="
@@ -4111,6 +4115,7 @@ start_node_subscribe(){
 				echo_date "❌节点信息写入失败！"
 				exit_sub
 			fi
+			fss_refresh_node_direct_cache >/dev/null 2>&1
 		else
 			echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
 		fi
@@ -4194,7 +4199,9 @@ start_offline_update() {
 	echo_date "-------------------------------------------------------------------"
 	if [ -f "${DIR}/offline_node_new.txt" ];then
 		echo_date "ℹ️离线节点解析完毕，开始写入节点..."
-		json2skipd "offline_node_new"
+		if json2skipd "offline_node_new"; then
+			fss_refresh_node_direct_cache >/dev/null 2>&1
+		fi
 	else
 		echo_date "ℹ️离线节点解析失败！跳过！"
 	fi

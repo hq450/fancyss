@@ -6,6 +6,8 @@ source /koolshare/scripts/ss_base.sh
 source /koolshare/scripts/ss_webtest_gen.sh
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 TMP2=/tmp/fancyss_webtest
+WT_SERVER_RESOLV_MODE=$(dbus get ss_basic_server_resolv_mode)
+[ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
 
 wt_node_get() {
 	fss_get_node_field_legacy "$2" "$1"
@@ -21,6 +23,32 @@ wt_node_count() {
 
 run(){
 	env -i PATH=${PATH} "$@"
+}
+
+wt_server_resolv_mode_is_dynamic() {
+	[ "${WT_SERVER_RESOLV_MODE}" = "1" ]
+}
+
+wt_server_resolv_mode_is_preresolve() {
+	[ "${WT_SERVER_RESOLV_MODE}" = "2" ]
+}
+
+wt_refresh_node_direct_dns_if_needed() {
+	local dns_plan=""
+
+	fss_refresh_node_direct_cache >/dev/null 2>&1
+	wt_server_resolv_mode_is_dynamic || return 0
+	[ "$(dbus get ss_basic_enable)" = "1" ] || return 0
+	dns_plan=$(dbus get ss_basic_dns_plan)
+	case "${dns_plan}" in
+	1|2)
+			;;
+	*)
+		return 0
+		;;
+	esac
+	fss_node_direct_cache_differs_from_runtime || return 0
+	/bin/sh /koolshare/ss/ssconfig.sh refresh_node_direct_dns >/dev/null 2>&1
 }
 
 detect_perf(){
@@ -167,7 +195,8 @@ start_webtest(){
 	# create lock
 	touch /tmp/webtest.lock
 	WT_SINGLE=0
-	WT_SKIP_DNS=1
+	WT_SKIP_DNS=0
+	wt_refresh_node_direct_dns_if_needed
 	ensure_latency_batch
 	
 	# 1. prepare
@@ -684,10 +713,27 @@ test_12_tc(){
 				# 1. gen json
 				local socks5_port=$(get_rand_port)
 				local new_addr="127.0.0.1:${socks5_port}"
-				wt_node_get tuic_json ${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${TMP2}/conf/tuic-${socks5_port}.json
+				local tuic_json_file="${TMP2}/conf/tuic-${socks5_port}.json"
+				local relay_server_raw=""
+				local relay_host=""
+				local relay_ip=""
+				wt_node_get tuic_json ${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${tuic_json_file}
+				relay_server_raw=$(cat ${tuic_json_file} | run jq -r '.relay.server // empty' 2>/dev/null)
+				{
+					read -r relay_host
+					read -r _
+				} <<-EOF
+				$(fss_extract_tuic_server_host_port "${relay_server_raw}")
+				EOF
+				relay_ip=$(_get_server_ip "${relay_host}")
+				if [ -n "${relay_ip}" ];then
+					cat ${tuic_json_file} | run jq --arg ip "${relay_ip}" '.relay.ip = $ip' | run sponge ${tuic_json_file}
+				else
+					cat ${tuic_json_file} | run jq 'del(.relay.ip)' | run sponge ${tuic_json_file}
+				fi
 
 				# 2. start tuic
-				run ${TMP2}/wt-tuic -c ${TMP2}/conf/tuic-${socks5_port}.json >/dev/null 2>&1 &
+				run ${TMP2}/wt-tuic -c ${tuic_json_file} >/dev/null 2>&1 &
 
 				sleep 2
 
@@ -954,7 +1000,8 @@ single_test_node(){
 	fi
 
 	WT_SINGLE=1
-	WT_SKIP_DNS=1
+	WT_SKIP_DNS=0
+	wt_refresh_node_direct_dns_if_needed
 	detect_perf
 	WT_XRAY_THREADS=1
 	WT_SSR_THREADS=1
@@ -1040,35 +1087,86 @@ _get_server_ip() {
 		return 0
 	fi
 
-	local count=0
-	local current=${ss_basic_lastru}
-	if [ -z "${current}" ];then
-		local current=$(shuf -i 1-18 -n 1)
+	wt_server_resolv_mode_is_dynamic && {
+		echo ""
+		return 0
+	}
+
+	local ss_basic_server_resolv=$(dbus get ss_basic_server_resolv)
+	[ -n "${ss_basic_server_resolv}" ] || ss_basic_server_resolv="-1"
+
+	if [ "${ss_basic_server_resolv}" -le "0" ];then
+		local count=0
+		local current=$(dbus get ss_basic_lastru)
+		if [ $(number_test ${current}) != "0" ];then
+			if [ "${ss_basic_server_resolv}" == "0" ];then
+				current=$(shuf -i 1-18 -n 1)
+			elif [ "${ss_basic_server_resolv}" == "-1" ];then
+				current=$(shuf -i 1-8 -n 1)
+			elif [ "${ss_basic_server_resolv}" == "-2" ];then
+				current=$(shuf -i 11-18 -n 1)
+			fi
+		fi
+		if [ "${ss_basic_server_resolv}" == "0" ];then
+			if [ ${current} -gt 8 -a ${current} -lt 11 ];then
+				current=11
+			fi
+			if [ ${current} -lt 1 -o ${current} -gt 18 ];then
+				current=1
+			fi
+		fi
+		if [ "${ss_basic_server_resolv}" == "-1" ];then
+			if [ ${current} -lt 1 -o ${current} -gt 8 ];then
+				current=1
+			fi
+		fi
+		if [ "${ss_basic_server_resolv}" == "-2" ];then
+			if [ ${current} -lt 11 -o ${current} -gt 18 ];then
+				current=11
+			fi
+		fi
+		until [ ${count} -eq 18 ]; do
+			SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null | head -n1)
+			__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
+			if [ "$?" != "0" -a "$?" != "1" ]; then
+				SERVER_IP=""
+			fi
+			if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
+				dbus set ss_basic_lastru=${current}
+				break
+			fi
+			let current++
+			if [ "${ss_basic_server_resolv}" == "0" ];then
+				if [ ${current} -gt 8 -a ${current} -lt 11 ];then
+					current=11
+				fi
+				if [ ${current} -lt 1 -o ${current} -gt 18 ];then
+					current=1
+				fi
+			elif [ "${ss_basic_server_resolv}" == "-1" ];then
+				if [ ${current} -lt 1 -o ${current} -gt 8 ];then
+					current=1
+				fi
+			elif [ "${ss_basic_server_resolv}" == "-2" ];then
+				if [ ${current} -lt 11 -o ${current} -gt 18 ];then
+					current=11
+				fi
+			fi
+			let count++
+		done
+	elif [ "${ss_basic_server_resolv}" == "99" ];then
+		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
+		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
+		if [ "$?" != "0" -a "$?" != "1" ]; then
+			SERVER_IP=""
+		fi
+	else
+		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
+		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
+		if [ "$?" != "0" -a "$?" != "1" ]; then
+			SERVER_IP=""
+		fi
 	fi
-	if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-		current=1
-	fi
-	# 只解析一轮
-	until [ ${count} -eq 18 ]; do
-		#echo "$1 选取DNS服务器$(__get_server_resolver ${current})，用于域名解析" >>${TMP2}/webtest_log.txt
-		
-		SERVER_IP=$(run dnsclient -p 53 -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null|grep -E "^IP"|sed -n '1p'|awk '{print $2}')
-		SERVER_IP=$(__valid_ip ${SERVER_IP})
-		if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
-			dbus set ss_basic_lastru=${current}
-			break
-		fi
-		
-		let current++
-		if [ ${current} -gt 8 -a ${current} -lt 11 ];then
-			current=11
-		fi
-		if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-			current=1
-		fi
-		
-		let count++
-	done
 
 	# resolve failed
 	if [ -z "${SERVER_IP}" ]; then
@@ -1128,6 +1226,44 @@ __get_server_resolver() {
 	[ "${idx}" == "17" ] && res="101.101.101.101"
 	# CleanBrowsing
 	[ "${idx}" == "18" ] && res="185.228.168.9"
+	if [ "${idx}" == "99" ]; then
+		local user_content=$(dbus get ss_basic_server_resolv_user)
+		if [ -n "${user_content}" ];then
+			local res_ip=$(echo "${user_content}"|awk -F"#|:" '{print $1}')
+			local res_ip=$(__valid_ip ${res_ip})
+			if [ -n "${res_ip}" ];then
+				res="${res_ip}"
+			else
+				res="114.114.114.114"
+			fi
+		else
+			res="114.114.114.114"
+		fi
+	fi
+	echo ${res}
+}
+
+__get_server_resolver_port() {
+	local idx=$1
+	local res
+	if [ "${idx}" == "99" ]; then
+		local user_content=$(dbus get ss_basic_server_resolv_user)
+		if [ -n "${user_content}" ];then
+			local res_port=$(echo "${user_content}"|awk -F"#|:" '{print $2}')
+			local res_port=$(__valid_port ${res_port})
+			if [ -n "${res_port}" ];then
+				res="${res_port}"
+			else
+				res="53"
+			fi
+		else
+			res="53"
+		fi
+	elif [ "${idx}" == "7" -o "${idx}" == "14" ]; then
+		res="5353"
+	else
+		res="53"
+	fi
 	echo ${res}
 }
 
