@@ -1,5 +1,12 @@
 fancyss Changelog
 
+3.5.8（20260325）
+   - add	新增节点服务器地址解析方式：`动态解析` / `预解析`，默认启用动态解析；可在DNS设定中按需切换，兼容保留原有预解析方案。
+   - update	重构节点服务器域名处理链路：统一提取普通节点、NaiveProxy、Hysteria2、TUIC、VMess/Xray JSON节点的原始服务器地址，并收敛`ss_basic_server`、`ss_basic_server_orig`、`ss_basic_server_ip`三者语义。
+   - update	chinadns-ng / smartdns 现会为当前节点服务器域名动态注入直连解析规则；动态解析模式下，客户端配置文件保留域名写入，运行中可自行跟随解析变化，并同步回填运行时解析结果用于状态展示。
+   - update	动态解析模式下，节点IP变更触发重启任务会自动跳过，避免与客户端运行时解析机制冲突；对应实施方案文档已写入`doc/node-server-dynamic-resolve-design.md`。
+   - fix	修复Schema 2节点切换过程中，`xray_use_json` / `v2ray_use_json`等布尔字段可能残留，导致从JSON节点切回普通节点后仍误走自定义JSON配置分支的问题。
+
 3.5.6 - 3.5.7（20260324）
    - note	本次更新解决了fancyss长期存在的一个底层设计问题：旧版节点按字段拆分为大量dbus KV，节点数量一多，会同时加重前端节点列表渲染、节点排序/移动、订阅整理，以及后端脚本取值和维护的负担；3.5.6起改为schema 2单节点单KV（JSON + Base64）存储。
 			此次升级对日常使用的感知可能不强，但这是fancyss后续继续维护、扩展协议字段和优化性能的必要基础改动；现有用户升级后，旧版节点会自动迁移到新结构。
