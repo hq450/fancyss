@@ -105,6 +105,7 @@ var single_test_wait = {};
 var single_test_running = false;
 var single_test_node = null;
 var batch_test_running = false;
+var batch_stop_pending = false;
 var batch_ws_fallback_started = false;
 var batch_ws_completed = false;
 var fss_nodes_raw = {};
@@ -3963,9 +3964,11 @@ function refresh_html() {
 		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">'
 		html += '<div class="dropdown" id="dropdown">'
 		if(db_ss["ss_basic_latency_batch"] == "1"){
-			html += '<a onclick="test_latency_now(2)" href="javascript:void(0);"></lable>开始 web 延迟测试<lable id="ss_wts_show"></lable></a>'
+			html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>'
+			html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>'
 		}else{
-			html += '<a href="javascript:void(0);" style="color:#999;cursor:not-allowed"></lable>批量测速已关闭</a>'
+			html += '<a id="start_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed"></lable>批量测速已关闭</a>'
+			html += '<a id="stop_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed">停止批量测速</a>'
 		}
 		if(db_ss["ss_basic_latency_val"] == "0"){
 			html += '<a onclick="enable_latency_feature()" href="javascript:void(0);"></lable>开启延迟测试功能</a>'
@@ -3986,6 +3989,7 @@ function refresh_html() {
 	$('.nodeTable').remove();
 	// add dynamic table
 	$('#ss_list_table').before(html);
+	update_latency_action_links();
 	// load cached webtest results if available
 	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
 		load_latency_cache();
@@ -4859,7 +4863,43 @@ function update_latency_finish_time() {
 }
 function finish_latency_batch() {
 	batch_test_running = false;
+	batch_stop_pending = false;
+	update_latency_action_links();
 	update_latency_finish_time();
+}
+function is_latency_transient_state(value){
+	value = String(value || "");
+	return value.indexOf("waiting") === 0 || value.indexOf("loading") === 0 || value.indexOf("booting") === 0 || value.indexOf("warming") === 0 || value.indexOf("testing") === 0;
+}
+function is_latency_terminal_state(value){
+	value = String(value || "");
+	return $.isNumeric(value) || value == "failed" || value == "timeout" || value == "ns" || value == "stopped" || value == "canceled";
+}
+function update_latency_action_links() {
+	var batchEnabled = db_ss["ss_basic_latency_batch"] == "1";
+	var running = batch_test_running;
+	var startEnabled = batchEnabled && !running;
+	var stopEnabled = batchEnabled && running && !batch_stop_pending;
+	var $start = $("#start_latency_batch");
+	var $stop = $("#stop_latency_batch");
+	if($start.length){
+		if(startEnabled){
+			$start.removeAttr("style");
+			$start.attr("onclick", "test_latency_now(2);return false;");
+		}else{
+			$start.attr("onclick", "return false;");
+			$start.css({"color":"#999","cursor":"not-allowed"});
+		}
+	}
+	if($stop.length){
+		if(stopEnabled){
+			$stop.removeAttr("style");
+			$stop.attr("onclick", "stop_latency_batch();return false;");
+		}else{
+			$stop.attr("onclick", "return false;");
+			$stop.css({"color":"#999","cursor":"not-allowed"});
+		}
+	}
 }
 function parse_webtest_lines(res){
 	const array = [];
@@ -4976,20 +5016,51 @@ function test_latency_now(test_flag) {
 					refresh_table(function() {
 						close_latency_flag = 1;
 						batch_test_running = false;
+						batch_stop_pending = false;
 						$("#ss_wts_show").html("");
 						$("#dropdown").width(150);
+						update_latency_action_links();
 					});
 				}else if(test_flag == 2){
 					close_latency_ws();
 					close_latency_flag = 0;
 					batch_test_running = true;
+					batch_stop_pending = false;
 					refresh_table(function() {
 						$(".latency .latency_val").html("waiting...");
 						$("#ss_wts_show").html("<em>【测速中...】</em>");
 						$("#dropdown").width(240);
+						update_latency_action_links();
 					});
 				}
 			}
+		}
+	});
+}
+function stop_latency_batch() {
+	if(db_ss["ss_basic_latency_batch"] != "1" || !batch_test_running || batch_stop_pending){
+		return;
+	}
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_webtest.sh", "params":["stop_webtest"], "fields": {}};
+	batch_stop_pending = true;
+	update_latency_action_links();
+	$("#ss_wts_show").html("<em>【停止中...】</em>");
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			if(response.result != id){
+				batch_stop_pending = false;
+				update_latency_action_links();
+			}
+		},
+		error: function() {
+			batch_stop_pending = false;
+			update_latency_action_links();
 		}
 	});
 }
@@ -5009,9 +5080,12 @@ function clear_latency_cache() {
 			}
 			if (response.result == id){
 				close_latency_ws();
+				batch_test_running = false;
+				batch_stop_pending = false;
 				$(".latency .latency_val").html("");
 				$("#ss_wts_show").html("");
 				$("#dropdown").width(150);
+				update_latency_action_links();
 			}
 		}
 	});
@@ -5030,6 +5104,8 @@ function enable_latency_feature() {
 		success: function(response) {
 			if (response.result == id){
 				close_latency_flag = 0;
+				batch_test_running = false;
+				batch_stop_pending = false;
 				refresh_table();
 			}
 		}
@@ -5112,6 +5188,8 @@ function check_batch_status(cb){
 		success: function(res) {
 			if(res && res.indexOf("stop>") !== -1){
 				batch_test_running = false;
+				batch_stop_pending = false;
+				update_latency_action_links();
 				if(typeof cb === "function"){ cb(true); }
 			}else{
 				if(typeof cb === "function"){ cb(false); }
@@ -5130,8 +5208,10 @@ function latency_test(action) {
 	if(action == "2"){
 		var bash_para = "web_webtest";
 		batch_test_running = true;
+		batch_stop_pending = false;
 		batch_ws_fallback_started = false;
 		batch_ws_completed = false;
+		update_latency_action_links();
 	}
 	//now post
 	var id = parseInt(Math.random() * 100000000);
@@ -5153,7 +5233,9 @@ function latency_test(action) {
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			$(".latency .latency_val").html("失败!");
 			batch_test_running = false;
+			batch_stop_pending = false;
 			close_latency_ws();
+			update_latency_action_links();
 		},
 		timeout: 60000
 	});
@@ -5187,14 +5269,14 @@ function get_latency_data_single(node, retry){
 				}
 			}
 			if(single_test_wait[node]){
-				if(value && String(value).indexOf("testing") === 0){
+				if(value && is_latency_transient_state(value)){
 					single_test_wait[node] = false;
 				}else{
 					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
 					return;
 				}
 			}
-			if(!value || String(value).indexOf("testing") === 0 || String(value).indexOf("waiting") === 0){
+			if(!value || is_latency_transient_state(value)){
 				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
 			}else{
 				write_webtest([[String(node), value]]);
@@ -5272,6 +5354,8 @@ function load_latency_cache(){
 			}
 			if(data.complete && usable >= threshold){
 				batch_test_running = false;
+				batch_stop_pending = false;
+				update_latency_action_links();
 				return;
 			}
 			load_latency_backup(usable);
@@ -5328,13 +5412,13 @@ function parse_webtest_complete(res){
 }
 function has_usable_webtest(array){
 	return array.some(function(item){
-		return $.isNumeric(item[1]) || item[1] == "failed" || item[1] == "timeout" || item[1] == "ns";
+		return is_latency_terminal_state(item[1]);
 	});
 }
 function count_usable_webtest(array){
 	var cnt = 0;
 	array.forEach(function(item){
-		if($.isNumeric(item[1]) || item[1] == "failed" || item[1] == "timeout" || item[1] == "ns"){
+		if(is_latency_terminal_state(item[1])){
 			cnt++;
 		}
 	});
@@ -5348,14 +5432,22 @@ function write_webtest(ps){
 			lag = lag.replace(/\.{3,}/, "...");
 			if(lag.indexOf("testing") === 0){
 				lag = "testing...";
+			}else if(lag.indexOf("waiting") === 0){
+				lag = "waiting...";
+			}else if(lag.indexOf("loading") === 0){
+				lag = "loading...";
+			}else if(lag.indexOf("booting") === 0){
+				lag = "booting...";
+			}else if(lag.indexOf("warming") === 0){
+				lag = "warming...";
 			}
 		}
 		var $cell = $('#ss_node_lt_' + nu);
 		var $val = $cell.length ? $cell.find(".latency_val") : null;
-		if(typeof lag === "string" && (lag.indexOf("testing") === 0 || lag.indexOf("waiting") === 0)){
+		if(typeof lag === "string" && is_latency_transient_state(lag)){
 			if($val && $val.length){
 				var curr = $val.text().trim();
-				if(curr && curr !== "-" && curr.indexOf("testing") !== 0 && curr.indexOf("waiting") !== 0){
+				if(curr && curr !== "-" && !is_latency_transient_state(curr)){
 					continue;
 				}
 			}
@@ -5377,6 +5469,20 @@ function write_webtest(ps){
 				test_result = '<font color="#FF0000">timeout!</font>';
 			}else if(lag == "ns"){
 				test_result = '<font color="#FF0000">不支持!</font>';
+			}else if(lag == "waiting..."){
+				test_result = '<font color="#999999">waiting...</font>';
+			}else if(lag == "loading..."){
+				test_result = '<font color="#66CCFF">loading...</font>';
+			}else if(lag == "booting..."){
+				test_result = '<font color="#FFAA33">booting...</font>';
+			}else if(lag == "testing..."){
+				test_result = '<font color="#00FFCC">testing...</font>';
+			}else if(lag == "warming..."){
+				test_result = '<font color="#00FFCC">warming...</font>';
+			}else if(lag == "stopped"){
+				test_result = '<font color="#999999">stopped</font>';
+			}else if(lag == "canceled"){
+				test_result = '<font color="#CC5500">canceled</font>';
 			}else{
 				test_result = '<font color="#00FFCC">' + lag +'</font>'
 			}

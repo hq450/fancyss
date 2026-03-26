@@ -9,6 +9,8 @@ TMP2=/tmp/fancyss_webtest
 WT_WEBTEST_FILE=/tmp/upload/webtest.txt
 WT_WEBTEST_STREAM=/tmp/upload/webtest.stream
 WT_WEBTEST_BACKUP=/tmp/upload/webtest_bakcup.txt
+WT_WEBTEST_STOP_FLAG=/tmp/webtest.stop
+WT_WEBTEST_PID_FILE=/tmp/webtest.pid
 WT_SERVER_RESOLV_MODE=$(dbus get ss_basic_server_resolv_mode)
 [ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
 WT_NODE_CACHE_DIR=""
@@ -17,6 +19,10 @@ WT_NODE_ACTIVE_ID=""
 WT_NODE_ACTIVE_FIELDS=""
 WT_PREVIEW_READY=0
 WT_FORCE_PRERESOLVE=0
+WT_WEBTEST_STATE_FILE=""
+WT_BATCH_ACTIVE=0
+WT_BATCH_FINALIZED=0
+WT_BATCH_ABORT_REASON=""
 
 wt_ensure_webtest_dir() {
 	mkdir -p /tmp/upload
@@ -41,6 +47,10 @@ wt_append_webtest_file() {
 	local src="$1"
 
 	[ -f "${src}" ] || return 0
+	if [ "${WT_SINGLE}" != "1" ] && [ -n "${WT_WEBTEST_STATE_FILE}" ] && [ -f "${WT_WEBTEST_STATE_FILE}" ]; then
+		wt_record_batch_result_file "${src}"
+		return 0
+	fi
 	wt_ensure_webtest_dir
 	cat "${src}" >>"${WT_WEBTEST_FILE}"
 	cat "${src}" >>"${WT_WEBTEST_STREAM}"
@@ -55,6 +65,254 @@ wt_write_webtest_snapshot() {
 	else
 		: >"${WT_WEBTEST_FILE}"
 	fi
+}
+
+wt_latency_state_is_transient() {
+	case "$1" in
+	waiting...|loading...|booting...|warming...|testing...)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+wt_latency_state_is_terminal() {
+	case "$1" in
+	failed|timeout|ns|stopped|canceled)
+		return 0
+		;;
+	esac
+	echo "$1" | grep -Eq '^[0-9]+$'
+}
+
+wt_init_batch_state_file() {
+	WT_WEBTEST_STATE_FILE="${TMP2}/webtest.state"
+	awk -F '|' '
+		NF > 0 && $1 != "" {
+			print $1 ">waiting..."
+		}
+	' ${TMP2}/nodes_index.txt > "${WT_WEBTEST_STATE_FILE}"
+	cp -f "${WT_WEBTEST_STATE_FILE}" "${WT_WEBTEST_FILE}"
+	cp -f "${WT_WEBTEST_STATE_FILE}" "${WT_WEBTEST_STREAM}"
+}
+
+wt_get_batch_state() {
+	local node_id="$1"
+	[ -n "${WT_WEBTEST_STATE_FILE}" ] || return 1
+	[ -f "${WT_WEBTEST_STATE_FILE}" ] || return 1
+	awk -F '>' -v node="${node_id}" '
+		$1 == node {
+			print $2
+			exit
+		}
+	' "${WT_WEBTEST_STATE_FILE}" 2>/dev/null
+}
+
+wt_set_batch_state() {
+	local node_id="$1"
+	local state="$2"
+	local current=""
+
+	[ -n "${node_id}" ] || return 0
+	[ -n "${state}" ] || return 0
+	[ -n "${WT_WEBTEST_STATE_FILE}" ] || return 0
+	[ -f "${WT_WEBTEST_STATE_FILE}" ] || return 0
+	current=$(wt_get_batch_state "${node_id}")
+	[ "${current}" = "${state}" ] && return 0
+	if grep -q "^${node_id}>" "${WT_WEBTEST_STATE_FILE}" 2>/dev/null; then
+		sed -i "/^${node_id}>/c\\${node_id}>${state}" "${WT_WEBTEST_STATE_FILE}"
+	else
+		echo "${node_id}>${state}" >> "${WT_WEBTEST_STATE_FILE}"
+	fi
+	wt_append_webtest_line "${node_id}>${state}"
+}
+
+wt_set_batch_state_from_file() {
+	local file_path="$1"
+	local state="$2"
+	local limit="$3"
+	local count=0
+	local node_id=""
+
+	[ -f "${file_path}" ] || return 0
+	while read node_id
+	do
+		[ -n "${node_id}" ] || continue
+		wt_set_batch_state "${node_id}" "${state}"
+		count=$((count + 1))
+		if [ -n "${limit}" ] && [ "${count}" -ge "${limit}" ]; then
+			break
+		fi
+	done < "${file_path}"
+}
+
+wt_emit_batch_state_diff() {
+	local old_file="$1"
+	local new_file="$2"
+	local line=""
+
+	[ -f "${old_file}" ] || return 0
+	[ -f "${new_file}" ] || return 0
+	awk -F '>' '
+		NR == FNR {
+			old[$1] = $2
+			next
+		}
+		{
+			if (old[$1] != $2) {
+				print $0
+			}
+		}
+	' "${old_file}" "${new_file}" | while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		wt_append_webtest_line "${line}"
+	done
+}
+
+wt_record_batch_result_file() {
+	local src="$1"
+	local line=""
+	local node_id=""
+	local state=""
+
+	[ -f "${src}" ] || return 0
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		node_id="${line%%>*}"
+		state="${line#*>}"
+		[ -n "${node_id}" ] || continue
+		wt_set_batch_state "${node_id}" "${state}"
+	done < "${src}"
+}
+
+wt_runtime_cleanup() {
+	killall wt-ss >/dev/null 2>&1
+	killall wt-ss-local >/dev/null 2>&1
+	killall wt-obfs >/dev/null 2>&1
+	killall wt-rss-local >/dev/null 2>&1
+	killall wt-v2ray >/dev/null 2>&1
+	killall wt-xray >/dev/null 2>&1
+	killall wt-trojan >/dev/null 2>&1
+	killall wt-naive >/dev/null 2>&1
+	killall wt-tuic >/dev/null 2>&1
+	killall wt-hy2 >/dev/null 2>&1
+	killall curl-fancyss >/dev/null 2>&1
+	killall curl-webtest >/dev/null 2>&1
+}
+
+wt_finalize_batch_output() {
+	[ -f "${WT_WEBTEST_STATE_FILE}" ] || return 0
+	cp -f "${WT_WEBTEST_STATE_FILE}" "${WT_WEBTEST_FILE}"
+	echo "stop>stop" >> "${WT_WEBTEST_FILE}"
+	echo "stop>stop" >> "${WT_WEBTEST_STREAM}"
+	local TS_LOG=$(date -r "${WT_WEBTEST_FILE}" "+%Y/%m/%d %X")
+	dbus set ss_basic_webtest_ts="${TS_LOG}"
+	cp -f "${WT_WEBTEST_FILE}" "${WT_WEBTEST_BACKUP}"
+}
+
+wt_abort_batch_run() {
+	local reason="$1"
+	local old_state=""
+	local new_state=""
+
+	[ "${WT_BATCH_FINALIZED}" = "1" ] && return 0
+	[ -n "${reason}" ] || reason="canceled"
+	WT_BATCH_FINALIZED=1
+	WT_BATCH_ABORT_REASON="${reason}"
+	wt_runtime_cleanup
+	if [ -f "${WT_WEBTEST_STATE_FILE}" ]; then
+		old_state="${WT_WEBTEST_STATE_FILE}.old.$$"
+		new_state="${WT_WEBTEST_STATE_FILE}.new.$$"
+		cp -f "${WT_WEBTEST_STATE_FILE}" "${old_state}"
+		awk -F '>' -v reason="${reason}" '
+			function terminal(v) {
+				return (v ~ /^[0-9]+$/ || v == "failed" || v == "timeout" || v == "ns" || v == "stopped" || v == "canceled")
+			}
+			{
+				val = $2
+				if (!terminal(val)) {
+					val = reason
+				}
+				print $1 ">" val
+			}
+		' "${WT_WEBTEST_STATE_FILE}" > "${new_state}"
+		wt_emit_batch_state_diff "${old_state}" "${new_state}"
+		mv -f "${new_state}" "${WT_WEBTEST_STATE_FILE}"
+		rm -f "${old_state}"
+	fi
+	wt_finalize_batch_output
+	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock
+}
+
+wt_finish_batch_run() {
+	[ "${WT_BATCH_FINALIZED}" = "1" ] && return 0
+	WT_BATCH_FINALIZED=1
+	wt_finalize_batch_output
+	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock
+}
+
+wt_batch_exit_guard() {
+	local reason=""
+
+	[ "${WT_BATCH_ACTIVE}" = "1" ] || return 0
+	[ "${WT_BATCH_FINALIZED}" = "1" ] && return 0
+	[ -f "${WT_WEBTEST_STOP_FLAG}" ] && reason="$(cat "${WT_WEBTEST_STOP_FLAG}" 2>/dev/null)"
+	[ -n "${reason}" ] || reason="${WT_BATCH_ABORT_REASON}"
+	[ -n "${reason}" ] || reason="canceled"
+	wt_abort_batch_run "${reason}"
+}
+
+wt_batch_signal_handler() {
+	local reason=""
+
+	[ -f "${WT_WEBTEST_STOP_FLAG}" ] && reason="$(cat "${WT_WEBTEST_STOP_FLAG}" 2>/dev/null)"
+	[ -n "${reason}" ] || reason="canceled"
+	WT_BATCH_ABORT_REASON="${reason}"
+	exit 0
+}
+
+wt_request_stop_batch() {
+	local current_pid="$$"
+	local old_state=""
+	local new_state=""
+	local ss_webtest_pids=""
+
+	echo "stopped" > "${WT_WEBTEST_STOP_FLAG}"
+	if [ -f "${TMP2}/webtest.state" ]; then
+		WT_WEBTEST_STATE_FILE="${TMP2}/webtest.state"
+		old_state="${WT_WEBTEST_STATE_FILE}.old.$$"
+		new_state="${WT_WEBTEST_STATE_FILE}.new.$$"
+		cp -f "${WT_WEBTEST_STATE_FILE}" "${old_state}"
+		awk -F '>' '
+			function terminal(v) {
+				return (v ~ /^[0-9]+$/ || v == "failed" || v == "timeout" || v == "ns" || v == "stopped" || v == "canceled")
+			}
+			{
+				val = $2
+				if (!terminal(val)) {
+					val = "stopped"
+				}
+				print $1 ">" val
+			}
+		' "${WT_WEBTEST_STATE_FILE}" > "${new_state}"
+	fi
+	ss_webtest_pids=$(ps | grep -E "ss_webtest\.sh" | awk '{print $1}' | grep -v "^${current_pid}$")
+	if [ -n "${ss_webtest_pids}" ];then
+		for ss_webtest_pid in ${ss_webtest_pids}
+		do
+			kill -9 ${ss_webtest_pid} >/dev/null 2>&1
+		done
+	fi
+	wt_runtime_cleanup
+	if [ -f "${new_state}" ]; then
+		wt_emit_batch_state_diff "${old_state}" "${new_state}"
+		mv -f "${new_state}" "${WT_WEBTEST_STATE_FILE}"
+		rm -f "${old_state}"
+		wt_finalize_batch_output
+	fi
+	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock
 }
 
 wt_reset_active_node_env() {
@@ -327,7 +585,7 @@ wt_show_current_group_preview() {
 	sed -n "1,${preview_lines}p" ${preview_file} | while read nu
 	do
 		[ -n "${nu}" ] || continue
-		wt_append_webtest_line "${nu}>testing..."
+		wt_set_batch_state "${nu}" "loading..."
 	done
 }
 
@@ -421,6 +679,27 @@ wt_reset_node_resolve_policy() {
 	WT_FORCE_PRERESOLVE=0
 }
 
+wt_open_fifo_pool() {
+	local slots="$1"
+	local fifo_path="$2"
+	local i=0
+
+	[ -n "${slots}" ] || slots=1
+	[ "${slots}" -gt 0 ] 2>/dev/null || slots=1
+	[ -e "${fifo_path}" ] || mknod "${fifo_path}" p
+	exec 3<>"${fifo_path}"
+	rm -f "${fifo_path}"
+	while [ ${i} -lt "${slots}" ]; do
+		echo >&3
+		i=$((i + 1))
+	done
+}
+
+wt_close_fifo_pool() {
+	exec 3<&-
+	exec 3>&-
+}
+
 wt_prepare_webtest_preview() {
 	local curr_node=""
 	local curr_file=""
@@ -486,7 +765,6 @@ wt_prepare_webtest_preview() {
 	fi
 
 	[ -n "${preview_file}" ] || preview_file="${curr_file}"
-	wt_reset_webtest_output
 	http_response "ok4, webtest.txt generating..."
 	wt_show_current_group_preview "${preview_file}" "${curr_type}"
 	WT_PREVIEW_READY=1
@@ -513,23 +791,27 @@ detect_perf(){
 	if [ "${WT_LOW_END}" == "1" ];then
 		WT_XRAY_THREADS=1
 		WT_SSR_THREADS=1
-		WT_XRAY_BATCH_SIZE=1
+		WT_MISC_THREADS=1
+		WT_XRAY_BATCH_SIZE=4
 		if [ "$(nvram get odmpid)" == "RT-AX89X" ];then
 			WT_XRAY_THREADS=4
 			WT_SSR_THREADS=2
-			WT_XRAY_BATCH_SIZE=4
+			WT_MISC_THREADS=1
+			WT_XRAY_BATCH_SIZE=16
 		fi
 	else
 		if [ "${WT_CPU_CORES}" -ge 3 -a "${WT_MEM_MB}" -ge 1024 ];then
 			# aarch64 4cores + 2G内存
 			WT_XRAY_THREADS=8
 			WT_SSR_THREADS=4
-			WT_XRAY_BATCH_SIZE=8
+			WT_MISC_THREADS=2
+			WT_XRAY_BATCH_SIZE=32
 		else
 			# aarch64 4cores + 1G内存
 			WT_XRAY_THREADS=4
 			WT_SSR_THREADS=2
-			WT_XRAY_BATCH_SIZE=4
+			WT_MISC_THREADS=1
+			WT_XRAY_BATCH_SIZE=16
 		fi
 	fi
 }
@@ -551,6 +833,9 @@ update_webtest_file(){
 	local snapshot_file="${TMP2}/webtest.snapshot"
 
 	rm -f "${snapshot_file}"
+	if [ "${WT_SINGLE}" != "1" ];then
+		return 0
+	fi
 	if [ "${WT_SINGLE}" == "1" ];then
 		find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > "${snapshot_file}"
 		cat "${snapshot_file}" >> "${WT_WEBTEST_FILE}"
@@ -568,7 +853,7 @@ get_webtest_usable_count(){
 		return 0
 	}
 	awk -F '>' '
-		$1 != "stop" && ($2 == "failed" || $2 == "timeout" || $2 == "ns" || $2 ~ /^[0-9]+$/) {count++}
+		$1 != "stop" && ($2 == "failed" || $2 == "timeout" || $2 == "ns" || $2 == "stopped" || $2 == "canceled" || $2 ~ /^[0-9]+$/) {count++}
 		END {print count + 0}
 	' "${webtest_file}" 2>/dev/null
 }
@@ -647,6 +932,13 @@ webtest_web(){
 start_webtest(){
 	# create lock
 	touch /tmp/webtest.lock
+	rm -f "${WT_WEBTEST_STOP_FLAG}"
+	echo "$$" > "${WT_WEBTEST_PID_FILE}"
+	WT_BATCH_ACTIVE=1
+	WT_BATCH_FINALIZED=0
+	WT_BATCH_ABORT_REASON=""
+	trap 'wt_batch_signal_handler' HUP INT TERM
+	trap 'wt_batch_exit_guard' EXIT
 	WT_SINGLE=0
 	WT_SKIP_DNS=0
 	WT_PREVIEW_READY=0
@@ -663,6 +955,7 @@ start_webtest(){
 
 	# 2. 分类
 	sort_nodes
+	wt_init_batch_state_file
 	wt_prepare_webtest_preview
 
 	# 3. 批量测速前，同步全量节点域名直连解析缓存
@@ -672,7 +965,8 @@ start_webtest(){
 	test_nodes
 
 	# 5. remove lock
-	rm -rf /tmp/webtest.lock
+	wt_finish_batch_run
+	trap - HUP INT TERM EXIT
 }
 
 sort_nodes(){
@@ -887,19 +1181,7 @@ test_nodes(){
 		esac
 	done
 	
-	# finish mark
-	find ${TMP2}/results/ -name "*.txt" | sort -t "/" -nk5 | xargs cat > "${WT_WEBTEST_FILE}"
-	wt_append_webtest_line "stop>stop"
-
-	# record timestamp
-	local TS_LOG=$(date -r "${WT_WEBTEST_FILE}" "+%Y/%m/%d %X")
-	dbus set ss_basic_webtest_ts="${TS_LOG}"
-
-	# copy webtest.txt for other useage
-	cp -rf "${WT_WEBTEST_FILE}" "${WT_WEBTEST_BACKUP}"
-
 	# we shold remove test tmp file
-	
 }
 
 test_xray_group(){
@@ -950,12 +1232,8 @@ test_xray_group(){
 	fi
 	[ -z "${JQ_BIN}" ] && JQ_BIN="/usr/bin/jq"
 
-	# show info to web as soon as possible
-	cat ${file_path} | xargs -n ${WT_XRAY_THREADS} | sed -n '1p' | while read nus; do
-		for nu in $nus; do
-			wt_append_webtest_line "${nu}>testing..."
-		done
-	done
+	# show the first batch state to web as soon as possible
+	wt_set_batch_state_from_file "${file_path}" "loading..." "${WT_XRAY_THREADS}"
 
 	# prepare
 	killall wt-xray >/dev/null 2>&1
@@ -1013,6 +1291,7 @@ test_xray_group(){
 	# now we can start xray to host multiple outbounds
 	local first_port=""
 	first_port=$(sed -n '1s/.*=//p' ${TMP2}/socsk5_ports.txt 2>/dev/null)
+	wt_set_batch_state_from_file "${file_path}" "booting..." "${WT_XRAY_THREADS}"
 	run ${TMP2}/wt-xray run -confdir ${TMP2}/json_${mark}/ >${TMP2}/logs_${mark}/log.txt 2>&1 &
 	local xray_pid=$!
 
@@ -1039,15 +1318,7 @@ test_xray_group(){
 	fi
 
 	local fifo="${TMP2}/fd1_${mark}"
-	[ -e "${fifo}" ] || mknod "${fifo}" p
-	exec 3<>"${fifo}"
-	rm -f "${fifo}"
-
-	local i=0
-	while [ ${i} -lt ${WT_XRAY_THREADS} ]; do
-		echo >&3
-		i=$((i+1))
-	done
+	wt_open_fifo_pool "${WT_XRAY_THREADS}" "${fifo}"
 
 	local pids=""
 	while read -r nu; do
@@ -1068,6 +1339,7 @@ test_xray_group(){
 				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
 				exit 0
 			fi
+			wt_set_batch_state "${nu}" "testing..."
 			curl_test ${nu} ${socks5_port}
 
 			# 3. stop obfs-local if needed
@@ -1086,8 +1358,7 @@ test_xray_group(){
 		wait ${pids}
 	fi
 
-	exec 3<&-
-	exec 3>&-
+	wt_close_fifo_pool
 
 	# finished kill xray
 	if [ -n "${xray_pid}" ]; then
@@ -1104,6 +1375,23 @@ test_xray_group(){
 test_07_sr(){
 	local file=$1
 	local mark=$2
+	local file_path=""
+	local worker_pids=""
+	local fifo=""
+	local max_threads=""
+
+	case "${file}" in
+	/*)
+		file_path="${file}"
+		;;
+	*)
+		file_path="${TMP2}/${file}"
+		;;
+	esac
+	[ -f "${file_path}" ] || return 0
+	max_threads="${WT_SSR_THREADS}"
+	[ -n "${max_threads}" ] || max_threads=1
+	wt_set_batch_state_from_file "${file_path}" "loading..." "${max_threads}"
 	
 	# alisa binary
 	killall wt-rss-local >/dev/null 2>&1
@@ -1111,109 +1399,143 @@ test_07_sr(){
 	mkdir -p ${TMP2}/conf_${mark}
 	rm -rf ${TMP2}/conf_${mark}/*
 
-	cat ${TMP2}/${file} | xargs -n 8 | while read nus; do
-		for nu in $nus; do
-			{
-				# 0. testing info
-				wt_append_webtest_line "${nu}>testing..."
-				wt_set_node_resolve_policy "${nu}"
-				
-				# 1. resolve server
-				local _server_ip=$(_get_server_ip $(wt_node_get server ${nu}))
-				if [ -z "${_server_ip}" ];then
-					# use domain
-					_server_ip=$(wt_node_get server ${nu})
-				fi
+	fifo="${TMP2}/fd1_${mark}"
+	wt_open_fifo_pool "${max_threads}" "${fifo}"
+	while read -r nu
+	do
+		[ -n "${nu}" ] || continue
+		read -r _ <&3
+		{
+			local _server_ip=""
+			local socks5_port=""
 
-				# 2. gen json conf
-				local socks5_port=$(get_rand_port)
-				cat >${TMP2}/conf_${mark}/${nu}.json <<-EOF
-					{
-					    "server":"${_server_ip}",
-					    "server_port":$(wt_node_get port ${nu}),
-					    "local_address":"0.0.0.0",
-					    "local_port":${socks5_port},
-					    "password":"$(wt_node_get password ${nu} | base64_decode)",
-					    "timeout":600,
-					    "protocol":"$(wt_node_get rss_protocol ${nu})",
-					    "protocol_param":"$(wt_node_get rss_protocol_param ${nu})",
-					    "obfs":"$(wt_node_get rss_obfs ${nu})",
-					    "obfs_param":"$(wt_node_get rss_obfs_param ${nu})",
-					    "method":"$(wt_node_get method ${nu})"
-					}
-				EOF
+			trap 'echo >&3' EXIT
+			wt_set_batch_state "${nu}" "loading..."
+			wt_set_node_resolve_policy "${nu}"
 
-				# 3. start rss-local
-				run ${TMP2}/wt-rss-local -c ${TMP2}/conf_${mark}/${nu}.json -f ${TMP2}/pids/${nu}.pid >/dev/null 2>&1
-				wait_local_port "${socks5_port}" 10 100000 || sleep 1
+			# 1. resolve server
+			_server_ip=$(_get_server_ip "$(wt_node_get server ${nu})")
+			if [ -z "${_server_ip}" ];then
+				_server_ip=$(wt_node_get server ${nu})
+			fi
 
-				# 4. start curl test
-				curl_test ${nu} ${socks5_port}
-				if [ -f "${TMP2}/results/${nu}.txt" ];then
-					wt_append_webtest_file "${TMP2}/results/${nu}.txt"
-				fi
+			# 2. gen json conf
+			socks5_port=$(get_rand_port)
+			cat >${TMP2}/conf_${mark}/${nu}.json <<-EOF
+				{
+				    "server":"${_server_ip}",
+				    "server_port":$(wt_node_get port ${nu}),
+				    "local_address":"0.0.0.0",
+				    "local_port":${socks5_port},
+				    "password":"$(wt_node_get password ${nu} | base64_decode)",
+				    "timeout":600,
+				    "protocol":"$(wt_node_get rss_protocol ${nu})",
+				    "protocol_param":"$(wt_node_get rss_protocol_param ${nu})",
+				    "obfs":"$(wt_node_get rss_obfs ${nu})",
+				    "obfs_param":"$(wt_node_get rss_obfs_param ${nu})",
+				    "method":"$(wt_node_get method ${nu})"
+				}
+			EOF
 
-				# 5. stop rss-local
-				if [ -f "${TMP2}/pids/${nu}.pid" ];then
-					kill -9 $(cat ${TMP2}/pids/${nu}.pid) >/dev/null 2>&1
-				fi
-				wt_reset_node_resolve_policy
-			} &
-		done
-		wait
+			# 3. start rss-local
+			wt_set_batch_state "${nu}" "booting..."
+			run ${TMP2}/wt-rss-local -c ${TMP2}/conf_${mark}/${nu}.json -f ${TMP2}/pids/${nu}.pid >/dev/null 2>&1
+			wait_local_port "${socks5_port}" 10 100000 || sleep 1
 
-		# merge all curl test result
-		update_webtest_file
-	done
+			# 4. start curl test
+			wt_set_batch_state "${nu}" "testing..."
+			curl_test ${nu} ${socks5_port}
+			if [ -f "${TMP2}/results/${nu}.txt" ];then
+				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+			fi
 
-	rm -rf ${TMP2}/wt-ss-local
+			# 5. stop rss-local
+			if [ -f "${TMP2}/pids/${nu}.pid" ];then
+				kill -9 $(cat ${TMP2}/pids/${nu}.pid) >/dev/null 2>&1
+			fi
+			wt_reset_node_resolve_policy
+		} &
+		worker_pids="${worker_pids} $!"
+	done < "${file_path}"
+	[ -n "${worker_pids}" ] && wait ${worker_pids}
+	wt_close_fifo_pool
+	update_webtest_file
+
+	rm -rf ${TMP2}/wt-rss-local
 }
 
 test_11_nv(){
 	local file=$1
+	local file_path=""
+	local worker_pids=""
+	local fifo=""
+	local max_threads=""
+
+	case "${file}" in
+	/*)
+		file_path="${file}"
+		;;
+	*)
+		file_path="${TMP2}/${file}"
+		;;
+	esac
+	[ -f "${file_path}" ] || return 0
+	max_threads="${WT_MISC_THREADS}"
+	[ -n "${max_threads}" ] || max_threads=1
+	wt_set_batch_state_from_file "${file_path}" "loading..." "${max_threads}"
 
 	# alisa binary
 	ln -sf /koolshare/bin/naive ${TMP2}/wt-naive
 	killall wt-naive >/dev/null 2>&1
 
-	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
-		for nu in $nus; do
-			{
-				wt_append_webtest_line "${nu}>testing..."
-				wt_set_node_resolve_policy "${nu}"
+	fifo="${TMP2}/fd1_nv"
+	wt_open_fifo_pool "${max_threads}" "${fifo}"
+	while read -r nu
+	do
+		[ -n "${nu}" ] || continue
+		read -r _ <&3
+		{
+			local _server_ip=""
+			local socks5_port=""
+			local _pid=""
 
-				# 1. resolve server
-				local _server_ip=$(_get_server_ip $(wt_node_get naive_server ${nu}))
+			trap 'echo >&3' EXIT
+			wt_set_batch_state "${nu}" "loading..."
+			wt_set_node_resolve_policy "${nu}"
 
-				# 2. start naiveproxy
-				local socks5_port=$(get_rand_port)
-				if [ -z "${_server_ip}" ];then
-					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) >/dev/null 2>&1 &
-				else
-					run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) --host-resolver-rules="MAP $(wt_node_get naive_server ${nu}) ${_server_ip}" >/dev/null 2>&1 &
-				fi
+			# 1. resolve server
+			_server_ip=$(_get_server_ip "$(wt_node_get naive_server ${nu})")
 
-				wait_local_port "${socks5_port}" 20 100000 || sleep 1
+			# 2. start naiveproxy
+			socks5_port=$(get_rand_port)
+			wt_set_batch_state "${nu}" "booting..."
+			if [ -z "${_server_ip}" ];then
+				run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) >/dev/null 2>&1 &
+			else
+				run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) --host-resolver-rules="MAP $(wt_node_get naive_server ${nu}) ${_server_ip}" >/dev/null 2>&1 &
+			fi
 
-				# 4. start curl test
-				curl_test ${nu} ${socks5_port}
-				if [ -f "${TMP2}/results/${nu}.txt" ];then
-					wt_append_webtest_file "${TMP2}/results/${nu}.txt"
-				fi
+			wait_local_port "${socks5_port}" 20 100000 || sleep 1
 
-				# 5. stop naive
-				local _pid=$(ps | grep wt-naive | grep ${socks5_port} | awk '{print $1}')
-				if [ -n "${_pid}" ];then
-					kill -9 ${_pid} >/dev/null 2>&1
-				fi
-				wt_reset_node_resolve_policy
-			} &
-		done
-		wait
+			# 3. start curl test
+			wt_set_batch_state "${nu}" "testing..."
+			curl_test ${nu} ${socks5_port}
+			if [ -f "${TMP2}/results/${nu}.txt" ];then
+				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+			fi
 
-		# merge all curl test result
-		update_webtest_file
-	done
+			# 4. stop naive
+			_pid=$(ps | grep wt-naive | grep ${socks5_port} | awk '{print $1}')
+			if [ -n "${_pid}" ];then
+				kill -9 ${_pid} >/dev/null 2>&1
+			fi
+			wt_reset_node_resolve_policy
+		} &
+		worker_pids="${worker_pids} $!"
+	done < "${file_path}"
+	[ -n "${worker_pids}" ] && wait ${worker_pids}
+	wt_close_fifo_pool
+	update_webtest_file
 	
 	killall wt-naive >/dev/null 2>&1
 	rm -rf ${TMP2}/wt-naive
@@ -1221,63 +1543,91 @@ test_11_nv(){
 
 test_12_tc(){
 	local file=$1
+	local file_path=""
+	local worker_pids=""
+	local fifo=""
+	local max_threads=""
+
+	case "${file}" in
+	/*)
+		file_path="${file}"
+		;;
+	*)
+		file_path="${TMP2}/${file}"
+		;;
+	esac
+	[ -f "${file_path}" ] || return 0
+	max_threads="${WT_MISC_THREADS}"
+	[ -n "${max_threads}" ] || max_threads=1
+	wt_set_batch_state_from_file "${file_path}" "loading..." "${max_threads}"
 
 	# alisa binary
 	ln -sf /koolshare/bin/tuic-client ${TMP2}/wt-tuic
 	killall wt-tuic >/dev/null 2>&1
 
-	cat ${TMP2}/${file} | xargs -n 1 | while read nus; do
-		for nu in $nus; do
+	fifo="${TMP2}/fd1_tc"
+	wt_open_fifo_pool "${max_threads}" "${fifo}"
+	while read -r nu
+	do
+		[ -n "${nu}" ] || continue
+		read -r _ <&3
+		{
+			local socks5_port=""
+			local new_addr=""
+			local tuic_json_file=""
+			local relay_server_raw=""
+			local relay_host=""
+			local relay_ip=""
+			local _pid=""
+
+			trap 'echo >&3' EXIT
+			wt_set_batch_state "${nu}" "loading..."
+			wt_set_node_resolve_policy "${nu}"
+
+			# 1. gen json
+			socks5_port=$(get_rand_port)
+			new_addr="127.0.0.1:${socks5_port}"
+			tuic_json_file="${TMP2}/conf/tuic-${socks5_port}.json"
+			wt_node_get tuic_json ${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${tuic_json_file}
+			relay_server_raw=$(cat ${tuic_json_file} | run jq -r '.relay.server // empty' 2>/dev/null)
 			{
-				wt_append_webtest_line "${nu}>testing..."
-				wt_set_node_resolve_policy "${nu}"
+				read -r relay_host
+				read -r _
+			} <<-EOF
+			$(fss_extract_tuic_server_host_port "${relay_server_raw}")
+			EOF
+			relay_ip=$(_get_server_ip "${relay_host}")
+			if [ -n "${relay_ip}" ];then
+				cat ${tuic_json_file} | run jq --arg ip "${relay_ip}" '.relay.ip = $ip' | run sponge ${tuic_json_file}
+			else
+				cat ${tuic_json_file} | run jq 'del(.relay.ip)' | run sponge ${tuic_json_file}
+			fi
 
-				# 1. gen json
-				local socks5_port=$(get_rand_port)
-				local new_addr="127.0.0.1:${socks5_port}"
-				local tuic_json_file="${TMP2}/conf/tuic-${socks5_port}.json"
-				local relay_server_raw=""
-				local relay_host=""
-				local relay_ip=""
-				wt_node_get tuic_json ${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${tuic_json_file}
-				relay_server_raw=$(cat ${tuic_json_file} | run jq -r '.relay.server // empty' 2>/dev/null)
-				{
-					read -r relay_host
-					read -r _
-				} <<-EOF
-				$(fss_extract_tuic_server_host_port "${relay_server_raw}")
-				EOF
-				relay_ip=$(_get_server_ip "${relay_host}")
-				if [ -n "${relay_ip}" ];then
-					cat ${tuic_json_file} | run jq --arg ip "${relay_ip}" '.relay.ip = $ip' | run sponge ${tuic_json_file}
-				else
-					cat ${tuic_json_file} | run jq 'del(.relay.ip)' | run sponge ${tuic_json_file}
-				fi
+			# 2. start tuic
+			wt_set_batch_state "${nu}" "booting..."
+			run ${TMP2}/wt-tuic -c ${tuic_json_file} >/dev/null 2>&1 &
 
-				# 2. start tuic
-				run ${TMP2}/wt-tuic -c ${tuic_json_file} >/dev/null 2>&1 &
+			wait_local_port "${socks5_port}" 20 100000 || sleep 1
 
-				wait_local_port "${socks5_port}" 20 100000 || sleep 1
+			# 3. start curl test
+			wt_set_batch_state "${nu}" "testing..."
+			curl_test ${nu} ${socks5_port}
+			if [ -f "${TMP2}/results/${nu}.txt" ];then
+				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+			fi
 
-				# 4. start curl test
-				curl_test ${nu} ${socks5_port}
-				if [ -f "${TMP2}/results/${nu}.txt" ];then
-					wt_append_webtest_file "${TMP2}/results/${nu}.txt"
-				fi
-
-				# 5. stop tuic
-				local _pid=$(ps | grep "wt-tuic" | grep -v grep | grep ${socks5_port} | awk '{print $1}')
-				if [ -n "${_pid}" ];then
-					kill -9 ${_pid} >/dev/null 2>&1
-				fi
-				wt_reset_node_resolve_policy
-			} &
-		done
-		wait
-
-		# merge all curl test result
-		update_webtest_file
-	done
+			# 4. stop tuic
+			_pid=$(ps | grep "wt-tuic" | grep -v grep | grep ${socks5_port} | awk '{print $1}')
+			if [ -n "${_pid}" ];then
+				kill -9 ${_pid} >/dev/null 2>&1
+			fi
+			wt_reset_node_resolve_policy
+		} &
+		worker_pids="${worker_pids} $!"
+	done < "${file_path}"
+	[ -n "${worker_pids}" ] && wait ${worker_pids}
+	wt_close_fifo_pool
+	update_webtest_file
 	
 	killall wt-tuic >/dev/null 2>&1
 	rm -rf ${TMP2}/wt-tuic
@@ -2051,18 +2401,7 @@ get_value_empty(){
 clean_webtest(){
 	# 当用户手动点击web test按钮的时候，不论是否有正在进行的任务，不论是否在在时限内，强制开始webtest
 	# 1. killall program
-	killall wt-ss >/dev/null 2>&1
-	killall wt-ss-local >/dev/null 2>&1
-	killall wt-obfs >/dev/null 2>&1
-	killall wt-rss-local >/dev/null 2>&1
-	killall wt-v2ray >/dev/null 2>&1
-	killall wt-xray >/dev/null 2>&1
-	killall wt-trojan >/dev/null 2>&1
-	killall wt-naive >/dev/null 2>&1
-	killall wt-tuic >/dev/null 2>&1
-	killall wt-hy2 >/dev/null 2>&1
-	killall curl-fancyss >/dev/null 2>&1
-	killall curl-webtest >/dev/null 2>&1
+	wt_runtime_cleanup
 
 	# 2. kill all other ss_webtest.sh
 	local current_pid=$$
@@ -2076,6 +2415,7 @@ clean_webtest(){
 
 	# 3. remove lock file if exist
 	rm -rf /tmp/webtest.lock >/dev/null 2>&1
+	rm -f "${WT_WEBTEST_STOP_FLAG}" "${WT_WEBTEST_PID_FILE}" >/dev/null 2>&1
 
 	# 4. remove webtest result file
 	rm -rf "${WT_WEBTEST_FILE}"
@@ -2150,6 +2490,10 @@ close_latency_test)
 	http_response $1
 	clean_webtest
 	dbus remove ss_basic_webtest_ts
+	;;
+stop_webtest)
+	http_response $1
+	wt_request_stop_batch
 	;;
 0)
 	http_response $1
