@@ -2000,6 +2000,7 @@ single_test_node(){
 
 	WT_SINGLE=1
 	WT_SKIP_DNS=0
+	WT_WEBTEST_STATE_FILE="${TMP2}/webtest.single.state"
 	detect_perf
 	WT_XRAY_THREADS=1
 	WT_SSR_THREADS=1
@@ -2011,8 +2012,10 @@ single_test_node(){
 	rm -rf ${TMP2}/conf/*
 	rm -rf ${TMP2}/pids/*
 	rm -rf ${TMP2}/results/*
+	: > "${WT_WEBTEST_STATE_FILE}"
 	ln -sf /koolshare/bin/curl-fancyss ${TMP2}/curl-webtest
 	wt_prepare_node_cache >/dev/null 2>&1
+	wt_set_batch_state "${test_node}" "waiting..."
 
 	local single_file="wt_single_${test_node}.txt"
 	echo "${test_node}" > ${TMP2}/${single_file}

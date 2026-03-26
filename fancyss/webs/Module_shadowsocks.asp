@@ -5137,9 +5137,7 @@ function test_latency_single(node){
 		}
 	}
 	var cell = $("#ss_node_lt_" + node + " .latency_val");
-	if(cell.length){
-		cell.html("testing...");
-	}
+	write_webtest([[String(node), "waiting..."]]);
 	single_test_wait[node] = true;
 	single_test_running = true;
 	single_test_node = node;
@@ -5268,18 +5266,16 @@ function get_latency_data_single(node, retry){
 					break;
 				}
 			}
-			if(single_test_wait[node]){
-				if(value && is_latency_transient_state(value)){
-					single_test_wait[node] = false;
-				}else{
-					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
-					return;
-				}
+			if(!value){
+				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
+				return;
 			}
-			if(!value || is_latency_transient_state(value)){
+			write_webtest([[String(node), value]]);
+			if(is_latency_transient_state(value)){
+				single_test_wait[node] = false;
 				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
 			}else{
-				write_webtest([[String(node), value]]);
+				single_test_wait[node] = false;
 				single_test_running = false;
 				single_test_node = null;
 				enable_latency_buttons();
