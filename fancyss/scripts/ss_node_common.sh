@@ -80,15 +80,32 @@ fss_get_node_catalog_ts() {
 	printf '%s' "${ts}"
 }
 
+fss_now_ts_ms() {
+	local now_sec
+
+	now_sec=$(date +%s)
+	printf '%s' "${now_sec}" | grep -Eq '^[0-9]+$' || now_sec="0"
+	printf '%s000' "${now_sec}"
+}
+
+fss_next_ts_ms() {
+	local old_ts="$1"
+	local now_ts
+
+	now_ts=$(fss_now_ts_ms)
+	awk -v now="${now_ts}" -v old="${old_ts}" 'BEGIN {
+		if (now !~ /^[0-9]+$/) now = 0
+		if (old !~ /^[0-9]+$/) old = 0
+		if ((now + 0) <= (old + 0)) now = (old + 0) + 1
+		printf "%.0f", now + 0
+	}'
+}
+
 fss_touch_node_catalog_ts() {
 	local old_ts now_ts
 
 	old_ts=$(fss_get_node_catalog_ts)
-	now_ts=$(date +%s)
-	printf '%s' "${now_ts}" | grep -Eq '^[0-9]+$' || now_ts="0"
-	if [ "${now_ts}" -le "${old_ts}" ] 2>/dev/null; then
-		now_ts=$((old_ts + 1))
-	fi
+	now_ts=$(fss_next_ts_ms "${old_ts}")
 	dbus set fss_node_catalog_ts="${now_ts}"
 	printf '%s' "${now_ts}"
 }
@@ -105,11 +122,7 @@ fss_touch_node_config_ts() {
 	local old_ts now_ts
 
 	old_ts=$(fss_get_node_config_ts)
-	now_ts=$(date +%s)
-	printf '%s' "${now_ts}" | grep -Eq '^[0-9]+$' || now_ts="0"
-	if [ "${now_ts}" -le "${old_ts}" ] 2>/dev/null; then
-		now_ts=$((old_ts + 1))
-	fi
+	now_ts=$(fss_next_ts_ms "${old_ts}")
 	dbus set fss_node_config_ts="${now_ts}"
 	printf '%s' "${now_ts}"
 }
@@ -813,7 +826,7 @@ fss_migrate_legacy_nodes() {
 	[ -n "${failover_id}" ] && grep -Fxq "${failover_id}" "${order_file}" || failover_id=""
 
 	fss_report_progress "${progress_cb}" "阶段3/4：转换节点到新存储结构，共 ${expected_count} 个节点..."
-	node_ts="$(date +%s)"
+	node_ts="$(fss_now_ts_ms)"
 	fss_legacy_node_dump_to_v2_tsv "${node_dump_file}" "${order_file}" "migration" "${node_ts}" > "${nodes_tsv}" || {
 		rm -rf "${tmp_dir}"
 		dbus remove fss_data_migrating
@@ -955,7 +968,7 @@ fss_legacy_node_dump_to_v2_tsv() {
 	[ -f "${dump_file}" ] || return 1
 	[ -f "${order_file}" ] || return 1
 	[ -n "${source}" ] || source="legacy"
-	[ -n "${node_ts}" ] || node_ts="$(date +%s)"
+	[ -n "${node_ts}" ] || node_ts="$(fss_now_ts_ms)"
 
 	jq -Rnrc \
 		--rawfile dump "${dump_file}" \
@@ -1048,6 +1061,7 @@ fss_legacy_node_dump_to_v2_tsv() {
 				"_b64_mode": "raw",
 				"_source": $source,
 				"_updated_at": $updated_at,
+				"_created_at": $updated_at,
 				"_migrated_from": $entry.key
 			}
 			| prune
@@ -1062,7 +1076,7 @@ fss_node_legacy_to_v2_json() {
 	local source="$3"
 	local dump_file="$4"
 	local node_json=""
-	local node_ts="$(date +%s)"
+	local node_ts="$(fss_now_ts_ms)"
 	local key value
 
 	[ -z "${node_id}" ] && node_id="${node_index}"
@@ -1141,6 +1155,7 @@ fss_node_legacy_to_v2_json() {
 			"_b64_mode": "raw",
 			"_source": $source,
 			"_updated_at": $updated_at,
+			"_created_at": $updated_at,
 			"_migrated_from": $migrated_from
 		}
 		' | fss_prune_node_json
@@ -1903,7 +1918,7 @@ fss_set_node_field_plain() {
 	local node_id="$1"
 	local field="$2"
 	local value="$3"
-	local schema node_json updated_json current_value
+	local schema node_json updated_json current_value updated_at
 
 	[ -z "${node_id}" ] && return 1
 	[ -z "${field}" ] && return 1
@@ -1920,14 +1935,15 @@ fss_set_node_field_plain() {
 	fi
 	current_value=$(fss_get_node_field_plain "${node_id}" "${field}" 2>/dev/null)
 	[ "${current_value}" = "${value}" ] && return 0
-	updated_json=$(printf '%s' "${node_json}" | jq -c --arg k "${field}" --arg v "${value}" '
+	updated_at=$(fss_now_ts_ms)
+	updated_json=$(printf '%s' "${node_json}" | jq -c --arg k "${field}" --arg v "${value}" --argjson updated_at "${updated_at}" '
 		if $v == "" then
 			del(.[$k])
 		else
 			.[$k] = $v
 		end
 		| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
-		| ._updated_at = (now | floor)
+		| ._updated_at = $updated_at
 	') || return 1
 	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
 	fss_clear_webtest_cache_node "${node_id}"
@@ -1941,7 +1957,7 @@ fss_set_node_field_plain() {
 
 fss_clear_node_runtime_fields() {
 	local node_id="$1"
-	local schema node_json updated_json
+	local schema node_json updated_json updated_at
 
 	[ -z "${node_id}" ] && return 1
 	schema=$(fss_detect_storage_schema)
@@ -1953,10 +1969,11 @@ fss_clear_node_runtime_fields() {
 	fi
 
 	node_json=$(fss_v2_get_node_json_by_id "${node_id}") || return 1
-	updated_json=$(printf '%s' "${node_json}" | jq -c '
+	updated_at=$(fss_now_ts_ms)
+	updated_json=$(printf '%s' "${node_json}" | jq -c --argjson updated_at "${updated_at}" '
 		del(.server_ip, .latency, .ping)
 		| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
-		| ._updated_at = (now | floor)
+		| ._updated_at = $updated_at
 	') || return 1
 	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
 }
@@ -2374,7 +2391,7 @@ fss_restore_legacy_backup_sh_fast() {
 	fi
 
 	echo_date "开始恢复节点到新存储结构..."
-	node_ts="$(date +%s)"
+	node_ts="$(fss_now_ts_ms)"
 	fss_legacy_node_dump_to_v2_tsv "${node_dump_file}" "${order_file}" "restore-sh" "${node_ts}" > "${tmp_dir}/nodes.tsv" || {
 		rm -rf "${tmp_dir}"
 		return 1
@@ -2501,7 +2518,7 @@ fss_restore_native_backup_v2() {
 	current_id=$(jq -r '.node_current // empty' "${json_file}")
 	failover_id=$(jq -r '.node_failover_backup // empty' "${json_file}")
 	next_id=$(jq -r '.node_next_id // empty' "${json_file}")
-	node_ts=$(date +%s)
+	node_ts=$(fss_now_ts_ms)
 
 	if [ "${node_count}" -gt 0 ];then
 		echo_date "阶段3/4：准备节点数据，共 ${node_count} 个节点..."
@@ -2550,6 +2567,7 @@ fss_restore_native_backup_v2() {
 				| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
 				| ._b64_mode = ((._b64_mode // "") | if . == "" then "raw" else . end)
 				| ._updated_at = $ts
+				| ._created_at = (((._created_at // $ts) | tonumber? // $ts) | if . < 1000000000000 then (. * 1000) else . end)
 				| if ((._source // "") == "") then ._source = "restore" else . end
 				| prune
 				| [$id, (tojson | @base64)] | @tsv

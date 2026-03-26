@@ -926,7 +926,7 @@ sub_write_nodes_schema2(){
 	if [ "${next_id}" -le "${max_id}" ] 2>/dev/null;then
 		next_id=$((max_id + 1))
 	fi
-	now_ts=$(date +%s)
+	now_ts=$(fss_now_ts_ms)
 		jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" '
 			def legacy_b64_mode:
 				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
@@ -959,6 +959,8 @@ sub_write_nodes_schema2(){
 					"_b64_mode": "raw",
 					"_source": "subscribe",
 					"_updated_at": $ts
+				} + {
+					"_created_at": (((($clean._created_at // $ts) | tonumber?) // $ts) | if . < 1000000000000 then (. * 1000) else . end)
 				}) | tojson | @base64),
 				($clean | tojson | @base64)
 			]]

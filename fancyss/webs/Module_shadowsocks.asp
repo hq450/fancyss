@@ -964,9 +964,23 @@ function sanitize_node_payload_value(field, value) {
 	}
 	return value;
 }
-function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting) {
+function normalize_schema2_node_timestamp(value, fallbackValue) {
+	var parsed = parseInt(value, 10);
+	if (isNaN(parsed) || parsed <= 0) {
+		return fallbackValue;
+	}
+	if (parsed < 1000000000000) {
+		return parsed * 1000;
+	}
+	return parsed;
+}
+function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, touchTs) {
 	var payload = {};
 	var raw = get_fss_raw_node(nodeId);
+	var updatedAt = parseInt(touchTs, 10);
+	if (isNaN(updatedAt) || updatedAt <= 0) {
+		updatedAt = Date.now();
+	}
 	if (raw) {
 		for (var key in raw) {
 			if (key.indexOf("_") === 0 || (preserveExisting && !is_node_runtime_field(key))) {
@@ -979,10 +993,8 @@ function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting) 
 	payload["_rev"] = raw && raw["_rev"] ? parseInt(raw["_rev"], 10) + 1 : 1;
 	payload["_b64_mode"] = "raw";
 	payload["_source"] = source || payload["_source"] || "manual";
-	payload["_updated_at"] = Math.floor(Date.now() / 1000);
-	if (!payload["_created_at"]) {
-		payload["_created_at"] = payload["_updated_at"];
-	}
+	payload["_updated_at"] = updatedAt;
+	payload["_created_at"] = normalize_schema2_node_timestamp(payload["_created_at"], updatedAt);
 	var suffix = "_" + nodeId;
 	for (var key2 in fieldBag) {
 		if (key2.indexOf("ssconf_basic_") !== 0 || key2.slice(-suffix.length) !== suffix) {
@@ -1090,9 +1102,9 @@ function schedule_schema2_webtest_warm() {
 	}, 200);
 }
 function build_schema2_upsert_fields(fieldBag, nodeId, source, preserveExisting) {
-	var payload = build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting);
-	var result = {};
 	var touchTs = get_schema2_touch_timestamp();
+	var payload = build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, touchTs);
+	var result = {};
 	result["fss_node_" + nodeId] = encode_schema2_node_payload(payload);
 	result["fss_node_config_ts"] = touchTs;
 	if (schema2_payload_changes_direct_domains(nodeId, payload)) {

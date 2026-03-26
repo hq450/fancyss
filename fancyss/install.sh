@@ -621,7 +621,7 @@ __get_name_by_type() {
 
 append_backup_nodes_schema2(){
 	local backup_file="$1"
-	local order_csv next_id max_id reserved_max imported_order="" node_json node_id stored_json
+	local order_csv next_id max_id reserved_max imported_order="" node_json node_id stored_json node_ts
 
 	[ -f "${backup_file}" ] || return 1
 	order_csv=$(dbus get fss_node_order)
@@ -647,7 +647,8 @@ append_backup_nodes_schema2(){
 			node_id="${next_id}"
 			next_id=$((next_id + 1))
 		fi
-		stored_json=$(printf '%s' "${node_json}" | jq -c --arg id "${node_id}" '
+		node_ts=$(fss_now_ts_ms)
+		stored_json=$(printf '%s' "${node_json}" | jq -c --arg id "${node_id}" --argjson ts "${node_ts}" '
 			with_entries(select(.value != "" and .value != null))
 			| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
 			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
@@ -656,8 +657,9 @@ append_backup_nodes_schema2(){
 				"_id": $id,
 				"_rev": 1,
 				"_source": "lite-restore",
-				"_updated_at": (now | floor)
+				"_updated_at": $ts
 			}
+			| ._created_at = (((._created_at // $ts) | tonumber? // $ts) | if . < 1000000000000 then (. * 1000) else . end)
 		')
 		fss_clear_webtest_cache_node "${node_id}"
 		dbus set fss_node_${node_id}="$(fss_b64_encode "${stored_json}")"
