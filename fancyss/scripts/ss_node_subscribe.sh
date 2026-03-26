@@ -975,6 +975,7 @@ sub_write_nodes_schema2(){
 	do
 		[ -n "${node_id}" ] || continue
 		[ -n "${stored_b64}" ] || continue
+		fss_clear_webtest_cache_node "${node_id}"
 		dbus set fss_node_${node_id}="${stored_b64}"
 		export_json=$(fss_b64_decode "${export_b64}")
 		printf '%s\n' "${export_json}" >> "${mapped_file}"
@@ -992,10 +993,12 @@ sub_write_nodes_schema2(){
 	if [ -n "${order_csv}" ];then
 		dbus set fss_node_order="${order_csv},${imported_order}"
 	else
-		dbus set fss_node_order="${imported_order}"
+	dbus set fss_node_order="${imported_order}"
 	fi
 	dbus set fss_data_schema=2
 	dbus set fss_node_next_id="$((max_id + 1))"
+	fss_touch_node_catalog_ts >/dev/null 2>&1
+	fss_touch_node_config_ts >/dev/null 2>&1
 	mv "${mapped_file}" "${input_file}"
 	return 0
 }
@@ -1708,6 +1711,7 @@ remove_sub_node(){
 			local group_value=$(sub_get_node_field_plain "${remove_nu}" group)
 			if [ -n "$(normalize_group_name "${group_value}")" ];then
 				echo_date "移除第$remove_nu节点：【$(sub_get_node_field_plain "${remove_nu}" name)】"
+				fss_clear_webtest_cache_node "${remove_nu}"
 				dbus remove fss_node_${remove_nu}
 				remove_flag=1
 			else
@@ -1735,6 +1739,8 @@ remove_sub_node(){
 		[ -n "${restore_failover}" ] && dbus set fss_node_failover_backup="${restore_failover}" || dbus remove fss_node_failover_backup
 		dbus set fss_data_schema=2
 		dbus set fss_node_next_id="$((max_keep + 1))"
+		fss_touch_node_catalog_ts >/dev/null 2>&1
+		fss_touch_node_config_ts >/dev/null 2>&1
 		for conf1 in $(dbus list ss_online_group|awk -F"=" '{print $1}')
 		do
 			dbus remove ${conf1}
@@ -1744,6 +1750,7 @@ remove_sub_node(){
 			dbus remove ${conf2}
 		done
 		fss_refresh_node_direct_cache >/dev/null 2>&1
+		fss_schedule_webtest_cache_warm >/dev/null 2>&1
 		echo_date "所有订阅节点信息已经成功删除！"
 		sub_refresh_node_state
 		return 0
@@ -1771,6 +1778,7 @@ remove_sub_node(){
 		dbus remove ${conf2}
 	done
 	fss_refresh_node_direct_cache >/dev/null 2>&1
+	fss_schedule_webtest_cache_warm >/dev/null 2>&1
 	echo_date "所有订阅节点信息已经成功删除！"
 }
 
@@ -3995,6 +4003,7 @@ start_node_subscribe(){
 				exit_sub
 			fi
 			fss_refresh_node_direct_cache >/dev/null 2>&1
+			fss_schedule_webtest_cache_warm >/dev/null 2>&1
 		else
 			echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
 		fi
@@ -4080,6 +4089,7 @@ start_offline_update() {
 		echo_date "ℹ️离线节点解析完毕，开始写入节点..."
 		if json2skipd "offline_node_new"; then
 			fss_refresh_node_direct_cache >/dev/null 2>&1
+			fss_schedule_webtest_cache_warm >/dev/null 2>&1
 		fi
 	else
 		echo_date "ℹ️离线节点解析失败！跳过！"

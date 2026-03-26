@@ -1110,12 +1110,69 @@ detect_running_status3(){
 }
 
 get_rand_port(){
-	# gen 10 random port
-	local ports=$(shuf -i 2000-65000 -n 10)
-	# get all used port
-	local LISTENS=$(netstat -nlp 2>/dev/null | grep -E "^tcp|^udp|^raw" | awk '{print $4}'|awk -F ":" '{print $NF}'|sort -un)
-	# get one avaliable port
-	echo ${ports} ${LISTENS} ${LISTENS} | sed 's/[[:space:]]/\n/g' | sort -n | uniq -u | head -n1
+	get_avail_ports 1 "$@" | sed -n '1p'
+}
+
+get_avail_ports(){
+	local need="$1"
+	local tmp_dir=""
+	local used_file="${tmp_dir}/used.txt"
+	local out_file="${tmp_dir}/out.txt"
+	local sample_file="${tmp_dir}/sample.txt"
+	local taken_file="${tmp_dir}/taken.txt"
+	local extra_file=""
+	local sample_size=""
+	local round=0
+	local current=0
+	local tmp_seed=""
+	local tmp_try=0
+
+	printf '%s' "${need}" | grep -Eq '^[0-9]+$' || need=1
+	[ "${need}" -gt 0 ] || need=1
+	tmp_seed=$(date +%s 2>/dev/null)
+	[ -n "${tmp_seed}" ] || tmp_seed="0"
+	while [ "${tmp_try}" -lt 128 ]
+	do
+		tmp_dir="/tmp/fss_ports.${tmp_seed}.$$.$tmp_try"
+		if mkdir "${tmp_dir}" 2>/dev/null; then
+			break
+		fi
+		tmp_try=$((tmp_try + 1))
+	done
+	[ -n "${tmp_dir}" ] && [ -d "${tmp_dir}" ] || return 1
+	used_file="${tmp_dir}/used.txt"
+	out_file="${tmp_dir}/out.txt"
+	sample_file="${tmp_dir}/sample.txt"
+	taken_file="${tmp_dir}/taken.txt"
+	: > "${used_file}"
+	: > "${out_file}"
+
+	# `-nlp` 只能看到监听端口，测速时大量已建立/TIME_WAIT 的本地端口也会占用 bind。
+	netstat -an 2>/dev/null | grep -E "^tcp|^udp|^raw" | awk '{print $4}' | awk -F ":" '{print $NF}' | sort -un > "${used_file}"
+	shift
+	for extra_file in "$@"
+	do
+		[ -f "${extra_file}" ] || continue
+		cat "${extra_file}" >> "${used_file}"
+	done
+	sort -un "${used_file}" -o "${used_file}"
+
+	while [ "${round}" -lt 8 ]
+	do
+		current=$(wc -l < "${out_file}" | tr -d ' ')
+		[ -n "${current}" ] || current=0
+		[ "${current}" -ge "${need}" ] && break
+		sample_size=$(( (need - current + 8) * 6 ))
+		[ "${sample_size}" -gt 512 ] && sample_size=512
+		shuf -i 2000-65000 -n "${sample_size}" > "${sample_file}" 2>/dev/null || break
+		cat "${used_file}" "${out_file}" | sed '/^$/d' | sort -un > "${taken_file}"
+		awk 'NR == FNR {taken[$1] = 1; next} !($1 in taken) {print}' "${taken_file}" "${sample_file}" | sed -n "1,$((need - current))p" >> "${out_file}"
+		sort -un "${out_file}" -o "${out_file}"
+		round=$((round + 1))
+	done
+
+	cat "${out_file}" 2>/dev/null
+	rm -rf "${tmp_dir}"
 }
 
 kill_used_port(){

@@ -288,6 +288,7 @@ restore_sh(){
 	dbus set ss_basic_enable="0"
 	dbus set ss_basic_version_local=$(cat /koolshare/ss/version) 
 	fss_refresh_node_direct_cache >/dev/null 2>&1
+	fss_schedule_webtest_cache_warm >/dev/null 2>&1
 	echo_date "配置恢复成功！"
 }
 
@@ -299,6 +300,7 @@ restore_json(){
 		dbus set ss_basic_enable="0"
 		dbus set ss_basic_version_local=$(cat /koolshare/ss/version)
 		fss_refresh_node_direct_cache >/dev/null 2>&1
+		fss_schedule_webtest_cache_warm >/dev/null 2>&1
 		echo_date "JSON备份恢复成功！"
 	else
 		echo_date "JSON备份恢复失败！请检查备份文件格式是否正确。"

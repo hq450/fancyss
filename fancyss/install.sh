@@ -659,6 +659,7 @@ append_backup_nodes_schema2(){
 				"_updated_at": (now | floor)
 			}
 		')
+		fss_clear_webtest_cache_node "${node_id}"
 		dbus set fss_node_${node_id}="$(fss_b64_encode "${stored_json}")"
 		imported_order="${imported_order}${imported_order:+,}${node_id}"
 		if [ "${node_id}" -gt "${max_id}" ] 2>/dev/null;then
@@ -675,6 +676,8 @@ append_backup_nodes_schema2(){
 	dbus set fss_data_schema=2
 	dbus set fss_node_next_id="$((max_id + 1))"
 	[ -n "$(dbus get fss_node_current)" ] || dbus set fss_node_current="$(printf '%s' "${imported_order}" | cut -d ',' -f 1)"
+	fss_touch_node_catalog_ts >/dev/null 2>&1
+	fss_touch_node_config_ts >/dev/null 2>&1
 	return 0
 }
 
@@ -700,6 +703,7 @@ full2lite(){
 					with_entries(select(.value != "" and .value != null))
 					| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
 				' >> "${backup_file}"
+				fss_clear_webtest_cache_node "${NU}"
 				dbus remove fss_node_${NU}
 				remove_flag=1
 				;;
@@ -718,6 +722,8 @@ full2lite(){
 		[ -n "${keep_order}" ] && dbus set fss_node_order="${keep_order}" || dbus remove fss_node_order
 		dbus set fss_data_schema=2
 		dbus set fss_node_next_id="$((max_keep + 1))"
+		fss_touch_node_catalog_ts >/dev/null 2>&1
+		fss_touch_node_config_ts >/dev/null 2>&1
 		if [ -s "${backup_file}" ];then
 			echo_date "📁lite版本不支持的节点成功备份到${backup_file}"
 		else
@@ -1311,6 +1317,7 @@ install_now(){
 		echo_date 重启科学上网插件！
 		sh /koolshare/ss/ssconfig.sh restart
 	fi
+	fss_schedule_webtest_cache_warm >/dev/null 2>&1
 
 	echo_date "更新完毕，请等待网页自动刷新！"
 	exit_install

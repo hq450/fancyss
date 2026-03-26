@@ -1011,10 +1011,93 @@ function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting) 
 function encode_schema2_node_payload(payload) {
 	return base64_encode_utf8(JSON.stringify(payload));
 }
+var SCHEMA2_NODE_DIRECT_FIELDS = {
+	"type": true,
+	"server": true,
+	"naive_server": true,
+	"hy2_server": true,
+	"v2ray_use_json": true,
+	"v2ray_json": true,
+	"xray_use_json": true,
+	"xray_json": true,
+	"tuic_json": true
+};
+function get_schema2_touch_timestamp() {
+	return String(Date.now());
+}
+function get_schema2_compare_field_value(raw, field) {
+	var value = "";
+	if (raw && typeof raw[field] != "undefined" && raw[field] !== null) {
+		value = String(raw[field]);
+	}
+	if (is_node_bool_field(field)) {
+		return value == "1" ? "1" : "0";
+	}
+	return value;
+}
+function schema2_payload_changes_direct_domains(nodeId, payload) {
+	var raw = get_fss_raw_node(nodeId);
+	if (!raw) {
+		return true;
+	}
+	for (var field in SCHEMA2_NODE_DIRECT_FIELDS) {
+		if (get_schema2_compare_field_value(raw, field) !== get_schema2_compare_field_value(payload, field)) {
+			return true;
+		}
+	}
+	return false;
+}
+var schema2WebtestWarmTimer = 0;
+var schema2NodeDirectTimer = 0;
+function schedule_schema2_node_direct_refresh() {
+	var id;
+	if (get_node_storage_schema() != 2) {
+		return;
+	}
+	if (schema2NodeDirectTimer) {
+		clearTimeout(schema2NodeDirectTimer);
+	}
+	schema2NodeDirectTimer = setTimeout(function() {
+		schema2NodeDirectTimer = 0;
+		id = parseInt(Math.random() * 100000000);
+		$.ajax({
+			type: "POST",
+			cache:false,
+			url: "/_api/",
+			data: JSON.stringify({"id": id, "method": "ss_webtest.sh", "params":["schedule_node_direct_refresh"], "fields": {}}),
+			dataType: "json"
+		});
+	}, 200);
+}
+function schedule_schema2_webtest_warm() {
+	var id;
+	if (get_node_storage_schema() != 2) {
+		return;
+	}
+	if (schema2WebtestWarmTimer) {
+		clearTimeout(schema2WebtestWarmTimer);
+	}
+	schema2WebtestWarmTimer = setTimeout(function() {
+		schema2WebtestWarmTimer = 0;
+		id = parseInt(Math.random() * 100000000);
+		$.ajax({
+			type: "POST",
+			cache:false,
+			url: "/_api/",
+			data: JSON.stringify({"id": id, "method": "ss_webtest.sh", "params":["schedule_warm"], "fields": {}}),
+			dataType: "json"
+		});
+	}, 200);
+}
 function build_schema2_upsert_fields(fieldBag, nodeId, source, preserveExisting) {
 	var payload = build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting);
 	var result = {};
+	var touchTs = get_schema2_touch_timestamp();
 	result["fss_node_" + nodeId] = encode_schema2_node_payload(payload);
+	result["fss_node_config_ts"] = touchTs;
+	if (schema2_payload_changes_direct_domains(nodeId, payload)) {
+		result["fss_node_catalog_ts"] = touchTs;
+	}
 	return result;
 }
 function strip_legacy_node_fields(fieldBag, nodeId) {
@@ -3002,6 +3085,8 @@ function add_ss_node_conf(flag) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
+			schedule_schema2_node_direct_refresh();
+			schedule_schema2_webtest_warm();
 			refresh_table();
 			E("ss_node_table_server").value = "";
 			if ((E("continue_add_box").checked) == false) {
@@ -3055,8 +3140,11 @@ function remove_conf_table(o) {
 		var new_nodes_v2 = ss_nodes.concat();
 		new_nodes_v2.splice(new_nodes_v2.indexOf(String(id)), 1);
 		var fields_v2 = {};
+		var touchTs = get_schema2_touch_timestamp();
 		fields_v2["fss_node_" + id] = "";
 		fields_v2["fss_node_order"] = new_nodes_v2.join(",");
+		fields_v2["fss_node_catalog_ts"] = touchTs;
+		fields_v2["fss_node_config_ts"] = touchTs;
 		if (get_saved_current_node_id() == String(id)) {
 			fields_v2["fss_node_current"] = new_nodes_v2.length ? new_nodes_v2[0] : "";
 		}
@@ -3071,8 +3159,10 @@ function remove_conf_table(o) {
 			cache:false,
 			url: "/_api/",
 			data: JSON.stringify(postData_v2),
-			dataType: "json",
+		dataType: "json",
 			success: function(response) {
+				schedule_schema2_node_direct_refresh();
+				schedule_schema2_webtest_warm();
 				refresh_table(function() {
 					set_node_table_scroll_top(nodeTableScrollTop);
 				});
@@ -3422,6 +3512,8 @@ function edit_ss_node_conf(flag) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
+			schedule_schema2_node_direct_refresh();
+			schedule_schema2_webtest_warm();
 			refresh_table();
 			E("ss_node_table_name").value = "";
 			E("ss_node_table_port").value = "";
@@ -4093,6 +4185,7 @@ function save_new_order(){
 			data: JSON.stringify(postData_v2),
 			dataType: "json",
 			success: function(response) {
+				schedule_schema2_webtest_warm();
 				refresh_table(function() {
 					getNowFormatDate();
 					ss_node_sel();
@@ -5137,10 +5230,10 @@ function test_latency_single(node){
 		}
 	}
 	var cell = $("#ss_node_lt_" + node + " .latency_val");
-	write_webtest([[String(node), "waiting..."]]);
 	single_test_wait[node] = true;
 	single_test_running = true;
 	single_test_node = node;
+	write_webtest([[String(node), "waiting..."]]);
 	disable_latency_buttons(node);
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_webtest.sh", "params":["single_test", String(node)], "fields": {}};
@@ -5443,7 +5536,8 @@ function write_webtest(ps){
 		if(typeof lag === "string" && is_latency_transient_state(lag)){
 			if($val && $val.length){
 				var curr = $val.text().trim();
-				if(curr && curr !== "-" && !is_latency_transient_state(curr)){
+				var allowSingleTransient = single_test_running && String(single_test_node) == String(nu);
+				if(!allowSingleTransient && curr && curr !== "-" && !is_latency_transient_state(curr)){
 					continue;
 				}
 			}
