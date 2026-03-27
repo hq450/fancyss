@@ -596,6 +596,10 @@ wt_gen_vless_outbound() {
 			fi
 		fi
 		local xray_flow=$(wt_node_get_plain xray_flow ${nu})
+		local xray_prot=$(wt_node_get_plain xray_prot ${nu})
+		local xray_encryption=$(wt_node_get_plain xray_encryption ${nu})
+		[ -z "${xray_prot}" ] && xray_prot="vless"
+		[ -z "${xray_encryption}" ] && xray_encryption="none"
 		local xray_fingerprint=$(wt_node_get_plain xray_fingerprint ${nu})
 		[ -z "${xray_fingerprint}" ] && xray_fingerprint="chrome"
 		local xray_pcs=$(wt_node_get_plain xray_pcs ${nu})
@@ -605,7 +609,9 @@ wt_gen_vless_outbound() {
 		local xray_xhttp_mode=$(wt_node_get_plain xray_xhttp_mode ${nu})
 
 		if [ "${xray_network_security}" == "none" ];then
-			xray_flow=""
+			if [ "${xray_prot}" != "vless" ] || [ "${xray_encryption}" = "none" ];then
+				xray_flow=""
+			fi
 		fi
 
 		if [ "${xray_network_security}" == "tls" -o "${xray_network_security}" == "xtls" ];then
@@ -759,11 +765,22 @@ wt_gen_vless_outbound() {
 
 		local xray_port=$(wt_node_get_plain port ${nu})
 		local xray_uuid=$(wt_node_get_plain xray_uuid ${nu})
-		local xray_prot=$(wt_node_get_plain xray_prot ${nu})
-		local xray_alterid=$(wt_node_get_plain xray_alterid ${nu})
-		local xray_encryption=$(wt_node_get_plain xray_encryption ${nu})
-		[ -z "${xray_prot}" ] && xray_prot="vless"
-		[ -z "${xray_alterid}" ] && xray_alterid="0"
+		local xray_user_json
+		if [ "${xray_prot}" = "vless" ];then
+			xray_user_json=$(cat <<-EOF
+										"id": "${xray_uuid}"
+										,"encryption": "${xray_encryption}"
+										,"flow": $(wt_get_value_null ${xray_flow})
+			EOF
+			)
+		else
+			[ -z "${xray_encryption}" -o "${xray_encryption}" = "none" ] && xray_encryption="auto"
+			xray_user_json=$(cat <<-EOF
+										"id": "${xray_uuid}"
+										,"security": "${xray_encryption}"
+			EOF
+			)
+		fi
 
 		cat >${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
 			{
@@ -778,11 +795,7 @@ wt_gen_vless_outbound() {
 								"port": ${xray_port},
 								"users": [
 									{
-										"id": "${xray_uuid}"
-										,"alterId": ${xray_alterid}
-										,"security": "auto"
-										,"encryption": "${xray_encryption}"
-										,"flow": $(wt_get_value_null ${xray_flow})
+${xray_user_json}
 									}
 								]
 							}
@@ -811,9 +824,6 @@ wt_gen_vless_outbound() {
 		EOF
 
 		wt_strip_null_keys ${TMP2}/conf_${mark}/${nu}_outbounds.json
-		if [ "${xray_prot}" == "vless" ];then
-			sed -i '/alterId/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
-		fi
 		if [ "${LINUX_VER}" == "26" ]; then
 			sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
 		fi

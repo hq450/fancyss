@@ -3967,9 +3967,13 @@ creat_vless_json() {
 		if [ -z "$ss_basic_xray_network_security" ];then
 			local ss_basic_xray_network_security="none"
 		fi
+		[ -z "${ss_basic_xray_prot}" ] && ss_basic_xray_prot="vless"
+		[ -z "${ss_basic_xray_encryption}" ] && ss_basic_xray_encryption="none"
 
 		if [ "${ss_basic_xray_network_security}" == "none" ];then
-			ss_basic_xray_flow=""
+			if [ "${ss_basic_xray_prot}" != "vless" ] || [ "${ss_basic_xray_encryption}" = "none" ];then
+				ss_basic_xray_flow=""
+			fi
 			ss_basic_xray_network_security_ai=""
 			ss_basic_xray_network_security_alpn_h2=""
 			ss_basic_xray_network_security_alpn_http=""
@@ -4197,8 +4201,22 @@ creat_vless_json() {
 		EOF
 		
 		# outbounds area
-		[ -z "${ss_basic_xray_alterid}" ] && ss_basic_xray_alterid="0"
-		[ -z "${ss_basic_xray_prot}" ] && ss_basic_xray_prot="vless"
+		local xray_user_json
+		if [ "${ss_basic_xray_prot}" = "vless" ];then
+			xray_user_json=$(cat <<-EOF
+									"id": "$ss_basic_xray_uuid"
+									,"encryption": "$ss_basic_xray_encryption"
+									,"flow": $(get_value_null $ss_basic_xray_flow)
+			EOF
+			)
+		else
+			[ -z "${ss_basic_xray_encryption}" -o "${ss_basic_xray_encryption}" = "none" ] && ss_basic_xray_encryption="auto"
+			xray_user_json=$(cat <<-EOF
+									"id": "$ss_basic_xray_uuid"
+									,"security": "$ss_basic_xray_encryption"
+			EOF
+			)
+		fi
 		cat >>"${VLESS_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
 				{
@@ -4211,11 +4229,7 @@ creat_vless_json() {
 								"port": ${ss_basic_port},
 								"users": [
 									{
-										"id": "$ss_basic_xray_uuid"
-										,"alterId": $ss_basic_xray_alterid
-										,"security": "auto"
-										,"encryption": "$ss_basic_xray_encryption"
-										,"flow": $(get_value_null $ss_basic_xray_flow)
+${xray_user_json}
 									}
 								]
 							}
@@ -4246,9 +4260,6 @@ creat_vless_json() {
 		EOF
 		echo_date "解析Xray配置文件..."
 		run jq 'del(.. | nulls)' ${VLESS_CONFIG_TEMP} > /tmp/jq_strip_tmp.txt 2>/dev/null && mv /tmp/jq_strip_tmp.txt ${VLESS_CONFIG_TEMP}
-		if [ "${ss_basic_xray_prot}" == "vless" ];then
-			sed -i '/alterId/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
-		fi
 		if [ "${LINUX_VER}" == "26" ]; then
 			sed -i '/tcpFastOpen/d' ${VLESS_CONFIG_TEMP} 2>/dev/null
 		fi

@@ -2568,7 +2568,11 @@ add_vless_node(){
 	x_path=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "path" | awk -F"=" '{print $2}' | urldecode)
 	x_encryption=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "encryption" | awk -F"=" '{print $2}')
 	if [ -z "${x_encryption}" ];then
-		x_encryption="none"
+		if [ "${strtype}" = "vmess" ];then
+			x_encryption="auto"
+		else
+			x_encryption="none"
+		fi
 	fi
 	x_type=$(echo "${_STRING_2}"|sed 's/&/\n/g;s/#/\n/g' | grep "type" | grep -v "header" | awk -F"=" '{print $2}')
 	if [ -z "${x_type}" ];then
