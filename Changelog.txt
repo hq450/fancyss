@@ -14,6 +14,7 @@ fancyss Changelog
    - fix	修复节点新增/删除/编辑后，前端延后触发的`node_direct`刷新与测速缓存预热任务可能与手动测速竞争，导致连续删改节点后立即批量测速时，前段一批xray-like节点异常`failed`的问题；现在手动单测/批量测速会先取消待发任务，后台也会在测速进行中跳过这类调度。
    - fix	修复tuic批量测速运行时为临时JSON补写本地监听和relay地址时，因`jq`改写路径兼容性问题产生`jq parse error`日志的情况；现在改为shell直接生成运行态tuic配置。
    - fix	修复hysteria2节点测速缓存outbound JSON收尾括号错误，导致xray-like聚合测速配置整体失效，进而出现除tuic外批量测速节点大面积`failed`的问题。
+   - fix	修复一个vless + tcp + vision节点因配置生成错误无法工作的问题。
 
 3.5.8（20260325）
    - note	本次更新重点补上了节点服务器域名动态解析能力。旧版为避免“先解析节点域名、后才能连上代理”的鸡蛋问题，会在启动前先把节点域名预解析成IP写进xray / tuic / naive等客户端配置。
