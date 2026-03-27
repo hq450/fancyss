@@ -117,6 +117,36 @@ wt_get_hy2_udphop_port() {
 	fi
 }
 
+wt_get_out_file_path() {
+	local nu="$1"
+	local mark="$2"
+	if [ -n "${WT_GEN_OUT_FILE}" ]; then
+		printf '%s' "${WT_GEN_OUT_FILE}"
+	else
+		printf '%s' "${TMP2}/conf_${mark}/${nu}_outbounds.json"
+	fi
+}
+
+wt_get_start_file_path() {
+	local nu="$1"
+	local mark="$2"
+	if [ -n "${WT_GEN_START_FILE}" ]; then
+		printf '%s' "${WT_GEN_START_FILE}"
+	else
+		printf '%s' "${TMP2}/bash_${mark}/start_${nu}.sh"
+	fi
+}
+
+wt_get_stop_file_path() {
+	local nu="$1"
+	local mark="$2"
+	if [ -n "${WT_GEN_STOP_FILE}" ]; then
+		printf '%s' "${WT_GEN_STOP_FILE}"
+	else
+		printf '%s' "${TMP2}/bash_${mark}/stop_${nu}.sh"
+	fi
+}
+
 wt_strip_null_keys() {
 	local json_file="$1"
 	local tmp_file="${json_file}.tmp"
@@ -183,7 +213,7 @@ wt_wrap_user_outbound_json() {
 		patch_addr
 		| (.outbound // (.outbounds[0] // {})) as $ob
 		| if ($ob | type) == "object" and (($ob | keys | length) > 0) then
-			{outbounds: [$ob]}
+			$ob
 		else
 			empty
 		end
@@ -211,33 +241,48 @@ wt_gen_ss_outbound() {
 	local nu="$1"
 	local mark="$2"
 	local out_file=""
-	local wrapped_mode="1"
+	local start_file=""
+	local stop_file=""
+	local ss_server=""
+	local _server_ip=""
+	local ss_port=""
+	local ss_pass=""
+	local ss_meth=""
+	local ss_obfs=""
+	local ss_obfs_host=""
+	local OBFS_ARG=""
+	local _server_ip_tmp=""
+	local _server_port_tmp=""
+	local _uot=""
 
 	WT_LAST_START_PORT=""
-	local ss_server=$(wt_node_get_plain server ${nu})
-	local _server_ip=$(wt_get_server_addr "${ss_server}")
-	local ss_port=$(wt_node_get_plain port ${nu})
-	local ss_pass=$(wt_node_get_plain password ${nu})
-	local ss_meth=$(wt_node_get_plain method ${nu})
+	ss_server=$(wt_node_get_plain server "${nu}")
+	_server_ip=$(wt_get_server_addr "${ss_server}")
+	ss_port=$(wt_node_get_plain port "${nu}")
+	ss_pass=$(wt_node_get_plain password "${nu}")
+	ss_meth=$(wt_node_get_plain method "${nu}")
+	ss_obfs=$(wt_node_get_plain ss_obfs "${nu}")
+	ss_obfs_host=$(wt_node_get_plain ss_obfs_host "${nu}")
+	out_file=$(wt_get_out_file_path "${nu}" "${mark}")
+	start_file=$(wt_get_start_file_path "${nu}" "${mark}")
+	stop_file=$(wt_get_stop_file_path "${nu}" "${mark}")
 
 	if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
-		local OBFS_ARG="--fast-open"
+		OBFS_ARG="--fast-open"
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
-	else
-		local OBFS_ARG=""
 	fi
 
-	if [ "$(wt_node_get_plain ss_obfs ${nu})" == "http" -o "$(wt_node_get_plain ss_obfs ${nu})" == "tls" ]; then
+	if [ "${ss_obfs}" = "http" -o "${ss_obfs}" = "tls" ]; then
 		local obfs_port="${WT_PRESET_START_PORT}"
 		[ -n "${obfs_port}" ] || obfs_port=$(wt_get_reserved_port)
 		WT_LAST_START_PORT="${obfs_port}"
-		local _server_ip_tmp="127.0.0.1"
-		local _server_port_tmp="${obfs_port}"
-		if [ -n "$(wt_node_get_plain ss_obfs_host ${nu})" ]; then
-			cat >>"${TMP2}/bash_${mark}/start_${nu}.sh" <<-EOF
+		_server_ip_tmp="127.0.0.1"
+		_server_port_tmp="${obfs_port}"
+		if [ -n "${ss_obfs_host}" ]; then
+			cat >"${start_file}" <<-EOF
 				#!/bin/sh
 				_wt_root=\${WT_RUNTIME_ROOT:-\$(cd "\$(dirname "\$0")/.." && pwd)}
-				"\${_wt_root}/wt-obfs" -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(wt_node_get_plain ss_obfs ${nu}) --obfs-host $(wt_node_get_plain ss_obfs_host ${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
+				"\${_wt_root}/wt-obfs" -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs ${ss_obfs} --obfs-host ${ss_obfs_host} ${OBFS_ARG} >/dev/null 2>&1 &
 				_i=20
 				while [ \${_i} -gt 0 ]; do
 					netstat -nl 2>/dev/null | awk '{print \$4}' | grep -E "[:\\\\.]${_server_port_tmp}\$" >/dev/null 2>&1 && break
@@ -246,10 +291,10 @@ wt_gen_ss_outbound() {
 				done
 			EOF
 		else
-			cat >>"${TMP2}/bash_${mark}/start_${nu}.sh" <<-EOF
+			cat >"${start_file}" <<-EOF
 				#!/bin/sh
 				_wt_root=\${WT_RUNTIME_ROOT:-\$(cd "\$(dirname "\$0")/.." && pwd)}
-				"\${_wt_root}/wt-obfs" -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs $(wt_node_get_plain ss_obfs ${nu}) ${OBFS_ARG} >/dev/null 2>&1 &
+				"\${_wt_root}/wt-obfs" -s ${_server_ip} -p ${ss_port} -l ${_server_port_tmp} --obfs ${ss_obfs} ${OBFS_ARG} >/dev/null 2>&1 &
 				_i=20
 				while [ \${_i} -gt 0 ]; do
 					netstat -nl 2>/dev/null | awk '{print \$4}' | grep -E "[:\\\\.]${_server_port_tmp}\$" >/dev/null 2>&1 && break
@@ -258,94 +303,56 @@ wt_gen_ss_outbound() {
 				done
 			EOF
 		fi
-		cat >${TMP2}/bash_${mark}/stop_${nu}.sh <<-EOF
+		cat >"${stop_file}" <<-EOF
 			#!/bin/sh
 			_pid=\$(ps -w | grep "wt-obfs" | grep -w "${_server_ip}" | grep -w "${ss_port}" | grep -w "${_server_port_tmp}" | awk '{print \$1}' | sed -n '1p')
 			if [ -n "\${_pid}" ];then
 			    kill -9 \${_pid}
 			fi
 		EOF
-		chmod +x ${TMP2}/bash_${mark}/start_${nu}.sh
-		chmod +x ${TMP2}/bash_${mark}/stop_${nu}.sh
-		local _uot="true"
+		_uot="true"
 	else
-		local _server_ip_tmp="${_server_ip}"
-		local _server_port_tmp="${ss_port}"
-		local _uot="false"
+		_server_ip_tmp="${_server_ip}"
+		_server_port_tmp="${ss_port}"
+		_uot="false"
 	fi
 
-	out_file="${TMP2}/conf_${mark}/${nu}_outbounds.json"
-	[ "${WT_OUTBOUND_OBJECT_ONLY}" = "1" ] && wrapped_mode="0"
-
-	if [ "${wrapped_mode}" = "1" ]; then
-		cat >"${out_file}" <<-EOF
-			{
-			"outbounds": [
-				{
-					"tag": "proxy${nu}",
-					"protocol": "shadowsocks",
-					"settings": {
-						"servers": [
-							{
-								"address": "${_server_ip_tmp}",
-								"port": ${_server_port_tmp},
-								"password": "${ss_pass}",
-								"method": "${ss_meth}",
-								"uot": ${_uot}
-							}
-						]
-					},
-					"streamSettings": {
-						"network": "raw"
-					},
-					"sockopt": {
-						"tcpFastOpen": $(get_function_switch ${ss_basic_tfo}),
-						"tcpMptcp": false,
-						"tcpcongestion": "bbr"
+	cat >"${out_file}" <<-EOF
+		{
+			"tag": "proxy${nu}",
+			"protocol": "shadowsocks",
+			"settings": {
+				"servers": [
+					{
+						"address": "${_server_ip_tmp}",
+						"port": ${_server_port_tmp},
+						"password": "${ss_pass}",
+						"method": "${ss_meth}",
+						"uot": ${_uot}
 					}
-				}
-			]
+				]
+			},
+			"streamSettings": {
+				"network": "raw"
+			},
+			"sockopt": {
+				"tcpFastOpen": $(get_function_switch ${ss_basic_tfo}),
+				"tcpMptcp": false,
+				"tcpcongestion": "bbr"
 			}
-		EOF
-		if [ "${LINUX_VER}" == "26" ]; then
-			sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
-		fi
-	else
-		cat >"${out_file}" <<-EOF
-			{
-				"tag": "proxy${nu}",
-				"protocol": "shadowsocks",
-				"settings": {
-					"servers": [
-						{
-							"address": "${_server_ip_tmp}",
-							"port": ${_server_port_tmp},
-							"password": "${ss_pass}",
-							"method": "${ss_meth}",
-							"uot": ${_uot}
-						}
-					]
-				},
-				"streamSettings": {
-					"network": "raw"
-				},
-				"sockopt": {
-					"tcpFastOpen": $(get_function_switch ${ss_basic_tfo}),
-					"tcpMptcp": false,
-					"tcpcongestion": "bbr"
-				}
-			}
-		EOF
-		if [ "${LINUX_VER}" == "26" ]; then
-			sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
-		fi
+		}
+	EOF
+	if [ "${LINUX_VER}" == "26" ]; then
+		sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
 	fi
 }
 
 wt_gen_vmess_outbound() {
 	local nu="$1"
 	local mark="$2"
+	local out_file=""
 	local v2ray_use_json=$(wt_node_get_plain v2ray_use_json ${nu})
+	out_file=$(wt_get_out_file_path "${nu}" "${mark}")
 	if [ "${v2ray_use_json}" != "1" ]; then
 		local v2ray_server=$(wt_node_get_plain server ${nu})
 		local _server_ip=$(wt_get_server_addr "${v2ray_server}")
@@ -501,48 +508,44 @@ wt_gen_vmess_outbound() {
 			;;
 		esac
 
-		cat >${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+		cat >"${out_file}" <<-EOF
 			{
-			"outbounds": [
-				{
-					"tag": "proxy${nu}",
-					"protocol": "vmess",
-					"settings": {
-						"vnext": [
-							{
-								"address": "${_server_ip}",
-								"port": $(wt_node_get_plain port ${nu}),
-								"users": [
-									{
-										"id": "$(wt_node_get_plain v2ray_uuid ${nu})"
-										,"alterId": $(wt_node_get_plain v2ray_alterid ${nu})
-										,"security": "$(wt_node_get_plain v2ray_security ${nu})"
-									}
-								]
-							}
-						]
-					},
-					"streamSettings": {
-						"network": "${v2ray_network}"
-						,"security": "${v2ray_network_security}"
-						,"tlsSettings": $tls
-						,"tcpSettings": $tcp
-						,"kcpSettings": $kcp
-						,"wsSettings": $ws
-						,"httpSettings": $h2
-						,"quicSettings": $qc
-						,"grpcSettings": $gr
-					},
-					"mux": {
-						"enabled": $(get_function_switch $(wt_node_get_plain v2ray_mux_enable ${nu})),
-						"concurrency": ${v2ray_mux_concurrency}
-					}
+				"tag": "proxy${nu}",
+				"protocol": "vmess",
+				"settings": {
+					"vnext": [
+						{
+							"address": "${_server_ip}",
+							"port": $(wt_node_get_plain port ${nu}),
+							"users": [
+								{
+									"id": "$(wt_node_get_plain v2ray_uuid ${nu})"
+									,"alterId": $(wt_node_get_plain v2ray_alterid ${nu})
+									,"security": "$(wt_node_get_plain v2ray_security ${nu})"
+								}
+							]
+						}
+					]
+				},
+				"streamSettings": {
+					"network": "${v2ray_network}"
+					,"security": "${v2ray_network_security}"
+					,"tlsSettings": $tls
+					,"tcpSettings": $tcp
+					,"kcpSettings": $kcp
+					,"wsSettings": $ws
+					,"httpSettings": $h2
+					,"quicSettings": $qc
+					,"grpcSettings": $gr
+				},
+				"mux": {
+					"enabled": $(get_function_switch $(wt_node_get_plain v2ray_mux_enable ${nu})),
+					"concurrency": ${v2ray_mux_concurrency}
 				}
-			]
 			}
 		EOF
 
-		wt_strip_null_keys ${TMP2}/conf_${mark}/${nu}_outbounds.json
+		wt_strip_null_keys "${out_file}"
 	else
 		wt_node_get_plain v2ray_json ${nu} >${TMP2}/v2ray_user_${nu}.json
 		local user_host=""
@@ -554,14 +557,16 @@ wt_gen_vmess_outbound() {
 		$(fss_get_node_server_host_port "${nu}")
 		EOF
 		user_host_addr=$(wt_get_server_addr "${user_host}")
-		wt_wrap_user_outbound_json "${TMP2}/v2ray_user_${nu}.json" "${user_host_addr}" "${TMP2}/conf_${mark}/${nu}_outbounds.json"
+		wt_wrap_user_outbound_json "${TMP2}/v2ray_user_${nu}.json" "${user_host_addr}" "${out_file}"
 	fi
 }
 
 wt_gen_vless_outbound() {
 	local nu="$1"
 	local mark="$2"
+	local out_file=""
 	local xray_use_json=$(wt_node_get_plain xray_use_json ${nu})
+	out_file=$(wt_get_out_file_path "${nu}" "${mark}")
 	if [ "${xray_use_json}" != "1" ]; then
 		local xray_server=$(wt_node_get_plain server ${nu})
 		local _server_ip=$(wt_get_server_addr "${xray_server}")
@@ -782,50 +787,46 @@ wt_gen_vless_outbound() {
 			)
 		fi
 
-		cat >${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+		cat >"${out_file}" <<-EOF
 			{
-			"outbounds": [
-				{
-					"tag": "proxy${nu}",
-					"protocol": "${xray_prot}",
-					"settings": {
-						"vnext": [
-							{
-								"address": "${_server_ip}",
-								"port": ${xray_port},
-								"users": [
-									{
+				"tag": "proxy${nu}",
+				"protocol": "${xray_prot}",
+				"settings": {
+					"vnext": [
+						{
+							"address": "${_server_ip}",
+							"port": ${xray_port},
+							"users": [
+								{
 ${xray_user_json}
-									}
-								]
-							}
-						]
-					},
-					"streamSettings": {
-						"network": "${xray_network}"
-						,"security": "${xray_network_security}"
-						,"tlsSettings": $tls
-						,"xtlsSettings": $xtls
-						,"realitySettings": $reali
-						,"tcpSettings": $tcp
-						,"kcpSettings": $kcp
-						,"wsSettings": $ws
-						,"httpSettings": $h2
-						,"quicSettings": $qc
-						,"grpcSettings": $gr
-						,"httpupgradeSettings": $htup
-						,"xhttpSettings": $xht
-						,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
-					},
-					"mux": {"enabled": false}
-				}
-			]
+								}
+							]
+						}
+					]
+				},
+				"streamSettings": {
+					"network": "${xray_network}"
+					,"security": "${xray_network_security}"
+					,"tlsSettings": $tls
+					,"xtlsSettings": $xtls
+					,"realitySettings": $reali
+					,"tcpSettings": $tcp
+					,"kcpSettings": $kcp
+					,"wsSettings": $ws
+					,"httpSettings": $h2
+					,"quicSettings": $qc
+					,"grpcSettings": $gr
+					,"httpupgradeSettings": $htup
+					,"xhttpSettings": $xht
+					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_tfo})}
+				},
+				"mux": {"enabled": false}
 			}
 		EOF
 
-		wt_strip_null_keys ${TMP2}/conf_${mark}/${nu}_outbounds.json
+		wt_strip_null_keys "${out_file}"
 		if [ "${LINUX_VER}" == "26" ]; then
-			sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
+			sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
 		fi
 	else
 		wt_node_get_plain xray_json ${nu} >${TMP2}/xray_user_${nu}.json
@@ -838,13 +839,14 @@ ${xray_user_json}
 		$(fss_get_node_server_host_port "${nu}")
 		EOF
 		user_host_addr=$(wt_get_server_addr "${user_host}")
-		wt_wrap_user_outbound_json "${TMP2}/xray_user_${nu}.json" "${user_host_addr}" "${TMP2}/conf_${mark}/${nu}_outbounds.json"
+		wt_wrap_user_outbound_json "${TMP2}/xray_user_${nu}.json" "${user_host_addr}" "${out_file}"
 	fi
 }
 
 wt_gen_trojan_outbound() {
 	local nu="$1"
 	local mark="$2"
+	local out_file=""
 
 	local trojan_server=$(wt_node_get_plain server ${nu})
 	local trojan_port=$(wt_node_get_plain port ${nu})
@@ -856,6 +858,7 @@ wt_gen_trojan_outbound() {
 	local trojan_tfo=$(wt_node_get_plain trojan_tfo ${nu})
 
 	local _server_ip=$(wt_get_server_addr "${trojan_server}")
+	out_file=$(wt_get_out_file_path "${nu}" "${mark}")
 
 	if [ -n "$(wt_node_get_plain trojan_plugin ${nu})" -a "$(wt_node_get_plain trojan_plugin ${nu})" == "obfs-local" -a "$(wt_node_get_plain trojan_obfs ${nu})" == "websocket" ];then
 		local _trojan_network="ws"
@@ -870,44 +873,42 @@ wt_gen_trojan_outbound() {
 		local _trojan_ws=null
 	fi
 
-	cat >${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+	cat >"${out_file}" <<-EOF
 		{
-		"outbounds": [
-			{
-				"tag": "proxy${nu}",
-				"protocol": "trojan",
-				"settings": {
-					"servers": [{
+			"tag": "proxy${nu}",
+			"protocol": "trojan",
+			"settings": {
+				"servers": [{
 					"address": "${_server_ip}",
 					"port": ${trojan_port},
 					"password": "${trojan_uuid}"
-					}]
-				},
-				"streamSettings": {
-					"network": "${_trojan_network}",
-					"security": "tls",
-					"tlsSettings": {
-						"serverName": $(wt_get_value_null ${trojan_sni}),
-						"pinnedPeerCertSha256": $(wt_get_value_empty ${trojan_pcs}),
-						"verifyPeerCertByName": $(wt_get_value_empty ${trojan_vcn}),
-						"allowInsecure": $(get_function_switch ${trojan_ai})
-					}
-					,"wsSettings": ${_trojan_ws}
-					,"sockopt": {"tcpFastOpen": $(get_function_switch ${trojan_tfo})}
 				}
+				]
+			},
+			"streamSettings": {
+				"network": "${_trojan_network}",
+				"security": "tls",
+				"tlsSettings": {
+					"serverName": $(wt_get_value_null ${trojan_sni}),
+					"pinnedPeerCertSha256": $(wt_get_value_empty ${trojan_pcs}),
+					"verifyPeerCertByName": $(wt_get_value_empty ${trojan_vcn}),
+					"allowInsecure": $(get_function_switch ${trojan_ai})
+				},
+				"wsSettings": ${_trojan_ws},
+				"sockopt": {"tcpFastOpen": $(get_function_switch ${trojan_tfo})}
 			}
-		]
 		}
 	EOF
 
 	if [ "${LINUX_VER}" == "26" ]; then
-		sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
+		sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
 	fi
 }
 
 wt_gen_hy2_outbound() {
 	local nu="$1"
 	local mark="$2"
+	local out_file=""
 
 	local hy2_server=$(wt_node_get_plain hy2_server ${nu})
 	local hy2_port=$(wt_node_get_plain hy2_port ${nu})
@@ -933,52 +934,51 @@ wt_gen_hy2_outbound() {
 	fi
 
 	local _server_ip=$(wt_get_server_addr "${hy2_server}")
+	out_file=$(wt_get_out_file_path "${nu}" "${mark}")
 
-	cat >${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+	cat >"${out_file}" <<-EOF
 		{
-		"outbounds": [
-			{
-				"tag": "proxy${nu}",
-				"protocol": "hysteria",
-				"settings": {
-					"version": 2,
-					"address": "${_server_ip}",
-					"port": $(wt_get_hy2_port ${hy2_port})
-				},
-				"streamSettings": {
-					"network": "hysteria",
-					"hysteriaSettings": {
-						"version": 2
-						,"auth": $(wt_get_value_empty ${hy2_pass})
-						,"congestion": $(wt_get_value_congestion ${hy2_up} ${hy2_dl} ${hy2_cg})
-						,"up": $(wt_get_value_speed ${hy2_up})
-						,"down": $(wt_get_value_speed ${hy2_dl})
-						,"udphop": {
-							"port": $(wt_get_hy2_udphop_port ${hy2_port}),
-							"interval": 30
-						}
+			"tag": "proxy${nu}",
+			"protocol": "hysteria",
+			"settings": {
+				"version": 2,
+				"address": "${_server_ip}",
+				"port": $(wt_get_hy2_port ${hy2_port})
+			},
+			"streamSettings": {
+				"network": "hysteria",
+				"hysteriaSettings": {
+					"version": 2
+					,"auth": $(wt_get_value_empty ${hy2_pass})
+					,"congestion": $(wt_get_value_congestion ${hy2_up} ${hy2_dl} ${hy2_cg})
+					,"up": $(wt_get_value_speed ${hy2_up})
+					,"down": $(wt_get_value_speed ${hy2_dl})
+					,"udphop": {
+						"port": $(wt_get_hy2_udphop_port ${hy2_port}),
+						"interval": 30
 					}
-					,"security": "tls"
-					,"tlsSettings": {
-						"serverName": "${hy2_sni}"
+				}
+				,"security": "tls"
+				,"tlsSettings": {
+					"serverName": "${hy2_sni}"
 	EOF
 	if [ "${hy2_ai}" != "1" ];then
-		cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+		cat >>"${out_file}" <<-EOF
 						,"pinnedPeerCertSha256": $(wt_get_value_empty ${hy2_pcs})
 						,"verifyPeerCertByName": $(wt_get_value_empty ${hy2_vcn})
 		EOF
 	else
-		cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+		cat >>"${out_file}" <<-EOF
 						,"allowInsecure": true
 		EOF
 	fi
-	cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+	cat >>"${out_file}" <<-EOF
 						,"alpn": ["h3"]
 					}
 					,"sockopt": {"tcpFastOpen": $(get_function_switch ${hy2_tfo})}
 	EOF
 	if [ "${hy2_obfs}" == "1" -a -n "${hy2_obfs_pass}" ];then
-		cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+		cat >>"${out_file}" <<-EOF
 					,"finalmask": {
 						"udp": [
 						{
@@ -987,17 +987,15 @@ wt_gen_hy2_outbound() {
 								"password": "${hy2_obfs_pass}"
 							}
 						}]
-					}
+			}
 		EOF
 	fi
-	cat >>${TMP2}/conf_${mark}/${nu}_outbounds.json <<-EOF
+	cat >>"${out_file}" <<-EOF
 				}
-			}
-		]
 		}
 	EOF
 
 	if [ "${LINUX_VER}" == "26" ]; then
-		sed -i '/tcpFastOpen/d' ${TMP2}/conf_${mark}/${nu}_outbounds.json 2>/dev/null
+		sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
 	fi
 }

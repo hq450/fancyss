@@ -1515,6 +1515,9 @@ wt_webtest_cache_is_globally_fresh() {
 	[ "${cache_node_config_ts}" = "${node_config_ts}" ] || return 1
 	[ "${cache_xray_count}" = "${current_count}" ] || return 1
 	[ "${cache_xray_ids_md5}" = "${current_ids_md5}" ] || return 1
+	[ -s "${FSS_WEBTEST_CACHE_INDEX_FILE}" ] || return 1
+	awk -F '|' '{print $1}' "${FSS_WEBTEST_CACHE_INDEX_FILE}" 2>/dev/null | cmp -s - "${ids_file}" || return 1
+	[ -s "${FSS_WEBTEST_CACHE_AGG_OUTBOUNDS_FILE}" ] || return 1
 }
 
 wt_webtest_cache_lock_acquire() {
@@ -1672,10 +1675,19 @@ wt_rebuild_webtest_cache_from_ids() {
 		return 0
 	}
 	wt_init_reserved_ports
-	WT_NODE_ENV_DIR="${TMP2}/node_env"
-	mkdir -p "${WT_NODE_ENV_DIR}" || return 1
-	rm -f ${WT_NODE_ENV_DIR}/*.env >/dev/null 2>&1
-	wt_build_node_env_files_bulk "${build_ids_file}" >/dev/null 2>&1 || return 1
+	wt_reset_active_node_env
+	WT_NODE_ENV_DIR=""
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		if fss_refresh_node_env_cache >/dev/null 2>&1 && ls "${FSS_NODE_ENV_CACHE_DIR}"/*.env >/dev/null 2>&1; then
+			WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
+		fi
+	fi
+	if [ -z "${WT_NODE_ENV_DIR}" ]; then
+		WT_NODE_ENV_DIR="${TMP2}/node_env"
+		mkdir -p "${WT_NODE_ENV_DIR}" || return 1
+		rm -f "${WT_NODE_ENV_DIR}"/*.env >/dev/null 2>&1
+		wt_build_node_env_files_bulk "${build_ids_file}" >/dev/null 2>&1 || return 1
+	fi
 	WT_CACHE_START_PORT_MAP_FILE="${TMP2}/cache_start_ports.txt"
 	wt_assign_webtest_cache_start_ports "${build_ids_file}" || return 1
 	worker_threads=$(wt_get_cache_build_threads)
@@ -1712,7 +1724,6 @@ wt_webtest_cache_build_node() {
 	local node_id="$1"
 	local node_type=""
 	local cache_mark=""
-	local direct_object="0"
 	local meta_file=""
 	local cache_out=""
 	local cache_start=""
@@ -1721,7 +1732,6 @@ wt_webtest_cache_build_node() {
 	local tmp_out=""
 	local tmp_start=""
 	local tmp_stop=""
-	local generated_out=""
 	local current_rev="0"
 
 	[ -n "${node_id}" ] || return 1
@@ -1734,24 +1744,23 @@ wt_webtest_cache_build_node() {
 	cache_out="${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_outbounds.json"
 	cache_start="${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_start.sh"
 	cache_stop="${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_stop.sh"
-	generated_out="${TMP2}/conf_${cache_mark}/${node_id}_outbounds.json"
 	tmp_meta="${meta_file}.tmp.$$"
 	tmp_out="${cache_out}.tmp.$$"
 	tmp_start="${cache_start}.tmp.$$"
 	tmp_stop="${cache_stop}.tmp.$$"
 
-	rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
-	mkdir -p "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}" || return 1
+	rm -f "${tmp_meta}" "${tmp_out}" "${tmp_start}" "${tmp_stop}"
 	WT_LAST_START_PORT=""
 	WT_PRESET_START_PORT=""
 	[ -n "${WT_CACHE_START_PORT_MAP_FILE}" ] && WT_PRESET_START_PORT=$(wt_cache_start_port_get "${node_id}")
+	WT_GEN_OUT_FILE="${tmp_out}"
+	WT_GEN_START_FILE="${tmp_start}"
+	WT_GEN_STOP_FILE="${tmp_stop}"
+	WT_OUTBOUND_OBJECT_ONLY="1"
 
 	case "${node_type}" in
 	0)
-		WT_OUTBOUND_OBJECT_ONLY="1"
 		wt_gen_ss_outbound "${node_id}" "${cache_mark}"
-		WT_OUTBOUND_OBJECT_ONLY=""
-		direct_object="1"
 		;;
 	3)
 		wt_gen_vmess_outbound "${node_id}" "${cache_mark}"
@@ -1766,28 +1775,22 @@ wt_webtest_cache_build_node() {
 		wt_gen_hy2_outbound "${node_id}" "${cache_mark}"
 		;;
 	*)
-		rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
+		WT_OUTBOUND_OBJECT_ONLY=""
+		WT_GEN_OUT_FILE=""
+		WT_GEN_START_FILE=""
+		WT_GEN_STOP_FILE=""
 		return 1
 		;;
 	esac
+	WT_OUTBOUND_OBJECT_ONLY=""
+	WT_GEN_OUT_FILE=""
+	WT_GEN_START_FILE=""
+	WT_GEN_STOP_FILE=""
 
-	[ -s "${generated_out}" ] || {
-		rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
+	[ -s "${tmp_out}" ] || {
+		rm -f "${tmp_meta}" "${tmp_out}" "${tmp_start}" "${tmp_stop}"
 		return 1
 	}
-	if [ "${direct_object}" = "1" ]; then
-		cp -f "${generated_out}" "${tmp_out}" || {
-			rm -f "${tmp_out}"
-			rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
-			return 1
-		}
-	else
-		wt_extract_single_outbound_object "${generated_out}" "${tmp_out}" || {
-			rm -f "${tmp_out}"
-			rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
-			return 1
-		}
-	fi
 
 	current_rev=$(wt_node_json_meta_get "${node_id}" "_rev")
 	[ -n "${current_rev}" ] || current_rev="0"
@@ -1800,18 +1803,15 @@ wt_webtest_cache_build_node() {
 		built_at=$(date +%s)
 	EOF
 
-	if [ -f "${TMP2}/bash_${cache_mark}/start_${node_id}.sh" ]; then
-		cp -f "${TMP2}/bash_${cache_mark}/start_${node_id}.sh" "${tmp_start}" || true
+	if [ -f "${tmp_start}" ]; then
 		sed -i '/^has_start=/c\has_start=1' "${tmp_meta}" 2>/dev/null
 	fi
-	if [ -f "${TMP2}/bash_${cache_mark}/stop_${node_id}.sh" ]; then
-		cp -f "${TMP2}/bash_${cache_mark}/stop_${node_id}.sh" "${tmp_stop}" || true
+	if [ -f "${tmp_stop}" ]; then
 		sed -i '/^has_stop=/c\has_stop=1' "${tmp_meta}" 2>/dev/null
 	fi
 
 	mv -f "${tmp_out}" "${cache_out}" || {
 		rm -f "${tmp_out}" "${tmp_meta}" "${tmp_start}" "${tmp_stop}"
-		rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
 		return 1
 	}
 	if [ -f "${tmp_start}" ]; then
@@ -1828,11 +1828,8 @@ wt_webtest_cache_build_node() {
 	fi
 	mv -f "${tmp_meta}" "${meta_file}" || {
 		rm -f "${tmp_meta}"
-		rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
 		return 1
 	}
-
-	rm -rf "${TMP2}/conf_${cache_mark}" "${TMP2}/bash_${cache_mark}"
 	return 0
 }
 
@@ -2603,9 +2600,6 @@ test_12_tc(){
 			local socks5_port=""
 			local new_addr=""
 			local tuic_json_file=""
-			local relay_server_raw=""
-			local relay_host=""
-			local relay_ip=""
 			local _pid=""
 
 			trap 'echo >&3' EXIT
@@ -2615,20 +2609,11 @@ test_12_tc(){
 			socks5_port=$(get_rand_port)
 			new_addr="127.0.0.1:${socks5_port}"
 			tuic_json_file="${TMP2}/conf/tuic-${socks5_port}.json"
-			wt_node_get tuic_json ${nu} | base64_decode | run jq --arg addr "$new_addr" '.local.server = $addr' >${tuic_json_file}
-			relay_server_raw=$(cat ${tuic_json_file} | run jq -r '.relay.server // empty' 2>/dev/null)
-			{
-				read -r relay_host
-				read -r _
-			} <<-EOF
-			$(fss_extract_tuic_server_host_port "${relay_server_raw}")
-			EOF
-			relay_ip=$(_get_server_ip "${relay_host}")
-			if [ -n "${relay_ip}" ];then
-				cat ${tuic_json_file} | run jq --arg ip "${relay_ip}" '.relay.ip = $ip' | run sponge ${tuic_json_file}
-			else
-				cat ${tuic_json_file} | run jq 'del(.relay.ip)' | run sponge ${tuic_json_file}
-			fi
+			wt_build_tuic_runtime_json "${nu}" "${new_addr}" "${tuic_json_file}" || {
+				echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
+				wt_append_webtest_file "${TMP2}/results/${nu}.txt"
+				exit 0
+			}
 
 			# 2. start tuic
 			wt_set_batch_state "${nu}" "booting..."
@@ -3269,6 +3254,52 @@ _get_server_ip() {
 	#echo "$1 域名解析成功，解析结果：${SERVER_IP}" >>${TMP2}/webtest_log.txt
 	echo $SERVER_IP
 	return 0
+}
+
+wt_json_escape_simple() {
+	printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+wt_build_tuic_runtime_json() {
+	local node_id="$1"
+	local local_addr="$2"
+	local out_file="$3"
+	local raw_json=""
+	local relay_server_raw=""
+	local relay_host=""
+	local relay_ip=""
+	local escaped_local_addr=""
+	local escaped_relay_ip=""
+
+	[ -n "${node_id}" ] || return 1
+	[ -n "${local_addr}" ] || return 1
+	[ -n "${out_file}" ] || return 1
+
+	raw_json=$(wt_node_get tuic_json "${node_id}" | base64_decode 2>/dev/null)
+	[ -n "${raw_json}" ] || return 1
+	raw_json=$(printf '%s' "${raw_json}" | tr -d '\r\n')
+	[ -n "${raw_json}" ] || return 1
+
+	relay_server_raw=$(printf '%s' "${raw_json}" | sed -n 's/.*"relay"[[:space:]]*:[[:space:]]*{[^}]*"server"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+	{
+		read -r relay_host
+		read -r _
+	} <<-EOF
+	$(fss_extract_tuic_server_host_port "${relay_server_raw}")
+	EOF
+	relay_ip=$(_get_server_ip "${relay_host}")
+
+	raw_json=$(printf '%s' "${raw_json}" | sed 's/,"local"[[:space:]]*:[[:space:]]*{[^}]*}//; s/"local"[[:space:]]*:[[:space:]]*{[^}]*},//')
+	raw_json=$(printf '%s' "${raw_json}" | sed 's/,"ip"[[:space:]]*:[[:space:]]*"[^"]*"//; s/"ip"[[:space:]]*:[[:space:]]*"[^"]*",//')
+
+	if [ -n "${relay_ip}" ]; then
+		escaped_relay_ip=$(wt_json_escape_simple "${relay_ip}")
+		raw_json=$(printf '%s' "${raw_json}" | sed '0,/"server"[[:space:]]*:[[:space:]]*"[^"]*"/s//&,"ip":"'"${escaped_relay_ip}"'"/')
+	fi
+
+	escaped_local_addr=$(wt_json_escape_simple "${local_addr}")
+	raw_json=$(printf '%s' "${raw_json}" | sed 's/}[[:space:]]*$/,"local":{"server":"'"${escaped_local_addr}"'"}}/')
+	printf '%s' "${raw_json}" > "${out_file}"
 }
 
 __get_server_resolver() {

@@ -1117,15 +1117,10 @@ get_avail_ports(){
 	local need="$1"
 	local tmp_dir=""
 	local used_file="${tmp_dir}/used.txt"
-	local out_file="${tmp_dir}/out.txt"
-	local sample_file="${tmp_dir}/sample.txt"
-	local taken_file="${tmp_dir}/taken.txt"
 	local extra_file=""
-	local sample_size=""
-	local round=0
-	local current=0
 	local tmp_seed=""
 	local tmp_try=0
+	local ret=0
 
 	printf '%s' "${need}" | grep -Eq '^[0-9]+$' || need=1
 	[ "${need}" -gt 0 ] || need=1
@@ -1141,38 +1136,55 @@ get_avail_ports(){
 	done
 	[ -n "${tmp_dir}" ] && [ -d "${tmp_dir}" ] || return 1
 	used_file="${tmp_dir}/used.txt"
-	out_file="${tmp_dir}/out.txt"
-	sample_file="${tmp_dir}/sample.txt"
-	taken_file="${tmp_dir}/taken.txt"
 	: > "${used_file}"
-	: > "${out_file}"
 
 	# `-nlp` 只能看到监听端口，测速时大量已建立/TIME_WAIT 的本地端口也会占用 bind。
-	netstat -an 2>/dev/null | grep -E "^tcp|^udp|^raw" | awk '{print $4}' | awk -F ":" '{print $NF}' | sort -un > "${used_file}"
+	netstat -an 2>/dev/null | awk '
+		/^(tcp|udp|raw)/ {
+			n = split($4, parts, ":")
+			port = parts[n]
+			if (port ~ /^[0-9]+$/) {
+				print port
+			}
+		}
+	' > "${used_file}"
 	shift
 	for extra_file in "$@"
 	do
 		[ -f "${extra_file}" ] || continue
 		cat "${extra_file}" >> "${used_file}"
 	done
-	sort -un "${used_file}" -o "${used_file}"
-
-	while [ "${round}" -lt 8 ]
-	do
-		current=$(wc -l < "${out_file}" | tr -d ' ')
-		[ -n "${current}" ] || current=0
-		[ "${current}" -ge "${need}" ] && break
-		sample_size=$(( (need - current + 8) * 6 ))
-		[ "${sample_size}" -gt 512 ] && sample_size=512
-		shuf -i 2000-65000 -n "${sample_size}" > "${sample_file}" 2>/dev/null || break
-		cat "${used_file}" "${out_file}" | sed '/^$/d' | sort -un > "${taken_file}"
-		awk 'NR == FNR {taken[$1] = 1; next} !($1 in taken) {print}' "${taken_file}" "${sample_file}" | sed -n "1,$((need - current))p" >> "${out_file}"
-		sort -un "${out_file}" -o "${out_file}"
-		round=$((round + 1))
-	done
-
-	cat "${out_file}" 2>/dev/null
+	awk -v need="${need}" -v seed="${tmp_seed}" '
+		/^[0-9]+$/ {
+			used[$1] = 1
+			next
+		}
+		END {
+			min = 2000
+			max = 65000
+			range = max - min + 1
+			if (need < 1) {
+				need = 1
+			}
+			srand(seed + 0)
+			start = int(rand() * range)
+			count = 0
+			for (offset = 0; offset < range && count < need; offset++) {
+				port = min + ((start + offset) % range)
+				if (!(port in used)) {
+					print port
+					used[port] = 1
+					count++
+				}
+			}
+			if (count < need) {
+				exit 1
+			}
+		}
+	' "${used_file}"
+	ret=$?
 	rm -rf "${tmp_dir}"
+	return "${ret}"
 }
 
 kill_used_port(){
