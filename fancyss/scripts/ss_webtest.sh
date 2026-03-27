@@ -11,6 +11,7 @@ WT_WEBTEST_STREAM=/tmp/upload/webtest.stream
 WT_WEBTEST_BACKUP=/tmp/upload/webtest_bakcup.txt
 WT_WEBTEST_STOP_FLAG=/tmp/webtest.stop
 WT_WEBTEST_PID_FILE=/tmp/webtest.pid
+WT_WEBTEST_STATE_LOCK=/tmp/webtest.state.lock
 WT_SERVER_RESOLV_MODE=$(dbus get ss_basic_server_resolv_mode)
 [ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
 WT_NODE_CACHE_DIR=""
@@ -29,6 +30,9 @@ WT_BATCH_ABORT_REASON=""
 WT_WEBTEST_CACHE_REV="1"
 WT_WEBTEST_CACHE_GEN_REV="20260326_6"
 WT_WEBTEST_CACHE_LOCK="/tmp/fss_webtest_cache.lock"
+WT_MEM_TIER_MID_MB="768"
+WT_MEM_TIER_HIGH_MB="1536"
+WT_PERF_READY="0"
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
 wt_cache_log() {
@@ -355,6 +359,7 @@ wt_latency_state_is_terminal() {
 
 wt_init_batch_state_file() {
 	WT_WEBTEST_STATE_FILE="${TMP2}/webtest.state"
+	rm -f "${WT_WEBTEST_STATE_LOCK}"
 	awk -F '|' '
 		NF > 0 && $1 != "" {
 			print $1 ">waiting..."
@@ -362,6 +367,15 @@ wt_init_batch_state_file() {
 	' ${TMP2}/nodes_index.txt > "${WT_WEBTEST_STATE_FILE}"
 	cp -f "${WT_WEBTEST_STATE_FILE}" "${WT_WEBTEST_FILE}"
 	cp -f "${WT_WEBTEST_STATE_FILE}" "${WT_WEBTEST_STREAM}"
+}
+
+wt_batch_state_lock_acquire() {
+	exec 235>"${WT_WEBTEST_STATE_LOCK}"
+	flock -x 235
+}
+
+wt_batch_state_lock_release() {
+	flock -u 235
 }
 
 wt_get_batch_state() {
@@ -385,13 +399,22 @@ wt_set_batch_state() {
 	[ -n "${state}" ] || return 0
 	[ -n "${WT_WEBTEST_STATE_FILE}" ] || return 0
 	[ -f "${WT_WEBTEST_STATE_FILE}" ] || return 0
-	current=$(wt_get_batch_state "${node_id}")
-	[ "${current}" = "${state}" ] && return 0
-	if grep -q "^${node_id}>" "${WT_WEBTEST_STATE_FILE}" 2>/dev/null; then
-		sed -i "/^${node_id}>/c\\${node_id}>${state}" "${WT_WEBTEST_STATE_FILE}"
-	else
-		echo "${node_id}>${state}" >> "${WT_WEBTEST_STATE_FILE}"
+	wt_batch_state_lock_acquire
+	current=$(awk -F '>' -v node="${node_id}" '
+		$1 == node {
+			print $2
+			exit
+		}
+	' "${WT_WEBTEST_STATE_FILE}" 2>/dev/null)
+	if [ "${current}" != "${state}" ]; then
+		if grep -q "^${node_id}>" "${WT_WEBTEST_STATE_FILE}" 2>/dev/null; then
+			sed -i "/^${node_id}>/c\\${node_id}>${state}" "${WT_WEBTEST_STATE_FILE}"
+		else
+			echo "${node_id}>${state}" >> "${WT_WEBTEST_STATE_FILE}"
+		fi
 	fi
+	wt_batch_state_lock_release
+	[ "${current}" = "${state}" ] && return 0
 	wt_append_webtest_line "${node_id}>${state}"
 }
 
@@ -511,14 +534,14 @@ wt_abort_batch_run() {
 		rm -f "${old_state}"
 	fi
 	wt_finalize_batch_output
-	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock
+	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock "${WT_WEBTEST_STATE_LOCK}"
 }
 
 wt_finish_batch_run() {
 	[ "${WT_BATCH_FINALIZED}" = "1" ] && return 0
 	WT_BATCH_FINALIZED=1
 	wt_finalize_batch_output
-	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock
+	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock "${WT_WEBTEST_STATE_LOCK}"
 }
 
 wt_batch_exit_guard() {
@@ -580,7 +603,7 @@ wt_request_stop_batch() {
 		rm -f "${old_state}"
 		wt_finalize_batch_output
 	fi
-	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock
+	rm -f "${WT_WEBTEST_PID_FILE}" "${WT_WEBTEST_STOP_FLAG}" /tmp/webtest.lock "${WT_WEBTEST_STATE_LOCK}"
 }
 
 wt_reset_active_node_env() {
@@ -707,21 +730,161 @@ wt_build_node_env_files_bulk() {
 	done < "${ids_file}"
 }
 
-wt_get_cache_build_threads() {
-	local cpu_cores="1"
-	local mem_mb="0"
+wt_get_router_model() {
+	local odmpid=""
+	local productid=""
 
-	cpu_cores=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
-	printf '%s' "${cpu_cores}" | grep -Eq '^[0-9]+$' || cpu_cores="1"
-	mem_mb=$(awk '/MemTotal/ {printf "%d", $2 / 1024}' /proc/meminfo 2>/dev/null)
-	printf '%s' "${mem_mb}" | grep -Eq '^[0-9]+$' || mem_mb="0"
-	if [ "${cpu_cores}" -ge 4 ] && [ "${mem_mb}" -ge 1024 ]; then
-		printf '%s' "4"
-	elif [ "${cpu_cores}" -ge 2 ] && [ "${mem_mb}" -ge 512 ]; then
-		printf '%s' "2"
+	odmpid=$(nvram get odmpid 2>/dev/null)
+	productid=$(nvram get productid 2>/dev/null)
+	if [ -n "${odmpid}" ]; then
+		printf '%s' "${odmpid}"
 	else
-		printf '%s' "1"
+		printf '%s' "${productid}"
 	fi
+}
+
+wt_collect_perf_facts() {
+	WT_ARCH=$(uname -m)
+	WT_CPU_CORES=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
+	printf '%s' "${WT_CPU_CORES}" | grep -Eq '^[0-9]+$' || WT_CPU_CORES="1"
+	WT_MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
+	printf '%s' "${WT_MEM_MB}" | grep -Eq '^[0-9]+$' || WT_MEM_MB="0"
+	WT_MODEL=$(wt_get_router_model)
+}
+
+wt_select_perf_profile() {
+	case "${WT_ARCH}" in
+	aarch64)
+		if [ "${WT_CPU_CORES}" -lt 3 ]; then
+			printf '%s\n' "aarch64_dual_core"
+		elif [ "${WT_MEM_MB}" -ge "${WT_MEM_TIER_HIGH_MB}" ]; then
+			printf '%s\n' "aarch64_3plus_2g"
+		elif [ "${WT_MEM_MB}" -ge "${WT_MEM_TIER_MID_MB}" ]; then
+			printf '%s\n' "aarch64_3plus_1g"
+		else
+			printf '%s\n' "aarch64_3plus_512m"
+		fi
+		;;
+	armv7l)
+		if [ "${WT_MODEL}" = "RT-AX89X" ]; then
+			printf '%s\n' "armv7l_rt_ax89x"
+		elif [ "${WT_CPU_CORES}" -ge 4 ]; then
+			if [ "${WT_MEM_MB}" -ge "${WT_MEM_TIER_MID_MB}" ]; then
+				printf '%s\n' "armv7l_quad_core_1g"
+			else
+				printf '%s\n' "armv7l_quad_core_512m"
+			fi
+		elif [ "${WT_CPU_CORES}" -ge 3 ]; then
+			printf '%s\n' "armv7l_tri_core"
+		else
+			printf '%s\n' "armv7l_low_end"
+		fi
+		;;
+	*)
+		printf '%s\n' "generic_low_end"
+		;;
+	esac
+}
+
+wt_apply_perf_profile() {
+	local profile="$1"
+
+	WT_LOW_END=1
+	WT_XRAY_THREADS=4
+	WT_SSR_THREADS=1
+	WT_TUIC_THREADS=1
+	WT_NAIVE_THREADS=1
+	WT_XRAY_BATCH_SIZE=32
+	WT_CACHE_BUILD_THREADS=1
+
+	case "${profile}" in
+	aarch64_3plus_2g)
+		WT_LOW_END=0
+		WT_XRAY_THREADS=12
+		WT_SSR_THREADS=4
+		WT_TUIC_THREADS=3
+		WT_NAIVE_THREADS=3
+		WT_XRAY_BATCH_SIZE=256
+		WT_CACHE_BUILD_THREADS=4
+		;;
+	aarch64_3plus_1g)
+		WT_LOW_END=0
+		WT_XRAY_THREADS=8
+		WT_SSR_THREADS=4
+		WT_TUIC_THREADS=2
+		WT_NAIVE_THREADS=2
+		WT_XRAY_BATCH_SIZE=128
+		WT_CACHE_BUILD_THREADS=4
+		;;
+	aarch64_3plus_512m)
+		WT_LOW_END=1
+		WT_XRAY_THREADS=6
+		WT_SSR_THREADS=2
+		WT_TUIC_THREADS=1
+		WT_NAIVE_THREADS=1
+		WT_XRAY_BATCH_SIZE=64
+		WT_CACHE_BUILD_THREADS=2
+		;;
+	aarch64_dual_core)
+		WT_LOW_END=1
+		WT_XRAY_THREADS=4
+		WT_SSR_THREADS=2
+		WT_TUIC_THREADS=1
+		WT_NAIVE_THREADS=1
+		WT_XRAY_BATCH_SIZE=64
+		WT_CACHE_BUILD_THREADS=2
+		;;
+	armv7l_rt_ax89x)
+		WT_LOW_END=0
+		WT_XRAY_THREADS=8
+		WT_SSR_THREADS=2
+		WT_TUIC_THREADS=2
+		WT_NAIVE_THREADS=2
+		WT_XRAY_BATCH_SIZE=128
+		WT_CACHE_BUILD_THREADS=3
+		;;
+	armv7l_quad_core_1g)
+		WT_LOW_END=1
+		WT_XRAY_THREADS=4
+		WT_SSR_THREADS=2
+		WT_TUIC_THREADS=2
+		WT_NAIVE_THREADS=2
+		WT_XRAY_BATCH_SIZE=64
+		WT_CACHE_BUILD_THREADS=3
+		;;
+	armv7l_quad_core_512m)
+		WT_LOW_END=1
+		WT_XRAY_THREADS=4
+		WT_SSR_THREADS=1
+		WT_TUIC_THREADS=1
+		WT_NAIVE_THREADS=1
+		WT_XRAY_BATCH_SIZE=32
+		WT_CACHE_BUILD_THREADS=2
+		;;
+	armv7l_tri_core)
+		WT_LOW_END=1
+		WT_XRAY_THREADS=4
+		WT_SSR_THREADS=1
+		WT_TUIC_THREADS=1
+		WT_NAIVE_THREADS=1
+		WT_XRAY_BATCH_SIZE=32
+		WT_CACHE_BUILD_THREADS=2
+		;;
+	armv7l_low_end|generic_low_end|*)
+		WT_LOW_END=1
+		WT_XRAY_THREADS=2
+		WT_SSR_THREADS=1
+		WT_TUIC_THREADS=1
+		WT_NAIVE_THREADS=1
+		WT_XRAY_BATCH_SIZE=16
+		WT_CACHE_BUILD_THREADS=1
+		;;
+	esac
+}
+
+wt_get_cache_build_threads() {
+	detect_perf
+	printf '%s' "${WT_CACHE_BUILD_THREADS:-1}"
 }
 
 wt_cache_start_port_get() {
@@ -1747,55 +1910,11 @@ wt_prepare_webtest_preview() {
 }
 
 detect_perf(){
-	WT_ARCH=$(uname -m)
-	WT_CPU_CORES=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
-	WT_MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
-	WT_LOW_END=0
-
-	# 低端机型： armv7l设备，或者aarch64设备，内存小于1G
-	# 高端机型： aarch64设备，且内存1G及其以上
-	if [ "${WT_ARCH}" == "armv7l" ];then
-		WT_LOW_END=1
-	elif [ "${WT_ARCH}" == "aarch64" ];then
-		if [ "${WT_CPU_CORES}" -le 2 -o "${WT_MEM_MB}" -lt 768 ];then
-			WT_LOW_END=1
-		fi
-	else
-		WT_LOW_END=1
-	fi
-
-	if [ "${WT_LOW_END}" == "1" ];then
-		WT_XRAY_THREADS=1
-		WT_SSR_THREADS=1
-		WT_MISC_THREADS=1
-		WT_XRAY_BATCH_SIZE=8
-		if [ "$(nvram get odmpid)" == "RT-AX89X" ];then
-			WT_XRAY_THREADS=4
-			WT_SSR_THREADS=2
-			WT_MISC_THREADS=1
-			WT_XRAY_BATCH_SIZE=32
-		fi
-	else
-		if [ "${WT_CPU_CORES}" -ge 3 -a "${WT_MEM_MB}" -ge 1536 ];then
-			# aarch64 3+ cores + ~2G内存：直接放大批次，优先避免 xray-like 节点反复分批。
-			WT_XRAY_THREADS=8
-			WT_SSR_THREADS=4
-			WT_MISC_THREADS=2
-			WT_XRAY_BATCH_SIZE=256
-		elif [ "${WT_CPU_CORES}" -ge 3 -a "${WT_MEM_MB}" -ge 1024 ];then
-			# aarch64 3+ cores + 1G内存：尽量保持单批完成，大节点列表再兜底分批。
-			WT_XRAY_THREADS=8
-			WT_SSR_THREADS=4
-			WT_MISC_THREADS=2
-			WT_XRAY_BATCH_SIZE=128
-		else
-			# aarch64 入门机型：批次适中，避免单批过大导致生成时间和内存抖动。
-			WT_XRAY_THREADS=4
-			WT_SSR_THREADS=2
-			WT_MISC_THREADS=1
-			WT_XRAY_BATCH_SIZE=64
-		fi
-	fi
+	[ "${WT_PERF_READY}" = "1" ] && return 0
+	wt_collect_perf_facts
+	WT_PERF_PROFILE=$(wt_select_perf_profile)
+	wt_apply_perf_profile "${WT_PERF_PROFILE}"
+	WT_PERF_READY="1"
 }
 
 ensure_latency_batch(){
@@ -2368,7 +2487,7 @@ test_11_nv(){
 	esac
 	[ -f "${file_path}" ] || return 0
 	wt_prepare_node_env_cache >/dev/null 2>&1 || true
-	max_threads="${WT_MISC_THREADS}"
+	max_threads="${WT_NAIVE_THREADS}"
 	[ -n "${max_threads}" ] || max_threads=1
 	wt_set_batch_state_from_file "${file_path}" "loading..." "${max_threads}"
 
@@ -2444,7 +2563,7 @@ test_12_tc(){
 	esac
 	[ -f "${file_path}" ] || return 0
 	wt_prepare_node_env_cache >/dev/null 2>&1 || true
-	max_threads="${WT_MISC_THREADS}"
+	max_threads="${WT_TUIC_THREADS}"
 	[ -n "${max_threads}" ] || max_threads=1
 	wt_set_batch_state_from_file "${file_path}" "loading..." "${max_threads}"
 
@@ -2889,6 +3008,8 @@ single_test_node(){
 	detect_perf
 	WT_XRAY_THREADS=1
 	WT_SSR_THREADS=1
+	WT_TUIC_THREADS=1
+	WT_NAIVE_THREADS=1
 
 	mkdir -p ${TMP2}
 	mkdir -p ${TMP2}/conf
