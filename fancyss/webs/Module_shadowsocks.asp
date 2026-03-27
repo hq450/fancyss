@@ -1106,6 +1106,16 @@ function schema2_payload_changes_direct_domains(nodeId, payload) {
 }
 var schema2WebtestWarmTimer = 0;
 var schema2NodeDirectTimer = 0;
+function cancel_schema2_postchange_jobs() {
+	if (schema2NodeDirectTimer) {
+		clearTimeout(schema2NodeDirectTimer);
+		schema2NodeDirectTimer = 0;
+	}
+	if (schema2WebtestWarmTimer) {
+		clearTimeout(schema2WebtestWarmTimer);
+		schema2WebtestWarmTimer = 0;
+	}
+}
 function schedule_schema2_node_direct_refresh() {
 	var id;
 	if (get_node_storage_schema() != 2) {
@@ -5135,6 +5145,9 @@ function test_latency_now(test_flag) {
 		layer.msg("批量测速已关闭");
 		return;
 	}
+	if(test_flag == 2){
+		cancel_schema2_postchange_jobs();
+	}
 	var dbus_post = {};
 	dbus_post["ss_basic_latency_val"] = String(test_flag);
 	if(test_flag == 0){
@@ -5265,12 +5278,13 @@ function normalize_latency_val(){
 }
 function test_latency_single(node){
 	if(!node) return;
+	cancel_schema2_postchange_jobs();
 	if(batch_test_running){
 		check_batch_status(function(done){
 			if(done){
 				test_latency_single(node);
 			}else{
-				layer.msg("批量测速中，无法进行单节点测速");
+				layer.msg("后台正在进行批量测速（新增或变更节点后会自动触发），请稍后再试");
 			}
 		});
 		return;
@@ -5302,7 +5316,7 @@ function test_latency_single(node){
 				if(cell.length){
 					cell.html("busy");
 				}
-				layer.msg("正在批量测速，请稍后重试");
+				layer.msg("后台正在进行批量测速（新增或变更节点后会自动触发），请稍后再试");
 				single_test_running = false;
 				single_test_node = null;
 				enable_latency_buttons();
@@ -5351,8 +5365,8 @@ function latency_test(action) {
 	//console.log("start latency test")
 	
 	if(action == "2"){
+		cancel_schema2_postchange_jobs();
 		var bash_para = "web_webtest";
-		batch_test_running = true;
 		batch_stop_pending = false;
 		batch_ws_fallback_started = false;
 		batch_ws_completed = false;
@@ -5369,8 +5383,33 @@ function latency_test(action) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			// 保留已有测速结果，避免刷新页面时单节点测速结果被 "waiting..." 覆盖。
-			if(action == "2" && start_latency_ws(action)){
+			var result = String(response.result || "");
+			if(result == "batch_disabled"){
+				batch_test_running = false;
+				batch_stop_pending = false;
+				close_latency_ws();
+				update_latency_action_links();
+				return;
+			}
+			if(action == "2"){
+				if(result.indexOf("ok1") === 0 || result.indexOf("ok4") === 0){
+					batch_test_running = true;
+					batch_stop_pending = false;
+					$("#ss_wts_show").html("<em>【测速中...】</em>");
+					$("#dropdown").width(240);
+					update_latency_action_links();
+					// 保留已有测速结果，避免刷新页面时单节点测速结果被 "waiting..." 覆盖。
+					if(start_latency_ws(action)){
+						return;
+					}
+					get_latency_data(action);
+					return;
+				}
+				batch_test_running = false;
+				batch_stop_pending = false;
+				close_latency_ws();
+				update_latency_action_links();
+				load_latency_cache();
 				return;
 			}
 			get_latency_data(action);

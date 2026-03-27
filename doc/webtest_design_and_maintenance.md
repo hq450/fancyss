@@ -100,11 +100,34 @@
 
 前端行为：
 
-1. 先把所有行写成 `waiting...`。
-2. 若 `ws_flag == 1`，优先连接 `ws://<router>:803/`。
-3. websocket 建立后发送 `follow_webtest`。
-4. 后端先回放 `webtest.txt` 当前内容，再持续 `tail -f webtest.stream`。
-5. 如果 websocket 打开失败、运行中断开、或浏览器不支持，则自动回退到 `get_latency_data()` 轮询 `/_temp/webtest.txt`。
+1. 页面进入节点管理页后，只要延迟测试功能开启，就会自动调用一次 `latency_test('2')`。
+2. 该调用并不等于“一定启动一轮新的批量测速”，真正是否新开测速由后端 `web_webtest` 判断。
+3. 只有后端返回 `ok1` 或 `ok4` 时，前端才认为当前处于真实批量测速中，并进入 websocket / 轮询跟随流程。
+4. 若 `ws_flag == 1`，优先连接 `ws://<router>:803/`。
+5. websocket 建立后发送 `follow_webtest`。
+6. 后端先回放 `webtest.txt` 当前内容，再持续 `tail -f webtest.stream`。
+7. 如果 websocket 打开失败、运行中断开、或浏览器不支持，则自动回退到 `get_latency_data()` 轮询 `/_temp/webtest.txt`。
+
+`web_webtest` 的返回语义需要特别注意：
+
+- `ok1`
+  - 已存在 `/tmp/webtest.lock`，说明当前确实有一轮批量测速正在跑。
+  - 前端应保持 `batch_test_running = true`，并继续跟随 `webtest.txt / webtest.stream`。
+- `ok4`
+  - 本次调用真正触发了 `start_webtest()`。
+  - 后端会清空旧结果并尽快写入 `waiting... / loading...` 预览状态。
+  - 前端应保持 `batch_test_running = true`。
+- `ok2`
+  - 现有 `webtest.txt` 仍在有效时间内，直接复用结果，不启动新一轮测速。
+  - 前端不应把它当成“批量测速中”，也不应阻塞单节点测速。
+- `ok3`
+  - 当前结果不完整，但 `webtest_bakcup.txt` 中有足够可用结果，直接复用 backup，不启动新一轮测速。
+  - 前端同样不应把它当成“批量测速中”。
+
+这意味着一个很重要的判断：
+
+- 如果页面上没有出现 `waiting... / loading... / booting... / testing...`，却提示“批量测速中”，通常不是后端真的在跑测速，而是前端错误把 `ok2 / ok3` 当成了运行态。
+- 现在前端已经修正，只把 `ok1 / ok4` 视为真实批量测速。
 
 ### 4.4 websocket 跟随逻辑
 
@@ -568,7 +591,29 @@ SSR 仍走独立协议组，按 `WT_SSR_THREADS` 并发。
    - `all_outbounds.json`
    - `cache.meta`
 
-### 10.4 一个重要细节
+### 10.4 页面自动触发与缓存复用的关系
+
+节点管理页每次渲染完成后，前端都会自动调用一次 `latency_test('2')`。
+
+但后端会分流成两种完全不同的路径：
+
+1. 真正开跑批量测速
+   - 条件：无结果、结果过期、或结果不可复用且 backup 也不够。
+   - 行为：进入 `start_webtest()`，清空旧结果，写入 `waiting...` 等中间态。
+2. 只复用已有结果
+   - 条件：`webtest.txt` 仍有效，或 backup 仍足够可用。
+   - 行为：直接返回 `ok2 / ok3`，不启动新测速。
+
+因此“页面自动调用了批量测速接口”与“后台真的在测速”不是一回事。
+
+维护时如果又出现以下症状：
+
+- 页面没有任何 `waiting... / loading...`
+- 单节点测速却被提示“批量测速中”
+
+优先检查前端是否又把 `ok2 / ok3` 误判成了运行态。
+
+### 10.5 一个重要细节
 
 `fss_clear_webtest_cache_node()` 会同时删除：
 
@@ -643,6 +688,22 @@ webtest 当前默认信任 schema2 节点对象缓存：
 - 新增后立即调度 node direct refresh 和 warm；
 - 编辑 server / json 等影响域名解析的字段后，node direct 和 webtest cache 都会更新；
 - 删除节点后，对应 cache 文件和 node direct 条目会被移除。
+
+需要额外注意一个时序点：
+
+- 前端对“节点变更后的 node_direct refresh / warm”做了短时间 debounce；
+- 如果用户刚删改节点就立刻手动发起单节点 / 批量测速，旧实现里这些延后任务可能在测速刚启动后再落下来；
+- `node_direct_refresh` 一旦在测速中途触发 `refresh_node_direct_dns`，会重载 smartdns / chinadns-ng，早批次的域名节点可能因此瞬时 `failed`，后批次又恢复正常。
+
+当前修复分两层：
+
+- 前端在手动单测 / 批量测速前，会先取消尚未发出的 schema2 post-change 定时任务；
+- 后端 `schedule_warm / schedule_node_direct_refresh` 在发现已有前台 webtest 任务运行时，会直接跳过，不再与当前测速抢 DNS / cache 资源。
+
+也就是说：
+
+- 节点刚发生增删改时，如果用户马上点测速，当前这次测速进程自己负责执行 `wt_ensure_node_direct_dns_ready()` 和 `wt_ensure_webtest_cache_ready()`；
+- 延后触发的 post-change 任务不会再中途插进来干扰当前测速。
 
 ### 12.3 URI 添加节点
 
@@ -760,6 +821,28 @@ URI 添加节点走订阅脚本导入路径，但最终也会：
 - 批量结束 / 停止 / 异常清理时同步清掉状态锁。
 
 修复后，批量测速完成后刷新页面，结果保持稳定，不再回退到 `testing...`。
+
+问题：新增节点后进入节点管理页，页面没有出现 `waiting... / loading...`，但单节点测速被提示“批量测速中”，并且某些新节点单测会直接 `failed`。
+
+原因：
+
+- 前端在调用 `web_webtest` 前，过早把 `batch_test_running` 设为 `true`；
+- 后端有可能只是返回 `ok2 / ok3` 复用已有结果，并没有真正启动批量测速；
+- 旧逻辑会把这种“复用缓存”误判成“批量测速中”；
+- 同时单节点测速复用了 `${TMP2}/nodes_index.txt` 的旧内容，可能按旧节点集合重建 `webtest cache`，把刚导入的新 xray-like 节点错误裁剪掉。
+
+修复：
+
+- 前端现在只在后端返回 `ok1 / ok4` 时才进入真实批量测速态；
+- 返回 `ok2 / ok3` 时只刷新已有结果，不阻塞单节点测速；
+- 单节点测速前强制清理旧的 `nodes_index.txt / nodes_file_name.txt / wt_*.txt`；
+- `wt_ensure_webtest_cache_ready()` 不再复用 TMP 中旧索引，而是每次重建当前节点索引。
+
+修复后：
+
+- 如果后台真的在跑自动批量测速，页面会出现 `waiting... / loading...` 等中间状态；
+- 如果只是复用现有结果，不会再出现“无中间状态却提示批量测速中”的假忙现象；
+- 新导入的 xray-like 节点单节点测速不会再因旧索引裁剪缓存而直接 `failed`。
 
 ---
 

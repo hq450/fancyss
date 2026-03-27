@@ -40,6 +40,28 @@ wt_cache_log() {
 	echo_date "$@"
 }
 
+wt_has_active_test_runner() {
+	local self_pid="${1:-$$}"
+
+	[ -f "/tmp/webtest.lock" ] && return 0
+	ps w 2>/dev/null | awk -v self="${self_pid}" '
+		/ss_webtest\.sh/ && !/grep/ {
+			pid = $1
+			if (pid == self) {
+				next
+			}
+			if ($0 ~ /schedule_warm/ || $0 ~ /schedule_node_direct_refresh/ || $0 ~ /warm_cache/ || $0 ~ /node_direct_refresh/) {
+				next
+			}
+			found = 1
+			exit
+		}
+		END {
+			exit(found ? 0 : 1)
+		}
+	'
+}
+
 wt_ensure_webtest_dir() {
 	mkdir -p /tmp/upload
 }
@@ -1818,7 +1840,7 @@ wt_ensure_webtest_cache_ready() {
 	local ids_file="${TMP2}/xray_like_nodes.all"
 	local ret=0
 
-	[ -s "${TMP2}/nodes_index.txt" ] || wt_build_nodes_index || return 1
+	wt_build_nodes_index || return 1
 	wt_collect_xray_like_ids_file "${ids_file}" || return 1
 	if wt_webtest_cache_is_globally_fresh "${ids_file}"; then
 		return 0
@@ -3015,6 +3037,7 @@ single_test_node(){
 	mkdir -p ${TMP2}/conf
 	mkdir -p ${TMP2}/pids
 	mkdir -p ${TMP2}/results
+	rm -f "${TMP2}/nodes_index.txt" "${TMP2}/nodes_file_name.txt" "${TMP2}"/wt_*.txt >/dev/null 2>&1
 	rm -rf ${TMP2}/conf/*
 	rm -rf ${TMP2}/pids/*
 	rm -rf ${TMP2}/results/*
@@ -3512,6 +3535,10 @@ case $1 in
 	;;
 schedule_warm)
 	mkdir -p /tmp/upload >/dev/null 2>&1
+	if wt_has_active_test_runner "$$"; then
+		http_response "ok"
+		exit 0
+	fi
 	if ! ps | grep -E "ss_webtest\\.sh warm_cache" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" warm_cache >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
@@ -3520,6 +3547,10 @@ schedule_warm)
 	;;
 schedule_node_direct_refresh)
 	mkdir -p /tmp/upload >/dev/null 2>&1
+	if wt_has_active_test_runner "$$"; then
+		http_response "ok"
+		exit 0
+	fi
 	if ! ps | grep -E "ss_webtest\\.sh node_direct_refresh" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" node_direct_refresh >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
@@ -3538,6 +3569,10 @@ esac
 case $2 in
 schedule_warm)
 	mkdir -p /tmp/upload >/dev/null 2>&1
+	if wt_has_active_test_runner "$$"; then
+		http_response "ok"
+		exit 0
+	fi
 	if ! ps | grep -E "ss_webtest\\.sh warm_cache" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" warm_cache >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
@@ -3546,6 +3581,10 @@ schedule_warm)
 	;;
 schedule_node_direct_refresh)
 	mkdir -p /tmp/upload >/dev/null 2>&1
+	if wt_has_active_test_runner "$$"; then
+		http_response "ok"
+		exit 0
+	fi
 	if ! ps | grep -E "ss_webtest\\.sh node_direct_refresh" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" node_direct_refresh >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
