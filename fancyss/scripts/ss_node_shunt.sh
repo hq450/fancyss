@@ -827,17 +827,26 @@ fss_shunt_emit_routing_rules_json() {
 		# 如果没有任何规则，跳过
 		if (!has_domains && !has_ips && !has_geoips) next
 
-		# 输出规则
-		if (!first_rule) printf ",\n"
-		first_rule = 0
-		printf "        {\"type\":\"field\""
+		# 输出域名规则
+		if (has_domains) {
+			if (!first_rule) printf ",\n"
+			first_rule = 0
+			printf "        {\"type\":\"field\",%s,\"outboundTag\":\"proxy%s\"}", domain_json, target
+		}
 
-		# 拼接各类规则
-		if (has_domains) printf ",%s", domain_json
-		if (has_ips) printf ",%s", ip_json
-		if (has_geoips) printf ",%s", geoip_json
+		# 输出 IP 规则
+		if (has_ips) {
+			if (!first_rule) printf ",\n"
+			first_rule = 0
+			printf "        {\"type\":\"field\",%s,\"outboundTag\":\"proxy%s\"}", ip_json, target
+		}
 
-		printf ",\"outboundTag\":\"proxy%s\"}", target
+		# 输出 GEOIP 规则
+		if (has_geoips) {
+			if (!first_rule) printf ",\n"
+			first_rule = 0
+			printf "        {\"type\":\"field\",%s,\"outboundTag\":\"proxy%s\"}", geoip_json, target
+		}
 	}
 	' "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}"
 }
