@@ -441,10 +441,11 @@ function base64_encode_utf8(value) {
 			for (var i = 0; i < bytes.length; i += chunkSize) {
 				binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
 			}
-			return window.btoa(binary);
+			return window.btoa(binary).replace(/\n/g, "");
 		}
 	} catch (e) {}
-	return Base64.encode(value);
+	var encoded = Base64.encode(value);
+	return encoded ? encoded.replace(/\n/g, "") : encoded;
 }
 function normalize_smartdns_mode_value(value) {
 	value = String(value || "");
