@@ -1,0 +1,34 @@
+# source: https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/netflix.list
+# format: plain domain suffix list for fancyss node shunt v1
+cookielaw.org
+e13252.dscg.akamaiedge.net
+fast.com
+flxvpn.net
+h-netflix.online-metrix.net
+netflix.ca
+netflix.com
+netflix.com.au
+netflix.com.edgesuite.net
+netflix.net
+netflixdnstest0.com
+netflixdnstest1.com
+netflixdnstest10.com
+netflixdnstest2.com
+netflixdnstest3.com
+netflixdnstest4.com
+netflixdnstest5.com
+netflixdnstest6.com
+netflixdnstest7.com
+netflixdnstest8.com
+netflixdnstest9.com
+netflixinvestor.com
+netflixstudios.com
+netflixtechblog.com
+nflxext.com
+nflximg.com
+nflximg.net
+nflxsearch.net
+nflxso.net
+nflxvideo.net
+onetrust.com
+us-west-2.amazonaws.com

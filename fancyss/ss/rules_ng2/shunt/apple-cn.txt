@@ -1,0 +1,14 @@
+domain:apple.com.cn
+domain:icloud.com.cn
+full:www.apple.com.cn
+full:www.icloud.com.cn
+full:swcdn.apple.com
+full:swdist.apple.com
+full:swdownload.apple.com
+full:swpost.apple.com
+full:swscan.apple.com
+full:updates-http.cdn-apple.com
+full:updates.cdn-apple.com
+keyword:apple.com.cdn
+keyword:apple.com.edgekey
+keyword:apple.com.akadns

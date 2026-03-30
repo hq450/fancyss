@@ -1,0 +1,29 @@
+# source: https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/spotify.list
+# format: plain domain suffix list for fancyss node shunt v1
+audio-ak-spotify-com.akamaized.net
+audio4-ak-spotify-com.akamaized.net
+byspotify.com
+cdn-spotify-experiments.conductrics.com
+heads-ak-spotify-com.akamaized.net
+heads4-ak-spotify-com.akamaized.net
+pscdn.co
+scdn.co
+spoti.fi
+spotify-com.akamaized.net
+spotify-everywhere.com
+spotify.app.link
+spotify.com
+spotify.com.edgesuite.net
+spotify.design
+spotify.link
+spotify.map.fastly.net
+spotify.map.fastlylb.net
+spotifycdn.com
+spotifycdn.net
+spotifycharts.com
+spotifycodes.com
+spotifyforbrands.com
+spotifyjobs.com
+spotifynewsroom.jp
+spotilocal.com
+tospotify.com

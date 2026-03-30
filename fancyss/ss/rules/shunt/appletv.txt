@@ -1,0 +1,10 @@
+# source: https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/appletv.list
+# format: plain domain suffix list for fancyss node shunt v1
+apple-tv-plus-press.apple.com
+hls-amt.itunes.apple.com
+hls.itunes.apple.com
+np-edge.itunes.apple.com
+play-edge.itunes.apple.com
+tv.apple.com
+tv.applemusic.com
+uts-api.itunes.apple.com

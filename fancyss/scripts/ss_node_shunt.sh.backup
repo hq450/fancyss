@@ -1,0 +1,1192 @@
+#!/bin/sh
+
+[ -z "${KSROOT}" ] && export KSROOT=/koolshare
+[ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
+[ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
+[ -f "${KSROOT}/scripts/ss_webtest_gen.sh" ] && source ${KSROOT}/scripts/ss_webtest_gen.sh
+
+FSS_SHUNT_RULES_DBUS_KEY="ss_basic_shunt_rules"
+FSS_SHUNT_DEFAULT_NODE_DBUS_KEY="ss_basic_shunt_default_node"
+FSS_SHUNT_RULE_TS_DBUS_KEY="ss_basic_shunt_rule_ts"
+FSS_SHUNT_INGRESS_MODE_DBUS_KEY="ss_basic_shunt_ingress_mode"
+FSS_SHUNT_MAX_RULES=16
+FSS_SHUNT_MAX_TARGETS=8
+FSS_SHUNT_DIRECT_TARGET="DIRECT"
+FSS_SHUNT_RULES_FILE="${KSROOT}/configs/fancyss/node_shunt_rules.json"
+FSS_SHUNT_RUNTIME_DIR="/tmp/fancyss_shunt"
+FSS_SHUNT_RUNTIME_RULE_DIR="${FSS_SHUNT_RUNTIME_DIR}/rules"
+FSS_SHUNT_RUNTIME_ACTIVE_FILE="${FSS_SHUNT_RUNTIME_DIR}/active_rules.tsv"
+FSS_SHUNT_RUNTIME_TARGET_FILE="${FSS_SHUNT_RUNTIME_DIR}/target_nodes.txt"
+FSS_SHUNT_RUNTIME_META_FILE="${FSS_SHUNT_RUNTIME_DIR}/runtime.meta"
+FSS_SHUNT_RUNTIME_NODE_JSON_DIR="${FSS_SHUNT_RUNTIME_DIR}/node_json"
+FSS_SHUNT_RUNTIME_NODE_ENV_DIR="${FSS_SHUNT_RUNTIME_DIR}/node_env"
+FSS_SHUNT_RUNTIME_OUTBOUND_DIR="${FSS_SHUNT_RUNTIME_DIR}/outbounds"
+FSS_SHUNT_RUNTIME_PROXY_FILE="/tmp/ss_shunt_proxy.txt"
+FSS_SHUNT_PRESET_DIR="${KSROOT}/ss/rules_ng2/shunt"
+FSS_SHUNT_WEBTEST_HELPER="${KSROOT}/scripts/ss_webtest.sh"
+
+fss_shunt_log() {
+	if type echo_date >/dev/null 2>&1; then
+		echo_date "$@"
+	else
+		echo "$@"
+	fi
+}
+
+fss_shunt_mode_selected() {
+	[ "${ss_basic_mode}" = "7" ]
+}
+
+fss_shunt_rules_enabled() {
+	return 0
+}
+
+fss_shunt_is_active() {
+	fss_shunt_mode_selected
+}
+
+fss_shunt_cleanup_runtime() {
+	rm -rf "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1
+	rm -f "${FSS_SHUNT_RUNTIME_PROXY_FILE}" >/dev/null 2>&1
+	fss_shunt_reset_active_node_env >/dev/null 2>&1 || true
+	unset WT_NODE_CACHE_DIR WT_NODE_ENV_DIR WT_SERVER_RESOLV_MODE
+	unset FSS_SHUNT_RUNTIME_READY FSS_SHUNT_RUNTIME_READY_KEY
+}
+
+fss_shunt_reset_active_node_env() {
+	local field=""
+
+	for field in ${WT_NODE_ACTIVE_FIELDS}
+	do
+		unset WTN_${field}
+	done
+	unset WT_NODE_ENV_FIELDS
+	WT_NODE_ACTIVE_ID=""
+	WT_NODE_ACTIVE_FIELDS=""
+}
+
+fss_shunt_load_node_env() {
+	local node_id="$1"
+	local env_file=""
+
+	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
+	[ -n "${node_id}" ] || return 1
+	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
+	env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
+	[ -f "${env_file}" ] || return 1
+	fss_shunt_reset_active_node_env
+	. "${env_file}" || return 1
+	WT_NODE_ACTIVE_ID="${node_id}"
+	WT_NODE_ACTIVE_FIELDS="${WT_NODE_ENV_FIELDS}"
+}
+
+wt_node_get_plain_from_cache() {
+	local node_id="$1"
+	local field="$2"
+	local store_field=""
+	local value=""
+
+	[ -n "${node_id}" ] || return 1
+	[ -n "${field}" ] || return 1
+	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
+	store_field=$(fss_resolve_node_field_name "${field}")
+	fss_shunt_load_node_env "${node_id}" || return 1
+	eval "value=\${WTN_${store_field}-}"
+	printf '%s' "${value}"
+}
+
+wt_node_get() {
+	local field="$1"
+	local node_id="$2"
+	local store_field=""
+	local value=""
+
+	if value=$(wt_node_get_plain_from_cache "${node_id}" "${field}" 2>/dev/null); then
+		store_field=$(fss_resolve_node_field_name "${field}")
+		[ -n "${value}" ] || return 0
+		if fss_is_bool_field "${store_field}"; then
+			[ "${value}" = "1" ] || return 0
+		fi
+		if fss_is_b64_field "${store_field}"; then
+			case "${store_field}" in
+			v2ray_json|xray_json|tuic_json)
+				value=$(fss_compact_json_value "${value}")
+				;;
+			esac
+			value=$(fss_b64_encode "${value}")
+		fi
+		printf '%s' "${value}"
+		return 0
+	fi
+	fss_get_node_field_legacy "${node_id}" "${field}"
+}
+
+wt_node_get_plain() {
+	local field="$1"
+	local node_id="$2"
+	local value=""
+
+	if value=$(wt_node_get_plain_from_cache "${node_id}" "${field}" 2>/dev/null); then
+		printf '%s' "${value}"
+		return 0
+	fi
+	fss_get_node_field_plain "${node_id}" "${field}"
+}
+
+wt_server_resolv_mode_is_dynamic() {
+	[ "${WT_SERVER_RESOLV_MODE}" = "1" ]
+}
+
+wt_server_resolv_mode_is_preresolve() {
+	[ "${WT_SERVER_RESOLV_MODE}" = "2" ]
+}
+
+fss_shunt_runtime_mode() {
+	local mode="${ss_basic_shunt_ingress_mode}"
+
+	[ -n "${mode}" ] || mode="$(dbus get ${FSS_SHUNT_INGRESS_MODE_DBUS_KEY})"
+	case "${mode}" in
+	5)
+		echo "5"
+		;;
+	*)
+		echo "2"
+		;;
+	esac
+}
+
+fss_shunt_effective_mode() {
+	if fss_shunt_mode_selected; then
+		fss_shunt_runtime_mode
+	else
+		echo "${ss_basic_mode}"
+	fi
+}
+
+fss_shunt_rule_tag_file() {
+	case "$1" in
+	ai|media|youtube|netflix|disney|max|primevideo|appletv|spotify|tiktok|bilibili|games|networktest|gfw)
+		echo "${FSS_SHUNT_PRESET_DIR}/$1.txt"
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+fss_shunt_rules_json() {
+	local rules_b64="${ss_basic_shunt_rules}"
+	local decoded=""
+	local jq_bin=""
+
+	[ -n "${rules_b64}" ] || rules_b64="$(dbus get ${FSS_SHUNT_RULES_DBUS_KEY})"
+	[ -n "${rules_b64}" ] || {
+		echo '[]'
+		return 0
+	}
+	decoded="$(fss_b64_decode "${rules_b64}" 2>/dev/null)"
+	[ -n "${decoded}" ] || {
+		echo '[]'
+		return 0
+	}
+	jq_bin="$(fss_pick_jq_bin)"
+	if [ -n "${jq_bin}" ]; then
+		printf '%s' "${decoded}" | "${jq_bin}" -c '.' 2>/dev/null || echo '[]'
+	else
+		echo '[]'
+	fi
+}
+
+fss_shunt_write_rules_mirror() {
+	local json="$1"
+	local dir="${FSS_SHUNT_RULES_FILE%/*}"
+
+	mkdir -p "${dir}" >/dev/null 2>&1 || return 1
+	printf '%s\n' "${json}" > "${FSS_SHUNT_RULES_FILE}"
+}
+
+fss_shunt_node_supported() {
+	local node_id="$1"
+	local node_type=""
+	local ss_obfs=""
+
+	[ -n "${node_id}" ] || return 1
+	node_type="$(fss_get_node_field_plain "${node_id}" type)"
+	case "${node_type}" in
+	0)
+		ss_obfs="$(fss_get_node_field_plain "${node_id}" ss_obfs)"
+		[ -z "${ss_obfs}" ] || [ "${ss_obfs}" = "0" ]
+		;;
+	3|4|5|8)
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+fss_shunt_target_is_direct() {
+	local target="$1"
+
+	[ -n "${target}" ] || return 1
+	[ "$(printf '%s' "${target}" | tr 'a-z' 'A-Z')" = "${FSS_SHUNT_DIRECT_TARGET}" ]
+}
+
+fss_shunt_get_first_rule_target_id() {
+	local json=""
+	local jq_bin=""
+
+	json="$(fss_shunt_rules_json)"
+	jq_bin="$(fss_pick_jq_bin)"
+	[ -n "${jq_bin}" ] || return 1
+	printf '%s' "${json}" | "${jq_bin}" -r '.[]? | select((.enabled // 1 | tostring) != "0") | (.target_node_id // "" | tostring)' 2>/dev/null | while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		fss_shunt_node_supported "${node_id}" || continue
+		echo "${node_id}"
+		break
+	done | sed -n '1p'
+}
+
+fss_shunt_get_active_rule_count() {
+	local json=""
+	local jq_bin=""
+	local count=""
+
+	json="$(fss_shunt_rules_json)"
+	jq_bin="$(fss_pick_jq_bin)"
+	[ -n "${jq_bin}" ] || {
+		echo "0"
+		return 0
+	}
+	count="$(printf '%s' "${json}" | "${jq_bin}" -r '[.[]? | select((.enabled // 1 | tostring) != "0") | select((.target_node_id // "" | tostring) != "")] | length' 2>/dev/null)"
+	printf '%s\n' "${count:-0}"
+}
+
+fss_shunt_current_node_supported() {
+	local node_id="$1"
+	[ -n "${node_id}" ] || node_id="$(fss_shunt_get_default_node_id)"
+	fss_shunt_node_supported "${node_id}"
+}
+
+fss_shunt_get_configured_default_target() {
+	local target="${ss_basic_shunt_default_node}"
+
+	[ -n "${target}" ] || target="$(dbus get ${FSS_SHUNT_DEFAULT_NODE_DBUS_KEY})"
+	[ -n "${target}" ] || return 1
+	if fss_shunt_target_is_direct "${target}"; then
+		echo "${FSS_SHUNT_DIRECT_TARGET}"
+		return 0
+	fi
+	printf '%s' "${target}" | grep -Eq '^[0-9]+$' || return 1
+	echo "${target}"
+}
+
+fss_shunt_get_effective_default_target() {
+	local target="$1"
+	local rule_count=0
+
+	[ -n "${target}" ] || target="$(fss_shunt_get_configured_default_target 2>/dev/null)"
+	if fss_shunt_target_is_direct "${target}"; then
+		rule_count="$(fss_shunt_get_active_rule_count)"
+		[ -n "${rule_count}" ] || rule_count=0
+		if [ "${rule_count}" -gt 0 ]; then
+			echo "${FSS_SHUNT_DIRECT_TARGET}"
+			return 0
+		fi
+		target=""
+	fi
+	if [ -n "${target}" ] && fss_shunt_node_supported "${target}"; then
+		echo "${target}"
+		return 0
+	fi
+	fss_shunt_get_default_node_id
+}
+
+fss_shunt_get_default_node_id() {
+	local node_id="$1"
+
+	[ -n "${node_id}" ] || node_id="$(fss_shunt_get_configured_default_target 2>/dev/null)"
+	if [ -n "${node_id}" ] && fss_shunt_node_supported "${node_id}"; then
+		echo "${node_id}"
+		return 0
+	fi
+	node_id="$(fss_get_current_node_id)"
+	if [ -n "${node_id}" ] && fss_shunt_node_supported "${node_id}"; then
+		echo "${node_id}"
+		return 0
+	fi
+	node_id="$(fss_shunt_get_first_rule_target_id)"
+	if [ -n "${node_id}" ] && fss_shunt_node_supported "${node_id}"; then
+		echo "${node_id}"
+		return 0
+	fi
+	fss_list_node_ids | while read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		if fss_shunt_node_supported "${node_id}"; then
+			echo "${node_id}"
+			break
+		fi
+	done | sed -n '1p'
+}
+
+fss_shunt_validate_current_node() {
+	local node_id="$1"
+	local node_type=""
+	local ss_obfs=""
+
+	[ -n "${node_id}" ] || node_id="$(fss_shunt_get_default_node_id)"
+	[ -n "${node_id}" ] || {
+		fss_shunt_log "错误：xray分流模式未找到可用的运行节点。"
+		return 1
+	}
+	if fss_shunt_node_supported "${node_id}"; then
+		return 0
+	fi
+
+	node_type="$(fss_get_node_field_plain "${node_id}" type)"
+	if [ "${node_type}" = "0" ]; then
+		ss_obfs="$(fss_get_node_field_plain "${node_id}" ss_obfs)"
+		if [ -n "${ss_obfs}" ] && [ "${ss_obfs}" != "0" ]; then
+			fss_shunt_log "错误：xray分流模式暂不支持将带obfs的SS节点作为运行节点。"
+			return 1
+		fi
+	fi
+	fss_shunt_log "错误：xray分流模式当前仅支持 SS(无obfs)/VMess/VLESS/Trojan/Hysteria2 节点作为运行节点。"
+	return 1
+}
+
+fss_shunt_runtime_key() {
+	local rule_ts=""
+	local node_config_ts=""
+	local ingress_mode=""
+
+	rule_ts="${ss_basic_shunt_rule_ts}"
+	[ -n "${rule_ts}" ] || rule_ts="$(dbus get ${FSS_SHUNT_RULE_TS_DBUS_KEY})"
+	printf '%s' "${rule_ts}" | grep -Eq '^[0-9]+$' || rule_ts="0"
+	node_config_ts="$(fss_get_node_config_ts)"
+	printf '%s' "${node_config_ts}" | grep -Eq '^[0-9]+$' || node_config_ts="0"
+	ingress_mode="$(fss_shunt_runtime_mode)"
+	printf '%s|%s|%s\n' "${ingress_mode}" "${rule_ts}" "${node_config_ts}"
+}
+
+fss_shunt_runtime_meta_get() {
+	local key="$1"
+
+	[ -f "${FSS_SHUNT_RUNTIME_META_FILE}" ] || return 1
+	sed -n "s/^${key}=//p" "${FSS_SHUNT_RUNTIME_META_FILE}" | sed -n '1p'
+}
+
+fss_shunt_runtime_is_fresh() {
+	local current_key=""
+	local cached_key=""
+
+	[ -f "${FSS_SHUNT_RUNTIME_META_FILE}" ] || return 1
+	current_key="$(fss_shunt_runtime_key)"
+	cached_key="$(fss_shunt_runtime_meta_get runtime_key)"
+	[ -n "${cached_key}" ] || return 1
+	[ "${cached_key}" = "${current_key}" ]
+}
+
+fss_shunt_write_runtime_meta() {
+	local runtime_key="$1"
+	local tmp_file="${FSS_SHUNT_RUNTIME_META_FILE}.tmp.$$"
+
+	mkdir -p "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1 || return 1
+	cat > "${tmp_file}" <<-EOF
+		runtime_key=${runtime_key}
+		built_at=$(date +%s)
+	EOF
+	mv -f "${tmp_file}" "${FSS_SHUNT_RUNTIME_META_FILE}"
+}
+
+fss_shunt_materialize_rule_domains() {
+	local source_type="$1"
+	local preset="$2"
+	local custom_b64="$3"
+	local domain_file="$4"
+	local proxy_file="$5"
+	local tag_file=""
+	local text=""
+
+	[ -n "${domain_file}" ] || return 1
+	[ -n "${proxy_file}" ] || return 1
+	if [ "${source_type}" = "builtin" ]; then
+		tag_file="$(fss_shunt_rule_tag_file "${preset}" 2>/dev/null)" || return 1
+		[ -f "${tag_file}" ] || return 1
+		awk -v domain_file="${domain_file}" -v proxy_file="${proxy_file}" '
+			function normalize(line, lower, prefix, value, token) {
+				gsub(/\r/, "", line)
+				sub(/#.*/, "", line)
+				gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+				if (line == "") return ""
+				lower = tolower(line)
+				prefix = "domain"
+				value = lower
+				if (lower ~ /^domain,/) {
+					prefix = "full"
+					value = substr(lower, 8)
+				} else if (lower ~ /^domain-suffix,/) {
+					prefix = "domain"
+					value = substr(lower, 15)
+				} else if (lower ~ /^domain-keyword,/) {
+					prefix = "keyword"
+					value = substr(lower, 16)
+				} else if (lower ~ /^full:/) {
+					prefix = "full"
+					value = substr(lower, 6)
+				} else if (lower ~ /^domain:/) {
+					prefix = "domain"
+					value = substr(lower, 8)
+				} else if (lower ~ /^keyword:/) {
+					prefix = "keyword"
+					value = substr(lower, 9)
+				}
+				gsub(/^[*.]+/, "", value)
+				gsub(/[[:space:]]+$/, "", value)
+				if (value == "") return ""
+				if (prefix == "keyword") {
+					if (value !~ /^[a-z0-9._-]+$/) return ""
+				} else {
+					if (value !~ /^[a-z0-9._-]+(\.[a-z0-9._-]+)+$/) return ""
+				}
+				return prefix ":" value
+			}
+			{
+				token = normalize($0)
+				if (token == "" || seen[token]++) next
+				print token > domain_file
+				if (token ~ /^(full|domain):/) print substr(token, index(token, ":") + 1) >> proxy_file
+				count++
+			}
+			END {
+				printf "%d\n", count + 0
+			}
+		' "${tag_file}"
+		return $?
+	fi
+
+	[ "${source_type}" = "custom" ] || return 1
+	text="$(fss_b64_decode "${custom_b64}" 2>/dev/null)"
+	[ -n "${text}" ] || return 1
+	printf '%s\n' "${text}" | awk -v domain_file="${domain_file}" -v proxy_file="${proxy_file}" '
+		function normalize(line, lower, prefix, value, token) {
+			gsub(/\r/, "", line)
+			sub(/#.*/, "", line)
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+			if (line == "") return ""
+			lower = tolower(line)
+			prefix = "domain"
+			value = lower
+			if (lower ~ /^domain,/) {
+				prefix = "full"
+				value = substr(lower, 8)
+			} else if (lower ~ /^domain-suffix,/) {
+				prefix = "domain"
+				value = substr(lower, 15)
+			} else if (lower ~ /^domain-keyword,/) {
+				prefix = "keyword"
+				value = substr(lower, 16)
+			} else if (lower ~ /^full:/) {
+				prefix = "full"
+				value = substr(lower, 6)
+			} else if (lower ~ /^domain:/) {
+				prefix = "domain"
+				value = substr(lower, 8)
+			} else if (lower ~ /^keyword:/) {
+				prefix = "keyword"
+				value = substr(lower, 9)
+			}
+			gsub(/^[*.]+/, "", value)
+			gsub(/[[:space:]]+$/, "", value)
+			if (value == "") return ""
+			if (prefix == "keyword") {
+				if (value !~ /^[a-z0-9._-]+$/) return ""
+			} else {
+				if (value !~ /^[a-z0-9._-]+(\.[a-z0-9._-]+)+$/) return ""
+			}
+			return prefix ":" value
+		}
+		{
+			token = normalize($0)
+			if (token == "" || seen[token]++) next
+			print token > domain_file
+			if (token ~ /^(full|domain):/) print substr(token, index(token, ":") + 1) >> proxy_file
+			count++
+		}
+		END {
+			printf "%d\n", count + 0
+		}
+	'
+}
+
+fss_shunt_rebuild_proxy_domains() {
+	local active_file="$1"
+	local proxy_file="$2"
+
+	[ -n "${active_file}" ] || return 1
+	[ -n "${proxy_file}" ] || return 1
+	if [ ! -s "${active_file}" ]; then
+		rm -f "${proxy_file}" >/dev/null 2>&1
+		return 0
+	fi
+	awk -F'|' '
+	{
+		file = $3
+		if (file == "") next
+		while ((getline line < file) > 0) {
+			split(line, part, ":")
+			if ((part[1] == "full" || part[1] == "domain") && !seen[part[2]]++) print part[2]
+		}
+		close(file)
+	}
+	' "${active_file}" > "${proxy_file}"
+}
+
+fss_shunt_get_proxy_domain_file() {
+	fss_shunt_mode_selected || return 1
+	fss_shunt_rules_enabled || return 1
+	fss_shunt_prepare_runtime || return 1
+	[ -s "${FSS_SHUNT_RUNTIME_PROXY_FILE}" ] || return 1
+	printf '%s\n' "${FSS_SHUNT_RUNTIME_PROXY_FILE}"
+}
+
+fss_shunt_prepare_runtime() {
+	local json=""
+	local jq_bin=""
+	local tmp_dir=""
+	local active_tmp=""
+	local proxy_tmp=""
+	local targets_tmp=""
+	local count=0
+	local rule_id=""
+	local source_type=""
+	local preset=""
+	local custom_b64=""
+	local target_id=""
+	local remark=""
+	local domain_file=""
+	local rule_count=0
+	local target_count=0
+	local rebuild_runtime_lists=0
+	local runtime_key=""
+	local sep="$(printf '\037')"
+
+	fss_shunt_mode_selected || return 0
+	fss_shunt_rules_enabled || return 0
+	runtime_key="$(fss_shunt_runtime_key)"
+	if [ "${FSS_SHUNT_RUNTIME_READY}" = "1" ] && [ "${FSS_SHUNT_RUNTIME_READY_KEY}" = "${runtime_key}" ]; then
+		return 0
+	fi
+	if fss_shunt_runtime_is_fresh; then
+		FSS_SHUNT_RUNTIME_READY="1"
+		FSS_SHUNT_RUNTIME_READY_KEY="${runtime_key}"
+		return 0
+	fi
+	fss_shunt_cleanup_runtime
+	json="$(fss_shunt_rules_json)"
+	fss_shunt_write_rules_mirror "${json}" >/dev/null 2>&1 || true
+	jq_bin="$(fss_pick_jq_bin)"
+	[ -n "${jq_bin}" ] || return 1
+	mkdir -p "${FSS_SHUNT_RUNTIME_RULE_DIR}" >/dev/null 2>&1 || return 1
+	tmp_dir="$(fss_mktemp_dir fss_shunt)" || return 1
+	active_tmp="${tmp_dir}/active.tsv"
+	proxy_tmp="${tmp_dir}/proxy.txt"
+	targets_tmp="${tmp_dir}/targets.txt"
+	: > "${active_tmp}"
+	: > "${proxy_tmp}"
+	: > "${targets_tmp}"
+
+	printf '%s' "${json}" | "${jq_bin}" -r '.[]? | select((.enabled // 1 | tostring) != "0") | "\(.id // "" | tostring)\u001f\(.source // "builtin" | tostring)\u001f\(.preset // "" | tostring)\u001f\(.custom_b64 // "" | tostring)\u001f\(.target_node_id // "" | tostring)\u001f\(.remark // "" | tostring)"' 2>/dev/null | while IFS="${sep}" read -r rule_id source_type preset custom_b64 target_id remark
+	do
+		[ -n "${target_id}" ] || continue
+		fss_shunt_node_supported "${target_id}" || continue
+		domain_file="${FSS_SHUNT_RUNTIME_RULE_DIR}/${rule_id}.domains"
+		rm -f "${domain_file}" >/dev/null 2>&1
+		count="$(fss_shunt_materialize_rule_domains "${source_type}" "${preset}" "${custom_b64}" "${domain_file}" "${proxy_tmp}" 2>/dev/null)"
+		[ -n "${count}" ] || count=0
+		if [ "${count}" -le 0 ]; then
+			rm -f "${domain_file}" >/dev/null 2>&1
+			continue
+		fi
+		echo "${rule_id}|${target_id}|${domain_file}|${source_type}|${preset}|${remark}" >> "${active_tmp}"
+		echo "${target_id}" >> "${targets_tmp}"
+	done
+
+	if [ -s "${targets_tmp}" ]; then
+		sort -u "${targets_tmp}" -o "${targets_tmp}" 2>/dev/null || true
+	fi
+	rule_count=$(wc -l < "${active_tmp}" 2>/dev/null | tr -d ' ')
+	[ -n "${rule_count}" ] || rule_count=0
+	target_count=$(wc -l < "${targets_tmp}" 2>/dev/null | tr -d ' ')
+	[ -n "${target_count}" ] || target_count=0
+	if [ "${rule_count}" -gt "${FSS_SHUNT_MAX_RULES}" ]; then
+		head -n "${FSS_SHUNT_MAX_RULES}" "${active_tmp}" > "${active_tmp}.limit"
+		mv -f "${active_tmp}.limit" "${active_tmp}"
+		rule_count="${FSS_SHUNT_MAX_RULES}"
+		rebuild_runtime_lists=1
+	fi
+	if [ "${rebuild_runtime_lists}" = "1" ]; then
+		awk -F '|' 'NF >= 2 && !seen[$2]++ {print $2}' "${active_tmp}" > "${targets_tmp}"
+		target_count=$(wc -l < "${targets_tmp}" 2>/dev/null | tr -d ' ')
+		[ -n "${target_count}" ] || target_count=0
+	fi
+	if [ "${target_count}" -gt "${FSS_SHUNT_MAX_TARGETS}" ]; then
+		head -n "${FSS_SHUNT_MAX_TARGETS}" "${targets_tmp}" > "${targets_tmp}.limit"
+		mv -f "${targets_tmp}.limit" "${targets_tmp}"
+		target_count="${FSS_SHUNT_MAX_TARGETS}"
+		awk -F '|' 'NR==FNR {keep[$1]=1; next} keep[$2]' "${targets_tmp}" "${active_tmp}" > "${active_tmp}.keep"
+		mv -f "${active_tmp}.keep" "${active_tmp}"
+		rebuild_runtime_lists=1
+	fi
+	if [ "${rebuild_runtime_lists}" = "1" ]; then
+		fss_shunt_rebuild_proxy_domains "${active_tmp}" "${proxy_tmp}"
+	fi
+	if [ -s "${proxy_tmp}" ]; then
+		sort -u "${proxy_tmp}" > "${FSS_SHUNT_RUNTIME_PROXY_FILE}" 2>/dev/null
+	else
+		rm -f "${FSS_SHUNT_RUNTIME_PROXY_FILE}" >/dev/null 2>&1
+	fi
+	if [ -s "${active_tmp}" ]; then
+		mv -f "${active_tmp}" "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}"
+	else
+		rm -f "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}" >/dev/null 2>&1
+	fi
+	if [ -s "${targets_tmp}" ]; then
+		mv -f "${targets_tmp}" "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
+	else
+		rm -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" >/dev/null 2>&1
+	fi
+	fss_shunt_write_runtime_meta "${runtime_key}" >/dev/null 2>&1 || true
+	FSS_SHUNT_RUNTIME_READY="1"
+	FSS_SHUNT_RUNTIME_READY_KEY="${runtime_key}"
+	rm -rf "${tmp_dir}" >/dev/null 2>&1
+}
+
+fss_shunt_emit_dns_relay_route_rule() {
+	local first=1
+	local relay_port=""
+	local sep="$(printf '\037')"
+	local tags=""
+
+	type has_dns_udp_relay_targets >/dev/null 2>&1 || return 0
+	has_dns_udp_relay_targets || return 0
+	while IFS="${sep}" read -r relay_port _rest
+	do
+		[ -n "${relay_port}" ] || continue
+		if [ "${first}" = "1" ]; then
+			first=0
+		else
+			tags="${tags},"
+		fi
+		tags="${tags}\"dns_udp_${relay_port}\""
+	done <<-EOF2
+	$(iter_dns_udp_relay_targets)
+EOF2
+	[ -n "${tags}" ] || return 0
+	printf '        {"type":"field","inboundTag":[%s],"outboundTag":"proxy%s"}' "${tags}" "$1"
+}
+
+fss_shunt_emit_outbounds_json() {
+	local current_id="$1"
+	local node_id=""
+	local runtime_out=""
+
+	runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${current_id}_outbounds.json"
+	[ -s "${runtime_out}" ] || return 1
+	cat "${runtime_out}"
+	if [ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ]; then
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			[ "${node_id}" = "${current_id}" ] && continue
+			runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json"
+			[ -s "${runtime_out}" ] || continue
+			printf ',\n'
+			cat "${runtime_out}"
+		done < "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
+	fi
+	printf ',\n        {"tag":"direct","protocol":"freedom","settings":{}}'
+}
+
+fss_shunt_emit_routing_rules_json() {
+	[ -s "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}" ] || return 0
+	awk -F'|' '
+	BEGIN {
+		first_rule = 1
+	}
+	{
+		target = $2
+		file = $3
+		if (target == "" || file == "") next
+		if ((getline line < file) <= 0) {
+			close(file)
+			next
+		}
+		if (!first_rule) printf ",\n"
+		first_rule = 0
+		printf "        {\"type\":\"field\",\"domain\":["
+		first_domain = 1
+		do {
+			gsub(/\\/, "\\\\", line)
+			gsub(/"/, "\\\"", line)
+			if (!first_domain) printf ","
+			printf "\"%s\"", line
+			first_domain = 0
+		} while ((getline line < file) > 0)
+		close(file)
+		printf "],\"outboundTag\":\"proxy%s\"}", target
+	}
+	' "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}"
+}
+
+fss_shunt_get_server_resolv_mode() {
+	local mode="${ss_basic_server_resolv_mode}"
+
+	[ -n "${mode}" ] || mode="$(dbus get ss_basic_server_resolv_mode)"
+	[ "${mode}" = "2" ] || mode="1"
+	printf '%s\n' "${mode}"
+}
+
+fss_shunt_get_webtest_cache_meta() {
+	local key="$1"
+
+	[ -n "${key}" ] || return 1
+	[ -f "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" ] || return 1
+	sed -n "s/^${key}=//p" "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" | sed -n '1p'
+}
+
+fss_shunt_webtest_cache_settings_match() {
+	local cache_linux_ver=""
+	local cache_tfo=""
+	local cache_resolv_mode=""
+	local cache_resolver=""
+	local server_resolver=""
+
+	[ -n "${LINUX_VER}" ] || LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="$(dbus get ss_basic_tfo)"
+	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="0"
+	cache_linux_ver="$(fss_shunt_get_webtest_cache_meta linux_ver)"
+	cache_tfo="$(fss_shunt_get_webtest_cache_meta ss_basic_tfo)"
+	cache_resolv_mode="$(fss_shunt_get_webtest_cache_meta server_resolv_mode)"
+	cache_resolver="$(fss_shunt_get_webtest_cache_meta server_resolver)"
+	server_resolver="$(dbus get ss_basic_server_resolv)"
+	[ -n "${server_resolver}" ] || server_resolver="-1"
+	[ -n "${cache_resolver}" ] || cache_resolver="-1"
+	[ "${cache_linux_ver}" = "${LINUX_VER}" ] || return 1
+	[ "${cache_tfo}" = "${ss_basic_tfo}" ] || return 1
+	[ "${cache_resolv_mode}" = "${WT_SERVER_RESOLV_MODE}" ] || return 1
+	[ "${cache_resolver}" = "${server_resolver}" ]
+}
+
+fss_shunt_webtest_cache_node_is_fresh() {
+	local node_id="$1"
+	local cache_out="${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_outbounds.json"
+	local meta_file="${FSS_WEBTEST_CACHE_META_DIR}/${node_id}.meta"
+	local current_rev=""
+	local cached_rev=""
+	local cache_linux_ver=""
+	local cache_tfo=""
+	local cache_resolv_mode=""
+	local cache_resolver=""
+	local server_resolver=""
+
+	[ -n "${node_id}" ] || return 1
+	[ -s "${cache_out}" ] || return 1
+	[ -f "${meta_file}" ] || return 1
+	[ -n "${LINUX_VER}" ] || LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="$(dbus get ss_basic_tfo)"
+	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="0"
+	[ -n "${WT_SERVER_RESOLV_MODE}" ] || WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
+	server_resolver="$(dbus get ss_basic_server_resolv)"
+	[ -n "${server_resolver}" ] || server_resolver="-1"
+	current_rev="$(fss_get_node_field_plain "${node_id}" "_rev" 2>/dev/null)"
+	[ -n "${current_rev}" ] || current_rev="0"
+	cached_rev="$(sed -n 's/^node_rev=//p' "${meta_file}" | sed -n '1p')"
+	[ -n "${cached_rev}" ] || cached_rev="0"
+	cache_linux_ver="$(sed -n 's/^linux_ver=//p' "${meta_file}" | sed -n '1p')"
+	cache_tfo="$(sed -n 's/^ss_basic_tfo=//p' "${meta_file}" | sed -n '1p')"
+	cache_resolv_mode="$(sed -n 's/^server_resolv_mode=//p' "${meta_file}" | sed -n '1p')"
+	cache_resolver="$(sed -n 's/^server_resolver=//p' "${meta_file}" | sed -n '1p')"
+	[ "${cached_rev}" = "${current_rev}" ] || return 1
+	[ "${cache_linux_ver}" = "${LINUX_VER}" ] || return 1
+	[ "${cache_tfo}" = "${ss_basic_tfo}" ] || return 1
+	[ "${cache_resolv_mode}" = "${WT_SERVER_RESOLV_MODE}" ] || return 1
+	[ -n "${cache_resolver}" ] || cache_resolver="-1"
+	[ "${cache_resolver}" = "${server_resolver}" ]
+}
+
+fss_shunt_need_webtest_cache_rebuild() {
+	local ids_file="$1"
+	local node_id=""
+
+	[ -f "${ids_file}" ] || return 0
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		fss_shunt_webtest_cache_node_is_fresh "${node_id}" || return 0
+	done < "${ids_file}"
+	return 1
+}
+
+fss_shunt_link_webtest_cache_outbounds() {
+	local ids_file="$1"
+	local node_id=""
+	local cache_out=""
+
+	[ -f "${ids_file}" ] || return 1
+	rm -rf "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" >/dev/null 2>&1
+	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		cache_out="${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_outbounds.json"
+		[ -s "${cache_out}" ] || return 1
+		ln -sf "${cache_out}" "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" || return 1
+	done < "${ids_file}"
+}
+
+fss_shunt_try_prepare_webtest_outbounds() {
+	local ids_file="$1"
+
+	[ -f "${ids_file}" ] || return 1
+	WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
+	fss_refresh_node_json_cache >/dev/null 2>&1 || return 1
+	if fss_shunt_need_webtest_cache_rebuild "${ids_file}"; then
+		fss_shunt_log "复用webtest节点配置缓存：检测到缺失或过期，开始增量更新。"
+		sh "${FSS_SHUNT_WEBTEST_HELPER}" ensure_cache_ids_file "${ids_file}" >/dev/null 2>&1 || return 1
+	fi
+	fss_shunt_link_webtest_cache_outbounds "${ids_file}" || return 1
+}
+
+fss_shunt_prune_runtime_targets_by_cache() {
+	local current_id="$1"
+	local tmp_targets="${FSS_SHUNT_RUNTIME_TARGET_FILE}.tmp.$$"
+	local tmp_active="${FSS_SHUNT_RUNTIME_ACTIVE_FILE}.tmp.$$"
+	local node_id=""
+	local runtime_out=""
+	local keep_any=0
+
+	[ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ] || return 0
+	: > "${tmp_targets}"
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json"
+		[ -s "${runtime_out}" ] || continue
+		echo "${node_id}" >> "${tmp_targets}"
+		keep_any=1
+	done < "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
+	if [ "${keep_any}" = "1" ]; then
+		mv -f "${tmp_targets}" "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
+		awk -F '|' 'NR==FNR {keep[$1]=1; next} keep[$2]' "${FSS_SHUNT_RUNTIME_TARGET_FILE}" "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}" > "${tmp_active}"
+		mv -f "${tmp_active}" "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}"
+	else
+		rm -f "${tmp_targets}" "${FSS_SHUNT_RUNTIME_TARGET_FILE}" "${tmp_active}" "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}" >/dev/null 2>&1
+	fi
+}
+
+fss_shunt_prepare_selected_node_env() {
+	local ids_file="$1"
+	local json_dir="${FSS_SHUNT_RUNTIME_NODE_JSON_DIR}"
+	local env_dir="${FSS_SHUNT_RUNTIME_NODE_ENV_DIR}"
+	local jq_bin=""
+	local json_files=""
+	local node_id=""
+	local line=""
+	local use_global_cache="0"
+
+	WT_NODE_CACHE_DIR=""
+	WT_NODE_ENV_DIR=""
+	fss_shunt_reset_active_node_env
+	[ -f "${ids_file}" ] || return 1
+	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
+	if fss_refresh_node_env_cache >/dev/null 2>&1; then
+		use_global_cache="1"
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			[ -f "${FSS_NODE_JSON_CACHE_DIR}/${node_id}.json" ] || {
+				use_global_cache="0"
+				break
+			}
+			[ -f "${FSS_NODE_ENV_CACHE_DIR}/${node_id}.env" ] || {
+				use_global_cache="0"
+				break
+			}
+		done < "${ids_file}"
+		if [ "${use_global_cache}" = "1" ]; then
+			WT_NODE_CACHE_DIR="${FSS_NODE_JSON_CACHE_DIR}"
+			WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
+			return 0
+		fi
+	fi
+	jq_bin=$(fss_pick_jq_bin)
+	[ -n "${jq_bin}" ] || return 1
+	rm -rf "${json_dir}" "${env_dir}" >/dev/null 2>&1
+	mkdir -p "${json_dir}" "${env_dir}" || return 1
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		fss_v2_get_node_json_by_id "${node_id}" > "${json_dir}/${node_id}.json" 2>/dev/null || rm -f "${json_dir}/${node_id}.json"
+	done < "${ids_file}"
+	ls "${json_dir}"/*.json >/dev/null 2>&1 || return 0
+	json_files=$(ls "${json_dir}"/*.json 2>/dev/null)
+	[ -n "${json_files}" ] || return 0
+	# shellcheck disable=SC2086
+	"${jq_bin}" -r '
+		def is_b64_field($key):
+			$key == "password"
+			or $key == "naive_pass"
+			or $key == "v2ray_json"
+			or $key == "xray_json"
+			or $key == "tuic_json";
+		def decode_value($root; $key; $value):
+			if is_b64_field($key) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
+				(try ($value | @base64d) catch $value)
+			else
+				$value
+			end;
+		. as $root
+		| [
+			to_entries[]
+			| select(.key | startswith("_") | not)
+			| .key as $k
+			| (.value | if type == "string" then . else tostring end) as $v
+			| select($v != "")
+			| {key: $k, value: decode_value($root; $k; $v)}
+		] as $entries
+		| (input_filename | split("/")[-1] | rtrimstr(".json")) as $id
+		| [$id, "WT_NODE_ENV_FIELDS=" + (($entries | map(.key) | join(" ")) | @sh)],
+		  ($entries[] | [$id, "WTN_" + .key + "=" + (.value | @sh)])
+		| @tsv
+	' ${json_files} 2>/dev/null | while IFS="$(printf '\t')" read -r node_id line
+	do
+		[ -n "${node_id}" ] || continue
+		printf '%s\n' "${line}" >> "${env_dir}/${node_id}.env"
+	done
+	ls "${env_dir}"/*.env >/dev/null 2>&1 || return 0
+	WT_NODE_CACHE_DIR="${json_dir}"
+	WT_NODE_ENV_DIR="${env_dir}"
+	return 0
+}
+
+fss_shunt_build_runtime_outbound() {
+	local node_id="$1"
+	local node_type=""
+	local out_file="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json"
+	local old_tmp2="${TMP2}"
+	local mark="shunt_${node_id}"
+
+	[ -n "${node_id}" ] || return 1
+	node_type=$(wt_node_get_plain type "${node_id}")
+	[ -n "${node_type}" ] || return 1
+	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
+	rm -f "${out_file}" >/dev/null 2>&1
+	TMP2="${FSS_SHUNT_RUNTIME_DIR}"
+	WT_GEN_OUT_FILE="${out_file}"
+	WT_GEN_START_FILE=""
+	WT_GEN_STOP_FILE=""
+	WT_OUTBOUND_OBJECT_ONLY="1"
+	WT_LAST_START_PORT=""
+	WT_PRESET_START_PORT=""
+	case "${node_type}" in
+	0)
+		wt_gen_ss_outbound "${node_id}" "${mark}"
+		;;
+	3)
+		wt_gen_vmess_outbound "${node_id}" "${mark}"
+		;;
+	4)
+		wt_gen_vless_outbound "${node_id}" "${mark}"
+		;;
+	5)
+		wt_gen_trojan_outbound "${node_id}" "${mark}"
+		;;
+	8)
+		wt_gen_hy2_outbound "${node_id}" "${mark}"
+		;;
+	*)
+		rm -f "${out_file}" >/dev/null 2>&1
+		TMP2="${old_tmp2}"
+		WT_OUTBOUND_OBJECT_ONLY=""
+		WT_GEN_OUT_FILE=""
+		WT_GEN_START_FILE=""
+		WT_GEN_STOP_FILE=""
+		return 1
+		;;
+	esac
+	TMP2="${old_tmp2}"
+	WT_OUTBOUND_OBJECT_ONLY=""
+	WT_GEN_OUT_FILE=""
+	WT_GEN_START_FILE=""
+	WT_GEN_STOP_FILE=""
+	[ -s "${out_file}" ]
+}
+
+fss_shunt_prepare_outbound_cache() {
+	local current_id="$1"
+	local runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${current_id}_outbounds.json"
+	local ids_file="${FSS_SHUNT_RUNTIME_DIR}/cache_ids.txt"
+	local node_id=""
+
+	: > "${ids_file}" || return 1
+	echo "${current_id}" >> "${ids_file}"
+	if [ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ]; then
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			echo "${node_id}" >> "${ids_file}"
+		done < "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
+	fi
+	sort -u "${ids_file}" -o "${ids_file}" 2>/dev/null || true
+	if fss_shunt_try_prepare_webtest_outbounds "${ids_file}"; then
+		[ -s "${runtime_out}" ] || return 1
+		fss_shunt_prune_runtime_targets_by_cache "${current_id}"
+		return 0
+	fi
+	WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
+	fss_shunt_prepare_selected_node_env "${ids_file}" || return 1
+	rm -rf "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" >/dev/null 2>&1
+	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		fss_shunt_build_runtime_outbound "${node_id}" || return 1
+	done < "${ids_file}"
+	[ -s "${runtime_out}" ] || return 1
+	fss_shunt_prune_runtime_targets_by_cache "${current_id}"
+	if [ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ]; then
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			[ -s "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" ] || return 1
+		done < "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
+	fi
+}
+
+fss_shunt_build_xray_config() {
+	local config_file="$1"
+	local current_id="$2"
+	local current_tag="proxy${current_id}"
+	local default_target=""
+	local default_outbound_tag=""
+	local tmp_file="${config_file}.tmp.$$"
+	local dns_rule=""
+	local route_rules_file="${tmp_file}.rules"
+	local build_started=0
+	local build_elapsed=0
+
+	[ -n "${config_file}" ] || return 1
+	[ -n "${current_id}" ] || return 1
+	fss_shunt_mode_selected || return 1
+	build_started="$(date +%s)"
+	fss_shunt_validate_current_node "${current_id}" || return 1
+	fss_shunt_prepare_runtime || return 1
+	fss_shunt_prepare_outbound_cache "${current_id}" || return 1
+	default_target="$(fss_shunt_get_effective_default_target)"
+	if fss_shunt_target_is_direct "${default_target}"; then
+		default_outbound_tag="direct"
+	else
+		[ -n "${default_target}" ] || default_target="${current_id}"
+		default_outbound_tag="proxy${default_target}"
+	fi
+
+	cat > "${tmp_file}" <<-EOF2
+	{
+	  "log": {
+	    "access": "none",
+	    "error": "none",
+	    "loglevel": "warning"
+	  },
+	  "api": {
+	    "tag": "api",
+	    "services": ["StatsService"]
+	  },
+	  "stats": {},
+	  "policy": {
+	    "system": {
+	      "statsOutboundUplink": true,
+	      "statsOutboundDownlink": true
+	    }
+	  },
+	  "inbounds": [
+EOF2
+	gen_xray_dns_inbound "${tmp_file}"
+	cat >> "${tmp_file}" <<-EOF2
+	    {
+	      "tag": "socks-in",
+	      "port": 23456,
+	      "listen": "127.0.0.1",
+	      "protocol": "socks",
+	      "settings": {
+	        "auth": "noauth",
+	        "udp": true,
+	        "ip": "127.0.0.1"
+	      }
+	    },
+	    {
+	      "tag": "tproxy-in",
+	      "listen": "0.0.0.0",
+	      "port": 3333,
+	      "protocol": "dokodemo-door",
+	      "settings": {
+	        "network": "tcp,udp",
+	        "followRedirect": true
+	      },
+	      "sniffing": {
+	        "enabled": true,
+	        "destOverride": ["http", "tls"],
+	        "routeOnly": true
+	      }
+	    },
+	    {
+	      "tag": "api-in",
+	      "listen": "127.0.0.1",
+	      "port": 10085,
+	      "protocol": "dokodemo-door",
+	      "settings": {
+	        "address": "127.0.0.1"
+	      }
+	    }
+	  ],
+	  "outbounds": [
+EOF2
+	fss_shunt_emit_outbounds_json "${current_id}" >> "${tmp_file}" || {
+		rm -f "${tmp_file}" "${route_rules_file}" >/dev/null 2>&1
+		return 1
+	}
+	cat >> "${tmp_file}" <<-EOF2
+	  ,
+	    {"tag":"api","protocol":"freedom","settings":{}}
+	  ],
+	  "routing": {
+	    "domainStrategy": "AsIs",
+	    "rules": [
+	      {"type":"field","inboundTag":["socks-in"],"outboundTag":"${current_tag}"},
+	      {"type":"field","inboundTag":["api-in"],"outboundTag":"api"}
+EOF2
+	dns_rule="$(fss_shunt_emit_dns_relay_route_rule "${current_id}")"
+	if [ -n "${dns_rule}" ]; then
+		printf ',\n%s\n' "${dns_rule}" >> "${tmp_file}"
+	fi
+	fss_shunt_emit_routing_rules_json > "${route_rules_file}" 2>/dev/null
+	if [ -s "${route_rules_file}" ]; then
+		printf ',\n' >> "${tmp_file}"
+		cat "${route_rules_file}" >> "${tmp_file}"
+		printf '\n' >> "${tmp_file}"
+	fi
+	cat >> "${tmp_file}" <<-EOF2
+	,
+	      {"type":"field","network":"tcp,udp","outboundTag":"${default_outbound_tag}"}
+	    ]
+	  }
+	}
+EOF2
+	rm -f "${route_rules_file}" >/dev/null 2>&1
+	mv -f "${tmp_file}" "${config_file}"
+	build_elapsed=$(( $(date +%s) - build_started ))
+	fss_shunt_log "xray分流配置已生成，用时${build_elapsed}s。"
+}

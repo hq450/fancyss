@@ -1,0 +1,32 @@
+# source: https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/primevideo.list
+# format: plain domain suffix list for fancyss node shunt v1
+aiv-cdn.net
+aiv-delivery.net
+amazonprimevideo.cn
+amazonprimevideo.com.cn
+amazonprimevideos.com
+amazonvideo.cc
+amazonvideo.com
+atv-ps.amazon.com
+avodmp4s3ww-a.akamaihd.net
+d1v5ir2lpwr8os.cloudfront.net
+d22qjgkvxw22r6.cloudfront.net
+d25xi40x97liuc.cloudfront.net
+d27xxe7juh1us6.cloudfront.net
+dmqdd6hw24ucf.cloudfront.net
+fls-na.amazon.com
+images-eu.ssl-images-amazon.com
+images-fe.ssl-images-amazon.com
+images-na.ssl-images-amazon.com
+media-amazon.com
+msh.amazon.co.uk
+prime-video.com
+primevideo.cc
+primevideo.com
+primevideo.info
+primevideo.org
+primevideo.tv
+prod.service.minerva.devices.a2z.com
+pv-cdn.net
+static.siege-amazon.com
+www.amazon.com

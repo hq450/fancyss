@@ -1,0 +1,13 @@
+domain:github.com
+domain:githubusercontent.com
+domain:githubassets.com
+domain:github.io
+domain:githubapp.com
+domain:github.dev
+domain:githubnext.com
+domain:thegithubshop.com
+full:api.github.com
+full:raw.githubusercontent.com
+full:gist.github.com
+full:education.github.com
+keyword:github

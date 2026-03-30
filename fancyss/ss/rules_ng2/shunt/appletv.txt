@@ -1,0 +1,8 @@
+domain:tv.apple.com
+full:apple-tv-plus-press.apple.com
+full:hls-amt.itunes.apple.com
+full:hls.itunes.apple.com
+full:np-edge.itunes.apple.com
+full:play-edge.itunes.apple.com
+full:tv.applemusic.com
+full:uts-api.itunes.apple.com
