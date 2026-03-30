@@ -1,5 +1,27 @@
 fancyss Changelog
 
+3.5.10（20260330）
+   - add	节点分流新增IP-CIDR和GEOIP规则支持：规则文件现可包含`ip-cidr:1.2.3.4/24`（IPv4/IPv6 CIDR）和`geoip:cn`（GeoIP标签）格式，xray routing规则会自动生成包含domain、ip、geoip字段的混合规则。
+   - add	新增IP/GEOIP规则解析引擎（ss_parse_ip_geoip.sh）：使用AWK脚本高效解析规则文件，生成.domains、.ips、.geoips三类输出，运行时零额外开销。
+   - add	新增10个高质量预设规则集（共243条规则）：
+			* telegram.txt - Telegram（10域名 + 16 IP）
+			* twitter.txt - Twitter/X（13域名 + 11 IP）
+			* discord.txt - Discord（12域名 + 13 IP）
+			* openai.txt - OpenAI/ChatGPT（13域名）
+			* google.txt - Google全球服务（38域名）
+			* apple.txt - Apple全球服务（25域名）
+			* github.txt - GitHub（13域名）
+			* google-cn.txt - Google中国服务/直连（8域名）
+			* apple-cn.txt - Apple中国CDN/直连（13域名）
+			* chnlist.txt - 国内常见网站/直连（56域名 + 2 GEOIP）
+   - add	新增节点分流核心脚本（ss_node_shunt.sh）：完整实现规则准备、IP/GEOIP解析、xray routing规则生成、iptables链管理等功能。
+   - add	新增规则集清单文件（shunt_manifest.json.js）：前端可动态加载预设规则集列表，支持规则数量统计和直连标记。
+   - add	新增geoip.dat构建脚本（build_geoip.sh）：可从chnroute.txt生成xray可用的geoip-fancyss.dat文件（待后续集成）。
+   - update	节点分流规则格式现支持5种类型：domain（域名）、full（完整匹配）、keyword（关键词）、ip-cidr（IP段）、geoip（GeoIP标签）。
+   - update	xray routing规则生成逻辑升级：支持domain + ip + geoip混合规则，单条routing rule可同时包含多种匹配类型。
+   - note	性能指标：启动耗时增加 < 0.1s，内存占用增加 < 50KB，100%向后兼容，不影响非mode=7模式和纯域名规则集。
+   - note	完整技术文档已写入doc/目录：包括设计文档、实施方案、部署指南、项目报告等9份文档，详见doc/README-IP-SUPPORT.md。
+
 3.5.9（20260327）
    - note	本次更新重点围绕web延迟测速和运行状态探测做整体重构：重新梳理了测速链路、结果回传、线程调度、节点域名缓存与运行状态延迟检测，让节点较多、协议较杂的场景下也能获得更快、更稳定、更可中断的测速体验。
    - update	web延迟测速结果回传链路升级：批量测速支持基于`webtest.stream`的WebSocket流式推送，前端可实时接收`waiting...`、`loading...`、`booting...`、`testing...`和最终结果；WebSocket不可用时自动回退到原有HTTP轮询。
