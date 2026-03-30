@@ -467,6 +467,7 @@ base_1="name type mode server port method password ss_obfs ss_obfs_host rss_prot
 base_2="v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_pcs trojan_vcn trojan_tfo trojan_plugin trojan_obfs trojan_obfshost trojan_obfsuri naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_pcs hy2_vcn hy2_svn hy2_ai hy2_tfo hy2_cg"
 fss_export_current_node_env "${cur_node}" ${base_1} ${base_2}
 ssconf_basic_node=${cur_node}
+export ss_basic_mode="${FSS_GLOBAL_BASIC_MODE}"
 if [ "$(fss_detect_storage_schema)" = "2" ];then
 	ss_failover_s4_3=$(fss_get_failover_node_id)
 	export ss_failover_s4_3
