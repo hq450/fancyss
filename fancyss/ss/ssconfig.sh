@@ -1897,6 +1897,13 @@ domain-set -name black_list -file /tmp/black_list.txt
 EOF
 	[ -s /tmp/ss_node_domains.txt ] && echo "domain-set -name node_direct -file /tmp/ss_node_domains.txt" >> "${outfile}"
 	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
+
+	local shunt_proxy_file=""
+	if [ "$(get_runtime_proxy_mode)" = "7" ] && type fss_shunt_get_proxy_domain_file >/dev/null 2>&1; then
+		shunt_proxy_file="$(fss_shunt_get_proxy_domain_file 2>/dev/null)"
+		[ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ] && echo "domain-set -name shunt_proxy -file ${shunt_proxy_file}" >> "${outfile}"
+	fi
+
 	[ "${mode}" = "3" ] && echo "conf-file /tmp/whitelist_ip.txt" >> "${outfile}"
 	cat >> "${outfile}" <<-'EOF'
 
@@ -1906,6 +1913,11 @@ EOF
 
 domain-rules /domain-set:chnlist/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn
 domain-rules /domain-set:white_list/ -p #4:white_list,#6:white_list6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn
+EOF
+	if [ "$(get_runtime_proxy_mode)" = "7" ] && [ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ]; then
+		echo "domain-rules /domain-set:shunt_proxy/ -p #4:gfwlist,#6:gfwlist6 -c none -n gfw" >> "${outfile}"
+	fi
+	cat >> "${outfile}" <<-'EOF'
 domain-rules /domain-set:gfwlist/ -p #4:gfwlist,#6:gfwlist6 -c none -n gfw
 domain-rules /domain-set:black_list/ -p #4:black_list,#6:black_list6 -c none -n gfw
 domain-rules /domain-set:rotlist/ -p #4:router,#6:router6 -c none -n gfw
@@ -5901,10 +5913,7 @@ insert_if_not_exists() {
 }
 
 get_shunt_ingress_mode() {
-	local mode="2"
-	if type fss_shunt_runtime_mode >/dev/null 2>&1; then
-		mode="$(fss_shunt_runtime_mode 2>/dev/null)"
-	fi
+	local mode="${ss_basic_shunt_ingress_mode:-2}"
 	case "${mode}" in
 	5)
 		echo "5"
