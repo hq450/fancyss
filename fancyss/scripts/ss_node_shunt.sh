@@ -409,6 +409,8 @@ fss_shunt_materialize_rule_domains() {
 	local custom_b64="$3"
 	local domain_file="$4"
 	local proxy_file="$5"
+	local ip_file="${domain_file%.domains}.ips"
+	local geoip_file="${domain_file%.domains}.geoips"
 	local tag_file=""
 	local text=""
 
@@ -417,6 +419,11 @@ fss_shunt_materialize_rule_domains() {
 	if [ "${source_type}" = "builtin" ]; then
 		tag_file="$(fss_shunt_rule_tag_file "${preset}" 2>/dev/null)" || return 1
 		[ -f "${tag_file}" ] || return 1
+
+		# Parse IP/GEOIP rules
+		sh "${KSROOT}/scripts/ss_parse_ip_geoip.sh" "${tag_file}" "${ip_file}" "${geoip_file}" 2>/dev/null
+
+		# Parse domain rules
 		awk -v domain_file="${domain_file}" -v proxy_file="${proxy_file}" '
 			function normalize(line, lower, prefix, value, token) {
 				gsub(/\r/, "", line)
@@ -600,7 +607,9 @@ fss_shunt_prepare_runtime() {
 	: > "${proxy_tmp}"
 	: > "${targets_tmp}"
 
-	printf '%s' "${json}" | "${jq_bin}" -r '.[]? | select((.enabled // 1 | tostring) != "0") | "\(.id // "" | tostring)\u001f\(.source // "builtin" | tostring)\u001f\(.preset // "" | tostring)\u001f\(.custom_b64 // "" | tostring)\u001f\(.target_node_id // "" | tostring)\u001f\(.remark // "" | tostring)"' 2>/dev/null | while IFS="${sep}" read -r rule_id source_type preset custom_b64 target_id remark
+	printf '%s' "${json}" | "${jq_bin}" -r '.[]? | select((.enabled // 1 | tostring) != "0") | "\(.id // "" | tostring)\u001f\(.source // "builtin" | tostring)\u001f\(.preset // "" | tostring)\u001f\(.custom_b64 // "" | tostring)\u001f\(.target_node_id // "" | tostring)\u001f\(.remark // "" | tostring)"' 2>/dev/null > "${tmp_dir}/rules.txt"
+
+	while IFS="${sep}" read -r rule_id source_type preset custom_b64 target_id remark
 	do
 		[ -n "${target_id}" ] || continue
 		fss_shunt_node_supported "${target_id}" || continue
@@ -644,7 +653,7 @@ fss_shunt_prepare_runtime() {
 		fi
 		echo "${rule_id}|${target_id}|${domain_file}|${source_type}|${preset}|${remark}" >> "${active_tmp}"
 		echo "${target_id}" >> "${targets_tmp}"
-	done
+	done < "${tmp_dir}/rules.txt"
 
 	if [ -s "${targets_tmp}" ]; then
 		sort -u "${targets_tmp}" -o "${targets_tmp}" 2>/dev/null || true
