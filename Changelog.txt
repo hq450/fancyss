@@ -1,7 +1,10 @@
 fancyss Changelog
 
 3.5.10（20260330）
-   - add	节点分流新增IP-CIDR和GEOIP规则支持：规则文件现可包含`ip-cidr:1.2.3.4/24`（IPv4/IPv6 CIDR）和`geoip:cn`（GeoIP标签）格式，xray routing规则会自动生成包含domain、ip、geoip字段的混合规则。
+   - add	添加节点分流功能，为了保持兼容性，节点分流作为单独的一个模式，目前需要在`账号设置`内，将节点模式切换为xray分流模式
+			不使用xray分流模式的情况下，其它功能跟之前（3.5.9）保持一致
+			使用xray分流模式的情况下，会自动出现节点分流标签页用于定义分流规则，另外DNS，黑白名单等相关功能都可能改变行为以适应节点分流
+   - add	节点分流支持IP-CIDR和GEOIP规则支持：规则文件现可包含`ip-cidr:1.2.3.4/24`（IPv4/IPv6 CIDR）和`geoip:cn`（GeoIP标签）格式，xray routing规则会自动生成包含domain、ip、geoip字段的混合规则。
    - add	新增IP/GEOIP规则解析引擎（ss_parse_ip_geoip.sh）：使用AWK脚本高效解析规则文件，生成.domains、.ips、.geoips三类输出，运行时零额外开销。
    - add	新增10个高质量预设规则集（共243条规则）：
 			* telegram.txt - Telegram（10域名 + 16 IP）
@@ -10,6 +13,15 @@ fancyss Changelog
 			* openai.txt - OpenAI/ChatGPT（13域名）
 			* google.txt - Google全球服务（38域名）
 			* apple.txt - Apple全球服务（25域名）
+			* github.txt - GitHub（13域名）
+			* ai.txt - AI服务合集（145域名，包含OpenAI/Claude/Gemini等）
+			* google-cn.txt - Google中国服务（8域名，直连）
+			* apple-cn.txt - Apple中国服务（13域名，直连）
+   - add	节点分流前端UI完整实现：规则列表展示、添加/编辑/删除规则、规则排序（拖拽）、预设规则选择器、自定义域名/IP集合输入、入口策略选择
+   - add	DNS一致性保证：smartdns和chinadns-ng自动同步分流规则，确保DNS解析与代理决策完全一致
+   - add	iptables一致性保证：mode 7专用SHADOWSOCKS_SHU链，支持大陆白名单引流和全量引流两种入口策略
+   - fix	修复mode切换问题：节点导出不再覆盖全局ss_basic_mode，确保mode 1-6与3.5.9完全一致
+   - fix	修复DNS配置生成：fss_shunt_effective_mode在mode 7时正确返回7，smartdns正确加载shunt_proxy规则
 			* github.txt - GitHub（13域名）
 			* google-cn.txt - Google中国服务/直连（8域名）
 			* apple-cn.txt - Apple中国CDN/直连（13域名）
