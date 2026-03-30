@@ -158,7 +158,7 @@ fss_shunt_runtime_mode() {
 
 fss_shunt_effective_mode() {
 	if fss_shunt_mode_selected; then
-		fss_shunt_runtime_mode
+		echo "7"
 	else
 		echo "${ss_basic_mode}"
 	fi
