@@ -629,10 +629,10 @@ fss_shunt_prepare_runtime() {
 			tag_file="$(fss_shunt_rule_tag_file "${preset}" 2>/dev/null)"
 			if [ -f "${tag_file}" ]; then
 				ip_geoip_counts="$(sh "${FSS_SCRIPT_DIR}/ss_parse_ip_geoip.sh" "${tag_file}" "${ip_file}" "${geoip_file}" 2>/dev/null)"
-				ip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f1)"
-				geoip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f2)"
-				[ -n "${ip_count}" ] || ip_count=0
-				[ -n "${geoip_count}" ] || geoip_count=0
+				ip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f1 2>/dev/null)"
+				geoip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f2 2>/dev/null)"
+				[ -n "${ip_count}" ] && [ "${ip_count}" -eq "${ip_count}" ] 2>/dev/null || ip_count=0
+				[ -n "${geoip_count}" ] && [ "${geoip_count}" -eq "${geoip_count}" ] 2>/dev/null || geoip_count=0
 			fi
 		elif [ "${source_type}" = "custom" ]; then
 			custom_text="$(fss_b64_decode "${custom_b64}" 2>/dev/null)"
@@ -640,10 +640,10 @@ fss_shunt_prepare_runtime() {
 				custom_tmp="/tmp/fss_shunt_custom_$$.txt"
 				printf '%s\n' "${custom_text}" > "${custom_tmp}"
 				ip_geoip_counts="$(sh "${FSS_SCRIPT_DIR}/ss_parse_ip_geoip.sh" "${custom_tmp}" "${ip_file}" "${geoip_file}" 2>/dev/null)"
-				ip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f1)"
-				geoip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f2)"
-				[ -n "${ip_count}" ] || ip_count=0
-				[ -n "${geoip_count}" ] || geoip_count=0
+				ip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f1 2>/dev/null)"
+				geoip_count="$(echo "${ip_geoip_counts}" | cut -d'|' -f2 2>/dev/null)"
+				[ -n "${ip_count}" ] && [ "${ip_count}" -eq "${ip_count}" ] 2>/dev/null || ip_count=0
+				[ -n "${geoip_count}" ] && [ "${geoip_count}" -eq "${geoip_count}" ] 2>/dev/null || geoip_count=0
 				rm -f "${custom_tmp}" >/dev/null 2>&1
 			fi
 		fi
