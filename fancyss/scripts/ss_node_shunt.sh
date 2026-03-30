@@ -5,6 +5,8 @@
 [ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
 [ -f "${KSROOT}/scripts/ss_webtest_gen.sh" ] && source ${KSROOT}/scripts/ss_webtest_gen.sh
 
+eval $(dbus export ss_basic_)
+
 FSS_SHUNT_RULES_DBUS_KEY="ss_basic_shunt_rules"
 FSS_SHUNT_DEFAULT_NODE_DBUS_KEY="ss_basic_shunt_default_node"
 FSS_SHUNT_RULE_TS_DBUS_KEY="ss_basic_shunt_rule_ts"
