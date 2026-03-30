@@ -423,7 +423,7 @@ fss_shunt_materialize_rule_domains() {
 		[ -f "${tag_file}" ] || return 1
 
 		# Parse IP/GEOIP rules
-		sh "${KSROOT}/scripts/ss_parse_ip_geoip.sh" "${tag_file}" "${ip_file}" "${geoip_file}" 2>/dev/null
+		sh "${KSROOT}/scripts/ss_parse_ip_geoip.sh" "${tag_file}" "${ip_file}" "${geoip_file}" >/dev/null 2>&1
 
 		# Parse domain rules
 		awk -v domain_file="${domain_file}" -v proxy_file="${proxy_file}" '
