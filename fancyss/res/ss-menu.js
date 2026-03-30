@@ -527,6 +527,9 @@ function LoadingSSProgress(seconds) {
 	} else if (action == 6) {
 		document.getElementById("loading_block3").innerHTML = "回国模式启用中 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在应用配置...</font></li>");
+	} else if (action == 28) {
+		document.getElementById("loading_block3").innerHTML = "xray分流模式启用中 ..."
+		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，正在生成节点分流配置 ...</font></li><li><font color='#ffcc00'>所有剩余流量会走兜底节点，命中规则的流量会按顺序切换到对应出站节点。</font></li>");
 	} else if (action == 7) {
 		document.getElementById("loading_block3").innerHTML = "科学上网插件升级 ..."
 		$("#loading_block2").html("<li><font color='#ffcc00'>请勿刷新本页面，等待脚本运行完毕后再刷新！</font></li><li><font color='#ffcc00'>升级服务会自动检测最新版本并下载升级...</font></li>");

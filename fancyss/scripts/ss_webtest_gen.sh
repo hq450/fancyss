@@ -173,11 +173,13 @@ wt_wrap_user_outbound_json() {
 	local json_file="$1"
 	local target_addr="$2"
 	local out_file="$3"
+	local tag_name="$4"
 
 	[ -n "${json_file}" ] || return 1
 	[ -f "${json_file}" ] || return 1
 	[ -n "${out_file}" ] || return 1
-	run jq --arg addr "${target_addr}" '
+	[ -n "${tag_name}" ] || tag_name="proxy"
+	run jq --arg addr "${target_addr}" --arg tag "${tag_name}" '
 		def patch_addr:
 			(.outbound // (.outbounds[0] // {})) as $ob
 			| ($ob.protocol // "") as $protocol
@@ -213,7 +215,7 @@ wt_wrap_user_outbound_json() {
 		patch_addr
 		| (.outbound // (.outbounds[0] // {})) as $ob
 		| if ($ob | type) == "object" and (($ob | keys | length) > 0) then
-			$ob
+			($ob | .tag = $tag)
 		else
 			empty
 		end
@@ -557,7 +559,7 @@ wt_gen_vmess_outbound() {
 		$(fss_get_node_server_host_port "${nu}")
 		EOF
 		user_host_addr=$(wt_get_server_addr "${user_host}")
-		wt_wrap_user_outbound_json "${TMP2}/v2ray_user_${nu}.json" "${user_host_addr}" "${out_file}"
+		wt_wrap_user_outbound_json "${TMP2}/v2ray_user_${nu}.json" "${user_host_addr}" "${out_file}" "proxy${nu}"
 	fi
 }
 
@@ -839,7 +841,7 @@ ${xray_user_json}
 		$(fss_get_node_server_host_port "${nu}")
 		EOF
 		user_host_addr=$(wt_get_server_addr "${user_host}")
-		wt_wrap_user_outbound_json "${TMP2}/xray_user_${nu}.json" "${user_host_addr}" "${out_file}"
+		wt_wrap_user_outbound_json "${TMP2}/xray_user_${nu}.json" "${user_host_addr}" "${out_file}" "proxy${nu}"
 	fi
 }
 

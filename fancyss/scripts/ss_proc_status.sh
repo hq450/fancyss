@@ -25,6 +25,9 @@ GET_MODE_NAME() {
 	6)
 		echo "回国模式"
 		;;
+	7)
+		echo "xray分流模式"
+		;;
 	esac
 }
 

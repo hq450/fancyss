@@ -165,7 +165,7 @@ test_xray_conf(){
 	#uset _test_ret
 	local conf=$1
 	echo_date "测试xray配置文件..."
-	local test_ret=$(run xray run -config=$conf -test 2>&1)
+	local test_ret=$(run /koolshare/bin/xray run -config=$conf -test 2>&1)
 	local ret_1=$(echo "$test_ret" | grep "Configuration OK.")
 	local ret_2=$(echo "$test_ret" | grep "does not support fingerprint")
 	#local ret_2=$(echo $test_ret | grep "Old version of XTLS does not support fingerprint")
@@ -1636,6 +1636,7 @@ dbus_eset(){
 start_dns_x(){
 	set_default "ss_basic_dns_plan" "1"
 	set_default "ss_basic_dns_serverx" "0"
+	local runtime_mode="$(get_runtime_proxy_mode)"
 	if [ "${ss_basic_type}" = "6" ];then
 		local trust_udp_fallback=""
 		local n=""
@@ -1654,14 +1655,14 @@ start_dns_x(){
 	fi
 	if [ "${ss_basic_dns_plan}" == "1" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
-		if [ "$ss_basic_mode" == "1" ];then
+		if [ "${runtime_mode}" == "1" ];then
 			if [ "${ss_basic_chng}" == "2" ];then
 				echo_date "⚠️警告：当前代理模式GFW黑名单与当前DNS模式：[国外优先]不匹配！"
 				echo_date "🔁建议使用：[国内优先/智能判断]，本次自动将当前DNS模式改为：[国内优先]！"
 				ss_basic_chng="1"
 				dbus set ss_basic_chng="1"
 			fi
-		elif [ "$ss_basic_mode" == "2" -o "$ss_basic_mode" == "3" ];then
+		elif [ "${runtime_mode}" == "2" -o "${runtime_mode}" == "3" ];then
 			if [ "${ss_basic_chng}" == "1" ];then
 				echo_date "⚠️警告：当前代理模式与当前DNS模式：[国内优先]不匹配！"
 				echo_date "🔁建议使用：[国外优先/智能判断]，本次自动将当前DNS模式改为：[国外优先]！"
@@ -1673,14 +1674,14 @@ start_dns_x(){
 		start_chinadns_ng
 	elif [ "${ss_basic_dns_plan}" == "2" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
-		if [ "$ss_basic_mode" == "1" ];then
+		if [ "${runtime_mode}" == "1" ];then
 			if [ "${ss_basic_smrt}" == "2" ];then
 				echo_date "⚠️警告：当前代理模式GFW黑名单与当前DNS模式：[国外优先]不匹配！"
 				echo_date "🔁建议使用：[国内优先/智能判断]，本次自动将当前DNS模式改为：[国内优先]！"
 				ss_basic_smrt="1"
 				dbus set ss_basic_smrt="1"
 			fi
-		elif [ "$ss_basic_mode" == "2" -o "$ss_basic_mode" == "3" ];then
+		elif [ "${runtime_mode}" == "2" -o "${runtime_mode}" == "3" ];then
 			if [ "${ss_basic_smrt}" == "1" ];then
 				echo_date "⚠️警告：当前代理模式与当前DNS模式：[国内优先]不匹配！"
 				echo_date "🔁建议使用：[国外优先/智能判断]，本次自动将当前DNS模式改为：[国外优先]！"
@@ -3156,27 +3157,29 @@ add_white_black() {
 	fi
 
 	# {black_list}, black domain
-	true >/tmp/black_list.txt
-	ss_black_domains="ip.sb api.skk.moe ip.skk.moe ipinfo.io ip-api.com us.ip111.cn"
-	echo_date "应用IP/CIDR黑名单"
-	for ss_black_domain in ${ss_black_domains}; do
-		echo ${ss_black_domain} >>/tmp/black_list.txt
-	done
-
-	# {black_list}, black domain
-	local wanblackdomains=$(echo ${ss_wan_black_domain} | base64_decode)
-	if [ "${ss_basic_proxy_newb}" == "1" ];then
-		#local wanblackdomains="${wanblackdomains} bing.com ipinfo.io ip.sb"
-		local wanblackdomains="${wanblackdomains} bing.com"
+	local shunt_proxy_file=""
+	echo_date "生成域名黑名单！"
+	if [ "${ss_basic_mode}" = "7" ]; then
+		shunt_proxy_file="$(fss_shunt_get_proxy_domain_file 2>/dev/null)"
 	fi
-	if [ -n "${ss_wan_black_domain}" ]; then
-		echo_date "生成域名黑名单！"
-		for wan_black_domain in ${wanblackdomains}; do
-			if [ -n "$(is_domain ${wan_black_domain})" ]; then
-				echo ${wan_black_domain} >>/tmp/black_list.txt
-			fi
-		done
-	fi
+	{
+		printf '%s\n' ip.sb api.skk.moe ip.skk.moe ipinfo.io ip-api.com us.ip111.cn
+		[ -n "${ss_wan_black_domain}" ] && fss_b64_decode "${ss_wan_black_domain}"
+		[ "${ss_basic_proxy_newb}" = "1" ] && printf '%s\n' "bing.com"
+		[ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ] && cat "${shunt_proxy_file}"
+	} | awk '
+		{
+			gsub(/\r/, "")
+			sub(/#.*/, "")
+			for (i = 1; i <= NF; i++) {
+				domain = tolower($i)
+				gsub(/^[*.]+/, "", domain)
+				if (domain ~ /^[a-z0-9._-]+(\.[a-z0-9._-]+)+$/ && !seen[domain]++) {
+					print domain
+				}
+			}
+		}
+	' > /tmp/black_list.txt
 
 	# {white_list}, white ip
 	[ -n "${ss_basic_server_ip}" ] && SBSI="${ss_basic_server_ip}" || SBSI=""
@@ -4384,6 +4387,51 @@ ${xray_user_json}
 	esac
 }
 
+creat_shunt_json() {
+	local current_id=""
+	local shunt_config="/koolshare/ss/xray.json"
+
+	current_id="$(fss_shunt_get_default_node_id)"
+	[ -n "${current_id}" ] || current_id="${ssconf_basic_node}"
+	echo_date "创建xray分流配置文件到${shunt_config}"
+	rm -f "${shunt_config}"
+	fss_shunt_build_xray_config "${shunt_config}" "${current_id}" || {
+		echo_date "错误：xray分流配置生成失败，请检查兜底节点和分流规则设置。"
+		close_in_five flag
+	}
+	test_xray_conf "${shunt_config}"
+	case "$?" in
+	0)
+		echo_date "测试结果：${_test_ret}"
+		echo_date "xray分流配置文件通过测试。"
+		;;
+	2)
+		echo_date "测试结果：${_test_ret}"
+		echo_date "检测到当前Xray-core版本不支持fingerprint，自动移除后重试。"
+		run jq 'del(.. | .fingerprint?)' "${shunt_config}" | run sponge "${shunt_config}"
+		test_xray_conf "${shunt_config}"
+		case "$?" in
+		0)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "xray分流配置文件通过测试。"
+			;;
+		*)
+			echo_date "测试结果：${_test_ret}"
+			echo_date "xray分流配置文件没有通过测试，请检查当前节点和分流规则。"
+			rm -f "${shunt_config}"
+			close_in_five flag
+			;;
+		esac
+		;;
+	*)
+		echo_date "测试结果：${_test_ret}"
+		echo_date "xray分流配置文件没有通过测试，请检查当前节点和分流规则。"
+		rm -f "${shunt_config}"
+		close_in_five flag
+		;;
+	esac
+}
+
 start_xray() {
 	# tfo start
 	if [ "${LINUX_VER}" != "26" ]; then
@@ -4397,7 +4445,7 @@ start_xray() {
 	# xray start
 	echo_date "开启Xray主进程..."
 	cd /koolshare/bin
-	run_bg xray run -c /koolshare/ss/xray.json
+	run_bg /koolshare/bin/xray run -c /koolshare/ss/xray.json
 	detect_running_status3 xray 23456 0 force
 }
 
@@ -4531,7 +4579,7 @@ start_trojan(){
 
 	echo_date "开启Xray主进程，用以运行trojan协议节点..."
 	cd /koolshare/bin
-	run_bg xray run -c $TROJAN_CONFIG_FILE
+	run_bg /koolshare/bin/xray run -c $TROJAN_CONFIG_FILE
 	detect_running_status3 xray 23456 0 force
 }
 
@@ -4737,7 +4785,7 @@ start_hy2(){
 
 	echo_date "开启Xray主进程，用以运行hysteria2协议节点..."
 	cd /koolshare/bin
-	run_bg xray run -c $HY2_CONFIG_FILE
+	run_bg /koolshare/bin/xray run -c $HY2_CONFIG_FILE
 	detect_running_status3 xray 23456 0 force
 }
 
@@ -5033,6 +5081,13 @@ get_action_chain() {
 	6)
 		echo "SHADOWSOCKS_HOM"
 		;;
+	7)
+		if [ "${ss_basic_mode}" = "7" ]; then
+			echo "SHADOWSOCKS_SHU"
+		else
+			get_action_chain "$(get_runtime_proxy_mode)"
+		fi
+		;;
 	esac
 }
 
@@ -5056,6 +5111,13 @@ get_action_chain6() {
 	6)
 		echo "SHADOWSOCKS6_HOM"
 		;;
+	7)
+		if [ "${ss_basic_mode}" = "7" ]; then
+			echo "SHADOWSOCKS6_SHU"
+		else
+			get_action_chain6 "$(get_runtime_proxy_mode)"
+		fi
+		;;
 	esac
 }
 
@@ -5078,6 +5140,9 @@ get_mode_name() {
 		;;
 	6)
 		echo "回国模式"
+		;;
+	7)
+		echo "xray分流模式"
 		;;
 	esac
 }
@@ -5835,6 +5900,86 @@ insert_if_not_exists() {
 	fi
 }
 
+get_shunt_ingress_mode() {
+	local mode="2"
+	if type fss_shunt_runtime_mode >/dev/null 2>&1; then
+		mode="$(fss_shunt_runtime_mode 2>/dev/null)"
+	fi
+	case "${mode}" in
+	5)
+		echo "5"
+		;;
+	*)
+		echo "2"
+		;;
+	esac
+}
+
+init_shunt_chain_v4() {
+	local ingress_mode="$(get_shunt_ingress_mode)"
+
+	ensure_chain nat SHADOWSOCKS_SHU
+	ensure_chain mangle SHADOWSOCKS_SHU
+	ensure_chain filter SHADOWSOCKS_SHU
+	if [ "${ingress_mode}" = "5" ]; then
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -m set --match-set white_list dst -j RETURN
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -j REDIRECT --to-ports 3333
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -m set --match-set white_list dst -j RETURN
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -m set --match-set white_list dst -j RETURN
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -j REJECT --reject-with icmp-port-unreachable
+	else
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -m set --match-set chnlist dst -j RETURN
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -m set --match-set chnroute dst -j RETURN
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -m set --match-set white_list dst -j RETURN
+		append_if_not_exists nat -A SHADOWSOCKS_SHU -p tcp -j REDIRECT --to-ports 3333
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -m set --match-set chnlist dst -j RETURN
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -m set --match-set chnroute dst -j RETURN
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -m set --match-set white_list dst -j RETURN
+		append_if_not_exists mangle -A SHADOWSOCKS_SHU -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -m set --match-set black_list dst -j REJECT --reject-with icmp-port-unreachable
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -m set --match-set chnlist dst -j RETURN
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -m set --match-set chnroute dst -j RETURN
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -m set --match-set white_list dst -j RETURN
+		append_if_not_exists filter -A SHADOWSOCKS_SHU -p udp -j REJECT --reject-with icmp-port-unreachable
+	fi
+}
+
+init_shunt_chain_v6() {
+	local ingress_mode="$(get_shunt_ingress_mode)"
+	local tproxy_port6="$(get_tproxy_port6)"
+
+	ensure_chain6 nat SHADOWSOCKS6_SHU || return 1
+	ensure_chain6 mangle SHADOWSOCKS6_SHU || return 1
+	ensure_chain6 filter SHADOWSOCKS6_SHU || return 1
+	if [ "${ingress_mode}" = "5" ]; then
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -j REDIRECT --to-ports ${tproxy_port6} || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -j TPROXY --on-port ${tproxy_port6} --tproxy-mark 0x07 || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -j REJECT --reject-with icmp6-port-unreachable || return 1
+	else
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -m set --match-set black_list6 dst -j REDIRECT --to-ports ${tproxy_port6} || return 1
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -m set --match-set chnlist6 dst -j RETURN || return 1
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -m set --match-set chnroute6 dst -j RETURN || return 1
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -m set --match-set white_list6 dst -j RETURN || return 1
+		append_if_not_exists6 nat -A SHADOWSOCKS6_SHU -p tcp -j REDIRECT --to-ports ${tproxy_port6} || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -m set --match-set black_list6 dst -j TPROXY --on-port ${tproxy_port6} --tproxy-mark 0x07 || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -m set --match-set chnlist6 dst -j RETURN || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -m set --match-set chnroute6 dst -j RETURN || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+		append_if_not_exists6 mangle -A SHADOWSOCKS6_SHU -p udp -j TPROXY --on-port ${tproxy_port6} --tproxy-mark 0x07 || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -m set --match-set black_list6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -m set --match-set chnlist6 dst -j RETURN || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -m set --match-set chnroute6 dst -j RETURN || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -m set --match-set white_list6 dst -j RETURN || return 1
+		append_if_not_exists6 filter -A SHADOWSOCKS6_SHU -p udp -j REJECT --reject-with icmp6-port-unreachable || return 1
+	fi
+}
+
 _start_iptables() {
 	#----------------------BASIC RULES---------------------
 	echo_date "写入iptables规则到nat表中..."
@@ -5975,6 +6120,9 @@ _start_iptables() {
 	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p udp -m set --match-set white_list dst -j RETURN
 	# {剩余流量} 代理
 	append_if_not_exists mangle -A SHADOWSOCKS_GLO -p udp -j TPROXY --on-port 3333 --tproxy-mark 0x07
+
+	echo_date "创建xray分流模式专用链，入口策略：$( [ "$(get_shunt_ingress_mode)" = "5" ] && echo 全量引流 || echo 大陆白名单引流 )"
+	init_shunt_chain_v4
 
 	# 创建回国模式udp rule
 	ensure_chain mangle SHADOWSOCKS_HOM
@@ -6237,6 +6385,9 @@ _start_ipv6_iptables() {
 	ensure_chain6 filter SHADOWSOCKS6_GLO || return 1
 	append_if_not_exists6 filter -A SHADOWSOCKS6_GLO -p udp -m set --match-set white_list6 dst -j RETURN || return 1
 	append_if_not_exists6 filter -A SHADOWSOCKS6_GLO -p udp -j REJECT --reject-with icmp6-port-unreachable || return 1
+
+	echo_date "创建IPv6 xray分流模式专用链，入口策略：$( [ "$(get_shunt_ingress_mode)" = "5" ] && echo 全量引流 || echo 大陆白名单引流 )"
+	init_shunt_chain_v6 || return 1
 
 	ensure_chain6 filter SHADOWSOCKS6_HOM || return 1
 	append_if_not_exists6 filter -A SHADOWSOCKS6_HOM -p udp -m set --match-set black_list6 dst -j REJECT --reject-with icmp6-port-unreachable || return 1
@@ -6642,12 +6793,16 @@ apply_ss() {
 	create_dnsmasq_conf
 	add_white_black
 	# 生成代理主程序配置
-	[ "${ss_basic_type}" == "0" ] && creat_xray_ss_json
-	[ "${ss_basic_type}" == "1" ] && creat_ssr_json
-	[ "${ss_basic_type}" == "3" ] && creat_vmess_json
-	[ "${ss_basic_type}" == "4" ] && creat_vless_json
-	[ "${ss_basic_type}" == "5" ] && creat_trojan_json
-	[ "${ss_basic_type}" == "8" ] && creat_hy2_json
+	if [ "${ss_basic_mode}" = "7" ]; then
+		creat_shunt_json
+	else
+		[ "${ss_basic_type}" == "0" ] && creat_xray_ss_json
+		[ "${ss_basic_type}" == "1" ] && creat_ssr_json
+		[ "${ss_basic_type}" == "3" ] && creat_vmess_json
+		[ "${ss_basic_type}" == "4" ] && creat_vless_json
+		[ "${ss_basic_type}" == "5" ] && creat_trojan_json
+		[ "${ss_basic_type}" == "8" ] && creat_hy2_json
+	fi
 
 	local bootstrap_dns_first="0"
 	if should_bootstrap_dns_before_proxy; then
@@ -6660,14 +6815,18 @@ apply_ss() {
 	fi
 
 	# 开启代理主程序
-	[ "${ss_basic_type}" == "0" ] && start_xray
-	[ "${ss_basic_type}" == "1" ] && start_ssr_redir
-	[ "${ss_basic_type}" == "3" ] && start_xray
-	[ "${ss_basic_type}" == "4" ] && start_xray
-	[ "${ss_basic_type}" == "5" ] && start_trojan
-	[ "${ss_basic_type}" == "6" ] && start_naive
-	[ "${ss_basic_type}" == "7" ] && start_tuic
-	[ "${ss_basic_type}" == "8" ] && start_hy2
+	if [ "${ss_basic_mode}" = "7" ]; then
+		start_xray
+	else
+		[ "${ss_basic_type}" == "0" ] && start_xray
+		[ "${ss_basic_type}" == "1" ] && start_ssr_redir
+		[ "${ss_basic_type}" == "3" ] && start_xray
+		[ "${ss_basic_type}" == "4" ] && start_xray
+		[ "${ss_basic_type}" == "5" ] && start_trojan
+		[ "${ss_basic_type}" == "6" ] && start_naive
+		[ "${ss_basic_type}" == "7" ] && start_tuic
+		[ "${ss_basic_type}" == "8" ] && start_hy2
+	fi
 
 	if [ "${bootstrap_dns_first}" != "1" ]; then
 		restart_dnsmasq
@@ -6719,6 +6878,7 @@ get_status() {
 	iptables -nvL SHADOWSOCKS_CHN -t nat
 	iptables -nvL SHADOWSOCKS_GAM -t nat
 	iptables -nvL SHADOWSOCKS_GLO -t nat
+	iptables -nvL SHADOWSOCKS_SHU -t nat 2>/dev/null
 }
 
 apply_ss_by_nat() {

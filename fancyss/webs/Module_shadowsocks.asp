@@ -18,6 +18,154 @@
 <link rel="stylesheet" type="text/css" href="/res/layer/theme/default/layer.css">
 <link rel="stylesheet" type="text/css" href="/res/softcenter.css">
 <link rel="stylesheet" type="text/css" href="/res/fancyss.css">
+<style type="text/css">
+.shunt-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px;padding:0 2px;}
+.shunt-summary-card,.shunt-rule-card,.shunt-fallback-card{position:relative;overflow:hidden;border:1px solid rgba(69,93,120,0.28);border-radius:8px;background:linear-gradient(180deg,rgba(22,30,40,0.96),rgba(15,21,30,0.92));box-shadow:0 10px 22px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.03);transition:all .2s ease;}
+.shunt-summary-card:hover,.shunt-rule-card:hover,.shunt-fallback-card:hover{background:linear-gradient(180deg,rgba(28,38,48,0.98),rgba(20,28,38,0.94));box-shadow:0 10px 22px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.05);}
+.shunt-summary-card{min-height:72px;padding:8px 14px;color:#edf3f9;transition:all .2s ease;border-width:1px;background:linear-gradient(180deg,rgba(28,38,52,0.98),rgba(18,25,36,0.94));}
+.shunt-summary-card-body span,.shunt-rule-shell span:not(.shunt-flow-link-dot):not(.shunt-flow-link-line):not(.shunt-flow-link-trace),.shunt-chip span{background-color:transparent !important;color:inherit !important;}
+.shunt-flow-link-line{background:rgba(110,168,254,0.45) !important;}
+.shunt-fallback-card .shunt-flow-link-line{background:rgba(242,153,74,0.5) !important;}
+.shunt-summary-card--runtime{border-color:rgba(76,161,175,0.42);box-shadow:0 8px 20px rgba(0,0,0,0.12),inset 0 0 12px rgba(76,161,175,0.05);}
+.shunt-summary-card--ingress{border-color:rgba(242,153,74,0.38);box-shadow:0 8px 20px rgba(0,0,0,0.12),inset 0 0 12px rgba(242,153,74,0.04);}
+.shunt-summary-card--status{border-color:rgba(127,127,213,0.36);box-shadow:0 8px 20px rgba(0,0,0,0.12),inset 0 0 12px rgba(127,127,213,0.04);}
+.shunt-summary-card--add{border-color:rgba(237,66,100,0.34);box-shadow:0 8px 20px rgba(0,0,0,0.12),inset 0 0 12px rgba(237,66,100,0.03);}
+.shunt-summary-card:not(.shunt-summary-card--add):hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.05);}
+.shunt-summary-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.shunt-title-row{display:flex;align-items:center;gap:8px;min-width:0;}
+.shunt-title-text{font-size:12px;font-weight:600;line-height:1.25;color:#f0f6fc;word-break:break-word;letter-spacing:0.4px;text-transform:uppercase;opacity:0.85;}
+.shunt-help{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:999px;border:1px solid rgba(141,177,212,0.42);background:rgba(120,153,187,0.12);color:#9cc0e6;font-size:10px;line-height:1;text-decoration:none;cursor:pointer;transition:all .15s ease;}
+.shunt-help:hover{border-color:rgba(162,198,236,0.6);background:rgba(120,153,187,0.2);color:#dcecff;}
+.shunt-summary-card-body{font-size:13px;line-height:1.45;color:#d4deea;}
+.shunt-summary-primary{font-size:15px;font-weight:600;line-height:1.34;color:#f7fbff;word-break:break-word;letter-spacing:0.1px;}
+.shunt-summary-secondary{padding-top:4px;font-size:11px;line-height:1.4;color:#9eb0c1;}
+.shunt-summary-inline{padding-top:3px;}
+.shunt-summary-inline select{max-width:100%;width:100%;}
+.shunt-summary-card--add{cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;transition:all .2s ease;background:linear-gradient(180deg,rgba(35,25,28,0.96),rgba(24,18,20,0.94));}
+.shunt-summary-card--add:hover{border-color:rgba(237,66,100,0.55);transform:translateY(-2px);box-shadow:0 15px 30px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);}
+.shunt-summary-card--add .shunt-summary-card-body{display:flex;align-items:center;justify-content:center;min-height:56px;}
+.shunt-add-frame{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:1px dashed rgba(237,66,100,0.48);border-radius:15px;font-size:30px;line-height:1;color:#ff7e9a;background:rgba(237,66,100,0.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02);transition:all .25s cubic-bezier(0.175, 0.885, 0.32, 1.275);animation:shunt_add_breathe 3.5s ease-in-out infinite;}
+.shunt-summary-card--add:hover .shunt-add-frame{transform:scale(1.1) rotate(90deg);border-color:rgba(237,66,100,0.7);box-shadow:0 0 20px rgba(237,66,100,0.15),0 10px 22px rgba(0,0,0,0.16);color:#fff;background:rgba(237,66,100,0.12);}
+.shunt-add-frame span{display:block;transform:translateY(-1px);}
+.shunt-rule-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:12px;padding:0 2px;}
+.shunt-rule-card,.shunt-fallback-card{padding:8px;color:#edf3f9;margin:0;overflow:visible;border:none;}
+.shunt-rule-card{cursor:pointer;transition:all .2s ease;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));}
+.shunt-rule-card:hover{border-color:rgba(110,168,254,0.45);transform:translateY(-2px);box-shadow:0 15px 30px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.04);}
+.shunt-rule-card.is-draggable{cursor:grab;}
+.shunt-rule-card.is-unavailable{border-color:rgba(242,153,74,0.4);background:linear-gradient(180deg,rgba(44,32,22,0.97),rgba(28,22,16,0.95));}
+.shunt-rule-card.is-dragging{opacity:0.6;transform:scale(0.99);}
+.shunt-rule-card.is-drop-target{border-color:#6ea8fe;box-shadow:0 0 0 2px rgba(110,168,254,0.25),0 15px 30px rgba(0,0,0,0.2);}
+.shunt-rule-toolbar{position:absolute;top:-12px;right:-8px;display:flex;gap:8px;z-index:4;}
+.shunt-rule-delete{position:static;width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:16px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.8);box-shadow:0 8px 16px rgba(159,38,38,0.3);transition:all .2s cubic-bezier(0.34, 1.56, 0.64, 1);}
+.shunt-rule-card:hover .shunt-rule-delete,.shunt-fallback-card:hover .shunt-rule-delete,.shunt-rule-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
+.shunt-rule-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.45);transform:scale(1.1);}
+.shunt-rule-shell{position:relative;display:flex;align-items:stretch;justify-content:space-between;gap:0;padding-right:4px;}
+.shunt-flow-link{position:relative;flex:0 0 108px;min-width:108px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;}
+.shunt-flow-link-line{display:block;width:100%;height:1px;background:rgba(110,168,254,0.45);position:relative;border-radius:1px;}
+.shunt-flow-link-dot{position:absolute;top:50%;width:6px;height:6px;border-radius:999px;transform:translateY(-50%);z-index:10;}
+.shunt-flow-link-dot.left{left:-3px;background:#4dabff;box-shadow:0 0 10px rgba(77,171,255,0.8), 0 0 4px rgba(77,171,255,0.4);}
+.shunt-flow-link-dot.right{right:-3px;background:#ffa64d;box-shadow:0 0 10px rgba(255,166,77,0.8), 0 0 4px rgba(255,166,77,0.4);}
+.shunt-fallback-card .shunt-flow-link-dot.right{background:#ff7e67;box-shadow:0 0 10px rgba(255,126,103,0.8);}
+.shunt-fallback-card .shunt-flow-link-line{background:rgba(242,153,74,0.5);}
+.shunt-flow-link-trace{position:absolute;left:0;top:50%;width:24px;height:2px;border-radius:2px;background:linear-gradient(90deg, transparent, #fff);transform:translateY(-50%);animation:shunt_flow_trace 2.2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;filter:drop-shadow(0 0 3px #fff);z-index:2;}
+@keyframes shunt_add_breathe{
+	0%,100%{transform:scale(1);opacity:0.9;}
+	50%{transform:scale(1.05);opacity:1;}
+}
+@keyframes shunt_flow_pulse{
+	0%,100%{box-shadow:0 0 0 4px rgba(110,168,254,0.12),0 0 12px rgba(110,168,254,0.3);}
+	50%{box-shadow:0 0 0 6px rgba(110,168,254,0.18),0 0 16px rgba(110,168,254,0.45);}
+}
+@keyframes shunt_flow_trace{
+	0%{left:0;opacity:0;}
+	10%{opacity:1;}
+	90%{opacity:1;}
+	100%{left:calc(100% - 24px);opacity:0;}
+}
+.shunt-flow-panel{position:relative;min-width:0;border:1px solid rgba(255,255,255,0.08);border-radius:8px;background:rgba(10,16,24,0.45);padding:6px 7px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02);transition:all .2s ease;display:flex;flex-direction:column;justify-content:center;z-index:2;}
+.shunt-flow-panel--source{border-color:rgba(110,168,254,0.22);flex:0 1 42%;max-width:380px;}
+.shunt-flow-panel--target{border-color:rgba(242,153,74,0.22);flex:0 1 42%;max-width:380px;}
+.shunt-rule-card:hover .shunt-flow-panel,.shunt-fallback-card:hover .shunt-flow-panel{background:rgba(10,16,24,0.6);box-shadow:inset 0 1px 0 rgba(255,255,255,0.03),0 8px 20px rgba(0,0,0,0.15);}
+.shunt-rule-card:hover .shunt-flow-panel--source,.shunt-fallback-card:hover .shunt-flow-panel--source{border-color:rgba(110,168,254,0.4);}
+.shunt-rule-card:hover .shunt-flow-panel--target,.shunt-fallback-card:hover .shunt-flow-panel--target{border-color:rgba(242,153,74,0.4);}
+.shunt-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.shunt-panel-heading{display:flex;align-items:center;gap:8px;min-width:0;}
+.shunt-panel-caption{font-size:10px;color:#9eb0c1;letter-spacing:0.8px;text-transform:uppercase;opacity:0.8;}
+.shunt-panel-badges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.shunt-rule-kind-badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:rgba(110,168,254,0.14);color:#b8d7ff;font-size:11px;line-height:1.4;border:1px solid rgba(110,168,254,0.15);}
+.shunt-rule-kind-badge.custom{background:rgba(242,153,74,0.16);color:#ffd1b5;border-color:rgba(242,153,74,0.2);}
+.shunt-rule-kind-badge.warning{background:rgba(255,77,77,0.18);color:#ffb8b8;border-color:rgba(255,77,77,0.25);}
+.shunt-rule-kind-badge.fallback{background:rgba(255,128,128,0.16);color:#ffc1c1;border-color:rgba(255,128,128,0.2);}
+.shunt-rule-order{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:5px 11px;border-radius:999px;background:rgba(110,168,254,0.1);color:#9fc7ff;font-size:11px;letter-spacing:0.45px;}
+.shunt-panel-title-row{display:flex;align-items:flex-start;gap:10px;min-width:0;}
+.shunt-panel-title{font-size:16px;line-height:1.22;color:#fff;font-weight:600;word-break:break-word;flex:1 1 auto;min-width:0;letter-spacing:0.2px;}
+.shunt-panel-subtitle{padding-top:4px;font-size:11px;line-height:1.6;color:#a5b9cc;}
+.shunt-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);}
+.shunt-mini-item{min-width:0;}
+.shunt-mini-label{display:flex;align-items:center;gap:6px;font-size:10px;color:#8aa4bf;letter-spacing:0.5px;text-transform:uppercase;opacity:0.75;}
+.shunt-mini-value{padding-top:4px;font-size:13px;line-height:1.42;color:#edf4fb;word-break:break-word;font-weight:500;}
+.shunt-mini-value--node{font-size:15px;font-weight:600;color:#fff;text-shadow:0 0 10px rgba(255,255,255,0.15);}
+.shunt-chip-list{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;}
+.shunt-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.06);font-size:11px;line-height:1;color:#dbe9f8;transition:all .2s ease;border:1px solid rgba(255,255,255,0.06);}
+.shunt-rule-card:hover .shunt-chip,.shunt-fallback-card:hover .shunt-chip{transform:translateY(-1px);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.12);}
+.shunt-chip-label{color:#9fb6d1;font-weight:normal;}
+.shunt-chip.muted{background:rgba(255,255,255,0.04);color:#a5bdd5;border-color:transparent;}
+.shunt-chip.custom{background:rgba(242,153,74,0.14);color:#ffd1b5;border-color:rgba(242,153,74,0.18);}
+.shunt-inline-warning{padding-top:10px;font-size:11px;line-height:1.6;color:#ff9e9e;font-weight:500;}
+.shunt-empty-state{padding:30px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:15px;color:#9fb6d1;line-height:1.85;text-align:center;background:rgba(18,24,34,0.44);margin:0 2px;}
+.shunt-fallback-card{border-color:rgba(242,153,74,0.32);background:linear-gradient(180deg,rgba(34,26,22,0.97),rgba(22,18,16,0.95));}
+.shunt-fallback-card:hover{border-color:rgba(242,153,74,0.52);}
+.shunt-fallback-target{max-width:100%;padding-top:6px;}
+.shunt-fallback-target select,.shunt-fallback-target .input_option{width:100%;max-width:100%;height:34px;border-radius:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);padding-left:10px;color:#fff;}
+.shunt-layer-tip{max-width:320px;line-height:1.8;color:#f2f6fb;font-size:12px;}
+.shunt-editor{padding:18px 22px 4px;color:#fff;}
+.shunt-editor-shell{display:flex;gap:20px;align-items:flex-start;}
+.shunt-editor-main{flex:1 1 auto;min-width:0;}
+.shunt-editor-side{flex:0 0 250px;min-width:250px;}
+.shunt-editor-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.shunt-editor-label{width:82px;line-height:36px;color:#e1e7ee;flex:0 0 82px;font-size:13px;font-weight:500;text-align:right;}
+.shunt-editor-control{flex:1 1 auto;max-width:none;}
+.shunt-editor-control textarea,.shunt-editor-control input[type='text'],.shunt-editor-control select{box-sizing:border-box;max-width:100%;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;height:36px;transition:all .18s ease;font-size:13px;}
+.shunt-editor-control textarea:focus,.shunt-editor-control input[type='text']:focus,.shunt-editor-control select:focus{outline:none;border-color:#3b82f6;background:rgba(0,0,0,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
+.shunt-editor-control textarea{min-height:140px;resize:vertical;height:auto;line-height:1.6;font-family: Menlo, Monaco, Consolas, "Courier New", monospace;}
+.shunt-editor-hint{font-size:11px;color:#94a3b8;line-height:1.6;padding-top:6px;}
+.shunt-editor-source-extra{display:none;padding:14px;background:rgba(255,255,255,0.03);border-radius:12px;margin:8px 0 14px 96px;border:1px solid rgba(255,255,255,0.05);}
+.shunt-editor-source-extra.active{display:block;}
+.shunt-editor-source-extra .shunt-editor-row{margin-bottom:12px;}
+.shunt-editor-source-extra .shunt-editor-label{width:70px;flex:0 0 70px;}
+.shunt-editor-preview{border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(255,255,255,0.03);padding:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);}
+.shunt-editor-preview-title{font-size:11px;color:#94a3b8;letter-spacing:0.8px;text-transform:uppercase;font-weight:600;}
+.shunt-editor-preview-main{padding-top:10px;font-size:16px;line-height:1.4;color:#fff;word-break:break-word;font-weight:600;}
+.shunt-editor-preview-note{padding-top:6px;font-size:12px;line-height:1.7;color:#94a3b8;}
+.shunt-editor-preview-section{padding-top:16px;border-top:1px solid rgba(255,255,255,0.05);margin-top:16px;}
+.shunt-editor-preview-label{font-size:11px;color:#94a3b8;letter-spacing:0.6px;text-transform:uppercase;}
+.shunt-editor-preview-value{padding-top:6px;font-size:14px;line-height:1.6;color:#e2e8f0;word-break:break-word;font-weight:500;}
+.shunt-editor-actions-tip{padding-top:10px;font-size:11px;color:#94a3b8;line-height:1.7;border-top:1px solid rgba(255,255,255,0.06);margin-top:16px;padding-left:96px;}
+body .shunt-editor-layer{background:#0f172a !important;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5) !important;border:1px solid rgba(255,255,255,0.1) !important;}
+body .shunt-editor-layer .layui-layer-title{background:rgba(255,255,255,0.02) !important;color:#f8fafc !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;font-size:16px !important;}
+body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;font-weight:600 !important;letter-spacing:0.5px;}
+body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.1) !important;color:#e2e8f0 !important;}
+@media (max-width: 900px){
+	.shunt-rule-shell{display:block;padding-right:0;min-height:auto;}
+	.shunt-flow-link{width:100%;height:22px;margin:2px 0 4px;}
+	.shunt-flow-panel--source,.shunt-flow-panel--target{max-width:none;}
+	.shunt-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+	.shunt-editor-shell{display:block;}
+	.shunt-editor-side{width:auto;min-width:0;padding-top:10px;}
+}
+@media (max-width: 640px){
+	.shunt-summary-grid{grid-template-columns:1fr;}
+	.shunt-rule-card,.shunt-fallback-card{padding:8px;}
+	.shunt-summary-card{min-height:auto;}
+	.shunt-rule-toolbar{top:-9px;right:-9px;}
+	.shunt-mini-grid{grid-template-columns:1fr;}
+	.shunt-panel-title{font-size:16px;}
+	.shunt-editor-row{display:block;}
+	.shunt-editor-label{width:auto;line-height:1.6;padding-bottom:6px;display:block;}
+	.shunt-editor-control{max-width:none;}
+	.shunt-editor{padding:16px 16px 4px;}
+}
+</style>
 <script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/layer/layer.js"></script>
 <script language="JavaScript" type="text/javascript" src="/js/httpApi.js"></script>
@@ -30,6 +178,7 @@
 <script language="JavaScript" type="text/javascript" src="/js/table/table.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/ss-menu.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/dns_servers.json.js"></script>
+<script language="JavaScript" type="text/javascript" src="/res/shunt_manifest.json.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/softcenter.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/tablednd.js"></script>
 <script>
@@ -69,7 +218,9 @@ var refreshRate;
 var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_tuic = "# 填入tuic client json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的relay部分的配置正确！！！" 	//fancyss-full
-var option_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"]];
+var option_proxy_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"]];
+var option_main_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["7", "xray分流模式"]];
+var option_modes = option_proxy_modes;
 var option_method = [ "none",  "rc4",  "rc4-md5",  "rc4-md5-6",  "aes-128-gcm",  "aes-192-gcm",  "aes-256-gcm",  "aes-128-cfb",  "aes-192-cfb",  "aes-256-cfb",  "aes-128-ctr",  "aes-192-ctr",  "aes-256-ctr",  "camellia-128-cfb",  "camellia-192-cfb",  "camellia-256-cfb",  "bf-cfb",  "cast5-cfb",  "idea-cfb",  "rc2-cfb",  "seed-cfb",  "salsa20",  "chacha20",  "chacha20-ietf",  "chacha20-ietf-poly1305",  "xchacha20-ietf-poly1305", "plain", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305" ];
 var option_protocals = [ "origin", "verify_simple", "verify_sha1", "auth_sha1", "auth_sha1_v2", "auth_sha1_v4", "auth_aes128_md5", "auth_aes128_sha1", "auth_chain_a", "auth_chain_b", "auth_chain_c", "auth_chain_d", "auth_chain_e", "auth_chain_f" ];
 var option_obfs = ["plain", "http_simple", "http_post", "tls1.2_ticket_auth"];
@@ -113,6 +264,21 @@ var node_auto_migrate_attempted = false;
 var node_auto_migrate_layer = null;
 var prepared_route_files = {};
 var pending_route_callbacks = {};
+var shuntRulesState = [];
+var shuntPresetMap = {};
+var shuntFallbackNodeId = "";
+var SHUNT_DIRECT_TARGET = "DIRECT";
+var SHUNT_MAX_RULES = 16;
+var SHUNT_MAX_TARGETS = 8;
+var shuntDragRuleId = "";
+var shuntDropRuleId = "";
+var shuntSuppressCardClickUntil = 0;
+var shuntRuleEditorLayerIndex = null;
+var shuntHintLayerIndex = null;
+var shuntStatsCache = {};
+var shuntStatsTimer = null;
+var shuntStatsRequestPending = false;
+var SHUNT_STATS_REFRESH_INTERVAL = 6000;
 var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
 var SMARTDNS_GROUP_LIMIT = 16;
@@ -914,6 +1080,1045 @@ function normalize_fss_node_for_ui(nodeId, raw) {
 	}
 	return build_node_derived_info(obj);
 }
+function htmlEscape(value) {
+	return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function init_shunt_preset_map() {
+	shuntPresetMap = {};
+	if (typeof SHUNT_PRESET_MANIFEST == "undefined" || !isArray(SHUNT_PRESET_MANIFEST)) {
+		return;
+	}
+	for (var i = 0; i < SHUNT_PRESET_MANIFEST.length; i++) {
+		var item = SHUNT_PRESET_MANIFEST[i];
+		if (!item || !item.id) {
+			continue;
+		}
+		shuntPresetMap[String(item.id)] = item;
+	}
+}
+function current_mode_is_shunt() {
+	if (E("ss_basic_mode")) {
+		return String(E("ss_basic_mode").value || "") == "7";
+	}
+	return String(db_ss["ss_basic_mode"] || "") == "7";
+}
+function is_shunt_supported_node(nodeId) {
+	var c = confs[nodeId];
+	if (!c) {
+		return false;
+	}
+	switch (String(c["type"] || "")) {
+	case "0":
+		return !(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls");
+	case "3":
+	case "4":
+	case "5":
+	case "8":
+		return true;
+	default:
+		return false;
+	}
+}
+function decode_shunt_custom_text(customB64) {
+	try {
+		return customB64 ? base64_decode_utf8(customB64) : "";
+	} catch (e) {
+		return "";
+	}
+}
+function normalize_shunt_rule(rule, idx) {
+	var obj = $.extend({}, rule || {});
+	obj.id = String(obj.id || ("rule_" + idx + "_" + new Date().getTime()));
+	obj.enabled = String(obj.enabled || "1") == "0" ? "0" : "1";
+	obj.source = String(obj.source || "builtin") == "custom" ? "custom" : "builtin";
+	obj.preset = String(obj.preset || "");
+	obj.custom_b64 = String(obj.custom_b64 || "");
+	obj.target_node_id = resolve_node_id(obj.target_node_id || "", true);
+	obj.remark = String(obj.remark || "");
+	return obj;
+}
+function get_shunt_rules_from_dbus() {
+	var raw = [];
+	try {
+		raw = JSON.parse(base64_decode_utf8(db_ss["ss_basic_shunt_rules"] || "W10=") || "[]");
+	} catch (e) {
+		raw = [];
+	}
+	if (!isArray(raw)) {
+		raw = [];
+	}
+	var rules = [];
+	for (var i = 0; i < raw.length; i++) {
+		rules.push(normalize_shunt_rule(raw[i], i + 1));
+	}
+	return rules;
+}
+function sync_shunt_state_from_dbus() {
+	shuntRulesState = get_shunt_rules_from_dbus();
+	shuntFallbackNodeId = get_saved_shunt_default_node_id();
+}
+function is_shunt_direct_target(nodeId) {
+	return String(nodeId || "").toUpperCase() == SHUNT_DIRECT_TARGET;
+}
+function get_saved_shunt_default_node_id() {
+	var value = $.trim(db_ss["ss_basic_shunt_default_node"] || "");
+	if (is_shunt_direct_target(value)) {
+		return SHUNT_DIRECT_TARGET;
+	}
+	return resolve_node_id(value, true);
+}
+function get_shunt_runtime_node_id() {
+	var explicitId = is_shunt_direct_target(shuntFallbackNodeId) ? "" : resolve_node_id(shuntFallbackNodeId || "", true);
+	if (explicitId && is_shunt_supported_node(explicitId)) {
+		return explicitId;
+	}
+	var currentId = get_current_node_id();
+	if (currentId && is_shunt_supported_node(currentId)) {
+		return currentId;
+	}
+	for (var i = 0; i < shuntRulesState.length; i++) {
+		var rule = normalize_shunt_rule(shuntRulesState[i], i + 1);
+		if (rule.target_node_id && is_shunt_supported_node(rule.target_node_id)) {
+			return String(rule.target_node_id);
+		}
+	}
+	var nodes = get_shunt_supported_target_nodes();
+	return nodes.length ? nodes[0].id : "";
+}
+function get_shunt_default_node_id() {
+	var explicitValue = shuntFallbackNodeId || "";
+	if (is_shunt_direct_target(explicitValue)) {
+		return shuntRulesState.length ? SHUNT_DIRECT_TARGET : get_shunt_runtime_node_id();
+	}
+	var explicitId = resolve_node_id(explicitValue, true);
+	if (explicitId && is_shunt_supported_node(explicitId)) {
+		return explicitId;
+	}
+	return get_shunt_runtime_node_id();
+}
+function get_shunt_target_node_label(nodeId) {
+	if (is_shunt_direct_target(nodeId)) {
+		return "DIRECT（直连）";
+	}
+	var node = confs[nodeId];
+	if (!node) {
+		return "已删除节点(" + nodeId + ")";
+	}
+	var typeText = "";
+	switch (String(node["type"] || "")) {
+	case "0":
+		typeText = node["ss_obfs"] == "http" || node["ss_obfs"] == "tls" ? "SS[obfs]" : "SS";
+		break;
+	case "3":
+		typeText = node["v2ray_use_json"] == "1" ? "json" : "Vmess";
+		break;
+	case "4":
+		typeText = node["xray_use_json"] == "1" ? "json" : ((node["xray_prot"] || "vless") == "vmess" ? "Vmess" : "Vless");
+		break;
+	case "5":
+		typeText = "Trojan";
+		break;
+	case "8":
+		typeText = "Hysteria2";
+		break;
+	default:
+		typeText = "节点";
+	}
+	var groupText = node.group ? ("[" + node.group.split("_")[0] + "] ") : "";
+	return "【" + typeText + "】" + groupText + node.name;
+}
+function get_shunt_supported_target_nodes() {
+	var nodes = [];
+	for (var i = 0; i < ss_nodes.length; i++) {
+		var nodeId = ss_nodes[i];
+		if (!is_shunt_supported_node(nodeId)) {
+			continue;
+		}
+		nodes.push({
+			id: String(nodeId),
+			label: get_shunt_target_node_label(nodeId)
+		});
+	}
+	return nodes;
+}
+function count_shunt_custom_domains(text) {
+	if (!text) {
+		return 0;
+	}
+	return text.replace(/\r/g, "").split("\n").filter(function(line) {
+		var trimmed = $.trim(line || "");
+		return trimmed && trimmed.indexOf("#") !== 0;
+	}).length;
+}
+function get_shunt_rule_meta(rule) {
+	var meta = {
+		label: "",
+		description: "",
+		count: 0,
+		kind: rule && rule.source == "custom" ? "自定义规则" : "内置规则"
+	};
+	if (rule && rule.source == "custom") {
+		var customText = decode_shunt_custom_text(rule.custom_b64);
+		meta.label = rule.remark || "自定义域名集";
+		meta.count = count_shunt_custom_domains(customText);
+		meta.description = meta.count ? ("手动维护的域名合集，共 " + meta.count + " 条") : "手动维护的域名合集";
+		return meta;
+	}
+	var preset = rule ? shuntPresetMap[rule.preset] : null;
+	meta.label = preset ? preset.label : ((rule && rule.preset) || "内置分类");
+	meta.count = preset && preset.count ? Number(preset.count) : 0;
+	meta.description = preset && preset.description ? preset.description : "预置域名合集";
+	return meta;
+}
+function get_shunt_rule_category_text(rule) {
+	return get_shunt_rule_meta(rule).label;
+}
+function get_shunt_rule_detail_text(rule) {
+	var meta = get_shunt_rule_meta(rule);
+	if (meta.count) {
+		return meta.description + "（" + meta.count + " 条）";
+	}
+	return meta.description;
+}
+function get_shunt_editor_preview_meta(sourceValue, remarkValue, customText) {
+	var rule = {
+		source: String(sourceValue || "") == "__custom__" ? "custom" : "builtin",
+		preset: String(sourceValue || ""),
+		custom_b64: base64_encode_utf8((customText || "").replace(/\r/g, "")),
+		remark: $.trim(remarkValue || "")
+	};
+	return get_shunt_rule_meta(rule);
+}
+function scroll_shunt_rule_into_view(ruleId) {
+	var node = document.getElementById("shunt_rule_card_" + ruleId);
+	if (!node || !node.scrollIntoView) {
+		return;
+	}
+	try {
+		node.scrollIntoView({behavior: "smooth", block: "nearest"});
+	} catch (e) {
+		node.scrollIntoView(false);
+	}
+}
+function close_shunt_rule_editor() {
+	if (shuntRuleEditorLayerIndex !== null && typeof layer != "undefined" && layer.close) {
+		layer.close(shuntRuleEditorLayerIndex);
+	}
+	shuntRuleEditorLayerIndex = null;
+}
+function render_shunt_rule_editor_preview(sourceValue, targetId, remarkValue, customText) {
+	var meta = get_shunt_editor_preview_meta(sourceValue, remarkValue, customText);
+	var targetLabel = targetId ? get_shunt_target_node_label(resolve_node_id(targetId, true) || targetId) : "尚未选择";
+	var latency = get_shunt_node_latency(resolve_node_id(targetId, true) || targetId);
+	var html = "";
+	html += '<div class="shunt-editor-preview-title">规则预览</div>';
+	html += '<div class="shunt-editor-preview-main">' + htmlEscape(meta.label || "未命名规则") + '</div>';
+	html += '<div class="shunt-editor-preview-note">' + htmlEscape(meta.description || "选择域名合集后，这里会显示规则摘要。") + '</div>';
+	html += '<div class="shunt-chip-list">';
+	html += render_shunt_metric_chip("规则类型", meta.kind, meta.kind == "自定义规则" ? "custom" : "muted");
+	if (meta.count) {
+		html += render_shunt_metric_chip("域名数", meta.count + " 条", "muted");
+	}
+	if (latency) {
+		html += render_shunt_metric_chip("落地延迟", latency);
+	}
+	html += '</div>';
+	html += '<div class="shunt-editor-preview-section">';
+	html += '<div class="shunt-editor-preview-label">出站节点</div>';
+	html += '<div class="shunt-editor-preview-value">' + htmlEscape(targetLabel) + '</div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-preview-section">';
+	html += '<div class="shunt-editor-preview-label">命中后行为</div>';
+	html += '<div class="shunt-editor-preview-note">命中该域名合集后，流量会立即切换到所选节点出站；若未命中，则继续往下匹配。</div>';
+	html += '</div>';
+	return html;
+}
+function refresh_shunt_rule_editor_preview() {
+	if (!$("#shunt_rule_preview").length) {
+		return;
+	}
+	var sourceValue = $("#shunt_rule_source").val() || "";
+	var targetId = $("#shunt_rule_target").val() || "";
+	var remarkValue = $("#shunt_rule_remark").val() || "";
+	var customText = $("#shunt_rule_custom").val() || "";
+	$("#shunt_rule_preview").html(render_shunt_rule_editor_preview(sourceValue, targetId, remarkValue, customText));
+}
+function check_shunt_rule_limits(rules) {
+	var activeTargets = {};
+	var activeTargetCount = 0;
+	if (rules.length > SHUNT_MAX_RULES) {
+		alert("节点分流一期最多支持 " + SHUNT_MAX_RULES + " 条规则。");
+		return false;
+	}
+	for (var i = 0; i < rules.length; i++) {
+		var rule = normalize_shunt_rule(rules[i], i + 1);
+		if (rule.enabled != "1" || !rule.target_node_id) {
+			continue;
+		}
+		if (!activeTargets[rule.target_node_id]) {
+			activeTargets[rule.target_node_id] = 1;
+			activeTargetCount++;
+		}
+	}
+	if (activeTargetCount > SHUNT_MAX_TARGETS) {
+		alert("节点分流一期最多支持 " + SHUNT_MAX_TARGETS + " 个启用中的目标节点。");
+		return false;
+	}
+	return true;
+}
+function update_shunt_default_target(nodeId) {
+	if (is_shunt_direct_target(nodeId)) {
+		shuntFallbackNodeId = SHUNT_DIRECT_TARGET;
+	} else {
+		shuntFallbackNodeId = resolve_node_id(nodeId || "", true);
+	}
+	refresh_shunt_ui();
+}
+function render_shunt_target_select(selectedId, includeEmpty, elementId, extraAttr, options) {
+	options = options || {};
+	var nodes = get_shunt_supported_target_nodes();
+	var html = includeEmpty ? '<option value="">请选择出站节点</option>' : "";
+	var selectedValue = String(selectedId || "");
+	var hasSelected = false;
+	if (options.allowDirect) {
+		hasSelected = is_shunt_direct_target(selectedValue);
+		html += '<option value="' + SHUNT_DIRECT_TARGET + '"' + (hasSelected ? ' selected' : '') + '>DIRECT（直连）</option>';
+	}
+	for (var i = 0; i < nodes.length; i++) {
+		if (String(nodes[i].id) == selectedValue) {
+			hasSelected = true;
+		}
+		html += '<option value="' + nodes[i].id + '"' + (String(nodes[i].id) == selectedValue ? ' selected' : '') + '>' + htmlEscape(nodes[i].label) + '</option>';
+	}
+	if (selectedValue && !hasSelected && !is_shunt_direct_target(selectedValue)) {
+		html = '<option value="' + htmlEscape(selectedValue) + '" selected>' + htmlEscape(get_shunt_target_node_label(selectedValue)) + '（不可用）</option>' + html;
+	}
+	if (elementId) {
+		html = '<select id="' + elementId + '" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="input_option"' + (extraAttr ? (' ' + extraAttr) : '') + '>' + html + '</select>';
+	}
+	return html;
+}
+function render_shunt_source_select(selectedValue, elementId, includeCustom, extraAttr, customLabel) {
+	var manifest = (typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST : [];
+	var html = "";
+	for (var i = 0; i < manifest.length; i++) {
+		var item = manifest[i];
+		html += '<option value="' + item.id + '"' + (String(item.id) == String(selectedValue || "") ? ' selected' : '') + '>' + htmlEscape(item.label) + '</option>';
+	}
+	if (includeCustom !== false) {
+		html += '<option value="__custom__"' + (String(selectedValue || "") == "__custom__" ? ' selected' : '') + '>' + htmlEscape(customLabel || "自定义域名集合") + '</option>';
+	}
+	if (elementId) {
+		html = '<select id="' + elementId + '" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="input_option"' + (extraAttr ? (' ' + extraAttr) : '') + '>' + html + '</select>';
+	}
+	return html;
+}
+function get_default_shunt_source_value() {
+	var manifest = (typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST : [];
+	if (manifest.length && manifest[0] && manifest[0].id) {
+		return String(manifest[0].id);
+	}
+	return "__custom__";
+}
+function normalize_shunt_ingress_mode(mode) {
+	return String(mode || "") == "5" ? "5" : "2";
+}
+function get_shunt_ingress_mode() {
+	if (E("ss_basic_shunt_ingress_mode")) {
+		return normalize_shunt_ingress_mode(E("ss_basic_shunt_ingress_mode").value);
+	}
+	return normalize_shunt_ingress_mode(db_ss["ss_basic_shunt_ingress_mode"] || "2");
+}
+function get_shunt_ingress_mode_text(mode) {
+	return normalize_shunt_ingress_mode(mode) == "5" ? "全量引流" : "大陆白名单引流";
+}
+function update_shunt_ingress_mode(mode) {
+	db_ss["ss_basic_shunt_ingress_mode"] = normalize_shunt_ingress_mode(mode);
+	refresh_shunt_ui();
+}
+function render_shunt_ingress_select(selectedValue, elementId, extraAttr) {
+	var value = normalize_shunt_ingress_mode(selectedValue);
+	var html = '';
+	html += '<option value="2"' + (value == "2" ? ' selected' : '') + '>大陆白名单引流</option>';
+	html += '<option value="5"' + (value == "5" ? ' selected' : '') + '>全量引流</option>';
+	if (elementId) {
+		html = '<select id="' + elementId + '" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="input_option"' + (extraAttr ? (' ' + extraAttr) : '') + '>' + html + '</select>';
+	}
+	return html;
+}
+function get_shunt_node_latency(nodeId) {
+	if (!nodeId || is_shunt_direct_target(nodeId)) {
+		return "";
+	}
+	var $cell = $("#ss_node_lt_" + nodeId);
+	if (!$cell.length) {
+		return "";
+	}
+	var text = "";
+	var $val = $cell.find(".latency_val");
+	if ($val.length) {
+		text = $.trim($val.text() || "");
+	}
+	if (!text) {
+		text = $.trim($cell.text() || "");
+	}
+	text = text.replace(/\s+/g, " ");
+	if (!text || text == "-") {
+		return "";
+	}
+	return text;
+}
+function render_shunt_metric_chip(label, value, extraClass) {
+	if (!value) {
+		return "";
+	}
+	return '<span class="shunt-chip' + (extraClass ? (' ' + extraClass) : '') + '"><span class="shunt-chip-label">' + htmlEscape(label) + '</span><span>' + htmlEscape(value) + '</span></span>';
+}
+function close_shunt_hint() {
+	if (shuntHintLayerIndex !== null && typeof layer != "undefined" && layer.close) {
+		layer.close(shuntHintLayerIndex);
+	}
+	shuntHintLayerIndex = null;
+}
+function show_shunt_hint(obj, event) {
+	var text = "";
+	if (event) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
+	if (!obj) {
+		return false;
+	}
+	text = $(obj).attr("data-tip") || "";
+	if (!text) {
+		return false;
+	}
+	close_shunt_hint();
+	if (typeof layer != "undefined" && layer.tips) {
+		shuntHintLayerIndex = layer.tips('<div class="shunt-layer-tip">' + htmlEscape(text).replace(/\n/g, "<br />") + '</div>', obj, {
+			tips: [1, "#24364a"],
+			time: 0
+		});
+	}
+	return false;
+}
+function render_shunt_hint_trigger(text) {
+	if (!text) {
+		return "";
+	}
+	return '<a href="javascript:void(0);" class="shunt-help" data-tip="' + htmlEscape(text) + '" onclick="return show_shunt_hint(this, event);">?</a>';
+}
+function render_shunt_card_title(title, hintText) {
+	return '<div class="shunt-title-row"><span class="shunt-title-text">' + htmlEscape(title) + '</span>' + render_shunt_hint_trigger(hintText) + '</div>';
+}
+function render_shunt_mini_item(label, value, hintText, extraClass) {
+	if (!value && value !== 0) {
+		return "";
+	}
+	return '<div class="shunt-mini-item"><div class="shunt-mini-label"><span>' + htmlEscape(label) + '</span></div><div class="shunt-mini-value' + (extraClass ? (' ' + extraClass) : '') + '">' + htmlEscape(value) + '</div></div>';
+}
+function render_shunt_flow_link() {
+	return '<div class="shunt-flow-link" aria-hidden="true"><span class="shunt-flow-link-dot left"></span><span class="shunt-flow-link-line"></span><span class="shunt-flow-link-dot right"></span><span class="shunt-flow-link-trace"></span></div>';
+}
+function format_shunt_bytes(bytes) {
+	var size = Number(bytes || 0);
+	var units = ["B", "KB", "MB", "GB", "TB"];
+	var idx = 0;
+	if (!isFinite(size) || size < 0) {
+		size = 0;
+	}
+	while (size >= 1024 && idx < units.length - 1) {
+		size = size / 1024;
+		idx++;
+	}
+	return (idx === 0 ? Math.round(size) : size.toFixed(size >= 100 ? 0 : (size >= 10 ? 1 : 2))) + " " + units[idx];
+}
+function get_shunt_stats_tag(nodeId) {
+	return is_shunt_direct_target(nodeId) ? "direct" : ("proxy" + String(nodeId || ""));
+}
+function get_shunt_usage_stats(nodeId) {
+	var tag = get_shunt_stats_tag(nodeId);
+	return shuntStatsCache[tag] || null;
+}
+function render_shunt_usage_chip(nodeId, chipId) {
+	var stats = get_shunt_usage_stats(nodeId);
+	var totalText = stats ? format_shunt_bytes(stats.total || 0) : "0 B";
+	return '<span id="' + chipId + '" class="shunt-chip muted shunt-usage-chip" data-node-id="' + htmlEscape(String(nodeId || "")) + '"><span class="shunt-chip-label">已用流量</span><span>' + htmlEscape(totalText) + '</span></span>';
+}
+function update_shunt_usage_chip($chip) {
+	if (!$chip || !$chip.length) {
+		return;
+	}
+	var nodeId = String($chip.attr("data-node-id") || "");
+	var stats = get_shunt_usage_stats(nodeId);
+	var totalText = format_shunt_bytes(stats ? (stats.total || 0) : 0);
+	$chip.find("span").eq(1).text(totalText);
+}
+function apply_shunt_stats_to_cards() {
+	$(".shunt-usage-chip").each(function() {
+		update_shunt_usage_chip($(this));
+	});
+}
+function normalize_shunt_stats_payload(res) {
+	var payload = res;
+	if (typeof res == "string") {
+		try {
+			payload = JSON.parse(res);
+		} catch (e) {
+			payload = {};
+		}
+	}
+	if (!payload || typeof payload != "object") {
+		payload = {};
+	}
+	if (!payload.stats || typeof payload.stats != "object") {
+		payload.stats = {};
+	}
+	return payload;
+}
+function is_shunt_tab_active() {
+	if (!current_mode_is_shunt()) {
+		return false;
+	}
+	if (!E("shunt_panel")) {
+		return false;
+	}
+	return ($("#show_btn5").is(":visible") && $.trim($("#shunt_panel").html() || "").length > 0);
+}
+function stop_shunt_stats_refresh() {
+	if (shuntStatsTimer) {
+		clearTimeout(shuntStatsTimer);
+		shuntStatsTimer = null;
+	}
+}
+function schedule_shunt_stats_refresh(immediate) {
+	stop_shunt_stats_refresh();
+	if (!is_shunt_tab_active()) {
+		return;
+	}
+	shuntStatsTimer = setTimeout(fetch_shunt_stats, immediate ? 0 : SHUNT_STATS_REFRESH_INTERVAL);
+}
+function fetch_shunt_stats() {
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_conf.sh", "params": ["shunt_stats"], "fields": {}};
+	if (!is_shunt_tab_active()) {
+		stop_shunt_stats_refresh();
+		return;
+	}
+	if (shuntStatsRequestPending) {
+		schedule_shunt_stats_refresh(false);
+		return;
+	}
+	shuntStatsRequestPending = true;
+	$.ajax({
+		type: "POST",
+		cache: false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function(response) {
+			if (!response || response.result != id) {
+				shuntStatsRequestPending = false;
+				schedule_shunt_stats_refresh(false);
+				return;
+			}
+			$.ajax({
+				url: "/_temp/ss_shunt_stats.json?_=" + new Date().getTime(),
+				type: "GET",
+				cache: false,
+				dataType: "text",
+				success: function(res) {
+					var payload = normalize_shunt_stats_payload(res);
+					shuntStatsCache = payload.stats || {};
+					apply_shunt_stats_to_cards();
+				},
+				complete: function() {
+					shuntStatsRequestPending = false;
+					schedule_shunt_stats_refresh(false);
+				}
+			});
+		},
+		error: function() {
+			shuntStatsRequestPending = false;
+			schedule_shunt_stats_refresh(false);
+		}
+	});
+}
+function render_shunt_summary_card(title, bodyHtml, hintText, extraClass) {
+	var html = '<div class="shunt-summary-card' + (extraClass ? (' ' + extraClass) : '') + '">';
+	html += '<div class="shunt-summary-card-head">' + render_shunt_card_title(title, hintText) + '</div>';
+	html += '<div class="shunt-summary-card-body">' + bodyHtml + '</div>';
+	html += '</div>';
+	return html;
+}
+function render_shunt_add_card() {
+	var html = "";
+	html += '<div class="shunt-summary-card shunt-summary-card--add" onclick="open_new_shunt_rule_editor()" title="添加新的节点分流规则" role="button" tabindex="0" onkeydown="if(event.keyCode==13||event.keyCode==32){open_new_shunt_rule_editor();return false;}">';
+	html += '<div class="shunt-summary-card-head"><div class="shunt-title-row"><span class="shunt-title-text">添加节点分流</span><a class="shunt-help" href="javascript:void(0);" onclick="event.stopPropagation();show_shunt_add_help();" title="查看规则说明">?</a></div></div>';
+	html += '<div class="shunt-summary-card-body"><div class="shunt-add-frame"><span>+</span></div></div>';
+	html += '</div>';
+	return html;
+}
+function show_shunt_add_help() {
+	var msg = '<div style="text-align:left;line-height:1.8;padding:10px;">';
+	msg += '<p><strong>规则匹配顺序：</strong></p>';
+	msg += '<p>规则从上到下依次匹配，一旦匹配成功就走相应出站，后续规则不再匹配同一流量。请注意调整规则顺序。</p>';
+	msg += '<p><strong>全局引流建议：</strong></p>';
+	msg += '<p>在"全量引流"模式下，建议将必要规则走代理，兜底规则走直连，以免国内网站被代理。</p>';
+	msg += '</div>';
+	layer.open({
+		type: 1,
+		title: '节点分流规则说明',
+		area: ['480px', 'auto'],
+		shade: 0.6,
+		shadeClose: true,
+		content: msg
+	});
+}
+function render_shunt_rule_card(rule, idx) {
+	var targetSupported = !!confs[rule.target_node_id] && is_shunt_supported_node(rule.target_node_id);
+	var latency = get_shunt_node_latency(rule.target_node_id);
+	var canDrag = shuntRulesState.length > 1;
+	var cardId = "shunt_rule_card_" + rule.id;
+	var meta = get_shunt_rule_meta(rule);
+	var targetLabel = get_shunt_target_node_label(rule.target_node_id);
+	var isCustom = rule.source == "custom";
+	var ruleKindText = isCustom ? "自定义规则" : "内置规则";
+	var ruleCountText = meta.count ? (meta.count + " 条") : (isCustom ? "0 条" : "未统计");
+	var html = '<div id="' + cardId + '" class="shunt-rule-card' + (targetSupported ? "" : " is-unavailable") + (canDrag ? " is-draggable" : "") + '" onclick="handle_shunt_rule_card_click(\'' + rule.id + '\', event)"';
+	if (canDrag) {
+		html += ' draggable="true" ondragstart="start_shunt_rule_drag(\'' + rule.id + '\', event)" ondragover="allow_shunt_rule_drop(\'' + rule.id + '\', event)" ondrop="drop_shunt_rule(\'' + rule.id + '\', event)" ondragend="end_shunt_rule_drag()"';
+	}
+	html += '>';
+	html += '<div class="shunt-rule-toolbar">';
+	html += '<a href="javascript:void(0);" class="shunt-rule-delete" title="删除此规则" onclick="delete_shunt_rule(\'' + rule.id + '\', event)">&times;</a>';
+	html += '</div>';
+	html += '<div class="shunt-rule-shell">';
+	html += '<div class="shunt-flow-panel shunt-flow-panel--source">';
+	html += '<div class="shunt-panel-head">';
+	html += '<div class="shunt-panel-heading"><span class="shunt-panel-caption">域名集</span></div>';
+	html += '<div class="shunt-panel-badges"><span class="shunt-rule-kind-badge' + (isCustom ? ' custom' : '') + '">' + ruleKindText + '</span></div>';
+	html += '</div>';
+	html += '<div class="shunt-panel-title-row"><div class="shunt-panel-title">' + htmlEscape(meta.label) + '</div></div>';
+	html += '<div class="shunt-chip-list">';
+	html += render_shunt_metric_chip("规则数量", ruleCountText);
+	html += render_shunt_metric_chip("匹配顺序", "#" + (idx + 1));
+	html += '</div>';
+	html += '</div>';
+	html += render_shunt_flow_link();
+	html += '<div class="shunt-flow-panel shunt-flow-panel--target">';
+	html += '<div class="shunt-panel-head">';
+	html += '<div class="shunt-panel-heading"><span class="shunt-panel-caption">出站节点</span></div>';
+	if (!targetSupported) {
+		html += '<div class="shunt-panel-badges"><span class="shunt-rule-kind-badge warning">节点不可用</span></div>';
+	}
+	html += '</div>';
+	html += '<div class="shunt-mini-value shunt-mini-value--node">' + htmlEscape(targetLabel) + '</div>';
+	html += '<div class="shunt-chip-list">';
+	if (latency) {
+		html += render_shunt_metric_chip("落地延迟", latency);
+	}
+	html += render_shunt_usage_chip(rule.target_node_id, "shunt_usage_rule_" + rule.id);
+	html += '</div>';
+	if (!targetSupported) {
+		html += '<div class="shunt-inline-warning">当前目标节点不可用，请点击卡片重新选择。</div>';
+	}
+	html += '</div>';
+	html += '</div>';
+	html += '</div>';
+	return html;
+}
+function render_shunt_fallback_card(fallbackId) {
+	var latency = get_shunt_node_latency(fallbackId);
+	var hintText = is_shunt_direct_target(fallbackId) ? '当前兜底为 DIRECT，剩余流量将直接放行。' : '当前未命中的剩余流量，会由该节点统一出站。';
+	var html = "";
+	html += '<div class="shunt-fallback-card">';
+	html += '<div class="shunt-rule-toolbar"><a href="javascript:void(0);" class="shunt-rule-delete" style="visibility:hidden;" tabindex="-1">&times;</a></div>';
+	html += '<div class="shunt-rule-shell">';
+	html += '<div class="shunt-flow-panel shunt-flow-panel--source">';
+	html += '<div class="shunt-panel-head">';
+	html += '<div class="shunt-panel-heading"><span class="shunt-panel-caption">兜底策略</span></div>';
+	html += '<div class="shunt-panel-badges"><span class="shunt-rule-kind-badge fallback">兜底规则</span></div>';
+	html += '</div>';
+	html += '<div class="shunt-panel-title-row"><div class="shunt-panel-title">所有剩余流量</div></div>';
+	html += '<div class="shunt-chip-list">';
+	html += render_shunt_metric_chip("规则类型", "兜底规则");
+	html += render_shunt_metric_chip("匹配范围", "剩余流量");
+	html += '</div>';
+	html += '</div>';
+	html += render_shunt_flow_link();
+	html += '<div class="shunt-flow-panel shunt-flow-panel--target">';
+	html += '<div class="shunt-panel-head">';
+	html += '<div class="shunt-panel-heading"><span class="shunt-panel-caption">兜底出站</span>' + render_shunt_hint_trigger(hintText) + '</div>';
+	html += '</div>';
+	html += '<div class="shunt-fallback-target">' + render_shunt_target_select(fallbackId, false, "shunt_default_target", 'onchange="update_shunt_default_target(this.value)"', {allowDirect: shuntRulesState.length >= 1}) + '</div>';
+	html += '<div class="shunt-chip-list">';
+	if (latency) {
+		html += render_shunt_metric_chip("落地延迟", latency);
+	}
+	html += render_shunt_usage_chip(fallbackId, "shunt_usage_fallback");
+	html += '</div>';
+	html += '</div>';
+	html += '</div>';
+	html += '</div>';
+	return html;
+}
+function render_shunt_rule_list() {
+	if (!E("shunt_panel")) {
+		return;
+	}
+	var html = "";
+	close_shunt_hint();
+	if (!current_mode_is_shunt()) {
+		html += '<div style="padding:10px 0;color:#A0A0A0;">切换到 xray分流模式 后，此处显示节点分流规则。</div>';
+		$("#shunt_panel").html(html);
+		return;
+	}
+	var fallbackId = get_shunt_default_node_id();
+	var fallbackLabel = fallbackId ? get_shunt_target_node_label(fallbackId) : "暂无可用节点";
+	var currentId = get_shunt_runtime_node_id();
+	var currentSupported = currentId && is_shunt_supported_node(currentId);
+	var supportedNodes = get_shunt_supported_target_nodes();
+	var ingressMode = get_shunt_ingress_mode();
+	if (!supportedNodes.length) {
+		html += '<div style="padding:10px 0;color:#ffb300;">当前没有可用于 xray 分流的节点。仅支持 SS(无obfs)/VMess/VLESS/Trojan/Hysteria2 节点。</div>';
+		$("#shunt_panel").html(html);
+		return;
+	}
+	var uniqueTargets = {};
+	for (var i = 0; i < shuntRulesState.length; i++) {
+		var activeRule = normalize_shunt_rule(shuntRulesState[i], i + 1);
+		if (activeRule.enabled == "1" && activeRule.target_node_id) {
+			uniqueTargets[activeRule.target_node_id] = 1;
+		}
+	}
+	var runtimeLatency = get_shunt_node_latency(currentId || fallbackId);
+	html += '<div class="shunt-summary-grid">';
+	var runtimeBody = '<div class="shunt-summary-primary">' + htmlEscape(get_shunt_target_node_label(currentId || fallbackId)) + '</div>';
+	if (runtimeLatency) {
+		runtimeBody += '<div class="shunt-chip-list">' + render_shunt_metric_chip("落地延迟", runtimeLatency) + '</div>';
+	}
+	html += render_shunt_summary_card("运行节点", runtimeBody, currentSupported ? "当前运行节点支持 xray 分流，界面展示的是实际承载分流流量的节点。" : "当前主节点不支持 xray 分流，运行时会自动切换到其它可用节点。", "shunt-summary-card--runtime");
+	html += render_shunt_summary_card("入口策略", '<div class="shunt-summary-inline">' + render_shunt_ingress_select(ingressMode, "ss_basic_shunt_ingress_mode", 'onchange="update_shunt_ingress_mode(this.value)"') + '</div>', "大陆白名单引流只把海外流量交给 xray；全量引流会把更多流量交给 xray，再由节点分流规则继续细分。", "shunt-summary-card--ingress");
+	html += render_shunt_summary_card("规则状态", '<div class="shunt-summary-primary">' + shuntRulesState.length + ' 条规则 / ' + Object.keys(uniqueTargets).length + ' 个目标节点</div><div class="shunt-summary-secondary">当前兜底：' + htmlEscape(fallbackLabel) + '</div>', "规则按顺序匹配；命中后即停止继续匹配。修改规则后，点击页面底部“提交”并重启插件后生效。", "shunt-summary-card--status");
+	html += render_shunt_add_card();
+	html += '</div>';
+	html += '<div class="shunt-rule-stack">';
+	if (!shuntRulesState.length) {
+		html += '<div class="shunt-empty-state">还没有用户定义的节点分流规则。当前所有进入 xray 的流量，都将直接走下方兜底规则。</div>';
+	}
+	for (var j = 0; j < shuntRulesState.length; j++) {
+		html += render_shunt_rule_card(normalize_shunt_rule(shuntRulesState[j], j + 1), j);
+	}
+	html += render_shunt_fallback_card(fallbackId);
+	html += '</div>';
+	$("#shunt_panel").html(html);
+	apply_shunt_stats_to_cards();
+	schedule_shunt_stats_refresh(true);
+}
+function refresh_shunt_tab_visibility() {
+	var show = current_mode_is_shunt();
+	$("#show_btn5").toggle(show);
+	if (!show && $(".show-btn5").hasClass("active")) {
+		$(".show-btn1").trigger("click");
+		stop_shunt_stats_refresh();
+	}
+}
+function refresh_shunt_ui() {
+	init_shunt_preset_map();
+	refresh_shunt_tab_visibility();
+	render_shunt_rule_list();
+}
+function clear_shunt_drop_targets() {
+	$(".shunt-rule-card").removeClass("is-drop-target");
+	shuntDropRuleId = "";
+}
+function handle_shunt_rule_card_click(ruleId, event) {
+	if (event && event.target) {
+		var $target = $(event.target);
+		if ($target.closest(".shunt-rule-delete,.shunt-help").length) {
+			return false;
+		}
+	}
+	if (new Date().getTime() < shuntSuppressCardClickUntil) {
+		return false;
+	}
+	open_shunt_rule_editor(ruleId);
+	return false;
+}
+function delete_shunt_rule(ruleId, event) {
+	if (event) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
+	for (var i = 0; i < shuntRulesState.length; i++) {
+		if (String(shuntRulesState[i].id) == String(ruleId)) {
+			shuntRulesState.splice(i, 1);
+			if (!shuntRulesState.length && is_shunt_direct_target(shuntFallbackNodeId)) {
+				shuntFallbackNodeId = "";
+			}
+			render_shunt_rule_list();
+			show_shunt_rule_restart_notice();
+			return false;
+		}
+	}
+	return false;
+}
+function move_shunt_rule_to(ruleId, targetRuleId, placeBefore) {
+	var fromIndex = -1;
+	var targetIndex = -1;
+	for (var i = 0; i < shuntRulesState.length; i++) {
+		var currentId = String(shuntRulesState[i].id || "");
+		if (currentId == String(ruleId)) {
+			fromIndex = i;
+		}
+		if (currentId == String(targetRuleId)) {
+			targetIndex = i;
+		}
+	}
+	if (fromIndex < 0 || targetIndex < 0 || fromIndex == targetIndex) {
+		return false;
+	}
+	var item = shuntRulesState.splice(fromIndex, 1)[0];
+	if (fromIndex < targetIndex) {
+		targetIndex--;
+	}
+	if (!placeBefore) {
+		targetIndex++;
+	}
+	if (targetIndex < 0) {
+		targetIndex = 0;
+	}
+	if (targetIndex > shuntRulesState.length) {
+		targetIndex = shuntRulesState.length;
+	}
+	shuntRulesState.splice(targetIndex, 0, item);
+	return true;
+}
+function start_shunt_rule_drag(ruleId, event) {
+	shuntDragRuleId = String(ruleId || "");
+	clear_shunt_drop_targets();
+	if (event && event.dataTransfer) {
+		event.dataTransfer.effectAllowed = "move";
+		try {
+			event.dataTransfer.setData("text/plain", shuntDragRuleId);
+		} catch (e) {}
+	}
+	setTimeout(function() {
+		$("#shunt_rule_card_" + ruleId).addClass("is-dragging");
+	}, 0);
+}
+function allow_shunt_rule_drop(ruleId, event) {
+	if (!shuntDragRuleId || String(shuntDragRuleId) == String(ruleId)) {
+		return false;
+	}
+	if (event) {
+		event.preventDefault();
+	}
+	clear_shunt_drop_targets();
+	shuntDropRuleId = String(ruleId || "");
+	$("#shunt_rule_card_" + ruleId).addClass("is-drop-target");
+	return false;
+}
+function drop_shunt_rule(ruleId, event) {
+	if (event) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
+	if (!shuntDragRuleId || String(shuntDragRuleId) == String(ruleId)) {
+		end_shunt_rule_drag();
+		return false;
+	}
+	var placeBefore = true;
+	var node = document.getElementById("shunt_rule_card_" + ruleId);
+	if (node && event && typeof event.clientY == "number") {
+		var rect = node.getBoundingClientRect();
+		placeBefore = event.clientY < (rect.top + rect.height / 2);
+	}
+	if (move_shunt_rule_to(shuntDragRuleId, ruleId, placeBefore)) {
+		shuntSuppressCardClickUntil = new Date().getTime() + 300;
+		render_shunt_rule_list();
+		show_shunt_rule_restart_notice();
+	}
+	end_shunt_rule_drag();
+	return false;
+}
+function end_shunt_rule_drag() {
+	shuntDragRuleId = "";
+	$(".shunt-rule-card").removeClass("is-dragging");
+	clear_shunt_drop_targets();
+}
+function open_new_shunt_rule_editor() {
+	open_shunt_rule_editor("", {
+		target_node_id: is_shunt_direct_target(get_shunt_default_node_id()) ? get_shunt_runtime_node_id() : get_shunt_default_node_id()
+	});
+	return false;
+}
+function add_shunt_rule_entry() {
+	return open_new_shunt_rule_editor();
+}
+function toggle_shunt_editor_source_fields(sourceValue) {
+	var isCustom = String(sourceValue || "") == "__custom__";
+	$("#shunt_rule_custom_group").toggleClass("active", isCustom);
+	refresh_shunt_rule_editor_preview();
+}
+function show_shunt_rule_restart_notice() {
+	var msg = "节点分流规则已更新，点击页面底部“提交”并重启插件后生效。";
+	if (typeof layer != "undefined" && layer.msg) {
+		layer.msg(msg);
+	} else {
+		alert(msg);
+	}
+}
+function open_shunt_rule_editor(ruleId, overrides) {
+	var editing = null;
+	var originalRulesState = JSON.stringify(shuntRulesState || []);
+	close_shunt_hint();
+	for (var i = 0; i < shuntRulesState.length; i++) {
+		if (String(shuntRulesState[i].id) == String(ruleId)) {
+			editing = normalize_shunt_rule(shuntRulesState[i], i + 1);
+			break;
+		}
+	}
+	if (editing && overrides) {
+		editing = normalize_shunt_rule($.extend({}, editing, overrides || {}), 1);
+	}
+	if (!editing) {
+		var defaultPreset = get_default_shunt_source_value();
+		editing = normalize_shunt_rule($.extend({
+			id: "rule_" + new Date().getTime(),
+			enabled: "1",
+			source: "builtin",
+			preset: defaultPreset == "__custom__" ? "" : defaultPreset,
+			custom_b64: "",
+			target_node_id: "",
+			remark: ""
+		}, overrides || {}), shuntRulesState.length + 1);
+	}
+	var sourceValue = editing.source == "custom" ? "__custom__" : (editing.preset || get_default_shunt_source_value());
+	var editorTitle = ruleId ? "编辑分流规则" : "添加分流规则";
+	var editorAction = ruleId ? "保存" : "添加";
+	var customText = decode_shunt_custom_text(editing.custom_b64);
+	var html = "";
+	html += '<div class="shunt-editor">';
+	html += '<div class="shunt-editor-shell">';
+	html += '<div class="shunt-editor-main">';
+	html += '<div class="shunt-editor-row">';
+	html += '<div class="shunt-editor-label">域名合集</div>';
+	html += '<div class="shunt-editor-control">';
+	html += render_shunt_source_select(sourceValue, "shunt_rule_source", true, 'onchange="toggle_shunt_editor_source_fields(this.value)"', "自定义域名合集");
+	html += '<div class="shunt-editor-hint">内置类别直接沿用预置规则；选择自定义后，可输入自定义集合名称与域名合集。</div>';
+	html += '</div>';
+	html += '</div>';
+	html += '<div id="shunt_rule_custom_group" class="shunt-editor-source-extra' + (sourceValue == "__custom__" ? ' active' : '') + '">';
+	html += '<div class="shunt-editor-row">';
+	html += '<div class="shunt-editor-label">集合名称</div>';
+	html += '<div class="shunt-editor-control">';
+	html += '<input id="shunt_rule_remark" type="text" maxlength="64" value="' + htmlEscape(editing.remark) + '" placeholder="如：AI 站点 / 流媒体 / 自建服务" />';
+	html += '</div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-row">';
+	html += '<div class="shunt-editor-label">域名合集</div>';
+	html += '<div class="shunt-editor-control">';
+	html += '<textarea id="shunt_rule_custom" rows="10" placeholder="# 一行一个域名&#10;openai.com&#10;chatgpt.com">' + htmlEscape(customText) + '</textarea>';
+	html += '<div class="shunt-editor-hint">支持一行一个域名；注释行请以 # 开头。也支持 DOMAIN / DOMAIN-SUFFIX / DOMAIN-KEYWORD、full: / domain: / keyword: 写法。</div>';
+	html += '</div>';
+	html += '</div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-row">';
+	html += '<div class="shunt-editor-label">出站节点</div>';
+	html += '<div class="shunt-editor-control">';
+	html += render_shunt_target_select(editing.target_node_id, true, "shunt_rule_target");
+	html += '<div class="shunt-editor-hint">规则按顺序匹配，命中后立即走对应节点出站。</div>';
+	html += '</div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-actions-tip">保存后会先更新当前页面中的规则草稿；点击页面底部“提交”并重启插件后，新的节点分流规则才会真正生效。</div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-side"><div id="shunt_rule_preview" class="shunt-editor-preview">' + render_shunt_rule_editor_preview(sourceValue, editing.target_node_id, editing.remark, customText) + '</div></div>';
+	html += '</div>';
+	html += '</div>';
+	close_shunt_rule_editor();
+	layer.open({
+		type: 1,
+		title: editorTitle,
+		skin: "shunt-editor-layer",
+		area: [$(window).width() < 760 ? '92%' : '860px', $(window).width() < 760 ? '86%' : 'auto'],
+		maxHeight: 650,
+		shadeClose: false,
+		content: html,
+		btn: [editorAction, '取消'],
+		success: function(layero, index) {
+			shuntRuleEditorLayerIndex = index;
+			toggle_shunt_editor_source_fields(sourceValue);
+			$("#shunt_rule_source,#shunt_rule_target").off(".shuntEditor").on("change.shuntEditor", refresh_shunt_rule_editor_preview);
+			$("#shunt_rule_remark,#shunt_rule_custom").off(".shuntEditor").on("input.shuntEditor keyup.shuntEditor", refresh_shunt_rule_editor_preview);
+			refresh_shunt_rule_editor_preview();
+		},
+		end: function() {
+			shuntRuleEditorLayerIndex = null;
+		},
+		yes: function(index) {
+			var nextRule = normalize_shunt_rule(editing, 1);
+			var selectedSource = $("#shunt_rule_source").val() || "";
+			nextRule.enabled = "1";
+			nextRule.target_node_id = resolve_node_id($("#shunt_rule_target").val() || "", true);
+			if (!nextRule.target_node_id || !is_shunt_supported_node(nextRule.target_node_id)) {
+				alert("请选择一个可用于 xray 分流的目标节点。");
+				return false;
+			}
+			if (String(selectedSource || "") == "__custom__") {
+				nextRule.source = "custom";
+				nextRule.preset = "";
+				nextRule.remark = $.trim($("#shunt_rule_remark").val() || "");
+				nextRule.custom_b64 = base64_encode_utf8(($("#shunt_rule_custom").val() || "").replace(/\r/g, ""));
+				if (!nextRule.remark) {
+					alert("请填写自定义域名集合的名称。");
+					return false;
+				}
+				if (!$.trim($("#shunt_rule_custom").val() || "")) {
+					alert("请填写至少一个自定义域名。");
+					return false;
+				}
+			} else {
+				if (!shuntPresetMap[selectedSource]) {
+					alert("请选择一个内置分类。");
+					return false;
+				}
+				nextRule.source = "builtin";
+				nextRule.preset = String(selectedSource);
+				nextRule.custom_b64 = "";
+				nextRule.remark = shuntPresetMap[selectedSource] ? shuntPresetMap[selectedSource].label : String(selectedSource);
+			}
+			var nextRules = shuntRulesState.slice(0);
+			var replaced = false;
+			for (var i = 0; i < nextRules.length; i++) {
+				if (String(nextRules[i].id) == String(nextRule.id)) {
+					nextRules[i] = nextRule;
+					replaced = true;
+					break;
+				}
+			}
+			if (!replaced) {
+				nextRules.push(nextRule);
+			}
+			if (!check_shunt_rule_limits(nextRules)) {
+				return false;
+			}
+			if (JSON.stringify(nextRules) == originalRulesState) {
+				layer.close(index);
+				return true;
+			}
+			shuntRulesState = nextRules;
+			render_shunt_rule_list();
+			layer.close(index);
+			setTimeout(function() {
+				scroll_shunt_rule_into_view(nextRule.id);
+			}, 80);
+			show_shunt_rule_restart_notice();
+			return true;
+		}
+	});
+}
 function get_saved_current_node_id() {
 	if (get_node_storage_schema() == 2) {
 		return resolve_node_id(db_fss["fss_node_current"] || "");
@@ -943,6 +2148,21 @@ function get_node_type(nodeId) {
 		return String(db_ss["ssconf_basic_type_" + nodeId]);
 	}
 	return "";
+}
+function get_node_persistent_mode(nodeId) {
+	var mode = "";
+	if (nodeId && confs[nodeId] && typeof confs[nodeId]["mode"] != "undefined") {
+		mode = String(confs[nodeId]["mode"] || "");
+	} else if (typeof db_ss["ssconf_basic_mode_" + nodeId] != "undefined") {
+		mode = String(db_ss["ssconf_basic_mode_" + nodeId] || "");
+	}
+	if (mode && mode != "7") {
+		return mode;
+	}
+	if ((E("ss_basic_mode") && String(E("ss_basic_mode").value || "") == "7") || String(db_ss["ss_basic_mode"] || "") == "7") {
+		return "2";
+	}
+	return mode || "1";
 }
 function get_node_type_title_tag(c) {
 	if (!c || typeof c["type"] == "undefined") {
@@ -1615,10 +2835,12 @@ function get_dbus_data(cb) {
 					generate_node_info();
 					// generate options for node select
 					refresh_options();
+					sync_shunt_state_from_dbus();
 					// generate node table
 					refresh_html();
 					// fill node value
 					ss_node_sel();
+					refresh_shunt_ui();
 					// define click action
 					toggle_func();
 					// try to get latest version of fancyss
@@ -1698,6 +2920,7 @@ function conf2obj(obj, action) {
 }
 function ssconf_node2obj(node_sel) {
 	obj_node = {};
+	var forceShuntMode = (E("ss_basic_mode") && String(E("ss_basic_mode").value || "") == "7") || String(db_ss["ss_basic_mode"] || "") == "7";
 	if (get_node_storage_schema() == 2) {
 		var conf = confs[node_sel] || {};
 		var nodeFields = NODE_FIELD_REWRITE_LIST.filter(function(field) {
@@ -1723,6 +2946,9 @@ function ssconf_node2obj(node_sel) {
 			obj_node["ss_basic_" + legacyField] = is_node_bool_field(legacyField) ? (db_ss[p + "_" + legacyField + "_" + node_sel] || "0") : (db_ss[p + "_" + legacyField + "_" + node_sel] || "");
 		}
 	}
+	if (forceShuntMode) {
+		obj_node["ss_basic_mode"] = "7";
+	}
 	obj_node["ssconf_basic_node"] = node_sel;
 	return obj_node;
 }
@@ -1737,6 +2963,7 @@ function ss_node_sel() {
 	verifyFields();
 	refresh_basic_method_width();
 	refresh_basic_input_width();
+	refresh_shunt_ui();
 }
 function refresh_options() {
 	if (node_max == 0) return false;
@@ -1838,11 +3065,25 @@ function refresh_options() {
 function save() {
 	var dbus = {};
 	var node_sel = resolve_node_id(E("ssconf_basic_node").value);
+	var shuntDefaultNodeId = "";
+	var shuntRuntimeNodeId = "";
 	if (node_sel) {
 		E("ssconf_basic_node").value = node_sel;
 	}
 	var node_type = get_node_type(node_sel);
 	submit_flag="1";
+	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
+		shuntDefaultNodeId = get_shunt_default_node_id();
+		shuntRuntimeNodeId = get_shunt_runtime_node_id();
+		if (is_shunt_direct_target(shuntDefaultNodeId) && !shuntRulesState.length) {
+			alert("至少需要一条分流规则后，兜底规则才能选择 DIRECT。");
+			return false;
+		}
+		if (!shuntRuntimeNodeId || !is_shunt_supported_node(shuntRuntimeNodeId)) {
+			alert("xray分流模式当前至少需要一个可用的运行节点。");
+			return false;
+		}
+	}
 	if (get_node_storage_schema() == 2) {
 		dbus["fss_node_current"] = node_sel;
 	} else {
@@ -1851,6 +3092,7 @@ function save() {
 	set_ss_status_waiting("Waiting....");
 	// key define
 	var params_input = [
+	  "ss_basic_mode",
 	  "ss_failover_s1",
 	  "ss_failover_s2_1",
 	  "ss_failover_s2_2",
@@ -1941,7 +3183,8 @@ function save() {
 	  "ss_basic_hy2_up_speed",
 	  "ss_basic_hy2_dl_speed",
 	  "ss_basic_hy2_tfo_switch",
-	  "ss_basic_hy2_cg_opt"
+	  "ss_basic_hy2_cg_opt",
+	  "ss_basic_shunt_ingress_mode"
 	];
 	var params_check = [
 	  "ss_failover_enable",
@@ -2026,20 +3269,38 @@ function save() {
 	for (var i = 0; i < params_base64.length; i++) {
 		dbus[params_base64[i]] = Base64.encode(E(params_base64[i]).value);
 	}
+	if (!check_shunt_rule_limits(shuntRulesState)) {
+		return false;
+	}
+	dbus["ss_basic_shunt_default_node"] = "";
+	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
+		if (is_shunt_direct_target(shuntDefaultNodeId)) {
+			dbus["ss_basic_shunt_default_node"] = SHUNT_DIRECT_TARGET;
+		} else if (shuntDefaultNodeId && (String(shuntDefaultNodeId) != String(node_sel) || !is_shunt_supported_node(node_sel))) {
+			dbus["ss_basic_shunt_default_node"] = shuntDefaultNodeId;
+		}
+	}
+	dbus["ss_basic_shunt_rules"] = base64_encode_utf8(JSON.stringify(shuntRulesState));
+	dbus["ss_basic_shunt_rule_ts"] = String(new Date().getTime());
 	// collect values in acl table
 	if(E("ACL_table")){
 		var tr = E("ACL_table").getElementsByTagName("tr");
 		for (var i = 1; i < tr.length - 1; i++) {
 			var rowid = tr[i].getAttribute("id").split("_")[2];
+			var aclMode = E("ss_acl_mode_" + rowid).value;
+			if (String(aclMode) == "7" && String(E("ss_basic_mode").value || "") != "7") {
+				alert("访问控制中的 xray分流模式 仅在主模式切换为 xray分流模式后才能生效。");
+				return false;
+			}
 			dbus["ss_acl_name_" + rowid] = E("ss_acl_name_" + rowid).value;
-			dbus["ss_acl_mode_" + rowid] = E("ss_acl_mode_" + rowid).value;
+			dbus["ss_acl_mode_" + rowid] = aclMode;
 			dbus["ss_acl_port_" + rowid] = get_acl_port_save_value("ss_acl_port_" + rowid);
 			dbus["ss_acl_udp_" + rowid] = get_acl_checkbox_save_value("ss_acl_udp_" + rowid);
 			dbus["ss_acl_quic_" + rowid] = get_acl_checkbox_save_value("ss_acl_quic_" + rowid);
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
-	dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value;
+	dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value == "7" ? get_node_persistent_mode(node_sel) : E("ss_basic_mode").value;
 	// ss
 	if (node_type == "0" ){
 		var params_ssi_1 = ["mode", "server", "port", "method", "ss_obfs_host"];
@@ -2290,6 +3551,8 @@ function save() {
 			db_ss["ss_basic_action"] = "3";
 		} else if (sel_mode == "5") {
 			db_ss["ss_basic_action"] = "5";
+		} else if (sel_mode == "7") {
+			db_ss["ss_basic_action"] = "28";
 		} else if (sel_mode == "6") {
 			db_ss["ss_basic_action"] = "6";
 		}
@@ -2772,6 +4035,7 @@ function verifyFields(r) {
 	if (E("ACL_table")) {
 		sync_acl_udp_quic_labels();
 	}
+	refresh_shunt_ui();
 }
 function sync_chinadns_ipv6_drop_proxy_ui() {
 	var dropProxy = E("ss_basic_chng_ipv6_drop_proxy");
@@ -3644,7 +4908,9 @@ function refresh_node_panel(cb) {
 			refresh_fss_bundle(function() {
 				generate_node_info();
 				refresh_options();
+				sync_shunt_state_from_dbus();
 				ss_node_sel();
+				refresh_shunt_ui();
 				if (typeof cb === "function") {
 					cb();
 				}
@@ -6093,6 +7359,11 @@ var tab_actions = {
 			autoTextarea(E(fields[i]), 0, 400);
 		}
 	},
+	5: function() {
+		$('#apply_button').show();
+		$('#ss_failover_save').hide();
+		refresh_shunt_ui();
+	},
 	7: function() {
 		$('#apply_button').hide();
 		$('#ss_failover_save').hide();
@@ -6121,6 +7392,9 @@ function handle_tab_click() {
 	var match = this.className.match(/show-btn(\d+)/);
 	if (!match) return;
 	var idx = parseInt(match[1], 10);
+	if (idx !== 5) {
+		stop_shunt_stats_refresh();
+	}
 	tabSelect(idx);
 	if (tab_actions[idx]) {
 		tab_actions[idx]();
@@ -6150,6 +7424,7 @@ function toggle_func() {
 		}
 	});
 	bind_tab_handlers();
+	bind_shunt_mode_sync();
 	$("#log_content2").click(
 		function() {
 			x = -1;
@@ -7098,6 +8373,8 @@ function get_acl_mode_name(mode) {
 		return "全局代理模式";
 	case "6":
 		return "回国模式";
+	case "7":
+		return "xray分流模式";
 	default:
 		return String(mode || "");
 	}
@@ -7738,6 +9015,14 @@ function bind_acl_mode_sync() {
 		}
 	});
 }
+function bind_shunt_mode_sync() {
+	$("#ss_basic_mode").off("change.shunt_sync").on("change.shunt_sync", function() {
+		refresh_shunt_ui();
+		if (String($(this).val() || "") == "7") {
+			$(".show-btn5").trigger("click");
+		}
+	});
+}
 function render_acl_port_select(id, className, style) {
 	var code = '';
 	code += '<select id="' + id + '"';
@@ -7819,6 +9104,7 @@ function refresh_acl_html() {
 	code += '<option value="2">大陆白名单模式</option>'
 	code += '<option value="3">游戏模式</option>'
 	code += '<option value="5">全局代理模式</option>'
+	code += '<option value="7">xray分流模式</option>'
 	// code += '<option value="6">回国模式</option>'
 	code += '</select>'
 	code += '</td>'
@@ -7859,6 +9145,7 @@ function refresh_acl_html() {
 			code += '<option value="2">大陆白名单模式</option>';
 			code += '<option value="3">游戏模式</option>';
 			code += '<option value="5">全局代理模式</option>';
+			code += '<option value="7">xray分流模式</option>';
 			//code += '<option value="6">回国模式</option>';
 		}
 		code += '</select>'
@@ -7900,6 +9187,8 @@ function refresh_acl_html() {
 			code += '<td width="18%"><span id="ss_acl_default_mode_text">游戏模式</span></td>';
 		} else if (ssmode == 5) {
 			code += '<td width="18%"><span id="ss_acl_default_mode_text">全局代理模式</span></td>';
+		} else if (ssmode == 7) {
+			code += '<td width="18%"><span id="ss_acl_default_mode_text">xray分流模式</span></td>';
 		} else if (ssmode == 6) {
 			//code += '<td width="18%">回国模式</td>';
 		}
@@ -8365,6 +9654,7 @@ function toggleKeyMask(o, show){
 														<td cellpadding="0" cellspacing="0" style="padding:0" border="1" bordercolor="#222">
 															<input id="show_btn0" class="show-btn0" style="cursor:pointer" type="button" value="帐号设置" />
 															<input id="show_btn1" class="show-btn1" style="cursor:pointer" type="button" value="节点管理" />
+															<input id="show_btn5" class="show-btn5" style="cursor:pointer;display:none;" type="button" value="节点分流" />
 															<input id="show_btn2" class="show-btn2" style="cursor:pointer" type="button" value="故障转移" />
 															<input id="show_btn3" class="show-btn3" style="cursor:pointer" type="button" value="DNS设定" />
 															<input id="show_btn4" class="show-btn4" style="cursor:pointer" type="button" value="黑白名单" />
@@ -8525,7 +9815,7 @@ function toggleKeyMask(o, show){
 														$('#table_basic').forms([
 															// commom
 															{ title: '节点选择', id:'ssconf_basic_node', type:'select', func:'onchange="ss_node_sel();"', style:'width:auto;min-width:164px;max-width:450px;', options:[], value: "1"},
-															{ title: '模式', id:'ss_basic_mode', type:'select', func:'v', hint:'1', options:option_modes, value: "1"},
+															{ title: '模式', id:'ss_basic_mode', type:'select', func:'v', hint:'1', options:option_main_modes, value: "1"},
 															{ title: '使用json配置', id:'ss_basic_v2ray_use_json', data:{show:'v2ray_on'}, type:'checkbox', func:'v', hint:'27'},
 															{ title: '使用json配置', id:'ss_basic_xray_use_json', data:{show:'xray_on'}, type:'checkbox', func:'v', hint:'27'},
 															{ title: '服务器地址', id:'ss_basic_server', data:{show:'basic_server_on'}, type:'text', maxlen:'100'},
@@ -9134,6 +10424,15 @@ function toggleKeyMask(o, show){
 															{ title: '域名白名单<br><br><font color="#ffcc00">添加不需要走代理的域名</font>', id:'ss_wan_white_domain', type:'textarea', hint:'39', rows:'7', ph:ph2},
 															{ title: 'IP/CIDR黑名单<br><br><font color="#ffcc00">添加需要强制走代理的外网ip地址</font>', id:'ss_wan_black_ip', type:'textarea', hint:'40', rows:'7', ph:ph3},
 															{ title: '域名黑名单<br><br><font color="#ffcc00">添加需要强制走代理的域名</font>', id:'ss_wan_black_domain', type:'textarea', hint:'41', rows:'7', ph:ph4},
+														]);
+													</script>
+												</table>
+											</div>
+											<div id="tablet_5" style="display: none;">
+												<table id="table_shunt" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+													<script type="text/javascript">
+														$('#table_shunt').forms([
+															{ td: '<tr><td colspan="2"><div id="shunt_panel" style="padding:6px 0 2px 0;"></div></td></tr>'}
 														]);
 													</script>
 												</table>

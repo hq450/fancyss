@@ -25,6 +25,16 @@ cp_rules(){
 	cp -rf ${CURR_PATH}/rules_ng/rules.json.js ${target}
 }
 
+cp_rules_ng2(){
+	local src=${CURR_PATH}/rules_ng2
+	local target=${CURR_PATH}/fancyss/ss/rules_ng2
+	rm -rf ${target}
+	if [ -d "${src}" ];then
+		mkdir -p ${CURR_PATH}/fancyss/ss
+		cp -rf ${src} ${target}
+	fi
+}
+
 sync_binary(){
 	# BINS_REMOVE="naive"
 	# for BIN_REMOVE in $BINS_REMOVE;
@@ -337,6 +347,7 @@ do_backup(){
 papare(){
 	rm -f ${CURR_PATH}/packages/*
 	cp_rules
+	cp_rules_ng2
 	sync_binary
 	cat >${CURR_PATH}/packages/version_tmp.json.js <<-EOF
 	{

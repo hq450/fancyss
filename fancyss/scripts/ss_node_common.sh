@@ -1918,7 +1918,7 @@ fss_set_node_field_plain() {
 	local node_id="$1"
 	local field="$2"
 	local value="$3"
-	local schema node_json updated_json current_value updated_at
+	local schema node_json updated_json current_value updated_at is_runtime="0"
 
 	[ -z "${node_id}" ] && return 1
 	[ -z "${field}" ] && return 1
@@ -1935,19 +1935,30 @@ fss_set_node_field_plain() {
 	fi
 	current_value=$(fss_get_node_field_plain "${node_id}" "${field}" 2>/dev/null)
 	[ "${current_value}" = "${value}" ] && return 0
+	fss_is_runtime_field "${field}" && is_runtime="1"
 	updated_at=$(fss_now_ts_ms)
-	updated_json=$(printf '%s' "${node_json}" | jq -c --arg k "${field}" --arg v "${value}" --argjson updated_at "${updated_at}" '
-		if $v == "" then
-			del(.[$k])
-		else
-			.[$k] = $v
-		end
-		| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
-		| ._updated_at = $updated_at
-	') || return 1
+	if [ "${is_runtime}" = "1" ]; then
+		updated_json=$(printf '%s' "${node_json}" | jq -c --arg k "${field}" --arg v "${value}" '
+			if $v == "" then
+				del(.[$k])
+			else
+				.[$k] = $v
+			end
+		') || return 1
+	else
+		updated_json=$(printf '%s' "${node_json}" | jq -c --arg k "${field}" --arg v "${value}" --argjson updated_at "${updated_at}" '
+			if $v == "" then
+				del(.[$k])
+			else
+				.[$k] = $v
+			end
+			| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+			| ._updated_at = $updated_at
+		') || return 1
+	fi
 	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
-	fss_clear_webtest_cache_node "${node_id}"
-	if ! fss_is_runtime_field "${field}"; then
+	if [ "${is_runtime}" != "1" ]; then
+		fss_clear_webtest_cache_node "${node_id}"
 		fss_touch_node_config_ts >/dev/null 2>&1
 	fi
 	if fss_node_field_affects_direct_domains "${field}"; then
@@ -1957,7 +1968,7 @@ fss_set_node_field_plain() {
 
 fss_clear_node_runtime_fields() {
 	local node_id="$1"
-	local schema node_json updated_json updated_at
+	local schema node_json updated_json
 
 	[ -z "${node_id}" ] && return 1
 	schema=$(fss_detect_storage_schema)
@@ -1969,11 +1980,8 @@ fss_clear_node_runtime_fields() {
 	fi
 
 	node_json=$(fss_v2_get_node_json_by_id "${node_id}") || return 1
-	updated_at=$(fss_now_ts_ms)
-	updated_json=$(printf '%s' "${node_json}" | jq -c --argjson updated_at "${updated_at}" '
+	updated_json=$(printf '%s' "${node_json}" | jq -c '
 		del(.server_ip, .latency, .ping)
-		| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
-		| ._updated_at = $updated_at
 	') || return 1
 	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
 }

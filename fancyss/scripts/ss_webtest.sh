@@ -1429,6 +1429,26 @@ wt_collect_xray_like_ids_file() {
 	' "${TMP2}/nodes_index.txt" > "${out_file}"
 }
 
+wt_filter_supported_ids_file() {
+	local src_file="$1"
+	local out_file="$2"
+
+	[ -f "${src_file}" ] || return 1
+	[ -n "${out_file}" ] || return 1
+	[ -f "${TMP2}/nodes_index.txt" ] || return 1
+	awk -F '|' '
+		NR == FNR {
+			if ($1 != "") {
+				want[$1] = 1
+			}
+			next
+		}
+		want[$1] && ($2 == "00" || $2 == "03" || $2 == "04" || $2 == "05" || $2 == "08") {
+			print $1
+		}
+	' "${src_file}" "${TMP2}/nodes_index.txt" | sort -u > "${out_file}"
+}
+
 wt_md5_of_file() {
 	local file_path="$1"
 
@@ -1615,6 +1635,17 @@ wt_node_json_meta_get() {
 	sed -n 's/.*"'"${key}"'":[[:space:]]*"\{0,1\}\([^",}]*\)"\{0,1\}.*/\1/p' "${json_file}" | sed -n '1p'
 }
 
+wt_node_current_rev_get() {
+	local node_id="$1"
+	local current_rev=""
+
+	[ -n "${node_id}" ] || return 1
+	current_rev=$(fss_get_node_field_plain "${node_id}" "_rev" 2>/dev/null)
+	[ -n "${current_rev}" ] || current_rev=$(wt_node_json_meta_get "${node_id}" "_rev")
+	[ -n "${current_rev}" ] || current_rev="0"
+	printf '%s\n' "${current_rev}"
+}
+
 wt_collect_missing_webtest_cache_ids() {
 	local ids_file="$1"
 	local out_file="$2"
@@ -1633,9 +1664,8 @@ wt_collect_missing_webtest_cache_ids() {
 		cache_out="${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_outbounds.json"
 		meta_file="${FSS_WEBTEST_CACHE_META_DIR}/${node_id}.meta"
 		if [ -s "${cache_out}" ] && [ -f "${meta_file}" ]; then
-			current_rev=$(wt_node_json_meta_get "${node_id}" "_rev")
+			current_rev=$(wt_node_current_rev_get "${node_id}")
 			cached_rev=$(sed -n 's/^node_rev=//p' "${meta_file}" | sed -n '1p')
-			[ -n "${current_rev}" ] || current_rev="0"
 			[ -n "${cached_rev}" ] || cached_rev="0"
 			[ "${cached_rev}" = "${current_rev}" ] && continue
 		fi
@@ -1733,10 +1763,15 @@ wt_webtest_cache_build_node() {
 	local tmp_start=""
 	local tmp_stop=""
 	local current_rev="0"
+	local server_resolver=""
 
 	[ -n "${node_id}" ] || return 1
 	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
 	[ -n "${LINUX_VER}" ] || LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="$(dbus get ss_basic_tfo)"
+	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="0"
+	[ -n "${WT_SERVER_RESOLV_MODE}" ] || WT_SERVER_RESOLV_MODE="$(dbus get ss_basic_server_resolv_mode)"
+	[ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
 	wt_webtest_cache_prepare_dirs || return 1
 	node_type=$(wt_node_get type "${node_id}")
 	cache_mark="cache_${node_id}"
@@ -1792,11 +1827,16 @@ wt_webtest_cache_build_node() {
 		return 1
 	}
 
-	current_rev=$(wt_node_json_meta_get "${node_id}" "_rev")
-	[ -n "${current_rev}" ] || current_rev="0"
+	current_rev=$(wt_node_current_rev_get "${node_id}")
+	server_resolver=$(dbus get ss_basic_server_resolv)
+	[ -n "${server_resolver}" ] || server_resolver="-1"
 	cat > "${tmp_meta}" <<-EOF
 		node_type=${node_type}
 		node_rev=${current_rev}
+		linux_ver=${LINUX_VER}
+		ss_basic_tfo=${ss_basic_tfo}
+		server_resolv_mode=${WT_SERVER_RESOLV_MODE}
+		server_resolver=${server_resolver}
 		has_start=0
 		has_stop=0
 		start_port=${WT_LAST_START_PORT}
@@ -1831,6 +1871,61 @@ wt_webtest_cache_build_node() {
 		return 1
 	}
 	return 0
+}
+
+wt_ensure_webtest_cache_nodes_file() {
+	local src_ids_file="$1"
+	local ids_file="${TMP2}/xray_like_nodes.ensure"
+	local build_ids_file="${TMP2}/cache_build.ensure"
+	local node_id=""
+	local ret=0
+
+	[ -f "${src_ids_file}" ] || return 1
+	wt_prepare_node_cache >/dev/null 2>&1 || return 1
+	wt_ensure_node_direct_dns_ready >/dev/null 2>&1 || true
+	wt_build_nodes_index || return 1
+	wt_filter_supported_ids_file "${src_ids_file}" "${ids_file}" || return 1
+	[ -s "${ids_file}" ] || return 0
+	wt_webtest_cache_prepare_dirs || return 1
+	wt_webtest_cache_lock_acquire || return 1
+	if wt_webtest_cache_settings_match; then
+		wt_collect_missing_webtest_cache_ids "${ids_file}" "${build_ids_file}" || ret=1
+	else
+		cp -f "${ids_file}" "${build_ids_file}" || ret=1
+	fi
+	if [ "${ret}" = "0" ] && [ -s "${build_ids_file}" ]; then
+		wt_init_reserved_ports
+		wt_reset_active_node_env
+		WT_NODE_ENV_DIR=""
+		if [ "$(fss_detect_storage_schema)" = "2" ]; then
+			if fss_refresh_node_env_cache >/dev/null 2>&1 && ls "${FSS_NODE_ENV_CACHE_DIR}"/*.env >/dev/null 2>&1; then
+				WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
+			fi
+		fi
+		if [ -z "${WT_NODE_ENV_DIR}" ]; then
+			WT_NODE_ENV_DIR="${TMP2}/node_env"
+			mkdir -p "${WT_NODE_ENV_DIR}" || ret=1
+			if [ "${ret}" = "0" ]; then
+				rm -f "${WT_NODE_ENV_DIR}"/*.env >/dev/null 2>&1
+				wt_build_node_env_files_bulk "${build_ids_file}" >/dev/null 2>&1 || ret=1
+			fi
+		fi
+		if [ "${ret}" = "0" ]; then
+			while IFS= read -r node_id
+			do
+				[ -n "${node_id}" ] || continue
+				wt_webtest_cache_build_node "${node_id}" >/dev/null 2>&1 || {
+					fss_clear_webtest_cache_node "${node_id}" >/dev/null 2>&1
+					ret=1
+					break
+				}
+			done < "${build_ids_file}"
+		fi
+	fi
+	rm -f "${WT_CACHE_START_PORT_MAP_FILE}" "${build_ids_file}" "${ids_file}" >/dev/null 2>&1
+	WT_CACHE_START_PORT_MAP_FILE=""
+	wt_webtest_cache_lock_release
+	return "${ret}"
 }
 
 wt_ensure_webtest_cache_ready() {
@@ -3591,6 +3686,17 @@ schedule_node_direct_refresh)
 warm_cache)
 	warm_webtest_cache
 	;;
+ensure_cache_ids_file)
+	shift
+	ensure_webtest_cache_nodes_file="$1"
+	[ -n "${ensure_webtest_cache_nodes_file}" ] || exit 1
+	WT_CACHE_LOGGING=0
+	LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+	TMP2=/tmp/fancyss_webtest_cachework
+	mkdir -p "${TMP2}"
+	rm -rf "${TMP2}/node_cache" "${TMP2}/node_env" "${TMP2}/nodes_index.txt"
+	wt_ensure_webtest_cache_nodes_file "${ensure_webtest_cache_nodes_file}"
+	;;
 node_direct_refresh)
 	refresh_node_direct_after_schema2_change
 	;;
@@ -3624,6 +3730,17 @@ schedule_node_direct_refresh)
 	;;
 warm_cache)
 	warm_webtest_cache
+	;;
+ensure_cache_ids_file)
+	shift 2
+	ensure_webtest_cache_nodes_file="$1"
+	[ -n "${ensure_webtest_cache_nodes_file}" ] || exit 1
+	WT_CACHE_LOGGING=0
+	LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+	TMP2=/tmp/fancyss_webtest_cachework
+	mkdir -p "${TMP2}"
+	rm -rf "${TMP2}/node_cache" "${TMP2}/node_env" "${TMP2}/nodes_index.txt"
+	wt_ensure_webtest_cache_nodes_file "${ensure_webtest_cache_nodes_file}"
 	;;
 node_direct_refresh)
 	refresh_node_direct_after_schema2_change
