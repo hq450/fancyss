@@ -1,1 +1,7 @@
 .idea
+.agents/
+.claude/
+.ralph-progress.md
+skills-lock.json
+PROJECT-COMPLETE.md
+CLAUDE.md
