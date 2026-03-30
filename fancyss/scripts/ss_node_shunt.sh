@@ -166,7 +166,7 @@ fss_shunt_effective_mode() {
 
 fss_shunt_rule_tag_file() {
 	case "$1" in
-	ai|media|youtube|netflix|disney|max|primevideo|appletv|spotify|tiktok|bilibili|games|networktest|gfw)
+	ai|media|youtube|netflix|disney|max|primevideo|appletv|spotify|tiktok|bilibili|games|networktest|gfw|telegram|twitter|discord|openai|google|apple|github|google-cn|apple-cn)
 		echo "${FSS_SHUNT_PRESET_DIR}/$1.txt"
 		;;
 	*)
