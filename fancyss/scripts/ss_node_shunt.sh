@@ -1308,43 +1308,11 @@ fss_shunt_write_hot_reload_state() {
 		[ -n "${rule_id}" ] || continue
 		ip_file="${domain_file%.domains}.ips"
 		geoip_file="${domain_file%.domains}.geoips"
-		site_assets_csv=""
-		ip_assets_csv=""
 		domain_rule_csv=""
 		ip_rule_csv=""
-		domain_rule_file=""
-		ip_rule_files=""
-		if [ "${backend}" = "geodata" ] && [ "${source_type}" = "builtin" ] && ! fss_shunt_is_custom_preset "${preset}"; then
-			site_assets_csv="$(fss_shunt_preset_assets_csv "${preset}" site)"
-			ip_assets_csv="$(fss_shunt_preset_assets_csv "${preset}" ip)"
-		fi
-		if [ -n "${site_assets_csv}" ]; then
-			domain_rule_csv="$(printf '%s' "${site_assets_csv}" | awk -F',' '{
-				for (i = 1; i <= NF; i++) {
-					if ($i == "") {
-						continue
-					}
-					printf "%sgeosite:%s", (n++ ? "," : ""), toupper($i)
-				}
-			}')"
-		fi
-		if [ -n "${ip_assets_csv}" ]; then
-			ip_rule_csv="$(printf '%s' "${ip_assets_csv}" | awk -F',' '{
-				for (i = 1; i <= NF; i++) {
-					if ($i == "") {
-						continue
-					}
-					printf "%sgeoip:%s", (n++ ? "," : ""), toupper($i)
-				}
-			}')"
-		fi
-		if [ -z "${domain_rule_csv}" ]; then
-			domain_rule_file="${domain_file}"
-		fi
-		if [ -z "${ip_rule_csv}" ]; then
-			ip_rule_files="${ip_file}${geoip_file:+,${geoip_file}}"
-		fi
-		if [ -n "${domain_rule_csv}" ] || [ -s "${domain_file}" ]; then
+		domain_rule_file="${domain_file}"
+		ip_rule_files="${ip_file}${geoip_file:+,${geoip_file}}"
+		if [ -s "${domain_file}" ]; then
 			printf '%s|%s|%s|%s|%s|%s|%s\n' \
 				"$(fss_shunt_make_rule_tag "${rule_id}" domain)" \
 				"${target_id}" \
@@ -1354,7 +1322,7 @@ fss_shunt_write_hot_reload_state() {
 				"" \
 				"prepend" >> "${out_file}"
 		fi
-		if [ -n "${ip_rule_csv}" ] || [ -s "${ip_file}" ] || [ -s "${geoip_file}" ]; then
+		if [ -s "${ip_file}" ] || [ -s "${geoip_file}" ]; then
 			printf '%s|%s|%s|%s|%s|%s|%s\n' \
 				"$(fss_shunt_make_rule_tag "${rule_id}" ip)" \
 				"${target_id}" \

@@ -9,6 +9,7 @@ HOT_STATE_DIR="/tmp/fancyss_shunt_hot_reload"
 HOT_BASE_FILE="${HOT_STATE_DIR}/base.tsv"
 HOT_LAST_FILE="${HOT_STATE_DIR}/applied.tsv"
 HOT_NEXT_FILE="${HOT_STATE_DIR}/next.tsv"
+HOT_STAGE_FILE="${HOT_STATE_DIR}/stage.tsv"
 HOT_LOCK_FILE="/var/lock/fss_shunt_hot_reload.lock"
 HOT_BASE_RULE_TS_FILE="${HOT_STATE_DIR}/base_rule_ts"
 HOT_APPLIED_RULE_TS_FILE="${HOT_STATE_DIR}/applied_rule_ts"
@@ -132,45 +133,109 @@ hot_add_rule() {
 	[ "${ret}" = "0" ] || return 1
 }
 
-hot_remove_obsolete_rules() {
-	local line old_tag
-	[ -s "${HOT_LAST_FILE}" ] || return 0
+hot_reverse_rules_file() {
+	local src_file="$1"
+	local out_file="$2"
+
+	[ -f "${src_file}" ] || return 1
+	awk '{lines[NR]=$0} END {for (i=NR; i>=1; i--) print lines[i]}' "${src_file}" > "${out_file}"
+}
+
+hot_remove_rules_from_file() {
+	local src_file="$1"
+	local reverse="${2:-0}"
+	local read_file="${src_file}"
+	local reverse_file=""
+	local old_tag=""
+
+	[ -s "${src_file}" ] || return 0
+	if [ "${reverse}" = "1" ]; then
+		reverse_file="${HOT_STATE_DIR}/reverse.$$"
+		hot_reverse_rules_file "${src_file}" "${reverse_file}" || return 1
+		read_file="${reverse_file}"
+	fi
 	while IFS='|' read -r old_tag _
 	do
 		[ -n "${old_tag}" ] || continue
-		grep -q '^'"${old_tag}"'|' "${HOT_NEXT_FILE}" 2>/dev/null && continue
+		hot_log "删除托管规则：${old_tag}"
+		hot_remove_rule "${old_tag}" || {
+			rm -f "${reverse_file}" >/dev/null 2>&1
+			return 1
+		}
+	done < "${read_file}"
+	rm -f "${reverse_file}" >/dev/null 2>&1
+	return 0
+}
+
+hot_runtime_managed_rule_tags() {
+	"${XAPI_TOOL_BIN}" routing-list-rule --server "${XRAY_API_SERVER}" 2>/dev/null | run jq -r '.rules[]? | (.rule_tag // empty)' 2>/dev/null | awk '/^fss_/'
+}
+
+hot_remove_runtime_rules_except() {
+	local keep_file="$1"
+	local runtime_tags_file="${HOT_STATE_DIR}/runtime_tags.$$"
+	local reverse_file="${HOT_STATE_DIR}/runtime_reverse.$$"
+	local old_tag=""
+
+	hot_runtime_managed_rule_tags > "${runtime_tags_file}" 2>/dev/null || true
+	[ -s "${runtime_tags_file}" ] || {
+		rm -f "${runtime_tags_file}" >/dev/null 2>&1
+		return 0
+	}
+	hot_reverse_rules_file "${runtime_tags_file}" "${reverse_file}" || {
+		rm -f "${runtime_tags_file}" >/dev/null 2>&1
+		return 1
+	}
+	while IFS= read -r old_tag
+	do
+		[ -n "${old_tag}" ] || continue
+		if [ -n "${keep_file}" ] && [ -f "${keep_file}" ] && grep -q '^'"${old_tag}"'|' "${keep_file}" 2>/dev/null; then
+			continue
+		fi
 		hot_log "删除旧规则：${old_tag}"
-		hot_remove_rule "${old_tag}" || return 1
-	done < "${HOT_LAST_FILE}"
+		hot_remove_rule "${old_tag}" || {
+			rm -f "${runtime_tags_file}" "${reverse_file}" >/dev/null 2>&1
+			return 1
+		}
+	done < "${reverse_file}"
+	rm -f "${runtime_tags_file}" "${reverse_file}" >/dev/null 2>&1
+	return 0
+}
+
+hot_apply_rules_from_file() {
+	local src_file="$1"
+	local tag=""
+	local target_id=""
+	local domain_files=""
+	local ip_files=""
+	local domain_rules=""
+	local ip_rules=""
+	local place=""
+
+	[ -s "${src_file}" ] || return 0
+	while IFS='|' read -r tag target_id domain_files ip_files domain_rules ip_rules place
+	do
+		[ -n "${tag}" ] || continue
+		hot_log "追加新规则：${tag} -> ${target_id}"
+		hot_add_rule "${tag}" "${target_id}" "${domain_files}" "${ip_files}" "${domain_rules}" "${ip_rules}" || return 1
+	done < "${src_file}"
 	return 0
 }
 
 hot_remove_all_managed_rules() {
-	local line old_tag
-	[ -s "${HOT_LAST_FILE}" ] || return 0
-	while IFS='|' read -r old_tag _
-	do
-		[ -n "${old_tag}" ] || continue
-		case "${old_tag}" in
-		fss_*)
-			hot_log "删除托管规则：${old_tag}"
-			hot_remove_rule "${old_tag}" || return 1
-			;;
-		esac
-	done < "${HOT_LAST_FILE}"
-	return 0
+	hot_remove_rules_from_file "${HOT_LAST_FILE}"
 }
 
 hot_apply_all_rules() {
-	local line tag target_id domain_files ip_files domain_rules ip_rules place
-	[ -s "${HOT_NEXT_FILE}" ] || return 0
-	while IFS='|' read -r tag target_id domain_files ip_files domain_rules ip_rules place
-	do
-		[ -n "${tag}" ] || continue
-		hot_log "写入规则：${tag} -> ${target_id}"
-		hot_add_rule "${tag}" "${target_id}" "${domain_files}" "${ip_files}" "${domain_rules}" "${ip_rules}" || return 1
-	done < "${HOT_NEXT_FILE}"
-	return 0
+	hot_apply_rules_from_file "${HOT_NEXT_FILE}"
+}
+
+hot_remove_staged_rules() {
+	hot_remove_rules_from_file "${HOT_STAGE_FILE}" 1
+}
+
+hot_apply_staged_rules() {
+	hot_apply_rules_from_file "${HOT_STAGE_FILE}"
 }
 
 hot_seed_state() {
@@ -205,17 +270,63 @@ hot_clear_state() {
 }
 
 hot_mark_applied_state() {
-	cp -f "${HOT_NEXT_FILE}" "${HOT_LAST_FILE}" >/dev/null 2>&1
+	local src_file="${1:-${HOT_NEXT_FILE}}"
+	cp -f "${src_file}" "${HOT_LAST_FILE}" >/dev/null 2>&1
 	printf '%s\n' "$(hot_current_rule_ts)" > "${HOT_APPLIED_RULE_TS_FILE}"
 }
 
+hot_make_stage_tag() {
+	local base_tag="$1"
+	local generation="$2"
+	[ -n "${base_tag}" ] || return 1
+	[ -n "${generation}" ] || return 1
+	printf '%s__%s\n' "${base_tag}" "${generation}"
+}
+
+hot_build_stage_state() {
+	local generation="$1"
+	local src_file="${2:-${HOT_NEXT_FILE}}"
+	local out_file="${3:-${HOT_STAGE_FILE}}"
+	local tag=""
+	local target_id=""
+	local domain_files=""
+	local ip_files=""
+	local domain_rules=""
+	local ip_rules=""
+	local place=""
+
+	[ -n "${generation}" ] || return 1
+	[ -f "${src_file}" ] || return 1
+	: > "${out_file}" || return 1
+	while IFS='|' read -r tag target_id domain_files ip_files domain_rules ip_rules place
+	do
+		[ -n "${tag}" ] || continue
+		printf '%s|%s|%s|%s|%s|%s|%s\n' \
+			"$(hot_make_stage_tag "${tag}" "${generation}")" \
+			"${target_id}" \
+			"${domain_files}" \
+			"${ip_files}" \
+			"${domain_rules}" \
+			"${ip_rules}" \
+			"${place}" >> "${out_file}"
+	done < "${src_file}"
+}
+
+hot_stage_generation() {
+	local generation="$(hot_current_rule_ts)"
+	[ -n "${generation}" ] || generation="$(date +%s)_$$"
+	printf '%s\n' "${generation}"
+}
+
 hot_reload_apply() {
+	local generation=""
+
 	[ -f "${HOT_LOCK_FILE}" ] && {
 		hot_log "已有热重载任务在执行。"
 		return 1
 	}
 	touch "${HOT_LOCK_FILE}" || return 1
-	trap 'rm -f "${HOT_LOCK_FILE}" "${HOT_NEXT_FILE}" >/dev/null 2>&1' EXIT INT TERM
+	trap 'rm -f "${HOT_LOCK_FILE}" "${HOT_NEXT_FILE}" "${HOT_STAGE_FILE}" >/dev/null 2>&1' EXIT INT TERM
 
 	hot_require_ready || return 1
 	hot_log "开始生成目标规则状态。"
@@ -235,15 +346,21 @@ hot_reload_apply() {
 		return 0
 	fi
 
-	hot_remove_all_managed_rules || {
+	generation="$(hot_stage_generation)"
+	hot_build_stage_state "${generation}" "${HOT_NEXT_FILE}" "${HOT_STAGE_FILE}" || {
+		hot_log "生成热重载临时规则失败。"
+		return 1
+	}
+	hot_apply_staged_rules || {
+		hot_log "写入新规则失败，回滚本次新增规则。"
+		hot_remove_staged_rules >/dev/null 2>&1 || true
+		return 1
+	}
+	hot_remove_runtime_rules_except "${HOT_STAGE_FILE}" || {
 		hot_log "删除旧规则失败。"
 		return 1
 	}
-	hot_apply_all_rules || {
-		hot_log "写入新规则失败。"
-		return 1
-	}
-	hot_mark_applied_state
+	hot_mark_applied_state "${HOT_STAGE_FILE}"
 	hot_log "热重载完成。"
 	return 0
 }
