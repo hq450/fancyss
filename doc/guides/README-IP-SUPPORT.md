@@ -78,10 +78,10 @@ xray routing rules (JSON)
 - 向后兼容性：100%
 
 ## 文档
-- [部署指南](doc/deployment-guide.md)
-- [设计文档](doc/node-shunt-design.md)
-- [实施方案](doc/ip-support-implementation.md)
-- [项目报告](doc/project-completion-report.md)
+- [部署指南](./deployment-guide.md)
+- [设计文档](../design/node-shunt-design.md)
+- [实施方案](../implementation/ip-support-implementation.md)
+- [项目报告](../reports/project-completion-report.md)
 
 ## 测试验证
 - ✅ GS7 规则解析测试通过

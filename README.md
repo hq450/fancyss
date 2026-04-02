@@ -11,16 +11,14 @@
 
 ## 插件特色
 
-- 多平台支持：博通armv7，博通armv8，联发科Filogic 830 MT7986A，高通ipq系列
-- 多客户端支持：Shadowsocks、ShadowsocksR、V2ray、Xray、Trojan、NaïveProxy、TuicV5、Hysteria2
-- shadowsocks支持SIP003插件：simple-obfs；V2ray和Xray支持多种协议配置
-- 多种模式支持：gfwlist模式、大陆白名单、游戏模式、全局模式、回国模式
-- 提供多种现成的DNS方案，并且可以自由方便的进行DNS方案自定义配置
-- 支持SS/SSR/V2ray/Xray/Trojan节点的在线订阅，支持节点生成二维码用以分享
-- 故障转移、主备切换、负载均衡、定时重启、定时订阅、规则更新、二进制更新
-- 支持kcptun、udpspeeder、udp2raw，可以实现代理加速，游戏加速，应对丢包等
-- 同时提供full版本和lite版本，hnd_lite版本安装后占用不到8MB的空间，适合小jffs机型
-- armv8机型支持tcp fast open和ss/ssr/trojan多核心运行
+- 面向华硕 Merlin / 官改固件软件中心环境的透明代理插件，覆盖 `arm`、`hnd`、`hnd_v8`、`qca`、`mtk`、`ipq32`、`ipq64` 七个平台
+- 支持 `SS`、`SSR`、`VMess`、`VLESS`、`Trojan`、`NaïveProxy`、`TUIC`、`Hysteria2`，以及自定义 `Xray/V2Ray JSON` 节点
+- 支持手动添加、URI 导入、在线订阅三种节点输入方式，支持订阅过滤、二维码分享、订阅 UA 适配
+- 提供 `chinadns-ng` 和 `smartdns` 两套 DNS 分流方案，并支持不同分流策略、动态解析 / 预解析切换
+- 支持 `gfwlist`、大陆白名单、游戏、全局、回国、`Xray` 节点分流等多种代理模式
+- 支持规则在线维护、节点分流规则集同步、客户端侧规则自动更新，以及 `geosite/geoip` 资产打包
+- 支持 TCP / UDP 透明代理、QUIC 屏蔽、访问控制、IPv6 相关代理和 DNS 处理
+- 支持单节点延迟检测、批量 Web 延迟测速、运行状态探测、简单故障转移、定时订阅 / 规则 / 二进制更新
 
 ## 支持机型/固件
 
@@ -88,30 +86,26 @@
 | ZenWiFi_BT8P | 官改 | mtk-7988_7990 | MT7988D | armv8 | 5.4.281 | fancyss_mtk |
 ## 版本选择
 
-fancyss 3.0支持hnd、hnd_v8、qca、arm、mtk 、ipq32、ipq64七个平台，每个平台又有full版本和lite版本
+fancyss 3.0 当前同时区分“平台包”和“包型”两个维度，选包时建议按下面顺序判断。
 
-full版本为全功能版本，支持SS、 SSR、Vmess、 Vless、Trojan、NaïveProxy、TuicV5、Hysteria2 八种协议，安装包体积较大
+1. 先按平台选择包名前缀
+   - `fancyss_arm`：老 `BCM470x` / `armv7` / `2.6` 内核机型
+   - `fancyss_hnd`：`BCM675x/6755/6756` 等 32 位博通平台
+   - `fancyss_hnd_v8`：`BCM4906/4908/4912/4916` 等 64 位博通平台
+   - `fancyss_qca`：老 `QCA/IPQ807x` 平台
+   - `fancyss_mtk`：`MT798x / MT7988` 平台
+   - `fancyss_ipq32` / `fancyss_ipq64`：新 `QCA IPQ53xx` 平台
 
-1. full版本支持tuic，并默认提供tuic-client二进制
-2. full版本虽然支持naiveproxy，但不提供kcptun二进制，如果使用naiveproxy，会提示下载二进制
+2. 再按 `full` / `lite` 选择包型
+   - `full` 和 `lite` 共享绝大部分主功能：透明代理、DNS 分流、规则维护、订阅、Web 延迟测速、故障转移、节点分流，以及 `SS/SSR/VMess/VLESS/Trojan/Hysteria2/Xray JSON` 等主路径
+   - `full` 额外保留 `NaïveProxy` / `TUIC` 相关前端、脚本和二进制，并带上 `ipt2socks`、`haveged`、`ss_v2ray.sh` 以及部分兼容资源
+   - `lite` 主要是为了节省 `JFFS` 空间，裁掉 `NaïveProxy` / `TUIC` 相关资源和少量附属文件；如果你不使用这两类协议，优先选 `lite`
 
-lite版本为精简版本，支持SS、 SSR、 Vmess、 Vless、 Trojan 五种协议，安装包小巧，以下为lite版本精简内容：
-
-1. lite版本移除了NaïveProxy支持及其相关二进制文件：naive、ipt2socks
-2. lite版本移除了tuic支持
-3. lite版本移除了hysteria2支持
-4. lite版本移除了haveged，因为现在较新的固件系统自带了熵增软件
-5. lite版本移除了v2ray二进制，默认用xray替代v2ray
-
-如果是不折腾以上被精简功能的用户，完全可以使用体积更小的lite版本
-
-RT-AX56U_V2、RT-AX57 这种jffs分区极小(15MB)的机型，直接使用lite版本即可
-
-要切换为lite版本，直接安装lite版本的离线安装包即可，以后在线更新也会维持为lite版本
-
-要切换为full版本，直接安装full版本的离线安装包即可，以后在线更新也会维持为full版本
-
-RT-AX86U、GT-AX6000等armv8机型（见上表），从3.0.6开始建议安装fancyss_hnd_v8版本，当然fancyss_hnd同样兼容
+3. 选择建议
+   - 需要 `NaïveProxy` 或 `TUIC`，请选择 `full`
+   - `JFFS` 空间紧张，或者只使用 `SS/SSR/VMess/VLESS/Trojan/Hysteria2/Xray`，请选择 `lite`
+   - 在线更新会保持当前平台和包型；要在 `full` 和 `lite` 之间切换，需要重新安装对应离线包
+   - `RT-AX86U`、`GT-AX6000` 这类 armv8 博通机型，应优先选择 `fancyss_hnd_v8`
 
 ## 插件下载
 
@@ -174,61 +168,62 @@ tx：华硕天选青色皮肤
 
 ## 目录说明
 
-1. **fancyss**：插件代码主目录，由build.sh打包成不同路由器的离线安装包
-2. **binaries**：一些在线更新的二进制程序，如v2ray、xray
-3. **packages**：不同平台的离线安装包的最新版本，用于插件的在线更新
-4. **rules**：插件的规则文件，如gfwlist.conf、chnroute.txt、cdn.txt
+- **fancyss/**：插件主体源码，也是 `build.sh` 的直接打包输入目录
+- **binaries/**：上游二进制存档、更新脚本和本项目发布时要同步到各平台 `bin-*` 的文件
+- **rules_ng/**：传统规则源，如 `gfwlist`、`chnroute`、`black_list` 等
+- **rules_ng2/**：节点分流使用的新规则资产树，包含 `site/`、`ip/`、`meta/`、`dat/`
+- **scripts/**：仓库级辅助脚本，主要负责 `geosite/geoip` 资产生成和本地工具链准备
+- **tool/**：自研工具源码子项目（submodule），目前主要是 `geotool` 和 `xapi-tool`
+- **packages/**：打包产物目录，包含各平台离线安装包和 `version.json.js`
+- **doc/**：文档目录，`doc/` 根目录是用户文档，其余分类目录主要面向开发和维护
 
 ## 打包插件
 
-> 打包过程就是将fancyss目录下相关二进制和代码文件通过脚本生成不同平台，不同版本的离线安装包。
+> `build.sh` 会把 `fancyss/` 复制为临时目录 `shadowsocks/`，再按平台和包型裁剪二进制、脚本和 Web 页面，最终生成离线安装包。
 >
-> 为保证在不同路由器/固件版本中都能运行，项目提供的所有二进制都是预编译好的，且尽量提供全静态编译版本。
+> 打包前会自动同步传统规则、重建 `rules_ng2` 的 `geosite/geoip` 资产，并从 `binaries/` 中拷贝当前指定版本的核心二进制。
 
-1. 克隆本项目：使用linux系统，比如Ubuntu 20.04
+1. 使用 Linux 环境准备仓库，建议带上 submodule 一起拉取
 
    ```bash
-   git clone https://github.com/hq450/fancyss.git
+   git clone --recurse-submodules https://github.com/hq450/fancyss.git
    ```
 
-2. 切换到3.0分支
+2. 切换到 `3.0` 分支
 
    ```bash
    cd fancyss
    git checkout 3.0
    ```
 
-3. 修改代码：根据自己需要修改代码主目录fancyss目录下的相关文件，如`./fancyss/ss/ssconfig.sh`
+3. 根据需要修改以下内容
+   - 插件运行逻辑：`fancyss/`
+   - 规则资产：`rules_ng/`、`rules_ng2/`
+   - 二进制版本：`binaries/`
+   - geodata 生成脚本：`scripts/`
 
-4. 打包插件，运行打包命令后会自动同步rules下最新的规则和binaries下最新的二进制
-
-   如需要开发，请使用`sh build.sh debug`命令，将会额外打包带`debug`字样的安装包，安装包内网页文件等保留了注释信息
+4. 运行打包脚本
 
    ```bash
    sh build.sh
    ```
 
-5. 打包好的离线安装包位于`./packages/`目录，包含以下5个平台的离线安装文件，每个平台分为full版本和lite版本
+5. 当前 `build.sh` 的实际行为
+   - 会先清空并重建 `packages/`
+   - 会生成 7 个平台各 2 个 `release` 包，共 14 个：`fancyss_<platform>_<full|lite>.tar.gz`
+   - 会额外生成 7 个平台的 `full debug` 包：`fancyss_<platform>_full_debug.tar.gz`
+   - 生成完成后会同时更新 `packages/version.json.js`
 
-   ```bash
-   fancyss_arm_full.tar.gz
-   fancyss_arm_lite.tar.gz
-   fancyss_hnd_full.tar.gz
-   fancyss_hnd_lite.tar.gz
-   fancyss_hnd_v8_full.tar.gz
-   fancyss_hnd_v8_lite.tar.gz
-   fancyss_qca_full.tar.gz
-   fancyss_qca_lite.tar.gz
-   fancyss_mtk_full.tar.gz
-   fancyss_mtk_lite.tar.gz
-   ```
+6. 如果你只想打某个平台、某种包型，或者不想同时生成 debug 包，直接修改 [build.sh](./build.sh) 里的 `make()` 即可
 
 ## 相关链接
 
-* **fancyss 3.0**更新日志：https://github.com/hq450/fancyss/blob/3.0/Changelog.txt
-
-* 官改/梅改固件下载【网方网站】（最新固件）：[https://www.koolcenter.com](https://www.koolcenter.com/)
-* 官改/梅改固件下载【固件镜像】（次新固件）：[https://fw.koolcenter.com](https://fw.koolcenter.com)
+- **fancyss 3.0 更新日志**：https://github.com/hq450/fancyss/blob/3.0/Changelog.txt
+- **fancyss 历史离线包**：https://github.com/hq450/fancyss_history_package
+- **geotool**：https://github.com/hq450/geotool
+- **xapi-tool**：https://github.com/hq450/xapi-tool
+- **官改/梅改固件下载【网方网站】**：https://www.koolcenter.com
+- **官改/梅改固件下载【固件镜像】**：https://fw.koolcenter.com
 
 ## Star History
 

@@ -2,7 +2,7 @@
 
 ## 1. 文档目标
 
-本文是在 `doc/node_data_storage_refactor_design.md` 的基础上，进一步给出可以直接落地的实施规格，回答以下问题：
+本文是在 `doc/design/node_data_storage_refactor_design.md` 的基础上，进一步给出可以直接落地的实施规格，回答以下问题：
 
 - 新节点数据到底存成什么样
 - 新旧字段如何一一映射

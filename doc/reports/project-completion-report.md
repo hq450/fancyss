@@ -144,14 +144,14 @@ geoip:cn                    # GeoIP 标签
 10. `rules_ng2/shunt/chnlist.txt`
 
 ### 文档文件（8 个）
-1. `doc/ruleset-research.md` - 规则集调研报告
-2. `doc/ip-matching-design.md` - IP 匹配方案设计
-3. `doc/ip-support-implementation.md` - 实施方案
-4. `doc/iteration-1-summary.md` - 迭代 1 总结
-5. `doc/iteration-2-summary.md` - 迭代 2 总结
-6. `doc/ip-support-final-summary.md` - 最终总结
-7. `doc/deployment-guide.md` - 部署指南
-8. `doc/project-completion-report.md` - 本报告
+1. `doc/analysis/ruleset-research.md` - 规则集调研报告
+2. `doc/design/ip-matching-design.md` - IP 匹配方案设计
+3. `doc/implementation/ip-support-implementation.md` - 实施方案
+4. `doc/reports/iteration-1-summary.md` - 迭代 1 总结
+5. `doc/reports/iteration-2-summary.md` - 迭代 2 总结
+6. `doc/reports/ip-support-final-summary.md` - 最终总结
+7. `doc/guides/deployment-guide.md` - 部署指南
+8. `doc/reports/project-completion-report.md` - 本报告
 
 ## 项目亮点
 

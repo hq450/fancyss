@@ -9,9 +9,9 @@
 
 ### 1. 调研和规划
 - ✅ 完成 clash/singbox 规则集调研
-- ✅ 创建调研报告：`doc/ruleset-research.md`
-- ✅ 创建 IP 匹配方案设计：`doc/ip-matching-design.md`
-- ✅ 创建实施方案：`doc/ip-support-implementation.md`
+- ✅ 创建调研报告：`doc/analysis/ruleset-research.md`
+- ✅ 创建 IP 匹配方案设计：`doc/design/ip-matching-design.md`
+- ✅ 创建实施方案：`doc/implementation/ip-support-implementation.md`
 
 ### 2. 新增规则集（5个）
 - ✅ `telegram.txt` (26条：10域名 + 16 IP段)
@@ -93,9 +93,9 @@ xray routing rule JSON
 4. `rules_ng2/shunt/apple-cn.txt` - Apple CN 直连规则
 5. `rules_ng2/shunt/chnlist.txt` - 国内常见网站（含 geoip）
 6. `fancyss/scripts/ss_parse_ip_geoip.sh` - IP/GEOIP 解析脚本
-7. `doc/ruleset-research.md` - 规则集调研报告
-8. `doc/ip-matching-design.md` - IP 匹配方案设计
-9. `doc/ip-support-implementation.md` - 实施方案
+7. `doc/analysis/ruleset-research.md` - 规则集调研报告
+8. `doc/design/ip-matching-design.md` - IP 匹配方案设计
+9. `doc/implementation/ip-support-implementation.md` - 实施方案
 10. `.ralph-progress.md` - 进度追踪文件
 
 ### 修改文件

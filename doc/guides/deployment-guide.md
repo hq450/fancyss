@@ -238,7 +238,7 @@ A: 当前不支持，仅支持 domain/full/keyword/ip-cidr/geoip。
 - 📋 高级匹配功能
 
 ## 参考资料
-- [设计文档](doc/node-shunt-design.md)
-- [MVP 文档](doc/node-shunt-mvp.md)
-- [实施方案](doc/ip-support-implementation.md)
-- [最终总结](doc/ip-support-final-summary.md)
+- [设计文档](../design/node-shunt-design.md)
+- [MVP 文档](../implementation/node-shunt-mvp.md)
+- [实施方案](../implementation/ip-support-implementation.md)
+- [最终总结](../reports/ip-support-final-summary.md)

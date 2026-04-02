@@ -12,7 +12,7 @@
 
 本文只做设计，不涉及当前代码修改。
 
-如果要继续推进实现层，请同时参考：`doc/node_data_storage_refactor_spec.md`。
+如果要继续推进实现层，请同时参考：`doc/implementation/node_data_storage_refactor_spec.md`。
 
 ---
 

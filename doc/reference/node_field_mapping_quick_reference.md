@@ -1,6 +1,6 @@
 # fancyss 节点字段精简速查表
 
-本文是 `doc/dbus_key_mapping_reference.md` 的节点专用精简版，只保留：
+本文是 `doc/reference/dbus_key_mapping_reference.md` 的节点专用精简版，只保留：
 
 - 当前节点/备用节点/顺序相关键
 - 节点本体字段的新旧对应

@@ -4,7 +4,7 @@
 
 本文描述 `3.5.10` 首个可用版“节点分流”的实际落地方案。
 
-这份文档对应当前代码实现，不等同于 `doc/node-shunt-design.md` 中更完整的长期规划。
+这份文档对应当前代码实现，不等同于 `doc/design/node-shunt-design.md` 中更完整的长期规划。
 
 当前版本优先保证：
 
@@ -501,7 +501,7 @@
 
 ## 16. 与设计文档的差异追踪
 
-以下是 MVP 实际实现与 `doc/node-shunt-design.md` 设计文档之间的关键差异：
+以下是 MVP 实际实现与 `doc/design/node-shunt-design.md` 设计文档之间的关键差异：
 
 | 设计文档章节 | 设计目标 | MVP 实际 | 备注 |
 |---|---|---|---|
@@ -513,4 +513,4 @@
 | §19 规则存储 | TSV 文件 | dbus base64(json) + 文件镜像 | 规则量小时可用 |
 | §25 实施顺序 | 先构建资产 → runtime → UI | 先 runtime + UI，资产用 TXT 过渡 | 更务实的落地路径 |
 
-完整分析和后续演进建议见 `doc/node-shunt-supplement.md`。
+完整分析和后续演进建议见 `doc/analysis/node-shunt-supplement.md`。

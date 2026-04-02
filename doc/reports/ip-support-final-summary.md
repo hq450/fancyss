@@ -96,11 +96,11 @@ xray routing rule JSON
 2. `fancyss/res/shunt_manifest.json.js` - 前端规则清单
 
 ### 文档文件
-1. `doc/ruleset-research.md` - 规则集调研报告
-2. `doc/ip-matching-design.md` - IP 匹配方案设计
-3. `doc/ip-support-implementation.md` - 实施方案
-4. `doc/iteration-1-summary.md` - 迭代 1 总结
-5. `doc/iteration-2-summary.md` - 迭代 2 总结
+1. `doc/analysis/ruleset-research.md` - 规则集调研报告
+2. `doc/design/ip-matching-design.md` - IP 匹配方案设计
+3. `doc/implementation/ip-support-implementation.md` - 实施方案
+4. `doc/reports/iteration-1-summary.md` - 迭代 1 总结
+5. `doc/reports/iteration-2-summary.md` - 迭代 2 总结
 6. `.ralph-progress.md` - 进度追踪
 
 ## 性能影响

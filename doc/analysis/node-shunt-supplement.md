@@ -1,6 +1,6 @@
 # fancyss 节点分流补充分析
 
-> 本文是对 `doc/node-shunt-design.md`（设计文档）和 `doc/node-shunt-mvp.md`（MVP 文档）的补充分析。
+> 本文是对 `doc/design/node-shunt-design.md`（设计文档）和 `doc/implementation/node-shunt-mvp.md`（MVP 文档）的补充分析。
 > 基于 3.5.10 首版实现的代码审查，梳理设计与实现之间的差异、技术债务、后续功能方向和优先级建议。
 
 ---

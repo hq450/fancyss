@@ -1,6 +1,6 @@
 # fancyss 节点分流设计文档（一期正式方案）
 
-> 说明：`3.5.10` 首个可用版的实际落地与优化细节，见 `doc/node-shunt-mvp.md`。当前已落地版本前端不再提供“节点分流开关”和“基础模板”选择，而是固定启用 `mode=7` 并维护“兜底节点 + 分类规则”。
+> 说明：`3.5.10` 首个可用版的实际落地与优化细节，见 `doc/implementation/node-shunt-mvp.md`。当前已落地版本前端不再提供“节点分流开关”和“基础模板”选择，而是固定启用 `mode=7` 并维护“兜底节点 + 分类规则”。
 
 ## 1. 文档目的
 
@@ -42,7 +42,7 @@
 10. 规则引用节点必须使用 schema 2 的稳定节点 ID，不能使用表格顺序号
 11. 与 `node_direct` 域名缓存、`webtest` 的 outbound cache 体系统一设计，避免重复生成配置
 
-> **MVP 过渡说明**：`3.5.10` 首个可用版的实际落地采用了务实的过渡策略——先跳过 geosite/geoip 资产构建，用 `rules_ng2/shunt/*.txt` 的 TXT 规则内联到 xray routing domain 数组中；基础模板简化为 `ingress_mode`（2=大陆白名单引流，5=全量引流）；规则存储暂用 dbus base64(json) + 文件镜像。实际落地细节见 `doc/node-shunt-mvp.md`，后续优化方向见 `doc/node-shunt-supplement.md`。
+> **MVP 过渡说明**：`3.5.10` 首个可用版的实际落地采用了务实的过渡策略——先跳过 geosite/geoip 资产构建，用 `rules_ng2/shunt/*.txt` 的 TXT 规则内联到 xray routing domain 数组中；基础模板简化为 `ingress_mode`（2=大陆白名单引流，5=全量引流）；规则存储暂用 dbus base64(json) + 文件镜像。实际落地细节见 `doc/implementation/node-shunt-mvp.md`，后续优化方向见 `doc/analysis/node-shunt-supplement.md`。
 
 ---
 
@@ -724,7 +724,7 @@ IPv6 是节点分流设计中的重点，不可作为附属功能对待。
 
 其中第 10 项由基础模板决定。
 
-> **MVP 实现说明**：`3.5.10` 首版实现仅覆盖了上述优先级的第 1 项（socks-in → 兜底节点）、第 8 项（用户节点分流域名规则 → 目标节点）和第 10 项（fallback）。第 2-7、9 项的直连/代理判断由 iptables 层的 `SHADOWSOCKS_SHU` 链承担（chnroute / white_list / black_list 等 ipset 匹配），功能等效但语义分布在两层。后续引入 geosite/geoip 资产后，可逐步将这些规则收拢到 xray routing 层。详见 `doc/node-shunt-supplement.md` §3。
+> **MVP 实现说明**：`3.5.10` 首版实现仅覆盖了上述优先级的第 1 项（socks-in → 兜底节点）、第 8 项（用户节点分流域名规则 → 目标节点）和第 10 项（fallback）。第 2-7、9 项的直连/代理判断由 iptables 层的 `SHADOWSOCKS_SHU` 链承担（chnroute / white_list / black_list 等 ipset 匹配），功能等效但语义分布在两层。后续引入 geosite/geoip 资产后，可逐步将这些规则收拢到 xray routing 层。详见 `doc/analysis/node-shunt-supplement.md` §3。
 
 ---
 
@@ -1124,7 +1124,7 @@ rule_id<TAB>enabled<TAB>match_type<TAB>match_value<TAB>target_node_id<TAB>remark
 6. 补齐 ACL / failover / restore / subscribe / status 等联动逻辑
 7. 做 IPv4 / IPv6 双栈联调
 
-> **MVP 实际执行顺序**：首版落地采用了不同于上述规划的顺序。实际路径为：先实现 xray runtime compiler（§3）和前端 UI（§5），规则资产用 `rules_ng2/shunt/*.txt` TXT 过渡（跳过 §1 的 geosite/geoip 构建），webtest cache 直接复用而非抽象为独立层（简化 §2），DNS 侧复用 `black_list.txt`（简化 §4）。这一路径更务实——先跑通端到端功能再补齐资产和架构，但留下了 geosite/geoip 资产、DNS 独立化等技术债务。详见 `doc/node-shunt-supplement.md` §2 差异追踪表。
+> **MVP 实际执行顺序**：首版落地采用了不同于上述规划的顺序。实际路径为：先实现 xray runtime compiler（§3）和前端 UI（§5），规则资产用 `rules_ng2/shunt/*.txt` TXT 过渡（跳过 §1 的 geosite/geoip 构建），webtest cache 直接复用而非抽象为独立层（简化 §2），DNS 侧复用 `black_list.txt`（简化 §4）。这一路径更务实——先跑通端到端功能再补齐资产和架构，但留下了 geosite/geoip 资产、DNS 独立化等技术债务。详见 `doc/analysis/node-shunt-supplement.md` §2 差异追踪表。
 
 ---
 
@@ -1203,6 +1203,6 @@ rule_id<TAB>enabled<TAB>match_type<TAB>match_value<TAB>target_node_id<TAB>remark
   `https://github.com/DustinWin/domain-list-custom/tree/domains`
 
 - fancyss 现有文档：
-  - `doc/node-server-dynamic-resolve-design.md`
-  - `doc/webtest_design_and_maintenance.md`
-  - `doc/node_data_storage_refactor_spec.md`
+  - `doc/design/node-server-dynamic-resolve-design.md`
+  - `doc/implementation/webtest_design_and_maintenance.md`
+  - `doc/implementation/node_data_storage_refactor_spec.md`
