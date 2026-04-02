@@ -1138,6 +1138,32 @@ fss_shunt_json_array_from_csv() {
 	IFS="${old_ifs}"
 }
 
+fss_shunt_csv_to_xray_refs() {
+	local csv="$1"
+	local prefix="$2"
+	local old_ifs="${IFS}"
+	local item=""
+	local first=1
+
+	IFS=','
+	printf '['
+	for item in ${csv}
+	do
+		[ -n "${item}" ] || continue
+		item="$(printf '%s' "${item}" | awk '{print toupper($0)}')"
+		item="${prefix}${item}"
+		item=$(printf '%s' "${item}" | sed 's/\\/\\\\/g; s/"/\\"/g')
+		if [ "${first}" = "1" ]; then
+			first=0
+		else
+			printf ','
+		fi
+		printf '"%s"' "${item}"
+	done
+	printf ']'
+	IFS="${old_ifs}"
+}
+
 fss_shunt_emit_routing_rule_line() {
 	local field_name="$1"
 	local values_json="$2"
@@ -1190,7 +1216,7 @@ fss_shunt_emit_routing_rules_json() {
 			site_assets_csv="$(fss_shunt_preset_assets_csv "${preset}" site)"
 			ip_assets_csv="$(fss_shunt_preset_assets_csv "${preset}" ip)"
 			if [ -n "${site_assets_csv}" ]; then
-				values_json="$(fss_shunt_json_array_from_csv "${site_assets_csv}" 'geosite:')"
+				values_json="$(fss_shunt_csv_to_xray_refs "${site_assets_csv}" 'geosite:')"
 				rule_line="$(fss_shunt_emit_routing_rule_line "domain" "${values_json}" "${target_id}" "$(fss_shunt_make_rule_tag "${rule_id}" domain)" 2>/dev/null || true)"
 				if [ -n "${rule_line}" ]; then
 					[ "${first_rule}" = "1" ] || printf ',\n'
@@ -1199,7 +1225,7 @@ fss_shunt_emit_routing_rules_json() {
 				fi
 			fi
 			if [ -n "${ip_assets_csv}" ]; then
-				values_json="$(fss_shunt_json_array_from_csv "${ip_assets_csv}" 'geoip:')"
+				values_json="$(fss_shunt_csv_to_xray_refs "${ip_assets_csv}" 'geoip:')"
 				rule_line="$(fss_shunt_emit_routing_rule_line "ip" "${values_json}" "${target_id}" "$(fss_shunt_make_rule_tag "${rule_id}" ip)" 2>/dev/null || true)"
 				if [ -n "${rule_line}" ]; then
 					[ "${first_rule}" = "1" ] || printf ',\n'
@@ -1298,7 +1324,7 @@ fss_shunt_write_hot_reload_state() {
 					if ($i == "") {
 						continue
 					}
-					printf "%sgeosite:%s", (n++ ? "," : ""), $i
+					printf "%sgeosite:%s", (n++ ? "," : ""), toupper($i)
 				}
 			}')"
 		fi
@@ -1308,7 +1334,7 @@ fss_shunt_write_hot_reload_state() {
 					if ($i == "") {
 						continue
 					}
-					printf "%sgeoip:%s", (n++ ? "," : ""), $i
+					printf "%sgeoip:%s", (n++ ? "," : ""), toupper($i)
 				}
 			}')"
 		fi

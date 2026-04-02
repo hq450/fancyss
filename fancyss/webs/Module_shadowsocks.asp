@@ -2995,6 +2995,62 @@ function show_shunt_rule_restart_notice() {
 		alert(msg);
 	}
 }
+function save_shunt_rule_editor_state(editing, originalRulesState, layerIndex) {
+	var nextRule = normalize_shunt_rule(editing, 1);
+	var selectedSource = $("#shunt_rule_source").val() || "";
+	var selectedAction = get_shunt_editor_selected_action();
+	nextRule.enabled = "1";
+	if (selectedAction == "direct") {
+		nextRule.target_node_id = SHUNT_DIRECT_TARGET;
+	} else if (selectedAction == "reject") {
+		nextRule.target_node_id = SHUNT_REJECT_TARGET;
+	} else {
+		nextRule.target_node_id = resolve_node_id($("#shunt_rule_target").val() || "", true);
+		if (!nextRule.target_node_id || !is_shunt_supported_node(nextRule.target_node_id)) {
+			alert("请选择一个可用于 xray 分流的目标节点。");
+			return false;
+		}
+	}
+	if (!shuntPresetMap[selectedSource]) {
+		alert("请选择一个规则合集。");
+		return false;
+	}
+	nextRule.source = "builtin";
+	nextRule.preset = String(selectedSource);
+	nextRule.custom_b64 = "";
+	nextRule.remark = shuntPresetMap[selectedSource] ? shuntPresetMap[selectedSource].label : String(selectedSource);
+	var nextRules = shuntRulesState.slice(0);
+	var replaced = false;
+	for (var i = 0; i < nextRules.length; i++) {
+		if (String(nextRules[i].id) == String(nextRule.id)) {
+			nextRules[i] = nextRule;
+			replaced = true;
+			break;
+		}
+	}
+	if (!replaced) {
+		if (selectedAction == "proxy") {
+			nextRules.push(nextRule);
+		} else {
+			nextRules.unshift(nextRule);
+		}
+	}
+	if (!check_shunt_rule_limits(nextRules)) {
+		return false;
+	}
+	if (JSON.stringify(nextRules) == originalRulesState) {
+		layer.close(layerIndex);
+		return true;
+	}
+	shuntRulesState = nextRules;
+	render_shunt_rule_list();
+	layer.close(layerIndex);
+	setTimeout(function() {
+		scroll_shunt_rule_into_view(nextRule.id);
+	}, 80);
+	show_shunt_rule_restart_notice();
+	return true;
+}
 function open_shunt_rule_editor(ruleId, overrides) {
 	var editing = null;
 	var originalRulesState = JSON.stringify(shuntRulesState || []);
@@ -3073,6 +3129,11 @@ function open_shunt_rule_editor(ruleId, overrides) {
 			toggle_shunt_editor_source_fields(sourceValue);
 			$("#shunt_rule_source,#shunt_rule_target").off(".shuntEditor").on("change.shuntEditor", refresh_shunt_rule_editor_preview);
 			set_shunt_editor_action(actionValue, false);
+			layero.find(".layui-layer-btn0").attr("id", "shunt_rule_save").off("click").on("click", function(e) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				return save_shunt_rule_editor_state(editing, originalRulesState, index);
+			});
 			$(window).off("resize.shuntEditor").on("resize.shuntEditor", function() {
 				position_shunt_rule_editor_layer(index);
 			});
@@ -3083,60 +3144,7 @@ function open_shunt_rule_editor(ruleId, overrides) {
 			shuntRuleEditorLayerIndex = null;
 		},
 		yes: function(index) {
-			var nextRule = normalize_shunt_rule(editing, 1);
-			var selectedSource = $("#shunt_rule_source").val() || "";
-			var selectedAction = get_shunt_editor_selected_action();
-			nextRule.enabled = "1";
-			if (selectedAction == "direct") {
-				nextRule.target_node_id = SHUNT_DIRECT_TARGET;
-			} else if (selectedAction == "reject") {
-				nextRule.target_node_id = SHUNT_REJECT_TARGET;
-			} else {
-				nextRule.target_node_id = resolve_node_id($("#shunt_rule_target").val() || "", true);
-				if (!nextRule.target_node_id || !is_shunt_supported_node(nextRule.target_node_id)) {
-					alert("请选择一个可用于 xray 分流的目标节点。");
-					return false;
-				}
-			}
-			if (!shuntPresetMap[selectedSource]) {
-				alert("请选择一个规则合集。");
-				return false;
-			}
-			nextRule.source = "builtin";
-			nextRule.preset = String(selectedSource);
-			nextRule.custom_b64 = "";
-			nextRule.remark = shuntPresetMap[selectedSource] ? shuntPresetMap[selectedSource].label : String(selectedSource);
-			var nextRules = shuntRulesState.slice(0);
-			var replaced = false;
-			for (var i = 0; i < nextRules.length; i++) {
-				if (String(nextRules[i].id) == String(nextRule.id)) {
-					nextRules[i] = nextRule;
-					replaced = true;
-					break;
-				}
-			}
-			if (!replaced) {
-				if (selectedAction == "proxy") {
-					nextRules.push(nextRule);
-				} else {
-					nextRules.unshift(nextRule);
-				}
-			}
-			if (!check_shunt_rule_limits(nextRules)) {
-				return false;
-			}
-			if (JSON.stringify(nextRules) == originalRulesState) {
-				layer.close(index);
-				return true;
-			}
-			shuntRulesState = nextRules;
-			render_shunt_rule_list();
-			layer.close(index);
-			setTimeout(function() {
-				scroll_shunt_rule_into_view(nextRule.id);
-			}, 80);
-			show_shunt_rule_restart_notice();
-			return true;
+			return save_shunt_rule_editor_state(editing, originalRulesState, index);
 		}
 	});
 }
