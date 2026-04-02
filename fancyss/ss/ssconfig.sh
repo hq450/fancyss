@@ -1471,6 +1471,48 @@ kill_process() {
 		echo 1 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
 }
+
+shunt_hot_restart_eligible() {
+	[ "${ss_basic_status}" = "1" ] || return 1
+	[ "${ss_basic_mode}" = "7" ] || return 1
+	[ "${ss_basic_shunt_hot_reload}" = "1" ] || return 1
+	[ -x "/koolshare/scripts/ss_shunt_hot_reload.sh" ] || return 1
+	[ -s "/koolshare/ss/xray.json" ] || return 1
+	pidof xray >/dev/null 2>&1 || return 1
+	return 0
+}
+
+shunt_configs_equivalent() {
+	local old_file="$1"
+	local new_file="$2"
+	local jq_bin=""
+	local old_norm=""
+	local new_norm=""
+
+	[ -s "${old_file}" ] || return 1
+	[ -s "${new_file}" ] || return 1
+	if type fss_pick_jq_bin >/dev/null 2>&1; then
+		jq_bin="$(fss_pick_jq_bin 2>/dev/null)"
+	fi
+	[ -n "${jq_bin}" ] || jq_bin="$(command -v jq 2>/dev/null)"
+	if [ -n "${jq_bin}" ]; then
+		old_norm="${old_file}.norm.$$"
+		new_norm="${new_file}.norm.$$"
+		"${jq_bin}" -S . "${old_file}" > "${old_norm}" 2>/dev/null || {
+			rm -f "${old_norm}" "${new_norm}" >/dev/null 2>&1
+			return 1
+		}
+		"${jq_bin}" -S . "${new_file}" > "${new_norm}" 2>/dev/null || {
+			rm -f "${old_norm}" "${new_norm}" >/dev/null 2>&1
+			return 1
+		}
+		cmp -s "${old_norm}" "${new_norm}"
+		local ret=$?
+		rm -f "${old_norm}" "${new_norm}" >/dev/null 2>&1
+		return "${ret}"
+	fi
+	cmp -s "${old_file}" "${new_file}"
+}
 # ================================= ss start ==============================
 
 init_current_node_server_state() {
@@ -6815,13 +6857,26 @@ disable_ss() {
 }
 
 apply_ss() {
+	local shunt_hot_restart="0"
+	local shunt_prev_xray_json=""
+
 	echo_date ======================= 梅林固件 - 【科学上网】 ========================
 	echo_date
 	if [ "${ss_basic_status}" == "1" ];then
+		if shunt_hot_restart_eligible; then
+			shunt_prev_xray_json="/tmp/fss_shunt_prev_xray.json.$$"
+			cp -f /koolshare/ss/xray.json "${shunt_prev_xray_json}" >/dev/null 2>&1 || shunt_prev_xray_json=""
+			if [ -s "${shunt_prev_xray_json}" ]; then
+				shunt_hot_restart="1"
+				echo_date "[hot-reload] 检测到 xray 分流热重载已启用，将在新配置生成后判断是否可保留当前 xray 进程。"
+			fi
+		fi
 		echo_date ------------------------- 关闭【科学上网】 -----------------------------
 		ss_pre_stop
 		stop_status
-		kill_process
+		if [ "${shunt_hot_restart}" != "1" ]; then
+			kill_process
+		fi
 		remove_ss_trigger_job
 		remove_ss_reboot_job
 		restore_conf
@@ -6833,6 +6888,8 @@ apply_ss() {
 	# pre-start
 	echo_date ------------------------- 启动【科学上网】 -----------------------------
 	# start
+	FSS_SKIP_XRAY_PORT_CLEANUP=""
+	[ "${shunt_hot_restart}" = "1" ] && FSS_SKIP_XRAY_PORT_CLEANUP="1"
 	prepare_system
 	resolv_server_ip
 	load_module
@@ -6863,7 +6920,16 @@ apply_ss() {
 
 	# 开启代理主程序
 	if [ "${ss_basic_mode}" = "7" ]; then
-		start_xray
+		if [ "${shunt_hot_restart}" = "1" ] && shunt_configs_equivalent "${shunt_prev_xray_json}" "/koolshare/ss/xray.json"; then
+			echo_date "[hot-reload] 检测到 xray 配置未变化，保留当前 xray 进程并复用已有运行时统计。"
+		else
+			if [ "${shunt_hot_restart}" = "1" ]; then
+				echo_date "[hot-reload] 检测到 xray 配置已变化，回退为重启 xray 主进程。"
+				FSS_SKIP_XRAY_PORT_CLEANUP=""
+				kill_process
+			fi
+			start_xray
+		fi
 	else
 		[ "${ss_basic_type}" == "0" ] && start_xray
 		[ "${ss_basic_type}" == "1" ] && start_ssr_redir
@@ -6897,6 +6963,8 @@ apply_ss() {
 	# store current status
 	dbus set ss_basic_status="1"
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
+	FSS_SKIP_XRAY_PORT_CLEANUP=""
+	rm -f "${shunt_prev_xray_json}" >/dev/null 2>&1
 }
 
 # for debug

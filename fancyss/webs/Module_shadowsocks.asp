@@ -1881,6 +1881,39 @@ function delete_shunt_custom_preset_from_form() {
 	}
 	return false;
 }
+function save_shunt_custom_preset_from_form() {
+	var existingId = $("#shunt_custom_pick").val() || "";
+	if (existingId == "__new__") {
+		existingId = "";
+	}
+	var oldPresets = JSON.stringify(shuntCustomPresetsState || []);
+	var preset = build_shunt_custom_preset_from_form(existingId);
+	if (!preset) {
+		return false;
+	}
+	var replaced = false;
+	for (var i = 0; i < shuntCustomPresetsState.length; i++) {
+		if (String(shuntCustomPresetsState[i].id) == String(preset.id)) {
+			shuntCustomPresetsState[i] = preset;
+			replaced = true;
+			break;
+		}
+	}
+	if (!replaced) {
+		if (shuntCustomPresetsState.length >= SHUNT_MAX_CUSTOM_PRESETS) {
+			alert("定制规则当前最多支持 " + SHUNT_MAX_CUSTOM_PRESETS + " 组。");
+			return false;
+		}
+		shuntCustomPresetsState.push(preset);
+	}
+	if (!persist_shunt_custom_presets_state({}, "定制规则已保存到当前配置。若已有分流规则引用它，请点击页面底部“保存&应用”后重启插件使运行时生效。")) {
+		shuntCustomPresetsState = JSON.parse(oldPresets || "[]");
+	}
+	init_shunt_preset_map();
+	fill_shunt_custom_preset_form(preset);
+	refresh_shunt_ui();
+	return false;
+}
 function open_shunt_custom_presets_manager() {
 	var html = "";
 	html += '<div class="shunt-editor">';
@@ -1921,6 +1954,11 @@ function open_shunt_custom_presets_manager() {
 				$("#shunt_custom_delete").off("click").on("click", function() {
 					return delete_shunt_custom_preset_from_form();
 				});
+				$btnBox.find(".layui-layer-btn0").attr("id", "shunt_custom_save").off("click").on("click", function(e) {
+					e.preventDefault();
+					e.stopImmediatePropagation();
+					return save_shunt_custom_preset_from_form();
+				});
 			}
 			fill_shunt_custom_preset_form(null);
 			bind_shunt_custom_preset_usage_events();
@@ -1930,37 +1968,7 @@ function open_shunt_custom_presets_manager() {
 			shuntCustomPresetLayerIndex = null;
 		},
 		yes: function(index) {
-			var existingId = $("#shunt_custom_pick").val() || "";
-			if (existingId == "__new__") {
-				existingId = "";
-			}
-			var oldPresets = JSON.stringify(shuntCustomPresetsState || []);
-			var preset = build_shunt_custom_preset_from_form(existingId);
-			if (!preset) {
-				return false;
-			}
-			var replaced = false;
-			for (var i = 0; i < shuntCustomPresetsState.length; i++) {
-				if (String(shuntCustomPresetsState[i].id) == String(preset.id)) {
-					shuntCustomPresetsState[i] = preset;
-					replaced = true;
-					break;
-				}
-			}
-			if (!replaced) {
-				if (shuntCustomPresetsState.length >= SHUNT_MAX_CUSTOM_PRESETS) {
-					alert("定制规则当前最多支持 " + SHUNT_MAX_CUSTOM_PRESETS + " 组。");
-					return false;
-				}
-				shuntCustomPresetsState.push(preset);
-			}
-			if (!persist_shunt_custom_presets_state({}, "定制规则已保存到当前配置。若已有分流规则引用它，请点击页面底部“保存&应用”后重启插件使运行时生效。")) {
-				shuntCustomPresetsState = JSON.parse(oldPresets || "[]");
-			}
-			init_shunt_preset_map();
-			fill_shunt_custom_preset_form(preset);
-			refresh_shunt_ui();
-			return false;
+			return save_shunt_custom_preset_from_form();
 		}
 	});
 	return false;

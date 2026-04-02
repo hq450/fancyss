@@ -1229,6 +1229,10 @@ kill_used_port(){
 			local _ret=$(netstat -nlp 2>/dev/null | grep -E "^tcp|^udp|^raw" | grep -w "${used_port}" | awk '{print $NF}')
 			local _conflic_prg=$(echo "${_ret}" | awk -F "/" '{print $2}' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]$//g' )
 			local _conflic_pid=$(echo "${_ret}" | awk -F "/" '{print $1}' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]$//g' )
+			if [ "${FSS_SKIP_XRAY_PORT_CLEANUP}" = "1" ] && echo " ${_conflic_prg} " | grep -q " xray "; then
+				echo_date "[hot-reload] 冲突端口 ${used_port} 当前由 xray 占用，保留现有进程。"
+				continue
+			fi
 			echo_date "关闭冲突端口 ${used_port} 占用程序：${_conflic_prg}，pid：${_conflic_pid}"
 			kill -9 "${_conflic_pid}" >/dev/null 2>&1
 		done
