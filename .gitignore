@@ -1,7 +1,14 @@
 .idea
 .agents/
 .claude/
+.codex
+.codex/
+.build_geodata/
+.upx-cache/
 .ralph-progress.md
+.ralph-shunt-progress.md
+Mine.md
 skills-lock.json
 PROJECT-COMPLETE.md
+AGENTS.md
 CLAUDE.md
