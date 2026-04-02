@@ -85,6 +85,13 @@ do
 			[ "${line}" = "stop>stop" ] && break
 		done
 		exit 0
+	elif [ "${MSG}" == "follow_shunt_stats" ]; then
+		while true
+		do
+			sh /koolshare/scripts/ss_shunt_stats.sh ws
+			sleep 6
+		done
+		exit 0
 	elif [ -n "${RET_3}" -o -n "${RET_4}" ]; then
 		echo "不允许命令：${MSG}"
 		exit

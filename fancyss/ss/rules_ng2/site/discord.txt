@@ -1,0 +1,12 @@
+domain:discord-activities.com
+domain:discord.co
+domain:discord.com
+domain:discord.gg
+domain:discord.media
+domain:discordapp.com
+domain:discordapp.net
+domain:discordmerch.com
+domain:discordpartygames.com
+domain:discordsays.com
+domain:discordstatus.com
+keyword:discord

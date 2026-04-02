@@ -1,8 +1,0 @@
-domain:google.cn
-domain:google.com.hk
-full:translate.google.cn
-full:maps.google.cn
-full:fonts.googleapis.cn
-full:ajax.googleapis.cn
-full:www.google.cn
-full:www.google.com.hk

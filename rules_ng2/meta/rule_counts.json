@@ -1,0 +1,445 @@
+{
+  "generated_at": 1774958475,
+  "source": "geotool",
+  "site": {
+    "ai": {
+      "total": 145
+    },
+    "apple": {
+      "total": 1584
+    },
+    "apple-cn": {
+      "total": 164
+    },
+    "appletv": {
+      "total": 8
+    },
+    "bilibili": {
+      "total": 116
+    },
+    "bybit": {
+      "total": 16
+    },
+    "cloudflare": {
+      "total": 74
+    },
+    "cn": {
+      "total": 118209
+    },
+    "connectivity-check": {
+      "total": 14
+    },
+    "cryptocurrency": {
+      "total": 184
+    },
+    "discord": {
+      "total": 12
+    },
+    "disney": {
+      "total": 172
+    },
+    "games": {
+      "total": 826
+    },
+    "gfw": {
+      "total": 6351
+    },
+    "github": {
+      "total": 31
+    },
+    "google": {
+      "total": 853
+    },
+    "google-cn": {
+      "total": 143
+    },
+    "max": {
+      "total": 87
+    },
+    "media": {
+      "total": 1307
+    },
+    "microsoft": {
+      "total": 620
+    },
+    "netflix": {
+      "total": 36
+    },
+    "networktest": {
+      "total": 83
+    },
+    "openai": {
+      "total": 18
+    },
+    "primevideo": {
+      "total": 31
+    },
+    "private": {
+      "total": 129
+    },
+    "proxy": {
+      "total": 27829
+    },
+    "social-media": {
+      "total": 592
+    },
+    "spotify": {
+      "total": 28
+    },
+    "telegram": {
+      "total": 20
+    },
+    "tiktok": {
+      "total": 54
+    },
+    "trackerslist": {
+      "total": 443
+    },
+    "twitter": {
+      "total": 24
+    },
+    "youtube": {
+      "total": 181
+    }
+  },
+  "ip": {
+    "cloudflare": {
+      "total": 901,
+      "ipv4": 666,
+      "ipv6": 235
+    },
+    "cn": {
+      "total": 10300,
+      "ipv4": 8286,
+      "ipv6": 2014
+    },
+    "discord": {
+      "total": 11,
+      "ipv4": 11,
+      "ipv6": 0
+    },
+    "netflix": {
+      "total": 80,
+      "ipv4": 23,
+      "ipv6": 57
+    },
+    "private": {
+      "total": 18,
+      "ipv4": 14,
+      "ipv6": 4
+    },
+    "telegram": {
+      "total": 12,
+      "ipv4": 8,
+      "ipv6": 4
+    },
+    "twitter": {
+      "total": 21,
+      "ipv4": 18,
+      "ipv6": 3
+    }
+  },
+  "preset": {
+    "ai": {
+      "site_assets": [
+        "ai"
+      ],
+      "ip_assets": [],
+      "site_count": 145,
+      "ip_count": 0,
+      "total": 145
+    },
+    "openai": {
+      "site_assets": [
+        "openai"
+      ],
+      "ip_assets": [],
+      "site_count": 18,
+      "ip_count": 0,
+      "total": 18
+    },
+    "telegram": {
+      "site_assets": [
+        "telegram"
+      ],
+      "ip_assets": [
+        "telegram"
+      ],
+      "site_count": 20,
+      "ip_count": 12,
+      "total": 32
+    },
+    "twitter": {
+      "site_assets": [
+        "twitter"
+      ],
+      "ip_assets": [
+        "twitter"
+      ],
+      "site_count": 24,
+      "ip_count": 21,
+      "total": 45
+    },
+    "discord": {
+      "site_assets": [
+        "discord"
+      ],
+      "ip_assets": [
+        "discord"
+      ],
+      "site_count": 12,
+      "ip_count": 11,
+      "total": 23
+    },
+    "github": {
+      "site_assets": [
+        "github"
+      ],
+      "ip_assets": [],
+      "site_count": 31,
+      "ip_count": 0,
+      "total": 31
+    },
+    "google": {
+      "site_assets": [
+        "google"
+      ],
+      "ip_assets": [],
+      "site_count": 853,
+      "ip_count": 0,
+      "total": 853
+    },
+    "apple": {
+      "site_assets": [
+        "apple"
+      ],
+      "ip_assets": [],
+      "site_count": 1584,
+      "ip_count": 0,
+      "total": 1584
+    },
+    "media": {
+      "site_assets": [
+        "media"
+      ],
+      "ip_assets": [],
+      "site_count": 1307,
+      "ip_count": 0,
+      "total": 1307
+    },
+    "youtube": {
+      "site_assets": [
+        "youtube"
+      ],
+      "ip_assets": [],
+      "site_count": 181,
+      "ip_count": 0,
+      "total": 181
+    },
+    "netflix": {
+      "site_assets": [
+        "netflix"
+      ],
+      "ip_assets": [
+        "netflix"
+      ],
+      "site_count": 36,
+      "ip_count": 80,
+      "total": 116
+    },
+    "disney": {
+      "site_assets": [
+        "disney"
+      ],
+      "ip_assets": [],
+      "site_count": 172,
+      "ip_count": 0,
+      "total": 172
+    },
+    "max": {
+      "site_assets": [
+        "max"
+      ],
+      "ip_assets": [],
+      "site_count": 87,
+      "ip_count": 0,
+      "total": 87
+    },
+    "primevideo": {
+      "site_assets": [
+        "primevideo"
+      ],
+      "ip_assets": [],
+      "site_count": 31,
+      "ip_count": 0,
+      "total": 31
+    },
+    "appletv": {
+      "site_assets": [
+        "appletv"
+      ],
+      "ip_assets": [],
+      "site_count": 8,
+      "ip_count": 0,
+      "total": 8
+    },
+    "spotify": {
+      "site_assets": [
+        "spotify"
+      ],
+      "ip_assets": [],
+      "site_count": 28,
+      "ip_count": 0,
+      "total": 28
+    },
+    "tiktok": {
+      "site_assets": [
+        "tiktok"
+      ],
+      "ip_assets": [],
+      "site_count": 54,
+      "ip_count": 0,
+      "total": 54
+    },
+    "bilibili": {
+      "site_assets": [
+        "bilibili"
+      ],
+      "ip_assets": [],
+      "site_count": 116,
+      "ip_count": 0,
+      "total": 116
+    },
+    "games": {
+      "site_assets": [
+        "games"
+      ],
+      "ip_assets": [],
+      "site_count": 826,
+      "ip_count": 0,
+      "total": 826
+    },
+    "networktest": {
+      "site_assets": [
+        "networktest"
+      ],
+      "ip_assets": [],
+      "site_count": 83,
+      "ip_count": 0,
+      "total": 83
+    },
+    "connectivity-check": {
+      "site_assets": [
+        "connectivity-check"
+      ],
+      "ip_assets": [],
+      "site_count": 14,
+      "ip_count": 0,
+      "total": 14
+    },
+    "cloudflare": {
+      "site_assets": [
+        "cloudflare"
+      ],
+      "ip_assets": [
+        "cloudflare"
+      ],
+      "site_count": 74,
+      "ip_count": 901,
+      "total": 975
+    },
+    "social-media": {
+      "site_assets": [
+        "social-media"
+      ],
+      "ip_assets": [],
+      "site_count": 592,
+      "ip_count": 0,
+      "total": 592
+    },
+    "microsoft": {
+      "site_assets": [
+        "microsoft"
+      ],
+      "ip_assets": [],
+      "site_count": 620,
+      "ip_count": 0,
+      "total": 620
+    },
+    "trackerslist": {
+      "site_assets": [
+        "trackerslist"
+      ],
+      "ip_assets": [],
+      "site_count": 443,
+      "ip_count": 0,
+      "total": 443
+    },
+    "bybit": {
+      "site_assets": [
+        "bybit"
+      ],
+      "ip_assets": [],
+      "site_count": 16,
+      "ip_count": 0,
+      "total": 16
+    },
+    "cryptocurrency": {
+      "site_assets": [
+        "cryptocurrency"
+      ],
+      "ip_assets": [],
+      "site_count": 184,
+      "ip_count": 0,
+      "total": 184
+    },
+    "google-cn": {
+      "site_assets": [
+        "google-cn"
+      ],
+      "ip_assets": [],
+      "site_count": 143,
+      "ip_count": 0,
+      "total": 143
+    },
+    "apple-cn": {
+      "site_assets": [
+        "apple-cn"
+      ],
+      "ip_assets": [],
+      "site_count": 164,
+      "ip_count": 0,
+      "total": 164
+    },
+    "chnlist": {
+      "site_assets": [
+        "cn"
+      ],
+      "ip_assets": [
+        "cn",
+        "private"
+      ],
+      "site_count": 118209,
+      "ip_count": 10318,
+      "total": 128527
+    },
+    "proxy": {
+      "site_assets": [
+        "proxy"
+      ],
+      "ip_assets": [],
+      "site_count": 27829,
+      "ip_count": 0,
+      "total": 27829
+    },
+    "gfw": {
+      "site_assets": [
+        "gfw"
+      ],
+      "ip_assets": [],
+      "site_count": 6351,
+      "ip_count": 0,
+      "total": 6351
+    }
+  }
+}

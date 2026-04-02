@@ -1,0 +1,400 @@
+{
+  "site": [
+    {
+      "id": "ai",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/ai.list"
+        }
+      ]
+    },
+    {
+      "id": "openai",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/openai.txt"
+        }
+      ]
+    },
+    {
+      "id": "telegram",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/telegram.txt"
+        }
+      ]
+    },
+    {
+      "id": "twitter",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/twitter.txt"
+        }
+      ]
+    },
+    {
+      "id": "discord",
+      "mode": "manual",
+      "notes": "No stable upstream source selected yet; keep a curated local seed file."
+    },
+    {
+      "id": "github",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/github.txt"
+        }
+      ]
+    },
+    {
+      "id": "google",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/google.txt"
+        }
+      ]
+    },
+    {
+      "id": "apple",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/apple.txt"
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/media.list"
+        }
+      ]
+    },
+    {
+      "id": "youtube",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/youtube.list"
+        }
+      ]
+    },
+    {
+      "id": "netflix",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/netflix.list"
+        }
+      ]
+    },
+    {
+      "id": "disney",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/disney.list"
+        }
+      ]
+    },
+    {
+      "id": "max",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/max.list"
+        }
+      ]
+    },
+    {
+      "id": "primevideo",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/primevideo.list"
+        }
+      ]
+    },
+    {
+      "id": "appletv",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/appletv.list"
+        }
+      ]
+    },
+    {
+      "id": "spotify",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/spotify.list"
+        }
+      ]
+    },
+    {
+      "id": "tiktok",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/tiktok.list"
+        }
+      ]
+    },
+    {
+      "id": "bilibili",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/bilibili.list"
+        }
+      ]
+    },
+    {
+      "id": "games",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/games.list"
+        }
+      ]
+    },
+    {
+      "id": "networktest",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/networktest.list"
+        }
+      ]
+    },
+    {
+      "id": "connectivity-check",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/connectivity-check.txt"
+        }
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/cloudflare.txt"
+        }
+      ]
+    },
+    {
+      "id": "social-media",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/category-social-media-%21cn.txt"
+        }
+      ]
+    },
+    {
+      "id": "microsoft",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/microsoft.txt"
+        }
+      ]
+    },
+    {
+      "id": "trackerslist",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/category-public-tracker.txt"
+        }
+      ]
+    },
+    {
+      "id": "bybit",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/bybit.txt"
+        }
+      ]
+    },
+    {
+      "id": "cryptocurrency",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/category-cryptocurrency.txt"
+        }
+      ]
+    },
+    {
+      "id": "google-cn",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "local_plain_domain_suffix",
+          "path": "rules_ng/google_china.txt"
+        }
+      ]
+    },
+    {
+      "id": "apple-cn",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "local_plain_domain_suffix",
+          "path": "rules_ng/apple_china.txt"
+        }
+      ]
+    },
+    {
+      "id": "gfw",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "local_gzip_domain_suffix",
+          "path": "rules_ng/gfwlist.gz"
+        }
+      ]
+    },
+    {
+      "id": "cn",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "local_gzip_domain_suffix",
+          "path": "rules_ng/chnlist.gz"
+        }
+      ]
+    },
+    {
+      "id": "private",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_site",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/site/private.txt"
+        }
+      ]
+    },
+    {
+      "id": "proxy",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_domain_list_custom",
+          "url": "https://raw.githubusercontent.com/DustinWin/domain-list-custom/domains/proxy.list"
+        }
+      ]
+    }
+  ],
+  "ip": [
+    {
+      "id": "cn",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "local_plain_cidr",
+          "path": "rules_ng/chnroute.txt"
+        },
+        {
+          "type": "local_plain_cidr",
+          "path": "rules_ng/chnroute6.txt"
+        }
+      ]
+    },
+    {
+      "id": "private",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_ip",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/ip/private.txt"
+        }
+      ]
+    },
+    {
+      "id": "telegram",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_ip",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/ip/telegram.txt"
+        }
+      ]
+    },
+    {
+      "id": "twitter",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_ip",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/ip/twitter.txt"
+        }
+      ]
+    },
+    {
+      "id": "discord",
+      "mode": "manual",
+      "notes": "No stable upstream source selected yet; keep a curated local seed file."
+    },
+    {
+      "id": "cloudflare",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_ip",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/ip/cloudflare.txt"
+        }
+      ]
+    },
+    {
+      "id": "netflix",
+      "mode": "generated",
+      "sources": [
+        {
+          "type": "remote_666os_ip",
+          "url": "https://raw.githubusercontent.com/666OS/rules/geo/ip/netflix.txt"
+        }
+      ]
+    }
+  ]
+}

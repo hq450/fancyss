@@ -84,6 +84,18 @@ start_fancyss(){
 	echo XU6J03M6
 }
 
+start_fancyss_shunt_hot(){
+	if [ "$(dbus get ss_basic_shunt_hot_reload)" = "1" ] && [ -x "/koolshare/scripts/ss_shunt_hot_reload.sh" ]; then
+		echo_date "[hot-reload] 尝试通过 Xray API 热更新节点分流规则..."
+		if sh /koolshare/scripts/ss_shunt_hot_reload.sh apply; then
+			echo XU6J03M6
+			return 0
+		fi
+		echo_date "[hot-reload] 热更新失败，回退到完整重启。"
+	fi
+	start_fancyss
+}
+
 # call by ws
 case $1 in
 start)
@@ -91,6 +103,13 @@ start)
 	true > /tmp/upload/ss_log.txt
 	pre_start
 	start_fancyss 2>&1 | tee -a /tmp/upload/ss_log.txt
+	unset_lock
+	;;
+start_shunt_hot)
+	set_lock
+	true > /tmp/upload/ss_log.txt
+	pre_start
+	start_fancyss_shunt_hot 2>&1 | tee -a /tmp/upload/ss_log.txt
 	unset_lock
 	;;
 start_by_ws)
@@ -119,6 +138,14 @@ start)
 	http_response "$1"
 	pre_start
 	start_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
+	unset_lock
+	;;
+start_shunt_hot)
+	set_lock
+	true > /tmp/upload/ss_log.txt
+	http_response "$1"
+	pre_start
+	start_fancyss_shunt_hot | tee -a /tmp/upload/ss_log.txt 2>&1
 	unset_lock
 	;;
 start_by_ws)

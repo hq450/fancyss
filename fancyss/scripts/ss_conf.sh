@@ -126,6 +126,9 @@ backup_tar(){
 	cp /koolshare/bin/sponge ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/jq ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/xray ${TARGET_FOLDER}/bin/
+	if [ -x "/koolshare/bin/xapi-tool" ];then
+		cp /koolshare/bin/xapi-tool ${TARGET_FOLDER}/bin/
+	fi
 	cp /koolshare/bin/curl-fancyss ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/dnsclient ${TARGET_FOLDER}/bin/
 	if [ -f "/koolshare/bin/sslocal" ];then

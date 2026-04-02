@@ -23,7 +23,7 @@
 .shunt-summary-card,.shunt-rule-card,.shunt-fallback-card{position:relative;overflow:hidden;border:1px solid rgba(69,93,120,0.28);border-radius:8px;background:linear-gradient(180deg,rgba(22,30,40,0.96),rgba(15,21,30,0.92));box-shadow:0 10px 22px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.03);transition:all .2s ease;}
 .shunt-summary-card:hover,.shunt-rule-card:hover,.shunt-fallback-card:hover{background:linear-gradient(180deg,rgba(28,38,48,0.98),rgba(20,28,38,0.94));box-shadow:0 10px 22px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.05);}
 .shunt-summary-card{min-height:72px;padding:8px 14px;color:#edf3f9;transition:all .2s ease;border-width:1px;background:linear-gradient(180deg,rgba(28,38,52,0.98),rgba(18,25,36,0.94));}
-.shunt-summary-card-body span,.shunt-rule-shell span:not(.shunt-flow-link-dot):not(.shunt-flow-link-line):not(.shunt-flow-link-trace),.shunt-chip span{background-color:transparent !important;color:inherit !important;}
+.shunt-summary-card-body span:not(.shunt-chip):not(.shunt-chip-label):not(.shunt-chip-value),.shunt-rule-shell span:not(.shunt-flow-link-dot):not(.shunt-flow-link-line):not(.shunt-flow-link-trace):not(.shunt-chip):not(.shunt-chip-label):not(.shunt-chip-value),.shunt-chip span{background-color:transparent !important;color:inherit !important;}
 .shunt-flow-link-line{background:rgba(110,168,254,0.45) !important;}
 .shunt-fallback-card .shunt-flow-link-line{background:rgba(242,153,74,0.5) !important;}
 .shunt-summary-card--runtime{border-color:rgba(76,161,175,0.42);box-shadow:0 8px 20px rgba(0,0,0,0.12),inset 0 0 12px rgba(76,161,175,0.05);}
@@ -41,12 +41,29 @@
 .shunt-summary-secondary{padding-top:4px;font-size:11px;line-height:1.4;color:#9eb0c1;}
 .shunt-summary-inline{padding-top:3px;}
 .shunt-summary-inline select{max-width:100%;width:100%;}
-.shunt-summary-card--add{cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;transition:all .2s ease;background:linear-gradient(180deg,rgba(35,25,28,0.96),rgba(24,18,20,0.94));}
+.shunt-summary-card.shunt-summary-card--add{min-height:72px;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-start;transition:all .2s ease;background:linear-gradient(180deg,rgba(35,25,28,0.96),rgba(24,18,20,0.94));}
 .shunt-summary-card--add:hover{border-color:rgba(237,66,100,0.55);transform:translateY(-2px);box-shadow:0 15px 30px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);}
-.shunt-summary-card--add .shunt-summary-card-body{display:flex;align-items:center;justify-content:center;min-height:56px;}
+.shunt-summary-card--add .shunt-summary-card-head{position:relative;z-index:2;margin-bottom:0;}
+.shunt-summary-card--add .shunt-summary-card-body{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;min-height:auto;pointer-events:none;}
 .shunt-add-frame{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:1px dashed rgba(237,66,100,0.48);border-radius:15px;font-size:30px;line-height:1;color:#ff7e9a;background:rgba(237,66,100,0.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02);transition:all .25s cubic-bezier(0.175, 0.885, 0.32, 1.275);animation:shunt_add_breathe 3.5s ease-in-out infinite;}
 .shunt-summary-card--add:hover .shunt-add-frame{transform:scale(1.1) rotate(90deg);border-color:rgba(237,66,100,0.7);box-shadow:0 0 20px rgba(237,66,100,0.15),0 10px 22px rgba(0,0,0,0.16);color:#fff;background:rgba(237,66,100,0.12);}
 .shunt-add-frame span{display:block;transform:translateY(-1px);}
+.shunt-info-band{display:flex;gap:12px;align-items:stretch;padding:10px 12px;margin:0 2px 12px;border:1px solid rgba(69,93,120,0.28);border-radius:10px;background:linear-gradient(180deg,rgba(23,31,42,0.96),rgba(16,22,30,0.93));box-shadow:0 10px 22px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.03);}
+.shunt-info-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;flex:1 1 0;min-width:0;min-height:58px;padding:10px 12px;border:1px solid rgba(255,255,255,0.06);border-radius:10px;background:rgba(255,255,255,0.03);box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);overflow:hidden;}
+.shunt-info-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(255,255,255,0.16);}
+.shunt-info-card.memory{background:linear-gradient(180deg,rgba(52,87,124,0.18),rgba(255,255,255,0.03));border-color:rgba(90,157,255,0.18);}
+.shunt-info-card.memory:before{background:linear-gradient(180deg,#5fa8ff,#2f6bd8);}
+.shunt-info-card.traffic{background:linear-gradient(180deg,rgba(39,91,74,0.18),rgba(255,255,255,0.03));border-color:rgba(62,188,136,0.18);}
+.shunt-info-card.traffic:before{background:linear-gradient(180deg,#44d1a3,#1e996d);}
+.shunt-info-card.connection{background:linear-gradient(180deg,rgba(109,76,31,0.16),rgba(255,255,255,0.03));border-color:rgba(255,176,74,0.16);}
+.shunt-info-card.connection:before{background:linear-gradient(180deg,#ffb86b,#d9831f);}
+.shunt-info-card.custom{background:linear-gradient(180deg,rgba(94,53,132,0.16),rgba(255,255,255,0.03));border-color:rgba(199,146,255,0.16);}
+.shunt-info-card.custom:before{background:linear-gradient(180deg,#d39cff,#7b61ff);}
+.shunt-info-card.is-action{cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease;}
+.shunt-info-card.is-action:hover{transform:translateY(-1px);border-color:rgba(110,168,254,0.28);background:rgba(255,255,255,0.05);}
+.shunt-info-title{font-size:11px;color:#93a8bc;letter-spacing:.7px;text-transform:uppercase;}
+.shunt-info-value{margin-top:auto;padding-top:8px;font-size:12px;line-height:1.35;color:#fff;font-weight:700;word-break:break-word;}
+.shunt-info-note{display:none;}
 .shunt-rule-stack{display:flex;flex-direction:column;gap:12px;margin-bottom:12px;padding:0 2px;}
 .shunt-rule-card,.shunt-fallback-card{padding:8px;color:#edf3f9;margin:0;overflow:visible;border:none;}
 .shunt-rule-card{cursor:pointer;transition:all .2s ease;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));}
@@ -94,6 +111,9 @@
 .shunt-panel-badges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
 .shunt-rule-kind-badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:rgba(110,168,254,0.14);color:#b8d7ff;font-size:11px;line-height:1.4;border:1px solid rgba(110,168,254,0.15);}
 .shunt-rule-kind-badge.custom{background:rgba(242,153,74,0.16);color:#ffd1b5;border-color:rgba(242,153,74,0.2);}
+.shunt-rule-kind-badge.proxy{background:rgba(70,145,255,0.16);color:#c7e0ff;border-color:rgba(70,145,255,0.24);}
+.shunt-rule-kind-badge.direct{background:rgba(41,179,111,0.16);color:#bdf5d2;border-color:rgba(41,179,111,0.24);}
+.shunt-rule-kind-badge.reject{background:rgba(235,87,87,0.18);color:#ffc0c0;border-color:rgba(235,87,87,0.26);}
 .shunt-rule-kind-badge.warning{background:rgba(255,77,77,0.18);color:#ffb8b8;border-color:rgba(255,77,77,0.25);}
 .shunt-rule-kind-badge.fallback{background:rgba(255,128,128,0.16);color:#ffc1c1;border-color:rgba(255,128,128,0.2);}
 .shunt-rule-order{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:5px 11px;border-radius:999px;background:rgba(110,168,254,0.1);color:#9fc7ff;font-size:11px;letter-spacing:0.45px;}
@@ -109,8 +129,21 @@
 .shunt-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.06);font-size:11px;line-height:1;color:#dbe9f8;transition:all .2s ease;border:1px solid rgba(255,255,255,0.06);}
 .shunt-rule-card:hover .shunt-chip,.shunt-fallback-card:hover .shunt-chip{transform:translateY(-1px);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.12);}
 .shunt-chip-label{color:#9fb6d1;font-weight:normal;}
+.shunt-chip-value{font-weight:600;}
 .shunt-chip.muted{background:rgba(255,255,255,0.04);color:#a5bdd5;border-color:transparent;}
 .shunt-chip.custom{background:rgba(242,153,74,0.14);color:#ffd1b5;border-color:rgba(242,153,74,0.18);}
+.shunt-chip.shunt-latency-chip{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.06);box-shadow:none;}
+.shunt-chip.shunt-latency-chip .shunt-chip-label{color:#9fb0c1 !important;}
+.shunt-chip.shunt-latency-chip .shunt-chip-value{font-weight:700;letter-spacing:0.15px;}
+.shunt-chip.shunt-latency-chip.latency-fast .shunt-chip-value{color:#1bbf35 !important;}
+.shunt-chip.shunt-latency-chip.latency-good .shunt-chip-value{color:#3399FF !important;}
+.shunt-chip.shunt-latency-chip.latency-mid .shunt-chip-value{color:#f36c21 !important;}
+.shunt-chip.shunt-latency-chip.latency-slow .shunt-chip-value{color:#FF0066 !important;}
+.shunt-chip.shunt-latency-chip.latency-waiting .shunt-chip-value{color:#999999 !important;}
+.shunt-chip.shunt-latency-chip.latency-loading .shunt-chip-value{color:#66CCFF !important;}
+.shunt-chip.shunt-latency-chip.latency-booting .shunt-chip-value{color:#FFAA33 !important;}
+.shunt-chip.shunt-latency-chip.latency-testing .shunt-chip-value{color:#00FFCC !important;}
+.shunt-chip.shunt-latency-chip.latency-failed .shunt-chip-value{color:#FF0000 !important;}
 .shunt-inline-warning{padding-top:10px;font-size:11px;line-height:1.6;color:#ff9e9e;font-weight:500;}
 .shunt-empty-state{padding:30px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:15px;color:#9fb6d1;line-height:1.85;text-align:center;background:rgba(18,24,34,0.44);margin:0 2px;}
 .shunt-fallback-card{border-color:rgba(242,153,74,0.32);background:linear-gradient(180deg,rgba(34,26,22,0.97),rgba(22,18,16,0.95));}
@@ -119,28 +152,49 @@
 .shunt-fallback-target select,.shunt-fallback-target .input_option{width:100%;max-width:100%;height:34px;border-radius:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);padding-left:10px;color:#fff;}
 .shunt-layer-tip{max-width:320px;line-height:1.8;color:#f2f6fb;font-size:12px;}
 .shunt-editor{padding:18px 22px 4px;color:#fff;}
-.shunt-editor-shell{display:flex;gap:20px;align-items:flex-start;}
-.shunt-editor-main{flex:1 1 auto;min-width:0;}
-.shunt-editor-side{flex:0 0 250px;min-width:250px;}
+.shunt-editor-shell{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start;}
+.shunt-editor-main,.shunt-editor-side{min-width:0;max-width:none;}
 .shunt-editor-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
-.shunt-editor-label{width:82px;line-height:36px;color:#e1e7ee;flex:0 0 82px;font-size:13px;font-weight:500;text-align:right;}
+.shunt-editor-label{width:76px;line-height:36px;color:#e1e7ee;flex:0 0 76px;font-size:13px;font-weight:500;text-align:left;}
 .shunt-editor-control{flex:1 1 auto;max-width:none;}
-.shunt-editor-control textarea,.shunt-editor-control input[type='text'],.shunt-editor-control select{box-sizing:border-box;max-width:100%;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;height:36px;transition:all .18s ease;font-size:13px;}
+.shunt-editor-control textarea,.shunt-editor-control input[type='text'],.shunt-editor-control select{box-sizing:border-box;width:100%;max-width:100%;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;height:36px;transition:all .18s ease;font-size:13px;}
 .shunt-editor-control textarea:focus,.shunt-editor-control input[type='text']:focus,.shunt-editor-control select:focus{outline:none;border-color:#3b82f6;background:rgba(0,0,0,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
-.shunt-editor-control textarea{min-height:140px;resize:vertical;height:auto;line-height:1.6;font-family: Menlo, Monaco, Consolas, "Courier New", monospace;}
+.shunt-editor-control textarea.is-overlimit,.shunt-editor-control input[type='text'].is-overlimit{border-color:#ef4444;background:rgba(84,19,19,0.38);box-shadow:0 0 0 3px rgba(239,68,68,0.14);}
+.shunt-action-group{display:flex;gap:8px;flex-wrap:wrap;padding-top:2px;}
+.shunt-action-btn{display:inline-flex;align-items:center;justify-content:center;min-width:78px;height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#dce7f3;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;}
+.shunt-action-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,0.18);}
+.shunt-action-btn.active{color:#fff;box-shadow:0 8px 20px rgba(0,0,0,0.18);}
+.shunt-action-btn[data-action="proxy"].active{background:linear-gradient(135deg,#1678f3,#37b4ff);border-color:rgba(70,160,255,0.48);}
+.shunt-action-btn[data-action="direct"].active{background:linear-gradient(135deg,#0f9d67,#37c67f);border-color:rgba(70,210,140,0.48);}
+.shunt-action-btn[data-action="reject"].active{background:linear-gradient(135deg,#d74444,#ff7b54);border-color:rgba(255,124,108,0.48);}
+.shunt-editor-control textarea{min-height:176px;resize:vertical;height:auto;line-height:1.6;font-family: Menlo, Monaco, Consolas, "Courier New", monospace;}
 .shunt-editor-hint{font-size:11px;color:#94a3b8;line-height:1.6;padding-top:6px;}
+.shunt-editor-meta-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px;font-size:11px;line-height:1.5;color:#8fa4ba;}
+.shunt-editor-meta-row .warn{color:#ffb347;}
+.shunt-editor-meta-row .danger{color:#ff7b7b;}
+.shunt-custom-usage{padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));}
+.shunt-custom-usage-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;line-height:1.6;color:#d9e7f3;flex-wrap:wrap;}
+.shunt-custom-usage-main{font-weight:600;color:#fff;}
+.shunt-custom-usage-sub{color:#8fa4ba;}
+.shunt-custom-usage-status{font-weight:600;}
+.shunt-custom-usage-status.warn{color:#ffb347;}
+.shunt-custom-usage-status.danger{color:#ff7b7b;}
+.shunt-custom-meter{margin-top:10px;height:10px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;box-shadow:inset 0 1px 1px rgba(0,0,0,0.18);}
+.shunt-custom-meter-bar{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#2563eb);transition:width .18s ease,background .18s ease;}
+.shunt-custom-meter-bar.warn{background:linear-gradient(90deg,#fbbf24,#f59e0b);}
+.shunt-custom-meter-bar.danger{background:linear-gradient(90deg,#fb7185,#ef4444);}
+.shunt-custom-usage-foot{padding-top:8px;font-size:11px;line-height:1.6;color:#8fa4ba;}
 .shunt-editor-source-extra{display:none;padding:14px;background:rgba(255,255,255,0.03);border-radius:12px;margin:8px 0 14px 96px;border:1px solid rgba(255,255,255,0.05);}
 .shunt-editor-source-extra.active{display:block;}
 .shunt-editor-source-extra .shunt-editor-row{margin-bottom:12px;}
-.shunt-editor-source-extra .shunt-editor-label{width:70px;flex:0 0 70px;}
-.shunt-editor-preview{border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(255,255,255,0.03);padding:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);}
-.shunt-editor-preview-title{font-size:11px;color:#94a3b8;letter-spacing:0.8px;text-transform:uppercase;font-weight:600;}
-.shunt-editor-preview-main{padding-top:10px;font-size:16px;line-height:1.4;color:#fff;word-break:break-word;font-weight:600;}
-.shunt-editor-preview-note{padding-top:6px;font-size:12px;line-height:1.7;color:#94a3b8;}
-.shunt-editor-preview-section{padding-top:16px;border-top:1px solid rgba(255,255,255,0.05);margin-top:16px;}
-.shunt-editor-preview-label{font-size:11px;color:#94a3b8;letter-spacing:0.6px;text-transform:uppercase;}
-.shunt-editor-preview-value{padding-top:6px;font-size:14px;line-height:1.6;color:#e2e8f0;word-break:break-word;font-weight:500;}
-.shunt-editor-actions-tip{padding-top:10px;font-size:11px;color:#94a3b8;line-height:1.7;border-top:1px solid rgba(255,255,255,0.06);margin-top:16px;padding-left:96px;}
+.shunt-editor-source-extra .shunt-editor-label{width:64px;flex:0 0 64px;}
+.shunt-editor-preview{border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(255,255,255,0.03);padding:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);}
+.shunt-editor-preview-main{padding-top:2px;font-size:16px;line-height:1.34;color:#fff;word-break:break-word;font-weight:600;}
+.shunt-editor-preview-note{padding-top:5px;font-size:11px;line-height:1.6;color:#94a3b8;}
+.shunt-editor-preview-section{padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);margin-top:12px;}
+.shunt-editor-preview-label{font-size:10px;color:#94a3b8;letter-spacing:0.7px;text-transform:uppercase;}
+.shunt-editor-preview-value{padding-top:4px;font-size:14px;line-height:1.45;color:#e2e8f0;word-break:break-word;font-weight:600;}
+.shunt-editor-actions-tip{padding-top:10px;font-size:11px;color:#94a3b8;line-height:1.7;border-top:1px solid rgba(255,255,255,0.06);margin-top:16px;padding-left:90px;}
 body .shunt-editor-layer{background:#0f172a !important;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5) !important;border:1px solid rgba(255,255,255,0.1) !important;}
 body .shunt-editor-layer .layui-layer-title{background:rgba(255,255,255,0.02) !important;color:#f8fafc !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;font-size:16px !important;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;font-weight:600 !important;letter-spacing:0.5px;}
@@ -152,9 +206,11 @@ body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,
 	.shunt-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 	.shunt-editor-shell{display:block;}
 	.shunt-editor-side{width:auto;min-width:0;padding-top:10px;}
+	.shunt-info-band{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 @media (max-width: 640px){
 	.shunt-summary-grid{grid-template-columns:1fr;}
+	.shunt-info-band{grid-template-columns:1fr;}
 	.shunt-rule-card,.shunt-fallback-card{padding:8px;}
 	.shunt-summary-card{min-height:auto;}
 	.shunt-rule-toolbar{top:-9px;right:-9px;}
@@ -246,6 +302,7 @@ var ws_flag;
 var wss_open;
 var wss;
 var wswt;
+var ws_probe_pending = false;
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -265,19 +322,35 @@ var node_auto_migrate_layer = null;
 var prepared_route_files = {};
 var pending_route_callbacks = {};
 var shuntRulesState = [];
+var shuntCustomPresetsState = [];
 var shuntPresetMap = {};
+var shuntPresetManifestState = [];
 var shuntFallbackNodeId = "";
 var SHUNT_DIRECT_TARGET = "DIRECT";
+var SHUNT_REJECT_TARGET = "REJECT";
 var SHUNT_MAX_RULES = 16;
 var SHUNT_MAX_TARGETS = 8;
+var SHUNT_MAX_CUSTOM_PRESETS = 24;
+var SHUNT_CUSTOM_PRESETS_FIELD_MAX = 65515;
+var SHUNT_CUSTOM_PRESETS_FIELD_WARN = 62000;
 var shuntDragRuleId = "";
 var shuntDropRuleId = "";
 var shuntSuppressCardClickUntil = 0;
 var shuntRuleEditorLayerIndex = null;
+var shuntCustomPresetLayerIndex = null;
 var shuntHintLayerIndex = null;
 var shuntStatsCache = {};
+var shuntStatsSummary = {};
 var shuntStatsTimer = null;
 var shuntStatsRequestPending = false;
+var shuntStatsWs = null;
+var shuntStatsWsOpenTimer = null;
+var shuntStatsWsInitTimer = null;
+var shuntStatsWsClosing = false;
+var shuntStatsWsReceived = false;
+var shuntUptimeTicker = null;
+var shuntUptimeBaseSeconds = -1;
+var shuntUptimeBaseClientMs = 0;
 var SHUNT_STATS_REFRESH_INTERVAL = 6000;
 var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
@@ -352,9 +425,11 @@ String.prototype.myReplace = function(f, e){
 }
 function init() {
 	show_menu(menu_hook);
+	bind_shunt_hint_global_events();
+	try_ws_connect(true);
 	get_dbus_data(function() {
 		check_node_migration_notice();
-		try_ws_connect();
+		wait_ws_probe_then_start_status(0);
 	});
 }
 function get_fss_data(cb) {
@@ -1086,16 +1161,180 @@ function htmlEscape(value) {
 }
 function init_shunt_preset_map() {
 	shuntPresetMap = {};
-	if (typeof SHUNT_PRESET_MANIFEST == "undefined" || !isArray(SHUNT_PRESET_MANIFEST)) {
-		return;
-	}
-	for (var i = 0; i < SHUNT_PRESET_MANIFEST.length; i++) {
-		var item = SHUNT_PRESET_MANIFEST[i];
+	shuntPresetManifestState = [];
+	var manifest = (typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST.slice(0) : [];
+	for (var i = 0; i < manifest.length; i++) {
+		var item = manifest[i];
 		if (!item || !item.id) {
 			continue;
 		}
+		shuntPresetManifestState.push(item);
 		shuntPresetMap[String(item.id)] = item;
 	}
+	for (var j = 0; j < shuntCustomPresetsState.length; j++) {
+		var customItem = normalize_shunt_custom_preset(shuntCustomPresetsState[j], j + 1);
+		if (!customItem || !customItem.id) {
+			continue;
+		}
+		shuntPresetManifestState.push(customItem);
+		shuntPresetMap[String(customItem.id)] = customItem;
+	}
+}
+function normalize_shunt_custom_preset(item, idx) {
+	var obj = $.extend({}, item || {});
+	obj.id = String(obj.id || ("custom_preset_" + idx));
+	obj.label = $.trim(String(obj.label || obj.name || ""));
+	obj.description = $.trim(String(obj.description || ""));
+	obj.policy = normalize_shunt_action(obj.policy || "proxy");
+	obj.domain_b64 = String(obj.domain_b64 || "");
+	obj.ip_b64 = String(obj.ip_b64 || "");
+	obj.customPreset = true;
+	obj.kind = "定制规则";
+	obj.site_count = count_shunt_custom_domains(decode_shunt_custom_text(obj.domain_b64));
+	obj.ip_count = count_shunt_custom_ip_rules(decode_shunt_custom_text(obj.ip_b64));
+	obj.count = obj.site_count + obj.ip_count;
+	return obj;
+}
+function count_shunt_custom_ip_rules(text) {
+	if (!text) {
+		return 0;
+	}
+	return text.replace(/\r/g, "").split("\n").filter(function(line) {
+		var trimmed = $.trim(line || "");
+		return trimmed && trimmed.indexOf("#") !== 0;
+	}).length;
+}
+function get_shunt_custom_presets_from_dbus() {
+	var raw = [];
+	try {
+		raw = JSON.parse(base64_decode_utf8(db_ss["ss_basic_shunt_custom_presets"] || "W10=") || "[]");
+	} catch (e) {
+		raw = [];
+	}
+	if (!isArray(raw)) {
+		raw = [];
+	}
+	var items = [];
+	for (var i = 0; i < raw.length; i++) {
+		items.push(normalize_shunt_custom_preset(raw[i], i + 1));
+	}
+	return items;
+}
+function encode_shunt_custom_presets_payload(presets) {
+	try {
+		return base64_encode_utf8(JSON.stringify(presets || []));
+	} catch (e) {
+		return "";
+	}
+}
+function get_shunt_custom_presets_payload_len(presets) {
+	return encode_shunt_custom_presets_payload(presets).length;
+}
+function get_str_utf8_byte_length(text) {
+	var value = String(text || "");
+	if (typeof TextEncoder != "undefined") {
+		return new TextEncoder().encode(value).length;
+	}
+	return unescape(encodeURIComponent(value)).length;
+}
+function get_shunt_custom_text_stats(text, type) {
+	var raw = String(text || "").replace(/\r/g, "");
+	var lines = raw ? raw.split("\n") : [];
+	var count = 0;
+	for (var i = 0; i < lines.length; i++) {
+		var line = $.trim(lines[i] || "");
+		if (!line || line.indexOf("#") === 0) {
+			continue;
+		}
+		count++;
+	}
+	return {
+		count: count,
+		bytes: get_str_utf8_byte_length(raw),
+		type: type || "domain"
+	};
+}
+function build_shunt_custom_presets_after_edit(preset, existingId) {
+	var list = [];
+	var replaced = false;
+	var currentId = String(existingId || (preset ? preset.id : ""));
+	for (var i = 0; i < shuntCustomPresetsState.length; i++) {
+		var item = $.extend({}, shuntCustomPresetsState[i] || {});
+		if (preset && currentId && String(item.id || "") == currentId) {
+			list.push($.extend({}, preset));
+			replaced = true;
+		} else {
+			list.push(item);
+		}
+	}
+	if (preset && !replaced) {
+		list.push($.extend({}, preset));
+	}
+	return list;
+}
+function get_shunt_custom_presets_usage_snapshot(preset, existingId) {
+	var merged = build_shunt_custom_presets_after_edit(preset, existingId);
+	var payload = encode_shunt_custom_presets_payload(merged);
+	return {
+		payload_len: payload.length,
+		remaining: SHUNT_CUSTOM_PRESETS_FIELD_MAX - payload.length,
+		overlimit: payload.length > SHUNT_CUSTOM_PRESETS_FIELD_MAX,
+		warn: payload.length >= SHUNT_CUSTOM_PRESETS_FIELD_WARN,
+		preset_count: merged.length
+	};
+}
+function render_shunt_custom_preset_usage(snapshot, preset) {
+	var domainText = preset ? decode_shunt_custom_text(preset.domain_b64) : "";
+	var ipText = preset ? decode_shunt_custom_text(preset.ip_b64) : "";
+	var domainStats = get_shunt_custom_text_stats(domainText, "domain");
+	var ipStats = get_shunt_custom_text_stats(ipText, "ip");
+	var percent = SHUNT_CUSTOM_PRESETS_FIELD_MAX > 0 ? Math.min(100, Math.max(0, Math.round(snapshot.payload_len * 100 / SHUNT_CUSTOM_PRESETS_FIELD_MAX))) : 0;
+	var statusClass = snapshot.overlimit ? "danger" : (snapshot.warn ? "warn" : "");
+	var statusText = snapshot.overlimit ? "已超出软件中心单字段上限，无法保存。" : (snapshot.warn ? ("剩余 " + snapshot.remaining + " bytes，已接近上限。") : ("剩余 " + snapshot.remaining + " bytes"));
+	var html = '<div class="shunt-custom-usage">';
+	html += '<div class="shunt-custom-usage-summary">';
+	html += '<span class="shunt-custom-usage-main">总占用：' + snapshot.payload_len + ' / ' + SHUNT_CUSTOM_PRESETS_FIELD_MAX + ' bytes</span>';
+	html += '<span class="shunt-custom-usage-status ' + statusClass + '">' + statusText + '</span>';
+	html += '</div>';
+	html += '<div class="shunt-custom-meter"><div class="shunt-custom-meter-bar ' + statusClass + '" style="width:' + percent + '%;"></div></div>';
+	html += '<div class="shunt-custom-usage-foot">域名 ' + domainStats.count + ' 条 / ' + domainStats.bytes + ' bytes，IP ' + ipStats.count + ' 条 / ' + ipStats.bytes + ' bytes；域名和 IP 会一起编码进同一个 <code>ss_basic_shunt_custom_presets</code> 字段后再统一计算总大小。</div>';
+	html += '</div>';
+	return html;
+}
+function update_shunt_custom_preset_usage(existingId) {
+	var name = $.trim($("#shunt_custom_name").val() || "");
+	var desc = $.trim($("#shunt_custom_desc").val() || "");
+	var policy = normalize_shunt_action($("#shunt_custom_policy").val() || "proxy");
+	var domainText = ($("#shunt_custom_domain").val() || "").replace(/\r/g, "");
+	var ipText = ($("#shunt_custom_ip").val() || "").replace(/\r/g, "");
+	var domainStats = get_shunt_custom_text_stats(domainText, "domain");
+	var ipStats = get_shunt_custom_text_stats(ipText, "ip");
+	var preset = normalize_shunt_custom_preset({
+		id: existingId || "custom_preset_preview",
+		label: name || "未命名集合",
+		description: desc,
+		policy: policy,
+		domain_b64: base64_encode_utf8(domainText),
+		ip_b64: base64_encode_utf8(ipText)
+	}, 1);
+	var snapshot = get_shunt_custom_presets_usage_snapshot(preset, existingId);
+	$("#shunt_custom_usage").html(render_shunt_custom_preset_usage(snapshot, preset));
+	$("#shunt_custom_domain_stats").html('域名规则：' + domainStats.count + ' 条 / ' + domainStats.bytes + ' bytes');
+	$("#shunt_custom_ip_stats").html('IP/CIDR：' + ipStats.count + ' 条 / ' + ipStats.bytes + ' bytes');
+	$("#shunt_custom_domain").toggleClass("is-overlimit", snapshot.overlimit);
+	$("#shunt_custom_ip").toggleClass("is-overlimit", snapshot.overlimit);
+	return snapshot;
+}
+function bind_shunt_custom_preset_usage_events() {
+	var sync = function() {
+		var existingId = $("#shunt_custom_pick").val() || "";
+		if (existingId == "__new__") {
+			existingId = "";
+		}
+		update_shunt_custom_preset_usage(existingId);
+	};
+	$("#shunt_custom_pick,#shunt_custom_name,#shunt_custom_desc,#shunt_custom_policy,#shunt_custom_domain,#shunt_custom_ip").off(".shuntUsage").on("input.shuntUsage change.shuntUsage", sync);
+	sync();
 }
 function current_mode_is_shunt() {
 	if (E("ss_basic_mode")) {
@@ -1134,7 +1373,13 @@ function normalize_shunt_rule(rule, idx) {
 	obj.source = String(obj.source || "builtin") == "custom" ? "custom" : "builtin";
 	obj.preset = String(obj.preset || "");
 	obj.custom_b64 = String(obj.custom_b64 || "");
-	obj.target_node_id = resolve_node_id(obj.target_node_id || "", true);
+	if (is_shunt_direct_target(obj.target_node_id)) {
+		obj.target_node_id = SHUNT_DIRECT_TARGET;
+	} else if (is_shunt_reject_target(obj.target_node_id)) {
+		obj.target_node_id = SHUNT_REJECT_TARGET;
+	} else {
+		obj.target_node_id = resolve_node_id(obj.target_node_id || "", true);
+	}
 	obj.remark = String(obj.remark || "");
 	return obj;
 }
@@ -1155,11 +1400,15 @@ function get_shunt_rules_from_dbus() {
 	return rules;
 }
 function sync_shunt_state_from_dbus() {
+	shuntCustomPresetsState = get_shunt_custom_presets_from_dbus();
 	shuntRulesState = get_shunt_rules_from_dbus();
 	shuntFallbackNodeId = get_saved_shunt_default_node_id();
 }
 function is_shunt_direct_target(nodeId) {
 	return String(nodeId || "").toUpperCase() == SHUNT_DIRECT_TARGET;
+}
+function is_shunt_reject_target(nodeId) {
+	return String(nodeId || "").toUpperCase() == SHUNT_REJECT_TARGET;
 }
 function get_saved_shunt_default_node_id() {
 	var value = $.trim(db_ss["ss_basic_shunt_default_node"] || "");
@@ -1200,6 +1449,9 @@ function get_shunt_default_node_id() {
 function get_shunt_target_node_label(nodeId) {
 	if (is_shunt_direct_target(nodeId)) {
 		return "DIRECT（直连）";
+	}
+	if (is_shunt_reject_target(nodeId)) {
+		return "REJECT（拒绝）";
 	}
 	var node = confs[nodeId];
 	if (!node) {
@@ -1256,30 +1508,179 @@ function get_shunt_rule_meta(rule) {
 		label: "",
 		description: "",
 		count: 0,
+		siteCount: 0,
+		ipCount: 0,
 		kind: rule && rule.source == "custom" ? "自定义规则" : "内置规则"
 	};
 	if (rule && rule.source == "custom") {
 		var customText = decode_shunt_custom_text(rule.custom_b64);
-		meta.label = rule.remark || "自定义域名集";
-		meta.count = count_shunt_custom_domains(customText);
-		meta.description = meta.count ? ("手动维护的域名合集，共 " + meta.count + " 条") : "手动维护的域名合集";
+		var customIpText = "";
+		meta.label = rule.remark || "自定义规则集";
+		customIpText = customText;
+		meta.siteCount = count_shunt_custom_domains(customText);
+		meta.ipCount = count_shunt_custom_ip_rules(customIpText);
+		meta.count = meta.siteCount + meta.ipCount;
+		meta.description = meta.count ? ("手动维护的规则集合，共 " + meta.count + " 条") : "手动维护的规则集合";
 		return meta;
 	}
 	var preset = rule ? shuntPresetMap[rule.preset] : null;
 	meta.label = preset ? preset.label : ((rule && rule.preset) || "内置分类");
 	meta.count = preset && preset.count ? Number(preset.count) : 0;
+	meta.siteCount = preset && preset.site_count ? Number(preset.site_count) : 0;
+	meta.ipCount = preset && preset.ip_count ? Number(preset.ip_count) : 0;
 	meta.description = preset && preset.description ? preset.description : "预置域名合集";
+	if (preset && preset.customPreset) {
+		meta.kind = "定制规则";
+	}
 	return meta;
+}
+function get_shunt_rule_breakdown_hint(meta) {
+	if (!meta) {
+		return "";
+	}
+	var parts = [];
+	if (Number(meta.siteCount || 0) > 0) {
+		parts.push("域名规则：" + Number(meta.siteCount || 0) + " 条");
+	}
+	if (Number(meta.ipCount || 0) > 0) {
+		parts.push("IP/CIDR规则：" + Number(meta.ipCount || 0) + " 条");
+	}
+	return parts.join("\n");
 }
 function get_shunt_rule_category_text(rule) {
 	return get_shunt_rule_meta(rule).label;
 }
 function get_shunt_rule_detail_text(rule) {
 	var meta = get_shunt_rule_meta(rule);
+	var breakdown = get_shunt_rule_breakdown_hint(meta);
 	if (meta.count) {
-		return meta.description + "（" + meta.count + " 条）";
+		return meta.description + "（" + meta.count + " 条）" + (breakdown ? ("；" + breakdown.replace(/\n/g, "，")) : "");
 	}
 	return meta.description;
+}
+function normalize_shunt_action(action) {
+	switch (String(action || "").toLowerCase()) {
+	case "direct":
+		return "direct";
+	case "reject":
+		return "reject";
+	default:
+		return "proxy";
+	}
+}
+function get_shunt_action_from_target(targetId) {
+	if (is_shunt_direct_target(targetId)) {
+		return "direct";
+	}
+	if (is_shunt_reject_target(targetId)) {
+		return "reject";
+	}
+	return "proxy";
+}
+function get_shunt_preset_policy(sourceValue) {
+	if (!sourceValue || String(sourceValue) == "__custom__") {
+		return "proxy";
+	}
+	var preset = shuntPresetMap[String(sourceValue)] || null;
+	return normalize_shunt_action(preset && preset.policy ? preset.policy : "proxy");
+}
+function get_shunt_preset_group(item) {
+	var id = String((item && item.id) || "");
+	var policy = normalize_shunt_action(item && item.policy ? item.policy : "proxy");
+	if (item && item.customPreset) {
+		return "定制规则";
+	}
+	if (policy == "direct") {
+		return "直连推荐";
+	}
+	if (id == "networktest" || id == "connectivity-check" || id == "trackerslist") {
+		return "网络与工具";
+	}
+	if (id == "media" || id == "youtube" || id == "netflix" || id == "disney" || id == "max" || id == "primevideo" || id == "appletv" || id == "spotify" || id == "tiktok" || id == "bilibili" || id == "games") {
+		return "流媒体与娱乐";
+	}
+	return "代理与平台";
+}
+function get_shunt_preset_icon(item) {
+	var id = String((item && item.id) || "");
+	var policy = normalize_shunt_action(item && item.policy ? item.policy : "proxy");
+	if (item && item.customPreset) return "🧩";
+	if (policy == "direct") {
+		return "🟢";
+	}
+	if (id == "ai" || id == "openai") return "🤖";
+	if (id == "telegram") return "✈️";
+	if (id == "twitter" || id == "social-media") return "💬";
+	if (id == "discord") return "🎧";
+	if (id == "github") return "💻";
+	if (id == "google") return "🌐";
+	if (id == "apple") return "🍎";
+	if (id == "cloudflare") return "☁️";
+	if (id == "media") return "🎬";
+	if (id == "youtube") return "▶️";
+	if (id == "netflix") return "🎞️";
+	if (id == "disney") return "🏰";
+	if (id == "max") return "🎥";
+	if (id == "primevideo") return "📺";
+	if (id == "appletv") return "📱";
+	if (id == "spotify") return "🎵";
+	if (id == "tiktok") return "🎶";
+	if (id == "bilibili") return "📼";
+	if (id == "games") return "🎮";
+	if (id == "networktest") return "📈";
+	if (id == "connectivity-check") return "🧭";
+	if (id == "trackerslist") return "🧲";
+	if (id == "microsoft") return "🪟";
+	if (id == "bybit") return "💸";
+	if (id == "cryptocurrency") return "₿";
+	if (id == "proxy") return "🛡️";
+	if (id == "gfw") return "🚧";
+	return policy == "neutral" ? "🟡" : "🔵";
+}
+function render_shunt_action_selector(selectedAction, elementId) {
+	var action = normalize_shunt_action(selectedAction);
+	var buttons = [
+		{value: "proxy", label: "节点"},
+		{value: "direct", label: "直连"},
+		{value: "reject", label: "屏蔽"}
+	];
+	var html = '<input type="hidden" id="' + elementId + '" value="' + action + '" />';
+	html += '<div class="shunt-action-group">';
+	for (var i = 0; i < buttons.length; i++) {
+		var item = buttons[i];
+		html += '<button type="button" class="shunt-action-btn' + (item.value == action ? ' active' : '') + '" data-action="' + item.value + '" onclick="return set_shunt_editor_action(\'' + item.value + '\', true);">' + item.label + '</button>';
+	}
+	html += '</div>';
+	return html;
+}
+function get_shunt_editor_selected_action() {
+	if (!E("shunt_rule_action")) {
+		return "proxy";
+	}
+	return normalize_shunt_action(E("shunt_rule_action").value);
+}
+function get_shunt_editor_effective_target_value() {
+	var action = get_shunt_editor_selected_action();
+	if (action == "direct") {
+		return SHUNT_DIRECT_TARGET;
+	}
+	if (action == "reject") {
+		return SHUNT_REJECT_TARGET;
+	}
+	return ($("#shunt_rule_target").val() || "");
+}
+function set_shunt_editor_action(actionValue, refreshPreview) {
+	var action = normalize_shunt_action(actionValue);
+	if (E("shunt_rule_action")) {
+		E("shunt_rule_action").value = action;
+	}
+	$(".shunt-action-btn").removeClass("active");
+	$('.shunt-action-btn[data-action="' + action + '"]').addClass("active");
+	$("#shunt_rule_target_row").toggle(action == "proxy");
+	if (refreshPreview !== false) {
+		refresh_shunt_rule_editor_preview();
+	}
+	return false;
 }
 function get_shunt_editor_preview_meta(sourceValue, remarkValue, customText) {
 	var rule = {
@@ -1301,6 +1702,16 @@ function scroll_shunt_rule_into_view(ruleId) {
 		node.scrollIntoView(false);
 	}
 }
+function position_shunt_rule_editor_layer(index) {
+	var $layer = $("#layui-layer" + index);
+	if (!$layer.length) {
+		return;
+	}
+	var viewportHeight = $(window).height() || 0;
+	var layerHeight = $layer.outerHeight() || 0;
+	var top = Math.max($(window).width() < 760 ? 18 : 30, Math.round(viewportHeight / 3 - layerHeight / 2));
+	$layer.css("top", top + "px");
+}
 function close_shunt_rule_editor() {
 	if (shuntRuleEditorLayerIndex !== null && typeof layer != "undefined" && layer.close) {
 		layer.close(shuntRuleEditorLayerIndex);
@@ -1309,28 +1720,50 @@ function close_shunt_rule_editor() {
 }
 function render_shunt_rule_editor_preview(sourceValue, targetId, remarkValue, customText) {
 	var meta = get_shunt_editor_preview_meta(sourceValue, remarkValue, customText);
-	var targetLabel = targetId ? get_shunt_target_node_label(resolve_node_id(targetId, true) || targetId) : "尚未选择";
-	var latency = get_shunt_node_latency(resolve_node_id(targetId, true) || targetId);
+	var normalizedTargetId = resolve_node_id(targetId, true) || targetId;
+	var targetLabel = normalizedTargetId ? get_shunt_target_node_label(normalizedTargetId) : "尚未选择";
+	var targetNote = "尚未选择出站节点或处理动作。";
+	var behaviorNote = "命中该规则后，会按当前选择的动作处理；未命中则继续往下匹配。";
+	if (normalizedTargetId) {
+		if (is_shunt_direct_target(normalizedTargetId)) {
+			targetNote = "DIRECT";
+			behaviorNote = "命中后 -> 直接放行";
+		} else if (is_shunt_reject_target(normalizedTargetId)) {
+			targetNote = "REJECT";
+			behaviorNote = "命中后 -> 直接拒绝";
+		} else {
+			targetNote = "PROXY";
+			behaviorNote = "命中后 -> 「" + targetLabel + "」出站";
+		}
+	}
 	var html = "";
-	html += '<div class="shunt-editor-preview-title">规则预览</div>';
+	html += '<div class="shunt-editor-preview-section">';
+	html += '<div class="shunt-editor-preview-label">规则介绍</div>';
 	html += '<div class="shunt-editor-preview-main">' + htmlEscape(meta.label || "未命名规则") + '</div>';
-	html += '<div class="shunt-editor-preview-note">' + htmlEscape(meta.description || "选择域名合集后，这里会显示规则摘要。") + '</div>';
+	html += '<div class="shunt-editor-preview-note">' + htmlEscape(meta.description || "选择规则合集后，这里会显示规则摘要。") + '</div>';
 	html += '<div class="shunt-chip-list">';
 	html += render_shunt_metric_chip("规则类型", meta.kind, meta.kind == "自定义规则" ? "custom" : "muted");
 	if (meta.count) {
-		html += render_shunt_metric_chip("域名数", meta.count + " 条", "muted");
+		html += render_shunt_metric_chip("规则数", meta.count + " 条", "muted");
 	}
-	if (latency) {
-		html += render_shunt_metric_chip("落地延迟", latency);
+	if (Number(meta.siteCount || 0) > 0) {
+		html += render_shunt_metric_chip("域名规则", meta.siteCount + " 条", "muted");
+	}
+	if (Number(meta.ipCount || 0) > 0) {
+		html += render_shunt_metric_chip("IP/CIDR", meta.ipCount + " 条", "muted");
 	}
 	html += '</div>';
+	html += '</div>';
 	html += '<div class="shunt-editor-preview-section">';
-	html += '<div class="shunt-editor-preview-label">出站节点</div>';
+	html += '<div class="shunt-editor-preview-label">节点信息</div>';
 	html += '<div class="shunt-editor-preview-value">' + htmlEscape(targetLabel) + '</div>';
+	if (!is_shunt_direct_target(normalizedTargetId) && !is_shunt_reject_target(normalizedTargetId) && normalizedTargetId) {
+		html += '<div class="shunt-chip-list">' + render_shunt_latency_chip(normalizedTargetId, "") + '</div>';
+	}
 	html += '</div>';
 	html += '<div class="shunt-editor-preview-section">';
 	html += '<div class="shunt-editor-preview-label">命中后行为</div>';
-	html += '<div class="shunt-editor-preview-note">命中该域名合集后，流量会立即切换到所选节点出站；若未命中，则继续往下匹配。</div>';
+	html += '<div class="shunt-editor-preview-note">' + htmlEscape(behaviorNote) + '</div>';
 	html += '</div>';
 	return html;
 }
@@ -1339,10 +1772,198 @@ function refresh_shunt_rule_editor_preview() {
 		return;
 	}
 	var sourceValue = $("#shunt_rule_source").val() || "";
-	var targetId = $("#shunt_rule_target").val() || "";
+	var targetId = get_shunt_editor_effective_target_value();
 	var remarkValue = $("#shunt_rule_remark").val() || "";
 	var customText = $("#shunt_rule_custom").val() || "";
 	$("#shunt_rule_preview").html(render_shunt_rule_editor_preview(sourceValue, targetId, remarkValue, customText));
+}
+function build_shunt_custom_preset_from_form(existingId) {
+	var name = $.trim($("#shunt_custom_name").val() || "");
+	var desc = $.trim($("#shunt_custom_desc").val() || "");
+	var policy = normalize_shunt_action($("#shunt_custom_policy").val() || "proxy");
+	var domainText = ($("#shunt_custom_domain").val() || "").replace(/\r/g, "");
+	var ipText = ($("#shunt_custom_ip").val() || "").replace(/\r/g, "");
+	if (!name) {
+		alert("请填写集合名称。");
+		return null;
+	}
+	if (!$.trim(domainText) && !$.trim(ipText)) {
+		alert("请至少填写域名规则或 IP/CIDR 规则。");
+		return null;
+	}
+	var preset = normalize_shunt_custom_preset({
+		id: existingId || ("custom_preset_" + new Date().getTime()),
+		label: name,
+		description: desc,
+		policy: policy,
+		domain_b64: base64_encode_utf8(domainText),
+		ip_b64: base64_encode_utf8(ipText)
+	}, 1);
+	var snapshot = get_shunt_custom_presets_usage_snapshot(preset, existingId);
+	$("#shunt_custom_usage").html(render_shunt_custom_preset_usage(snapshot, preset));
+	if (snapshot.overlimit) {
+		alert("定制规则编码后总长度将达到 " + snapshot.payload_len + " bytes，超过软件中心单字段上限 " + SHUNT_CUSTOM_PRESETS_FIELD_MAX + " bytes，请减少域名/IP 规则数量。");
+		return null;
+	}
+	return preset;
+}
+function get_shunt_custom_preset_by_id(presetId) {
+	for (var i = 0; i < shuntCustomPresetsState.length; i++) {
+		if (String(shuntCustomPresetsState[i].id) == String(presetId)) {
+			return normalize_shunt_custom_preset(shuntCustomPresetsState[i], i + 1);
+		}
+	}
+	return null;
+}
+function get_shunt_policy_text(policy) {
+	switch (normalize_shunt_action(policy)) {
+	case "direct":
+		return "直连";
+	case "reject":
+		return "屏蔽";
+	default:
+		return "代理";
+	}
+}
+function render_shunt_custom_preset_select(selectedId) {
+	var html = '<option value="__new__">+ 新建规则集合</option>';
+	for (var i = 0; i < shuntCustomPresetsState.length; i++) {
+		var item = normalize_shunt_custom_preset(shuntCustomPresetsState[i], i + 1);
+		var itemLabel = "[" + get_shunt_policy_text(item.policy) + "] " + item.label;
+		if (item.count) {
+			itemLabel += " (" + item.count + ")";
+		}
+		html += '<option value="' + htmlEscape(item.id) + '"' + (String(item.id) == String(selectedId || "") ? ' selected' : '') + '>' + htmlEscape(itemLabel) + '</option>';
+	}
+	return '<select id="shunt_custom_pick" class="input_option" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" onchange="return switch_shunt_custom_preset_editor(this.value);">' + html + '</select>';
+}
+function fill_shunt_custom_preset_form(preset) {
+	var item = preset ? normalize_shunt_custom_preset(preset, 1) : null;
+	$("#shunt_custom_pick").val(item ? item.id : "__new__");
+	$("#shunt_custom_name").val(item ? item.label : "");
+	$("#shunt_custom_desc").val(item ? item.description : "");
+	$("#shunt_custom_policy").val(item ? normalize_shunt_action(item.policy) : "proxy");
+	$("#shunt_custom_domain").val(item ? decode_shunt_custom_text(item.domain_b64) : "");
+	$("#shunt_custom_ip").val(item ? decode_shunt_custom_text(item.ip_b64) : "");
+	$("#shunt_custom_delete").toggle(!!item);
+	update_shunt_custom_preset_usage(item ? item.id : "");
+}
+function switch_shunt_custom_preset_editor(presetId) {
+	fill_shunt_custom_preset_form(presetId && presetId != "__new__" ? get_shunt_custom_preset_by_id(presetId) : null);
+	return false;
+}
+function delete_shunt_custom_preset_from_form() {
+	var presetId = $("#shunt_custom_pick").val() || "";
+	if (!presetId || presetId == "__new__") {
+		return false;
+	}
+	var oldPresets = JSON.stringify(shuntCustomPresetsState || []);
+	var oldRules = JSON.stringify(shuntRulesState || []);
+	for (var i = 0; i < shuntCustomPresetsState.length; i++) {
+		if (String(shuntCustomPresetsState[i].id) == String(presetId)) {
+			shuntCustomPresetsState.splice(i, 1);
+			for (var j = shuntRulesState.length - 1; j >= 0; j--) {
+				if (String(shuntRulesState[j].preset || "") == String(presetId)) {
+					shuntRulesState.splice(j, 1);
+				}
+			}
+			if (!persist_shunt_custom_presets_state({
+				"ss_basic_shunt_rules": base64_encode_utf8(JSON.stringify(shuntRulesState || []))
+			}, "定制规则已保存到当前配置。若已有分流规则引用它，请点击页面底部“保存&应用”后重启插件使运行时生效。")) {
+				shuntCustomPresetsState = JSON.parse(oldPresets || "[]");
+				shuntRulesState = JSON.parse(oldRules || "[]");
+			}
+			init_shunt_preset_map();
+			fill_shunt_custom_preset_form(null);
+			refresh_shunt_ui();
+			return false;
+		}
+	}
+	return false;
+}
+function open_shunt_custom_presets_manager() {
+	var html = "";
+	html += '<div class="shunt-editor">';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">已有规则</div><div class="shunt-editor-control">' + render_shunt_custom_preset_select("") + '<div class="shunt-editor-hint">这里统一管理可重复复用的定制规则；保存后会出现在节点分流的“规则合集”下拉中。</div></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">集合名称</div><div class="shunt-editor-control"><input id="shunt_custom_name" type="text" maxlength="64" placeholder="例如：常用 AI / 常用直连 / 屏蔽站点" /></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">集合描述</div><div class="shunt-editor-control"><input id="shunt_custom_desc" type="text" maxlength="120" placeholder="简单说明该规则集适合匹配哪些域名或地址" /></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">推荐用于</div><div class="shunt-editor-control"><select id="shunt_custom_policy" class="input_option" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;"><option value="proxy">代理</option><option value="direct">直连</option><option value="reject">屏蔽</option></select></div></div>';
+	html += '<div class="shunt-editor-shell">';
+	html += '<div class="shunt-editor-main">';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">域名规则</div><div class="shunt-editor-control"><textarea id="shunt_custom_domain" rows="11" placeholder="# 支持 bare domain / full: / domain: / keyword:&#10;openai.com&#10;domain:chatgpt.com&#10;keyword:claude"></textarea><div class="shunt-editor-meta-row"><span id="shunt_custom_domain_stats">域名规则：0 条 / 0 bytes</span></div><div class="shunt-editor-hint">支持 bare domain、full:、domain:、keyword:，也兼容 DOMAIN / DOMAIN-SUFFIX / DOMAIN-KEYWORD 风格。</div></div></div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-side">';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">IP/CIDR</div><div class="shunt-editor-control"><textarea id="shunt_custom_ip" rows="11" placeholder="# 支持 CIDR 或 ip-cidr: 前缀&#10;1.2.3.0/24&#10;ip-cidr:2001:db8::/32"></textarea><div class="shunt-editor-meta-row"><span id="shunt_custom_ip_stats">IP/CIDR：0 条 / 0 bytes</span></div><div class="shunt-editor-hint">支持纯 CIDR 或 ip-cidr: 前缀写法；当前不提供 geoip: 自定义输入。</div></div></div>';
+	html += '</div>';
+	html += '</div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">占用预估</div><div class="shunt-editor-control"><div id="shunt_custom_usage" class="shunt-editor-hint">loading...</div></div></div>';
+	html += '<div class="shunt-editor-actions-tip">保存后会立即出现在“规则合集”下拉中；点击页面底部“提交”并重启插件后，规则集及引用它的节点分流规则才会正式生效。</div>';
+	html += '</div>';
+	if (shuntCustomPresetLayerIndex !== null && typeof layer != "undefined" && layer.close) {
+		layer.close(shuntCustomPresetLayerIndex);
+	}
+	layer.open({
+		type: 1,
+		title: "定制规则",
+		skin: "shunt-editor-layer",
+		area: [$(window).width() < 760 ? '94%' : '960px', $(window).width() < 760 ? '88%' : 'auto'],
+		content: html,
+		btn: ["保存", "关闭"],
+		success: function(layero, index) {
+			shuntCustomPresetLayerIndex = index;
+			position_shunt_rule_editor_layer(index);
+			$(window).off("resize.shuntCustom").on("resize.shuntCustom", function() {
+				position_shunt_rule_editor_layer(index);
+			});
+			var $btnBox = layero.find(".layui-layer-btn");
+			if ($btnBox.length) {
+				$btnBox.prepend('<a href="javascript:void(0);" id="shunt_custom_delete" class="layui-layer-btn1" style="display:none;float:left;margin-left:0;">删除</a>');
+				$("#shunt_custom_delete").off("click").on("click", function() {
+					return delete_shunt_custom_preset_from_form();
+				});
+			}
+			fill_shunt_custom_preset_form(null);
+			bind_shunt_custom_preset_usage_events();
+		},
+		end: function() {
+			$(window).off("resize.shuntCustom");
+			shuntCustomPresetLayerIndex = null;
+		},
+		yes: function(index) {
+			var existingId = $("#shunt_custom_pick").val() || "";
+			if (existingId == "__new__") {
+				existingId = "";
+			}
+			var oldPresets = JSON.stringify(shuntCustomPresetsState || []);
+			var preset = build_shunt_custom_preset_from_form(existingId);
+			if (!preset) {
+				return false;
+			}
+			var replaced = false;
+			for (var i = 0; i < shuntCustomPresetsState.length; i++) {
+				if (String(shuntCustomPresetsState[i].id) == String(preset.id)) {
+					shuntCustomPresetsState[i] = preset;
+					replaced = true;
+					break;
+				}
+			}
+			if (!replaced) {
+				if (shuntCustomPresetsState.length >= SHUNT_MAX_CUSTOM_PRESETS) {
+					alert("定制规则当前最多支持 " + SHUNT_MAX_CUSTOM_PRESETS + " 组。");
+					return false;
+				}
+				shuntCustomPresetsState.push(preset);
+			}
+			if (!persist_shunt_custom_presets_state({}, "定制规则已保存到当前配置。若已有分流规则引用它，请点击页面底部“保存&应用”后重启插件使运行时生效。")) {
+				shuntCustomPresetsState = JSON.parse(oldPresets || "[]");
+			}
+			init_shunt_preset_map();
+			fill_shunt_custom_preset_form(preset);
+			refresh_shunt_ui();
+			return false;
+		}
+	});
+	return false;
 }
 function check_shunt_rule_limits(rules) {
 	var activeTargets = {};
@@ -1353,7 +1974,7 @@ function check_shunt_rule_limits(rules) {
 	}
 	for (var i = 0; i < rules.length; i++) {
 		var rule = normalize_shunt_rule(rules[i], i + 1);
-		if (rule.enabled != "1" || !rule.target_node_id) {
+		if (rule.enabled != "1" || !rule.target_node_id || is_shunt_direct_target(rule.target_node_id) || is_shunt_reject_target(rule.target_node_id)) {
 			continue;
 		}
 		if (!activeTargets[rule.target_node_id]) {
@@ -1391,7 +2012,7 @@ function render_shunt_target_select(selectedId, includeEmpty, elementId, extraAt
 		}
 		html += '<option value="' + nodes[i].id + '"' + (String(nodes[i].id) == selectedValue ? ' selected' : '') + '>' + htmlEscape(nodes[i].label) + '</option>';
 	}
-	if (selectedValue && !hasSelected && !is_shunt_direct_target(selectedValue)) {
+	if (selectedValue && !hasSelected && !is_shunt_direct_target(selectedValue) && !is_shunt_reject_target(selectedValue)) {
 		html = '<option value="' + htmlEscape(selectedValue) + '" selected>' + htmlEscape(get_shunt_target_node_label(selectedValue)) + '（不可用）</option>' + html;
 	}
 	if (elementId) {
@@ -1400,14 +2021,26 @@ function render_shunt_target_select(selectedId, includeEmpty, elementId, extraAt
 	return html;
 }
 function render_shunt_source_select(selectedValue, elementId, includeCustom, extraAttr, customLabel) {
-	var manifest = (typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST : [];
+	var manifest = shuntPresetManifestState && shuntPresetManifestState.length ? shuntPresetManifestState : ((typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST : []);
 	var html = "";
+	var currentGroup = "";
 	for (var i = 0; i < manifest.length; i++) {
 		var item = manifest[i];
-		html += '<option value="' + item.id + '"' + (String(item.id) == String(selectedValue || "") ? ' selected' : '') + '>' + htmlEscape(item.label) + '</option>';
+		var group = get_shunt_preset_group(item);
+		if (group != currentGroup) {
+			if (currentGroup) {
+				html += '</optgroup>';
+			}
+			currentGroup = group;
+			html += '<optgroup label="' + htmlEscape(group) + '">';
+		}
+		html += '<option value="' + item.id + '"' + (String(item.id) == String(selectedValue || "") ? ' selected' : '') + '>' + htmlEscape(get_shunt_preset_icon(item) + " " + item.label) + '</option>';
+	}
+	if (currentGroup) {
+		html += '</optgroup>';
 	}
 	if (includeCustom !== false) {
-		html += '<option value="__custom__"' + (String(selectedValue || "") == "__custom__" ? ' selected' : '') + '>' + htmlEscape(customLabel || "自定义域名集合") + '</option>';
+		html += '<option value="__custom__"' + (String(selectedValue || "") == "__custom__" ? ' selected' : '') + '>' + htmlEscape("📝 " + (customLabel || "自定义规则集合")) + '</option>';
 	}
 	if (elementId) {
 		html = '<select id="' + elementId + '" style="width:100%;max-width:100%;box-sizing:border-box;margin:0;" class="input_option"' + (extraAttr ? (' ' + extraAttr) : '') + '>' + html + '</select>';
@@ -1415,7 +2048,7 @@ function render_shunt_source_select(selectedValue, elementId, includeCustom, ext
 	return html;
 }
 function get_default_shunt_source_value() {
-	var manifest = (typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST : [];
+	var manifest = shuntPresetManifestState && shuntPresetManifestState.length ? shuntPresetManifestState : ((typeof SHUNT_PRESET_MANIFEST != "undefined" && isArray(SHUNT_PRESET_MANIFEST)) ? SHUNT_PRESET_MANIFEST : []);
 	if (manifest.length && manifest[0] && manifest[0].id) {
 		return String(manifest[0].id);
 	}
@@ -1448,7 +2081,7 @@ function render_shunt_ingress_select(selectedValue, elementId, extraAttr) {
 	return html;
 }
 function get_shunt_node_latency(nodeId) {
-	if (!nodeId || is_shunt_direct_target(nodeId)) {
+	if (!nodeId || is_shunt_direct_target(nodeId) || is_shunt_reject_target(nodeId)) {
 		return "";
 	}
 	var $cell = $("#ss_node_lt_" + nodeId);
@@ -1469,17 +2102,109 @@ function get_shunt_node_latency(nodeId) {
 	}
 	return text;
 }
+function normalize_shunt_latency_text(value) {
+	var text = $.trim(String(value || ""));
+	if (!text || text == "-") {
+		return "—";
+	}
+	text = text.replace(/\s+/g, " ");
+	if (/^failed!?$/i.test(text)) {
+		return "failed!";
+	}
+	if (/^timeout!?$/i.test(text)) {
+		return "timeout!";
+	}
+	if (/^(waiting|loading|booting|testing|warming)(\.\.\.)?$/i.test(text)) {
+		return text.replace(/\.\.\.+$/, "") + "...";
+	}
+	return text;
+}
+function parse_shunt_latency_ms(value) {
+	var text = $.trim(String(value || ""));
+	var match = text.match(/([0-9]+(?:\.[0-9]+)?)\s*ms$/i) || text.match(/^([0-9]+(?:\.[0-9]+)?)$/);
+	if (!match) {
+		return null;
+	}
+	return Number(match[1]);
+}
+function get_shunt_latency_chip_class(value) {
+	var text = normalize_shunt_latency_text(value).toLowerCase();
+	var latencyMs = parse_shunt_latency_ms(text);
+	if (latencyMs !== null && isFinite(latencyMs)) {
+		if (latencyMs <= 100) {
+			return "latency-fast";
+		}
+		if (latencyMs <= 200) {
+			return "latency-good";
+		}
+		if (latencyMs <= 300) {
+			return "latency-mid";
+		}
+		return "latency-slow";
+	}
+	if (text == "waiting...") {
+		return "latency-waiting";
+	}
+	if (text == "loading...") {
+		return "latency-loading";
+	}
+	if (text == "booting...") {
+		return "latency-booting";
+	}
+	if (text == "testing..." || text == "warming...") {
+		return "latency-testing";
+	}
+	if (text == "failed!" || text == "timeout!" || text == "不支持!" || text == "stopped" || text == "canceled") {
+		return "latency-failed";
+	}
+	return "muted";
+}
 function render_shunt_metric_chip(label, value, extraClass) {
 	if (!value) {
 		return "";
 	}
-	return '<span class="shunt-chip' + (extraClass ? (' ' + extraClass) : '') + '"><span class="shunt-chip-label">' + htmlEscape(label) + '</span><span>' + htmlEscape(value) + '</span></span>';
+	return '<span class="shunt-chip' + (extraClass ? (' ' + extraClass) : '') + '"><span class="shunt-chip-label">' + htmlEscape(label) + '</span><span class="shunt-chip-value">' + htmlEscape(value) + '</span></span>';
+}
+function render_shunt_latency_chip(nodeId, chipId) {
+	if (!nodeId || is_shunt_direct_target(nodeId) || is_shunt_reject_target(nodeId)) {
+		return "";
+	}
+	var latency = normalize_shunt_latency_text(get_shunt_node_latency(nodeId));
+	var cls = get_shunt_latency_chip_class(latency);
+	var attr = chipId ? (' id="' + chipId + '"') : "";
+	return '<span' + attr + ' class="shunt-chip shunt-latency-chip ' + cls + '" data-node-id="' + htmlEscape(String(nodeId || "")) + '"><span class="shunt-chip-label">落地延迟</span><span class="shunt-chip-value">' + htmlEscape(latency) + '</span></span>';
+}
+function update_shunt_latency_chip($chip) {
+	if (!$chip || !$chip.length) {
+		return;
+	}
+	var nodeId = String($chip.attr("data-node-id") || "");
+	var latency = normalize_shunt_latency_text(get_shunt_node_latency(nodeId));
+	$chip.attr("class", "shunt-chip shunt-latency-chip " + get_shunt_latency_chip_class(latency));
+	$chip.find(".shunt-chip-value").text(latency);
+}
+function update_shunt_latency_chips() {
+	$(".shunt-latency-chip").each(function() {
+		update_shunt_latency_chip($(this));
+	});
 }
 function close_shunt_hint() {
 	if (shuntHintLayerIndex !== null && typeof layer != "undefined" && layer.close) {
 		layer.close(shuntHintLayerIndex);
 	}
 	shuntHintLayerIndex = null;
+}
+function bind_shunt_hint_global_events() {
+	$(document).off(".shuntHint").on("mousedown.shuntHint touchstart.shuntHint", function(event) {
+		var $target = $(event.target);
+		if ($target.closest(".shunt-help,.layui-layer-tips").length) {
+			return;
+		}
+		close_shunt_hint();
+	});
+	$(window).off(".shuntHint").on("scroll.shuntHint resize.shuntHint", function() {
+		close_shunt_hint();
+	});
 }
 function show_shunt_hint(obj, event) {
 	var text = "";
@@ -1534,6 +2259,75 @@ function format_shunt_bytes(bytes) {
 	}
 	return (idx === 0 ? Math.round(size) : size.toFixed(size >= 100 ? 0 : (size >= 10 ? 1 : 2))) + " " + units[idx];
 }
+function format_shunt_duration(seconds) {
+	var total = Number(seconds || 0);
+	var days = 0;
+	var hours = 0;
+	var mins = 0;
+	var secs = 0;
+	if (!isFinite(total) || total < 0) {
+		total = 0;
+	}
+	total = Math.floor(total);
+	days = Math.floor(total / 86400);
+	hours = Math.floor((total % 86400) / 3600);
+	mins = Math.floor((total % 3600) / 60);
+	secs = total % 60;
+	if (days > 0) {
+		return days + "天" + hours + "时" + mins + "分" + secs + "秒";
+	}
+	if (hours > 0) {
+		return hours + "时" + mins + "分" + secs + "秒";
+	}
+	if (mins > 0) {
+		return mins + "分" + secs + "秒";
+	}
+	return secs + "秒";
+}
+function stop_shunt_uptime_tick() {
+	if (shuntUptimeTicker) {
+		clearInterval(shuntUptimeTicker);
+		shuntUptimeTicker = null;
+	}
+}
+function reset_shunt_uptime_clock(summary) {
+	var secs = Number(summary && summary.uptime_seconds);
+	if (isFinite(secs) && secs >= 0 && String((summary && summary.uptime_text) || "") !== "") {
+		shuntUptimeBaseSeconds = Math.floor(secs);
+		shuntUptimeBaseClientMs = new Date().getTime();
+		return;
+	}
+	shuntUptimeBaseSeconds = -1;
+	shuntUptimeBaseClientMs = 0;
+	stop_shunt_uptime_tick();
+}
+function get_shunt_uptime_text() {
+	var summary = shuntStatsSummary || {};
+	var elapsed = 0;
+	if (shuntUptimeBaseSeconds >= 0 && shuntUptimeBaseClientMs > 0) {
+		elapsed = Math.floor((new Date().getTime() - shuntUptimeBaseClientMs) / 1000);
+		if (elapsed < 0) {
+			elapsed = 0;
+		}
+		return format_shunt_duration(shuntUptimeBaseSeconds + elapsed);
+	}
+	return summary.uptime_text || "—";
+}
+function start_shunt_uptime_tick() {
+	stop_shunt_uptime_tick();
+	if (!is_shunt_tab_active() || shuntUptimeBaseSeconds < 0) {
+		return;
+	}
+	shuntUptimeTicker = setInterval(function() {
+		if (!is_shunt_tab_active()) {
+			stop_shunt_uptime_tick();
+			return;
+		}
+		if ($("#shunt_info_connection").length) {
+			$("#shunt_info_connection").text(get_shunt_uptime_text());
+		}
+	}, 1000);
+}
 function get_shunt_stats_tag(nodeId) {
 	return is_shunt_direct_target(nodeId) ? "direct" : ("proxy" + String(nodeId || ""));
 }
@@ -1544,7 +2338,7 @@ function get_shunt_usage_stats(nodeId) {
 function render_shunt_usage_chip(nodeId, chipId) {
 	var stats = get_shunt_usage_stats(nodeId);
 	var totalText = stats ? format_shunt_bytes(stats.total || 0) : "0 B";
-	return '<span id="' + chipId + '" class="shunt-chip muted shunt-usage-chip" data-node-id="' + htmlEscape(String(nodeId || "")) + '"><span class="shunt-chip-label">已用流量</span><span>' + htmlEscape(totalText) + '</span></span>';
+	return '<span id="' + chipId + '" class="shunt-chip muted shunt-usage-chip" data-node-id="' + htmlEscape(String(nodeId || "")) + '"><span class="shunt-chip-label">已用流量</span><span class="shunt-chip-value">' + htmlEscape(totalText) + '</span></span>';
 }
 function update_shunt_usage_chip($chip) {
 	if (!$chip || !$chip.length) {
@@ -1553,12 +2347,14 @@ function update_shunt_usage_chip($chip) {
 	var nodeId = String($chip.attr("data-node-id") || "");
 	var stats = get_shunt_usage_stats(nodeId);
 	var totalText = format_shunt_bytes(stats ? (stats.total || 0) : 0);
-	$chip.find("span").eq(1).text(totalText);
+	$chip.find(".shunt-chip-value").text(totalText);
 }
 function apply_shunt_stats_to_cards() {
+	update_shunt_latency_chips();
 	$(".shunt-usage-chip").each(function() {
 		update_shunt_usage_chip($(this));
 	});
+	update_shunt_info_cards();
 }
 function normalize_shunt_stats_payload(res) {
 	var payload = res;
@@ -1575,7 +2371,63 @@ function normalize_shunt_stats_payload(res) {
 	if (!payload.stats || typeof payload.stats != "object") {
 		payload.stats = {};
 	}
+	if (!payload.summary || typeof payload.summary != "object") {
+		payload.summary = {};
+	}
+	payload.summary.traffic_ready = Number(payload.summary.traffic_ready || 0);
 	return payload;
+}
+function has_shunt_process_payload(summary) {
+	summary = summary || shuntStatsSummary || {};
+	if ((summary.memory_text && summary.memory_text !== "") || (summary.uptime_text && summary.uptime_text !== "")) {
+		return true;
+	}
+	return false;
+}
+function has_shunt_traffic_payload(summary, stats) {
+	summary = summary || shuntStatsSummary || {};
+	stats = stats || shuntStatsCache || {};
+	if (Number(summary.traffic_ready || 0) === 1) {
+		return true;
+	}
+	if (Number(summary.total_uplink || 0) > 0 || Number(summary.total_downlink || 0) > 0 || Number(summary.total_traffic || 0) > 0) {
+		return true;
+	}
+	return Object.keys(stats || {}).length > 0;
+}
+function get_shunt_total_proxy_traffic_summary() {
+	var uplink = 0;
+	var downlink = 0;
+	for (var key in shuntStatsCache) {
+		if (!shuntStatsCache.hasOwnProperty(key) || key.indexOf("proxy") !== 0) {
+			continue;
+		}
+		uplink += Number((shuntStatsCache[key] && shuntStatsCache[key].uplink) || 0);
+		downlink += Number((shuntStatsCache[key] && shuntStatsCache[key].downlink) || 0);
+	}
+	return {
+		uplink: uplink,
+		downlink: downlink,
+		total: uplink + downlink
+	};
+}
+function update_shunt_info_cards() {
+	var summary = shuntStatsSummary || {};
+	var traffic = get_shunt_total_proxy_traffic_summary();
+	var processReady = has_shunt_process_payload(summary);
+	var trafficReady = has_shunt_traffic_payload(summary);
+	if ($("#shunt_info_memory").length) {
+		$("#shunt_info_memory").text(summary.memory_text || (processReady ? "—" : "loading..."));
+	}
+	if ($("#shunt_info_traffic").length) {
+		$("#shunt_info_traffic").text(trafficReady ? ("↑ " + format_shunt_bytes(traffic.uplink) + " / ↓ " + format_shunt_bytes(traffic.downlink)) : "loading...");
+	}
+	if ($("#shunt_info_connection").length) {
+		$("#shunt_info_connection").text(processReady ? get_shunt_uptime_text() : "loading...");
+	}
+	if ($("#shunt_info_custom").length) {
+		$("#shunt_info_custom").text((shuntCustomPresetsState || []).length + " 组");
+	}
 }
 function is_shunt_tab_active() {
 	if (!current_mode_is_shunt()) {
@@ -1592,18 +2444,155 @@ function stop_shunt_stats_refresh() {
 		shuntStatsTimer = null;
 	}
 }
+function clear_shunt_stats_ws_timers() {
+	if (shuntStatsWsOpenTimer) {
+		clearTimeout(shuntStatsWsOpenTimer);
+		shuntStatsWsOpenTimer = null;
+	}
+	if (shuntStatsWsInitTimer) {
+		clearTimeout(shuntStatsWsInitTimer);
+		shuntStatsWsInitTimer = null;
+	}
+}
+function close_shunt_stats_ws(triggerFallback) {
+	var socket = shuntStatsWs;
+	clear_shunt_stats_ws_timers();
+	if (!socket) {
+		return;
+	}
+	shuntStatsWsClosing = triggerFallback ? false : true;
+	shuntStatsWs = null;
+	try {
+		socket.onopen = null;
+		socket.onmessage = null;
+		socket.onerror = null;
+		socket.onclose = null;
+		socket.close();
+	} catch (e) {}
+}
+function stop_shunt_stats_runtime() {
+	stop_shunt_stats_refresh();
+	close_shunt_stats_ws(false);
+	stop_shunt_uptime_tick();
+}
+function apply_shunt_stats_payload(payload) {
+	var normalized = normalize_shunt_stats_payload(payload);
+	var incomingStats = normalized.stats || {};
+	var incomingSummary = normalized.summary || {};
+	var nextSummary = $.extend({}, shuntStatsSummary || {}, incomingSummary);
+	var incomingTrafficReady = has_shunt_traffic_payload(incomingSummary, incomingStats);
+	if (incomingTrafficReady) {
+		shuntStatsCache = incomingStats;
+		nextSummary.traffic_ready = 1;
+	} else {
+		nextSummary.total_uplink = Number((shuntStatsSummary || {}).total_uplink || 0);
+		nextSummary.total_downlink = Number((shuntStatsSummary || {}).total_downlink || 0);
+		nextSummary.total_traffic = Number((shuntStatsSummary || {}).total_traffic || 0);
+		nextSummary.connection_count = String((shuntStatsSummary || {}).connection_count || "");
+		nextSummary.connection_text = String((shuntStatsSummary || {}).connection_text || "");
+		nextSummary.traffic_ready = Number((shuntStatsSummary || {}).traffic_ready || 0);
+	}
+	shuntStatsSummary = nextSummary;
+	reset_shunt_uptime_clock(shuntStatsSummary);
+	apply_shunt_stats_to_cards();
+	start_shunt_uptime_tick();
+}
+function fallback_shunt_stats_ws() {
+	if (!is_shunt_tab_active()) {
+		return;
+	}
+	close_shunt_stats_ws(true);
+	stop_shunt_stats_refresh();
+	shuntStatsTimer = setTimeout(fetch_shunt_stats_http, 0);
+}
+function handle_shunt_stats_ws_payload(raw) {
+	var lines = String(raw || "").split(/\r?\n/);
+	var handled = false;
+	for (var i = 0; i < lines.length; i++) {
+		var line = $.trim(lines[i] || "");
+		if (!line || line.charAt(0) != "{") {
+			continue;
+		}
+		apply_shunt_stats_payload(line);
+		handled = true;
+	}
+	return handled;
+}
+function start_shunt_stats_ws() {
+	if (!is_shunt_tab_active() || ws_flag != 1) {
+		return false;
+	}
+	if (shuntStatsWs) {
+		return true;
+	}
+	shuntStatsWsClosing = false;
+	shuntStatsWsReceived = false;
+	shuntStatsWs = new WebSocket("ws://" + hostname + ":803/");
+	shuntStatsWsOpenTimer = setTimeout(function() {
+		if (!shuntStatsWsReceived) {
+			fallback_shunt_stats_ws();
+		}
+	}, 1800);
+	shuntStatsWs.onopen = function() {
+		clear_shunt_stats_ws_timers();
+		try {
+			shuntStatsWs.send("follow_shunt_stats");
+		} catch (e) {
+			fallback_shunt_stats_ws();
+			return;
+		}
+		shuntStatsWsInitTimer = setTimeout(function() {
+			if (!shuntStatsWsReceived) {
+				fallback_shunt_stats_ws();
+			}
+		}, 2500);
+	};
+	shuntStatsWs.onmessage = function(event) {
+		clear_shunt_stats_ws_timers();
+		if (handle_shunt_stats_ws_payload(event.data)) {
+			shuntStatsWsReceived = true;
+		}
+	};
+	shuntStatsWs.onerror = function() {
+		if (!shuntStatsWsClosing) {
+			fallback_shunt_stats_ws();
+		}
+	};
+	shuntStatsWs.onclose = function() {
+		var shouldFallback = !shuntStatsWsClosing;
+		shuntStatsWs = null;
+		shuntStatsWsClosing = false;
+		clear_shunt_stats_ws_timers();
+		if (shouldFallback && is_shunt_tab_active()) {
+			stop_shunt_stats_refresh();
+			shuntStatsTimer = setTimeout(fetch_shunt_stats_http, 0);
+		}
+	};
+	return true;
+}
 function schedule_shunt_stats_refresh(immediate) {
 	stop_shunt_stats_refresh();
 	if (!is_shunt_tab_active()) {
 		return;
 	}
-	shuntStatsTimer = setTimeout(fetch_shunt_stats, immediate ? 0 : SHUNT_STATS_REFRESH_INTERVAL);
+	if (ws_probe_pending && ws_enable == 1) {
+		shuntStatsTimer = setTimeout(function() {
+			schedule_shunt_stats_refresh(true);
+		}, immediate ? 120 : 260);
+		return;
+	}
+	if (ws_flag == 1) {
+		if (start_shunt_stats_ws()) {
+			return;
+		}
+	}
+	shuntStatsTimer = setTimeout(fetch_shunt_stats_http, immediate ? 0 : SHUNT_STATS_REFRESH_INTERVAL);
 }
-function fetch_shunt_stats() {
+function fetch_shunt_stats_http() {
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_conf.sh", "params": ["shunt_stats"], "fields": {}};
 	if (!is_shunt_tab_active()) {
-		stop_shunt_stats_refresh();
+		stop_shunt_stats_runtime();
 		return;
 	}
 	if (shuntStatsRequestPending) {
@@ -1629,9 +2618,7 @@ function fetch_shunt_stats() {
 				cache: false,
 				dataType: "text",
 				success: function(res) {
-					var payload = normalize_shunt_stats_payload(res);
-					shuntStatsCache = payload.stats || {};
-					apply_shunt_stats_to_cards();
+					apply_shunt_stats_payload(res);
 				},
 				complete: function() {
 					shuntStatsRequestPending = false;
@@ -1651,6 +2638,23 @@ function render_shunt_summary_card(title, bodyHtml, hintText, extraClass) {
 	html += '<div class="shunt-summary-card-body">' + bodyHtml + '</div>';
 	html += '</div>';
 	return html;
+}
+function render_shunt_info_card(cardId, title, value, note, extraClass, onclickJs) {
+	var cls = "shunt-info-card" + (extraClass ? (" " + extraClass) : "");
+	var attr = onclickJs ? (' onclick="' + onclickJs + '"') : "";
+	return '<div class="' + cls + '"' + attr + '><div class="shunt-info-title">' + htmlEscape(title) + '</div><div id="' + cardId + '" class="shunt-info-value">' + htmlEscape(value || "—") + '</div></div>';
+}
+function render_shunt_info_band() {
+	var summary = shuntStatsSummary || {};
+	var traffic = get_shunt_total_proxy_traffic_summary();
+	var processReady = has_shunt_process_payload(summary);
+	var trafficReady = has_shunt_traffic_payload(summary);
+	var cards = "";
+	cards += render_shunt_info_card("shunt_info_memory", "内存占用", summary.memory_text || (processReady ? "—" : "loading..."), "代理 Xray 主进程内存", "memory");
+	cards += render_shunt_info_card("shunt_info_traffic", "流量统计", trafficReady ? ("↑ " + format_shunt_bytes(traffic.uplink) + " / ↓ " + format_shunt_bytes(traffic.downlink)) : "loading...", "经过代理的累计上下行", "traffic");
+	cards += render_shunt_info_card("shunt_info_connection", "运行时长", processReady ? get_shunt_uptime_text() : "loading...", "主 Xray 进程运行时长", "connection");
+	cards += render_shunt_info_card("shunt_info_custom", "定制规则", (shuntCustomPresetsState || []).length + " 组", "点击管理自定义规则集合", "custom is-action", "return open_shunt_custom_presets_manager();");
+	return '<div class="shunt-info-band">' + cards + '</div>';
 }
 function render_shunt_add_card() {
 	var html = "";
@@ -1677,8 +2681,8 @@ function show_shunt_add_help() {
 	});
 }
 function render_shunt_rule_card(rule, idx) {
-	var targetSupported = !!confs[rule.target_node_id] && is_shunt_supported_node(rule.target_node_id);
-	var latency = get_shunt_node_latency(rule.target_node_id);
+	var isSpecialTarget = is_shunt_direct_target(rule.target_node_id) || is_shunt_reject_target(rule.target_node_id);
+	var targetSupported = isSpecialTarget || (!!confs[rule.target_node_id] && is_shunt_supported_node(rule.target_node_id));
 	var canDrag = shuntRulesState.length > 1;
 	var cardId = "shunt_rule_card_" + rule.id;
 	var meta = get_shunt_rule_meta(rule);
@@ -1686,6 +2690,8 @@ function render_shunt_rule_card(rule, idx) {
 	var isCustom = rule.source == "custom";
 	var ruleKindText = isCustom ? "自定义规则" : "内置规则";
 	var ruleCountText = meta.count ? (meta.count + " 条") : (isCustom ? "0 条" : "未统计");
+	var actionBadgeClass = is_shunt_direct_target(rule.target_node_id) ? "direct" : (is_shunt_reject_target(rule.target_node_id) ? "reject" : "proxy");
+	var actionBadgeText = is_shunt_direct_target(rule.target_node_id) ? "直连放行" : (is_shunt_reject_target(rule.target_node_id) ? "直接屏蔽" : "节点出站");
 	var html = '<div id="' + cardId + '" class="shunt-rule-card' + (targetSupported ? "" : " is-unavailable") + (canDrag ? " is-draggable" : "") + '" onclick="handle_shunt_rule_card_click(\'' + rule.id + '\', event)"';
 	if (canDrag) {
 		html += ' draggable="true" ondragstart="start_shunt_rule_drag(\'' + rule.id + '\', event)" ondragover="allow_shunt_rule_drop(\'' + rule.id + '\', event)" ondrop="drop_shunt_rule(\'' + rule.id + '\', event)" ondragend="end_shunt_rule_drag()"';
@@ -1696,8 +2702,7 @@ function render_shunt_rule_card(rule, idx) {
 	html += '</div>';
 	html += '<div class="shunt-rule-shell">';
 	html += '<div class="shunt-flow-panel shunt-flow-panel--source">';
-	html += '<div class="shunt-panel-head">';
-	html += '<div class="shunt-panel-heading"><span class="shunt-panel-caption">域名集</span></div>';
+	html += '<div class="shunt-panel-head" style="justify-content:flex-end;margin-bottom:6px;">';
 	html += '<div class="shunt-panel-badges"><span class="shunt-rule-kind-badge' + (isCustom ? ' custom' : '') + '">' + ruleKindText + '</span></div>';
 	html += '</div>';
 	html += '<div class="shunt-panel-title-row"><div class="shunt-panel-title">' + htmlEscape(meta.label) + '</div></div>';
@@ -1710,18 +2715,26 @@ function render_shunt_rule_card(rule, idx) {
 	html += '<div class="shunt-flow-panel shunt-flow-panel--target">';
 	html += '<div class="shunt-panel-head">';
 	html += '<div class="shunt-panel-heading"><span class="shunt-panel-caption">出站节点</span></div>';
+	html += '<div class="shunt-panel-badges"><span class="shunt-rule-kind-badge ' + actionBadgeClass + '">' + actionBadgeText + '</span>';
 	if (!targetSupported) {
-		html += '<div class="shunt-panel-badges"><span class="shunt-rule-kind-badge warning">节点不可用</span></div>';
+		html += '<span class="shunt-rule-kind-badge warning">节点不可用</span>';
 	}
+	html += '</div>';
 	html += '</div>';
 	html += '<div class="shunt-mini-value shunt-mini-value--node">' + htmlEscape(targetLabel) + '</div>';
 	html += '<div class="shunt-chip-list">';
-	if (latency) {
-		html += render_shunt_metric_chip("落地延迟", latency);
+	if (!isSpecialTarget) {
+		html += render_shunt_latency_chip(rule.target_node_id, "shunt_latency_rule_" + rule.id);
 	}
-	html += render_shunt_usage_chip(rule.target_node_id, "shunt_usage_rule_" + rule.id);
+	if (!isSpecialTarget) {
+		html += render_shunt_usage_chip(rule.target_node_id, "shunt_usage_rule_" + rule.id);
+	}
 	html += '</div>';
-	if (!targetSupported) {
+	if (is_shunt_reject_target(rule.target_node_id)) {
+		html += '<div class="shunt-inline-warning">命中该规则后，流量会被立即拒绝。</div>';
+	} else if (is_shunt_direct_target(rule.target_node_id)) {
+		html += '<div class="shunt-inline-warning">命中该规则后，流量会直接放行，不再经过代理节点。</div>';
+	} else if (!targetSupported) {
 		html += '<div class="shunt-inline-warning">当前目标节点不可用，请点击卡片重新选择。</div>';
 	}
 	html += '</div>';
@@ -1730,8 +2743,8 @@ function render_shunt_rule_card(rule, idx) {
 	return html;
 }
 function render_shunt_fallback_card(fallbackId) {
-	var latency = get_shunt_node_latency(fallbackId);
 	var hintText = is_shunt_direct_target(fallbackId) ? '当前兜底为 DIRECT，剩余流量将直接放行。' : '当前未命中的剩余流量，会由该节点统一出站。';
+	hintText += '\n兜底规则只允许选择代理节点或 DIRECT，暂不开放 REJECT（屏蔽）动作。';
 	var html = "";
 	html += '<div class="shunt-fallback-card">';
 	html += '<div class="shunt-rule-toolbar"><a href="javascript:void(0);" class="shunt-rule-delete" style="visibility:hidden;" tabindex="-1">&times;</a></div>';
@@ -1754,10 +2767,12 @@ function render_shunt_fallback_card(fallbackId) {
 	html += '</div>';
 	html += '<div class="shunt-fallback-target">' + render_shunt_target_select(fallbackId, false, "shunt_default_target", 'onchange="update_shunt_default_target(this.value)"', {allowDirect: shuntRulesState.length >= 1}) + '</div>';
 	html += '<div class="shunt-chip-list">';
-	if (latency) {
-		html += render_shunt_metric_chip("落地延迟", latency);
+	if (!is_shunt_direct_target(fallbackId)) {
+		html += render_shunt_latency_chip(fallbackId, "shunt_latency_fallback");
 	}
-	html += render_shunt_usage_chip(fallbackId, "shunt_usage_fallback");
+	if (!is_shunt_direct_target(fallbackId)) {
+		html += render_shunt_usage_chip(fallbackId, "shunt_usage_fallback");
+	}
 	html += '</div>';
 	html += '</div>';
 	html += '</div>';
@@ -1789,21 +2804,22 @@ function render_shunt_rule_list() {
 	var uniqueTargets = {};
 	for (var i = 0; i < shuntRulesState.length; i++) {
 		var activeRule = normalize_shunt_rule(shuntRulesState[i], i + 1);
-		if (activeRule.enabled == "1" && activeRule.target_node_id) {
+		if (activeRule.enabled == "1" && activeRule.target_node_id && !is_shunt_direct_target(activeRule.target_node_id) && !is_shunt_reject_target(activeRule.target_node_id)) {
 			uniqueTargets[activeRule.target_node_id] = 1;
 		}
 	}
-	var runtimeLatency = get_shunt_node_latency(currentId || fallbackId);
+	var runtimeTargetId = currentId || fallbackId;
 	html += '<div class="shunt-summary-grid">';
 	var runtimeBody = '<div class="shunt-summary-primary">' + htmlEscape(get_shunt_target_node_label(currentId || fallbackId)) + '</div>';
-	if (runtimeLatency) {
-		runtimeBody += '<div class="shunt-chip-list">' + render_shunt_metric_chip("落地延迟", runtimeLatency) + '</div>';
+	if (runtimeTargetId && !is_shunt_direct_target(runtimeTargetId) && !is_shunt_reject_target(runtimeTargetId)) {
+		runtimeBody += '<div class="shunt-chip-list">' + render_shunt_latency_chip(runtimeTargetId, "shunt_latency_runtime") + '</div>';
 	}
 	html += render_shunt_summary_card("运行节点", runtimeBody, currentSupported ? "当前运行节点支持 xray 分流，界面展示的是实际承载分流流量的节点。" : "当前主节点不支持 xray 分流，运行时会自动切换到其它可用节点。", "shunt-summary-card--runtime");
 	html += render_shunt_summary_card("入口策略", '<div class="shunt-summary-inline">' + render_shunt_ingress_select(ingressMode, "ss_basic_shunt_ingress_mode", 'onchange="update_shunt_ingress_mode(this.value)"') + '</div>', "大陆白名单引流只把海外流量交给 xray；全量引流会把更多流量交给 xray，再由节点分流规则继续细分。", "shunt-summary-card--ingress");
 	html += render_shunt_summary_card("规则状态", '<div class="shunt-summary-primary">' + shuntRulesState.length + ' 条规则 / ' + Object.keys(uniqueTargets).length + ' 个目标节点</div><div class="shunt-summary-secondary">当前兜底：' + htmlEscape(fallbackLabel) + '</div>', "规则按顺序匹配；命中后即停止继续匹配。修改规则后，点击页面底部“提交”并重启插件后生效。", "shunt-summary-card--status");
 	html += render_shunt_add_card();
 	html += '</div>';
+	html += render_shunt_info_band();
 	html += '<div class="shunt-rule-stack">';
 	if (!shuntRulesState.length) {
 		html += '<div class="shunt-empty-state">还没有用户定义的节点分流规则。当前所有进入 xray 的流量，都将直接走下方兜底规则。</div>';
@@ -1815,6 +2831,7 @@ function render_shunt_rule_list() {
 	html += '</div>';
 	$("#shunt_panel").html(html);
 	apply_shunt_stats_to_cards();
+	start_shunt_uptime_tick();
 	schedule_shunt_stats_refresh(true);
 }
 function refresh_shunt_tab_visibility() {
@@ -1822,7 +2839,7 @@ function refresh_shunt_tab_visibility() {
 	$("#show_btn5").toggle(show);
 	if (!show && $(".show-btn5").hasClass("active")) {
 		$(".show-btn1").trigger("click");
-		stop_shunt_stats_refresh();
+		stop_shunt_stats_runtime();
 	}
 }
 function refresh_shunt_ui() {
@@ -1959,8 +2976,7 @@ function add_shunt_rule_entry() {
 	return open_new_shunt_rule_editor();
 }
 function toggle_shunt_editor_source_fields(sourceValue) {
-	var isCustom = String(sourceValue || "") == "__custom__";
-	$("#shunt_rule_custom_group").toggleClass("active", isCustom);
+	set_shunt_editor_action(get_shunt_preset_policy(sourceValue), false);
 	refresh_shunt_rule_editor_preview();
 }
 function show_shunt_rule_restart_notice() {
@@ -1996,37 +3012,32 @@ function open_shunt_rule_editor(ruleId, overrides) {
 			remark: ""
 		}, overrides || {}), shuntRulesState.length + 1);
 	}
-	var sourceValue = editing.source == "custom" ? "__custom__" : (editing.preset || get_default_shunt_source_value());
+	var sourceValue = editing.preset || get_default_shunt_source_value();
 	var editorTitle = ruleId ? "编辑分流规则" : "添加分流规则";
 	var editorAction = ruleId ? "保存" : "添加";
-	var customText = decode_shunt_custom_text(editing.custom_b64);
 	var html = "";
 	html += '<div class="shunt-editor">';
 	html += '<div class="shunt-editor-shell">';
 	html += '<div class="shunt-editor-main">';
+	var actionValue = get_shunt_action_from_target(editing.target_node_id);
+	if (actionValue == "proxy") {
+		actionValue = get_shunt_preset_policy(sourceValue);
+	}
 	html += '<div class="shunt-editor-row">';
-	html += '<div class="shunt-editor-label">域名合集</div>';
+	html += '<div class="shunt-editor-label">规则合集</div>';
 	html += '<div class="shunt-editor-control">';
-	html += render_shunt_source_select(sourceValue, "shunt_rule_source", true, 'onchange="toggle_shunt_editor_source_fields(this.value)"', "自定义域名合集");
-	html += '<div class="shunt-editor-hint">内置类别直接沿用预置规则；选择自定义后，可输入自定义集合名称与域名合集。</div>';
+	html += render_shunt_source_select(sourceValue, "shunt_rule_source", false, 'onchange="toggle_shunt_editor_source_fields(this.value)"');
+	html += '<div class="shunt-editor-hint">内置类别与定制规则都在这里选择；定制规则请通过上方“定制规则”入口统一管理。</div>';
 	html += '</div>';
 	html += '</div>';
-	html += '<div id="shunt_rule_custom_group" class="shunt-editor-source-extra' + (sourceValue == "__custom__" ? ' active' : '') + '">';
 	html += '<div class="shunt-editor-row">';
-	html += '<div class="shunt-editor-label">集合名称</div>';
+	html += '<div class="shunt-editor-label">处理动作</div>';
 	html += '<div class="shunt-editor-control">';
-	html += '<input id="shunt_rule_remark" type="text" maxlength="64" value="' + htmlEscape(editing.remark) + '" placeholder="如：AI 站点 / 流媒体 / 自建服务" />';
+	html += render_shunt_action_selector(actionValue, "shunt_rule_action");
+	html += '<div class="shunt-editor-hint">节点表示切换到代理节点出站；直连表示命中后直接放行；屏蔽表示命中后直接拒绝。</div>';
 	html += '</div>';
 	html += '</div>';
-	html += '<div class="shunt-editor-row">';
-	html += '<div class="shunt-editor-label">域名合集</div>';
-	html += '<div class="shunt-editor-control">';
-	html += '<textarea id="shunt_rule_custom" rows="10" placeholder="# 一行一个域名&#10;openai.com&#10;chatgpt.com">' + htmlEscape(customText) + '</textarea>';
-	html += '<div class="shunt-editor-hint">支持一行一个域名；注释行请以 # 开头。也支持 DOMAIN / DOMAIN-SUFFIX / DOMAIN-KEYWORD、full: / domain: / keyword: 写法。</div>';
-	html += '</div>';
-	html += '</div>';
-	html += '</div>';
-	html += '<div class="shunt-editor-row">';
+	html += '<div id="shunt_rule_target_row" class="shunt-editor-row"' + (actionValue == "proxy" ? '' : ' style="display:none;"') + '>';
 	html += '<div class="shunt-editor-label">出站节点</div>';
 	html += '<div class="shunt-editor-control">';
 	html += render_shunt_target_select(editing.target_node_id, true, "shunt_rule_target");
@@ -2035,7 +3046,7 @@ function open_shunt_rule_editor(ruleId, overrides) {
 	html += '</div>';
 	html += '<div class="shunt-editor-actions-tip">保存后会先更新当前页面中的规则草稿；点击页面底部“提交”并重启插件后，新的节点分流规则才会真正生效。</div>';
 	html += '</div>';
-	html += '<div class="shunt-editor-side"><div id="shunt_rule_preview" class="shunt-editor-preview">' + render_shunt_rule_editor_preview(sourceValue, editing.target_node_id, editing.remark, customText) + '</div></div>';
+	html += '<div class="shunt-editor-side"><div id="shunt_rule_preview" class="shunt-editor-preview">' + render_shunt_rule_editor_preview(sourceValue, editing.target_node_id, "", "") + '</div></div>';
 	html += '</div>';
 	html += '</div>';
 	close_shunt_rule_editor();
@@ -2050,46 +3061,43 @@ function open_shunt_rule_editor(ruleId, overrides) {
 		btn: [editorAction, '取消'],
 		success: function(layero, index) {
 			shuntRuleEditorLayerIndex = index;
+			position_shunt_rule_editor_layer(index);
 			toggle_shunt_editor_source_fields(sourceValue);
 			$("#shunt_rule_source,#shunt_rule_target").off(".shuntEditor").on("change.shuntEditor", refresh_shunt_rule_editor_preview);
-			$("#shunt_rule_remark,#shunt_rule_custom").off(".shuntEditor").on("input.shuntEditor keyup.shuntEditor", refresh_shunt_rule_editor_preview);
+			set_shunt_editor_action(actionValue, false);
+			$(window).off("resize.shuntEditor").on("resize.shuntEditor", function() {
+				position_shunt_rule_editor_layer(index);
+			});
 			refresh_shunt_rule_editor_preview();
 		},
 		end: function() {
+			$(window).off("resize.shuntEditor");
 			shuntRuleEditorLayerIndex = null;
 		},
 		yes: function(index) {
 			var nextRule = normalize_shunt_rule(editing, 1);
 			var selectedSource = $("#shunt_rule_source").val() || "";
+			var selectedAction = get_shunt_editor_selected_action();
 			nextRule.enabled = "1";
-			nextRule.target_node_id = resolve_node_id($("#shunt_rule_target").val() || "", true);
-			if (!nextRule.target_node_id || !is_shunt_supported_node(nextRule.target_node_id)) {
-				alert("请选择一个可用于 xray 分流的目标节点。");
+			if (selectedAction == "direct") {
+				nextRule.target_node_id = SHUNT_DIRECT_TARGET;
+			} else if (selectedAction == "reject") {
+				nextRule.target_node_id = SHUNT_REJECT_TARGET;
+			} else {
+				nextRule.target_node_id = resolve_node_id($("#shunt_rule_target").val() || "", true);
+				if (!nextRule.target_node_id || !is_shunt_supported_node(nextRule.target_node_id)) {
+					alert("请选择一个可用于 xray 分流的目标节点。");
+					return false;
+				}
+			}
+			if (!shuntPresetMap[selectedSource]) {
+				alert("请选择一个规则合集。");
 				return false;
 			}
-			if (String(selectedSource || "") == "__custom__") {
-				nextRule.source = "custom";
-				nextRule.preset = "";
-				nextRule.remark = $.trim($("#shunt_rule_remark").val() || "");
-				nextRule.custom_b64 = base64_encode_utf8(($("#shunt_rule_custom").val() || "").replace(/\r/g, ""));
-				if (!nextRule.remark) {
-					alert("请填写自定义域名集合的名称。");
-					return false;
-				}
-				if (!$.trim($("#shunt_rule_custom").val() || "")) {
-					alert("请填写至少一个自定义域名。");
-					return false;
-				}
-			} else {
-				if (!shuntPresetMap[selectedSource]) {
-					alert("请选择一个内置分类。");
-					return false;
-				}
-				nextRule.source = "builtin";
-				nextRule.preset = String(selectedSource);
-				nextRule.custom_b64 = "";
-				nextRule.remark = shuntPresetMap[selectedSource] ? shuntPresetMap[selectedSource].label : String(selectedSource);
-			}
+			nextRule.source = "builtin";
+			nextRule.preset = String(selectedSource);
+			nextRule.custom_b64 = "";
+			nextRule.remark = shuntPresetMap[selectedSource] ? shuntPresetMap[selectedSource].label : String(selectedSource);
 			var nextRules = shuntRulesState.slice(0);
 			var replaced = false;
 			for (var i = 0; i < nextRules.length; i++) {
@@ -2100,7 +3108,11 @@ function open_shunt_rule_editor(ruleId, overrides) {
 				}
 			}
 			if (!replaced) {
-				nextRules.push(nextRule);
+				if (selectedAction == "proxy") {
+					nextRules.push(nextRule);
+				} else {
+					nextRules.unshift(nextRule);
+				}
 			}
 			if (!check_shunt_rule_limits(nextRules)) {
 				return false;
@@ -2711,8 +3723,23 @@ function auto_migrate_node_storage(cb) {
 		}
 	});
 }
-function try_ws_connect(){
+function wait_ws_probe_then_start_status(retry){
+	if (db_ss['ss_basic_enable'] != "1") {
+		return false;
+	}
+	if (ws_probe_pending && retry < 20) {
+		setTimeout(function() {
+			wait_ws_probe_then_start_status(retry + 1);
+		}, 120);
+		return true;
+	}
+	get_ss_status(ws_flag == 1);
+	return true;
+}
+function try_ws_connect(probeOnly){
+	probeOnly = (probeOnly === true);
 	if (ws_enable != 1){
+		ws_probe_pending = false;
 		ws_flag = 0;
 		if (wss){
 			try {
@@ -2720,10 +3747,13 @@ function try_ws_connect(){
 			} catch (e) {}
 			wss = null;
 		}
-		get_ss_status(false);
+		if (!probeOnly) {
+			get_ss_status(false);
+		}
 		return false;
 	}
 	if (window.location.protocol != "http:"){
+		ws_probe_pending = false;
 		ws_flag = 0;
 		if (wss){
 			try {
@@ -2731,10 +3761,13 @@ function try_ws_connect(){
 			} catch (e) {}
 			wss = null;
 		}
-		get_ss_status(false);
+		if (!probeOnly) {
+			get_ss_status(false);
+		}
 		return false;
 	}
 	if (hostname != lan_ipaddr){
+		ws_probe_pending = false;
 		ws_flag = 0;
 		if (wss){
 			try {
@@ -2742,9 +3775,12 @@ function try_ws_connect(){
 			} catch (e) {}
 			wss = null;
 		}
-		get_ss_status(false);
+		if (!probeOnly) {
+			get_ss_status(false);
+		}
 		return false;
 	}
+	ws_probe_pending = true;
 	wss = new WebSocket("ws://" + hostname + ":803/");
 	var ws_test_done = false;
 	var ws_test_timer = setTimeout(function() {
@@ -2752,13 +3788,16 @@ function try_ws_connect(){
 			return;
 		}
 		ws_test_done = true;
+		ws_probe_pending = false;
 		ws_flag = 3;
 		wss_open = 0;
 		try {
 			wss.close();
 		} catch (e) {}
 		wss = null;
-		get_ss_status(false);
+		if (!probeOnly) {
+			get_ss_status(false);
+		}
 	}, 1000);
 	wss.onopen = function() {
 		if (ws_test_done){
@@ -2772,6 +3811,7 @@ function try_ws_connect(){
 		}
 		ws_test_done = true;
 		clearTimeout(ws_test_timer);
+		ws_probe_pending = false;
 		ws_flag = 2;
 		wss_open = 0;
 		//console.log('ws_test failed!');
@@ -2779,7 +3819,9 @@ function try_ws_connect(){
 			wss.close();
 		} catch (e) {}
 		wss = null;
-		get_ss_status(false);
+		if (!probeOnly) {
+			get_ss_status(false);
+		}
 	};
 	wss.onmessage = function(event) {
 		if (ws_test_done){
@@ -2787,10 +3829,13 @@ function try_ws_connect(){
 		}
 		ws_test_done = true;
 		clearTimeout(ws_test_timer);
+		ws_probe_pending = false;
 		ws_flag = 1;
 		wss_open = 1;
 		//console.log('ws_test message_ok!');
-		get_ss_status(true);
+		if (!probeOnly) {
+			get_ss_status(true);
+		}
 	};
 }
 function refresh_dbss(cb) {
@@ -3208,6 +4253,7 @@ function save() {
 	  "ss_basic_chnlist_update",
 	  "ss_basic_dns_hijack",
 	  "ss_basic_mcore",
+	  "ss_basic_shunt_hot_reload",
 	  "ss_basic_chng_china_dns_1_chk",
 	  "ss_basic_chng_china_dns_2_chk",
 	  "ss_basic_chng_china_dns_3_chk",
@@ -3282,6 +4328,12 @@ function save() {
 		}
 	}
 	dbus["ss_basic_shunt_rules"] = base64_encode_utf8(JSON.stringify(shuntRulesState));
+	var shuntCustomPresetsPayload = encode_shunt_custom_presets_payload(shuntCustomPresetsState);
+	if (shuntCustomPresetsPayload.length > SHUNT_CUSTOM_PRESETS_FIELD_MAX) {
+		alert("定制规则编码后总长度为 " + shuntCustomPresetsPayload.length + " bytes，超过软件中心单字段上限 " + SHUNT_CUSTOM_PRESETS_FIELD_MAX + " bytes，请减少定制规则内容。");
+		return false;
+	}
+	dbus["ss_basic_shunt_custom_presets"] = shuntCustomPresetsPayload;
 	dbus["ss_basic_shunt_rule_ts"] = String(new Date().getTime());
 	// collect values in acl table
 	if(E("ACL_table")){
@@ -3568,15 +4620,19 @@ function save() {
 		strip_legacy_node_fields(dbus, node_sel);
 	}
 	var post_dbus = compfilter(get_compare_store(), dbus);
+	var submit_arg = "start";
+	if (dbus["ss_basic_enable"] == "1" && should_use_shunt_hot_reload(post_dbus)) {
+		submit_arg = "start_shunt_hot";
+	}
 	//console.log("post_dbus", post_dbus);
 
 	if(dbus["ss_basic_enable"] == "1"){
 		if(ws_flag == 1){
 			//console.log("push_data_ws");
-			push_data_ws("ss_config.sh", "start",  post_dbus);
+			push_data_ws("ss_config.sh", submit_arg,  post_dbus);
 		}else{
 			//console.log("push_data_httpd");
-			push_data("ss_config.sh", "start",  post_dbus);
+			push_data("ss_config.sh", submit_arg,  post_dbus);
 		}
 	}else{
 		if(ws_flag == 1){
@@ -3634,6 +4690,29 @@ function push_data_ws(script, arg, obj, flag){
 		}
 	});
 }
+
+function should_use_shunt_hot_reload(post_dbus){
+	if (!post_dbus) return false;
+	if (!E("ss_basic_enable") || !E("ss_basic_enable").checked) return false;
+	if (!E("ss_basic_mode") || String(E("ss_basic_mode").value || "") != "7") return false;
+	if (!E("ss_basic_shunt_hot_reload") || !E("ss_basic_shunt_hot_reload").checked) return false;
+	if (String(db_ss["ss_basic_status"] || "0") != "1") return false;
+	var allowed = {
+		"ss_basic_shunt_rules": 1,
+		"ss_basic_shunt_default_node": 1,
+		"ss_basic_shunt_custom_presets": 1,
+		"ss_basic_shunt_rule_ts": 1
+	};
+	var has_real_change = false;
+	for (var key in post_dbus) {
+		if (!post_dbus.hasOwnProperty(key)) continue;
+		if (!allowed[key]) return false;
+		if (key != "ss_basic_shunt_rule_ts") {
+			has_real_change = true;
+		}
+	}
+	return has_real_change;
+}
 function push_data(script, arg, obj, flag){
 	if (!flag) showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
@@ -3657,6 +4736,53 @@ function push_data(script, arg, obj, flag){
 			}
 		}
 	});
+}
+function persist_shunt_local_fields(fields, successText) {
+	var id = parseInt(Math.random() * 100000000);
+	var ok = false;
+	var errMsg = "";
+	$.ajax({
+		type: "POST",
+		cache: false,
+		async: false,
+		url: "/_api/",
+		data: JSON.stringify({"id": id, "method": "dummy_script.sh", "params": [], "fields": fields || {}}),
+		dataType: "json",
+		success: function(response) {
+			if (response && String(response.result) == String(id)) {
+				ok = true;
+				for (var key in fields) {
+					if (fields.hasOwnProperty(key)) {
+						db_ss[key] = fields[key];
+					}
+				}
+			} else {
+				errMsg = "软件中心返回结果异常";
+			}
+		},
+		error: function(xhr, status, error) {
+			errMsg = error || status || "unknown";
+		}
+	});
+	if (!ok) {
+		alert("保存失败：" + (errMsg || "软件中心接口调用失败"));
+		return false;
+	}
+	if (successText) {
+		if (typeof layer != "undefined" && layer.msg) {
+			layer.msg(successText);
+		}
+	}
+	return true;
+}
+function persist_shunt_custom_presets_state(extraFields, successText) {
+	var fields = $.extend({}, extraFields || {});
+	fields["ss_basic_shunt_custom_presets"] = encode_shunt_custom_presets_payload(shuntCustomPresetsState);
+	if (fields["ss_basic_shunt_custom_presets"].length > SHUNT_CUSTOM_PRESETS_FIELD_MAX) {
+		alert("定制规则编码后总长度为 " + fields["ss_basic_shunt_custom_presets"].length + " bytes，超过软件中心单字段上限 " + SHUNT_CUSTOM_PRESETS_FIELD_MAX + " bytes，请减少定制规则内容。");
+		return false;
+	}
+	return persist_shunt_local_fields(fields, successText);
 }
 function applyVisibility(container, ctx) {
 	if (!ctx) return;
@@ -6693,10 +7819,7 @@ function latency_test(action) {
 }
 function get_latency_data_single(node, retry){
 	if(retry > 40){
-		var cell = $("#ss_node_lt_" + node + " .latency_val");
-		if(cell.length){
-			cell.html("timeout");
-		}
+		write_webtest([[String(node), "timeout"]]);
 		single_test_wait[node] = false;
 		single_test_running = false;
 		single_test_node = null;
@@ -6946,6 +8069,7 @@ function write_webtest(ps){
 			}
 		}
 	}
+	update_shunt_latency_chips();
 }
 function save_row(action) {
 	var dbus_post = {};
@@ -7394,7 +8518,7 @@ function handle_tab_click() {
 	if (!match) return;
 	var idx = parseInt(match[1], 10);
 	if (idx !== 5) {
-		stop_shunt_stats_refresh();
+		stop_shunt_stats_runtime();
 	}
 	tabSelect(idx);
 	if (tab_actions[idx]) {
@@ -7442,7 +8566,7 @@ function toggle_func() {
 		$('.sub-btn2').addClass('active2');
 		verifyFields()
 	});
-	var default_tab = parseInt(E("ss_basic_tablet").checked ? "1":"0");
+	var default_tab = current_mode_is_shunt() ? 5 : parseInt(E("ss_basic_tablet").checked ? "1":"0");
 	if (node_nu == 0 && poped == 0) {
 		$(".show-btn1").trigger("click");
 	}else{
@@ -10664,6 +11788,7 @@ function toggleKeyMask(o, show){
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">性能优化</td></tr>'},
 															{ title: 'ssr开启多核心支持', id:'ss_basic_mcore', hint:'108', type:'checkbox', value:true},										//fancyss-hnd
 															{ title: 'ss/v2ray/xray开启tcp fast open', id:'ss_basic_tfo', type:'checkbox', value:false},										//fancyss-hnd
+															{ title: 'xray热重载', id:'ss_basic_shunt_hot_reload', type:'checkbox', value:false},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">其它</td></tr>'},
 															{ title: '插件开启时 - 跳过网络可用性检测', id:'ss_basic_nonetcheck', hint:'138', type:'checkbox', value:false},
 															{ title: '插件开启时 - 跳过国内出口ip检测', id:'ss_basic_nochnipcheck', hint:'142', type:'checkbox', value:false},

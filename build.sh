@@ -35,6 +35,13 @@ cp_rules_ng2(){
 	fi
 }
 
+prepare_geodata_assets(){
+	echo ">>> refresh rules_ng2 manifest and package mirror"
+	${CURR_PATH}/scripts/update_geodata_assets.sh --no-fetch
+	echo ">>> build geosite/geoip dat assets"
+	${CURR_PATH}/scripts/build_geodata_fancyss.sh
+}
+
 sync_binary(){
 	# BINS_REMOVE="naive"
 	# for BIN_REMOVE in $BINS_REMOVE;
@@ -86,6 +93,23 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto$upx ${CURR_PATH}/fancyss/bin-hnd/chinadns-ng
 	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v7a@fast+lto$upx ${CURR_PATH}/fancyss/bin-qca/chinadns-ng
 	cp -rf ${CURR_PATH}/binaries/chinadns-ng/chinadns-ng+wolfssl@arm-linux-musleabi@generic+v5te+soft_float@fast+lto$upx ${CURR_PATH}/fancyss/bin-arm/chinadns-ng
+
+	local GEOTOOL_VER="v1.2"
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/geotool
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/geotool
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/geotool
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/geotool
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-hnd/geotool
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/geotool
+	cp -rf ${CURR_PATH}/binaries/geotool/geotool-${GEOTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/geotool
+
+	local XAPITOOL_VER="v0.2.1"
+	cp -rf ${CURR_PATH}/binaries/xapi-tool/xapi-tool-${XAPITOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/xapi-tool
+	cp -rf ${CURR_PATH}/binaries/xapi-tool/xapi-tool-${XAPITOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/xapi-tool
+	cp -rf ${CURR_PATH}/binaries/xapi-tool/xapi-tool-${XAPITOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/xapi-tool
+	cp -rf ${CURR_PATH}/binaries/xapi-tool/xapi-tool-${XAPITOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/xapi-tool
+	cp -rf ${CURR_PATH}/binaries/xapi-tool/xapi-tool-${XAPITOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-hnd/xapi-tool
+	cp -rf ${CURR_PATH}/binaries/xapi-tool/xapi-tool-${XAPITOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/xapi-tool
 }
 
 gen_folder(){
@@ -347,6 +371,7 @@ do_backup(){
 papare(){
 	rm -f ${CURR_PATH}/packages/*
 	cp_rules
+	prepare_geodata_assets
 	cp_rules_ng2
 	sync_binary
 	cat >${CURR_PATH}/packages/version_tmp.json.js <<-EOF

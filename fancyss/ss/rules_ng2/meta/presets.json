@@ -1,0 +1,370 @@
+[
+  {
+    "id": "ai",
+    "order": 10,
+    "label": "AI",
+    "description": "AI 常见域名，默认建议走代理节点",
+    "policy": "proxy",
+    "site": [
+      "ai"
+    ],
+    "ip": []
+  },
+  {
+    "id": "openai",
+    "order": 20,
+    "label": "OpenAI",
+    "description": "OpenAI / ChatGPT 域名",
+    "policy": "proxy",
+    "site": [
+      "openai"
+    ],
+    "ip": []
+  },
+  {
+    "id": "telegram",
+    "order": 30,
+    "label": "Telegram",
+    "description": "Telegram 域名与 IP 段",
+    "policy": "proxy",
+    "site": [
+      "telegram"
+    ],
+    "ip": [
+      "telegram"
+    ]
+  },
+  {
+    "id": "twitter",
+    "order": 40,
+    "label": "Twitter/X",
+    "description": "Twitter/X 域名与 IP 段",
+    "policy": "proxy",
+    "site": [
+      "twitter"
+    ],
+    "ip": [
+      "twitter"
+    ]
+  },
+  {
+    "id": "discord",
+    "order": 50,
+    "label": "Discord",
+    "description": "Discord 域名与 IP 段",
+    "policy": "proxy",
+    "site": [
+      "discord"
+    ],
+    "ip": [
+      "discord"
+    ]
+  },
+  {
+    "id": "github",
+    "order": 60,
+    "label": "GitHub",
+    "description": "GitHub 相关域名",
+    "policy": "proxy",
+    "site": [
+      "github"
+    ],
+    "ip": []
+  },
+  {
+    "id": "google",
+    "order": 70,
+    "label": "Google",
+    "description": "Google 全球服务",
+    "policy": "proxy",
+    "site": [
+      "google"
+    ],
+    "ip": []
+  },
+  {
+    "id": "apple",
+    "order": 80,
+    "label": "Apple",
+    "description": "Apple 全球服务",
+    "policy": "proxy",
+    "site": [
+      "apple"
+    ],
+    "ip": []
+  },
+  {
+    "id": "media",
+    "order": 90,
+    "label": "媒体合集",
+    "description": "常见流媒体与媒体域名",
+    "policy": "proxy",
+    "site": [
+      "media"
+    ],
+    "ip": []
+  },
+  {
+    "id": "youtube",
+    "order": 100,
+    "label": "YouTube",
+    "description": "YouTube 及 Google Video 相关域名",
+    "policy": "proxy",
+    "site": [
+      "youtube"
+    ],
+    "ip": []
+  },
+  {
+    "id": "netflix",
+    "order": 110,
+    "label": "Netflix",
+    "description": "Netflix 相关域名与常见 IP 段",
+    "policy": "proxy",
+    "site": [
+      "netflix"
+    ],
+    "ip": [
+      "netflix"
+    ]
+  },
+  {
+    "id": "disney",
+    "order": 120,
+    "label": "Disney+",
+    "description": "Disney+ 相关域名",
+    "policy": "proxy",
+    "site": [
+      "disney"
+    ],
+    "ip": []
+  },
+  {
+    "id": "max",
+    "order": 130,
+    "label": "Max",
+    "description": "Max / HBO Max 相关域名",
+    "policy": "proxy",
+    "site": [
+      "max"
+    ],
+    "ip": []
+  },
+  {
+    "id": "primevideo",
+    "order": 140,
+    "label": "Prime Video",
+    "description": "Prime Video 相关域名",
+    "policy": "proxy",
+    "site": [
+      "primevideo"
+    ],
+    "ip": []
+  },
+  {
+    "id": "appletv",
+    "order": 150,
+    "label": "Apple TV+",
+    "description": "Apple TV+ 相关域名",
+    "policy": "proxy",
+    "site": [
+      "appletv"
+    ],
+    "ip": []
+  },
+  {
+    "id": "spotify",
+    "order": 160,
+    "label": "Spotify",
+    "description": "Spotify 相关域名",
+    "policy": "proxy",
+    "site": [
+      "spotify"
+    ],
+    "ip": []
+  },
+  {
+    "id": "tiktok",
+    "order": 170,
+    "label": "TikTok",
+    "description": "TikTok 相关域名",
+    "policy": "proxy",
+    "site": [
+      "tiktok"
+    ],
+    "ip": []
+  },
+  {
+    "id": "bilibili",
+    "order": 180,
+    "label": "Bilibili",
+    "description": "哔哩哔哩海外与国际化域名",
+    "policy": "proxy",
+    "site": [
+      "bilibili"
+    ],
+    "ip": []
+  },
+  {
+    "id": "games",
+    "order": 190,
+    "label": "游戏平台",
+    "description": "常见游戏平台与游戏服务域名",
+    "policy": "proxy",
+    "site": [
+      "games"
+    ],
+    "ip": []
+  },
+  {
+    "id": "networktest",
+    "order": 200,
+    "label": "测速站点",
+    "description": "偏向测速场景的站点与测速服务域名",
+    "policy": "proxy",
+    "site": [
+      "networktest"
+    ],
+    "ip": []
+  },
+  {
+    "id": "connectivity-check",
+    "order": 210,
+    "label": "连通性检查",
+    "description": "偏向联网检测、连通性探测和探活场景的域名",
+    "policy": "neutral",
+    "site": [
+      "connectivity-check"
+    ],
+    "ip": []
+  },
+  {
+    "id": "cloudflare",
+    "order": 220,
+    "label": "Cloudflare",
+    "description": "Cloudflare 相关域名与常见 IP 段",
+    "policy": "proxy",
+    "site": [
+      "cloudflare"
+    ],
+    "ip": [
+      "cloudflare"
+    ]
+  },
+  {
+    "id": "social-media",
+    "order": 230,
+    "label": "社交媒体",
+    "description": "常见海外社交媒体域名合集",
+    "policy": "proxy",
+    "site": [
+      "social-media"
+    ],
+    "ip": []
+  },
+  {
+    "id": "microsoft",
+    "order": 240,
+    "label": "Microsoft",
+    "description": "Microsoft / Windows / Office / Xbox 相关域名",
+    "policy": "proxy",
+    "site": [
+      "microsoft"
+    ],
+    "ip": []
+  },
+  {
+    "id": "trackerslist",
+    "order": 250,
+    "label": "Tracker 列表",
+    "description": "公开 Tracker 域名列表，适合 BT / Tracker 分流",
+    "policy": "proxy",
+    "site": [
+      "trackerslist"
+    ],
+    "ip": []
+  },
+  {
+    "id": "bybit",
+    "order": 260,
+    "label": "Bybit",
+    "description": "Bybit 相关域名",
+    "policy": "proxy",
+    "site": [
+      "bybit"
+    ],
+    "ip": []
+  },
+  {
+    "id": "cryptocurrency",
+    "order": 270,
+    "label": "加密货币",
+    "description": "常见交易所与加密货币服务域名",
+    "policy": "proxy",
+    "site": [
+      "cryptocurrency"
+    ],
+    "ip": []
+  },
+  {
+    "id": "google-cn",
+    "order": 280,
+    "label": "Google 中国",
+    "description": "Google 中国服务 / 国内可达域名，默认建议直连",
+    "policy": "direct",
+    "direct": true,
+    "site": [
+      "google-cn"
+    ],
+    "ip": []
+  },
+  {
+    "id": "apple-cn",
+    "order": 290,
+    "label": "Apple 中国",
+    "description": "Apple 中国服务与 CDN，默认建议直连",
+    "policy": "direct",
+    "direct": true,
+    "site": [
+      "apple-cn"
+    ],
+    "ip": []
+  },
+  {
+    "id": "chnlist",
+    "order": 300,
+    "label": "国内常见",
+    "description": "完整 cn 域名与 cn/private IP 资产，默认建议直连",
+    "policy": "direct",
+    "direct": true,
+    "site": [
+      "cn"
+    ],
+    "ip": [
+      "cn",
+      "private"
+    ]
+  },
+  {
+    "id": "proxy",
+    "order": 305,
+    "label": "代理扩展",
+    "description": "DustinWin Proxy 域名合集，覆盖比 GFW 扩展更宽，默认建议走代理",
+    "policy": "proxy",
+    "site": [
+      "proxy"
+    ],
+    "ip": []
+  },
+  {
+    "id": "gfw",
+    "order": 310,
+    "label": "GFW 扩展",
+    "description": "项目内置 gfwlist 扩展域名集合，默认建议走代理",
+    "policy": "proxy",
+    "site": [
+      "gfw"
+    ],
+    "ip": []
+  }
+]

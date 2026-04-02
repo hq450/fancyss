@@ -1,0 +1,14 @@
+domain:captive.apple.com
+domain:connectivitycheck.gstatic.com
+domain:cp.cloudflare.com
+domain:detectportal.firefox.com
+domain:msftconnecttest.com
+domain:msftncsi.com
+domain:network-test.debian.org
+domain:networkcheck.kde.org
+full:connect.rom.miui.com
+full:connectivity-check.ubuntu.com
+full:connectivitycheck.platform.hicloud.com
+full:connectivitycheck.platform.hihonorcloud.com
+full:ping.archlinux.org
+full:redirect.archlinux.org

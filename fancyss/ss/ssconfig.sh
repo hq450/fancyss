@@ -164,8 +164,16 @@ compare_time(){
 test_xray_conf(){
 	#uset _test_ret
 	local conf=$1
+	local xray_asset_dir=""
 	echo_date "测试xray配置文件..."
-	local test_ret=$(run /koolshare/bin/xray run -config=$conf -test 2>&1)
+	if [ "$(get_runtime_proxy_mode)" = "7" ] && type fss_shunt_xray_asset_dir >/dev/null 2>&1; then
+		xray_asset_dir="$(fss_shunt_xray_asset_dir 2>/dev/null || true)"
+	fi
+	if [ -n "${xray_asset_dir}" ]; then
+		local test_ret=$(run env "xray.location.asset=${xray_asset_dir}" /koolshare/bin/xray run -config="${conf}" -test 2>&1)
+	else
+		local test_ret=$(run /koolshare/bin/xray run -config="${conf}" -test 2>&1)
+	fi
 	local ret_1=$(echo "$test_ret" | grep "Configuration OK.")
 	local ret_2=$(echo "$test_ret" | grep "does not support fingerprint")
 	#local ret_2=$(echo $test_ret | grep "Old version of XTLS does not support fingerprint")
@@ -3121,11 +3129,23 @@ add_white_black() {
 	rm -rf /tmp/block_list.txt
 	rm -rf /tmp/chnlist.txt
 	rm -rf /tmp/gfwlist.txt
+	rm -rf /tmp/chnroute.txt
+	rm -rf /tmp/chnroute6.txt
 
 	# copy gfwlist.txt & chnlist.txt to tmp
 	echo_date "创建/tmp/chnlist.txt 和 /tmp/gfwlist.txt！"
-	gzip -d -c /koolshare/ss/rules/chnlist.gz >/tmp/chnlist.txt
-	gzip -d -c /koolshare/ss/rules/gfwlist.gz >/tmp/gfwlist.txt
+	if [ "${ss_basic_mode}" = "7" ] && type fss_shunt_export_runtime_base_rules >/dev/null 2>&1; then
+		if fss_shunt_export_runtime_base_rules; then
+			echo_date "通过geotool批量导出基础规则：chnlist / gfwlist / chnroute / chnroute6。"
+		else
+			echo_date "geotool批量导出基础规则失败，回退使用内置txt/gz规则。"
+			gzip -d -c /koolshare/ss/rules/chnlist.gz >/tmp/chnlist.txt
+			gzip -d -c /koolshare/ss/rules/gfwlist.gz >/tmp/gfwlist.txt
+		fi
+	else
+		gzip -d -c /koolshare/ss/rules/chnlist.gz >/tmp/chnlist.txt
+		gzip -d -c /koolshare/ss/rules/gfwlist.gz >/tmp/gfwlist.txt
+	fi
 	#cp -rf /koolshare/ss/rules/chnlist.txt /tmp/chnlist.txt
 	#cp -rf /koolshare/ss/rules/gfwlist.txt /tmp/gfwlist.txt
 	
@@ -4457,7 +4477,15 @@ start_xray() {
 	# xray start
 	echo_date "开启Xray主进程..."
 	cd /koolshare/bin
-	run_bg /koolshare/bin/xray run -c /koolshare/ss/xray.json
+	local xray_asset_dir=""
+	if [ "$(get_runtime_proxy_mode)" = "7" ] && type fss_shunt_xray_asset_dir >/dev/null 2>&1; then
+		xray_asset_dir="$(fss_shunt_xray_asset_dir 2>/dev/null || true)"
+	fi
+	if [ -n "${xray_asset_dir}" ]; then
+		run_bg env "xray.location.asset=${xray_asset_dir}" /koolshare/bin/xray run -c /koolshare/ss/xray.json
+	else
+		run_bg /koolshare/bin/xray run -c /koolshare/ss/xray.json
+	fi
 	detect_running_status3 xray 23456 0 force
 }
 
@@ -5028,6 +5056,16 @@ flush_ipset() {
 # creat ipset rules
 creat_ipset() {
 	echo_date "创建ipset名单"
+	local chnroute4_file="/koolshare/ss/rules/chnroute.txt"
+	local chnroute6_file="/koolshare/ss/rules/chnroute6.txt"
+	if [ "${ss_basic_mode}" = "7" ] && type fss_shunt_get_runtime_chnroute4_file >/dev/null 2>&1; then
+		local runtime_chnroute4=""
+		local runtime_chnroute6=""
+		runtime_chnroute4="$(fss_shunt_get_runtime_chnroute4_file 2>/dev/null || true)"
+		runtime_chnroute6="$(fss_shunt_get_runtime_chnroute6_file 2>/dev/null || true)"
+		[ -n "${runtime_chnroute4}" ] && chnroute4_file="${runtime_chnroute4}"
+		[ -n "${runtime_chnroute6}" ] && chnroute6_file="${runtime_chnroute6}"
+	fi
 
 	# 使用ipset restore批量创建/清空并导入网段，减少大量 ipset 子进程调用，加快启动速度
 	{
@@ -5063,11 +5101,11 @@ creat_ipset() {
 
 		echo "create chnroute nethash -exist"
 		echo "flush chnroute"
-		sed -e "s/^/add chnroute &/g" /koolshare/ss/rules/chnroute.txt
+		sed -e "s/^/add chnroute &/g" "${chnroute4_file}"
 
 		echo "create chnroute6 nethash family inet6 -exist"
 		echo "flush chnroute6"
-		sed -e "s/^/add chnroute6 &/g" /koolshare/ss/rules/chnroute6.txt
+		sed -e "s/^/add chnroute6 &/g" "${chnroute6_file}"
 
 		echo "COMMIT"
 	} | ipset -R
@@ -6853,6 +6891,9 @@ apply_ss() {
 	finish_start
 	ss_post_start
 	check_status
+	if [ "${ss_basic_mode}" = "7" ] && [ "${ss_basic_shunt_hot_reload}" = "1" ] && [ -x "/koolshare/scripts/ss_shunt_hot_reload.sh" ]; then
+		sh /koolshare/scripts/ss_shunt_hot_reload.sh seed >/dev/null 2>&1 || true
+	fi
 	# store current status
 	dbus set ss_basic_status="1"
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------

@@ -1,0 +1,16 @@
+domain:byabcde.com
+domain:byapis.com
+domain:byapps.net
+domain:bybdc6.com
+domain:bybit-global.com
+domain:bybit.biz
+domain:bybit.cloud
+domain:bybit.com
+domain:bybitglobal.com
+domain:bycbe.com
+domain:bycsi.com
+domain:byd3c3.com
+domain:bymj.io
+domain:bytick.com
+full:bybit-exchange.github.io
+full:bybit.ada.support
