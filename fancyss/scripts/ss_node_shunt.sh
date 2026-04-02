@@ -44,11 +44,7 @@ FSS_SHUNT_WEBTEST_HELPER="${KSROOT}/scripts/ss_webtest.sh"
 FSS_SCRIPT_DIR="${KSROOT}/scripts"
 
 fss_shunt_log() {
-	if type echo_date >/dev/null 2>&1; then
-		echo_date "$@"
-	else
-		echo "$@"
-	fi
+	echo "【$(date +'%Y%m%d %H:%M:%S')】: $*"
 }
 
 fss_shunt_mode_selected() {

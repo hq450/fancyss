@@ -3320,6 +3320,11 @@ var SCHEMA2_NODE_DIRECT_FIELDS = {
 	"xray_json": true,
 	"tuic_json": true
 };
+var SCHEMA2_NODE_COMPARE_IGNORE_FIELDS = {
+	"_rev": true,
+	"_updated_at": true,
+	"_source": true
+};
 function get_schema2_touch_timestamp() {
 	return String(Date.now());
 }
@@ -3332,6 +3337,35 @@ function get_schema2_compare_field_value(raw, field) {
 		return value == "1" ? "1" : "0";
 	}
 	return value;
+}
+function schema2_payload_has_material_changes(nodeId, payload) {
+	var raw = get_fss_raw_node(nodeId);
+	var keys = {};
+	var key = "";
+	if (!raw) {
+		return true;
+	}
+	for (key in raw) {
+		if (!raw.hasOwnProperty(key) || SCHEMA2_NODE_COMPARE_IGNORE_FIELDS[key] || is_node_runtime_field(key)) {
+			continue;
+		}
+		keys[key] = 1;
+	}
+	for (key in payload) {
+		if (!payload.hasOwnProperty(key) || SCHEMA2_NODE_COMPARE_IGNORE_FIELDS[key] || is_node_runtime_field(key)) {
+			continue;
+		}
+		keys[key] = 1;
+	}
+	for (key in keys) {
+		if (!keys.hasOwnProperty(key)) {
+			continue;
+		}
+		if (get_schema2_compare_field_value(raw, key) !== get_schema2_compare_field_value(payload, key)) {
+			return true;
+		}
+	}
+	return false;
 }
 function schema2_payload_changes_direct_domains(nodeId, payload) {
 	var raw = get_fss_raw_node(nodeId);
@@ -3401,6 +3435,9 @@ function build_schema2_upsert_fields(fieldBag, nodeId, source, preserveExisting)
 	var touchTs = get_schema2_touch_timestamp();
 	var payload = build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, touchTs);
 	var result = {};
+	if (!schema2_payload_has_material_changes(nodeId, payload)) {
+		return result;
+	}
 	result["fss_node_" + nodeId] = encode_schema2_node_payload(payload);
 	result["fss_node_config_ts"] = touchTs;
 	if (schema2_payload_changes_direct_domains(nodeId, payload)) {
