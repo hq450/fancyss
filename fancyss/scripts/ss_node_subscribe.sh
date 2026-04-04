@@ -1462,6 +1462,79 @@ sub_nodes_file_md5(){
 	' "${file}" 2>/dev/null | md5sum | awk '{print $1}'
 }
 
+sub_nodes_file_sorted_md5(){
+	local file="$1"
+	[ -f "${file}" ] || return 1
+	jq -S -c '
+		def normalize_json_config:
+			. as $raw
+			| if (($raw | type) != "string") or $raw == "" then
+				$raw
+			else
+				(
+					try ($raw | fromjson | tojson)
+					catch (
+						try ($raw | gsub("\\\\\""; "\"") | fromjson | tojson)
+						catch $raw
+					)
+				)
+			end;
+			def legacy_b64_mode:
+				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+			def decode_b64_field($field):
+				if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+					.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
+				else
+					.
+				end;
+		decode_b64_field("password")
+		| decode_b64_field("naive_pass")
+		| decode_b64_field("v2ray_json")
+		| decode_b64_field("xray_json")
+		| decode_b64_field("tuic_json")
+		| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
+		| if has("xray_json") then .xray_json |= normalize_json_config else . end
+		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
+		| del(._id, ._schema, ._rev, ._source, ._updated_at, ._created_at, ._migrated_from, ._b64_mode, .server_ip, .latency, .ping)
+	' "${file}" 2>/dev/null | sort | md5sum | awk '{print $1}'
+}
+
+sub_nodes_file_identity_md5(){
+	local file="$1"
+	[ -f "${file}" ] || return 1
+	jq -r '[.type // "", .xray_prot // "", .name // ""] | @tsv' "${file}" 2>/dev/null | sort -u | md5sum | awk '{print $1}'
+}
+
+sub_log_nodes_file_change_reason(){
+	local local_file="$1"
+	local online_file="$2"
+	local local_count online_count local_sorted_md5 online_sorted_md5 local_identity_md5 online_identity_md5
+
+	[ -f "${local_file}" ] || return 0
+	[ -f "${online_file}" ] || return 0
+	local_count=$(wc -l < "${local_file}" 2>/dev/null | tr -d ' ')
+	online_count=$(wc -l < "${online_file}" 2>/dev/null | tr -d ' ')
+	[ -n "${local_count}" ] || local_count=0
+	[ -n "${online_count}" ] || online_count=0
+	local_sorted_md5=$(sub_nodes_file_sorted_md5 "${local_file}") || return 0
+	online_sorted_md5=$(sub_nodes_file_sorted_md5 "${online_file}") || return 0
+	if [ "${local_sorted_md5}" = "${online_sorted_md5}" ];then
+		echo_date "ℹ️本地与在线节点内容集合一致，仅节点顺序发生变化，本次仍会判定为更新。"
+		return 0
+	fi
+	local_identity_md5=$(sub_nodes_file_identity_md5 "${local_file}") || return 0
+	online_identity_md5=$(sub_nodes_file_identity_md5 "${online_file}") || return 0
+	if [ "${local_identity_md5}" = "${online_identity_md5}" ];then
+		echo_date "ℹ️本地与在线节点名称集合一致，但连接参数发生变化（如 server/port/relay），本次会正常判定为更新。"
+		return 0
+	fi
+	if [ "${local_count}" = "${online_count}" ];then
+		echo_date "ℹ️本地与在线节点数量一致，但节点身份集合发生变化，可能存在重命名、协议切换或节点替换。"
+	else
+		echo_date "ℹ️本地与在线节点数量从${local_count}变为${online_count}，说明存在新增或删除节点。"
+	fi
+}
+
 sub_validate_jsonl_file(){
 	local file="$1"
 	local total=0 valid=0
@@ -4409,6 +4482,7 @@ get_online_rule_now(){
 			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${ISLOCALFILE}"
 		else
+			sub_log_nodes_file_change_reason "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
 			# 将订阅后的文件，覆盖为本地的相同link hash的文件
 			rm -rf ${ISLOCALFILE}
