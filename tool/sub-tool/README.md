@@ -49,8 +49,18 @@ sub-tool version
 - 直接 URI 行订阅
 - Base64 包裹的 URI 行订阅
 - 疑似 `SSEP Envelope`
+- HTML 登录页
+- HTML/JS 跳转页
+- 其它普通 HTML 页面
+- Clash/Mihomo YAML 配置
 - 普通 JSON
+- JSON 错误响应
+- 文本错误响应
+- gzip 内容
 - 未知内容
+
+当识别结果为 `HTML/JS` 跳转页时，`inspect` 会额外输出 `redirect_url`，
+用于让 shell 在无 Python 环境下继续跟随跳转并重新下载真正的订阅内容。
 
 ### `parse-uri-lines`
 
@@ -227,6 +237,27 @@ zig build test
 ```bash
 ./zig-out/bin/sub-tool summary --input sample.txt
 ```
+
+在无 Python 的路由器环境做兼容性分类：
+
+```bash
+sh ./tool/sub-tool/scripts/test-compat-sh.sh \
+  --input /tmp/airport_all.txt \
+  --limit 50
+```
+
+这个脚本只依赖：
+
+- `sh`
+- `curl` 或 `wget`
+- `sub-tool`
+- `awk` / `sed` / `sort` / `uniq`
+
+输出目录默认在 `/tmp/subtool_compat_runs/`，会生成：
+
+- `results.tsv`
+- `summary.txt`
+- `samples/`
 
 ## 一句话定位
 

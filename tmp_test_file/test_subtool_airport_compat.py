@@ -13,6 +13,7 @@ import sys
 import tempfile
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -250,11 +251,25 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         "historical_zero_now_nonzero": 0,
     }
     type_totals: dict[str, int] = {}
+    inspect_kind_totals: dict[str, int] = {}
+    parse_fail_kind_totals: dict[str, int] = {}
+    parse_fail_host_totals: dict[str, int] = {}
     for item in results:
         status = item["status"]
         summary[status] = summary.get(status, 0) + 1
         if status != "download_fail":
             summary["download_ok"] += 1
+        inspect = item.get("inspect")
+        inspect_kind = ""
+        if isinstance(inspect, dict):
+            inspect_kind = str(inspect.get("kind", "") or "")
+        if inspect_kind:
+            inspect_kind_totals[inspect_kind] = inspect_kind_totals.get(inspect_kind, 0) + 1
+        if status == "parse_fail" and inspect_kind:
+            parse_fail_kind_totals[inspect_kind] = parse_fail_kind_totals.get(inspect_kind, 0) + 1
+            host = urllib.parse.urlparse(item.get("url", "")).netloc
+            key = f"{inspect_kind}|{host}"
+            parse_fail_host_totals[key] = parse_fail_host_totals.get(key, 0) + 1
         for type_id, count in item.get("type_counts", {}).items():
             type_totals[type_id] = type_totals.get(type_id, 0) + count
         hist_parse = item.get("historical_parse", "")
@@ -265,6 +280,9 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         if hist_parse.startswith("解析成功") and item.get("status") == "parse_ok":
             pass
     summary["type_totals"] = type_totals
+    summary["inspect_kind_totals"] = inspect_kind_totals
+    summary["parse_fail_kind_totals"] = parse_fail_kind_totals
+    summary["parse_fail_host_totals"] = dict(sorted(parse_fail_host_totals.items(), key=lambda kv: (-kv[1], kv[0]))[:30])
     return summary
 
 
@@ -333,15 +351,44 @@ def main() -> int:
     lines.append("type_totals:")
     for key, value in sorted(summary.get("type_totals", {}).items()):
         lines.append(f"  type_{key}: {value}")
+    lines.append("inspect_kind_totals:")
+    for key, value in sorted(summary.get("inspect_kind_totals", {}).items(), key=lambda kv: (-kv[1], kv[0])):
+        lines.append(f"  {key}: {value}")
+    lines.append("parse_fail_kind_totals:")
+    for key, value in sorted(summary.get("parse_fail_kind_totals", {}).items(), key=lambda kv: (-kv[1], kv[0])):
+        lines.append(f"  {key}: {value}")
+    lines.append("parse_fail_host_totals:")
+    for key, value in summary.get("parse_fail_host_totals", {}).items():
+        kind, host = key.split("|", 1)
+        lines.append(f"  {kind} | {host}: {value}")
 
     parse_fail_samples = [x for x in results if x["status"] == "parse_fail"][:50]
     parse_zero_samples = [x for x in results if x["status"] == "parse_zero"][:50]
     download_fail_samples = [x for x in results if x["status"] == "download_fail"][:50]
+    parse_fail_by_kind: dict[str, list[dict[str, Any]]] = {}
+    for item in results:
+        if item["status"] != "parse_fail":
+            continue
+        inspect_kind = ""
+        inspect = item.get("inspect")
+        if isinstance(inspect, dict):
+            inspect_kind = inspect.get("kind", "") or ""
+        parse_fail_by_kind.setdefault(inspect_kind or "(empty)", []).append(item)
 
     lines.append("")
     lines.append("parse_fail_samples:")
     for item in parse_fail_samples:
-        lines.append(f"  - {item['index']} | {item['url']} | {item.get('reason','')}")
+        inspect_kind = ""
+        inspect = item.get("inspect")
+        if isinstance(inspect, dict):
+            inspect_kind = inspect.get("kind", "")
+        lines.append(f"  - {item['index']} | {item['url']} | inspect={inspect_kind} sniff={item.get('sniff','')} | {item.get('reason','')}")
+    lines.append("")
+    lines.append("parse_fail_samples_by_kind:")
+    for kind, items in sorted(parse_fail_by_kind.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        lines.append(f"  [{kind}] count={len(items)}")
+        for item in items[:8]:
+            lines.append(f"    - {item['index']} | {item['url']} | sniff={item.get('sniff','')} | {item.get('reason','')}")
     lines.append("")
     lines.append("parse_zero_samples:")
     for item in parse_zero_samples:

@@ -35,6 +35,7 @@ const InputKind = enum {
     base64_uri_lines,
     ssep_envelope,
     html_login,
+    html_redirect,
     html_page,
     clash_yaml,
     json_error,
@@ -50,6 +51,7 @@ const InputKind = enum {
             .base64_uri_lines => "base64-uri-lines",
             .ssep_envelope => "ssep-envelope",
             .html_login => "html-login",
+            .html_redirect => "html-redirect",
             .html_page => "html-page",
             .clash_yaml => "clash-yaml",
             .json_error => "json-error",
@@ -290,6 +292,11 @@ fn runInspect(allocator: std.mem.Allocator, options: Options) !void {
 
     const info = try detectContentInfo(allocator, raw);
     defer if (info.content.ptr != raw.ptr) allocator.free(info.content);
+    const redirect_url = if (info.kind == .html_redirect)
+        try extractHtmlRedirectTargetAlloc(allocator, info.content)
+    else
+        null;
+    defer if (redirect_url) |value| allocator.free(value);
 
     var scheme_counts = std.StringHashMap(usize).init(allocator);
     defer scheme_counts.deinit();
@@ -310,7 +317,12 @@ fn runInspect(allocator: std.mem.Allocator, options: Options) !void {
         try stdout.writeAll(":");
         try stdout.print("{d}", .{entry.value_ptr.*});
     }
-    try stdout.writeAll("}}\n");
+    try stdout.writeAll("}");
+    if (redirect_url) |value| {
+        try stdout.writeAll(",\"redirect_url\":");
+        try writeJsonString(stdout, value);
+    }
+    try stdout.writeAll("}\n");
 }
 
 fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
@@ -980,7 +992,7 @@ fn detectContentInfo(allocator: std.mem.Allocator, raw: []const u8) !ContentInfo
     }
     if (looksLikeHtml(normalized)) {
         return .{
-            .kind = if (looksLikeHtmlLoginPage(normalized)) .html_login else .html_page,
+            .kind = detectHtmlKind(normalized),
             .content = try allocator.dupe(u8, normalized),
         };
     }
@@ -1004,19 +1016,29 @@ fn detectContentInfo(allocator: std.mem.Allocator, raw: []const u8) !ContentInfo
     }
 
     if (try maybeDecodeBase64Text(allocator, normalized)) |decoded| {
+        const decoded_trimmed = trimBom(std.mem.trim(u8, decoded, " \t\r\n"));
+        if (decoded_trimmed.len == 0) {
+            allocator.free(decoded);
+            return .{ .kind = .empty, .content = try allocator.dupe(u8, normalized) };
+        }
         if (looksLikeUriLines(decoded)) {
             return .{ .kind = .base64_uri_lines, .content = decoded };
         }
-        if (looksLikeClashYaml(decoded)) {
+        if (looksLikeClashYaml(decoded_trimmed)) {
             allocator.free(decoded);
             return .{ .kind = .clash_yaml, .content = try allocator.dupe(u8, normalized) };
         }
-        if (looksLikeJson(decoded)) {
-            const kind: InputKind = if (looksLikeJsonError(allocator, decoded)) .json_error else .json;
+        if (looksLikeJson(decoded_trimmed)) {
+            const kind: InputKind = if (looksLikeJsonError(allocator, decoded_trimmed)) .json_error else .json;
             allocator.free(decoded);
             return .{ .kind = kind, .content = try allocator.dupe(u8, normalized) };
         }
-        if (looksLikeTextError(decoded)) {
+        if (looksLikeHtml(decoded_trimmed)) {
+            const kind: InputKind = detectHtmlKind(decoded_trimmed);
+            allocator.free(decoded);
+            return .{ .kind = kind, .content = try allocator.dupe(u8, normalized) };
+        }
+        if (looksLikeTextError(decoded_trimmed)) {
             allocator.free(decoded);
             return .{ .kind = .text_error, .content = try allocator.dupe(u8, normalized) };
         }
@@ -1652,15 +1674,138 @@ fn looksLikeHtmlLoginPage(input: []const u8) bool {
         std.mem.indexOf(u8, lower, "登录") != null;
 }
 
+fn looksLikeHtmlRedirectPage(input: []const u8) bool {
+    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
+    defer std.heap.page_allocator.free(lower);
+    return std.mem.indexOf(u8, lower, "window.location.replace(") != null or
+        std.mem.indexOf(u8, lower, "window.location.href") != null or
+        std.mem.indexOf(u8, lower, "window.location=") != null or
+        std.mem.indexOf(u8, lower, "redirect_link") != null or
+        std.mem.indexOf(u8, lower, "http-equiv=\"refresh\"") != null or
+        std.mem.indexOf(u8, lower, "http-equiv='refresh'") != null or
+        std.mem.indexOf(u8, lower, "/lander?sub=") != null or
+        std.mem.indexOf(u8, lower, "fingerprint/iife.min.js") != null;
+}
+
+fn detectHtmlKind(input: []const u8) InputKind {
+    if (looksLikeHtmlLoginPage(input)) return .html_login;
+    if (looksLikeHtmlRedirectPage(input)) return .html_redirect;
+    return .html_page;
+}
+
+fn extractHtmlRedirectTargetAlloc(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
+    const head = input[0..@min(input.len, 8192)];
+    if (try extractQuotedUrlAfterLiteralAlloc(allocator, head, "window.location.replace(")) |value| return value;
+    if (try extractAssignedQuotedUrlAlloc(allocator, head, "window.location.href")) |value| return value;
+    if (try extractAssignedQuotedUrlAlloc(allocator, head, "window.location")) |value| return value;
+    if (try extractAssignedQuotedUrlAlloc(allocator, head, "redirect_link")) |value| return value;
+    if (try extractMetaRefreshUrlAlloc(allocator, head)) |value| return value;
+    return null;
+}
+
+fn extractQuotedUrlAfterLiteralAlloc(allocator: std.mem.Allocator, input: []const u8, literal: []const u8) !?[]u8 {
+    const pos = std.mem.indexOf(u8, input, literal) orelse return null;
+    var idx = pos + literal.len;
+    while (idx < input.len and isInlineSpace(input[idx])) : (idx += 1) {}
+    return extractQuotedUrlAtAlloc(allocator, input, idx);
+}
+
+fn extractAssignedQuotedUrlAlloc(allocator: std.mem.Allocator, input: []const u8, literal: []const u8) !?[]u8 {
+    const pos = std.mem.indexOf(u8, input, literal) orelse return null;
+    var idx = pos + literal.len;
+    while (idx < input.len and isInlineSpace(input[idx])) : (idx += 1) {}
+    if (idx >= input.len or input[idx] != '=') return null;
+    idx += 1;
+    while (idx < input.len and isInlineSpace(input[idx])) : (idx += 1) {}
+    return extractQuotedUrlAtAlloc(allocator, input, idx);
+}
+
+fn extractQuotedUrlAtAlloc(allocator: std.mem.Allocator, input: []const u8, idx: usize) !?[]u8 {
+    if (idx >= input.len) return null;
+    const quote = input[idx];
+    if (quote != '\'' and quote != '"') return null;
+    const start = idx + 1;
+    var end = start;
+    while (end < input.len) : (end += 1) {
+        if (input[end] == '\\' and end + 1 < input.len) {
+            end += 1;
+            continue;
+        }
+        if (input[end] == quote) break;
+    }
+    if (end >= input.len or end <= start) return null;
+    return try sanitizeRedirectTargetAlloc(allocator, input[start..end]);
+}
+
+fn extractMetaRefreshUrlAlloc(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
+    const lower = try lowercasePrefixAlloc(allocator, input, 8192);
+    defer allocator.free(lower);
+    const pos = std.mem.indexOf(u8, lower, "url=") orelse return null;
+    var idx = pos + 4;
+    while (idx < input.len and isInlineSpace(input[idx])) : (idx += 1) {}
+    if (idx >= input.len) return null;
+    if (input[idx] == '\'' or input[idx] == '"') {
+        return extractQuotedUrlAtAlloc(allocator, input, idx);
+    }
+    var end = idx;
+    while (end < input.len and !isMetaRefreshTerminator(input[end])) : (end += 1) {}
+    if (end <= idx) return null;
+    return try sanitizeRedirectTargetAlloc(allocator, input[idx..end]);
+}
+
+fn sanitizeRedirectTargetAlloc(allocator: std.mem.Allocator, raw: []const u8) ![]u8 {
+    const trimmed = std.mem.trim(u8, raw, " \t\r\n");
+    var out = try allocator.dupe(u8, trimmed);
+    out = try replaceOwnedAlloc(allocator, out, "\\/", "/");
+    out = try replaceOwnedAlloc(allocator, out, "\\u0026", "&");
+    out = try replaceOwnedAlloc(allocator, out, "&amp;", "&");
+    return out;
+}
+
+fn replaceOwnedAlloc(allocator: std.mem.Allocator, input: []u8, needle: []const u8, replacement: []const u8) ![]u8 {
+    const replaced = try std.mem.replaceOwned(u8, allocator, input, needle, replacement);
+    allocator.free(input);
+    return replaced;
+}
+
+fn lowercasePrefixAlloc(allocator: std.mem.Allocator, input: []const u8, max_len: usize) ![]u8 {
+    const head = input[0..@min(input.len, max_len)];
+    const out = try allocator.dupe(u8, head);
+    for (out) |*ch| {
+        if (ch.* <= 0x7f) {
+            ch.* = std.ascii.toLower(ch.*);
+        }
+    }
+    return out;
+}
+
+fn isInlineSpace(ch: u8) bool {
+    return ch == ' ' or ch == '\t' or ch == '\r' or ch == '\n';
+}
+
+fn isMetaRefreshTerminator(ch: u8) bool {
+    return isInlineSpace(ch) or ch == '"' or ch == '\'' or ch == '>' or ch == ';';
+}
+
 fn looksLikeClashYaml(input: []const u8) bool {
     const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
     defer std.heap.page_allocator.free(lower);
-    return std.mem.indexOf(u8, lower, "proxies:") != null and
-        (std.mem.indexOf(u8, lower, "proxy-groups:") != null or
+    const has_proxies = std.mem.indexOf(u8, lower, "proxies:") != null or std.mem.indexOf(u8, lower, "\nproxies:") != null;
+    if (!has_proxies) return false;
+    return std.mem.indexOf(u8, lower, "proxy-groups:") != null or
+        std.mem.indexOf(u8, lower, "\nproxy-groups:") != null or
         std.mem.indexOf(u8, lower, "rules:") != null or
+        std.mem.indexOf(u8, lower, "\nrules:") != null or
+        std.mem.indexOf(u8, lower, "rule:") != null or
+        std.mem.indexOf(u8, lower, "\nrule:") != null or
         std.mem.indexOf(u8, lower, "type: vmess") != null or
         std.mem.indexOf(u8, lower, "type: trojan") != null or
-        std.mem.indexOf(u8, lower, "type: ss") != null);
+        std.mem.indexOf(u8, lower, "type: ss") != null or
+        std.mem.indexOf(u8, lower, "type: socks5") != null or
+        std.mem.indexOf(u8, lower, "port:") != null or
+        std.mem.indexOf(u8, lower, "socks-port:") != null or
+        std.mem.indexOf(u8, lower, "redir-port:") != null or
+        std.mem.indexOf(u8, lower, "external-controller:") != null;
 }
 
 fn looksLikeSsepEnvelope(allocator: std.mem.Allocator, input: []const u8) bool {
@@ -1720,6 +1865,17 @@ fn looksLikeTextError(input: []const u8) bool {
         std.mem.indexOf(u8, lower, "请重新获取订阅") != null or
         std.mem.indexOf(u8, lower, "nice try") != null or
         std.mem.indexOf(u8, lower, "can not find user") != null or
+        std.mem.indexOf(u8, lower, "pass wrong") != null or
+        std.mem.indexOf(u8, lower, "uncorrect token") != null or
+        std.mem.indexOf(u8, lower, "incorrect token") != null or
+        std.mem.indexOf(u8, lower, "invalid service") != null or
+        std.mem.indexOf(u8, lower, "not active") != null or
+        std.mem.indexOf(u8, lower, "link not found") != null or
+        std.mem.indexOf(u8, lower, "obsolete") != null or
+        std.mem.indexOf(u8, lower, "api url is obsolete") != null or
+        std.mem.indexOf(u8, lower, "service is not under normal status") != null or
+        std.mem.indexOf(u8, lower, "please submit ticket") != null or
+        std.mem.indexOf(u8, lower, "产品状态异常") != null or
         std.mem.indexOf(u8, lower, "forbidden") != null or
         std.mem.indexOf(u8, lower, "access denied") != null or
         std.mem.indexOf(u8, lower, "denied") != null or
@@ -1978,4 +2134,81 @@ test "parse vmess link" {
     try std.testing.expectEqualStrings("vmess", node.scheme);
     try std.testing.expectEqualStrings("VMESS", node.name);
     try std.testing.expectEqualStrings("example.com", node.server);
+}
+
+test "detect text error payloads" {
+    try std.testing.expect(looksLikeTextError("pass wrong"));
+    try std.testing.expect(looksLikeTextError("Unisset or Uncorrect Token"));
+    try std.testing.expect(looksLikeTextError("INVALID SERVICE"));
+    try std.testing.expect(looksLikeTextError("Not Active"));
+    try std.testing.expect(looksLikeTextError("Link not found"));
+    try std.testing.expect(looksLikeTextError("This API URL is obsolete and can no longer be used."));
+    try std.testing.expect(looksLikeTextError("产品状态异常 !\n Your service is not under normal status, please submit ticket !"));
+}
+
+test "detect content info classifications" {
+    const allocator = std.testing.allocator;
+    {
+        const info = try detectContentInfo(allocator, "pass wrong");
+        defer allocator.free(info.content);
+        try std.testing.expectEqual(InputKind.text_error, info.kind);
+    }
+    {
+        const info = try detectContentInfo(allocator, "<!DOCTYPE html><html><title>Sign in ・ Cloudflare Access</title></html>");
+        defer allocator.free(info.content);
+        try std.testing.expectEqual(InputKind.html_login, info.kind);
+    }
+    {
+        const info = try detectContentInfo(allocator, "<html><head><script>window.onload=function(){window.location.href=\"/lander?sub=1\"}</script></head></html>");
+        defer allocator.free(info.content);
+        try std.testing.expectEqual(InputKind.html_redirect, info.kind);
+    }
+    {
+        const info = try detectContentInfo(allocator, "port: 7890\nsocks-port: 7891\nproxies:\n  - {name: test, type: vmess}");
+        defer allocator.free(info.content);
+        try std.testing.expectEqual(InputKind.clash_yaml, info.kind);
+    }
+}
+
+test "detect clash style profile yaml" {
+    const allocator = std.testing.allocator;
+    const sample =
+        "\xEF\xBB\xBFport: 7890\n" ++
+        "socks-port: 7891\n" ++
+        "redir-port: 7892\n" ++
+        "allow-lan: false\n" ++
+        "mode: rule\n" ++
+        "log-level: info\n" ++
+        "external-controller: '127.0.0.1:9090'\n" ++
+        "secret: ''\n\n" ++
+        "proxies:\n" ++
+        "  - name: Shadowsocks\n" ++
+        "    type: socks5\n" ++
+        "    server: 127.0.0.1\n" ++
+        "    port: 1080\n\n" ++
+        "rule:\n" ++
+        "  - 'MATCH,DIRECT'\n";
+    try std.testing.expect(looksLikeClashYaml(trimBom(sample)));
+    const info = try detectContentInfo(allocator, sample);
+    defer allocator.free(info.content);
+    try std.testing.expectEqual(InputKind.clash_yaml, info.kind);
+}
+
+test "extract html redirect target" {
+    const allocator = std.testing.allocator;
+    {
+        const value = try extractHtmlRedirectTargetAlloc(allocator, "<html><script>window.location.replace('https://example.com/sub?token=1')</script></html>");
+        defer if (value) |v| allocator.free(v);
+        try std.testing.expectEqualStrings("https://example.com/sub?token=1", value.?);
+    }
+    {
+        const value = try extractHtmlRedirectTargetAlloc(allocator, "<html><script>window.onload=function(){window.location.href=\"/lander?sub=3\"}</script></html>");
+        defer if (value) |v| allocator.free(v);
+        try std.testing.expectEqualStrings("/lander?sub=3", value.?);
+    }
+    {
+        const value = try extractHtmlRedirectTargetAlloc(allocator, "<html><script>var redirect_link = 'https:\\/\\/bigairport.icu\\/api\\/v1\\/client\\/subscribe?token=1\\u0026js=2';</script></html>");
+        defer if (value) |v| allocator.free(v);
+        try std.testing.expectEqualStrings("https://bigairport.icu/api/v1/client/subscribe?token=1&js=2", value.?);
+    }
 }

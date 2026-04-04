@@ -438,6 +438,318 @@ pick_sub_tool(){
 	return 1
 }
 
+sub_tool_inspect_file(){
+	local file_path="$1"
+	local output_file="$2"
+	local sub_tool=""
+	[ -f "${file_path}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	sub_tool="$(pick_sub_tool 2>/dev/null)" || return 1
+	"${sub_tool}" inspect --input "${file_path}" > "${output_file}" 2>/dev/null
+}
+
+sub_inspect_json_field(){
+	local field_name="$1"
+	local json_file="$2"
+	[ -n "${field_name}" ] || return 1
+	[ -f "${json_file}" ] || return 1
+	sed -n "s/.*\"${field_name}\":\"\\([^\"]*\\)\".*/\\1/p" "${json_file}" | sed -n '1p'
+}
+
+sub_payload_preview(){
+	local file_path="$1"
+	[ -f "${file_path}" ] || return 0
+	head -c 180 "${file_path}" 2>/dev/null | tr '\r\n' ' ' | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//'
+}
+
+sub_url_scheme(){
+	local url="$1"
+	printf '%s' "${url}" | sed -n 's#^\([A-Za-z][A-Za-z0-9+.-]*\)://.*#\1#p' | sed -n '1p'
+}
+
+sub_url_origin(){
+	local url="$1"
+	printf '%s' "${url}" | sed -n 's#^\([A-Za-z][A-Za-z0-9+.-]*://[^/]*\).*#\1#p' | sed -n '1p'
+}
+
+sub_resolve_redirect_url(){
+	local base_url="$1"
+	local redirect_target="$2"
+	local scheme origin base_no_frag base_no_query base_dir
+
+	[ -n "${base_url}" ] || return 1
+	[ -n "${redirect_target}" ] || return 1
+
+	case "${redirect_target}" in
+	http://*|https://*)
+		echo "${redirect_target}"
+		return 0
+		;;
+	//*)
+		scheme=$(sub_url_scheme "${base_url}")
+		[ -n "${scheme}" ] || return 1
+		echo "${scheme}:${redirect_target}"
+		return 0
+		;;
+	/*)
+		origin=$(sub_url_origin "${base_url}")
+		[ -n "${origin}" ] || return 1
+		echo "${origin}${redirect_target}"
+		return 0
+		;;
+	\?*)
+		base_no_frag="${base_url%%#*}"
+		base_no_query="${base_no_frag%%\?*}"
+		echo "${base_no_query}${redirect_target}"
+		return 0
+		;;
+	*)
+		base_no_frag="${base_url%%#*}"
+		base_no_query="${base_no_frag%%\?*}"
+		base_dir="${base_no_query%/*}"
+		if [ -z "${base_dir}" ] || [ "${base_dir}" = "${base_no_query}" ];then
+			base_dir=$(sub_url_origin "${base_url}")
+		fi
+		[ -n "${base_dir}" ] || return 1
+		echo "${base_dir%/}/${redirect_target}"
+		return 0
+		;;
+	esac
+}
+
+sub_follow_html_redirect_chain_with_tool(){
+	local base_url="$1"
+	local short_hash="$2"
+	local payload_file="${DIR}/sub_file_encode_${short_hash}.txt"
+	local inspect_file="${DIR}/sub_file_inspect_${short_hash}.json"
+	local backup_file="${DIR}/sub_file_encode_${short_hash}.bak"
+	local current_url="${base_url}"
+	local visited_urls=""
+	local inspect_kind=""
+	local redirect_target=""
+	local resolved_url=""
+	local hop=0
+	local max_hops=3
+
+	[ -f "${payload_file}" ] || return 1
+	while [ "${hop}" -lt "${max_hops}" ]; do
+		sub_tool_inspect_file "${payload_file}" "${inspect_file}" || return 2
+		inspect_kind=$(sub_inspect_json_field "kind" "${inspect_file}")
+		[ "${inspect_kind}" = "html-redirect" ] || return 0
+		redirect_target=$(sub_inspect_json_field "redirect_url" "${inspect_file}")
+		if [ -z "${redirect_target}" ];then
+			echo_date "⚠️检测到HTML跳转页，但未能提取到跳转目标。"
+			return 1
+		fi
+		resolved_url=$(sub_resolve_redirect_url "${current_url}" "${redirect_target}") || {
+			echo_date "⚠️检测到HTML跳转页，但跳转链接解析失败：${redirect_target}"
+			return 1
+		}
+		if printf '%s\n' "${visited_urls}" | grep -Fxq "${resolved_url}";then
+			echo_date "⚠️检测到HTML跳转循环，终止继续跟随：${resolved_url}"
+			return 1
+		fi
+		hop=$((hop + 1))
+		echo_date "⤴️检测到HTML跳转页，第${hop}次跟随跳转：${resolved_url}"
+		visited_urls=$(printf '%s\n%s\n' "${visited_urls}" "${resolved_url}")
+		cp -f "${payload_file}" "${backup_file}" >/dev/null 2>&1
+		rm -f "${payload_file}" "${inspect_file}" >/dev/null 2>&1
+		download_by_curl "${resolved_url}" || {
+			[ -f "${backup_file}" ] && mv -f "${backup_file}" "${payload_file}"
+			echo_date "⚠️跟随HTML跳转后的订阅链接下载失败：${resolved_url}"
+			return 1
+		}
+		rm -f "${backup_file}" >/dev/null 2>&1
+		current_url="${resolved_url}"
+	done
+
+	rm -f "${backup_file}" >/dev/null 2>&1
+	echo_date "⚠️HTML跳转次数超过${max_hops}次，终止继续跟随。"
+	return 1
+}
+
+sub_validate_downloaded_payload_with_tool(){
+	local short_hash="$1"
+	local payload_file="${DIR}/sub_file_encode_${short_hash}.txt"
+	local inspect_file="${DIR}/sub_file_inspect_${short_hash}.json"
+	local inspect_kind=""
+	local preview=""
+
+	[ -f "${payload_file}" ] || return 1
+	sub_tool_inspect_file "${payload_file}" "${inspect_file}" || return 2
+	inspect_kind=$(sub_inspect_json_field "kind" "${inspect_file}")
+	case "${inspect_kind}" in
+	uri-lines|base64-uri-lines)
+		return 0
+		;;
+	clash-yaml)
+		echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
+		return 1
+		;;
+	empty)
+		echo_date "⚠️下载内容为空！️该订阅链接不包含任何节点信息"
+		echo_date "⚠️请检查你的服务商是否更换了订阅链接！"
+		return 1
+		;;
+	html-login)
+		echo_date "⚠️解析错误！原因：该订阅链接返回了登录/验证页面，当前无法直接获取订阅内容！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
+		return 1
+		;;
+	html-redirect)
+		echo_date "⚠️解析错误！原因：该订阅链接返回了HTML跳转页，但自动跟随未成功完成！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
+		return 1
+		;;
+	html-page)
+		echo_date "⚠️解析错误！原因：该订阅链接返回了HTML页面，而不是订阅内容！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
+		return 1
+		;;
+	json-error)
+		echo_date "⚠️解析错误！原因：该订阅链接返回了JSON错误响应！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
+		return 1
+		;;
+	json)
+		echo_date "⚠️解析错误！原因：该订阅链接返回了JSON内容，而不是订阅内容！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
+		return 1
+		;;
+	text-error)
+		echo_date "⚠️解析错误！原因：该订阅链接返回了文本错误响应！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
+		return 1
+		;;
+	ssep-envelope)
+		echo_date "⚠️解析错误！原因：检测到SSEP加密订阅Envelope，当前版本暂未解密此订阅格式！"
+		return 1
+		;;
+	gzip)
+		echo_date "⚠️解析错误！原因：检测到gzip压缩响应，当前订阅链路暂未处理此类返回内容！"
+		return 1
+		;;
+	unknown|"")
+		return 2
+		;;
+	*)
+		return 2
+		;;
+	esac
+}
+
+sub_validate_downloaded_payload_legacy(){
+	local sub_link="$1"
+	local short_hash="$2"
+	local download_mode="$3"
+	local payload_file="${DIR}/sub_file_encode_${short_hash}.txt"
+	local wrong=""
+	local jump=""
+
+	[ -f "${payload_file}" ] || return 1
+
+	if [ "${download_mode}" = "curl" ];then
+		jump=$(grep -Eo "Redirecting|301" "${payload_file}")
+		if [ -n "${jump}" ];then
+			echo_date "⤴️订阅链接可能有跳转，尝试更换wget进行下载..."
+			rm -f "${payload_file}" >/dev/null 2>&1
+			download_by_wget "${sub_link}" || return 1
+		fi
+
+		if [ "$(cat "${payload_file}" | wc -c)" = "0" ];then
+			echo_date "🈳下载内容为空，尝试更换wget进行下载..."
+			rm -f "${payload_file}" >/dev/null 2>&1
+			download_by_wget "${sub_link}" || return 1
+		fi
+	else
+		if [ "$(cat "${payload_file}" | wc -c)" = "0" ];then
+			echo_date "⚠️下载内容为空！️该订阅链接不包含任何节点信息"
+			echo_date "⚠️请检查你的服务商是否更换了订阅链接！"
+			return 1
+		fi
+	fi
+
+	if [ "$(cat "${payload_file}" | grep -c proxies)" -ge "1" ];then
+		echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
+		return 1
+	fi
+
+	wrong=$(cat "${payload_file}" | grep -E "404")
+	if [ -n "${wrong}" ];then
+		echo_date "⚠️解析错误！原因：该订阅链接无法访问，错误代码：404！"
+		return 1
+	fi
+
+	wrong=$(cat "${payload_file}" | grep -E "\{")
+	if [ -n "${wrong}" ];then
+		echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
+		echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
+		echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
+		return 1
+	fi
+
+	dec64 $(cat "${payload_file}") >/dev/null 2>&1
+	if [ "$?" != "0" ];then
+		echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
+		echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
+		return 1
+	fi
+
+	return 0
+}
+
+sub_process_downloaded_payload_with_tool(){
+	local sub_link="$1"
+	local short_hash="$2"
+	local follow_rc=0
+
+	sub_follow_html_redirect_chain_with_tool "${sub_link}" "${short_hash}"
+	follow_rc="$?"
+	case "${follow_rc}" in
+	0)
+		;;
+	2)
+		return 2
+		;;
+	*)
+		return 1
+		;;
+	esac
+
+	sub_validate_downloaded_payload_with_tool "${short_hash}"
+	return $?
+}
+
+sub_validate_downloaded_payload(){
+	local sub_link="$1"
+	local short_hash="$2"
+	local download_mode="$3"
+	local tool_rc=2
+
+	if pick_sub_tool >/dev/null 2>&1;then
+		sub_process_downloaded_payload_with_tool "${sub_link}" "${short_hash}"
+		tool_rc="$?"
+	fi
+
+	case "${tool_rc}" in
+	0)
+		return 0
+		;;
+	1)
+		return 1
+		;;
+	esac
+
+	sub_validate_downloaded_payload_legacy "${sub_link}" "${short_hash}" "${download_mode}"
+	return $?
+}
+
 sub_filter_fancyss_jsonl_file(){
 	local src_file="$1"
 	local out_file="$2"
@@ -3911,51 +4223,7 @@ get_online_rule_now(){
 	download_by_curl "${SUB_LINK}"
 	if [ "$?" == "0" ]; then
 		echo_date "😀下载成功，继续检测下载内容..."
-
-		#可能有跳转
-		local jump=$(grep -Eo "Redirecting|301" ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt)
-		if [ -n "$jump" ]; then
-			echo_date "⤴️订阅链接可能有跳转，尝试更换wget进行下载..."
-			rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-			download_by_wget "${SUB_LINK}"
-		fi
-
-		# 下载到了yaml文件？
-		if [ "$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -c proxies)" -ge "1" ]; then
-			echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
-			return 1
-		fi
-
-		#下载为空...
-		if [ "$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | wc -c)" == "0" ]; then
-			echo_date "🈳下载内容为空，尝试更换wget进行下载..."
-			rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-			download_by_wget "${SUB_LINK}"
-		fi
-
-		# 404
-		local wrong1=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -E "404")
-		if [ -n "${wrong1}" ]; then
-			echo_date "⚠️解析错误！原因：该订阅链接无法访问，错误代码：404！"
-			return 1
-		fi
-		
-		# 产品信息错误
-		local wrong=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -E "\{")
-		if [ -n "${wrong}" ]; then
-			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
-			echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
-			echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
-			return 1
-		fi
-
-		# 非base64编码
-		dec64 $(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt) >/dev/null 2>&1
-		if [ "$?" != "0" ]; then
-			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
-			echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
-			return 1
-		fi
+		sub_validate_downloaded_payload "${SUB_LINK}" "${SUB_LINK_HASH:0:4}" "curl" || return 1
 	else
 		echo_date "⚠️使用curl下载订阅失败！"
 		rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
@@ -3966,36 +4234,7 @@ get_online_rule_now(){
 			echo_date "⚠️wget下载订阅失败！"
 			return 1
 		fi
-
-		# 下载到了yaml文件？
-		if [ "$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -c proxies)" -ge "1" ]; then
-			echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
-			return 1
-		fi
-
-		#下载为空...
-		if [ "$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | wc -c)" == "0" ]; then
-			echo_date "⚠️下载内容为空！️该订阅链接不包含任何节点信息"
-			echo_date "⚠️请检查你的服务商是否更换了订阅链接！"
-			return 1
-		fi
-		
-		# 产品信息错误
-		local wrong2=$(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt | grep -E "\{")
-		if [ -n "${wrong2}" ]; then
-			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
-			echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
-			echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
-			return 1
-		fi
-
-		# 非base64编码
-		dec64 $(cat ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt) >/dev/null 2>&1
-		if [ "$?" != "0" ]; then
-			echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
-			echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
-			return 1
-		fi
+		sub_validate_downloaded_payload "${SUB_LINK}" "${SUB_LINK_HASH:0:4}" "wget" || return 1
 	fi
 	
 	echo_date "😀下载内容检测完成！"

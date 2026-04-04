@@ -272,6 +272,51 @@
 - shell 负责下载和任务控制
 - `sub-tool` 负责解析、解密、归一化
 
+#### 从 `ss_node_subscribe.sh` 继续下沉的优先顺序
+
+现阶段结合代码现状，`sub-tool` 后续最值得继续吃掉的，不是整条下载链，而是下载之后这几层：
+
+1. 内容识别增强
+
+- [x] 区分 `uri-lines` / `base64-uri-lines` / `html-login` / `html-redirect` / `html-page` / `json-error` / `text-error`
+- [x] 为 `html-redirect` 提供跳转目标提取
+- [ ] 支持更多跳转壳模式
+- [ ] 支持 `gzip` 解压
+- [ ] 支持 `SSEP Envelope` 真正解密
+
+2. 下载后预处理
+
+- [x] shell 基于 `sub-tool inspect` 跟随常见 HTML/JS 跳转页
+- [ ] 把“跳转页提取 + 相对链接解析 + 重定向链保护”进一步收敛进 `sub-tool`
+- [ ] 输出结构化错误码，而不是只给 `kind`
+
+3. 订阅内容标准化
+
+- [ ] 让 `sub-tool` 直接产出“解码后规范文本”
+- [ ] 逐步替代 `sub_prepare_decoded_file()` 里的明文/`base64` 判定和解码
+- [ ] 统一行清洗、BOM、CRLF、空行、注释处理
+
+4. 节点过滤与归一化
+
+- [ ] 把 `sub_filter_fancyss_jsonl_file()` 的关键词过滤继续下沉
+- [ ] 把“订阅信息节点”识别继续下沉
+- [ ] 输出过滤统计与过滤原因摘要
+
+5. 订阅 diff
+
+- [ ] 输出“新增 / 删除 / 变化”节点摘要
+- [ ] 让 shell 不再只靠 `md5 + 本地文件覆盖` 做变化判断
+
+6. 最后才考虑整体下载器替换
+
+- [ ] 是否把 `curl/wget` 进一步包进 Zig，需要等前面几层稳定后再评估
+
+换句话说，`ss_node_subscribe.sh` 里最应该变薄的顺序是：
+
+- 先变薄“内容识别与解码”
+- 再变薄“过滤与 diff”
+- 最后才考虑“下载器本身”
+
 #### 对 fancyss 的价值
 
 - 大幅减轻 `ss_node_subscribe.sh` 里海量协议解析和 `jq/sed/awk/base64` 链式处理
