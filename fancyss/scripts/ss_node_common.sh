@@ -239,7 +239,7 @@ fss_node_env_cache_is_fresh() {
 }
 
 fss_schedule_webtest_cache_warm() {
-	local warm_log="/tmp/upload/ss_log.txt"
+	local warm_log="${2:-/tmp/upload/ss_log.txt}"
 	local ignore_pid="$1"
 	local webtest_pids=""
 

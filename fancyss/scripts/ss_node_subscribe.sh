@@ -46,7 +46,11 @@ SUB_LOCAL_CHANGED=0
 SUB_HAS_FAILURE=0
 SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
 SUB_AI=$(dbus get ss_basic_sub_ai)
+SUB_TOOL_NODE_LOG=$(dbus get ss_basic_sub_node_log)
+SUB_KEEP_INFO_NODE=$(dbus get ss_basic_sub_keep_info_node)
 [ -z "${SUB_BY_PROXY}" ] && SUB_BY_PROXY=0
+[ -n "${SUB_TOOL_NODE_LOG}" ] || SUB_TOOL_NODE_LOG=0
+[ -n "${SUB_KEEP_INFO_NODE}" ] || SUB_KEEP_INFO_NODE=0
 KEY_WORDS_1=$(dbus get ss_basic_exclude | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_2=$(dbus get ss_basic_include | sed 's/,$//g' | sed 's/,/|/g')
 KEY_WORDS_1_RAW=$(dbus get ss_basic_exclude | sed 's/,$//g')
@@ -56,6 +60,7 @@ SUB_ONLINE_URLS_READY=0
 SUB_VERBOSE_NODE_LOG=1
 LOCAL_SPLIT_META_VALID=0
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
+SUB_WEBTEST_WARM_LOG="/tmp/upload/ss_webtest_cache.log"
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -413,11 +418,152 @@ sub_get_filter_signature(){
 		"include=${KEY_WORDS_2_RAW}" \
 		"sub_mode=${SUB_MODE}" \
 		"sub_ai=${effective_sub_ai}" \
+		"keep_info_node=${SUB_KEEP_INFO_NODE}" \
 		"hy2_up=${effective_hy2_up}" \
 		"hy2_dl=${effective_hy2_dl}" \
 		"hy2_tfo_switch=${effective_hy2_tfo}" \
 		"hy2_cg_opt=${effective_hy2_cg}" \
 		| md5sum | awk '{print $1}'
+}
+
+pick_sub_tool(){
+	if command -v sub-tool >/dev/null 2>&1; then
+		command -v sub-tool
+		return 0
+	fi
+	if [ -x "/koolshare/bin/sub-tool" ];then
+		echo "/koolshare/bin/sub-tool"
+		return 0
+	fi
+	return 1
+}
+
+sub_filter_fancyss_jsonl_file(){
+	local src_file="$1"
+	local out_file="$2"
+	local line=""
+	local meta=""
+	local type_id=""
+	local xray_prot=""
+	local remarks=""
+	local server=""
+	local type_name=""
+
+	[ -f "${src_file}" ] || return 1
+	[ -n "${out_file}" ] || return 1
+	: > "${out_file}"
+
+	while IFS= read -r line || [ -n "${line}" ]
+	do
+		[ -n "${line}" ] || continue
+		meta=$(printf '%s' "${line}" | run jq -r '[.type // "", .xray_prot // "", .name // "", (.server // .hy2_server // .naive_server // "")] | @tsv' 2>/dev/null) || {
+			printf '%s\n' "${line}" >> "${out_file}"
+			continue
+		}
+		type_id=$(printf '%s' "${meta}" | awk -F'\t' '{print $1}')
+		xray_prot=$(printf '%s' "${meta}" | awk -F'\t' '{print $2}')
+		remarks=$(printf '%s' "${meta}" | awk -F'\t' '{print $3}')
+		server=$(printf '%s' "${meta}" | awk -F'\t' '{print $4}')
+		case "${type_id}" in
+		0)
+			type_name="SS"
+			;;
+		1)
+			type_name="SSR"
+			;;
+		3)
+			type_name="vmess"
+			;;
+		4)
+			type_name="${xray_prot:-xray}"
+			;;
+		5)
+			type_name="trojan"
+			;;
+		6)
+			type_name="Naïve"
+			;;
+		7)
+			type_name="tuic"
+			;;
+		8)
+			type_name="hysteria2"
+			;;
+		*)
+			type_name="node"
+			;;
+		esac
+		filter_nodes "${type_name}" "${remarks}" "${server}" || continue
+		printf '%s\n' "${line}" >> "${out_file}"
+	done < "${src_file}"
+}
+
+sub_try_parse_uri_lines_with_tool(){
+	local input_file="$1"
+	local output_file="$2"
+	local default_group="$3"
+	local source_tag="$4"
+	local pkg_type="$5"
+	local sub_tool=""
+	local tmp_output="${output_file}.subtool.$$"
+	local filtered_output="${output_file}.filtered.$$"
+	local subtool_log_file="${output_file}.log.$$"
+	local effective_sub_ai=""
+	local effective_hy2_up=""
+	local effective_hy2_dl=""
+	local effective_hy2_tfo=""
+	local effective_hy2_cg=""
+	local subtool_log_level="summary"
+
+	[ -f "${input_file}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	sub_tool="$(pick_sub_tool 2>/dev/null)" || return 1
+	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
+	{
+		read -r effective_hy2_up
+		read -r effective_hy2_dl
+		read -r effective_hy2_tfo
+		read -r effective_hy2_cg
+	} <<-EOF
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	EOF
+
+	[ "${SUB_TOOL_NODE_LOG}" = "1" ] && subtool_log_level="verbose"
+	rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" >/dev/null 2>&1
+	set -- parse-uri-lines \
+		--input "${input_file}" \
+		--output "${tmp_output}" \
+		--format fancyss \
+		--mode "${SUB_MODE}" \
+		--pkg-type "${pkg_type}" \
+		--sub-ai "${effective_sub_ai}" \
+		--hy2-tfo-switch "${effective_hy2_tfo}" \
+		--hy2-cg-opt "${effective_hy2_cg}" \
+		--log-level "${subtool_log_level}" \
+		--log-output "${subtool_log_file}" \
+		--include-raw
+	[ -n "${default_group}" ] && set -- "$@" --group "${default_group}"
+	[ -n "${source_tag}" ] && set -- "$@" --source-tag "${source_tag}"
+	[ -n "${effective_hy2_up}" ] && set -- "$@" --hy2-up "${effective_hy2_up}"
+	[ -n "${effective_hy2_dl}" ] && set -- "$@" --hy2-dl "${effective_hy2_dl}"
+	"${sub_tool}" "$@" >/dev/null 2>&1 || {
+		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" >/dev/null 2>&1
+		return 1
+	}
+
+	sub_filter_fancyss_jsonl_file "${tmp_output}" "${filtered_output}" || {
+		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" >/dev/null 2>&1
+		return 1
+	}
+	mv -f "${filtered_output}" "${output_file}"
+	rm -f "${tmp_output}" "${subtool_log_file}" >/dev/null 2>&1
+	if [ -s "${output_file}" ];then
+		sub_log_fancyss_parse_summary "${output_file}"
+		sub_log_fancyss_parse_nodes "${output_file}"
+	else
+		rm -f "${output_file}" >/dev/null 2>&1
+	fi
+	return 0
 }
 
 sub_update_parsed_cache_meta(){
@@ -454,6 +600,7 @@ sub_update_parsed_cache_meta(){
 	include_keywords=${KEY_WORDS_2_RAW}
 	sub_mode=${SUB_MODE}
 	sub_ai=${effective_sub_ai}
+	keep_info_node=${SUB_KEEP_INFO_NODE}
 	hy2_up=${effective_hy2_up}
 	hy2_dl=${effective_hy2_dl}
 	hy2_tfo_switch=${effective_hy2_tfo}
@@ -465,7 +612,7 @@ sub_update_parsed_cache_meta(){
 
 sub_parsed_cache_meta_matches(){
 	local sub_hash="$1"
-	local meta_file cached_schema cached_exclude cached_include cached_sub_mode cached_sub_ai
+	local meta_file cached_schema cached_exclude cached_include cached_sub_mode cached_sub_ai cached_keep_info_node
 	local cached_hy2_up cached_hy2_dl cached_hy2_tfo cached_hy2_cg has_ai_sensitive has_hy2_sensitive
 	local current_sub_ai current_hy2_up current_hy2_dl current_hy2_tfo current_hy2_cg
 	[ -n "${sub_hash}" ] || return 1
@@ -476,6 +623,7 @@ sub_parsed_cache_meta_matches(){
 	cached_include=$(sed -n 's/^include_keywords=//p' "${meta_file}" | sed -n '1p')
 	cached_sub_mode=$(sed -n 's/^sub_mode=//p' "${meta_file}" | sed -n '1p')
 	cached_sub_ai=$(sed -n 's/^sub_ai=//p' "${meta_file}" | sed -n '1p')
+	cached_keep_info_node=$(sed -n 's/^keep_info_node=//p' "${meta_file}" | sed -n '1p')
 	cached_hy2_up=$(sed -n 's/^hy2_up=//p' "${meta_file}" | sed -n '1p')
 	cached_hy2_dl=$(sed -n 's/^hy2_dl=//p' "${meta_file}" | sed -n '1p')
 	cached_hy2_tfo=$(sed -n 's/^hy2_tfo_switch=//p' "${meta_file}" | sed -n '1p')
@@ -496,6 +644,7 @@ sub_parsed_cache_meta_matches(){
 	[ "${cached_exclude}" = "${KEY_WORDS_1_RAW}" ] || return 1
 	[ "${cached_include}" = "${KEY_WORDS_2_RAW}" ] || return 1
 	[ "${cached_sub_mode}" = "${SUB_MODE}" ] || return 1
+	[ "${cached_keep_info_node}" = "${SUB_KEEP_INFO_NODE}" ] || return 1
 	if [ "${has_ai_sensitive}" = "1" ];then
 		[ "${cached_sub_ai}" = "${current_sub_ai}" ] || return 1
 	fi
@@ -517,6 +666,148 @@ sub_file_md5(){
 sub_log_node_success(){
 	[ "${SUB_VERBOSE_NODE_LOG}" = "1" ] || return 0
 	echo_date "$1"
+}
+
+sub_fancyss_type_name(){
+	local type_id="$1"
+	local xray_prot="$2"
+	case "${type_id}" in
+	0)
+		echo "SS"
+		;;
+	1)
+		echo "SSR"
+		;;
+	3)
+		echo "vmess"
+		;;
+	4)
+		case "${xray_prot}" in
+		vmess)
+			echo "vmess"
+			;;
+		vless)
+			echo "vless"
+			;;
+		*)
+			echo "xray"
+			;;
+		esac
+		;;
+	5)
+		echo "trojan"
+		;;
+	6)
+		echo "Naïve"
+		;;
+	7)
+		echo "tuic"
+		;;
+	8)
+		echo "hysteria2"
+		;;
+	*)
+		echo "node"
+		;;
+	esac
+}
+
+sub_fancyss_type_prefix(){
+	local type_id="$1"
+	local xray_prot="$2"
+	case "${type_id}" in
+	0)
+		echo "🟢SS节点："
+		;;
+	1)
+		echo "🔵SSR节点："
+		;;
+	3)
+		echo "🟠vmess节点："
+		;;
+	4)
+		case "${xray_prot}" in
+		vmess)
+			echo "🟠vmess节点："
+			;;
+		vless)
+			echo "🟣vless节点："
+			;;
+		*)
+			echo "🟣xray节点："
+			;;
+		esac
+		;;
+	5)
+		echo "🟡trojan节点："
+		;;
+	6)
+		echo "🟧Naïve节点："
+		;;
+	7)
+		echo "🟫tuic节点："
+		;;
+	8)
+		echo "🟤hysteria2节点："
+		;;
+	*)
+		echo "⚪节点："
+		;;
+	esac
+}
+
+sub_log_fancyss_parse_summary(){
+	local file="$1"
+	local total=0
+	[ -f "${file}" ] || return 0
+	total=$(wc -l < "${file}" 2>/dev/null | tr -d ' ')
+	[ -n "${total}" ] || total=0
+	echo_date "🧩sub-tool最终保留节点：${total}个。"
+	run jq -r '[.type // "", .xray_prot // ""] | @tsv' "${file}" 2>/dev/null | awk -F '\t' '
+		function label(type_id, xray_prot) {
+			if (type_id == "0") return "🟢SS节点";
+			if (type_id == "1") return "🔵SSR节点";
+			if (type_id == "3") return "🟠vmess节点";
+			if (type_id == "4" && xray_prot == "vmess") return "🟠vmess节点";
+			if (type_id == "4" && xray_prot == "vless") return "🟣vless节点";
+			if (type_id == "4") return "🟣xray节点";
+			if (type_id == "5") return "🟡trojan节点";
+			if (type_id == "6") return "🟧Naïve节点";
+			if (type_id == "7") return "🟫tuic节点";
+			if (type_id == "8") return "🟤hysteria2节点";
+			return "⚪节点";
+		}
+		{
+			key = label($1, $2);
+			if (key != "") cnt[key]++;
+		}
+		END {
+			for (key in cnt) {
+				print key "|" cnt[key];
+			}
+		}
+	' | sort | while IFS='|' read -r label count
+	do
+		[ -n "${label}" ] && echo_date "${label}：${count}个"
+	done
+}
+
+sub_log_fancyss_parse_nodes(){
+	local file="$1"
+	local meta=""
+	local type_id=""
+	local xray_prot=""
+	local name=""
+	local prefix=""
+	local delim="$(printf '\037')"
+	[ "${SUB_TOOL_NODE_LOG}" = "1" ] || return 0
+	[ -f "${file}" ] || return 0
+	run jq -r '[.type // "", .xray_prot // "", .name // ""] | join("\u001f")' "${file}" 2>/dev/null | while IFS="${delim}" read -r type_id xray_prot name
+	do
+		[ -n "${name}" ] || continue
+		prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+		echo_date "${prefix}${name}"
+	done
 }
 
 sub_prepare_decoded_file(){
@@ -690,7 +981,7 @@ sub_prepare_schema2_export_jsonl(){
 		| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
 		| if has("xray_json") then .xray_json |= normalize_json_config else . end
 		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
-		| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+		| del(._schema, ._rev, ._source, ._updated_at, ._created_at, ._migrated_from, .server_ip, .latency, .ping)
 	' "${SCHEMA2_RAW_JSONL}" > "${SCHEMA2_EXPORT_JSONL}" || return 1
 	return 0
 }
@@ -815,7 +1106,7 @@ sub_export_local_node_json(){
 			| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
 			| if has("xray_json") then .xray_json |= normalize_json_config else . end
 			| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
-			| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+			| del(._schema, ._rev, ._source, ._updated_at, ._created_at, ._migrated_from, .server_ip, .latency, .ping)
 		'
 	else
 		fss_build_legacy_node_json "${node_id}" | jq -c .
@@ -855,7 +1146,7 @@ sub_nodes_file_md5(){
 		| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
 		| if has("xray_json") then .xray_json |= normalize_json_config else . end
 		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
-		| del(._id, ._schema, ._rev, ._source, ._updated_at, ._migrated_from, ._b64_mode, .server_ip, .latency, .ping)
+		| del(._id, ._schema, ._rev, ._source, ._updated_at, ._created_at, ._migrated_from, ._b64_mode, .server_ip, .latency, .ping)
 	' "${file}" 2>/dev/null | md5sum | awk '{print $1}'
 }
 
@@ -1752,7 +2043,7 @@ remove_sub_node(){
 			dbus remove ${conf2}
 		done
 		fss_refresh_node_direct_cache >/dev/null 2>&1
-		fss_schedule_webtest_cache_warm >/dev/null 2>&1
+		fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		echo_date "所有订阅节点信息已经成功删除！"
 		sub_refresh_node_state
 		return 0
@@ -1780,7 +2071,7 @@ remove_sub_node(){
 		dbus remove ${conf2}
 	done
 	fss_refresh_node_direct_cache >/dev/null 2>&1
-	fss_schedule_webtest_cache_warm >/dev/null 2>&1
+	fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 	echo_date "所有订阅节点信息已经成功删除！"
 }
 
@@ -1864,12 +2155,17 @@ filter_nodes(){
 	# 用[排除]和[包括]关键词去匹配，剔除掉用户不需要的节点，剩下的需要的节点：UPDATE_FLAG=0，
 	# UPDATE_FLAG=0,需要的节点；1.判断本地是否有此节点，2.如果有就添加，没有就判断是否需要更新
 	# UPDATE_FLAG=2,不需要的节点；1. 判断本地是否有此节点，2.如果有就删除，没有就不管
-	if [ -z "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ];then
-		return 0
-	fi
 	local _type=$1
 	local remarks=$2
 	local server=$3
+	if [ "${SUB_KEEP_INFO_NODE}" != "1" ] && printf '%s' "${remarks}" | grep -Eiq '^(Expire|Traffic|Sync)[:：]|^(剩余流量|套餐到期|订阅到期|到期时间|流量重置|更新于|更新时间)[:：]'; then
+		echo_date "⚪${_type}节点：【${remarks}】，不添加，因为是订阅信息节点"
+		let exclude+=1
+		return 1
+	fi
+	if [ -z "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ];then
+		return 0
+	fi
 	[ -n "${KEY_WORDS_1}" ] && local KEY_MATCH_1=$(echo ${remarks} ${server} | grep -Eo "${KEY_WORDS_1}")
 	[ -n "${KEY_WORDS_2}" ] && local KEY_MATCH_2=$(echo ${remarks} ${server} | grep -Eo "${KEY_WORDS_2}")
 	if [ -n "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ]; then
@@ -3766,65 +4062,71 @@ get_online_rule_now(){
 	echo_date "-------------------------------------------------------------------"
 
 	# 12. 开始解析并写入节点
-	while IFS= read -r node || [ -n "${node}" ]; do
-		local node_type=$(sub_uri_scheme "${node}")
-		local node_info=$(sub_uri_body "${node}")
-		case ${node_type} in
-		ss)
-			add_ss_node "${node_info}" 1
-			;;
-		ssr)
-			add_ssr_node "${node_info}" 1
-			;;
-		vmess)
-			local _match=$(echo "${node_info}" | grep -E "@|\?|type")
-			if [ -n "${_match}" ];then
-				#明文的vmess链接
-				add_vless_node "${node_info}" 1 vmess
-			else
-				#base64的vmess链接
-				add_vmess_node "${node_info}" 1
-			fi
-			;;
-		vless)
-			add_vless_node "${node_info}" 1 vless
-			;;
-		trojan)
-			add_trojan_node "${node_info}" 1
-			;;
-		hysteria2|hy2)
-			add_hy2_node "${node_info}" 1
-			;;
-		tuic)
-			if [ "${pkg_type}" == "full" ];then
-				add_tuic_node "${node_info}" 1
-			else
-				echo_date "⛔当前为lite版本，跳过tuic节点！"
-			fi
-			;;
-		naive+https|naive+quic)
-			if [ "${pkg_type}" == "full" ];then
-				add_naive_node "${node_type}" "${node_info}" 1
-			else
-				echo_date "⛔当前为lite版本，跳过Naïve节点！"
-			fi
-			;;
-		*)
-			if [ -n "${node_type}" ];then
-				sub_log_unsupported_scheme_once "${node_type}"
-			fi
-			# if [ -n "${node_info}" ];then
-			# 	local _match=$(echo "${node_info}"|grep -E "//")
-			# 	if [ -z "${_match}" ];then
-			# 		echo_date "ℹ️$node"
-			# 	else
-			# 		echo "${node_info}"
-			# 	fi
-			# fi
-			continue
-			;;
-		esac
-	done < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
+	local ONLINE_PARSED_FILE="${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
+	local PARSED_BY_SUB_TOOL="0"
+	if pick_sub_tool >/dev/null 2>&1;then
+		echo_date "🧩检测到sub-tool，尝试使用新解析器..."
+		if sub_try_parse_uri_lines_with_tool "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt" "${ONLINE_PARSED_FILE}" "${DOMAIN_NAME}" "${SUB_SOURCE_TAG}" "${pkg_type}";then
+			PARSED_BY_SUB_TOOL="1"
+			echo_date "🧩sub-tool解析完成。"
+		else
+			echo_date "⚠️sub-tool解析失败，回退旧订阅解析器。"
+			rm -f "${ONLINE_PARSED_FILE}" >/dev/null 2>&1
+		fi
+	fi
+	if [ "${PARSED_BY_SUB_TOOL}" != "1" ];then
+		while IFS= read -r node || [ -n "${node}" ]; do
+			local node_type=$(sub_uri_scheme "${node}")
+			local node_info=$(sub_uri_body "${node}")
+			case ${node_type} in
+			ss)
+				add_ss_node "${node_info}" 1
+				;;
+			ssr)
+				add_ssr_node "${node_info}" 1
+				;;
+			vmess)
+				local _match=$(echo "${node_info}" | grep -E "@|\?|type")
+				if [ -n "${_match}" ];then
+					#明文的vmess链接
+					add_vless_node "${node_info}" 1 vmess
+				else
+					#base64的vmess链接
+					add_vmess_node "${node_info}" 1
+				fi
+				;;
+			vless)
+				add_vless_node "${node_info}" 1 vless
+				;;
+			trojan)
+				add_trojan_node "${node_info}" 1
+				;;
+			hysteria2|hy2)
+				add_hy2_node "${node_info}" 1
+				;;
+			tuic)
+				if [ "${pkg_type}" == "full" ];then
+					add_tuic_node "${node_info}" 1
+				else
+					echo_date "⛔当前为lite版本，跳过tuic节点！"
+				fi
+				;;
+			naive+https|naive+quic)
+				if [ "${pkg_type}" == "full" ];then
+					add_naive_node "${node_type}" "${node_info}" 1
+				else
+					echo_date "⛔当前为lite版本，跳过Naïve节点！"
+				fi
+				;;
+			*)
+				if [ -n "${node_type}" ];then
+					sub_log_unsupported_scheme_once "${node_type}"
+				fi
+				continue
+				;;
+			esac
+		done < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
+	fi
 	echo_date "-------------------------------------------------------------------"
 	local ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}")
 	CANONICAL_SOURCE_TAG=$(sub_canonicalize_online_source "${sub_count}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" 2>/dev/null)
@@ -4009,7 +4311,7 @@ start_node_subscribe(){
 				exit_sub
 			fi
 			fss_refresh_node_direct_cache >/dev/null 2>&1
-			fss_schedule_webtest_cache_warm >/dev/null 2>&1
+			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		else
 			echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
 		fi
@@ -4095,7 +4397,7 @@ start_offline_update() {
 		echo_date "ℹ️离线节点解析完毕，开始写入节点..."
 		if json2skipd "offline_node_new"; then
 			fss_refresh_node_direct_cache >/dev/null 2>&1
-			fss_schedule_webtest_cache_warm >/dev/null 2>&1
+			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		fi
 	else
 		echo_date "ℹ️离线节点解析失败！跳过！"

@@ -842,6 +842,16 @@ function openssHint(itemNum, flag) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;一些机场的vmess/vless/trojan/hysteria2节点必须设置允许不安全才能工作，勾选这里后订阅的节点将默认启用允许不安全！";
 		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;如果不勾选，允许不安全设定将跟随机场订阅设定(如果机场有此设定的话)。";
 		_caption = "说明";
+	} else if (itemNum == 117) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;当订阅解析走sub-tool时，默认只输出解析摘要。";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;开启后会把每个成功保留的节点逐条写入订阅日志，便于排查订阅内容、过滤结果和节点名称。";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;注意：逐节点日志会明显增加日志I/O，节点很多时会拖慢订阅速度，建议仅在调试时开启。";
+		_caption = "说明";
+	} else if (itemNum == 118) {
+		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;有些机场会把剩余流量、到期时间、同步时间等信息伪装成普通节点放在订阅前几条。默认会自动过滤这些“订阅信息节点”。";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;如果你希望把这些信息节点也保留到节点列表中，请开启此开关。";
+		statusmenu += "<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;开启后，这些信息节点将参与订阅结果校验；像Sync这类每次都会变化的信息，可能会让订阅更频繁地判定为“节点发生变更”。";
+		_caption = "说明";
 	} else if (itemNum == 116) {
 		statusmenu = "&nbsp;&nbsp;&nbsp;&nbsp;此处填入你的机场订阅链接，通常是http://或https://开头的链接，多个链接可以分行填写！<br />&nbsp;&nbsp;&nbsp;&nbsp;也可以增加非http开头的行作为注释，或使用空行或者符号线作为分割，订阅脚本仅会提取http://或https://开头的链接用以订阅，示例：<br />-------------------------------------------------<br />🚀魅影极速<br />https://subserver.maying.io/xxx<br /><br />🛩️nextitally<br />https://naixisubs.com/downloadConfig/xxx<br />-------------------------------------------------"
 		_caption = "订阅地址管理";
