@@ -29,4 +29,6 @@
 - [部署指南](./guides/deployment-guide.md)
 - [节点分流设计文档](./design/node-shunt-design.md)
 - [节点分流 MVP 文档](./implementation/node-shunt-mvp.md)
+- [智能分流未来规划](./todo/future_todo_smart_shunt.md)
+- [Zig 工具路线图](./todo/future_todo_zig_tools.md)
 - [项目完成报告](./reports/project-completion-report.md)
