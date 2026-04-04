@@ -1031,6 +1031,15 @@ fn parseLine(allocator: std.mem.Allocator, line: []const u8, options: Options) !
     if (std.mem.eql(u8, scheme, "ssr")) return parseSsr(allocator, line, options);
     if (std.mem.eql(u8, scheme, "vmess")) {
         const body = try requireBody(line, "vmess");
+        const query_main = splitQuery(body);
+        if (query_main.query.len > 0 and looksLikeBase64(query_main.before)) {
+            if (try maybeDecodeBase64Lossy(allocator, query_main.before)) |decoded| {
+                defer allocator.free(decoded);
+                if (std.mem.indexOfScalar(u8, decoded, '@') != null) {
+                    return parseVmessUriEncoded(allocator, line, options);
+                }
+            }
+        }
         if (std.mem.indexOfScalar(u8, body, '@') != null or std.mem.indexOfScalar(u8, body, '?') != null) {
             return parseVlessLike(allocator, "vmess", line, options);
         }
@@ -1154,8 +1163,8 @@ fn parseSsr(allocator: std.mem.Allocator, line: []const u8, options: Options) !N
     node.method = try allocator.dupe(u8, method);
     node.password = try allocator.dupe(u8, password);
     node.obfs = try allocator.dupe(u8, obfs);
-    if (obfsparam) |v| node.obfs_host = v;
-    if (protoparam) |v| node.protocol_param = v;
+    if (obfsparam) |v| node.obfs_host = try allocator.dupe(u8, v);
+    if (protoparam) |v| node.protocol_param = try allocator.dupe(u8, v);
     if (options.include_raw) node.raw_uri = try allocator.dupe(u8, line);
     return node;
 }
@@ -1171,23 +1180,92 @@ fn parseVmess(allocator: std.mem.Allocator, line: []const u8, options: Options) 
     if (root != .object) return error.InvalidUri;
 
     const obj = root.object;
-    const name = jsonObjectString(obj, "ps") orelse jsonObjectString(obj, "remark") orelse jsonObjectString(obj, "add") orelse return error.InvalidUri;
-    const server = jsonObjectString(obj, "add") orelse return error.InvalidUri;
-    const port_text = jsonObjectString(obj, "port") orelse return error.InvalidUri;
+    const name = (try jsonObjectTextAlloc(allocator, obj, "ps")) orelse
+        (try jsonObjectTextAlloc(allocator, obj, "remark")) orelse
+        (try jsonObjectTextAlloc(allocator, obj, "add")) orelse return error.InvalidUri;
+    defer allocator.free(name);
+    const server = (try jsonObjectTextAlloc(allocator, obj, "add")) orelse return error.InvalidUri;
+    defer allocator.free(server);
+    const port_text = (try jsonObjectTextAlloc(allocator, obj, "port")) orelse return error.InvalidUri;
+    defer allocator.free(port_text);
     const port = try parsePort(port_text);
 
     var node = try baseNode(allocator, "vmess", name, server, port, options);
-    if (jsonObjectString(obj, "id")) |v| node.uuid = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "aid")) |v| node.protocol_param = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "scy")) |v| node.method = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "net")) |v| node.network = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "tls")) |v| node.security = try allocator.dupe(u8, if (v.len > 0) v else "none");
-    if (jsonObjectString(obj, "host")) |v| node.host = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "path")) |v| node.path = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "sni")) |v| node.sni = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "alpn")) |v| node.alpn = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "type")) |v| node.protocol = try allocator.dupe(u8, v);
-    if (jsonObjectString(obj, "verify_cert")) |v| node.allow_insecure = !stringEqualsIgnoreCase(v, "true");
+    if (try jsonObjectTextAlloc(allocator, obj, "id")) |v| node.uuid = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "aid")) |v| node.protocol_param = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "scy")) |v| node.method = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "net")) |v| node.network = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "tls")) |v| {
+        if (v.len > 0) node.security = v else allocator.free(v);
+    }
+    if (try jsonObjectTextAlloc(allocator, obj, "host")) |v| node.host = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "path")) |v| node.path = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "sni")) |v| node.sni = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "alpn")) |v| node.alpn = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "type")) |v| node.protocol = v;
+    if (try jsonObjectTextAlloc(allocator, obj, "verify_cert")) |v| {
+        node.allow_insecure = !stringEqualsIgnoreCase(v, "true");
+        allocator.free(v);
+    }
+    if (options.include_raw) node.raw_uri = try allocator.dupe(u8, line);
+    return node;
+}
+
+fn parseVmessUriEncoded(allocator: std.mem.Allocator, line: []const u8, options: Options) !NormalizedNode {
+    const body = try requireBody(line, "vmess");
+    const parts = splitFragment(body);
+    const query_main = splitQuery(parts.before);
+    const decoded = try decodeBase64SmartAlloc(allocator, query_main.before);
+    defer allocator.free(decoded);
+    const at = std.mem.lastIndexOfScalar(u8, decoded, '@') orelse return error.InvalidUri;
+    const userinfo = decoded[0..at];
+    const hostport = decoded[at + 1 ..];
+    const hp = try splitHostPortAlloc(allocator, hostport);
+    defer hp.deinit(allocator);
+    const name = if (try queryValueAlloc(allocator, query_main.query, "remark")) |v|
+        v
+    else if (parts.fragment.len > 0)
+        try urlDecodeAlloc(allocator, parts.fragment)
+    else
+        try allocator.dupe(u8, hp.host);
+    defer allocator.free(name);
+
+    var uuid: []const u8 = userinfo;
+    var method: ?[]u8 = null;
+    if (std.mem.indexOfScalar(u8, userinfo, ':')) |colon| {
+        const candidate_method = userinfo[0..colon];
+        const candidate_uuid = userinfo[colon + 1 ..];
+        if (candidate_uuid.len > 0) {
+            uuid = candidate_uuid;
+            method = try allocator.dupe(u8, candidate_method);
+        }
+    }
+
+    var node = try baseNode(allocator, "vmess", name, hp.host, hp.port, options);
+    node.uuid = try allocator.dupe(u8, uuid);
+    if (method) |m| node.method = m;
+    if (try queryValueAlloc(allocator, query_main.query, "network")) |v| node.network = v;
+    if (try queryValueAlloc(allocator, query_main.query, "type")) |v| node.protocol = v;
+    if (try queryValueAlloc(allocator, query_main.query, "wsPath")) |v| node.path = v;
+    if (try queryValueAlloc(allocator, query_main.query, "path")) |v| {
+        if (node.path == null) {
+            node.path = v;
+        } else {
+            allocator.free(v);
+        }
+    }
+    if (try queryValueAlloc(allocator, query_main.query, "host")) |v| node.host = v;
+    if (try queryValueAlloc(allocator, query_main.query, "sni")) |v| node.sni = v;
+    if (try queryValueAlloc(allocator, query_main.query, "tls")) |v| {
+        if (std.mem.eql(u8, v, "1") or stringEqualsIgnoreCase(v, "tls") or stringEqualsIgnoreCase(v, "true")) {
+            allocator.free(v);
+            node.security = try allocator.dupe(u8, "tls");
+        } else {
+            node.security = v;
+        }
+    }
+    if (try queryValueAlloc(allocator, query_main.query, "aid")) |v| node.protocol_param = v;
+    if (try queryBoolValue(query_main.query, "allowInsecure")) |v| node.allow_insecure = v;
     if (options.include_raw) node.raw_uri = try allocator.dupe(u8, line);
     return node;
 }
@@ -1481,6 +1559,18 @@ fn jsonObjectString(obj: std.json.ObjectMap, key: []const u8) ?[]const u8 {
     return value.string;
 }
 
+fn jsonObjectTextAlloc(allocator: std.mem.Allocator, obj: std.json.ObjectMap, key: []const u8) !?[]u8 {
+    const value = obj.get(key) orelse return null;
+    return switch (value) {
+        .string => try allocator.dupe(u8, value.string),
+        .integer => try std.fmt.allocPrint(allocator, "{d}", .{value.integer}),
+        .float => try std.fmt.allocPrint(allocator, "{d}", .{value.float}),
+        .number_string => try allocator.dupe(u8, value.number_string),
+        .bool => try allocator.dupe(u8, if (value.bool) "true" else "false"),
+        else => null,
+    };
+}
+
 fn looksLikeJson(input: []const u8) bool {
     return input.len > 1 and ((input[0] == '{' and input[input.len - 1] == '}') or (input[0] == '[' and input[input.len - 1] == ']'));
 }
@@ -1647,6 +1737,7 @@ fn queryValueBorrowed(allocator: std.mem.Allocator, query: []const u8, key: []co
 fn decodeOptionalB64QueryValue(allocator: std.mem.Allocator, query: []const u8, key: []const u8) !?[]u8 {
     const raw = try queryValueAlloc(allocator, query, key) orelse return null;
     defer allocator.free(raw);
+    if (raw.len == 0) return null;
     return try decodeBase64SmartAlloc(allocator, raw);
 }
 
