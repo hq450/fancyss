@@ -30,19 +30,31 @@ const LogLevel = enum {
 };
 
 const InputKind = enum {
+    empty,
     uri_lines,
     base64_uri_lines,
     ssep_envelope,
+    html_login,
+    html_page,
+    clash_yaml,
+    json_error,
     json,
+    text_error,
     gzip,
     unknown,
 
     fn name(self: InputKind) []const u8 {
         return switch (self) {
+            .empty => "empty",
             .uri_lines => "uri-lines",
             .base64_uri_lines => "base64-uri-lines",
             .ssep_envelope => "ssep-envelope",
+            .html_login => "html-login",
+            .html_page => "html-page",
+            .clash_yaml => "clash-yaml",
+            .json_error => "json-error",
             .json => "json",
+            .text_error => "text-error",
             .gzip => "gzip",
             .unknown => "unknown",
         };
@@ -959,30 +971,59 @@ fn readInput(allocator: std.mem.Allocator, input_path: ?[]const u8) ![]u8 {
 
 fn detectContentInfo(allocator: std.mem.Allocator, raw: []const u8) !ContentInfo {
     const trimmed = std.mem.trim(u8, raw, " \t\r\n");
-    if (trimmed.len == 0) {
-        return .{ .kind = .unknown, .content = try allocator.dupe(u8, trimmed) };
+    const normalized = trimBom(trimmed);
+    if (normalized.len == 0) {
+        return .{ .kind = .empty, .content = try allocator.dupe(u8, normalized) };
     }
-    if (trimmed.len >= 2 and trimmed[0] == 0x1f and trimmed[1] == 0x8b) {
-        return .{ .kind = .gzip, .content = try allocator.dupe(u8, trimmed) };
+    if (normalized.len >= 2 and normalized[0] == 0x1f and normalized[1] == 0x8b) {
+        return .{ .kind = .gzip, .content = try allocator.dupe(u8, normalized) };
     }
-    if (looksLikeSsepEnvelope(allocator, trimmed)) {
-        return .{ .kind = .ssep_envelope, .content = try allocator.dupe(u8, trimmed) };
+    if (looksLikeHtml(normalized)) {
+        return .{
+            .kind = if (looksLikeHtmlLoginPage(normalized)) .html_login else .html_page,
+            .content = try allocator.dupe(u8, normalized),
+        };
     }
-    if (looksLikeUriLines(trimmed)) {
-        return .{ .kind = .uri_lines, .content = try allocator.dupe(u8, trimmed) };
+    if (looksLikeClashYaml(normalized)) {
+        return .{ .kind = .clash_yaml, .content = try allocator.dupe(u8, normalized) };
     }
-    if (looksLikeJson(trimmed)) {
-        return .{ .kind = .json, .content = try allocator.dupe(u8, trimmed) };
+    if (looksLikeSsepEnvelope(allocator, normalized)) {
+        return .{ .kind = .ssep_envelope, .content = try allocator.dupe(u8, normalized) };
+    }
+    if (looksLikeUriLines(normalized)) {
+        return .{ .kind = .uri_lines, .content = try allocator.dupe(u8, normalized) };
+    }
+    if (looksLikeJson(normalized)) {
+        return .{
+            .kind = if (looksLikeJsonError(allocator, normalized)) .json_error else .json,
+            .content = try allocator.dupe(u8, normalized),
+        };
+    }
+    if (looksLikeTextError(normalized)) {
+        return .{ .kind = .text_error, .content = try allocator.dupe(u8, normalized) };
     }
 
-    if (try maybeDecodeBase64Text(allocator, trimmed)) |decoded| {
+    if (try maybeDecodeBase64Text(allocator, normalized)) |decoded| {
         if (looksLikeUriLines(decoded)) {
             return .{ .kind = .base64_uri_lines, .content = decoded };
+        }
+        if (looksLikeClashYaml(decoded)) {
+            allocator.free(decoded);
+            return .{ .kind = .clash_yaml, .content = try allocator.dupe(u8, normalized) };
+        }
+        if (looksLikeJson(decoded)) {
+            const kind: InputKind = if (looksLikeJsonError(allocator, decoded)) .json_error else .json;
+            allocator.free(decoded);
+            return .{ .kind = kind, .content = try allocator.dupe(u8, normalized) };
+        }
+        if (looksLikeTextError(decoded)) {
+            allocator.free(decoded);
+            return .{ .kind = .text_error, .content = try allocator.dupe(u8, normalized) };
         }
         allocator.free(decoded);
     }
 
-    return .{ .kind = .unknown, .content = try allocator.dupe(u8, trimmed) };
+    return .{ .kind = .unknown, .content = try allocator.dupe(u8, normalized) };
 }
 
 fn parseSubscription(allocator: std.mem.Allocator, raw: []const u8, options: Options) !ParseResult {
@@ -1571,8 +1612,55 @@ fn jsonObjectTextAlloc(allocator: std.mem.Allocator, obj: std.json.ObjectMap, ke
     };
 }
 
+fn trimBom(input: []const u8) []const u8 {
+    if (input.len >= 3 and input[0] == 0xef and input[1] == 0xbb and input[2] == 0xbf) {
+        return input[3..];
+    }
+    return input;
+}
+
+fn lowercaseHeadAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    const head = input[0..@min(input.len, 4096)];
+    const out = try allocator.dupe(u8, head);
+    for (out) |*ch| {
+        if (ch.* <= 0x7f) {
+            ch.* = std.ascii.toLower(ch.*);
+        }
+    }
+    return out;
+}
+
 fn looksLikeJson(input: []const u8) bool {
     return input.len > 1 and ((input[0] == '{' and input[input.len - 1] == '}') or (input[0] == '[' and input[input.len - 1] == ']'));
+}
+
+fn looksLikeHtml(input: []const u8) bool {
+    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
+    defer std.heap.page_allocator.free(lower);
+    return std.mem.startsWith(u8, lower, "<!doctype html") or
+        std.mem.startsWith(u8, lower, "<html") or
+        std.mem.indexOf(u8, lower, "<html") != null;
+}
+
+fn looksLikeHtmlLoginPage(input: []const u8) bool {
+    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
+    defer std.heap.page_allocator.free(lower);
+    return std.mem.indexOf(u8, lower, "cloudflare access") != null or
+        std.mem.indexOf(u8, lower, "sign in") != null or
+        std.mem.indexOf(u8, lower, "login") != null or
+        std.mem.indexOf(u8, lower, "用户中心") != null or
+        std.mem.indexOf(u8, lower, "登录") != null;
+}
+
+fn looksLikeClashYaml(input: []const u8) bool {
+    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
+    defer std.heap.page_allocator.free(lower);
+    return std.mem.indexOf(u8, lower, "proxies:") != null and
+        (std.mem.indexOf(u8, lower, "proxy-groups:") != null or
+        std.mem.indexOf(u8, lower, "rules:") != null or
+        std.mem.indexOf(u8, lower, "type: vmess") != null or
+        std.mem.indexOf(u8, lower, "type: trojan") != null or
+        std.mem.indexOf(u8, lower, "type: ss") != null);
 }
 
 fn looksLikeSsepEnvelope(allocator: std.mem.Allocator, input: []const u8) bool {
@@ -1582,6 +1670,21 @@ fn looksLikeSsepEnvelope(allocator: std.mem.Allocator, input: []const u8) bool {
     if (parsed.value != .object) return false;
     const obj = parsed.value.object;
     return obj.contains("v") and obj.contains("alg") and (obj.contains("data") or obj.contains("payload")) and (obj.contains("req") or obj.contains("request"));
+}
+
+fn looksLikeJsonError(allocator: std.mem.Allocator, input: []const u8) bool {
+    var parsed = std.json.parseFromSlice(std.json.Value, allocator, input, .{}) catch return false;
+    defer parsed.deinit();
+    if (parsed.value != .object) return false;
+    const obj = parsed.value.object;
+    if (obj.contains("error") or obj.contains("errors")) return true;
+    if (obj.contains("msg") or obj.contains("message")) return true;
+    if (obj.contains("status")) return true;
+    if (obj.contains("code") and !obj.contains("proxies") and !obj.contains("outbounds")) return true;
+    if (obj.get("success")) |value| {
+        if (value == .bool and value.bool == false) return true;
+    }
+    return false;
 }
 
 fn looksLikeUriLines(input: []const u8) bool {
@@ -1607,6 +1710,20 @@ fn isSupportedScheme(scheme: []const u8) bool {
         std.mem.eql(u8, scheme, "tuic") or
         std.mem.eql(u8, scheme, "hy2") or
         std.mem.eql(u8, scheme, "hysteria2");
+}
+
+fn looksLikeTextError(input: []const u8) bool {
+    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
+    defer std.heap.page_allocator.free(lower);
+    return std.mem.indexOf(u8, lower, "error:") != null or
+        std.mem.indexOf(u8, lower, "参数缺失") != null or
+        std.mem.indexOf(u8, lower, "请重新获取订阅") != null or
+        std.mem.indexOf(u8, lower, "nice try") != null or
+        std.mem.indexOf(u8, lower, "can not find user") != null or
+        std.mem.indexOf(u8, lower, "forbidden") != null or
+        std.mem.indexOf(u8, lower, "access denied") != null or
+        std.mem.indexOf(u8, lower, "denied") != null or
+        std.mem.indexOf(u8, lower, "expired") != null;
 }
 
 fn maybeDecodeBase64Text(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
