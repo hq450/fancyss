@@ -45,6 +45,8 @@ FAILOVER_NODE_SERVER=""
 FAILOVER_NODE_PORT=""
 FAILOVER_NODE_IDENTITY=""
 SUB_REWRITE_ALL=0
+SUB_FAST_APPEND=0
+SUB_FAST_APPEND_USED=0
 SUB_LOCAL_CHANGED=0
 SUB_HAS_FAILURE=0
 SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
@@ -2620,6 +2622,214 @@ sub_write_nodes_schema2(){
 	return 0
 }
 
+sub_can_fast_append_schema2(){
+	local input_file="$1"
+	local old_count=0
+	local existing_count=0
+	local total_count=0
+	local new_count=0
+	local non_user_count=0
+
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
+	[ -f "${input_file}" ] || return 1
+	old_count=$(sub_list_node_ids | sed '/^$/d' | wc -l)
+	existing_count=$(jq -r 'select(((._id // "") | tostring | test("^[0-9]+$")))|1' "${input_file}" 2>/dev/null | wc -l | tr -d ' ')
+	total_count=$(wc -l < "${input_file}" 2>/dev/null | tr -d ' ')
+	[ -n "${existing_count}" ] || existing_count=0
+	[ -n "${total_count}" ] || total_count=0
+	new_count=$((total_count - existing_count))
+	[ "${new_count}" -gt 0 ] || return 1
+	[ "${existing_count}" -eq "${old_count}" ] || return 1
+	if [ "${LOCAL_SPLIT_META_VALID}" = "1" ] && [ -s "${LOCAL_SPLIT_META}" ];then
+		non_user_count=$(awk -F '\t' '$3 != "" && $3 != "null" && $3 != "user" {count++} END {print count + 0}' "${LOCAL_SPLIT_META}" 2>/dev/null)
+	else
+		non_user_count=1
+	fi
+	[ "${non_user_count}" -eq 0 ]
+}
+
+sub_append_nodes_schema2(){
+	local input_file="$1"
+	local assigned_file="${input_file}.append"
+	local meta_file="${input_file}.append.meta"
+	local new_ids_file="${input_file}.append.ids"
+	local old_order_csv="" next_id max_id imported_order=""
+	local now_ts node_id stored_b64 touched_any=0
+
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
+	[ -f "${input_file}" ] || return 1
+
+	old_order_csv=$(dbus get fss_node_order)
+	next_id=$(dbus get fss_node_next_id)
+	[ -n "${next_id}" ] || next_id=1
+	max_id=$(printf '%s' "${old_order_csv}" | tr ',' '\n' | sed '/^$/d' | sort -n | tail -n1)
+	[ -n "${max_id}" ] || max_id=0
+	if [ "${next_id}" -le "${max_id}" ] 2>/dev/null;then
+		next_id=$((max_id + 1))
+	fi
+	now_ts=$(fss_now_ts_ms)
+
+	jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" '
+		def normalize_json_config:
+			. as $raw
+			| if (($raw | type) != "string") or $raw == "" then
+				$raw
+			else
+				(
+					try ($raw | fromjson | tojson)
+					catch (
+						try ($raw | gsub("\\\\\""; "\"") | fromjson | tojson)
+						catch $raw
+					)
+				)
+			end;
+		def legacy_b64_mode:
+			((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+		def decode_b64_field($field):
+			if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+				.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
+			else
+				.
+			end;
+		def clean:
+			with_entries(select(.value != "" and .value != null))
+			| decode_b64_field("password")
+			| decode_b64_field("naive_pass")
+			| decode_b64_field("v2ray_json")
+			| decode_b64_field("xray_json")
+			| decode_b64_field("tuic_json")
+			| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
+			| if has("xray_json") then .xray_json |= normalize_json_config else . end
+			| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
+			| del(
+				._schema,
+				._rev,
+				._updated_at,
+				._migrated_from,
+				._b64_mode,
+				.server_ip,
+				.latency,
+				.ping
+			)
+			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end;
+		(reduce inputs as $node (
+			{next: $next, out: []};
+			($node | clean) as $clean
+			| (($clean._id // "") | tostring) as $raw_id
+			| if ($raw_id | test("^[0-9]+$")) then
+				.out += [($clean | tojson)]
+			else
+				($clean + {
+					"_id": (.next | tostring),
+					"_created_at": (((($clean._created_at // $ts) | tonumber?) // $ts) | if . < 1000000000000 then (. * 1000) else . end)
+				}) as $assigned
+				| .out += [($assigned | tojson)]
+				| .next += 1
+			end
+		)).out[]
+	' "${input_file}" > "${assigned_file}" 2>/dev/null || {
+		rm -f "${assigned_file}" "${meta_file}" "${new_ids_file}"
+		return 1
+	}
+
+	jq -nr -r -c --argjson max "${max_id}" --argjson ts "${now_ts}" '
+		def normalize_json_config:
+			. as $raw
+			| if (($raw | type) != "string") or $raw == "" then
+				$raw
+			else
+				(
+					try ($raw | fromjson | tojson)
+					catch (
+						try ($raw | gsub("\\\\\""; "\"") | fromjson | tojson)
+						catch $raw
+					)
+				)
+			end;
+		def legacy_b64_mode:
+			((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+		def decode_b64_field($field):
+			if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+				.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
+			else
+				.
+			end;
+		def clean:
+			with_entries(select(.value != "" and .value != null))
+			| decode_b64_field("password")
+			| decode_b64_field("naive_pass")
+			| decode_b64_field("v2ray_json")
+			| decode_b64_field("xray_json")
+			| decode_b64_field("tuic_json")
+			| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
+			| if has("xray_json") then .xray_json |= normalize_json_config else . end
+			| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
+			| del(
+				._schema,
+				._rev,
+				._updated_at,
+				._migrated_from,
+				._b64_mode,
+				.server_ip,
+				.latency,
+				.ping
+			)
+			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end;
+		foreach inputs as $node (null;
+			($node | clean) as $clean
+			| (($clean._id // "") | tostring) as $id
+			| select(($id | test("^[0-9]+$")) and (($id | tonumber) > $max))
+			| [
+				$id,
+				(($clean + {
+					"_schema": 2,
+					"_id": $id,
+					"_rev": 1,
+					"_b64_mode": "raw",
+					"_source": (((($clean._source // "") | tostring)) | if . == "" then "subscribe" else . end),
+					"_updated_at": $ts
+				} + {
+					"_created_at": (((($clean._created_at // $ts) | tonumber?) // $ts) | if . < 1000000000000 then (. * 1000) else . end)
+				}) | tojson | @base64)
+			] | @tsv
+		)
+	' "${assigned_file}" > "${meta_file}" 2>/dev/null || {
+		rm -f "${assigned_file}" "${meta_file}" "${new_ids_file}"
+		return 1
+	}
+
+	: > "${new_ids_file}"
+	while IFS='	' read -r node_id stored_b64
+	do
+		[ -n "${node_id}" ] || continue
+		dbus set fss_node_${node_id}="${stored_b64}"
+		echo "${node_id}" >> "${new_ids_file}"
+		touched_any=1
+	done < "${meta_file}"
+
+	imported_order=$(printf '%s' "${old_order_csv}")
+	if [ -s "${new_ids_file}" ];then
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			imported_order="${imported_order}${imported_order:+,}${node_id}"
+			if [ "${node_id}" -gt "${max_id}" ] 2>/dev/null;then
+				max_id="${node_id}"
+			fi
+		done < "${new_ids_file}"
+	fi
+
+	[ -n "${imported_order}" ] && dbus set fss_node_order="${imported_order}" || dbus remove fss_node_order
+	dbus set fss_data_schema=2
+	dbus set fss_node_next_id="$((max_id + 1))"
+	[ "${touched_any}" = "1" ] && fss_clear_webtest_runtime_results
+	fss_touch_node_catalog_ts >/dev/null 2>&1
+	fss_touch_node_config_ts >/dev/null 2>&1
+	mv -f "${assigned_file}" "${input_file}"
+	rm -f "${meta_file}" "${new_ids_file}"
+	return 0
+}
+
 sub_restore_active_nodes_after_rewrite(){
 	local input_file="$1"
 	local restore_current="" restore_failover="" first_id=""
@@ -2876,6 +3086,19 @@ decode_urllink(){
 json2skipd(){
 	local file_name=$1
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		if [ "${SUB_FAST_APPEND}" = "1" ];then
+			sub_append_nodes_schema2 "${DIR}/${file_name}.txt" || return 1
+			SUB_FAST_APPEND_USED=1
+			SUB_FAST_APPEND=0
+			if [ -z "$(fss_get_current_node_id)" ];then
+				local first_id=$(sub_list_node_ids | sed -n '1p')
+				[ -n "${first_id}" ] && fss_set_current_node_id "${first_id}"
+			fi
+			echo_date "😀节点信息写入成功！"
+			sync
+			sub_refresh_node_state
+			return 0
+		fi
 		sub_write_nodes_schema2 "${DIR}/${file_name}.txt" || return 1
 		if [ "${SUB_REWRITE_ALL}" = "1" ];then
 			sub_restore_active_nodes_after_rewrite "${DIR}/${file_name}.txt"
@@ -3276,6 +3499,10 @@ clear_nodes(){
 	# 写入节点钱需要清空所有ssconf配置
 	echo_date "⌛节点写入前准备..."
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		if [ "${SUB_FAST_APPEND}" = "1" ];then
+			echo_date "😀准备完成！"
+			return 0
+		fi
 		sub_capture_active_nodes
 		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
 		[ -s "${SCHEMA2_EXPORT_JSONL}" ] && cp -f "${SCHEMA2_EXPORT_JSONL}" "${SCHEMA2_BEFORE_EXPORT_JSONL}"
@@ -5607,6 +5834,12 @@ start_node_subscribe(){
 					echo_date "❌节点写入文件校验失败，已终止本次订阅，原有节点保持不变！"
 					exit_sub
 				fi
+				SUB_FAST_APPEND_USED=0
+				if sub_can_fast_append_schema2 "$DIR/ss_nodes_new.txt";then
+					SUB_FAST_APPEND=1
+				else
+					SUB_FAST_APPEND=0
+				fi
 			fi
 			clear_nodes
 			echo_date "ℹ️开始写入节点..."
@@ -5614,10 +5847,12 @@ start_node_subscribe(){
 				echo_date "❌节点信息写入失败！"
 				exit_sub
 			fi
-			sub_reference_notice_reset
-			sub_apply_shunt_reference_rewrite
-			sub_collect_runtime_reference_notice_after_rewrite "$DIR/ss_nodes_new.txt"
-			sub_reference_notice_commit
+			if [ "${SUB_FAST_APPEND_USED}" != "1" ];then
+				sub_reference_notice_reset
+				sub_apply_shunt_reference_rewrite
+				sub_collect_runtime_reference_notice_after_rewrite "$DIR/ss_nodes_new.txt"
+				sub_reference_notice_commit
+			fi
 			fss_refresh_node_direct_cache >/dev/null 2>&1
 			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		else
