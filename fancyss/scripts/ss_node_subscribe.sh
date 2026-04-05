@@ -2235,6 +2235,27 @@ get_group_label_from_file(){
 	fi
 }
 
+sub_find_local_source_file(){
+	local source_tag="$1"
+	local matches=""
+	local first_match=""
+	local match_count=0
+
+	[ -n "${source_tag}" ] || return 1
+	if [ "${LOCAL_SPLIT_META_VALID}" = "1" ] && [ -s "${LOCAL_SPLIT_META}" ];then
+		matches=$(awk -F '\t' -v source_tag="${source_tag}" '$3 == source_tag {print $1}' "${LOCAL_SPLIT_META}" 2>/dev/null)
+	else
+		matches=$(find "${DIR}" -name "local_*_${source_tag}.txt" 2>/dev/null | sort -n)
+	fi
+	first_match=$(printf '%s\n' "${matches}" | sed '/^$/d' | sed -n '1p')
+	match_count=$(printf '%s\n' "${matches}" | sed '/^$/d' | wc -l)
+	[ -n "${first_match}" ] || return 1
+	if [ "${match_count}" -gt "1" ];then
+		echo_date "⚠️检测到来源【${source_tag}】对应多个本地节点文件，优先使用第一份进行对比。"
+	fi
+	printf '%s' "${first_match}"
+}
+
 skipdb2json(){
 	if [ "${SEQ_NU}" == "0" ];then
 		return
@@ -4653,24 +4674,24 @@ get_online_rule_now(){
 	fi
 	echo_date "🔷订阅节点校验：${md5_new}"
 	echo_date "💾本地节点信息："
-	local ISLOCALFILE=$(find ${DIR} -name "local_*_${SUB_SOURCE_TAG}.txt")
+	local ISLOCALFILE=$(sub_find_local_source_file "${SUB_SOURCE_TAG}" 2>/dev/null)
 	if [ -n "${ISLOCALFILE}" ];then
-		local md5_loc=$(sub_nodes_file_md5 ${ISLOCALFILE})
+		local md5_loc=$(sub_nodes_file_md5 "${ISLOCALFILE}")
 		local LOCAL_GROUP=$(get_group_label_from_file "${ISLOCALFILE}" "${DOMAIN_NAME}")
-		local LOCAL_NODES=$(cat $ISLOCALFILE | wc -l)
+		local LOCAL_NODES=$(cat "${ISLOCALFILE}" | wc -l)
 		echo_date "🔶当前订阅来源【${LOCAL_GROUP}】，在本地已有节点${LOCAL_NODES}个。"
 		echo_date "🔶本地节点校验：${md5_loc}"
 		if [ "${md5_loc}" == "${md5_new}" ];then
 			echo_date "🆚对比结果：本地节点已经是最新，跳过！"
-			rm -rf ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
+			rm -rf "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${ISLOCALFILE}"
 		else
 			sub_log_nodes_file_change_reason "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
 			# 将订阅后的文件，覆盖为本地的相同link hash的文件
-			rm -rf ${ISLOCALFILE}
-			cp -rf ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt
+			rm -rf "${ISLOCALFILE}"
+			cp -rf "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			SUB_LOCAL_CHANGED=1
