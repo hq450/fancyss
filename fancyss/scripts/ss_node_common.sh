@@ -348,6 +348,152 @@ fss_resolve_node_field_name() {
 	esac
 }
 
+fss_identity_hash_v1() {
+	if command -v cksum >/dev/null 2>&1; then
+		printf '%s' "$1" | cksum | awk '{printf "%08x", $1}'
+	else
+		printf '%s' "$1" | md5sum | awk '{print substr($1, 1, 8)}'
+	fi
+}
+
+fss_identity_slugify() {
+	local raw="$1"
+	local fallback="$2"
+	local slug=""
+	slug=$(printf '%s' "${raw}" \
+		| tr '[:upper:]' '[:lower:]' \
+		| sed 's/[^a-z0-9]\+/_/g; s/^_//; s/_$//')
+	[ -n "${slug}" ] || slug="${fallback}"
+	printf '%s' "${slug}"
+}
+
+fss_identity_secondary_payload_json() {
+	if [ "$#" -gt 0 ]; then
+		printf '%s' "$1"
+	else
+		cat
+	fi | jq -S -c '
+		del(
+			.name,
+			.group,
+			.mode,
+			._id,
+			._schema,
+			._rev,
+			._source,
+			._updated_at,
+			._created_at,
+			._migrated_from,
+			._b64_mode,
+			._airport_identity,
+			._source_scope,
+			._source_url_hash,
+			._identity_primary,
+			._identity_secondary,
+			._identity,
+			._identity_ver,
+			._identity_slot,
+			.server_ip,
+			.latency,
+			.ping
+		)
+	'
+}
+
+fss_enrich_node_identity_json() {
+	local node_json="$1"
+	local explicit_airport="$2"
+	local explicit_scope="$3"
+	local explicit_url_hash="$4"
+	local explicit_source="$5"
+	local source=""
+	local raw_name=""
+	local group_value=""
+	local airport_identity=""
+	local source_scope=""
+	local source_url_hash=""
+	local group_base=""
+	local primary=""
+	local secondary_payload=""
+	local secondary=""
+
+	[ -n "${node_json}" ] || return 1
+	source=$(printf '%s' "${node_json}" | jq -r '._source // empty' 2>/dev/null)
+	[ -n "${source}" ] || source="${explicit_source}"
+	[ -n "${source}" ] || source="manual"
+	raw_name=$(printf '%s' "${node_json}" | jq -r '.name // empty' 2>/dev/null)
+	group_value=$(printf '%s' "${node_json}" | jq -r '.group // empty' 2>/dev/null)
+	source_url_hash=$(printf '%s' "${node_json}" | jq -r '._source_url_hash // empty' 2>/dev/null)
+	[ -n "${explicit_url_hash}" ] && source_url_hash="${explicit_url_hash}"
+	airport_identity=$(printf '%s' "${node_json}" | jq -r '._airport_identity // empty' 2>/dev/null)
+	[ -n "${explicit_airport}" ] && airport_identity="${explicit_airport}"
+	source_scope=$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)
+	[ -n "${explicit_scope}" ] && source_scope="${explicit_scope}"
+
+	if [ "${source}" = "subscribe" ]; then
+		if [ -z "${airport_identity}" ]; then
+			group_base="${group_value}"
+			case "${group_base}" in
+			*_*)
+				group_base="${group_base%_*}"
+				;;
+			esac
+			airport_identity=$(fss_identity_slugify "${group_base}" "sub")
+		fi
+		if [ -z "${source_scope}" ]; then
+			source_scope="${airport_identity}"
+			[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
+		fi
+	else
+		airport_identity="local"
+		source_scope="local"
+		source_url_hash=""
+	fi
+
+	primary=$(fss_identity_hash_v1 "$(printf '%s\037%s' "${source_scope}" "${raw_name}")")
+	secondary_payload=$(fss_identity_secondary_payload_json "${node_json}") || return 1
+	secondary=$(fss_identity_hash_v1 "${secondary_payload}")
+
+	printf '%s' "${node_json}" | jq -c \
+		--arg source "${source}" \
+		--arg airport_identity "${airport_identity}" \
+		--arg source_scope "${source_scope}" \
+		--arg source_url_hash "${source_url_hash}" \
+		--arg identity_primary "${primary}" \
+		--arg identity_secondary "${secondary}" \
+		'
+		. + {
+			"_source": (if (._source // "") == "" then $source else ._source end),
+			"_airport_identity": $airport_identity,
+			"_source_scope": $source_scope,
+			"_source_url_hash": $source_url_hash,
+			"_identity_primary": $identity_primary,
+			"_identity_secondary": $identity_secondary,
+			"_identity": ($identity_primary + "_" + $identity_secondary),
+			"_identity_ver": "1"
+		}
+	'
+}
+
+fss_enrich_node_identity_file() {
+	local input_file="$1"
+	local output_file="$2"
+	local explicit_airport="$3"
+	local explicit_scope="$4"
+	local explicit_url_hash="$5"
+	local explicit_source="$6"
+	local line=""
+
+	[ -f "${input_file}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	: > "${output_file}"
+	while IFS= read -r line || [ -n "${line}" ]
+	do
+		[ -n "${line}" ] || continue
+		fss_enrich_node_identity_json "${line}" "${explicit_airport}" "${explicit_scope}" "${explicit_url_hash}" "${explicit_source}" >> "${output_file}" || return 1
+	done < "${input_file}"
+}
+
 fss_prune_node_json() {
 	if [ "$#" -gt 0 ]; then
 		printf '%s' "$1"
@@ -1214,7 +1360,7 @@ fss_v2_get_node_json_by_id() {
 	local blob
 	blob=$(dbus get fss_node_${node_id})
 	[ -z "${blob}" ] && return 1
-	fss_b64_decode "${blob}"
+	fss_enrich_node_identity_json "$(fss_b64_decode "${blob}")" "" "" "" ""
 }
 
 fss_dump_v2_node_json_dir() {
@@ -1280,6 +1426,42 @@ fss_get_failover_node_id() {
 	else
 		dbus get ss_failover_s4_3
 	fi
+}
+
+fss_get_node_identity_by_id() {
+	local node_id="$1"
+	local schema node_json
+
+	[ -n "${node_id}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+	else
+		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
+		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+	fi
+	printf '%s' "${node_json}" | jq -r '._identity // empty'
+}
+
+fss_find_node_id_by_identity() {
+	local identity="$1"
+	local node_id=""
+	local current_identity=""
+
+	[ -n "${identity}" ] || return 1
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		current_identity=$(fss_get_node_identity_by_id "${node_id}" 2>/dev/null) || continue
+		[ -n "${current_identity}" ] || continue
+		if [ "${current_identity}" = "${identity}" ];then
+			printf '%s' "${node_id}"
+			return 0
+		fi
+	done <<-EOF
+$(fss_list_node_ids)
+	EOF
+	return 1
 }
 
 fss_get_next_node_id_in_order() {

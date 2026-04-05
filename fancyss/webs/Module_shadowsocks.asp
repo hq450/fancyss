@@ -1013,6 +1013,21 @@ function get_fss_raw_node(nodeId) {
 		return null;
 	}
 }
+function get_node_identity(nodeId) {
+	var raw = null;
+	nodeId = nodeId ? String(nodeId) : "";
+	if (!nodeId) {
+		return "";
+	}
+	if (confs[nodeId] && typeof confs[nodeId]["_identity"] != "undefined") {
+		return String(confs[nodeId]["_identity"] || "");
+	}
+	raw = get_fss_raw_node(nodeId);
+	if (raw && typeof raw["_identity"] != "undefined") {
+		return String(raw["_identity"] || "");
+	}
+	return "";
+}
 function schema2_b64_value_for_ui(raw, field, value) {
 	if (!value) {
 		return "";
@@ -1380,6 +1395,7 @@ function normalize_shunt_rule(rule, idx) {
 	} else {
 		obj.target_node_id = resolve_node_id(obj.target_node_id || "", true);
 	}
+	obj.target_node_identity = String(obj.target_node_identity || "");
 	obj.remark = String(obj.remark || "");
 	return obj;
 }
@@ -1416,6 +1432,9 @@ function get_saved_shunt_default_node_id() {
 		return SHUNT_DIRECT_TARGET;
 	}
 	return resolve_node_id(value, true);
+}
+function get_saved_shunt_default_node_identity() {
+	return $.trim(db_ss["ss_basic_shunt_default_node_identity"] || "");
 }
 function get_shunt_runtime_node_id() {
 	var explicitId = is_shunt_direct_target(shuntFallbackNodeId) ? "" : resolve_node_id(shuntFallbackNodeId || "", true);
@@ -3002,14 +3021,17 @@ function save_shunt_rule_editor_state(editing, originalRulesState, layerIndex) {
 	nextRule.enabled = "1";
 	if (selectedAction == "direct") {
 		nextRule.target_node_id = SHUNT_DIRECT_TARGET;
+		nextRule.target_node_identity = "";
 	} else if (selectedAction == "reject") {
 		nextRule.target_node_id = SHUNT_REJECT_TARGET;
+		nextRule.target_node_identity = "";
 	} else {
 		nextRule.target_node_id = resolve_node_id($("#shunt_rule_target").val() || "", true);
 		if (!nextRule.target_node_id || !is_shunt_supported_node(nextRule.target_node_id)) {
 			alert("请选择一个可用于 xray 分流的目标节点。");
 			return false;
 		}
+		nextRule.target_node_identity = get_node_identity(nextRule.target_node_id);
 	}
 	if (!shuntPresetMap[selectedSource]) {
 		alert("请选择一个规则合集。");
@@ -3289,6 +3311,11 @@ function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, 
 	payload["_source"] = source || payload["_source"] || "manual";
 	payload["_updated_at"] = updatedAt;
 	payload["_created_at"] = normalize_schema2_node_timestamp(payload["_created_at"], updatedAt);
+	if (payload["_source"] != "subscribe") {
+		payload["_airport_identity"] = "local";
+		payload["_source_scope"] = "local";
+		payload["_source_url_hash"] = "";
+	}
 	var suffix = "_" + nodeId;
 	for (var key2 in fieldBag) {
 		if (key2.indexOf("ssconf_basic_") !== 0 || key2.slice(-suffix.length) !== suffix) {
@@ -4374,11 +4401,13 @@ function save() {
 		return false;
 	}
 	dbus["ss_basic_shunt_default_node"] = "";
+	dbus["ss_basic_shunt_default_node_identity"] = "";
 	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
 		if (is_shunt_direct_target(shuntDefaultNodeId)) {
 			dbus["ss_basic_shunt_default_node"] = SHUNT_DIRECT_TARGET;
 		} else if (shuntDefaultNodeId && (String(shuntDefaultNodeId) != String(node_sel) || !is_shunt_supported_node(node_sel))) {
 			dbus["ss_basic_shunt_default_node"] = shuntDefaultNodeId;
+			dbus["ss_basic_shunt_default_node_identity"] = get_node_identity(shuntDefaultNodeId);
 		}
 	}
 	dbus["ss_basic_shunt_rules"] = base64_encode_utf8(JSON.stringify(shuntRulesState));

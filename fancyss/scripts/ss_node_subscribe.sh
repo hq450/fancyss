@@ -16,6 +16,7 @@ LOCAL_SPLIT_META="$DIR/local_split_meta.tsv"
 ACTIVE_SOURCE_TAGS="$DIR/active_source_tags.txt"
 SCHEMA2_RAW_JSONL="$DIR/schema2_nodes_raw.txt"
 SCHEMA2_EXPORT_JSONL="$DIR/schema2_nodes_export.txt"
+SCHEMA2_BEFORE_EXPORT_JSONL="$DIR/schema2_nodes_before_rewrite.txt"
 SUB_RAW_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/raw"
 SUB_PARSED_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/parsed"
 # 订阅缓存的 raw / parsed / meta 都放在持久化目录。
@@ -37,10 +38,12 @@ CURR_NODE_NAME=""
 CURR_NODE_TYPE=""
 CURR_NODE_SERVER=""
 CURR_NODE_PORT=""
+CURR_NODE_IDENTITY=""
 FAILOVER_NODE_NAME=""
 FAILOVER_NODE_TYPE=""
 FAILOVER_NODE_SERVER=""
 FAILOVER_NODE_PORT=""
+FAILOVER_NODE_IDENTITY=""
 SUB_REWRITE_ALL=0
 SUB_LOCAL_CHANGED=0
 SUB_HAS_FAILURE=0
@@ -61,6 +64,9 @@ SUB_VERBOSE_NODE_LOG=1
 LOCAL_SPLIT_META_VALID=0
 alias urldecode='sed "s@+@ @g;s@%@\\\\x@g" | xargs -0 printf "%b"'
 SUB_WEBTEST_WARM_LOG="/tmp/upload/ss_webtest_cache.log"
+SUB_SOURCE_URL_HASH=""
+SUB_AIRPORT_IDENTITY=""
+SUB_SOURCE_SCOPE=""
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -153,6 +159,49 @@ sub_get_source_tag_from_url(){
 	sub_get_source_alias_tag "$(sub_get_source_tag_from_domain "${domain_name}")"
 }
 
+sub_build_airport_identity(){
+	local label="$1"
+	local fallback="$2"
+	fss_identity_slugify "${label}" "${fallback}"
+}
+
+sub_build_source_scope(){
+	local airport_identity="$1"
+	local short_url_hash="$2"
+	local scope="${airport_identity}"
+	[ -n "${short_url_hash}" ] && scope="${scope}_${short_url_hash}"
+	printf '%s' "${scope}"
+}
+
+sub_rewrite_identity_fields_for_file(){
+	local file_path="$1"
+	local airport_label="$2"
+	local source_tag="$3"
+	local short_url_hash="$4"
+	local source_type="$5"
+	local airport_identity=""
+	local source_scope=""
+	local tmp_file=""
+
+	[ -f "${file_path}" ] || return 1
+	[ -n "${source_type}" ] || source_type="subscribe"
+	if [ "${source_type}" = "subscribe" ];then
+		airport_identity=$(sub_build_airport_identity "${airport_label}" "${source_tag}")
+		source_scope=$(sub_build_source_scope "${airport_identity}" "${short_url_hash}")
+	else
+		airport_identity="local"
+		source_scope="local"
+		short_url_hash=""
+	fi
+	tmp_file="${file_path}.identity.$$"
+	fss_enrich_node_identity_file "${file_path}" "${tmp_file}" "${airport_identity}" "${source_scope}" "${short_url_hash}" "${source_type}" || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${file_path}"
+	return 0
+}
+
 sub_get_legacy_tag_from_url(){
 	local sub_url="$1"
 	[ -n "${sub_url}" ] || return 1
@@ -161,7 +210,7 @@ sub_get_legacy_tag_from_url(){
 }
 
 sub_reset_schema2_cache(){
-	rm -f "${SCHEMA2_RAW_JSONL}" "${SCHEMA2_EXPORT_JSONL}"
+	rm -f "${SCHEMA2_RAW_JSONL}" "${SCHEMA2_EXPORT_JSONL}" "${SCHEMA2_BEFORE_EXPORT_JSONL}"
 }
 
 sub_mark_active_source_tag(){
@@ -1270,6 +1319,7 @@ sub_prepare_schema2_raw_jsonl(){
 sub_prepare_schema2_export_jsonl(){
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
 	[ -f "${SCHEMA2_EXPORT_JSONL}" ] && return 0
+	local tmp_export="${SCHEMA2_EXPORT_JSONL}.tmp.$$"
 	sub_prepare_schema2_raw_jsonl || return 1
 	if [ ! -s "${SCHEMA2_RAW_JSONL}" ];then
 		: > "${SCHEMA2_EXPORT_JSONL}"
@@ -1294,7 +1344,15 @@ sub_prepare_schema2_export_jsonl(){
 		| if has("xray_json") then .xray_json |= normalize_json_config else . end
 		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
 		| del(._schema, ._rev, ._source, ._updated_at, ._created_at, ._migrated_from, .server_ip, .latency, .ping)
-	' "${SCHEMA2_RAW_JSONL}" > "${SCHEMA2_EXPORT_JSONL}" || return 1
+	' "${SCHEMA2_RAW_JSONL}" > "${tmp_export}" || {
+		rm -f "${tmp_export}"
+		return 1
+	}
+	fss_enrich_node_identity_file "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}" "" "" "" "" || {
+		rm -f "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}"
+		return 1
+	}
+	rm -f "${tmp_export}"
 	return 0
 }
 
@@ -1362,6 +1420,23 @@ sub_get_node_port_plain(){
 	printf '%s' "${port}"
 }
 
+sub_get_node_identity_plain(){
+	local node_id="$1"
+	local value=""
+	local node_json=""
+	[ -z "${node_id}" ] && return 1
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		value=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null | jq -r '._identity // empty')
+		[ -n "${value}" ] && {
+			printf '%s' "${value}"
+			return 0
+		}
+	fi
+	node_json=$(sub_export_local_node_json "${node_id}" 2>/dev/null) || return 1
+	value=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null | jq -r '._identity // empty') || return 1
+	printf '%s' "${value}"
+}
+
 sub_node_exists_in_order(){
 	local node_id="$1"
 	[ -z "${node_id}" ] && return 1
@@ -1374,10 +1449,12 @@ sub_capture_active_nodes(){
 	CURR_NODE_TYPE=$(sub_get_node_field_plain "${CURR_NODE}" type)
 	CURR_NODE_SERVER=$(sub_get_node_server_plain "${CURR_NODE}")
 	CURR_NODE_PORT=$(sub_get_node_port_plain "${CURR_NODE}")
+	CURR_NODE_IDENTITY=$(sub_get_node_identity_plain "${CURR_NODE}")
 	FAILOVER_NODE_NAME=$(sub_get_node_field_plain "${FAILOVER_NODE}" name)
 	FAILOVER_NODE_TYPE=$(sub_get_node_field_plain "${FAILOVER_NODE}" type)
 	FAILOVER_NODE_SERVER=$(sub_get_node_server_plain "${FAILOVER_NODE}")
 	FAILOVER_NODE_PORT=$(sub_get_node_port_plain "${FAILOVER_NODE}")
+	FAILOVER_NODE_IDENTITY=$(sub_get_node_identity_plain "${FAILOVER_NODE}")
 }
 
 sub_find_node_id_in_file(){
@@ -1392,8 +1469,16 @@ sub_find_node_id_in_file(){
 		--arg type "${type}" \
 		--arg server "${server}" \
 		--arg port "${port}" \
-		'select((.name // "") == $name and (.type // "") == $type and ((.server // .hy2_server // "") == $server) and ((.port // .hy2_port // "") == $port)) | ._id // empty' \
+	'select((.name // "") == $name and (.type // "") == $type and ((.server // .hy2_server // "") == $server) and ((.port // .hy2_port // "") == $port)) | ._id // empty' \
 		"${file}" 2>/dev/null | sed -n '1p'
+}
+
+sub_find_node_id_by_identity_in_file(){
+	local file="$1"
+	local identity="$2"
+	[ -f "${file}" ] || return 1
+	[ -n "${identity}" ] || return 1
+	jq -r --arg identity "${identity}" 'select((._identity // "") == $identity) | ._id // empty' "${file}" 2>/dev/null | sed -n '1p'
 }
 
 sub_export_local_node_json(){
@@ -1581,15 +1666,82 @@ sub_count_unique_groups(){
 	fi
 }
 
+sub_apply_existing_ids_by_identity(){
+	local input_file="$1"
+	local output_file="$2"
+	local source_map_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
+	local map_file="${output_file}.map.$$"
+	local used_file="${output_file}.used.$$"
+	local line=""
+	local identity=""
+	local matched=""
+	local old_id=""
+	local old_created=""
+
+	[ -f "${input_file}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	if [ "${SUB_STORAGE_SCHEMA}" != "2" ];then
+		cp -f "${input_file}" "${output_file}"
+		return 0
+	fi
+	if [ ! -s "${source_map_file}" ];then
+		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
+		source_map_file="${SCHEMA2_EXPORT_JSONL}"
+	fi
+	if [ ! -s "${source_map_file}" ];then
+		cp -f "${input_file}" "${output_file}"
+		return 0
+	fi
+	run jq -r '[._identity // "", ._id // "", ((._created_at // "") | tostring)] | @tsv' "${source_map_file}" 2>/dev/null > "${map_file}" || {
+		rm -f "${map_file}"
+		cp -f "${input_file}" "${output_file}"
+		return 0
+	}
+	: > "${output_file}"
+	: > "${used_file}"
+	while IFS= read -r line || [ -n "${line}" ]
+	do
+		[ -n "${line}" ] || continue
+		identity=$(printf '%s' "${line}" | run jq -r '._identity // empty' 2>/dev/null)
+		if [ -n "${identity}" ];then
+			matched=$(awk -F '\t' -v identity="${identity}" '$1 == identity {print $2 "\t" $3; exit}' "${map_file}" 2>/dev/null)
+			if [ -n "${matched}" ];then
+				old_id=$(printf '%s' "${matched}" | awk -F '\t' '{print $1}')
+				old_created=$(printf '%s' "${matched}" | awk -F '\t' '{print $2}')
+				if [ -n "${old_id}" ] && ! grep -Fxq "${old_id}" "${used_file}" 2>/dev/null;then
+					echo "${old_id}" >> "${used_file}"
+					line=$(printf '%s' "${line}" | run jq -c --arg id "${old_id}" --arg created "${old_created}" '
+						. + {"_id": $id}
+						| if $created != "" then ._created_at = (($created | tonumber?) // ._created_at) else . end
+					' 2>/dev/null)
+				fi
+			fi
+		fi
+		printf '%s\n' "${line}" >> "${output_file}"
+	done < "${input_file}"
+	rm -f "${map_file}" "${used_file}"
+	return 0
+}
+
 sub_write_nodes_schema2(){
 	local input_file="$1"
-	local order_csv next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts
+	local order_csv next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
 	local node_id stored_b64 export_b64 export_json
 
 	[ -f "${input_file}" ] || return 1
 	mapped_file="${input_file}.mapped"
 	meta_file="${input_file}.meta"
+	identity_file="${input_file}.identity"
+	reuse_file="${input_file}.reuse"
 	: > "${mapped_file}"
+	fss_enrich_node_identity_file "${input_file}" "${identity_file}" "" "" "" "" || {
+		rm -f "${mapped_file}" "${identity_file}"
+		return 1
+	}
+	sub_apply_existing_ids_by_identity "${identity_file}" "${reuse_file}" || {
+		rm -f "${mapped_file}" "${identity_file}" "${reuse_file}"
+		return 1
+	}
 	order_csv=$(dbus get fss_node_order)
 	next_id=$(dbus get fss_node_next_id)
 	[ -n "${next_id}" ] || next_id=1
@@ -1644,8 +1796,8 @@ sub_write_nodes_schema2(){
 		)
 		| .rows[]
 		| @tsv
-	' "${input_file}" > "${meta_file}" 2>/dev/null || {
-		rm -f "${mapped_file}" "${meta_file}"
+	' "${reuse_file}" > "${meta_file}" 2>/dev/null || {
+		rm -f "${mapped_file}" "${meta_file}" "${identity_file}" "${reuse_file}"
 		return 1
 	}
 
@@ -1662,7 +1814,7 @@ sub_write_nodes_schema2(){
 			max_id="${node_id}"
 		fi
 	done < "${meta_file}"
-	rm -f "${meta_file}"
+	rm -f "${meta_file}" "${identity_file}" "${reuse_file}"
 
 	if [ -z "${imported_order}" ];then
 		rm -f "${mapped_file}"
@@ -1690,6 +1842,9 @@ sub_restore_active_nodes_after_rewrite(){
 	if sub_node_exists_in_order "${CURR_NODE}";then
 		restore_current="${CURR_NODE}"
 	else
+		restore_current=$(sub_find_node_id_by_identity_in_file "${input_file}" "${CURR_NODE_IDENTITY}")
+	fi
+	if [ -z "${restore_current}" ];then
 		restore_current=$(sub_find_node_id_in_file "${input_file}" "${CURR_NODE_NAME}" "${CURR_NODE_TYPE}" "${CURR_NODE_SERVER}" "${CURR_NODE_PORT}")
 	fi
 	[ -z "${restore_current}" ] && restore_current="${first_id}"
@@ -1697,6 +1852,9 @@ sub_restore_active_nodes_after_rewrite(){
 	if sub_node_exists_in_order "${FAILOVER_NODE}";then
 		restore_failover="${FAILOVER_NODE}"
 	else
+		restore_failover=$(sub_find_node_id_by_identity_in_file "${input_file}" "${FAILOVER_NODE_IDENTITY}")
+	fi
+	if [ -z "${restore_failover}" ];then
 		restore_failover=$(sub_find_node_id_in_file "${input_file}" "${FAILOVER_NODE_NAME}" "${FAILOVER_NODE_TYPE}" "${FAILOVER_NODE_SERVER}" "${FAILOVER_NODE_PORT}")
 	fi
 
@@ -1872,7 +2030,25 @@ json_add_string(){
 }
 
 json_write_object(){
-	echo $NODE_DATA | sed '$ s/,$/}/g' >>$1
+	local output_file="$1"
+	local object_json=""
+	local source_type="manual"
+	local airport_identity="local"
+	local source_scope="local"
+	local source_url_hash=""
+	object_json=$(echo $NODE_DATA | sed '$ s/,$/}/g')
+	case "${output_file}" in
+	*/online_*|*/local_*)
+		source_type="subscribe"
+		airport_identity="${SUB_AIRPORT_IDENTITY}"
+		source_scope="${SUB_SOURCE_SCOPE}"
+		source_url_hash="${SUB_SOURCE_URL_HASH}"
+		;;
+	esac
+	if type fss_enrich_node_identity_json >/dev/null 2>&1;then
+		object_json=$(fss_enrich_node_identity_json "${object_json}" "${airport_identity}" "${source_scope}" "${source_url_hash}" "${source_type}") || return 1
+	fi
+	printf '%s\n' "${object_json}" >> "${output_file}"
 }
 
 dec64(){
@@ -2296,6 +2472,8 @@ clear_nodes(){
 	echo_date "⌛节点写入前准备..."
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
 		sub_capture_active_nodes
+		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
+		[ -s "${SCHEMA2_EXPORT_JSONL}" ] && cp -f "${SCHEMA2_EXPORT_JSONL}" "${SCHEMA2_BEFORE_EXPORT_JSONL}"
 		SUB_REWRITE_ALL=1
 		fss_clear_v2_nodes
 		dbus set fss_data_schema=2
@@ -4269,6 +4447,9 @@ get_online_rule_now(){
 		echo_date "⚠️无法识别当前订阅来源域名，跳过此订阅！"
 		return 1
 	fi
+	SUB_SOURCE_URL_HASH="${SUB_LINK_HASH:0:4}"
+	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${DOMAIN_NAME}" "${SUB_SOURCE_TAG}")
+	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
 	if [ -f "/$DIR/sublink_md5.txt" ];then
 		local IS_ADD=$(cat /$DIR/sublink_md5.txt | grep -Eo ${SUB_LINK_HASH})
 		if [ -n "${IS_ADD}" ];then
@@ -4447,6 +4628,9 @@ get_online_rule_now(){
 		echo_date "♻️检测到订阅域名已变更，但机场分组保持为【${ONLINE_GROUP}】，沿用原机场身份处理。"
 		SUB_SOURCE_TAG="${CANONICAL_SOURCE_TAG}"
 	fi
+	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}")
+	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
+	sub_rewrite_identity_fields_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" "${SUB_SOURCE_URL_HASH}" "subscribe" >/dev/null 2>&1 || true
 	sub_register_source_identity "${RAW_SOURCE_TAG}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" >/dev/null 2>&1
 	if [ -s "${ACTIVE_SOURCE_TAGS}" ] && grep -Fxq "${SUB_SOURCE_TAG}" "${ACTIVE_SOURCE_TAGS}";then
 		echo_date "⚠️检测到多个订阅链接属于同一机场【${ONLINE_GROUP}】，本次仅保留第一个来源。"

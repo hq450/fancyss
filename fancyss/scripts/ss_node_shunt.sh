@@ -10,6 +10,7 @@ eval $(dbus export ss_basic_)
 FSS_SHUNT_RULES_DBUS_KEY="ss_basic_shunt_rules"
 FSS_SHUNT_CUSTOM_PRESETS_DBUS_KEY="ss_basic_shunt_custom_presets"
 FSS_SHUNT_DEFAULT_NODE_DBUS_KEY="ss_basic_shunt_default_node"
+FSS_SHUNT_DEFAULT_NODE_IDENTITY_DBUS_KEY="ss_basic_shunt_default_node_identity"
 FSS_SHUNT_RULE_TS_DBUS_KEY="ss_basic_shunt_rule_ts"
 FSS_SHUNT_INGRESS_MODE_DBUS_KEY="ss_basic_shunt_ingress_mode"
 FSS_SHUNT_RULE_BACKEND_DBUS_KEY="ss_basic_shunt_rule_backend"
@@ -515,6 +516,106 @@ fss_shunt_rules_json() {
 	fi
 }
 
+fss_shunt_sync_identity_shadows() {
+	local json=""
+	local jq_bin=""
+	local default_target=""
+	local default_identity=""
+	local new_default_identity=""
+	local new_json=""
+
+	json="$(fss_shunt_rules_json)"
+	jq_bin="$(fss_pick_jq_bin)"
+	[ -n "${jq_bin}" ] || return 0
+	new_json="$(printf '%s' "${json}" | "${jq_bin}" -c '.[]?' 2>/dev/null | while IFS= read -r line
+	do
+		local target_id=""
+		local target_identity=""
+		local resolved_identity=""
+		[ -n "${line}" ] || continue
+		target_id=$(printf '%s' "${line}" | "${jq_bin}" -r '.target_node_id // empty' 2>/dev/null)
+		target_identity=$(printf '%s' "${line}" | "${jq_bin}" -r '.target_node_identity // empty' 2>/dev/null)
+		if fss_shunt_target_is_direct "${target_id}" || fss_shunt_target_is_reject "${target_id}"; then
+			printf '%s' "${line}" | "${jq_bin}" -c '.target_node_identity = ""'
+			continue
+		fi
+		if [ -n "${target_id}" ] && fss_shunt_target_is_proxy_node "${target_id}" && [ -z "${target_identity}" ]; then
+			resolved_identity="$(fss_get_node_identity_by_id "${target_id}" 2>/dev/null)"
+			if [ -n "${resolved_identity}" ]; then
+				printf '%s' "${line}" | "${jq_bin}" -c --arg identity "${resolved_identity}" '.target_node_identity = $identity'
+				continue
+			fi
+		fi
+		printf '%s\n' "${line}"
+	done | "${jq_bin}" -s -c '.')"
+	[ -n "${new_json}" ] || new_json='[]'
+	if [ "${new_json}" != "${json}" ]; then
+		dbus set ${FSS_SHUNT_RULES_DBUS_KEY}="$(fss_b64_encode "${new_json}")"
+		fss_shunt_write_rules_mirror "${new_json}" >/dev/null 2>&1 || true
+	fi
+
+	default_target="${ss_basic_shunt_default_node}"
+	[ -n "${default_target}" ] || default_target="$(dbus get ${FSS_SHUNT_DEFAULT_NODE_DBUS_KEY})"
+	default_identity="$(dbus get ${FSS_SHUNT_DEFAULT_NODE_IDENTITY_DBUS_KEY})"
+	if fss_shunt_target_is_direct "${default_target}" || fss_shunt_target_is_reject "${default_target}"; then
+		[ -n "${default_identity}" ] && dbus set ${FSS_SHUNT_DEFAULT_NODE_IDENTITY_DBUS_KEY}=""
+	elif [ -n "${default_target}" ] && fss_shunt_target_is_proxy_node "${default_target}" && [ -z "${default_identity}" ]; then
+		new_default_identity="$(fss_get_node_identity_by_id "${default_target}" 2>/dev/null)"
+		[ -n "${new_default_identity}" ] && dbus set ${FSS_SHUNT_DEFAULT_NODE_IDENTITY_DBUS_KEY}="${new_default_identity}"
+	fi
+}
+
+fss_shunt_resolve_target_id() {
+	local target_id="$1"
+	local target_identity="$2"
+	local mapped=""
+
+	if fss_shunt_target_is_direct "${target_id}"; then
+		echo "${FSS_SHUNT_DIRECT_TARGET}"
+		return 0
+	fi
+	if fss_shunt_target_is_reject "${target_id}"; then
+		echo "${FSS_SHUNT_REJECT_TARGET}"
+		return 0
+	fi
+	if [ -n "${target_id}" ] && fss_shunt_target_is_proxy_node "${target_id}"; then
+		echo "${target_id}"
+		return 0
+	fi
+	if [ -n "${target_identity}" ]; then
+		mapped="$(fss_find_node_id_by_identity "${target_identity}" 2>/dev/null)"
+		if [ -n "${mapped}" ] && fss_shunt_target_is_proxy_node "${mapped}"; then
+			echo "${mapped}"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+fss_shunt_rules_json_resolved() {
+	local json=""
+	local jq_bin=""
+
+	fss_shunt_sync_identity_shadows >/dev/null 2>&1 || true
+	json="$(fss_shunt_rules_json)"
+	jq_bin="$(fss_pick_jq_bin)"
+	[ -n "${jq_bin}" ] || {
+		echo '[]'
+		return 0
+	}
+	printf '%s' "${json}" | "${jq_bin}" -c '.[]?' 2>/dev/null | while IFS= read -r line
+	do
+		local target_id=""
+		local target_identity=""
+		local resolved=""
+		[ -n "${line}" ] || continue
+		target_id=$(printf '%s' "${line}" | "${jq_bin}" -r '.target_node_id // empty' 2>/dev/null)
+		target_identity=$(printf '%s' "${line}" | "${jq_bin}" -r '.target_node_identity // empty' 2>/dev/null)
+		resolved=$(fss_shunt_resolve_target_id "${target_id}" "${target_identity}" 2>/dev/null) || resolved="${target_id}"
+		printf '%s' "${line}" | "${jq_bin}" -c --arg target "${resolved}" '.target_node_id = $target'
+	done | "${jq_bin}" -s -c '.'
+}
+
 fss_shunt_write_rules_mirror() {
 	local json="$1"
 	local dir="${FSS_SHUNT_RULES_FILE%/*}"
@@ -588,7 +689,7 @@ fss_shunt_get_first_rule_target_id() {
 	local json=""
 	local jq_bin=""
 
-	json="$(fss_shunt_rules_json)"
+	json="$(fss_shunt_rules_json_resolved)"
 	jq_bin="$(fss_pick_jq_bin)"
 	[ -n "${jq_bin}" ] || return 1
 	printf '%s' "${json}" | "${jq_bin}" -r '.[]? | select((.enabled // 1 | tostring) != "0") | (.target_node_id // "" | tostring)' 2>/dev/null | while IFS= read -r node_id
@@ -605,7 +706,7 @@ fss_shunt_get_active_rule_count() {
 	local jq_bin=""
 	local count=""
 
-	json="$(fss_shunt_rules_json)"
+	json="$(fss_shunt_rules_json_resolved)"
 	jq_bin="$(fss_pick_jq_bin)"
 	[ -n "${jq_bin}" ] || {
 		echo "0"
@@ -623,16 +724,23 @@ fss_shunt_current_node_supported() {
 
 fss_shunt_get_configured_default_target() {
 	local target="${ss_basic_shunt_default_node}"
+	local target_identity=""
+	local mapped=""
 
 	[ -n "${target}" ] || target="$(dbus get ${FSS_SHUNT_DEFAULT_NODE_DBUS_KEY})"
-	[ -n "${target}" ] || return 1
+	target_identity="$(dbus get ${FSS_SHUNT_DEFAULT_NODE_IDENTITY_DBUS_KEY})"
+	[ -n "${target}${target_identity}" ] || return 1
 	if fss_shunt_target_is_direct "${target}"; then
 		echo "${FSS_SHUNT_DIRECT_TARGET}"
 		return 0
 	fi
 	fss_shunt_target_is_reject "${target}" && return 1
-	printf '%s' "${target}" | grep -Eq '^[0-9]+$' || return 1
-	echo "${target}"
+	if printf '%s' "${target}" | grep -Eq '^[0-9]+$' && fss_shunt_target_is_proxy_node "${target}"; then
+		echo "${target}"
+		return 0
+	fi
+	mapped="$(fss_shunt_resolve_target_id "${target}" "${target_identity}" 2>/dev/null)" || return 1
+	echo "${mapped}"
 }
 
 fss_shunt_get_effective_default_target() {
