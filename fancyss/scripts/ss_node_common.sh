@@ -1418,6 +1418,28 @@ fss_export_acl_json() {
 	} | fss_emit_kv_lines | fss_kv_lines_to_json
 }
 
+fss_clear_global_config_storage() {
+	dbus list ss 2>/dev/null | cut -d "=" -f 1 | grep -v '^ssconf_basic_' | grep -v '^ss_acl_' | grep -v '^ssid_' | grep -v '^ss_failover_s4_3$' | while IFS= read -r key
+	do
+		[ -n "${key}" ] || continue
+		dbus remove "${key}"
+	done
+}
+
+fss_clear_acl_config_storage() {
+	dbus list ss_acl_ 2>/dev/null | cut -d "=" -f 1 | while IFS= read -r key
+	do
+		[ -n "${key}" ] || continue
+		dbus remove "${key}"
+	done
+}
+
+fss_clear_global_and_acl_storage() {
+	fss_clear_global_config_storage
+	fss_clear_acl_config_storage
+	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
+}
+
 fss_v2_get_node_json_by_id() {
 	local node_id="$1"
 	local blob
@@ -2753,6 +2775,7 @@ fss_restore_legacy_backup_sh_fast() {
 	echo_date "开始恢复普通配置和ACL配置..."
 
 	fss_clear_all_node_storage
+	fss_clear_global_and_acl_storage
 	while IFS= read -r line
 	do
 		[ -n "${line}" ] || continue
@@ -2883,6 +2906,7 @@ fss_restore_native_backup_v2() {
 	}
 
 	fss_clear_all_node_storage
+	fss_clear_global_and_acl_storage
 
 	while IFS='	' read -r key value_b64
 	do
