@@ -413,6 +413,7 @@ fss_enrich_node_identity_json() {
 	local source_scope=""
 	local source_url_hash=""
 	local group_base=""
+	local group_hash_suffix=""
 	local primary=""
 	local secondary_payload=""
 	local secondary=""
@@ -430,6 +431,20 @@ fss_enrich_node_identity_json() {
 	source_scope=$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)
 	[ -n "${explicit_scope}" ] && source_scope="${explicit_scope}"
 
+	if [ -z "${airport_identity}" ] || [ -z "${source_scope}" ]; then
+		case "${group_value}" in
+		*_[0-9a-f][0-9a-f][0-9a-f][0-9a-f])
+			group_base="${group_value%_*}"
+			group_hash_suffix="${group_value##*_}"
+			[ -n "${airport_identity}" ] || airport_identity=$(fss_identity_slugify "${group_base}" "sub")
+			if [ -z "${source_scope}" ] && [ -n "${airport_identity}" ] && [ -n "${group_hash_suffix}" ]; then
+				source_scope="${airport_identity}_${group_hash_suffix}"
+			fi
+			[ -n "${source_url_hash}" ] || source_url_hash="${group_hash_suffix}"
+			;;
+		esac
+	fi
+
 	if [ "${source}" = "subscribe" ]; then
 		if [ -z "${airport_identity}" ]; then
 			group_base="${group_value}"
@@ -445,9 +460,11 @@ fss_enrich_node_identity_json() {
 			[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
 		fi
 	else
-		airport_identity="local"
-		source_scope="local"
-		source_url_hash=""
+		[ -n "${airport_identity}" ] || airport_identity="local"
+		[ -n "${source_scope}" ] || source_scope="local"
+		if [ "${source_scope}" = "local" ]; then
+			source_url_hash=""
+		fi
 	fi
 
 	primary=$(fss_identity_hash_v1 "$(printf '%s\037%s' "${source_scope}" "${raw_name}")")

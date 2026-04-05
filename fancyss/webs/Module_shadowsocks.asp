@@ -11746,7 +11746,7 @@ function toggleKeyMask(o, show){
 																{ id:'ss_basic_hy2_cg_opt', type:'select', style:'width:70px', options:option_hy2_cg, value:'brutal'},
 															]},
 																{ title: '订阅节点允许不安全', id:'ss_basic_sub_ai', hint:'113', type:'checkbox', value:true},
-															{ title: 'sub-tool逐节点解析日志', id:'ss_basic_sub_node_log', hint:'117', type:'checkbox', value:false},
+															{ title: '订阅逐节点日志', id:'ss_basic_sub_node_log', hint:'117', type:'checkbox', value:false},
 															{ title: '保留订阅信息节点', id:'ss_basic_sub_keep_info_node', hint:'118', type:'checkbox', value:false},
 															{ title: '下载订阅时走代理网络', id:'ss_basic_online_links_proxy', type:'select', style:'width:auto', options:[["0", "自动判断"], ["1", "走代理"], ["2", "不走代理"]], value:'0'},
 															{ title: '自定义UserAgent', id:'ss_basic_online_ua', type:'select', style:'width:auto', hint:'112', options:[["0", "fancyss默认（≥3.3.9）"], ["1", "curl/wget（≤3.3.8）"], ["2", "V2rayN"], ["3", "V2rayNG"], ["4", "Shadowrocket"]], value:'0'},

@@ -1590,6 +1590,239 @@ sub_nodes_file_identity_md5(){
 	jq -r '[.type // "", .xray_prot // "", .name // ""] | @tsv' "${file}" 2>/dev/null | sort -u | md5sum | awk '{print $1}'
 }
 
+sub_mark_map_row_used(){
+	local used_file="$1"
+	local row_no="$2"
+	[ -f "${used_file}" ] || return 1
+	[ -n "${row_no}" ] || return 1
+	grep -Fxq "${row_no}" "${used_file}" 2>/dev/null || echo "${row_no}" >> "${used_file}"
+}
+
+sub_find_first_unused_map_row(){
+	local map_file="$1"
+	local used_file="$2"
+	local field_no="$3"
+	local match_value="$4"
+	local delim="$(printf '\037')"
+	[ -f "${map_file}" ] || return 1
+	[ -f "${used_file}" ] || return 1
+	[ -n "${field_no}" ] || return 1
+	[ -n "${match_value}" ] || return 1
+	awk -v FS="${delim}" -v used_file="${used_file}" -v field_no="${field_no}" -v match_value="${match_value}" '
+		BEGIN {
+			while ((getline line < used_file) > 0) {
+				used[line] = 1
+			}
+		}
+		!($1 in used) && $(field_no) == match_value {
+			print $1
+			exit
+		}
+	' "${map_file}" 2>/dev/null | sed -n '1p'
+}
+
+sub_find_unique_unused_map_row(){
+	local map_file="$1"
+	local used_file="$2"
+	local field_no="$3"
+	local match_value="$4"
+	local delim="$(printf '\037')"
+	[ -f "${map_file}" ] || return 1
+	[ -f "${used_file}" ] || return 1
+	[ -n "${field_no}" ] || return 1
+	[ -n "${match_value}" ] || return 1
+	awk -v FS="${delim}" -v used_file="${used_file}" -v field_no="${field_no}" -v match_value="${match_value}" '
+		BEGIN {
+			while ((getline line < used_file) > 0) {
+				used[line] = 1
+			}
+		}
+		!($1 in used) && $(field_no) == match_value {
+			count++
+			if (count == 1) {
+				first = $1
+			}
+		}
+		END {
+			if (count > 0) {
+				printf "%s\t%s\n", count, first
+			}
+		}
+	' "${map_file}" 2>/dev/null
+}
+
+sub_get_map_row_by_no(){
+	local map_file="$1"
+	local row_no="$2"
+	local delim="$(printf '\037')"
+	[ -f "${map_file}" ] || return 1
+	[ -n "${row_no}" ] || return 1
+	awk -v FS="${delim}" -v row_no="${row_no}" '$1 == row_no {print; exit}' "${map_file}" 2>/dev/null
+}
+
+sub_build_identity_change_map(){
+	local input_file="$1"
+	local output_file="$2"
+	local delim="$(printf '\037')"
+	[ -f "${input_file}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	run jq -r '[._identity // "", ._identity_primary // "", ._identity_secondary // "", ._source_scope // "", ._airport_identity // "", .type // "", .xray_prot // "", .name // "", ((._source_scope // "") + "|" + (._identity_secondary // ""))] | join("\u001f")' "${input_file}" 2>/dev/null \
+		| awk -v fs="${delim}" 'BEGIN{FS=fs; OFS=fs} {print NR, $0}' > "${output_file}"
+}
+
+sub_log_nodes_file_change_detail(){
+	local local_file="$1"
+	local online_file="$2"
+	local local_identity_file=""
+	local online_identity_file=""
+	local local_map=""
+	local online_map=""
+	local old_used=""
+	local new_used=""
+	local exact_new_row=""
+	local exact_new_line=""
+	local unique_match=""
+	local match_count=""
+	local match_row=""
+	local match_line=""
+	local old_row=""
+	local old_identity=""
+	local old_primary=""
+	local old_secondary=""
+	local old_scope=""
+	local old_airport=""
+	local old_type=""
+	local old_xray=""
+	local old_name=""
+	local old_scope_secondary=""
+	local new_row=""
+	local new_identity=""
+	local new_primary=""
+	local new_secondary=""
+	local new_scope=""
+	local new_airport=""
+	local new_type=""
+	local new_xray=""
+	local new_name=""
+	local new_scope_secondary=""
+	local prefix=""
+	local delim="$(printf '\037')"
+	local param_changed=0
+	local renamed=0
+	local deleted=0
+	local added=0
+
+	[ "${SUB_TOOL_NODE_LOG}" = "1" ] || return 0
+	[ -f "${local_file}" ] || return 0
+	[ -f "${online_file}" ] || return 0
+
+	local_identity_file="${local_file}.identity_cmp.$$"
+	online_identity_file="${online_file}.identity_cmp.$$"
+	local_map="${local_file}.identity_cmp_map.$$"
+	online_map="${online_file}.identity_cmp_map.$$"
+	old_used="${local_file}.identity_cmp_used_old.$$"
+	new_used="${online_file}.identity_cmp_used_new.$$"
+
+	fss_enrich_node_identity_file "${local_file}" "${local_identity_file}" "" "" "" "" || {
+		rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
+		return 0
+	}
+	fss_enrich_node_identity_file "${online_file}" "${online_identity_file}" "" "" "" "" || {
+		rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
+		return 0
+	}
+	sub_build_identity_change_map "${local_identity_file}" "${local_map}" || {
+		rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
+		return 0
+	}
+	sub_build_identity_change_map "${online_identity_file}" "${online_map}" || {
+		rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
+		return 0
+	}
+	: > "${old_used}"
+	: > "${new_used}"
+
+	while IFS="${delim}" read -r old_row old_identity old_primary old_secondary old_scope old_airport old_type old_xray old_name old_scope_secondary
+	do
+		[ -n "${old_row}" ] || continue
+		[ -n "${old_identity}" ] || continue
+		exact_new_row=$(sub_find_first_unused_map_row "${online_map}" "${new_used}" "2" "${old_identity}")
+		[ -n "${exact_new_row}" ] || continue
+		sub_mark_map_row_used "${old_used}" "${old_row}" >/dev/null 2>&1
+		sub_mark_map_row_used "${new_used}" "${exact_new_row}" >/dev/null 2>&1
+	done < "${local_map}"
+
+	while IFS="${delim}" read -r old_row old_identity old_primary old_secondary old_scope old_airport old_type old_xray old_name old_scope_secondary
+	do
+		[ -n "${old_row}" ] || continue
+		grep -Fxq "${old_row}" "${old_used}" 2>/dev/null && continue
+		[ -n "${old_primary}" ] || continue
+		unique_match=$(sub_find_unique_unused_map_row "${online_map}" "${new_used}" "3" "${old_primary}")
+		[ -n "${unique_match}" ] || continue
+		match_count=$(printf '%s' "${unique_match}" | awk -F '\t' '{print $1}')
+		match_row=$(printf '%s' "${unique_match}" | awk -F '\t' '{print $2}')
+		[ "${match_count}" = "1" ] || continue
+		match_line=$(sub_get_map_row_by_no "${online_map}" "${match_row}")
+		[ -n "${match_line}" ] || continue
+		IFS="${delim}" read -r new_row new_identity new_primary new_secondary new_scope new_airport new_type new_xray new_name new_scope_secondary <<-EOF
+		${match_line}
+		EOF
+		prefix=$(sub_fancyss_type_prefix "${new_type:-${old_type}}" "${new_xray:-${old_xray}}")
+		echo_date "${prefix}${new_name:-${old_name}}，发现节点参数改变。"
+		param_changed=$((param_changed + 1))
+		sub_mark_map_row_used "${old_used}" "${old_row}" >/dev/null 2>&1
+		sub_mark_map_row_used "${new_used}" "${match_row}" >/dev/null 2>&1
+	done < "${local_map}"
+
+	while IFS="${delim}" read -r old_row old_identity old_primary old_secondary old_scope old_airport old_type old_xray old_name old_scope_secondary
+	do
+		[ -n "${old_row}" ] || continue
+		grep -Fxq "${old_row}" "${old_used}" 2>/dev/null && continue
+		[ -n "${old_scope_secondary}" ] || continue
+		unique_match=$(sub_find_unique_unused_map_row "${online_map}" "${new_used}" "10" "${old_scope_secondary}")
+		[ -n "${unique_match}" ] || continue
+		match_count=$(printf '%s' "${unique_match}" | awk -F '\t' '{print $1}')
+		match_row=$(printf '%s' "${unique_match}" | awk -F '\t' '{print $2}')
+		[ "${match_count}" = "1" ] || continue
+		match_line=$(sub_get_map_row_by_no "${online_map}" "${match_row}")
+		[ -n "${match_line}" ] || continue
+		IFS="${delim}" read -r new_row new_identity new_primary new_secondary new_scope new_airport new_type new_xray new_name new_scope_secondary <<-EOF
+		${match_line}
+		EOF
+		[ "${old_name}" != "${new_name}" ] || continue
+		prefix=$(sub_fancyss_type_prefix "${new_type:-${old_type}}" "${new_xray:-${old_xray}}")
+		echo_date "${prefix}${new_name}，发现节点名改变：${old_name} -> ${new_name}"
+		renamed=$((renamed + 1))
+		sub_mark_map_row_used "${old_used}" "${old_row}" >/dev/null 2>&1
+		sub_mark_map_row_used "${new_used}" "${match_row}" >/dev/null 2>&1
+	done < "${local_map}"
+
+	while IFS="${delim}" read -r old_row old_identity old_primary old_secondary old_scope old_airport old_type old_xray old_name old_scope_secondary
+	do
+		[ -n "${old_row}" ] || continue
+		grep -Fxq "${old_row}" "${old_used}" 2>/dev/null && continue
+		prefix=$(sub_fancyss_type_prefix "${old_type}" "${old_xray}")
+		echo_date "${prefix}${old_name}，检测到节点已删除。"
+		deleted=$((deleted + 1))
+	done < "${local_map}"
+
+	while IFS="${delim}" read -r new_row new_identity new_primary new_secondary new_scope new_airport new_type new_xray new_name new_scope_secondary
+	do
+		[ -n "${new_row}" ] || continue
+		grep -Fxq "${new_row}" "${new_used}" 2>/dev/null && continue
+		prefix=$(sub_fancyss_type_prefix "${new_type}" "${new_xray}")
+		echo_date "${prefix}${new_name}，检测到新增节点。"
+		added=$((added + 1))
+	done < "${online_map}"
+
+	if [ "$((param_changed + renamed + deleted + added))" -gt "0" ];then
+		echo_date "ℹ️节点变更分类：参数改变${param_changed}个，名称改变${renamed}个，新增${added}个，删除${deleted}个。"
+	fi
+
+	rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
+	return 0
+}
+
 sub_log_nodes_file_change_reason(){
 	local local_file="$1"
 	local online_file="$2"
@@ -4688,6 +4921,7 @@ get_online_rule_now(){
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${ISLOCALFILE}"
 		else
 			sub_log_nodes_file_change_reason "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			sub_log_nodes_file_change_detail "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
 			# 将订阅后的文件，覆盖为本地的相同link hash的文件
 			rm -rf "${ISLOCALFILE}"
