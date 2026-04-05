@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.1";
+const app_version = "0.1.2";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -864,9 +864,20 @@ fn buildIdentitySecondaryPayloadAlloc(allocator: std.mem.Allocator, base_json: [
 
 fn buildIdentityMetaAlloc(allocator: std.mem.Allocator, base_json: []const u8, node: NormalizedNode, options: Options) !IdentityMeta {
     const source_tag = options.source_tag orelse "sub";
-    const airport_label = options.group orelse source_tag;
+    const normalized_group_label = try extractNormalizedGroupLabelAlloc(allocator, base_json);
+    const airport_label = blk: {
+        if (normalized_group_label) |label| break :blk label;
+        if (options.group) |value| break :blk try allocator.dupe(u8, value);
+        break :blk try allocator.dupe(u8, source_tag);
+    };
+    defer allocator.free(airport_label);
     const airport_identity = if (options.airport_identity) |value|
-        try allocator.dupe(u8, value)
+        blk: {
+            if (airport_label.len > 0) {
+                break :blk try identitySlugifyAlloc(allocator, airport_label, source_tag);
+            }
+            break :blk try allocator.dupe(u8, value);
+        }
     else
         try identitySlugifyAlloc(allocator, airport_label, source_tag);
     errdefer allocator.free(airport_identity);
@@ -875,21 +886,42 @@ fn buildIdentityMetaAlloc(allocator: std.mem.Allocator, base_json: []const u8, n
     else
         try allocator.dupe(u8, "");
     errdefer allocator.free(source_url_hash);
-    const source_scope = if (options.source_scope) |value|
-        try allocator.dupe(u8, value)
-    else if (source_url_hash.len > 0)
+    const source_scope = if (source_url_hash.len > 0)
         try std.fmt.allocPrint(allocator, "{s}_{s}", .{ airport_identity, source_url_hash })
     else
         try allocator.dupe(u8, airport_identity);
     errdefer allocator.free(source_scope);
 
-    _ = base_json;
     _ = node;
     return .{
         .airport_identity = airport_identity,
         .source_scope = source_scope,
         .source_url_hash = source_url_hash,
     };
+}
+
+fn extractNormalizedGroupLabelAlloc(allocator: std.mem.Allocator, base_json: []const u8) !?[]u8 {
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, base_json, .{});
+    defer parsed.deinit();
+    if (parsed.value != .object) return null;
+    const raw_group = jsonObjectString(parsed.value.object, "group") orelse return null;
+    return try normalizeGroupLabelAlloc(allocator, raw_group);
+}
+
+fn normalizeGroupLabelAlloc(allocator: std.mem.Allocator, raw_group: []const u8) !?[]u8 {
+    const trimmed = std.mem.trim(u8, raw_group, " \t\r\n");
+    if (trimmed.len == 0) return null;
+    if (std.mem.eql(u8, trimmed, "null") or std.mem.eql(u8, trimmed, "_")) return null;
+
+    const last_us = std.mem.lastIndexOfScalar(u8, trimmed, '_');
+    const base = if (last_us) |idx|
+        trimmed[0..idx]
+    else
+        trimmed;
+    const normalized = std.mem.trim(u8, base, " \t\r\n");
+    if (normalized.len == 0) return null;
+    if (std.mem.eql(u8, normalized, "null") or std.mem.eql(u8, normalized, "_")) return null;
+    return try allocator.dupe(u8, normalized);
 }
 
 fn appendIdentityFieldsAlloc(allocator: std.mem.Allocator, base_json: []const u8, node: NormalizedNode, options: Options) ![]u8 {
