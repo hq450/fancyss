@@ -194,6 +194,9 @@ sub_rewrite_identity_fields_for_file(){
 		source_scope="local"
 		short_url_hash=""
 	fi
+	if sub_file_has_identity_fields "${file_path}" && sub_file_identity_scope_matches "${file_path}" "${airport_identity}" "${source_scope}" "${short_url_hash}";then
+		return 0
+	fi
 	tmp_file="${file_path}.identity.$$"
 	fss_enrich_node_identity_file "${file_path}" "${tmp_file}" "${airport_identity}" "${source_scope}" "${short_url_hash}" "${source_type}" || {
 		rm -f "${tmp_file}"
@@ -880,10 +883,12 @@ sub_try_parse_uri_lines_with_tool(){
 	local effective_hy2_tfo=""
 	local effective_hy2_cg=""
 	local subtool_log_level="summary"
+	local reuse_ids_from=""
 
 	[ -f "${input_file}" ] || return 1
 	[ -n "${output_file}" ] || return 1
 	sub_tool="$(pick_sub_tool 2>/dev/null)" || return 1
+	reuse_ids_from="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || reuse_ids_from=""
 	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
 	{
 		read -r effective_hy2_up
@@ -913,6 +918,7 @@ sub_try_parse_uri_lines_with_tool(){
 	[ -n "${SUB_SOURCE_URL_HASH}" ] && set -- "$@" --source-url-hash "${SUB_SOURCE_URL_HASH}"
 	[ -n "${SUB_AIRPORT_IDENTITY}" ] && set -- "$@" --airport-identity "${SUB_AIRPORT_IDENTITY}"
 	[ -n "${SUB_SOURCE_SCOPE}" ] && set -- "$@" --source-scope "${SUB_SOURCE_SCOPE}"
+	[ -n "${reuse_ids_from}" ] && set -- "$@" --reuse-ids-from "${reuse_ids_from}"
 	[ -n "${effective_hy2_up}" ] && set -- "$@" --hy2-up "${effective_hy2_up}"
 	[ -n "${effective_hy2_dl}" ] && set -- "$@" --hy2-dl "${effective_hy2_dl}"
 	"${sub_tool}" "$@" >/dev/null 2>&1 || {
@@ -1617,6 +1623,20 @@ sub_file_has_identity_fields(){
 	[ "${secondary_hits}" = "${total}" ]
 }
 
+sub_file_has_complete_numeric_ids(){
+	local file="$1"
+	local total=0
+	local id_hits=0
+
+	[ -s "${file}" ] || return 1
+	total=$(wc -l < "${file}" 2>/dev/null | tr -d ' ')
+	[ -n "${total}" ] || total=0
+	[ "${total}" -gt 0 ] || return 1
+	id_hits=$(jq -r 'select(((._id // "") | tostring | test("^[0-9]+$")))|1' "${file}" 2>/dev/null | wc -l | tr -d ' ')
+	[ -n "${id_hits}" ] || id_hits=0
+	[ "${id_hits}" = "${total}" ]
+}
+
 sub_prepare_identity_view_file(){
 	local input_file="$1"
 	local output_file="$2"
@@ -1632,6 +1652,24 @@ sub_prepare_identity_view_file(){
 		return 0
 	fi
 	fss_enrich_node_identity_file "${input_file}" "${output_file}" "${explicit_airport}" "${explicit_scope}" "${explicit_url_hash}" "${explicit_source}"
+}
+
+sub_file_identity_scope_matches(){
+	local file="$1"
+	local airport_identity="$2"
+	local source_scope="$3"
+	local source_url_hash="$4"
+	local first_airport=""
+	local first_scope=""
+	local first_hash=""
+
+	[ -s "${file}" ] || return 1
+	first_airport=$(jq -r '."_airport_identity" // empty' "${file}" 2>/dev/null | sed -n '1p')
+	first_scope=$(jq -r '."_source_scope" // empty' "${file}" 2>/dev/null | sed -n '1p')
+	first_hash=$(jq -r '."_source_url_hash" // empty' "${file}" 2>/dev/null | sed -n '1p')
+	[ "${first_airport}" = "${airport_identity}" ] || return 1
+	[ "${first_scope}" = "${source_scope}" ] || return 1
+	[ "${first_hash}" = "${source_url_hash}" ]
 }
 
 sub_mark_map_row_used(){
@@ -1717,6 +1755,15 @@ sub_build_identity_change_map(){
 sub_log_nodes_file_change_detail(){
 	local local_file="$1"
 	local online_file="$2"
+	local sub_tool=""
+	local compare_file=""
+	local reason=""
+	local old_id=""
+	local new_id=""
+	local type_id=""
+	local xray_prot=""
+	local old_name=""
+	local new_name=""
 	local local_identity_file=""
 	local online_identity_file=""
 	local local_map=""
@@ -1759,6 +1806,56 @@ sub_log_nodes_file_change_detail(){
 	[ "${SUB_TOOL_NODE_LOG}" = "1" ] || return 0
 	[ -f "${local_file}" ] || return 0
 	[ -f "${online_file}" ] || return 0
+
+	sub_tool="$(pick_sub_tool 2>/dev/null)" || sub_tool=""
+	if [ -n "${sub_tool}" ];then
+		compare_file="${online_file}.compare.$$"
+		local_identity_file="${local_file}.identity_cmp.$$"
+		online_identity_file="${online_file}.identity_cmp.$$"
+		sub_prepare_identity_view_file "${local_file}" "${local_identity_file}" "" "" "" "" >/dev/null 2>&1 || true
+		sub_prepare_identity_view_file "${online_file}" "${online_identity_file}" "" "" "" "" >/dev/null 2>&1 || true
+		if [ -s "${local_identity_file}" ] && [ -s "${online_identity_file}" ] && "${sub_tool}" compare-fancyss --old "${local_identity_file}" --new "${online_identity_file}" --output "${compare_file}" >/dev/null 2>&1;then
+			while IFS= read -r line
+			do
+				[ -n "${line}" ] || continue
+				reason=$(printf '%s\n' "${line}" | awk -F '\t' '{print $1}')
+				old_id=$(printf '%s\n' "${line}" | awk -F '\t' '{print $2}')
+				new_id=$(printf '%s\n' "${line}" | awk -F '\t' '{print $3}')
+				type_id=$(printf '%s\n' "${line}" | awk -F '\t' '{print $4}')
+				xray_prot=$(printf '%s\n' "${line}" | awk -F '\t' '{print $5}')
+				old_name=$(printf '%s\n' "${line}" | awk -F '\t' '{print $6}')
+				new_name=$(printf '%s\n' "${line}" | awk -F '\t' '{print $7}')
+				case "${reason}" in
+				param)
+					prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+					echo_date "${prefix}${new_name:-${old_name}}，发现节点参数改变。"
+					param_changed=$((param_changed + 1))
+					;;
+				rename)
+					prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+					echo_date "${prefix}${new_name}，发现节点名改变：${old_name} -> ${new_name}"
+					renamed=$((renamed + 1))
+					;;
+				deleted)
+					prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+					echo_date "${prefix}${old_name}，检测到节点已删除。"
+					deleted=$((deleted + 1))
+					;;
+				new)
+					prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+					echo_date "${prefix}${new_name}，检测到新增节点。"
+					added=$((added + 1))
+					;;
+				esac
+			done < "${compare_file}"
+			rm -f "${local_identity_file}" "${online_identity_file}" "${compare_file}"
+			if [ "$((param_changed + renamed + deleted + added))" -gt "0" ];then
+				echo_date "ℹ️节点变更分类：参数改变${param_changed}个，名称改变${renamed}个，新增${added}个，删除${deleted}个。"
+			fi
+			return 0
+		fi
+		rm -f "${local_identity_file}" "${online_identity_file}" "${compare_file}"
+	fi
 
 	local_identity_file="${local_file}.identity_cmp.$$"
 	online_identity_file="${online_file}.identity_cmp.$$"
@@ -2204,13 +2301,6 @@ sub_apply_existing_ids_by_identity(){
 	local input_file="$1"
 	local output_file="$2"
 	local source_map_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
-	local map_file="${output_file}.map.$$"
-	local used_file="${output_file}.used.$$"
-	local line=""
-	local identity=""
-	local matched=""
-	local old_id=""
-	local old_created=""
 
 	[ -f "${input_file}" ] || return 1
 	[ -n "${output_file}" ] || return 1
@@ -2226,34 +2316,40 @@ sub_apply_existing_ids_by_identity(){
 		cp -f "${input_file}" "${output_file}"
 		return 0
 	fi
-	run jq -r '[._identity // "", ._id // "", ((._created_at // "") | tostring)] | @tsv' "${source_map_file}" 2>/dev/null > "${map_file}" || {
-		rm -f "${map_file}"
+	run jq -n -c \
+		--slurpfile src "${source_map_file}" '
+		(reduce $src[] as $item ({};
+			($item._identity // "") as $identity
+			| if $identity != "" then
+				.[$identity] = {
+					id: (($item._id // "") | tostring),
+					created: (($item._created_at // "") | tostring)
+				}
+			else
+				.
+			end
+		)) as $identity_map
+		| foreach inputs as $node (null;
+			($node._identity // "") as $identity
+			| ($identity_map[$identity] // null) as $mapped
+			| if $mapped != null and (($mapped.id // "") != "") then
+				($node + {
+					"_id": ($mapped.id | tostring)
+				} + (
+					if (($mapped.created // "") != "") then
+						{"_created_at": (((($mapped.created // "") | tonumber?) // ($node._created_at // empty)))}
+					else
+						{}
+					end
+				))
+			else
+				$node
+			end
+		)
+	' "${input_file}" > "${output_file}" 2>/dev/null || {
 		cp -f "${input_file}" "${output_file}"
 		return 0
 	}
-	: > "${output_file}"
-	: > "${used_file}"
-	while IFS= read -r line || [ -n "${line}" ]
-	do
-		[ -n "${line}" ] || continue
-		identity=$(printf '%s' "${line}" | run jq -r '._identity // empty' 2>/dev/null)
-		if [ -n "${identity}" ];then
-			matched=$(awk -F '\t' -v identity="${identity}" '$1 == identity {print $2 "\t" $3; exit}' "${map_file}" 2>/dev/null)
-			if [ -n "${matched}" ];then
-				old_id=$(printf '%s' "${matched}" | awk -F '\t' '{print $1}')
-				old_created=$(printf '%s' "${matched}" | awk -F '\t' '{print $2}')
-				if [ -n "${old_id}" ] && ! grep -Fxq "${old_id}" "${used_file}" 2>/dev/null;then
-					echo "${old_id}" >> "${used_file}"
-					line=$(printf '%s' "${line}" | run jq -c --arg id "${old_id}" --arg created "${old_created}" '
-						. + {"_id": $id}
-						| if $created != "" then ._created_at = (($created | tonumber?) // ._created_at) else . end
-					' 2>/dev/null)
-				fi
-			fi
-		fi
-		printf '%s\n' "${line}" >> "${output_file}"
-	done < "${input_file}"
-	rm -f "${map_file}" "${used_file}"
 	return 0
 }
 
@@ -2261,11 +2357,11 @@ sub_write_nodes_schema2(){
 	local input_file="$1"
 	local old_order_csv="" next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
 	local old_export_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
-	local old_export_map="${input_file}.old_export_map"
 	local new_ids_file="${input_file}.new_ids"
 	local removed_ids_file="${input_file}.removed_ids"
-	local node_id stored_b64 export_b64 export_json existing_blob old_export_b64
+	local node_id stored_b64 export_b64 export_json existing_blob
 	local touched_any=0
+	local prepared_reuse_temp=0
 
 	[ -f "${input_file}" ] || return 1
 	mapped_file="${input_file}.mapped"
@@ -2273,14 +2369,19 @@ sub_write_nodes_schema2(){
 	identity_file="${input_file}.identity"
 	reuse_file="${input_file}.reuse"
 	: > "${mapped_file}"
-	sub_prepare_identity_view_file "${input_file}" "${identity_file}" "" "" "" "" || {
-		rm -f "${mapped_file}" "${identity_file}"
-		return 1
-	}
-	sub_apply_existing_ids_by_identity "${identity_file}" "${reuse_file}" || {
-		rm -f "${mapped_file}" "${identity_file}" "${reuse_file}"
-		return 1
-	}
+	if sub_file_has_complete_numeric_ids "${input_file}";then
+		reuse_file="${input_file}"
+	else
+		sub_prepare_identity_view_file "${input_file}" "${identity_file}" "" "" "" "" || {
+			rm -f "${mapped_file}" "${identity_file}"
+			return 1
+		}
+		sub_apply_existing_ids_by_identity "${identity_file}" "${reuse_file}" || {
+			rm -f "${mapped_file}" "${identity_file}" "${reuse_file}"
+			return 1
+		}
+		prepared_reuse_temp=1
+	fi
 	old_order_csv=$(dbus get fss_node_order)
 	next_id=$(dbus get fss_node_next_id)
 	[ -n "${next_id}" ] || next_id=1
@@ -2294,7 +2395,7 @@ sub_write_nodes_schema2(){
 		next_id=$((max_id + 1))
 	fi
 	now_ts=$(fss_now_ts_ms)
-		jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" '
+		jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" --slurpfile old "${old_export_file}" '
 			def legacy_b64_mode:
 				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
 			def decode_b64_field($field):
@@ -2303,33 +2404,47 @@ sub_write_nodes_schema2(){
 				else
 					.
 				end;
-		def clean:
-			with_entries(select(.value != "" and .value != null))
-			| decode_b64_field("password")
+			def clean:
+				with_entries(select(.value != "" and .value != null))
+				| decode_b64_field("password")
 			| decode_b64_field("naive_pass")
 			| decode_b64_field("v2ray_json")
 			| decode_b64_field("xray_json")
 			| decode_b64_field("tuic_json")
 			| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
 			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end;
-		reduce inputs as $node (
+		(reduce $old[] as $item ({};
+			(($item._id // "") | tostring) as $id
+			| if $id != "" then
+				.[$id] = (($item | clean) | tojson | @base64)
+			else
+				.
+			end
+		)) as $old_export_map
+		| reduce inputs as $node (
 			{next: $next, rows: []};
 			($node | clean) as $clean
 			| ($clean._id // "" | tostring) as $raw_id
 			| (if ($raw_id | test("^[0-9]+$")) then ($raw_id | tonumber) else .next end) as $id
+			| ($clean | tojson | @base64) as $export_b64
+			| ($old_export_map[($id | tostring)] // "") as $old_export_b64
 			| .rows += [[
 				($id | tostring),
-				(($clean + {
-					"_schema": 2,
-					"_id": ($id | tostring),
-					"_rev": 1,
-					"_b64_mode": "raw",
-					"_source": "subscribe",
-					"_updated_at": $ts
-				} + {
-					"_created_at": (((($clean._created_at // $ts) | tonumber?) // $ts) | if . < 1000000000000 then (. * 1000) else . end)
-				}) | tojson | @base64),
-				($clean | tojson | @base64)
+				(if $old_export_b64 == $export_b64 then
+					""
+				else
+					(($clean + {
+						"_schema": 2,
+						"_id": ($id | tostring),
+						"_rev": 1,
+						"_b64_mode": "raw",
+						"_source": "subscribe",
+						"_updated_at": $ts
+					} + {
+						"_created_at": (((($clean._created_at // $ts) | tonumber?) // $ts) | if . < 1000000000000 then (. * 1000) else . end)
+					}) | tojson | @base64)
+				end),
+				$export_b64
 			]]
 			| .next = (if ($raw_id | test("^[0-9]+$")) then .next else (.next + 1) end)
 		)
@@ -2340,25 +2455,20 @@ sub_write_nodes_schema2(){
 		return 1
 	}
 	: > "${new_ids_file}"
-	if [ -s "${old_export_file}" ];then
-		run jq -r '[._id // "", (tojson | @base64)] | @tsv' "${old_export_file}" 2>/dev/null > "${old_export_map}" || : > "${old_export_map}"
-	else
-		: > "${old_export_map}"
-	fi
 
 	while IFS='	' read -r node_id stored_b64 export_b64
 	do
 		[ -n "${node_id}" ] || continue
-		[ -n "${stored_b64}" ] || continue
 		echo "${node_id}" >> "${new_ids_file}"
-		existing_blob="$(dbus get fss_node_${node_id})"
-		old_export_b64="$(awk -F '\t' -v id="${node_id}" '$1 == id {print $2; exit}' "${old_export_map}" 2>/dev/null)"
-		if [ -n "${existing_blob}" ] && [ -n "${old_export_b64}" ] && [ "${old_export_b64}" = "${export_b64}" ];then
-			:
-		else
-			fss_clear_webtest_cache_node "${node_id}"
-			dbus set fss_node_${node_id}="${stored_b64}"
-			touched_any=1
+		if [ -n "${stored_b64}" ];then
+			existing_blob="$(dbus get fss_node_${node_id})"
+			if [ -n "${existing_blob}" ] && [ "${existing_blob}" = "${stored_b64}" ];then
+				:
+			else
+				fss_clear_webtest_cache_node "${node_id}"
+				dbus set fss_node_${node_id}="${stored_b64}"
+				touched_any=1
+			fi
 		fi
 		export_json=$(fss_b64_decode "${export_b64}")
 		printf '%s\n' "${export_json}" >> "${mapped_file}"
@@ -2380,7 +2490,8 @@ sub_write_nodes_schema2(){
 		dbus remove fss_node_${node_id}
 		touched_any=1
 	done < "${removed_ids_file}"
-	rm -f "${meta_file}" "${identity_file}" "${reuse_file}" "${old_export_map}" "${new_ids_file}" "${removed_ids_file}"
+	rm -f "${meta_file}" "${identity_file}" "${new_ids_file}" "${removed_ids_file}"
+	[ "${prepared_reuse_temp}" = "1" ] && rm -f "${reuse_file}"
 
 	if [ -z "${imported_order}" ];then
 		rm -f "${mapped_file}"
