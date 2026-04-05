@@ -994,6 +994,32 @@ function resolve_node_id(nodeId, allowBlank) {
 	}
 	return allowBlank ? "" : get_first_node_id();
 }
+function resolve_node_id_by_identity(identity, allowBlank) {
+	var ids = ss_nodes || [];
+	var idx = 0;
+	var nodeId = "";
+	identity = identity ? String(identity) : "";
+	if (identity) {
+		for (idx = 0; idx < ids.length; idx++) {
+			nodeId = String(ids[idx] || "");
+			if (nodeId && get_node_identity(nodeId) == identity) {
+				return nodeId;
+			}
+		}
+	}
+	return allowBlank ? "" : get_first_node_id();
+}
+function resolve_node_id_with_identity(nodeId, identity, allowBlank) {
+	var resolved = resolve_node_id(nodeId, true);
+	if (resolved) {
+		return resolved;
+	}
+	resolved = resolve_node_id_by_identity(identity, true);
+	if (resolved) {
+		return resolved;
+	}
+	return allowBlank ? "" : get_first_node_id();
+}
 function get_fss_raw_node(nodeId) {
 	if (!nodeId) {
 		return null;
@@ -3172,7 +3198,12 @@ function open_shunt_rule_editor(ruleId, overrides) {
 }
 function get_saved_current_node_id() {
 	if (get_node_storage_schema() == 2) {
-		return resolve_node_id(db_fss["fss_node_current"] || "");
+		var resolvedCurrent = resolve_node_id_with_identity(db_fss["fss_node_current"] || "", db_fss["fss_current_node_identity"] || "", false);
+		db_fss["fss_node_current"] = resolvedCurrent;
+		if (resolvedCurrent && !db_fss["fss_current_node_identity"]) {
+			db_fss["fss_current_node_identity"] = get_node_identity(resolvedCurrent) || "";
+		}
+		return resolvedCurrent;
 	}
 	return resolve_node_id(db_ss["ssconf_basic_node"] || "");
 }
@@ -3184,7 +3215,12 @@ function get_current_node_id() {
 }
 function get_failover_node_id() {
 	if (get_node_storage_schema() == 2) {
-		return resolve_node_id(db_fss["fss_node_failover_backup"] || "", true);
+		var resolvedFailover = resolve_node_id_with_identity(db_fss["fss_node_failover_backup"] || "", db_fss["fss_failover_node_identity"] || "", true);
+		db_fss["fss_node_failover_backup"] = resolvedFailover;
+		if (resolvedFailover && !db_fss["fss_failover_node_identity"]) {
+			db_fss["fss_failover_node_identity"] = get_node_identity(resolvedFailover) || "";
+		}
+		return resolvedFailover;
 	}
 	return resolve_node_id(db_ss["ss_failover_s4_3"] || "", true);
 }
@@ -3425,6 +3461,24 @@ function cancel_schema2_postchange_jobs() {
 		clearTimeout(schema2WebtestWarmTimer);
 		schema2WebtestWarmTimer = 0;
 	}
+}
+function invalidate_schema2_webtest_results() {
+	var id;
+	if (get_node_storage_schema() != 2) {
+		return;
+	}
+	close_latency_ws(false);
+	close_latency_flag = 0;
+	$(".latency .latency_val").html("");
+	update_shunt_latency_chips();
+	id = parseInt(Math.random() * 100000000);
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify({"id": id, "method": "ss_webtest.sh", "params":["clear_webtest"], "fields": {}}),
+		dataType: "json"
+	});
 }
 function schedule_schema2_node_direct_refresh() {
 	var id;
@@ -4212,6 +4266,7 @@ function save() {
 	}
 	if (get_node_storage_schema() == 2) {
 		dbus["fss_node_current"] = node_sel;
+		dbus["fss_current_node_identity"] = get_node_identity(node_sel) || "";
 	} else {
 		dbus["ssconf_basic_node"] = node_sel;
 	}
@@ -4697,7 +4752,9 @@ function save() {
 	}
 	//---------------------------------------------------------------
 	if (get_node_storage_schema() == 2) {
-		dbus["fss_node_failover_backup"] = E("ss_failover_s4_3").value || "";
+		var failoverNodeId = resolve_node_id(E("ss_failover_s4_3").value, true);
+		dbus["fss_node_failover_backup"] = failoverNodeId || "";
+		dbus["fss_failover_node_identity"] = get_node_identity(failoverNodeId) || "";
 		delete dbus["ss_failover_s4_3"];
 		dbus = $.extend(dbus, build_schema2_upsert_fields(dbus, node_sel, "manual", true));
 		strip_legacy_node_fields(dbus, node_sel);
@@ -5610,6 +5667,7 @@ function add_ss_node_conf(flag) {
 		ns["fss_node_next_id"] = String(parseInt(node_id, 10) + 1);
 		if (!get_saved_current_node_id()) {
 			ns["fss_node_current"] = String(node_id);
+			ns["fss_current_node_identity"] = "";
 		}
 		strip_legacy_node_fields(ns, node_id);
 	}
@@ -5627,6 +5685,7 @@ function add_ss_node_conf(flag) {
 		dataType: "json",
 		success: function(response) {
 			schedule_schema2_node_direct_refresh();
+			invalidate_schema2_webtest_results();
 			schedule_schema2_webtest_warm();
 			refresh_table();
 			E("ss_node_table_server").value = "";
@@ -5687,10 +5746,13 @@ function remove_conf_table(o) {
 		fields_v2["fss_node_catalog_ts"] = touchTs;
 		fields_v2["fss_node_config_ts"] = touchTs;
 		if (get_saved_current_node_id() == String(id)) {
-			fields_v2["fss_node_current"] = new_nodes_v2.length ? new_nodes_v2[0] : "";
+			var nextCurrentId = new_nodes_v2.length ? new_nodes_v2[0] : "";
+			fields_v2["fss_node_current"] = nextCurrentId;
+			fields_v2["fss_current_node_identity"] = nextCurrentId ? (get_node_identity(nextCurrentId) || "") : "";
 		}
 		if (get_failover_node_id() == String(id)) {
 			fields_v2["fss_node_failover_backup"] = "";
+			fields_v2["fss_failover_node_identity"] = "";
 		}
 		var post_data_v2 = compfilter(get_compare_store(), fields_v2);
 		var id_2 = parseInt(Math.random() * 100000000);
@@ -5700,9 +5762,10 @@ function remove_conf_table(o) {
 			cache:false,
 			url: "/_api/",
 			data: JSON.stringify(postData_v2),
-		dataType: "json",
+			dataType: "json",
 			success: function(response) {
 				schedule_schema2_node_direct_refresh();
+				invalidate_schema2_webtest_results();
 				schedule_schema2_webtest_warm();
 				refresh_table(function() {
 					set_node_table_scroll_top(nodeTableScrollTop);
@@ -6058,6 +6121,7 @@ function edit_ss_node_conf(flag) {
 		dataType: "json",
 		success: function(response) {
 			schedule_schema2_node_direct_refresh();
+			invalidate_schema2_webtest_results();
 			schedule_schema2_webtest_warm();
 			refresh_table();
 			E("ss_node_table_name").value = "";
@@ -6914,6 +6978,7 @@ function apply_this_ss_node(rowdata) {
 		$activateItem.removeClass("deactivate_icon");
 		if (get_node_storage_schema() == 2) {
 			dbus["fss_node_current"] = enable_id;
+			dbus["fss_current_node_identity"] = get_node_identity(enable_id) || "";
 		} else {
 			dbus["ssconf_basic_node"] = enable_id;
 		}

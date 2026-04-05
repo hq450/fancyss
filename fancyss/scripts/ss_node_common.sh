@@ -54,6 +54,11 @@ FSS_WEBTEST_CACHE_META_DIR="${FSS_WEBTEST_CACHE_DIR}/meta"
 FSS_WEBTEST_CACHE_GLOBAL_META_FILE="${FSS_WEBTEST_CACHE_DIR}/cache.meta"
 FSS_WEBTEST_CACHE_INDEX_FILE="${FSS_WEBTEST_CACHE_DIR}/materialize_index.txt"
 FSS_WEBTEST_CACHE_AGG_OUTBOUNDS_FILE="${FSS_WEBTEST_CACHE_DIR}/all_outbounds.json"
+FSS_WEBTEST_RUNTIME_FILE="/tmp/upload/webtest.txt"
+FSS_WEBTEST_RUNTIME_STREAM_FILE="/tmp/upload/webtest.stream"
+FSS_WEBTEST_RUNTIME_BACKUP_FILE="/tmp/upload/webtest_bakcup.txt"
+FSS_CURRENT_NODE_IDENTITY_DBUS_KEY="fss_current_node_identity"
+FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY="fss_failover_node_identity"
 
 fss_clear_webtest_cache_node() {
 	local node_id="$1"
@@ -70,6 +75,13 @@ fss_clear_webtest_cache_node() {
 
 fss_clear_webtest_cache_all() {
 	rm -rf "${FSS_WEBTEST_CACHE_DIR}" >/dev/null 2>&1
+}
+
+fss_clear_webtest_runtime_results() {
+	rm -f "${FSS_WEBTEST_RUNTIME_FILE}" \
+		"${FSS_WEBTEST_RUNTIME_STREAM_FILE}" \
+		"${FSS_WEBTEST_RUNTIME_BACKUP_FILE}" >/dev/null 2>&1
+	dbus remove ss_basic_webtest_ts >/dev/null 2>&1
 }
 
 fss_get_node_catalog_ts() {
@@ -757,6 +769,7 @@ fss_list_legacy_node_indices() {
 
 fss_clear_v2_nodes() {
 	fss_clear_webtest_cache_all
+	fss_clear_webtest_runtime_results
 	rm -f "${FSS_NODE_DIRECT_CACHE_FILE}" \
 		"${FSS_NODE_DIRECT_RUNTIME_FILE}" \
 		"${FSS_NODE_DIRECT_CACHE_META_FILE}" >/dev/null 2>&1
@@ -768,6 +781,8 @@ fss_clear_v2_nodes() {
 	dbus remove fss_node_order
 	dbus remove fss_node_current
 	dbus remove fss_node_failover_backup
+	dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}"
+	dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}"
 	dbus remove fss_node_next_id
 	dbus remove fss_data_schema
 	dbus remove fss_data_migrated
@@ -1028,8 +1043,8 @@ fss_migrate_legacy_nodes() {
 
 	order_csv=$(tr '\n' ',' < "${order_file}" | sed 's/,$//')
 	dbus set fss_node_order="${order_csv}"
-	[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
-	[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
+	fss_set_current_node_id "${current_id}"
+	fss_set_failover_node_id "${failover_id}"
 	dbus set fss_node_next_id="$((max_id + 1))"
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
@@ -1421,25 +1436,102 @@ fss_get_first_node_id() {
 	fss_list_node_ids | sed -n '1p'
 }
 
+fss_node_id_exists() {
+	local node_id="$1"
+	[ -n "${node_id}" ] || return 1
+	fss_list_node_ids | grep -Fxq "${node_id}"
+}
+
+fss_resolve_reference_node_id() {
+	local node_id="$1"
+	local node_identity="$2"
+	local allow_blank="$3"
+	local resolved_id=""
+
+	[ -n "${allow_blank}" ] || allow_blank="0"
+	if [ -n "${node_id}" ] && fss_node_id_exists "${node_id}"; then
+		printf '%s' "${node_id}"
+		return 0
+	fi
+	if [ -n "${node_identity}" ]; then
+		resolved_id=$(fss_find_node_id_by_identity "${node_identity}" 2>/dev/null)
+		if [ -n "${resolved_id}" ]; then
+			printf '%s' "${resolved_id}"
+			return 0
+		fi
+	fi
+	if [ "${allow_blank}" = "1" ]; then
+		return 1
+	fi
+	resolved_id=$(fss_get_first_node_id)
+	[ -n "${resolved_id}" ] || return 1
+	printf '%s' "${resolved_id}"
+}
+
+fss_set_schema2_reference_node_id() {
+	local id_key="$1"
+	local identity_key="$2"
+	local node_id="$3"
+	local node_identity=""
+
+	[ -n "${id_key}" ] || return 1
+	[ -n "${identity_key}" ] || return 1
+	if [ -n "${node_id}" ]; then
+		if ! fss_node_id_exists "${node_id}"; then
+			dbus remove "${id_key}"
+			dbus remove "${identity_key}"
+			return 0
+		fi
+		dbus set "${id_key}=${node_id}"
+		node_identity=$(fss_get_node_identity_by_id "${node_id}" 2>/dev/null)
+		[ -n "${node_identity}" ] && dbus set "${identity_key}=${node_identity}" || dbus remove "${identity_key}"
+	else
+		dbus remove "${id_key}"
+		dbus remove "${identity_key}"
+	fi
+}
+
 fss_get_current_node_id() {
-	local schema current_id
+	local schema current_id current_identity resolved_id resolved_identity
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		current_id=$(dbus get fss_node_current)
+		current_identity=$(dbus get "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
+		resolved_id=$(fss_resolve_reference_node_id "${current_id}" "${current_identity}" "0" 2>/dev/null)
+		[ -n "${resolved_id}" ] || resolved_id=$(fss_get_first_node_id)
+		if [ -n "${resolved_id}" ]; then
+			resolved_identity=$(fss_get_node_identity_by_id "${resolved_id}" 2>/dev/null)
+		fi
+		if [ -n "${resolved_id}" ] && { [ "${resolved_id}" != "${current_id}" ] || [ "${current_identity}" != "${resolved_identity}" ]; }; then
+			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" "${resolved_id}" >/dev/null 2>&1
+		elif [ -z "${resolved_id}" ] && [ -n "${current_id}${current_identity}" ]; then
+			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" "" >/dev/null 2>&1
+		fi
+		current_id="${resolved_id}"
 	else
 		current_id=$(dbus get ssconf_basic_node)
-	fi
-	if [ -z "${current_id}" ];then
-		current_id=$(fss_get_first_node_id)
+		[ -z "${current_id}" ] && current_id=$(fss_get_first_node_id)
 	fi
 	echo "${current_id}"
 }
 
 fss_get_failover_node_id() {
-	local schema
+	local schema failover_id failover_identity resolved_id resolved_identity
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
-		dbus get fss_node_failover_backup
+		failover_id=$(dbus get fss_node_failover_backup)
+		failover_identity=$(dbus get "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
+		resolved_id=$(fss_resolve_reference_node_id "${failover_id}" "${failover_identity}" "1" 2>/dev/null)
+		if [ -n "${resolved_id}" ]; then
+			resolved_identity=$(fss_get_node_identity_by_id "${resolved_id}" 2>/dev/null)
+			if [ "${resolved_id}" != "${failover_id}" -o "${failover_identity}" != "${resolved_identity}" ]; then
+				fss_set_schema2_reference_node_id "fss_node_failover_backup" "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}" "${resolved_id}" >/dev/null 2>&1
+			fi
+			printf '%s' "${resolved_id}"
+		else
+			[ -n "${failover_id}${failover_identity}" ] && fss_set_schema2_reference_node_id "fss_node_failover_backup" "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}" "" >/dev/null 2>&1
+			return 1
+		fi
 	else
 		dbus get ss_failover_s4_3
 	fi
@@ -1447,17 +1539,30 @@ fss_get_failover_node_id() {
 
 fss_get_node_identity_by_id() {
 	local node_id="$1"
-	local schema node_json
+	local schema node_json node_identity=""
 
 	[ -n "${node_id}" ] || return 1
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+		node_identity=$(printf '%s' "${node_json}" | jq -r '._identity // empty' 2>/dev/null)
+		if [ -z "${node_identity}" ]; then
+			node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+			node_identity=$(printf '%s' "${node_json}" | jq -r '._identity // empty' 2>/dev/null)
+			[ -n "${node_identity}" ] && dbus set fss_node_${node_id}="$(fss_b64_encode "${node_json}")"
+		fi
 	else
 		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
 		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+		node_identity=$(printf '%s' "${node_json}" | jq -r '._identity // empty' 2>/dev/null)
 	fi
-	printf '%s' "${node_json}" | jq -r '._identity // empty'
+	printf '%s' "${node_identity}"
+}
+
+fss_sync_reference_identity_shadows() {
+	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
+	fss_get_current_node_id >/dev/null 2>&1 || true
+	fss_get_failover_node_id >/dev/null 2>&1 || true
 }
 
 fss_find_node_id_by_identity() {
@@ -2096,18 +2201,21 @@ EOF
 
 fss_set_current_node_id() {
 	local node_id="$1"
-	[ -z "${node_id}" ] && return 1
 	if [ "$(fss_detect_storage_schema)" = "2" ];then
-		dbus set fss_node_current="${node_id}"
+		if [ -n "${node_id}" ]; then
+			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" "${node_id}"
+		else
+			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" ""
+		fi
 	else
-		dbus set ssconf_basic_node="${node_id}"
+		[ -n "${node_id}" ] && dbus set ssconf_basic_node="${node_id}" || dbus remove ssconf_basic_node
 	fi
 }
 
 fss_set_failover_node_id() {
 	local node_id="$1"
 	if [ "$(fss_detect_storage_schema)" = "2" ];then
-		[ -n "${node_id}" ] && dbus set fss_node_failover_backup="${node_id}" || dbus remove fss_node_failover_backup
+		fss_set_schema2_reference_node_id "fss_node_failover_backup" "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}" "${node_id}"
 	else
 		[ -n "${node_id}" ] && dbus set ss_failover_s4_3="${node_id}" || dbus remove ss_failover_s4_3
 	fi
@@ -2158,6 +2266,7 @@ fss_set_node_field_plain() {
 	dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
 	if [ "${is_runtime}" != "1" ]; then
 		fss_clear_webtest_cache_node "${node_id}"
+		fss_clear_webtest_runtime_results
 		fss_touch_node_config_ts >/dev/null 2>&1
 	fi
 	if fss_node_field_affects_direct_domains "${field}"; then
@@ -2246,8 +2355,8 @@ fss_export_native_backup() {
 		local node_id
 		node_order_csv=$(dbus get fss_node_order)
 		order_json=$(fss_csv_to_json_array "${node_order_csv}")
-		node_current=$(dbus get fss_node_current)
-		node_failover=$(dbus get fss_node_failover_backup)
+		node_current=$(fss_get_current_node_id)
+		node_failover=$(fss_get_failover_node_id)
 		node_next_id=$(dbus get fss_node_next_id)
 		node_cache_dir="${tmp_dir}/nodes_v2"
 		fss_dump_v2_node_json_dir "${node_cache_dir}" || {
@@ -2375,8 +2484,8 @@ EOF
 		done
 
 		node_order_csv=$(dbus get fss_node_order)
-		node_current=$(dbus get fss_node_current)
-		node_failover=$(dbus get fss_node_failover_backup)
+		node_current=$(fss_get_current_node_id)
+		node_failover=$(fss_get_failover_node_id)
 		node_total=$(printf '%s' "${node_order_csv}" | tr ',' '\n' | sed '/^$/d' | awk 'END{print NR + 0}')
 		if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
 			"${progress_cb}" "阶段4/4：导出节点配置，共 ${node_total} 个节点..."
@@ -2631,8 +2740,8 @@ fss_restore_legacy_backup_sh_fast() {
 	if [ -n "${failover_id}" ];then
 		grep -Fxq "${failover_id}" "${order_file}" || failover_id=""
 	fi
-	[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
-	[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
+	fss_set_current_node_id "${current_id}"
+	fss_set_failover_node_id "${failover_id}"
 	dbus set fss_node_next_id="${next_id}"
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
@@ -2825,12 +2934,12 @@ fss_restore_native_backup_v2() {
 		if [ -n "${failover_id}" ];then
 			grep -Fxq "${failover_id}" "${node_order_file}" || failover_id=""
 		fi
-		[ -n "${current_id}" ] && dbus set fss_node_current="${current_id}" || dbus remove fss_node_current
-		[ -n "${failover_id}" ] && dbus set fss_node_failover_backup="${failover_id}" || dbus remove fss_node_failover_backup
+		fss_set_current_node_id "${current_id}"
+		fss_set_failover_node_id "${failover_id}"
 	else
 		dbus remove fss_node_order
-		dbus remove fss_node_current
-		dbus remove fss_node_failover_backup
+		fss_set_current_node_id ""
+		fss_set_failover_node_id ""
 	fi
 	dbus set fss_node_next_id="${next_id}"
 	fss_touch_node_catalog_ts >/dev/null 2>&1

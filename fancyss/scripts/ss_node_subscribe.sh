@@ -1367,8 +1367,8 @@ sub_refresh_node_state(){
 	NODE_INDEX=$(sub_list_node_ids | sed -n '$p')
 	SEQ_NU=$(sub_list_node_ids | sed '/^$/d' | wc -l)
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		CURR_NODE=$(dbus get fss_node_current)
-		FAILOVER_NODE=$(dbus get fss_node_failover_backup)
+		CURR_NODE=$(fss_get_current_node_id)
+		FAILOVER_NODE=$(fss_get_failover_node_id)
 	else
 		CURR_NODE=$(dbus get ssconf_basic_node)
 		FAILOVER_NODE=$(dbus get ss_failover_s4_3)
@@ -2091,8 +2091,8 @@ sub_restore_active_nodes_after_rewrite(){
 		restore_failover=$(sub_find_node_id_in_file "${input_file}" "${FAILOVER_NODE_NAME}" "${FAILOVER_NODE_TYPE}" "${FAILOVER_NODE_SERVER}" "${FAILOVER_NODE_PORT}")
 	fi
 
-	[ -n "${restore_current}" ] && dbus set fss_node_current="${restore_current}" || dbus remove fss_node_current
-	[ -n "${restore_failover}" ] && dbus set fss_node_failover_backup="${restore_failover}" || dbus remove fss_node_failover_backup
+	fss_set_current_node_id "${restore_current}"
+	fss_set_failover_node_id "${restore_failover}"
 }
 
 sub_refresh_node_state
@@ -2326,10 +2326,11 @@ json2skipd(){
 		if [ "${SUB_REWRITE_ALL}" = "1" ];then
 			sub_restore_active_nodes_after_rewrite "${DIR}/${file_name}.txt"
 			SUB_REWRITE_ALL=0
-		elif [ -z "$(dbus get fss_node_current)" ];then
+		elif [ -z "$(fss_get_current_node_id)" ];then
 			local first_id=$(sub_list_node_ids | sed -n '1p')
-			[ -n "${first_id}" ] && dbus set fss_node_current="${first_id}"
+			[ -n "${first_id}" ] && fss_set_current_node_id "${first_id}"
 		fi
+		fss_clear_webtest_runtime_results
 		echo_date "😀节点信息写入成功！"
 		sync
 		sub_refresh_node_state
@@ -2845,10 +2846,11 @@ remove_sub_node(){
 		if sub_node_exists_in_order "${FAILOVER_NODE}";then
 			restore_failover="${FAILOVER_NODE}"
 		fi
-		[ -n "${restore_current}" ] && dbus set fss_node_current="${restore_current}" || dbus remove fss_node_current
-		[ -n "${restore_failover}" ] && dbus set fss_node_failover_backup="${restore_failover}" || dbus remove fss_node_failover_backup
+		fss_set_current_node_id "${restore_current}"
+		fss_set_failover_node_id "${restore_failover}"
 		dbus set fss_data_schema=2
 		dbus set fss_node_next_id="$((max_keep + 1))"
+		fss_clear_webtest_runtime_results
 		fss_touch_node_catalog_ts >/dev/null 2>&1
 		fss_touch_node_config_ts >/dev/null 2>&1
 		for conf1 in $(dbus list ss_online_group|awk -F"=" '{print $1}')
