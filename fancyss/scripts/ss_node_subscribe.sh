@@ -67,6 +67,8 @@ SUB_WEBTEST_WARM_LOG="/tmp/upload/ss_webtest_cache.log"
 SUB_SOURCE_URL_HASH=""
 SUB_AIRPORT_IDENTITY=""
 SUB_SOURCE_SCOPE=""
+SCHEMA2_RECONCILE_DRYRUN_TSV="${DIR}/node_identity_reconcile.tsv"
+SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -1851,6 +1853,416 @@ sub_log_nodes_file_change_reason(){
 	else
 		echo_date "ℹ️本地与在线节点数量从${local_count}变为${online_count}，说明存在新增或删除节点。"
 	fi
+}
+
+sub_run_identity_reconcile_dry_run(){
+	local old_file="$1"
+	local new_file="$2"
+	local reconcile_script="${KSROOT}/scripts/ss_node_identity_reconcile.sh"
+	local tmp_file="${SCHEMA2_RECONCILE_DRYRUN_TSV}.tmp.$$"
+	local total=0
+	local summary=""
+	local current_hit=""
+	local failover_hit=""
+	local line=""
+	local detail_count=0
+
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 0
+	[ -s "${old_file}" ] || return 0
+	[ -s "${new_file}" ] || return 0
+	[ -f "${reconcile_script}" ] || return 0
+	sh "${reconcile_script}" "${old_file}" "${new_file}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}"
+		return 0
+	}
+	if [ ! -s "${tmp_file}" ];then
+		rm -f "${tmp_file}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}"
+		return 0
+	fi
+	mv -f "${tmp_file}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}"
+	total=$(wc -l < "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null | tr -d ' ')
+	[ -n "${total}" ] || total=0
+	summary=$(awk -F '\t' '
+		{
+			if ($3 != "") c[$3]++
+		}
+		END {
+			first = 1
+			if ("identity" in c) { printf "%sidentity %d", (first ? "" : "，"), c["identity"]; first = 0 }
+			if ("primary" in c) { printf "%sprimary %d", (first ? "" : "，"), c["primary"]; first = 0 }
+			if ("airport_name" in c) { printf "%sairport_name %d", (first ? "" : "，"), c["airport_name"]; first = 0 }
+			if ("airport_secondary" in c) { printf "%sairport_secondary %d", (first ? "" : "，"), c["airport_secondary"]; first = 0 }
+			if ("secondary" in c) { printf "%ssecondary %d", (first ? "" : "，"), c["secondary"]; first = 0 }
+			if ("deleted" in c) { printf "%sdeleted %d", (first ? "" : "，"), c["deleted"]; first = 0 }
+			if ("new" in c) { printf "%snew %d", (first ? "" : "，"), c["new"]; first = 0 }
+		}
+	' "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)
+	echo_date "🧭节点身份 dry-run：已生成 ${total} 条映射建议。"
+	[ -n "${summary}" ] && echo_date "🧭映射分类：${summary}"
+	echo_date "🧭映射文件：${SCHEMA2_RECONCILE_DRYRUN_TSV}"
+
+	current_hit=$(awk -F '\t' -v node_id="${CURR_NODE}" '$1 == node_id {print $2 "\t" $3; exit}' "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)
+	if [ -n "${current_hit}" ];then
+		echo_date "🧭当前运行节点 dry-run：${CURR_NODE} -> $(printf '%s' "${current_hit}" | awk -F '\t' '{print $1}') ($(printf '%s' "${current_hit}" | awk -F '\t' '{print $2}'))"
+	fi
+	failover_hit=$(awk -F '\t' -v node_id="${FAILOVER_NODE}" '$1 == node_id {print $2 "\t" $3; exit}' "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)
+	if [ -n "${failover_hit}" ];then
+		echo_date "🧭故障转移节点 dry-run：${FAILOVER_NODE} -> $(printf '%s' "${failover_hit}" | awk -F '\t' '{print $1}') ($(printf '%s' "${failover_hit}" | awk -F '\t' '{print $2}'))"
+	fi
+
+	[ "${SUB_TOOL_NODE_LOG}" = "1" ] || return 0
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		echo_date "🧭映射建议：${line}"
+		detail_count=$((detail_count + 1))
+		[ "${detail_count}" -lt 20 ] || break
+	done < "${SCHEMA2_RECONCILE_DRYRUN_TSV}"
+	return 0
+}
+
+sub_reconcile_lookup_new_id_by_old_id(){
+	local map_file="$1"
+	local old_id="$2"
+	[ -s "${map_file}" ] || return 1
+	[ -n "${old_id}" ] || return 1
+	awk -F '\t' -v old_id="${old_id}" '$1 == old_id && $2 != "" && $3 != "deleted" {print $2; exit}' "${map_file}" 2>/dev/null
+}
+
+sub_reference_notice_reset(){
+	: > "${SCHEMA2_REFERENCE_NOTICE_FILE}"
+}
+
+sub_reference_notice_add(){
+	local ref_type="$1"
+	local title="$2"
+	local message="$3"
+	local old_id="$4"
+	local new_id="$5"
+	local reason="$6"
+	local level="$7"
+	local payload=""
+
+	[ -n "${ref_type}${title}${message}" ] || return 0
+	[ -n "${level}" ] || level="warn"
+	payload=$(jq -cn \
+		--arg type "${ref_type}" \
+		--arg title "${title}" \
+		--arg message "${message}" \
+		--arg old_id "${old_id}" \
+		--arg new_id "${new_id}" \
+		--arg reason "${reason}" \
+		--arg level "${level}" \
+		'{
+			type: $type,
+			title: $title,
+			message: $message,
+			old_id: $old_id,
+			new_id: $new_id,
+			reason: $reason,
+			level: $level
+		}' 2>/dev/null)
+	[ -n "${payload}" ] || return 0
+	printf '%s\n' "${payload}" >> "${SCHEMA2_REFERENCE_NOTICE_FILE}"
+}
+
+sub_reference_notice_commit(){
+	local payload=""
+	[ -s "${SCHEMA2_REFERENCE_NOTICE_FILE}" ] || {
+		fss_clear_reference_notice
+		return 0
+	}
+	payload=$(jq -sc --arg ts "$(fss_now_ts_ms)" '{version:"1", ts:$ts, items:.}' "${SCHEMA2_REFERENCE_NOTICE_FILE}" 2>/dev/null)
+	[ -n "${payload}" ] || {
+		fss_clear_reference_notice
+		return 0
+	}
+	fss_set_reference_notice_json "${payload}"
+}
+
+sub_collect_runtime_reference_notice_after_rewrite(){
+	local input_file="$1"
+	local matched_current=""
+	local matched_failover=""
+	local restored_current=""
+	local restored_failover=""
+	local restored_current_name=""
+	local restored_failover_name=""
+
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 0
+	[ -f "${input_file}" ] || return 0
+
+	restored_current="$(fss_get_current_node_id 2>/dev/null)"
+	restored_failover="$(fss_get_failover_node_id 2>/dev/null)"
+
+	if [ -n "${CURR_NODE}" ];then
+		matched_current="$(sub_find_node_id_by_identity_in_file "${input_file}" "${CURR_NODE_IDENTITY}")"
+		if [ -z "${matched_current}" ];then
+			matched_current="$(sub_find_node_id_in_file "${input_file}" "${CURR_NODE_NAME}" "${CURR_NODE_TYPE}" "${CURR_NODE_SERVER}" "${CURR_NODE_PORT}")"
+		fi
+		if [ -z "${matched_current}" ] && [ -n "${restored_current}" ] && [ "${restored_current}" != "${CURR_NODE}" ];then
+			restored_current_name="$(sub_get_node_field_plain "${restored_current}" name)"
+			sub_reference_notice_add \
+				"current" \
+				"运行节点已调整" \
+				"原运行节点【${CURR_NODE_NAME:-ID ${CURR_NODE}}】已无法恢复，系统已切换到【${restored_current_name:-ID ${restored_current}}】。请确认当前运行节点。" \
+				"${CURR_NODE}" \
+				"${restored_current}" \
+				"fallback"
+		fi
+	fi
+
+	if [ -n "${FAILOVER_NODE}" ];then
+		matched_failover="$(sub_find_node_id_by_identity_in_file "${input_file}" "${FAILOVER_NODE_IDENTITY}")"
+		if [ -z "${matched_failover}" ];then
+			matched_failover="$(sub_find_node_id_in_file "${input_file}" "${FAILOVER_NODE_NAME}" "${FAILOVER_NODE_TYPE}" "${FAILOVER_NODE_SERVER}" "${FAILOVER_NODE_PORT}")"
+		fi
+		if [ -z "${matched_failover}" ];then
+			if [ -n "${restored_failover}" ] && [ "${restored_failover}" != "${FAILOVER_NODE}" ];then
+				restored_failover_name="$(sub_get_node_field_plain "${restored_failover}" name)"
+				sub_reference_notice_add \
+					"failover" \
+					"故障转移节点已调整" \
+					"原故障转移节点【${FAILOVER_NODE_NAME:-ID ${FAILOVER_NODE}}】已无法恢复，系统已改为【${restored_failover_name:-ID ${restored_failover}}】。请确认故障转移配置。" \
+					"${FAILOVER_NODE}" \
+					"${restored_failover}" \
+					"fallback"
+			else
+				sub_reference_notice_add \
+					"failover" \
+					"故障转移节点已失效" \
+					"原故障转移节点【${FAILOVER_NODE_NAME:-ID ${FAILOVER_NODE}}】已无法恢复，当前已清空故障转移目标，请重新选择。" \
+					"${FAILOVER_NODE}" \
+					"" \
+					"missing"
+			fi
+		fi
+	fi
+}
+
+sub_resolve_reference_new_id(){
+	local current_id="$1"
+	local current_identity="$2"
+	local map_file="$3"
+	local mapped=""
+
+	if [ -n "${current_identity}" ];then
+		mapped="$(fss_find_node_id_by_identity "${current_identity}" 2>/dev/null)"
+		if [ -n "${mapped}" ];then
+			printf '%s' "${mapped}"
+			return 0
+		fi
+	fi
+	if [ -n "${current_id}" ] && [ -s "${map_file}" ];then
+		mapped="$(sub_reconcile_lookup_new_id_by_old_id "${map_file}" "${current_id}")"
+		if [ -n "${mapped}" ];then
+			printf '%s' "${mapped}"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+sub_log_shunt_reference_dry_run(){
+	local default_target=""
+	local default_identity=""
+	local mapped_target=""
+	local rules_b64=""
+	local rules_json=""
+	local changed=0
+	local unresolved=0
+	local sep="$(printf '\037')"
+	local line=""
+	local rule_id=""
+	local source_type=""
+	local preset=""
+	local custom_b64=""
+	local target_id=""
+	local target_identity=""
+	local remark=""
+	local label=""
+	local rules_file="${DIR}/shunt_reconcile_rules.$$"
+
+	default_target="$(dbus get ss_basic_shunt_default_node)"
+	default_identity="$(dbus get ss_basic_shunt_default_node_identity)"
+	case "${default_target}" in
+	DIRECT|REJECT|"")
+		mapped_target=""
+		;;
+	*)
+		mapped_target="$(sub_resolve_reference_new_id "${default_target}" "${default_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
+		if [ -n "${mapped_target}" ];then
+			if [ "${mapped_target}" != "${default_target}" ];then
+				echo_date "🧭分流兜底 dry-run：${default_target} -> ${mapped_target}"
+				changed=$((changed + 1))
+			fi
+		elif [ -n "${default_target}${default_identity}" ];then
+			echo_date "🧭分流兜底 dry-run：未能根据 identity 找回目标节点（当前记录 ${default_target}）。"
+			unresolved=$((unresolved + 1))
+		fi
+		;;
+	esac
+
+	rules_b64="$(dbus get ss_basic_shunt_rules)"
+	[ -n "${rules_b64}" ] || return 0
+	rules_json=$(printf '%s' "${rules_b64}" | base64 -d 2>/dev/null) || return 0
+	printf '%s' "${rules_json}" | jq -r '.[]? | select((.enabled // 1 | tostring) != "0") | "\(.id // "" | tostring)\u001f\(.source // "builtin" | tostring)\u001f\(.preset // "" | tostring)\u001f\(.custom_b64 // "" | tostring)\u001f\(.target_node_id // "" | tostring)\u001f\(.target_node_identity // "" | tostring)\u001f\(.remark // "" | tostring)"' 2>/dev/null > "${rules_file}" || {
+		rm -f "${rules_file}"
+		return 0
+	}
+	while IFS="${sep}" read -r rule_id source_type preset custom_b64 target_id target_identity remark
+	do
+		[ -n "${target_identity}" ] || continue
+		[ -n "${target_id}" ] || continue
+		case "${target_id}" in
+		DIRECT|REJECT)
+			continue
+			;;
+		esac
+		mapped_target="$(sub_resolve_reference_new_id "${target_id}" "${target_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
+		label="${remark}"
+		[ -n "${label}" ] || label="${preset}"
+		[ -n "${label}" ] || label="${rule_id}"
+		if [ -n "${mapped_target}" ];then
+			if [ "${mapped_target}" != "${target_id}" ];then
+				echo_date "🧭分流规则 dry-run：【${label}】${target_id} -> ${mapped_target}"
+				changed=$((changed + 1))
+			fi
+		else
+			echo_date "🧭分流规则 dry-run：【${label}】未能根据 identity 找回目标节点（当前记录 ${target_id}）。"
+			unresolved=$((unresolved + 1))
+		fi
+	done < "${rules_file}"
+	rm -f "${rules_file}"
+	[ "${changed}" -gt 0 -o "${unresolved}" -gt 0 ] && echo_date "🧭分流引用 dry-run：需要变更 ${changed} 项，未解析 ${unresolved} 项。"
+	return 0
+}
+
+sub_apply_shunt_reference_rewrite(){
+	local default_target=""
+	local default_identity=""
+	local mapped_target=""
+	local mapped_identity=""
+	local changed_default=0
+	local changed_rules=0
+	local synced_identities=0
+	local unresolved=0
+	local rules_b64=""
+	local rules_json=""
+	local line=""
+	local new_line=""
+	local target_id=""
+	local target_identity=""
+	local rule_id=""
+	local remark=""
+	local preset=""
+	local label=""
+	local sep="$(printf '\037')"
+	local rules_file="${DIR}/shunt_apply_rules.$$"
+	local updated_rules_file="${DIR}/shunt_apply_rules_new.$$"
+	local new_json=""
+
+	default_target="$(dbus get ss_basic_shunt_default_node)"
+	default_identity="$(dbus get ss_basic_shunt_default_node_identity)"
+	case "${default_target}" in
+	DIRECT|REJECT)
+		if [ -n "${default_identity}" ];then
+			dbus set ss_basic_shunt_default_node_identity=""
+			changed_default=$((changed_default + 1))
+		fi
+		;;
+	"")
+		:
+		;;
+	*)
+		mapped_target="$(sub_resolve_reference_new_id "${default_target}" "${default_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
+		if [ -n "${mapped_target}" ];then
+			mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
+			if [ "${mapped_target}" != "${default_target}" ];then
+				dbus set ss_basic_shunt_default_node="${mapped_target}"
+				changed_default=$((changed_default + 1))
+			fi
+			if [ -n "${mapped_identity}" ] && [ "${mapped_identity}" != "${default_identity}" ];then
+				dbus set ss_basic_shunt_default_node_identity="${mapped_identity}"
+				synced_identities=$((synced_identities + 1))
+			fi
+		elif [ -n "${default_target}${default_identity}" ];then
+			sub_reference_notice_add \
+				"shunt_default" \
+				"分流兜底节点已失效" \
+				"节点分流的兜底目标节点已无法恢复，请进入节点分流页面重新选择兜底节点。" \
+				"${default_target}" \
+				"" \
+				"missing"
+			unresolved=$((unresolved + 1))
+		fi
+		;;
+	esac
+
+	rules_b64="$(dbus get ss_basic_shunt_rules)"
+	[ -n "${rules_b64}" ] || {
+		[ "${changed_default}" -gt 0 -o "${synced_identities}" -gt 0 -o "${unresolved}" -gt 0 ] && echo_date "🧭分流引用已同步：兜底调整 ${changed_default} 项，规则调整 ${changed_rules} 项，补全 identity ${synced_identities} 项，未解析 ${unresolved} 项。"
+		return 0
+	}
+	rules_json=$(printf '%s' "${rules_b64}" | base64 -d 2>/dev/null) || return 0
+	printf '%s' "${rules_json}" | jq -c '.[]?' 2>/dev/null > "${rules_file}" || {
+		rm -f "${rules_file}" "${updated_rules_file}"
+		return 0
+	}
+	: > "${updated_rules_file}"
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		new_line="${line}"
+		target_id="$(printf '%s' "${line}" | jq -r '.target_node_id // empty' 2>/dev/null)"
+		target_identity="$(printf '%s' "${line}" | jq -r '.target_node_identity // empty' 2>/dev/null)"
+		rule_id="$(printf '%s' "${line}" | jq -r '.id // empty' 2>/dev/null)"
+		remark="$(printf '%s' "${line}" | jq -r '.remark // empty' 2>/dev/null)"
+		preset="$(printf '%s' "${line}" | jq -r '.preset // empty' 2>/dev/null)"
+		label="${remark}"
+		[ -n "${label}" ] || label="${preset}"
+		[ -n "${label}" ] || label="${rule_id}"
+		case "${target_id}" in
+		DIRECT|REJECT)
+			if [ -n "${target_identity}" ];then
+				new_line="$(printf '%s' "${new_line}" | jq -c '.target_node_identity = ""' 2>/dev/null)"
+				synced_identities=$((synced_identities + 1))
+			fi
+			;;
+		*)
+			mapped_target="$(sub_resolve_reference_new_id "${target_id}" "${target_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
+			if [ -n "${mapped_target}" ];then
+				mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
+				if [ "${mapped_target}" != "${target_id}" ];then
+					new_line="$(printf '%s' "${new_line}" | jq -c --arg target "${mapped_target}" '.target_node_id = $target' 2>/dev/null)"
+					changed_rules=$((changed_rules + 1))
+				fi
+				if [ -n "${mapped_identity}" ] && [ "${mapped_identity}" != "${target_identity}" ];then
+					new_line="$(printf '%s' "${new_line}" | jq -c --arg identity "${mapped_identity}" '.target_node_identity = $identity' 2>/dev/null)"
+					synced_identities=$((synced_identities + 1))
+				fi
+			elif [ -n "${target_id}${target_identity}" ];then
+				echo_date "🧭分流规则保持原值：【${label}】未能解析新目标节点。"
+				sub_reference_notice_add \
+					"shunt_rule" \
+					"分流规则目标节点已失效" \
+					"节点分流规则【${label}】的目标节点已无法恢复，请进入节点分流页面重新选择。" \
+					"${target_id}" \
+					"" \
+					"missing"
+				unresolved=$((unresolved + 1))
+			fi
+			;;
+		esac
+		printf '%s\n' "${new_line}" >> "${updated_rules_file}"
+	done < "${rules_file}"
+	new_json="$(jq -s -c '.' "${updated_rules_file}" 2>/dev/null)"
+	if [ -n "${new_json}" ] && [ "${new_json}" != "${rules_json}" ];then
+		dbus set ss_basic_shunt_rules="$(fss_b64_encode "${new_json}")"
+	fi
+	rm -f "${rules_file}" "${updated_rules_file}"
+	[ "${changed_default}" -gt 0 -o "${changed_rules}" -gt 0 -o "${synced_identities}" -gt 0 -o "${unresolved}" -gt 0 ] && echo_date "🧭分流引用已同步：兜底调整 ${changed_default} 项，规则调整 ${changed_rules} 项，补全 identity ${synced_identities} 项，未解析 ${unresolved} 项。"
+	return 0
 }
 
 sub_validate_jsonl_file(){
@@ -5064,6 +5476,12 @@ start_node_subscribe(){
 				echo_date "❌节点信息写入失败！"
 				exit_sub
 			fi
+			sub_reference_notice_reset
+			sub_run_identity_reconcile_dry_run "${SCHEMA2_BEFORE_EXPORT_JSONL}" "$DIR/ss_nodes_new.txt"
+			sub_log_shunt_reference_dry_run
+			sub_apply_shunt_reference_rewrite
+			sub_collect_runtime_reference_notice_after_rewrite "$DIR/ss_nodes_new.txt"
+			sub_reference_notice_commit
 			fss_refresh_node_direct_cache >/dev/null 2>&1
 			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		else

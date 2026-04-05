@@ -57,8 +57,14 @@ FSS_WEBTEST_CACHE_AGG_OUTBOUNDS_FILE="${FSS_WEBTEST_CACHE_DIR}/all_outbounds.jso
 FSS_WEBTEST_RUNTIME_FILE="/tmp/upload/webtest.txt"
 FSS_WEBTEST_RUNTIME_STREAM_FILE="/tmp/upload/webtest.stream"
 FSS_WEBTEST_RUNTIME_BACKUP_FILE="/tmp/upload/webtest_bakcup.txt"
-FSS_CURRENT_NODE_IDENTITY_DBUS_KEY="fss_current_node_identity"
-FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY="fss_failover_node_identity"
+FSS_CURRENT_NODE_IDENTITY_DBUS_KEY="fss_node_current_identity"
+FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY="fss_node_failover_identity"
+FSS_REFERENCE_NOTICE_DBUS_KEY="fss_data_reference_notice"
+FSS_REFERENCE_NOTICE_TS_DBUS_KEY="fss_data_reference_notice_ts"
+FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY="fss_current_node_identity"
+FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY="fss_failover_node_identity"
+FSS_REFERENCE_NOTICE_DBUS_KEY_LEGACY="fss_reference_notice"
+FSS_REFERENCE_NOTICE_TS_DBUS_KEY_LEGACY="fss_reference_notice_ts"
 
 fss_clear_webtest_cache_node() {
 	local node_id="$1"
@@ -82,6 +88,28 @@ fss_clear_webtest_runtime_results() {
 		"${FSS_WEBTEST_RUNTIME_STREAM_FILE}" \
 		"${FSS_WEBTEST_RUNTIME_BACKUP_FILE}" >/dev/null 2>&1
 	dbus remove ss_basic_webtest_ts >/dev/null 2>&1
+}
+
+fss_clear_reference_notice() {
+	dbus remove "${FSS_REFERENCE_NOTICE_DBUS_KEY}" >/dev/null 2>&1
+	dbus remove "${FSS_REFERENCE_NOTICE_TS_DBUS_KEY}" >/dev/null 2>&1
+	dbus remove "${FSS_REFERENCE_NOTICE_DBUS_KEY_LEGACY}" >/dev/null 2>&1
+	dbus remove "${FSS_REFERENCE_NOTICE_TS_DBUS_KEY_LEGACY}" >/dev/null 2>&1
+}
+
+fss_set_reference_notice_json() {
+	local notice_json="$1"
+	local ts=""
+
+	[ -n "${notice_json}" ] || {
+		fss_clear_reference_notice
+		return 0
+	}
+	ts="$(fss_now_ts_ms)"
+	dbus set "${FSS_REFERENCE_NOTICE_DBUS_KEY}=$(fss_b64_encode "${notice_json}")"
+	dbus set "${FSS_REFERENCE_NOTICE_TS_DBUS_KEY}=${ts}"
+	dbus remove "${FSS_REFERENCE_NOTICE_DBUS_KEY_LEGACY}" >/dev/null 2>&1
+	dbus remove "${FSS_REFERENCE_NOTICE_TS_DBUS_KEY_LEGACY}" >/dev/null 2>&1
 }
 
 fss_get_node_catalog_ts() {
@@ -783,6 +811,9 @@ fss_clear_v2_nodes() {
 	dbus remove fss_node_failover_backup
 	dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}"
 	dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}"
+	dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+	dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+	fss_clear_reference_notice
 	dbus remove fss_node_next_id
 	dbus remove fss_data_schema
 	dbus remove fss_data_migrated
@@ -1480,14 +1511,50 @@ fss_set_schema2_reference_node_id() {
 		if ! fss_node_id_exists "${node_id}"; then
 			dbus remove "${id_key}"
 			dbus remove "${identity_key}"
+			case "${identity_key}" in
+			"${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
+				dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+				;;
+			"${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
+				dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+				;;
+			esac
 			return 0
 		fi
 		dbus set "${id_key}=${node_id}"
 		node_identity=$(fss_get_node_identity_by_id "${node_id}" 2>/dev/null)
-		[ -n "${node_identity}" ] && dbus set "${identity_key}=${node_identity}" || dbus remove "${identity_key}"
+		if [ -n "${node_identity}" ]; then
+			dbus set "${identity_key}=${node_identity}"
+			case "${identity_key}" in
+			"${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
+				dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+				;;
+			"${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
+				dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+				;;
+			esac
+		else
+			dbus remove "${identity_key}"
+			case "${identity_key}" in
+			"${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
+				dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+				;;
+			"${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
+				dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+				;;
+			esac
+		fi
 	else
 		dbus remove "${id_key}"
 		dbus remove "${identity_key}"
+		case "${identity_key}" in
+		"${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
+			dbus remove "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+			;;
+		"${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
+			dbus remove "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}"
+			;;
+		esac
 	fi
 }
 
@@ -1497,6 +1564,7 @@ fss_get_current_node_id() {
 	if [ "${schema}" = "2" ];then
 		current_id=$(dbus get fss_node_current)
 		current_identity=$(dbus get "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
+		[ -n "${current_identity}" ] || current_identity=$(dbus get "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}")
 		resolved_id=$(fss_resolve_reference_node_id "${current_id}" "${current_identity}" "0" 2>/dev/null)
 		[ -n "${resolved_id}" ] || resolved_id=$(fss_get_first_node_id)
 		if [ -n "${resolved_id}" ]; then
@@ -1521,6 +1589,7 @@ fss_get_failover_node_id() {
 	if [ "${schema}" = "2" ];then
 		failover_id=$(dbus get fss_node_failover_backup)
 		failover_identity=$(dbus get "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
+		[ -n "${failover_identity}" ] || failover_identity=$(dbus get "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}")
 		resolved_id=$(fss_resolve_reference_node_id "${failover_id}" "${failover_identity}" "1" 2>/dev/null)
 		if [ -n "${resolved_id}" ]; then
 			resolved_identity=$(fss_get_node_identity_by_id "${resolved_id}" 2>/dev/null)

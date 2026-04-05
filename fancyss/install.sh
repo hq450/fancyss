@@ -622,6 +622,7 @@ __get_name_by_type() {
 append_backup_nodes_schema2(){
 	local backup_file="$1"
 	local order_csv next_id max_id reserved_max imported_order="" node_json node_id stored_json node_ts
+	local first_imported=""
 
 	[ -f "${backup_file}" ] || return 1
 	order_csv=$(dbus get fss_node_order)
@@ -664,6 +665,7 @@ append_backup_nodes_schema2(){
 		fss_clear_webtest_cache_node "${node_id}"
 		dbus set fss_node_${node_id}="$(fss_b64_encode "${stored_json}")"
 		imported_order="${imported_order}${imported_order:+,}${node_id}"
+		[ -n "${first_imported}" ] || first_imported="${node_id}"
 		if [ "${node_id}" -gt "${max_id}" ] 2>/dev/null;then
 			max_id="${node_id}"
 		fi
@@ -677,7 +679,9 @@ append_backup_nodes_schema2(){
 	fi
 	dbus set fss_data_schema=2
 	dbus set fss_node_next_id="$((max_id + 1))"
-	[ -n "$(dbus get fss_node_current)" ] || dbus set fss_node_current="$(printf '%s' "${imported_order}" | cut -d ',' -f 1)"
+	if [ -z "$(fss_get_current_node_id 2>/dev/null)" ] && [ -n "${first_imported}" ];then
+		fss_set_current_node_id "${first_imported}"
+	fi
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
 	return 0
@@ -693,6 +697,10 @@ full2lite(){
 		local remove_flag=0
 		local keep_order=""
 		local max_keep=0
+		local old_current="$(fss_get_current_node_id 2>/dev/null)"
+		local old_failover="$(fss_get_failover_node_id 2>/dev/null)"
+		local new_current=""
+		local new_failover=""
 		mkdir -p "${backup_dir}"
 		: > "${backup_file}"
 		for NU in $(fss_list_node_ids)
@@ -722,6 +730,18 @@ full2lite(){
 			return
 		fi
 		[ -n "${keep_order}" ] && dbus set fss_node_order="${keep_order}" || dbus remove fss_node_order
+		if [ -n "${keep_order}" ];then
+			if printf '%s' "${keep_order}" | tr ',' '\n' | grep -Fxq "${old_current}" 2>/dev/null;then
+				new_current="${old_current}"
+			else
+				new_current="$(printf '%s' "${keep_order}" | cut -d ',' -f 1)"
+			fi
+			if [ -n "${old_failover}" ] && printf '%s' "${keep_order}" | tr ',' '\n' | grep -Fxq "${old_failover}" 2>/dev/null;then
+				new_failover="${old_failover}"
+			fi
+		fi
+		fss_set_current_node_id "${new_current}"
+		fss_set_failover_node_id "${new_failover}"
 		dbus set fss_data_schema=2
 		dbus set fss_node_next_id="$((max_keep + 1))"
 		fss_touch_node_catalog_ts >/dev/null 2>&1
@@ -822,7 +842,7 @@ check_empty_node(){
 		local CURR_TYPE=$(fss_get_node_field_plain "${CURR_NODE}" type)
 		if [ -z "${CURR_TYPE}" ];then
 			echo_date "检测到当前节点为空，调整默认节点为节点列表内的第一个节点!"
-			dbus set fss_node_current=${NODE_FIRST}
+			fss_set_current_node_id "${NODE_FIRST}"
 			return 0
 		fi
 		return 0

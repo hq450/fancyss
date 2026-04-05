@@ -321,6 +321,7 @@ var node_auto_migrate_attempted = false;
 var node_auto_migrate_layer = null;
 var prepared_route_files = {};
 var pending_route_callbacks = {};
+var referenceNoticeShownTs = "";
 var shuntRulesState = [];
 var shuntCustomPresetsState = [];
 var shuntPresetMap = {};
@@ -1490,6 +1491,75 @@ function get_shunt_default_node_id() {
 		return explicitId;
 	}
 	return get_shunt_runtime_node_id();
+}
+function collect_node_reference_delete_impact(nodeId) {
+	nodeId = String(nodeId || "");
+	var impact = {
+		current: get_saved_current_node_id() == nodeId,
+		failover: get_failover_node_id() == nodeId,
+		shuntDefault: false,
+		shuntRuleCount: 0
+	};
+	if (!nodeId) {
+		return impact;
+	}
+	impact.shuntDefault = get_saved_shunt_default_node_id() == nodeId;
+	for (var i = 0; i < shuntRulesState.length; i++) {
+		var rule = normalize_shunt_rule(shuntRulesState[i], i + 1);
+		if (String(rule.enabled || "1") == "0") {
+			continue;
+		}
+		if (String(rule.target_node_id || "") == nodeId) {
+			impact.shuntRuleCount += 1;
+		}
+	}
+	return impact;
+}
+function show_deleted_node_reference_notice(nodeName, impact, nextCurrentId) {
+	impact = impact || {};
+	var lines = [];
+	var nextCurrentName = (nextCurrentId && confs[nextCurrentId] && confs[nextCurrentId]["name"]) ? String(confs[nextCurrentId]["name"]) : "";
+	if (impact.current) {
+		if (nextCurrentId) {
+			lines.push("原运行节点【" + nodeName + "】已被删除，当前节点已自动切换到【" + (nextCurrentName || ("ID " + nextCurrentId)) + "】。");
+		} else {
+			lines.push("原运行节点【" + nodeName + "】已被删除，当前节点已被清空。");
+		}
+	}
+	if (impact.failover) {
+		lines.push("原故障转移节点【" + nodeName + "】已被删除，故障转移目标已自动清空，请重新选择。");
+	}
+	if (impact.shuntDefault) {
+		lines.push("节点分流的兜底目标原本指向【" + nodeName + "】，请进入节点分流页面重新确认兜底节点。");
+	}
+	if (impact.shuntRuleCount > 0) {
+		lines.push("节点分流中有 " + impact.shuntRuleCount + " 条规则仍引用【" + nodeName + "】，请进入节点分流页面检查并重新选择目标节点。");
+	}
+	if (!lines.length) {
+		return;
+	}
+	var html = '<div style="padding:18px 22px;line-height:1.8;font-size:13px;color:#111;background:#fff;">';
+	html += '<div style="margin-bottom:10px;">删除节点后，以下引用需要你确认处理：</div><ul style="margin:0;padding-left:20px;">';
+	for (var i = 0; i < lines.length; i++) {
+		html += '<li style="margin-bottom:8px;">' + htmlEscape(lines[i]) + '</li>';
+	}
+	html += '</ul></div>';
+	if (typeof layer != "undefined" && layer.open) {
+		layer.open({
+			type: 1,
+			title: "节点引用提醒",
+			area: ["680px", "auto"],
+			shadeClose: true,
+			closeBtn: 1,
+			content: html,
+			btn: ["我知道了"],
+			yes: function(index) {
+				layer.close(index);
+			}
+		});
+		return;
+	}
+	alert(lines.join("\n"));
 }
 function get_shunt_target_node_label(nodeId) {
 	if (is_shunt_direct_target(nodeId)) {
@@ -3198,10 +3268,10 @@ function open_shunt_rule_editor(ruleId, overrides) {
 }
 function get_saved_current_node_id() {
 	if (get_node_storage_schema() == 2) {
-		var resolvedCurrent = resolve_node_id_with_identity(db_fss["fss_node_current"] || "", db_fss["fss_current_node_identity"] || "", false);
+		var resolvedCurrent = resolve_node_id_with_identity(db_fss["fss_node_current"] || "", db_fss["fss_node_current_identity"] || db_fss["fss_current_node_identity"] || "", false);
 		db_fss["fss_node_current"] = resolvedCurrent;
-		if (resolvedCurrent && !db_fss["fss_current_node_identity"]) {
-			db_fss["fss_current_node_identity"] = get_node_identity(resolvedCurrent) || "";
+		if (resolvedCurrent && !db_fss["fss_node_current_identity"]) {
+			db_fss["fss_node_current_identity"] = get_node_identity(resolvedCurrent) || "";
 		}
 		return resolvedCurrent;
 	}
@@ -3215,10 +3285,10 @@ function get_current_node_id() {
 }
 function get_failover_node_id() {
 	if (get_node_storage_schema() == 2) {
-		var resolvedFailover = resolve_node_id_with_identity(db_fss["fss_node_failover_backup"] || "", db_fss["fss_failover_node_identity"] || "", true);
+		var resolvedFailover = resolve_node_id_with_identity(db_fss["fss_node_failover_backup"] || "", db_fss["fss_node_failover_identity"] || db_fss["fss_failover_node_identity"] || "", true);
 		db_fss["fss_node_failover_backup"] = resolvedFailover;
-		if (resolvedFailover && !db_fss["fss_failover_node_identity"]) {
-			db_fss["fss_failover_node_identity"] = get_node_identity(resolvedFailover) || "";
+		if (resolvedFailover && !db_fss["fss_node_failover_identity"]) {
+			db_fss["fss_node_failover_identity"] = get_node_identity(resolvedFailover) || "";
 		}
 		return resolvedFailover;
 	}
@@ -3785,6 +3855,102 @@ function check_node_migration_notice() {
 		}
 	});
 }
+function close_reference_notice() {
+	if (!db_fss["fss_data_reference_notice"] && !db_fss["fss_data_reference_notice_ts"]) {
+		return;
+	}
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": {"fss_data_reference_notice": "", "fss_data_reference_notice_ts": "", "fss_reference_notice": "", "fss_reference_notice_ts": ""} };
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		success: function() {
+			db_fss["fss_data_reference_notice"] = "";
+			db_fss["fss_data_reference_notice_ts"] = "";
+			referenceNoticeShownTs = "";
+		}
+	});
+}
+function get_reference_notice_payload() {
+	var raw = db_fss["fss_data_reference_notice"] || db_fss["fss_reference_notice"] || "";
+	if (!raw) {
+		return null;
+	}
+	try {
+		var payload = JSON.parse(base64_decode_utf8(raw) || "{}");
+		if (!payload || !$.isArray(payload.items) || !payload.items.length) {
+			return null;
+		}
+		return payload;
+	} catch (e) {
+		return null;
+	}
+}
+function render_reference_notice_html(payload) {
+	var items = $.isArray(payload && payload.items) ? payload.items : [];
+	var html = '<div style="padding:18px 22px;line-height:1.8;font-size:13px;color:#111;background:#fff;">';
+	html += '<div style="margin-bottom:10px;">订阅后检测到部分节点引用需要你确认处理：</div>';
+	html += '<ul style="margin:0;padding-left:20px;">';
+	for (var i = 0; i < items.length; i++) {
+		var item = items[i] || {};
+		html += '<li style="margin-bottom:10px;">';
+		html += '<div style="font-weight:700;color:#b22222;">' + htmlEscape(String(item.title || "节点引用提醒")) + '</div>';
+		html += '<div>' + htmlEscape(String(item.message || "")) + '</div>';
+		html += '</li>';
+	}
+	html += '</ul>';
+	html += '<div style="margin-top:8px;color:#666;">这些提醒不会自动替你决定最终策略，请按需检查运行节点、故障转移和节点分流配置。</div>';
+	html += '</div>';
+	return html;
+}
+function show_reference_notice(payload) {
+	if (!payload || !$.isArray(payload.items) || !payload.items.length) {
+		return;
+	}
+	if (referenceNoticeShownTs == String(payload.ts || "")) {
+		return;
+	}
+	referenceNoticeShownTs = String(payload.ts || "");
+	if (typeof layer != "undefined" && layer.open) {
+		layer.open({
+			type: 1,
+			title: "节点引用提醒",
+			area: ["680px", "auto"],
+			shadeClose: true,
+			closeBtn: 1,
+			content: render_reference_notice_html(payload),
+			btn: ["我知道了"],
+			yes: function(index) {
+				close_reference_notice();
+				layer.close(index);
+			},
+			cancel: function() {
+				close_reference_notice();
+			}
+		});
+		return;
+	}
+	var lines = [];
+	for (var i = 0; i < payload.items.length; i++) {
+		var item = payload.items[i] || {};
+		lines.push("[" + String(item.title || "节点引用提醒") + "] " + String(item.message || ""));
+	}
+	alert(lines.join("\n"));
+}
+function check_reference_notice() {
+	if (db_fss["fss_data_migration_notice"] == "1") {
+		return;
+	}
+	var payload = get_reference_notice_payload();
+	if (!payload) {
+		referenceNoticeShownTs = "";
+		return;
+	}
+	show_reference_notice(payload);
+}
 function get_legacy_node_ids() {
 	var ids = [];
 	for (var field in db_ss) {
@@ -4021,6 +4187,7 @@ function get_dbus_data(cb) {
 					// fill node value
 					ss_node_sel();
 					refresh_shunt_ui();
+					check_reference_notice();
 					// define click action
 					toggle_func();
 					// try to get latest version of fancyss
@@ -4266,7 +4433,7 @@ function save() {
 	}
 	if (get_node_storage_schema() == 2) {
 		dbus["fss_node_current"] = node_sel;
-		dbus["fss_current_node_identity"] = get_node_identity(node_sel) || "";
+		dbus["fss_node_current_identity"] = get_node_identity(node_sel) || "";
 	} else {
 		dbus["ssconf_basic_node"] = node_sel;
 	}
@@ -4754,7 +4921,7 @@ function save() {
 	if (get_node_storage_schema() == 2) {
 		var failoverNodeId = resolve_node_id(E("ss_failover_s4_3").value, true);
 		dbus["fss_node_failover_backup"] = failoverNodeId || "";
-		dbus["fss_failover_node_identity"] = get_node_identity(failoverNodeId) || "";
+		dbus["fss_node_failover_identity"] = get_node_identity(failoverNodeId) || "";
 		delete dbus["ss_failover_s4_3"];
 		dbus = $.extend(dbus, build_schema2_upsert_fields(dbus, node_sel, "manual", true));
 		strip_legacy_node_fields(dbus, node_sel);
@@ -5667,7 +5834,7 @@ function add_ss_node_conf(flag) {
 		ns["fss_node_next_id"] = String(parseInt(node_id, 10) + 1);
 		if (!get_saved_current_node_id()) {
 			ns["fss_node_current"] = String(node_id);
-			ns["fss_current_node_identity"] = "";
+			ns["fss_node_current_identity"] = "";
 		}
 		strip_legacy_node_fields(ns, node_id);
 	}
@@ -5739,6 +5906,8 @@ function remove_conf_table(o) {
 		var nodeTableScrollTop = get_node_table_scroll_top();
 		var new_nodes_v2 = ss_nodes.concat();
 		new_nodes_v2.splice(new_nodes_v2.indexOf(String(id)), 1);
+		var deleteImpact = collect_node_reference_delete_impact(String(id));
+		var removedNodeName = (confs[String(id)] && confs[String(id)]["name"]) ? String(confs[String(id)]["name"]) : ("ID " + String(id));
 		var fields_v2 = {};
 		var touchTs = get_schema2_touch_timestamp();
 		fields_v2["fss_node_" + id] = "";
@@ -5748,11 +5917,11 @@ function remove_conf_table(o) {
 		if (get_saved_current_node_id() == String(id)) {
 			var nextCurrentId = new_nodes_v2.length ? new_nodes_v2[0] : "";
 			fields_v2["fss_node_current"] = nextCurrentId;
-			fields_v2["fss_current_node_identity"] = nextCurrentId ? (get_node_identity(nextCurrentId) || "") : "";
+			fields_v2["fss_node_current_identity"] = nextCurrentId ? (get_node_identity(nextCurrentId) || "") : "";
 		}
 		if (get_failover_node_id() == String(id)) {
 			fields_v2["fss_node_failover_backup"] = "";
-			fields_v2["fss_failover_node_identity"] = "";
+			fields_v2["fss_node_failover_identity"] = "";
 		}
 		var post_data_v2 = compfilter(get_compare_store(), fields_v2);
 		var id_2 = parseInt(Math.random() * 100000000);
@@ -5770,6 +5939,7 @@ function remove_conf_table(o) {
 				refresh_table(function() {
 					set_node_table_scroll_top(nodeTableScrollTop);
 				});
+				show_deleted_node_reference_notice(removedNodeName, deleteImpact, new_nodes_v2.length ? String(new_nodes_v2[0]) : "");
 			}
 		});
 		return;
@@ -6978,7 +7148,7 @@ function apply_this_ss_node(rowdata) {
 		$activateItem.removeClass("deactivate_icon");
 		if (get_node_storage_schema() == 2) {
 			dbus["fss_node_current"] = enable_id;
-			dbus["fss_current_node_identity"] = get_node_identity(enable_id) || "";
+			dbus["fss_node_current_identity"] = get_node_identity(enable_id) || "";
 		} else {
 			dbus["ssconf_basic_node"] = enable_id;
 		}
