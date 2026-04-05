@@ -1359,31 +1359,20 @@ sub_prepare_schema2_export_jsonl(){
 		| if has("v2ray_json") then .v2ray_json |= normalize_json_config else . end
 		| if has("xray_json") then .xray_json |= normalize_json_config else . end
 		| if has("tuic_json") then .tuic_json |= normalize_json_config else . end
-		| del(
-			._schema,
-			._rev,
-			._updated_at,
-			._created_at,
-			._migrated_from,
-			.server_ip,
-			.latency,
-			.ping,
-			._airport_identity,
-			._source_scope,
-			._identity_primary,
-			._identity_secondary,
-			._identity,
-			._identity_ver
-		)
+		| del(._schema, ._rev, ._updated_at, ._created_at, ._migrated_from, .server_ip, .latency, .ping)
 	' "${SCHEMA2_RAW_JSONL}" > "${tmp_export}" || {
 		rm -f "${tmp_export}"
 		return 1
 	}
-	sub_prepare_identity_view_file "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}" "" "" "" "" || {
-		rm -f "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}"
-		return 1
-	}
-	rm -f "${tmp_export}"
+	if sub_file_has_identity_fields "${tmp_export}";then
+		mv -f "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}"
+	else
+		sub_prepare_identity_view_file "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}" "" "" "" "" || {
+			rm -f "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}"
+			return 1
+		}
+		rm -f "${tmp_export}"
+	fi
 	return 0
 }
 
