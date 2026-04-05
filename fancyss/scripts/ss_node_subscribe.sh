@@ -67,7 +67,6 @@ SUB_WEBTEST_WARM_LOG="/tmp/upload/ss_webtest_cache.log"
 SUB_SOURCE_URL_HASH=""
 SUB_AIRPORT_IDENTITY=""
 SUB_SOURCE_SCOPE=""
-SCHEMA2_RECONCILE_DRYRUN_TSV="${DIR}/node_identity_reconcile.tsv"
 SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
@@ -479,12 +478,16 @@ sub_get_filter_signature(){
 
 pick_sub_tool(){
 	if command -v sub-tool >/dev/null 2>&1; then
-		command -v sub-tool
-		return 0
+		if "$(command -v sub-tool)" version >/dev/null 2>&1; then
+			command -v sub-tool
+			return 0
+		fi
 	fi
 	if [ -x "/koolshare/bin/sub-tool" ];then
-		echo "/koolshare/bin/sub-tool"
-		return 0
+		if /koolshare/bin/sub-tool version >/dev/null 2>&1; then
+			echo "/koolshare/bin/sub-tool"
+			return 0
+		fi
 	fi
 	return 1
 }
@@ -907,6 +910,9 @@ sub_try_parse_uri_lines_with_tool(){
 		--include-raw
 	[ -n "${default_group}" ] && set -- "$@" --group "${default_group}"
 	[ -n "${source_tag}" ] && set -- "$@" --source-tag "${source_tag}"
+	[ -n "${SUB_SOURCE_URL_HASH}" ] && set -- "$@" --source-url-hash "${SUB_SOURCE_URL_HASH}"
+	[ -n "${SUB_AIRPORT_IDENTITY}" ] && set -- "$@" --airport-identity "${SUB_AIRPORT_IDENTITY}"
+	[ -n "${SUB_SOURCE_SCOPE}" ] && set -- "$@" --source-scope "${SUB_SOURCE_SCOPE}"
 	[ -n "${effective_hy2_up}" ] && set -- "$@" --hy2-up "${effective_hy2_up}"
 	[ -n "${effective_hy2_dl}" ] && set -- "$@" --hy2-dl "${effective_hy2_dl}"
 	"${sub_tool}" "$@" >/dev/null 2>&1 || {
@@ -1350,7 +1356,7 @@ sub_prepare_schema2_export_jsonl(){
 		rm -f "${tmp_export}"
 		return 1
 	}
-	fss_enrich_node_identity_file "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}" "" "" "" "" || {
+	sub_prepare_identity_view_file "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}" "" "" "" "" || {
 		rm -f "${tmp_export}" "${SCHEMA2_EXPORT_JSONL}"
 		return 1
 	}
@@ -1592,6 +1598,42 @@ sub_nodes_file_identity_md5(){
 	jq -r '[.type // "", .xray_prot // "", .name // ""] | @tsv' "${file}" 2>/dev/null | sort -u | md5sum | awk '{print $1}'
 }
 
+sub_file_has_identity_fields(){
+	local file="$1"
+	local total=0
+	local identity_hits=0
+	local primary_hits=0
+	local secondary_hits=0
+
+	[ -s "${file}" ] || return 1
+	total=$(wc -l < "${file}" 2>/dev/null | tr -d ' ')
+	[ -n "${total}" ] || total=0
+	[ "${total}" -gt 0 ] || return 1
+	identity_hits=$(grep -c '"_identity":"[^"]\+"' "${file}" 2>/dev/null || true)
+	primary_hits=$(grep -c '"_identity_primary":"[^"]\+"' "${file}" 2>/dev/null || true)
+	secondary_hits=$(grep -c '"_identity_secondary":"[^"]\+"' "${file}" 2>/dev/null || true)
+	[ "${identity_hits}" = "${total}" ] || return 1
+	[ "${primary_hits}" = "${total}" ] || return 1
+	[ "${secondary_hits}" = "${total}" ]
+}
+
+sub_prepare_identity_view_file(){
+	local input_file="$1"
+	local output_file="$2"
+	local explicit_airport="$3"
+	local explicit_scope="$4"
+	local explicit_url_hash="$5"
+	local explicit_source="$6"
+
+	[ -f "${input_file}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	if sub_file_has_identity_fields "${input_file}";then
+		cp -f "${input_file}" "${output_file}"
+		return 0
+	fi
+	fss_enrich_node_identity_file "${input_file}" "${output_file}" "${explicit_airport}" "${explicit_scope}" "${explicit_url_hash}" "${explicit_source}"
+}
+
 sub_mark_map_row_used(){
 	local used_file="$1"
 	local row_no="$2"
@@ -1725,11 +1767,11 @@ sub_log_nodes_file_change_detail(){
 	old_used="${local_file}.identity_cmp_used_old.$$"
 	new_used="${online_file}.identity_cmp_used_new.$$"
 
-	fss_enrich_node_identity_file "${local_file}" "${local_identity_file}" "" "" "" "" || {
+	sub_prepare_identity_view_file "${local_file}" "${local_identity_file}" "" "" "" "" || {
 		rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
 		return 0
 	}
-	fss_enrich_node_identity_file "${online_file}" "${online_identity_file}" "" "" "" "" || {
+	sub_prepare_identity_view_file "${online_file}" "${online_identity_file}" "" "" "" "" || {
 		rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
 		return 0
 	}
@@ -1855,80 +1897,6 @@ sub_log_nodes_file_change_reason(){
 	fi
 }
 
-sub_run_identity_reconcile_dry_run(){
-	local old_file="$1"
-	local new_file="$2"
-	local reconcile_script="${KSROOT}/scripts/ss_node_identity_reconcile.sh"
-	local tmp_file="${SCHEMA2_RECONCILE_DRYRUN_TSV}.tmp.$$"
-	local total=0
-	local summary=""
-	local current_hit=""
-	local failover_hit=""
-	local line=""
-	local detail_count=0
-
-	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 0
-	[ -s "${old_file}" ] || return 0
-	[ -s "${new_file}" ] || return 0
-	[ -f "${reconcile_script}" ] || return 0
-	sh "${reconcile_script}" "${old_file}" "${new_file}" > "${tmp_file}" 2>/dev/null || {
-		rm -f "${tmp_file}"
-		return 0
-	}
-	if [ ! -s "${tmp_file}" ];then
-		rm -f "${tmp_file}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}"
-		return 0
-	fi
-	mv -f "${tmp_file}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}"
-	total=$(wc -l < "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null | tr -d ' ')
-	[ -n "${total}" ] || total=0
-	summary=$(awk -F '\t' '
-		{
-			if ($3 != "") c[$3]++
-		}
-		END {
-			first = 1
-			if ("identity" in c) { printf "%sidentity %d", (first ? "" : "，"), c["identity"]; first = 0 }
-			if ("primary" in c) { printf "%sprimary %d", (first ? "" : "，"), c["primary"]; first = 0 }
-			if ("airport_name" in c) { printf "%sairport_name %d", (first ? "" : "，"), c["airport_name"]; first = 0 }
-			if ("airport_secondary" in c) { printf "%sairport_secondary %d", (first ? "" : "，"), c["airport_secondary"]; first = 0 }
-			if ("secondary" in c) { printf "%ssecondary %d", (first ? "" : "，"), c["secondary"]; first = 0 }
-			if ("deleted" in c) { printf "%sdeleted %d", (first ? "" : "，"), c["deleted"]; first = 0 }
-			if ("new" in c) { printf "%snew %d", (first ? "" : "，"), c["new"]; first = 0 }
-		}
-	' "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)
-	echo_date "🧭节点身份 dry-run：已生成 ${total} 条映射建议。"
-	[ -n "${summary}" ] && echo_date "🧭映射分类：${summary}"
-	echo_date "🧭映射文件：${SCHEMA2_RECONCILE_DRYRUN_TSV}"
-
-	current_hit=$(awk -F '\t' -v node_id="${CURR_NODE}" '$1 == node_id {print $2 "\t" $3; exit}' "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)
-	if [ -n "${current_hit}" ];then
-		echo_date "🧭当前运行节点 dry-run：${CURR_NODE} -> $(printf '%s' "${current_hit}" | awk -F '\t' '{print $1}') ($(printf '%s' "${current_hit}" | awk -F '\t' '{print $2}'))"
-	fi
-	failover_hit=$(awk -F '\t' -v node_id="${FAILOVER_NODE}" '$1 == node_id {print $2 "\t" $3; exit}' "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)
-	if [ -n "${failover_hit}" ];then
-		echo_date "🧭故障转移节点 dry-run：${FAILOVER_NODE} -> $(printf '%s' "${failover_hit}" | awk -F '\t' '{print $1}') ($(printf '%s' "${failover_hit}" | awk -F '\t' '{print $2}'))"
-	fi
-
-	[ "${SUB_TOOL_NODE_LOG}" = "1" ] || return 0
-	while IFS= read -r line
-	do
-		[ -n "${line}" ] || continue
-		echo_date "🧭映射建议：${line}"
-		detail_count=$((detail_count + 1))
-		[ "${detail_count}" -lt 20 ] || break
-	done < "${SCHEMA2_RECONCILE_DRYRUN_TSV}"
-	return 0
-}
-
-sub_reconcile_lookup_new_id_by_old_id(){
-	local map_file="$1"
-	local old_id="$2"
-	[ -s "${map_file}" ] || return 1
-	[ -n "${old_id}" ] || return 1
-	awk -F '\t' -v old_id="${old_id}" '$1 == old_id && $2 != "" && $3 != "deleted" {print $2; exit}' "${map_file}" 2>/dev/null
-}
-
 sub_reference_notice_reset(){
 	: > "${SCHEMA2_REFERENCE_NOTICE_FILE}"
 }
@@ -2043,7 +2011,6 @@ sub_collect_runtime_reference_notice_after_rewrite(){
 sub_resolve_reference_new_id(){
 	local current_id="$1"
 	local current_identity="$2"
-	local map_file="$3"
 	local mapped=""
 
 	if [ -n "${current_identity}" ];then
@@ -2053,89 +2020,11 @@ sub_resolve_reference_new_id(){
 			return 0
 		fi
 	fi
-	if [ -n "${current_id}" ] && [ -s "${map_file}" ];then
-		mapped="$(sub_reconcile_lookup_new_id_by_old_id "${map_file}" "${current_id}")"
-		if [ -n "${mapped}" ];then
-			printf '%s' "${mapped}"
-			return 0
-		fi
+	if [ -n "${current_id}" ] && fss_node_id_exists "${current_id}" 2>/dev/null;then
+		printf '%s' "${current_id}"
+		return 0
 	fi
 	return 1
-}
-
-sub_log_shunt_reference_dry_run(){
-	local default_target=""
-	local default_identity=""
-	local mapped_target=""
-	local rules_b64=""
-	local rules_json=""
-	local changed=0
-	local unresolved=0
-	local sep="$(printf '\037')"
-	local line=""
-	local rule_id=""
-	local source_type=""
-	local preset=""
-	local custom_b64=""
-	local target_id=""
-	local target_identity=""
-	local remark=""
-	local label=""
-	local rules_file="${DIR}/shunt_reconcile_rules.$$"
-
-	default_target="$(dbus get ss_basic_shunt_default_node)"
-	default_identity="$(dbus get ss_basic_shunt_default_node_identity)"
-	case "${default_target}" in
-	DIRECT|REJECT|"")
-		mapped_target=""
-		;;
-	*)
-		mapped_target="$(sub_resolve_reference_new_id "${default_target}" "${default_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
-		if [ -n "${mapped_target}" ];then
-			if [ "${mapped_target}" != "${default_target}" ];then
-				echo_date "🧭分流兜底 dry-run：${default_target} -> ${mapped_target}"
-				changed=$((changed + 1))
-			fi
-		elif [ -n "${default_target}${default_identity}" ];then
-			echo_date "🧭分流兜底 dry-run：未能根据 identity 找回目标节点（当前记录 ${default_target}）。"
-			unresolved=$((unresolved + 1))
-		fi
-		;;
-	esac
-
-	rules_b64="$(dbus get ss_basic_shunt_rules)"
-	[ -n "${rules_b64}" ] || return 0
-	rules_json=$(printf '%s' "${rules_b64}" | base64 -d 2>/dev/null) || return 0
-	printf '%s' "${rules_json}" | jq -r '.[]? | select((.enabled // 1 | tostring) != "0") | "\(.id // "" | tostring)\u001f\(.source // "builtin" | tostring)\u001f\(.preset // "" | tostring)\u001f\(.custom_b64 // "" | tostring)\u001f\(.target_node_id // "" | tostring)\u001f\(.target_node_identity // "" | tostring)\u001f\(.remark // "" | tostring)"' 2>/dev/null > "${rules_file}" || {
-		rm -f "${rules_file}"
-		return 0
-	}
-	while IFS="${sep}" read -r rule_id source_type preset custom_b64 target_id target_identity remark
-	do
-		[ -n "${target_identity}" ] || continue
-		[ -n "${target_id}" ] || continue
-		case "${target_id}" in
-		DIRECT|REJECT)
-			continue
-			;;
-		esac
-		mapped_target="$(sub_resolve_reference_new_id "${target_id}" "${target_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
-		label="${remark}"
-		[ -n "${label}" ] || label="${preset}"
-		[ -n "${label}" ] || label="${rule_id}"
-		if [ -n "${mapped_target}" ];then
-			if [ "${mapped_target}" != "${target_id}" ];then
-				echo_date "🧭分流规则 dry-run：【${label}】${target_id} -> ${mapped_target}"
-				changed=$((changed + 1))
-			fi
-		else
-			echo_date "🧭分流规则 dry-run：【${label}】未能根据 identity 找回目标节点（当前记录 ${target_id}）。"
-			unresolved=$((unresolved + 1))
-		fi
-	done < "${rules_file}"
-	rm -f "${rules_file}"
-	[ "${changed}" -gt 0 -o "${unresolved}" -gt 0 ] && echo_date "🧭分流引用 dry-run：需要变更 ${changed} 项，未解析 ${unresolved} 项。"
-	return 0
 }
 
 sub_apply_shunt_reference_rewrite(){
@@ -2175,7 +2064,7 @@ sub_apply_shunt_reference_rewrite(){
 		:
 		;;
 	*)
-		mapped_target="$(sub_resolve_reference_new_id "${default_target}" "${default_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
+		mapped_target="$(sub_resolve_reference_new_id "${default_target}" "${default_identity}" 2>/dev/null)"
 		if [ -n "${mapped_target}" ];then
 			mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
 			if [ "${mapped_target}" != "${default_target}" ];then
@@ -2230,7 +2119,7 @@ sub_apply_shunt_reference_rewrite(){
 			fi
 			;;
 		*)
-			mapped_target="$(sub_resolve_reference_new_id "${target_id}" "${target_identity}" "${SCHEMA2_RECONCILE_DRYRUN_TSV}" 2>/dev/null)"
+			mapped_target="$(sub_resolve_reference_new_id "${target_id}" "${target_identity}" 2>/dev/null)"
 			if [ -n "${mapped_target}" ];then
 				mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
 				if [ "${mapped_target}" != "${target_id}" ];then
@@ -2370,8 +2259,13 @@ sub_apply_existing_ids_by_identity(){
 
 sub_write_nodes_schema2(){
 	local input_file="$1"
-	local order_csv next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
-	local node_id stored_b64 export_b64 export_json
+	local old_order_csv="" next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
+	local old_export_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
+	local old_export_map="${input_file}.old_export_map"
+	local new_ids_file="${input_file}.new_ids"
+	local removed_ids_file="${input_file}.removed_ids"
+	local node_id stored_b64 export_b64 export_json existing_blob old_export_b64
+	local touched_any=0
 
 	[ -f "${input_file}" ] || return 1
 	mapped_file="${input_file}.mapped"
@@ -2379,7 +2273,7 @@ sub_write_nodes_schema2(){
 	identity_file="${input_file}.identity"
 	reuse_file="${input_file}.reuse"
 	: > "${mapped_file}"
-	fss_enrich_node_identity_file "${input_file}" "${identity_file}" "" "" "" "" || {
+	sub_prepare_identity_view_file "${input_file}" "${identity_file}" "" "" "" "" || {
 		rm -f "${mapped_file}" "${identity_file}"
 		return 1
 	}
@@ -2387,10 +2281,10 @@ sub_write_nodes_schema2(){
 		rm -f "${mapped_file}" "${identity_file}" "${reuse_file}"
 		return 1
 	}
-	order_csv=$(dbus get fss_node_order)
+	old_order_csv=$(dbus get fss_node_order)
 	next_id=$(dbus get fss_node_next_id)
 	[ -n "${next_id}" ] || next_id=1
-	max_id=$(printf '%s' "${order_csv}" | tr ',' '\n' | sed '/^$/d' | sort -n | tail -n1)
+	max_id=$(printf '%s' "${old_order_csv}" | tr ',' '\n' | sed '/^$/d' | sort -n | tail -n1)
 	[ -n "${max_id}" ] || max_id=0
 	reserved_max=$(jq -r '._id // empty' "${input_file}" 2>/dev/null | sed '/^$/d' | sort -n | tail -n1)
 	if [ -n "${reserved_max}" ] && [ "${reserved_max}" -gt "${max_id}" ] 2>/dev/null;then
@@ -2445,13 +2339,27 @@ sub_write_nodes_schema2(){
 		rm -f "${mapped_file}" "${meta_file}" "${identity_file}" "${reuse_file}"
 		return 1
 	}
+	: > "${new_ids_file}"
+	if [ -s "${old_export_file}" ];then
+		run jq -r '[._id // "", (tojson | @base64)] | @tsv' "${old_export_file}" 2>/dev/null > "${old_export_map}" || : > "${old_export_map}"
+	else
+		: > "${old_export_map}"
+	fi
 
 	while IFS='	' read -r node_id stored_b64 export_b64
 	do
 		[ -n "${node_id}" ] || continue
 		[ -n "${stored_b64}" ] || continue
-		fss_clear_webtest_cache_node "${node_id}"
-		dbus set fss_node_${node_id}="${stored_b64}"
+		echo "${node_id}" >> "${new_ids_file}"
+		existing_blob="$(dbus get fss_node_${node_id})"
+		old_export_b64="$(awk -F '\t' -v id="${node_id}" '$1 == id {print $2; exit}' "${old_export_map}" 2>/dev/null)"
+		if [ -n "${existing_blob}" ] && [ -n "${old_export_b64}" ] && [ "${old_export_b64}" = "${export_b64}" ];then
+			:
+		else
+			fss_clear_webtest_cache_node "${node_id}"
+			dbus set fss_node_${node_id}="${stored_b64}"
+			touched_any=1
+		fi
 		export_json=$(fss_b64_decode "${export_b64}")
 		printf '%s\n' "${export_json}" >> "${mapped_file}"
 		imported_order="${imported_order}${imported_order:+,}${node_id}"
@@ -2459,19 +2367,29 @@ sub_write_nodes_schema2(){
 			max_id="${node_id}"
 		fi
 	done < "${meta_file}"
-	rm -f "${meta_file}" "${identity_file}" "${reuse_file}"
+	printf '%s' "${old_order_csv}" | tr ',' '\n' | sed '/^$/d' | while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		grep -Fxq "${node_id}" "${new_ids_file}" 2>/dev/null && continue
+		echo "${node_id}"
+	done > "${removed_ids_file}"
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		fss_clear_webtest_cache_node "${node_id}"
+		dbus remove fss_node_${node_id}
+		touched_any=1
+	done < "${removed_ids_file}"
+	rm -f "${meta_file}" "${identity_file}" "${reuse_file}" "${old_export_map}" "${new_ids_file}" "${removed_ids_file}"
 
 	if [ -z "${imported_order}" ];then
 		rm -f "${mapped_file}"
 		return 1
 	fi
-	if [ -n "${order_csv}" ];then
-		dbus set fss_node_order="${order_csv},${imported_order}"
-	else
 	dbus set fss_node_order="${imported_order}"
-	fi
 	dbus set fss_data_schema=2
 	dbus set fss_node_next_id="$((max_id + 1))"
+	[ "${touched_any}" = "1" ] && fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
 	mv "${mapped_file}" "${input_file}"
@@ -2802,19 +2720,7 @@ get_group_hash_value(){
 sanitize_invalid_local_groups(){
 	local key value node changed=0 invalid_file
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		sub_prepare_schema2_raw_jsonl >/dev/null 2>&1 || return 0
-		invalid_file="${DIR}/schema2_invalid_groups.txt"
-		jq -r 'select(has("group")) | [._id // empty, (.group // "")] | @tsv' "${SCHEMA2_RAW_JSONL}" > "${invalid_file}" 2>/dev/null
-		while IFS='	' read -r node value
-		do
-			[ -z "${node}" ] && continue
-			if ! normalize_group_name "${value}" >/dev/null 2>&1;then
-				echo_date "🧹检测到第${node}个节点的group值无效，已移除该group标记。"
-				fss_set_node_field_plain "${node}" group ""
-				changed=1
-			fi
-		done < "${invalid_file}"
-		[ "${changed}" = "1" ] && sub_reset_schema2_cache
+		# schema2 节点的 group/identity 已由新写入链路保证；订阅阶段不再为兼容旧数据做全量巡检。
 		return 0
 	fi
 	while IFS='=' read -r key value
@@ -3142,8 +3048,6 @@ clear_nodes(){
 		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
 		[ -s "${SCHEMA2_EXPORT_JSONL}" ] && cp -f "${SCHEMA2_EXPORT_JSONL}" "${SCHEMA2_BEFORE_EXPORT_JSONL}"
 		SUB_REWRITE_ALL=1
-		fss_clear_v2_nodes
-		dbus set fss_data_schema=2
 		echo_date "😀准备完成！"
 		return 0
 	fi
@@ -5477,8 +5381,6 @@ start_node_subscribe(){
 				exit_sub
 			fi
 			sub_reference_notice_reset
-			sub_run_identity_reconcile_dry_run "${SCHEMA2_BEFORE_EXPORT_JSONL}" "$DIR/ss_nodes_new.txt"
-			sub_log_shunt_reference_dry_run
 			sub_apply_shunt_reference_rewrite
 			sub_collect_runtime_reference_notice_after_rewrite "$DIR/ss_nodes_new.txt"
 			sub_reference_notice_commit

@@ -69,6 +69,9 @@ const Options = struct {
     output: ?[]const u8 = null,
     group: ?[]const u8 = null,
     source_tag: ?[]const u8 = null,
+    source_url_hash: ?[]const u8 = null,
+    airport_identity: ?[]const u8 = null,
+    source_scope: ?[]const u8 = null,
     include_raw: bool = false,
     format: OutputFormat = .normalized,
     mode: ?[]const u8 = null,
@@ -182,7 +185,7 @@ fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         "Usage:\n" ++
         "  sub-tool inspect [--input path]\n" ++
-        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
         "  sub-tool summary [--input path]\n" ++
         "  sub-tool version\n",
     );
@@ -220,6 +223,18 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.source_tag = args[i];
+        } else if (std.mem.eql(u8, arg, "--source-url-hash")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.source_url_hash = args[i];
+        } else if (std.mem.eql(u8, arg, "--airport-identity")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.airport_identity = args[i];
+        } else if (std.mem.eql(u8, arg, "--source-scope")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.source_scope = args[i];
         } else if (std.mem.eql(u8, arg, "--format")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -347,8 +362,11 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
         switch (options.format) {
             .normalized => try writer.print("{f}\n", .{std.json.fmt(node, .{ .emit_null_optional_fields = false })}),
             .fancyss => {
-                const wrote = try writeFancyssNode(allocator, writer, node, options);
-                if (!wrote) continue;
+                const json = try buildFancyssNodeJsonAlloc(allocator, node, options);
+                if (json == null) continue;
+                defer allocator.free(json.?);
+                try writer.writeAll(json.?);
+                try writer.writeAll("\n");
             },
         }
     }
@@ -451,15 +469,232 @@ fn writeParseLogs(writer: anytype, nodes: []const NormalizedNode, level: LogLeve
     }
 }
 
-fn writeFancyssNode(allocator: std.mem.Allocator, writer: anytype, node: NormalizedNode, options: Options) !bool {
+const IdentityMeta = struct {
+    airport_identity: []u8,
+    source_scope: []u8,
+    source_url_hash: []u8,
+};
+
+fn makeCksumTable() [256]u32 {
+    var table: [256]u32 = undefined;
+    const poly: u32 = 0x04C11DB7;
+    var i: usize = 0;
+    while (i < 256) : (i += 1) {
+        var crc: u32 = @as(u32, @intCast(i)) << 24;
+        var bit: usize = 0;
+        while (bit < 8) : (bit += 1) {
+            if ((crc & 0x80000000) != 0) {
+                crc = (crc << 1) ^ poly;
+            } else {
+                crc <<= 1;
+            }
+        }
+        table[i] = crc;
+    }
+    return table;
+}
+
+const cksum_table = blk: {
+    @setEvalBranchQuota(10000);
+    break :blk makeCksumTable();
+};
+
+fn identityHashHexAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    var crc: u32 = 0;
+    for (input) |byte| {
+        const idx: u8 = @intCast(((crc >> 24) ^ @as(u32, byte)) & 0xff);
+        crc = (crc << 8) ^ cksum_table[idx];
+    }
+    var remaining = input.len;
+    while (remaining != 0) {
+        const len_byte: u8 = @intCast(remaining & 0xff);
+        const idx: u8 = @intCast(((crc >> 24) ^ @as(u32, len_byte)) & 0xff);
+        crc = (crc << 8) ^ cksum_table[idx];
+        remaining >>= 8;
+    }
+    crc = ~crc;
+    return try std.fmt.allocPrint(allocator, "{x:0>8}", .{crc});
+}
+
+fn identitySlugifyAlloc(allocator: std.mem.Allocator, raw: []const u8, fallback: []const u8) ![]u8 {
+    var out = std.ArrayList(u8){};
+    defer out.deinit(allocator);
+    var prev_sep = false;
+    for (raw) |byte| {
+        const ch = std.ascii.toLower(byte);
+        if ((ch >= 'a' and ch <= 'z') or (ch >= '0' and ch <= '9')) {
+            try out.append(allocator, ch);
+            prev_sep = false;
+        } else if (!prev_sep and out.items.len > 0) {
+            try out.append(allocator, '_');
+            prev_sep = true;
+        }
+    }
+    while (out.items.len > 0 and out.items[out.items.len - 1] == '_') {
+        _ = out.pop();
+    }
+    if (out.items.len == 0) {
+        return try allocator.dupe(u8, fallback);
+    }
+    return try out.toOwnedSlice(allocator);
+}
+
+fn writeCanonicalIdentityValue(writer: anytype, value: std.json.Value) !void {
+    switch (value) {
+        .null => try writer.writeAll("null"),
+        .bool => |b| try writer.writeAll(if (b) "true" else "false"),
+        .integer => |v| try writer.print("{}", .{v}),
+        .float => |v| try writer.print("{d}", .{v}),
+        .number_string => |v| try writer.writeAll(v),
+        .string => |v| try writeJsonString(writer, v),
+        else => try writer.print("{f}", .{std.json.fmt(value, .{})}),
+    }
+}
+
+fn buildIdentitySecondaryPayloadAlloc(allocator: std.mem.Allocator, base_json: []const u8) ![]u8 {
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, base_json, .{});
+    defer parsed.deinit();
+    if (parsed.value != .object) return error.InvalidUri;
+
+    var keys = std.ArrayList([]const u8){};
+    defer keys.deinit(allocator);
+    var it = parsed.value.object.iterator();
+    while (it.next()) |entry| {
+        const key = entry.key_ptr.*;
+        if (std.mem.eql(u8, key, "name") or std.mem.eql(u8, key, "group") or std.mem.eql(u8, key, "mode")) continue;
+        try keys.append(allocator, key);
+    }
+    std.mem.sort([]const u8, keys.items, {}, struct {
+        fn lessThan(_: void, a: []const u8, b: []const u8) bool {
+            return std.mem.lessThan(u8, a, b);
+        }
+    }.lessThan);
+
+    var out = std.ArrayList(u8){};
+    defer out.deinit(allocator);
+    const writer = out.writer(allocator);
+    try writer.writeAll("{");
+    var first = true;
+    for (keys.items) |key| {
+        const value = parsed.value.object.get(key) orelse continue;
+        if (first) {
+            first = false;
+        } else {
+            try writer.writeAll(",");
+        }
+        try writeJsonString(writer, key);
+        try writer.writeAll(":");
+        try writeCanonicalIdentityValue(writer, value);
+    }
+    try writer.writeAll("}");
+    return try out.toOwnedSlice(allocator);
+}
+
+fn buildIdentityMetaAlloc(allocator: std.mem.Allocator, base_json: []const u8, node: NormalizedNode, options: Options) !IdentityMeta {
+    const source_tag = options.source_tag orelse "sub";
+    const airport_label = options.group orelse source_tag;
+    const airport_identity = if (options.airport_identity) |value|
+        try allocator.dupe(u8, value)
+    else
+        try identitySlugifyAlloc(allocator, airport_label, source_tag);
+    errdefer allocator.free(airport_identity);
+    const source_url_hash = if (options.source_url_hash) |value|
+        try allocator.dupe(u8, value)
+    else
+        try allocator.dupe(u8, "");
+    errdefer allocator.free(source_url_hash);
+    const source_scope = if (options.source_scope) |value|
+        try allocator.dupe(u8, value)
+    else if (source_url_hash.len > 0)
+        try std.fmt.allocPrint(allocator, "{s}_{s}", .{ airport_identity, source_url_hash })
+    else
+        try allocator.dupe(u8, airport_identity);
+    errdefer allocator.free(source_scope);
+
+    _ = base_json;
+    _ = node;
+    return .{
+        .airport_identity = airport_identity,
+        .source_scope = source_scope,
+        .source_url_hash = source_url_hash,
+    };
+}
+
+fn appendIdentityFieldsAlloc(allocator: std.mem.Allocator, base_json: []const u8, node: NormalizedNode, options: Options) ![]u8 {
+    if (base_json.len < 2 or base_json[base_json.len - 1] != '}') {
+        return try allocator.dupe(u8, base_json);
+    }
+    const meta = try buildIdentityMetaAlloc(allocator, base_json, node, options);
+    defer allocator.free(meta.airport_identity);
+    defer allocator.free(meta.source_scope);
+    defer allocator.free(meta.source_url_hash);
+
+    const primary_input = try std.fmt.allocPrint(allocator, "{s}\x1f{s}", .{ meta.source_scope, node.name });
+    defer allocator.free(primary_input);
+    const primary = try identityHashHexAlloc(allocator, primary_input);
+    defer allocator.free(primary);
+
+    const secondary_payload = try buildIdentitySecondaryPayloadAlloc(allocator, base_json);
+    defer allocator.free(secondary_payload);
+    const secondary = try identityHashHexAlloc(allocator, secondary_payload);
+    defer allocator.free(secondary);
+
+    var out = std.ArrayList(u8){};
+    defer out.deinit(allocator);
+    const writer = out.writer(allocator);
+    try writer.writeAll(base_json[0 .. base_json.len - 1]);
+    if (base_json.len > 2) {
+        try writer.writeAll(",");
+    }
+    try writeJsonString(writer, "_source");
+    try writer.writeAll(":");
+    try writeJsonString(writer, "subscribe");
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_airport_identity");
+    try writer.writeAll(":");
+    try writeJsonString(writer, meta.airport_identity);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_source_scope");
+    try writer.writeAll(":");
+    try writeJsonString(writer, meta.source_scope);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_source_url_hash");
+    try writer.writeAll(":");
+    try writeJsonString(writer, meta.source_url_hash);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_identity_primary");
+    try writer.writeAll(":");
+    try writeJsonString(writer, primary);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_identity_secondary");
+    try writer.writeAll(":");
+    try writeJsonString(writer, secondary);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_identity");
+    try writer.writeAll(":");
+    const identity_value = try std.fmt.allocPrint(allocator, "{s}_{s}", .{ primary, secondary });
+    defer allocator.free(identity_value);
+    try writeJsonString(writer, identity_value);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "_identity_ver");
+    try writer.writeAll(":");
+    try writeJsonString(writer, "1");
+    try writer.writeAll("}");
+    return try out.toOwnedSlice(allocator);
+}
+
+fn buildFancyssNodeJsonAlloc(allocator: std.mem.Allocator, node: NormalizedNode, options: Options) !?[]u8 {
     if (options.pkg_type) |pkg_type| {
         if (!std.mem.eql(u8, pkg_type, "full") and
             (std.mem.eql(u8, node.scheme, "tuic") or std.mem.eql(u8, node.scheme, "naive+https") or std.mem.eql(u8, node.scheme, "naive+quic")))
         {
-            return false;
+            return null;
         }
     }
 
+    var out = std.ArrayList(u8){};
+    defer out.deinit(allocator);
+    const writer = out.writer(allocator);
     var first = true;
     try writer.writeAll("{");
 
@@ -710,11 +945,11 @@ fn writeFancyssNode(allocator: std.mem.Allocator, writer: anytype, node: Normali
         try jsonFieldMaybeString(writer, &first, "hy2_cg", hy2_ctx.cg);
         try jsonFieldMaybeString(writer, &first, "hy2_tfo", resolveHy2Tfo(hy2_ctx.tfo_switch, tfo_value));
     } else {
-        return false;
+        return null;
     }
 
-    try writer.writeAll("}\n");
-    return true;
+    try writer.writeAll("}");
+    return try appendIdentityFieldsAlloc(allocator, out.items, node, options);
 }
 
 fn jsonFieldSeparator(writer: anytype, first: *bool) !void {
