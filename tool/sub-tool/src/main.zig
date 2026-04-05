@@ -1,12 +1,13 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.0";
+const app_version = "0.1.1";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
     inspect,
     parse_uri_lines,
+    compare_fancyss,
     summary,
     version,
 };
@@ -66,12 +67,15 @@ const InputKind = enum {
 const Options = struct {
     command: Command,
     input: ?[]const u8 = null,
+    old_input: ?[]const u8 = null,
+    new_input: ?[]const u8 = null,
     output: ?[]const u8 = null,
     group: ?[]const u8 = null,
     source_tag: ?[]const u8 = null,
     source_url_hash: ?[]const u8 = null,
     airport_identity: ?[]const u8 = null,
     source_scope: ?[]const u8 = null,
+    reuse_ids_from: ?[]const u8 = null,
     include_raw: bool = false,
     format: OutputFormat = .normalized,
     mode: ?[]const u8 = null,
@@ -177,6 +181,7 @@ fn run() !void {
         },
         .inspect => try runInspect(allocator, options),
         .parse_uri_lines => try runParseUriLines(allocator, options),
+        .compare_fancyss => try runCompareFancyss(allocator, options),
         .summary => try runSummary(allocator, options),
     }
 }
@@ -185,7 +190,8 @@ fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         "Usage:\n" ++
         "  sub-tool inspect [--input path]\n" ++
-        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool compare-fancyss --old path --new path [--output path]\n" ++
         "  sub-tool summary [--input path]\n" ++
         "  sub-tool version\n",
     );
@@ -197,6 +203,7 @@ fn parseArgs(args: []const []const u8) !Options {
     const command = blk: {
         if (std.mem.eql(u8, args[1], "inspect")) break :blk Command.inspect;
         if (std.mem.eql(u8, args[1], "parse-uri-lines")) break :blk Command.parse_uri_lines;
+        if (std.mem.eql(u8, args[1], "compare-fancyss")) break :blk Command.compare_fancyss;
         if (std.mem.eql(u8, args[1], "summary")) break :blk Command.summary;
         if (std.mem.eql(u8, args[1], "version")) break :blk Command.version;
         if (std.mem.eql(u8, args[1], "-h") or std.mem.eql(u8, args[1], "--help")) return error.HelpRequested;
@@ -211,6 +218,14 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.input = args[i];
+        } else if (std.mem.eql(u8, arg, "--old")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.old_input = args[i];
+        } else if (std.mem.eql(u8, arg, "--new")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.new_input = args[i];
         } else if (std.mem.eql(u8, arg, "--output")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -235,6 +250,10 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.source_scope = args[i];
+        } else if (std.mem.eql(u8, arg, "--reuse-ids-from")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.reuse_ids_from = args[i];
         } else if (std.mem.eql(u8, arg, "--format")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -358,17 +377,91 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
     else
         std.fs.File.stdout().deprecatedWriter();
 
-    for (result.nodes.items) |node| {
-        switch (options.format) {
-            .normalized => try writer.print("{f}\n", .{std.json.fmt(node, .{ .emit_null_optional_fields = false })}),
-            .fancyss => {
+    switch (options.format) {
+        .normalized => {
+            for (result.nodes.items) |node| {
+                try writer.print("{f}\n", .{std.json.fmt(node, .{ .emit_null_optional_fields = false })});
+            }
+        },
+        .fancyss => {
+            var rendered_nodes = std.ArrayList(CompareNode){};
+            defer {
+                for (rendered_nodes.items) |*node| node.deinit(allocator);
+                rendered_nodes.deinit(allocator);
+            }
+
+            for (result.nodes.items) |node| {
                 const json = try buildFancyssNodeJsonAlloc(allocator, node, options);
                 if (json == null) continue;
                 defer allocator.free(json.?);
-                try writer.writeAll(json.?);
-                try writer.writeAll("\n");
-            },
-        }
+                try rendered_nodes.append(allocator, try parseCompareNodeAlloc(allocator, json.?, true));
+            }
+
+            if (options.reuse_ids_from) |reuse_path| {
+                const old_nodes = try loadCompareNodesAlloc(allocator, reuse_path, false);
+                defer {
+                    for (old_nodes) |*node| node.deinit(allocator);
+                    allocator.free(old_nodes);
+                }
+
+                const old_used = try allocator.alloc(bool, old_nodes.len);
+                defer allocator.free(old_used);
+                @memset(old_used, false);
+
+                const new_used = try allocator.alloc(bool, rendered_nodes.items.len);
+                defer allocator.free(new_used);
+                @memset(new_used, false);
+
+                const reused_old_index = try allocator.alloc(?usize, rendered_nodes.items.len);
+                defer allocator.free(reused_old_index);
+                for (reused_old_index) |*slot| slot.* = null;
+
+                for (old_nodes, 0..) |old_node, old_idx| {
+                    const new_idx = findUnmatchedIdentity(rendered_nodes.items, new_used, .identity, old_node) orelse continue;
+                    old_used[old_idx] = true;
+                    new_used[new_idx] = true;
+                    reused_old_index[new_idx] = old_idx;
+                }
+
+                for (old_nodes, 0..) |old_node, old_idx| {
+                    if (old_used[old_idx]) continue;
+                    if (countUnmatchedIdentity(rendered_nodes.items, new_used, .primary, old_node) != 1) continue;
+                    const new_idx = findUnmatchedIdentity(rendered_nodes.items, new_used, .primary, old_node) orelse continue;
+                    old_used[old_idx] = true;
+                    new_used[new_idx] = true;
+                    reused_old_index[new_idx] = old_idx;
+                }
+
+                for (old_nodes, 0..) |old_node, old_idx| {
+                    if (old_used[old_idx]) continue;
+                    if (countUnmatchedIdentity(rendered_nodes.items, new_used, .scope_secondary, old_node) != 1) continue;
+                    const new_idx = findUnmatchedIdentity(rendered_nodes.items, new_used, .scope_secondary, old_node) orelse continue;
+                    old_used[old_idx] = true;
+                    new_used[new_idx] = true;
+                    reused_old_index[new_idx] = old_idx;
+                }
+
+                for (rendered_nodes.items, 0..) |node, idx| {
+                    if (reused_old_index[idx]) |old_idx| {
+                        const old_node = old_nodes[old_idx];
+                        if (old_node.id.len > 0) {
+                            const reused_json = try appendReuseFieldsAlloc(allocator, node.raw_json, old_node.id, old_node.created_at);
+                            defer allocator.free(reused_json);
+                            try writer.writeAll(reused_json);
+                            try writer.writeAll("\n");
+                            continue;
+                        }
+                    }
+                    try writer.writeAll(node.raw_json);
+                    try writer.writeAll("\n");
+                }
+            } else {
+                for (rendered_nodes.items) |node| {
+                    try writer.writeAll(node.raw_json);
+                    try writer.writeAll("\n");
+                }
+            }
+        },
     }
 
     if (options.log_output) |path| {
@@ -417,6 +510,185 @@ fn runSummary(allocator: std.mem.Allocator, options: Options) !void {
         try stdout.print("{d}", .{entry.value_ptr.*});
     }
     try stdout.writeAll("}}\n");
+}
+
+const CompareNode = struct {
+    raw_json: []u8,
+    id: []u8,
+    created_at: []u8,
+    name: []u8,
+    type_id: []u8,
+    xray_prot: []u8,
+    identity: []u8,
+    primary: []u8,
+    secondary: []u8,
+    source_scope: []u8,
+
+    fn deinit(self: *CompareNode, allocator: std.mem.Allocator) void {
+        allocator.free(self.raw_json);
+        allocator.free(self.id);
+        allocator.free(self.created_at);
+        allocator.free(self.name);
+        allocator.free(self.type_id);
+        allocator.free(self.xray_prot);
+        allocator.free(self.identity);
+        allocator.free(self.primary);
+        allocator.free(self.secondary);
+        allocator.free(self.source_scope);
+    }
+};
+
+fn parseCompareNodeAlloc(allocator: std.mem.Allocator, line: []const u8, keep_raw: bool) !CompareNode {
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, line, .{});
+    defer parsed.deinit();
+    if (parsed.value != .object) return error.InvalidArguments;
+    const obj = parsed.value.object;
+
+    return .{
+        .raw_json = if (keep_raw) try allocator.dupe(u8, line) else try allocator.dupe(u8, ""),
+        .id = try allocator.dupe(u8, jsonObjectString(obj, "_id") orelse ""),
+        .created_at = blk: {
+            const created = try jsonObjectTextAlloc(allocator, obj, "_created_at");
+            break :blk if (created) |value| value else try allocator.dupe(u8, "");
+        },
+        .name = try allocator.dupe(u8, jsonObjectString(obj, "name") orelse ""),
+        .type_id = try allocator.dupe(u8, jsonObjectString(obj, "type") orelse ""),
+        .xray_prot = try allocator.dupe(u8, jsonObjectString(obj, "xray_prot") orelse ""),
+        .identity = try allocator.dupe(u8, jsonObjectString(obj, "_identity") orelse ""),
+        .primary = try allocator.dupe(u8, jsonObjectString(obj, "_identity_primary") orelse ""),
+        .secondary = try allocator.dupe(u8, jsonObjectString(obj, "_identity_secondary") orelse ""),
+        .source_scope = try allocator.dupe(u8, jsonObjectString(obj, "_source_scope") orelse ""),
+    };
+}
+
+fn loadCompareNodesAlloc(allocator: std.mem.Allocator, path: []const u8, keep_raw: bool) ![]CompareNode {
+    const raw = try std.fs.cwd().readFileAlloc(allocator, path, max_input_size);
+    defer allocator.free(raw);
+
+    var nodes = std.ArrayList(CompareNode){};
+    errdefer {
+        for (nodes.items) |*node| node.deinit(allocator);
+        nodes.deinit(allocator);
+    }
+
+    var lines = std.mem.tokenizeAny(u8, raw, "\r\n");
+    while (lines.next()) |line_raw| {
+        const line = std.mem.trim(u8, line_raw, " \t");
+        if (line.len == 0) continue;
+        try nodes.append(allocator, try parseCompareNodeAlloc(allocator, line, keep_raw));
+    }
+    return try nodes.toOwnedSlice(allocator);
+}
+
+fn countUnmatchedIdentity(nodes: []const CompareNode, used: []bool, field: enum { identity, primary, scope_secondary }, a: CompareNode) usize {
+    var count: usize = 0;
+    for (nodes, 0..) |node, idx| {
+        if (used[idx]) continue;
+        const matched = switch (field) {
+            .identity => a.identity.len > 0 and std.mem.eql(u8, a.identity, node.identity),
+            .primary => a.primary.len > 0 and std.mem.eql(u8, a.primary, node.primary),
+            .scope_secondary => a.secondary.len > 0 and a.source_scope.len > 0 and std.mem.eql(u8, a.secondary, node.secondary) and std.mem.eql(u8, a.source_scope, node.source_scope),
+        };
+        if (matched) count += 1;
+    }
+    return count;
+}
+
+fn findUnmatchedIdentity(nodes: []const CompareNode, used: []bool, field: enum { identity, primary, scope_secondary }, a: CompareNode) ?usize {
+    for (nodes, 0..) |node, idx| {
+        if (used[idx]) continue;
+        const matched = switch (field) {
+            .identity => a.identity.len > 0 and std.mem.eql(u8, a.identity, node.identity),
+            .primary => a.primary.len > 0 and std.mem.eql(u8, a.primary, node.primary),
+            .scope_secondary => a.secondary.len > 0 and a.source_scope.len > 0 and std.mem.eql(u8, a.secondary, node.secondary) and std.mem.eql(u8, a.source_scope, node.source_scope),
+        };
+        if (matched) return idx;
+    }
+    return null;
+}
+
+fn emitCompareLine(writer: anytype, reason: []const u8, old_node: ?CompareNode, new_node: ?CompareNode) !void {
+    try writer.writeAll(reason);
+    try writer.writeAll("\t");
+    try writer.writeAll(if (old_node) |n| n.id else "");
+    try writer.writeAll("\t");
+    try writer.writeAll(if (new_node) |n| n.id else "");
+    try writer.writeAll("\t");
+    try writer.writeAll(if (new_node) |n| n.type_id else if (old_node) |n| n.type_id else "");
+    try writer.writeAll("\t");
+    try writer.writeAll(if (new_node) |n| n.xray_prot else if (old_node) |n| n.xray_prot else "");
+    try writer.writeAll("\t");
+    try writer.writeAll(if (old_node) |n| n.name else "");
+    try writer.writeAll("\t");
+    try writer.writeAll(if (new_node) |n| n.name else "");
+    try writer.writeAll("\n");
+}
+
+fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
+    const old_path = options.old_input orelse return error.InvalidArguments;
+    const new_path = options.new_input orelse return error.InvalidArguments;
+    const old_nodes = try loadCompareNodesAlloc(allocator, old_path, false);
+    defer {
+        for (old_nodes) |*node| node.deinit(allocator);
+        allocator.free(old_nodes);
+    }
+    const new_nodes = try loadCompareNodesAlloc(allocator, new_path, false);
+    defer {
+        for (new_nodes) |*node| node.deinit(allocator);
+        allocator.free(new_nodes);
+    }
+
+    const writer_file = if (options.output) |path|
+        try std.fs.cwd().createFile(path, .{ .truncate = true })
+    else
+        null;
+    defer if (writer_file) |*file| file.close();
+    const writer = if (writer_file) |file|
+        file.deprecatedWriter()
+    else
+        std.fs.File.stdout().deprecatedWriter();
+
+    const old_used = try allocator.alloc(bool, old_nodes.len);
+    defer allocator.free(old_used);
+    @memset(old_used, false);
+    const new_used = try allocator.alloc(bool, new_nodes.len);
+    defer allocator.free(new_used);
+    @memset(new_used, false);
+
+    for (old_nodes, 0..) |old_node, old_idx| {
+        const new_idx = findUnmatchedIdentity(new_nodes, new_used, .identity, old_node) orelse continue;
+        old_used[old_idx] = true;
+        new_used[new_idx] = true;
+    }
+
+    for (old_nodes, 0..) |old_node, old_idx| {
+        if (old_used[old_idx]) continue;
+        if (countUnmatchedIdentity(new_nodes, new_used, .primary, old_node) != 1) continue;
+        const new_idx = findUnmatchedIdentity(new_nodes, new_used, .primary, old_node) orelse continue;
+        old_used[old_idx] = true;
+        new_used[new_idx] = true;
+        try emitCompareLine(writer, "param", old_node, new_nodes[new_idx]);
+    }
+
+    for (old_nodes, 0..) |old_node, old_idx| {
+        if (old_used[old_idx]) continue;
+        if (countUnmatchedIdentity(new_nodes, new_used, .scope_secondary, old_node) != 1) continue;
+        const new_idx = findUnmatchedIdentity(new_nodes, new_used, .scope_secondary, old_node) orelse continue;
+        old_used[old_idx] = true;
+        new_used[new_idx] = true;
+        if (!std.mem.eql(u8, old_node.name, new_nodes[new_idx].name)) {
+            try emitCompareLine(writer, "rename", old_node, new_nodes[new_idx]);
+        }
+    }
+
+    for (old_nodes, 0..) |old_node, old_idx| {
+        if (old_used[old_idx]) continue;
+        try emitCompareLine(writer, "deleted", old_node, null);
+    }
+    for (new_nodes, 0..) |new_node, new_idx| {
+        if (new_used[new_idx]) continue;
+        try emitCompareLine(writer, "new", null, new_node);
+    }
 }
 
 fn parseBoolArg(value: []const u8) bool {
@@ -679,6 +951,35 @@ fn appendIdentityFieldsAlloc(allocator: std.mem.Allocator, base_json: []const u8
     try writeJsonString(writer, "_identity_ver");
     try writer.writeAll(":");
     try writeJsonString(writer, "1");
+    try writer.writeAll("}");
+    return try out.toOwnedSlice(allocator);
+}
+
+fn appendReuseFieldsAlloc(allocator: std.mem.Allocator, base_json: []const u8, id: []const u8, created_at: []const u8) ![]u8 {
+    if (base_json.len < 2 or base_json[base_json.len - 1] != '}') {
+        return try allocator.dupe(u8, base_json);
+    }
+
+    var out = std.ArrayList(u8){};
+    defer out.deinit(allocator);
+    const writer = out.writer(allocator);
+    try writer.writeAll(base_json[0 .. base_json.len - 1]);
+    if (base_json.len > 2) {
+        try writer.writeAll(",");
+    }
+    try writeJsonString(writer, "_id");
+    try writer.writeAll(":");
+    try writeJsonString(writer, id);
+    if (created_at.len > 0) {
+        try writer.writeAll(",");
+        try writeJsonString(writer, "_created_at");
+        try writer.writeAll(":");
+        if (isAsciiDigits(created_at)) {
+            try writer.writeAll(created_at);
+        } else {
+            try writeJsonString(writer, created_at);
+        }
+    }
     try writer.writeAll("}");
     return try out.toOwnedSlice(allocator);
 }
@@ -1013,6 +1314,14 @@ fn resolveHy2Tfo(tfo_switch: []const u8, raw_tfo: ?[]const u8) ?[]const u8 {
     if (std.mem.eql(u8, tfo_switch, "1")) return "1";
     if (std.mem.eql(u8, tfo_switch, "0")) return "0";
     return raw_tfo;
+}
+
+fn isAsciiDigits(value: []const u8) bool {
+    if (value.len == 0) return false;
+    for (value) |ch| {
+        if (ch < '0' or ch > '9') return false;
+    }
+    return true;
 }
 
 fn effectiveAllowInsecure(node: NormalizedNode, options: Options) bool {
