@@ -14,6 +14,8 @@ LOCAL_NODES_SPL="$DIR/ss_nodes_spl.txt"
 LOCAL_NODES_BAK="$DIR/ss_nodes_bak.txt"
 LOCAL_SPLIT_META="$DIR/local_split_meta.tsv"
 ACTIVE_SOURCE_TAGS="$DIR/active_source_tags.txt"
+SUB_CHANGED_SOURCE_TAGS_FILE="$DIR/changed_source_tags.txt"
+SUB_REMOVED_SOURCE_TAGS_FILE="$DIR/removed_source_tags.txt"
 SCHEMA2_RAW_JSONL="$DIR/schema2_nodes_raw.txt"
 SCHEMA2_EXPORT_JSONL="$DIR/schema2_nodes_export.txt"
 SCHEMA2_BEFORE_EXPORT_JSONL="$DIR/schema2_nodes_before_rewrite.txt"
@@ -230,6 +232,39 @@ sub_mark_active_source_tag(){
 	mkdir -p "${DIR}" >/dev/null 2>&1
 	touch "${ACTIVE_SOURCE_TAGS}"
 	grep -Fxq "${source_tag}" "${ACTIVE_SOURCE_TAGS}" 2>/dev/null || echo "${source_tag}" >> "${ACTIVE_SOURCE_TAGS}"
+}
+
+sub_mark_changed_source_tag(){
+	local source_tag="$1"
+	[ -n "${source_tag}" ] || return 1
+	[ "${source_tag}" = "user" ] && return 0
+	mkdir -p "${DIR}" >/dev/null 2>&1
+	touch "${SUB_CHANGED_SOURCE_TAGS_FILE}"
+	grep -Fxq "${source_tag}" "${SUB_CHANGED_SOURCE_TAGS_FILE}" 2>/dev/null || echo "${source_tag}" >> "${SUB_CHANGED_SOURCE_TAGS_FILE}"
+}
+
+sub_mark_removed_source_tag(){
+	local source_tag="$1"
+	[ -n "${source_tag}" ] || return 1
+	[ "${source_tag}" = "user" ] && return 0
+	mkdir -p "${DIR}" >/dev/null 2>&1
+	touch "${SUB_REMOVED_SOURCE_TAGS_FILE}"
+	grep -Fxq "${source_tag}" "${SUB_REMOVED_SOURCE_TAGS_FILE}" 2>/dev/null || echo "${source_tag}" >> "${SUB_REMOVED_SOURCE_TAGS_FILE}"
+}
+
+sub_get_single_changed_source_tag(){
+	local uniq_file="${SUB_CHANGED_SOURCE_TAGS_FILE}.uniq.$$"
+	[ -s "${SUB_CHANGED_SOURCE_TAGS_FILE}" ] || return 1
+	sort -u "${SUB_CHANGED_SOURCE_TAGS_FILE}" > "${uniq_file}" 2>/dev/null || {
+		rm -f "${uniq_file}"
+		return 1
+	}
+	[ "$(wc -l < "${uniq_file}" | tr -d ' ')" = "1" ] || {
+		rm -f "${uniq_file}"
+		return 1
+	}
+	sed -n '1p' "${uniq_file}"
+	rm -f "${uniq_file}"
 }
 
 sub_find_group_hash_by_label(){
@@ -1510,6 +1545,7 @@ sub_restore_from_parsed_cache(){
 	[ -n "${local_file}" ] && rm -f "${local_file}"
 	cp -f "${parsed_cache}" "${DIR}/local_${sub_count}_${short_hash}.txt"
 	sub_mark_active_source_tag "${short_hash}"
+	sub_mark_changed_source_tag "${short_hash}"
 	SUB_LOCAL_CHANGED=1
 	return 0
 }
@@ -3322,6 +3358,74 @@ sub_append_nodes_schema2(){
 	return 0
 }
 
+sub_sync_single_source_schema2(){
+	local source_tag="$1"
+	local input_file="$2"
+	local node_tool=""
+	local normalized_tmp=""
+	local plan_tmp=""
+
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
+	[ -n "${source_tag}" ] || return 1
+	[ -f "${input_file}" ] || return 1
+	node_tool="$(pick_node_tool 2>/dev/null)" || return 1
+	SUB_NODE_TOOL_PLAN_FILE_CURRENT=""
+	normalized_tmp="${input_file}.sync.normalized.$$"
+	plan_tmp="${input_file}.sync.plan.$$"
+	if "${node_tool}" sync-source --source-tag "${source_tag}" --input "${input_file}" --reuse-ids --normalized-output "${normalized_tmp}" --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
+		if [ -f "${normalized_tmp}" ];then
+			mv -f "${normalized_tmp}" "${input_file}"
+		else
+			rm -f "${normalized_tmp}" >/dev/null 2>&1
+		fi
+		[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+		sub_refresh_node_state
+		return 0
+	fi
+	rm -f "${normalized_tmp}" "${plan_tmp}" >/dev/null 2>&1
+	return 1
+}
+
+sub_try_sync_single_source_fast_path(){
+	local source_tag=""
+	local input_file=""
+
+	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
+	[ ! -s "${SUB_REMOVED_SOURCE_TAGS_FILE}" ] || return 1
+	source_tag="$(sub_get_single_changed_source_tag 2>/dev/null)" || return 1
+	[ -n "${source_tag}" ] || return 1
+	[ "${source_tag}" != "user" ] || return 1
+	input_file="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || return 1
+	[ -f "${input_file}" ] || return 1
+
+	SUB_FAST_APPEND_USED=0
+	sub_capture_active_nodes
+	echo_date "⌛节点写入前准备..."
+	echo_date "😀准备完成！"
+	echo_date "ℹ️开始写入节点..."
+	if ! sub_sync_single_source_schema2 "${source_tag}" "${input_file}";then
+		return 1
+	fi
+	echo_date "😀节点信息写入成功！"
+	sync
+	if [ "${SUB_FAST_APPEND_USED}" != "1" ] && sub_should_run_reference_postwrite;then
+		sub_reference_notice_reset
+		sub_apply_shunt_reference_rewrite
+		sub_collect_runtime_reference_notice_after_rewrite "${input_file}"
+		sub_reference_notice_commit
+	fi
+	if sub_should_refresh_runtime_caches;then
+		fss_refresh_node_direct_cache >/dev/null 2>&1
+		fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
+	fi
+	find $DIR -name "local_*.txt" | sort -n | xargs cat >$DIR/ss_nodes_new.txt
+	cp -f "$DIR/ss_nodes_new.txt" "${LOCAL_NODES_BAK}"
+	echo_date "🧹一点点清理工作..."
+	echo_date "🎉所有订阅任务完成，请等待6秒，或者手动关闭本窗口！"
+	echo_date "==================================================================="
+	return 0
+}
+
 sub_restore_active_nodes_after_rewrite(){
 	local input_file="$1"
 	local restore_current="" restore_failover="" first_id=""
@@ -3997,6 +4101,7 @@ remove_null(){
 				do
 					[ "${action}" = "remove" ] || continue
 					echo_date "⚠️检测到【${group_label:-${source_tag}}】机场已经不再订阅！尝试删除该订阅的节点！"
+					sub_mark_removed_source_tag "${source_tag}"
 					removed_any=1
 				done < "${prune_log}"
 				rm -f "${prune_log}" >/dev/null 2>&1
@@ -4027,6 +4132,7 @@ remove_null(){
 		fi
 		[ -n "${group_label}" ] || group_label=$(get_sub_group_fallback_by_hash "${group_hash}")
 		echo_date "⚠️检测到【${group_label}】机场已经不再订阅！尝试删除该订阅的节点！"
+		sub_mark_removed_source_tag "${group_hash}"
 		rm -rf "${file}"
 		removed_any=1
 	done < "${LOCAL_SPLIT_META}"
@@ -6264,6 +6370,7 @@ get_online_rule_now(){
 			}
 			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			sub_mark_changed_source_tag "${SUB_SOURCE_TAG}"
 			SUB_LOCAL_CHANGED=1
 		fi
 		return 0
@@ -6277,6 +6384,7 @@ get_online_rule_now(){
 		}
 		sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 		sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+		sub_mark_changed_source_tag "${SUB_SOURCE_TAG}"
 		SUB_LOCAL_CHANGED=1
 		return 0
 	fi
@@ -6385,6 +6493,9 @@ start_node_subscribe(){
 	fi
 	local ISNEW=$(find $DIR -name "local_*_*.txt")
 	if [ -n "${ISNEW}" ];then
+		if [ "${SUB_STORAGE_SCHEMA}" = "2" ] && sub_try_sync_single_source_fast_path;then
+			return 0
+		fi
 		find $DIR -name "local_*.txt" | sort -n | xargs cat >$DIR/ss_nodes_new.txt
 		local md5sum_old=$(sub_nodes_file_md5 ${LOCAL_NODES_BAK})
 		local md5sum_new=$(sub_nodes_file_md5 $DIR/ss_nodes_new.txt)
