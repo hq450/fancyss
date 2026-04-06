@@ -870,6 +870,13 @@ sub_filter_fancyss_jsonl_file(){
 	done < "${src_file}"
 }
 
+sub_keyword_patterns_can_use_tool(){
+	local combined="${KEY_WORDS_1}${KEY_WORDS_2}"
+	[ -n "${combined}" ] || return 0
+	printf '%s' "${combined}" | grep -Eq '[\[\]\(\)\{\}\*\+\?\^\$\\]' && return 1
+	return 0
+}
+
 sub_try_parse_uri_lines_with_tool(){
 	local input_file="$1"
 	local output_file="$2"
@@ -888,12 +895,14 @@ sub_try_parse_uri_lines_with_tool(){
 	local subtool_log_level="summary"
 	local reuse_ids_from=""
 	local diff_output_file=""
+	local tool_can_filter=1
 
 	[ -f "${input_file}" ] || return 1
 	[ -n "${output_file}" ] || return 1
 	sub_tool="$(pick_sub_tool 2>/dev/null)" || return 1
 	reuse_ids_from="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || reuse_ids_from=""
 	SUB_TOOL_DIFF_FILE_CURRENT=""
+	sub_keyword_patterns_can_use_tool || tool_can_filter=0
 	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
 	{
 		read -r effective_hy2_up
@@ -924,8 +933,10 @@ sub_try_parse_uri_lines_with_tool(){
 	[ -n "${SUB_AIRPORT_IDENTITY}" ] && set -- "$@" --airport-identity "${SUB_AIRPORT_IDENTITY}"
 	[ -n "${SUB_SOURCE_SCOPE}" ] && set -- "$@" --source-scope "${SUB_SOURCE_SCOPE}"
 	[ -n "${reuse_ids_from}" ] && set -- "$@" --reuse-ids-from "${reuse_ids_from}"
+	[ "${tool_can_filter}" = "1" ] && [ -n "${KEY_WORDS_1}" ] && set -- "$@" --exclude-pattern "${KEY_WORDS_1}"
+	[ "${tool_can_filter}" = "1" ] && [ -n "${KEY_WORDS_2}" ] && set -- "$@" --include-pattern "${KEY_WORDS_2}"
 	set -- "$@" --keep-info-node "${SUB_KEEP_INFO_NODE}"
-	if [ -n "${reuse_ids_from}" ] && [ -z "${KEY_WORDS_1_RAW}" ] && [ -z "${KEY_WORDS_2_RAW}" ];then
+	if [ -n "${reuse_ids_from}" ] && [ "${tool_can_filter}" = "1" ];then
 		diff_output_file="${output_file}.diff.$$"
 		set -- "$@" --compare-with "${reuse_ids_from}" --diff-output "${diff_output_file}"
 	fi
@@ -936,22 +947,25 @@ sub_try_parse_uri_lines_with_tool(){
 		return 1
 	}
 
-	sub_filter_fancyss_jsonl_file "${tmp_output}" "${filtered_output}" || {
-		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" >/dev/null 2>&1
-		return 1
-	}
-	mv -f "${filtered_output}" "${output_file}"
-	rm -f "${tmp_output}" "${subtool_log_file}" >/dev/null 2>&1
+	if [ "${tool_can_filter}" = "1" ];then
+		mv -f "${tmp_output}" "${output_file}"
+	else
+		sub_filter_fancyss_jsonl_file "${tmp_output}" "${filtered_output}" || {
+			rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" >/dev/null 2>&1
+			return 1
+		}
+		mv -f "${filtered_output}" "${output_file}"
+		rm -f "${tmp_output}" >/dev/null 2>&1
+	fi
+	rm -f "${subtool_log_file}" >/dev/null 2>&1
 	if [ -s "${output_file}" ];then
 		sub_log_fancyss_parse_summary "${output_file}"
 		sub_log_fancyss_parse_nodes "${output_file}"
-		if [ -z "${KEY_WORDS_1_RAW}" ] && [ -z "${KEY_WORDS_2_RAW}" ];then
-			local kept_total=0
-			kept_total=$(wc -l < "${output_file}" 2>/dev/null | tr -d ' ')
-			[ -n "${kept_total}" ] || kept_total=0
-			if [ -n "${NODE_NU_TT}" ] && [ "${NODE_NU_TT}" -ge "${kept_total}" ] 2>/dev/null;then
-				exclude=$((NODE_NU_TT - kept_total))
-			fi
+		local kept_total=0
+		kept_total=$(wc -l < "${output_file}" 2>/dev/null | tr -d ' ')
+		[ -n "${kept_total}" ] || kept_total=0
+		if [ -n "${NODE_NU_TT}" ] && [ "${NODE_NU_TT}" -ge "${kept_total}" ] 2>/dev/null;then
+			exclude=$((NODE_NU_TT - kept_total))
 		fi
 		if [ -n "${diff_output_file}" ] && [ -f "${diff_output_file}" ];then
 			SUB_TOOL_DIFF_FILE_CURRENT="${diff_output_file}"

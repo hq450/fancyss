@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.3";
+const app_version = "0.1.4";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -72,6 +72,8 @@ const Options = struct {
     output: ?[]const u8 = null,
     compare_with: ?[]const u8 = null,
     diff_output: ?[]const u8 = null,
+    exclude_pattern: ?[]const u8 = null,
+    include_pattern: ?[]const u8 = null,
     group: ?[]const u8 = null,
     source_tag: ?[]const u8 = null,
     source_url_hash: ?[]const u8 = null,
@@ -193,7 +195,7 @@ fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         "Usage:\n" ++
         "  sub-tool inspect [--input path]\n" ++
-        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--exclude-pattern pattern] [--include-pattern pattern] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
         "  sub-tool compare-fancyss --old path --new path [--output path]\n" ++
         "  sub-tool summary [--input path]\n" ++
         "  sub-tool version\n",
@@ -241,6 +243,14 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.diff_output = args[i];
+        } else if (std.mem.eql(u8, arg, "--exclude-pattern")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.exclude_pattern = args[i];
+        } else if (std.mem.eql(u8, arg, "--include-pattern")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.include_pattern = args[i];
         } else if (std.mem.eql(u8, arg, "--group")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -404,13 +414,17 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
                 for (rendered_nodes.items) |*node| node.deinit(allocator);
                 rendered_nodes.deinit(allocator);
             }
+            var exclude_filter = try KeywordFilter.init(allocator, options.exclude_pattern);
+            defer exclude_filter.deinit(allocator);
+            var include_filter = try KeywordFilter.init(allocator, options.include_pattern);
+            defer include_filter.deinit(allocator);
 
             for (result.nodes.items) |node| {
                 const json = try buildFancyssNodeJsonAlloc(allocator, node, options);
                 if (json == null) continue;
                 defer allocator.free(json.?);
                 const parsed_node = try parseCompareNodeAlloc(allocator, json.?, true);
-                if (!options.keep_info_node and isInfoNodeName(parsed_node.name)) {
+                if (!(try shouldKeepRenderedNode(allocator, parsed_node, &exclude_filter, &include_filter, options.keep_info_node))) {
                     var filtered = parsed_node;
                     filtered.deinit(allocator);
                     continue;
@@ -551,6 +565,7 @@ const CompareNode = struct {
     id: []u8,
     created_at: []u8,
     name: []u8,
+    server: []u8,
     type_id: []u8,
     xray_prot: []u8,
     identity: []u8,
@@ -563,6 +578,7 @@ const CompareNode = struct {
         allocator.free(self.id);
         allocator.free(self.created_at);
         allocator.free(self.name);
+        allocator.free(self.server);
         allocator.free(self.type_id);
         allocator.free(self.xray_prot);
         allocator.free(self.identity);
@@ -615,6 +631,13 @@ fn canonicalSourceMetaAlloc(allocator: std.mem.Allocator, obj: std.json.ObjectMa
         .source_scope = existing_scope,
         .source_url_hash = source_url_hash,
     };
+}
+
+fn firstJsonObjectTextAlloc(allocator: std.mem.Allocator, obj: std.json.ObjectMap, keys: []const []const u8) !?[]u8 {
+    for (keys) |key| {
+        if (try jsonObjectTextAlloc(allocator, obj, key)) |value| return value;
+    }
+    return null;
 }
 
 fn writeCanonicalCompareValue(writer: anytype, allocator: std.mem.Allocator, key: []const u8, value: std.json.Value) !void {
@@ -717,6 +740,10 @@ fn parseCompareNodeAlloc(allocator: std.mem.Allocator, line: []const u8, keep_ra
             break :blk if (created) |value| value else try allocator.dupe(u8, "");
         },
         .name = name,
+        .server = blk: {
+            const value = try firstJsonObjectTextAlloc(allocator, obj, &.{ "server", "hy2_server", "naive_server" });
+            break :blk if (value) |text| text else try allocator.dupe(u8, "");
+        },
         .type_id = blk: {
             const value = try jsonObjectTextAlloc(allocator, obj, "type");
             break :blk if (value) |text| text else try allocator.dupe(u8, "");
@@ -730,6 +757,51 @@ fn parseCompareNodeAlloc(allocator: std.mem.Allocator, line: []const u8, keep_ra
         .secondary = secondary,
         .source_scope = try allocator.dupe(u8, source_meta.source_scope),
     };
+}
+
+const KeywordFilter = struct {
+    tokens: std.ArrayList([]u8),
+
+    fn init(allocator: std.mem.Allocator, pattern: ?[]const u8) !KeywordFilter {
+        var filter = KeywordFilter{ .tokens = std.ArrayList([]u8){} };
+        if (pattern) |value| {
+            var parts = std.mem.splitScalar(u8, value, '|');
+            while (parts.next()) |part| {
+                if (part.len == 0) continue;
+                try filter.tokens.append(allocator, try allocator.dupe(u8, part));
+            }
+        }
+        return filter;
+    }
+
+    fn deinit(self: *KeywordFilter, allocator: std.mem.Allocator) void {
+        for (self.tokens.items) |token| allocator.free(token);
+        self.tokens.deinit(allocator);
+    }
+
+    fn enabled(self: *const KeywordFilter) bool {
+        return self.tokens.items.len > 0;
+    }
+
+    fn matches(self: *const KeywordFilter, text: []const u8) bool {
+        if (self.tokens.items.len == 0) return false;
+        for (self.tokens.items) |token| {
+            if (std.mem.indexOf(u8, text, token) != null) return true;
+        }
+        return false;
+    }
+};
+
+fn shouldKeepRenderedNode(allocator: std.mem.Allocator, node: CompareNode, exclude_filter: *const KeywordFilter, include_filter: *const KeywordFilter, keep_info_node: bool) !bool {
+    if (!keep_info_node and isInfoNodeName(node.name)) return false;
+    if (!exclude_filter.enabled() and !include_filter.enabled()) return true;
+    const haystack = try std.fmt.allocPrint(allocator, "{s} {s}", .{ node.name, node.server });
+    defer allocator.free(haystack);
+    const exclude_hit = exclude_filter.matches(haystack);
+    const include_hit = include_filter.matches(haystack);
+    if (exclude_filter.enabled() and include_filter.enabled()) return !exclude_hit and include_hit;
+    if (exclude_filter.enabled()) return !exclude_hit;
+    return include_hit;
 }
 
 fn loadCompareNodesAlloc(allocator: std.mem.Allocator, path: []const u8, keep_raw: bool) ![]CompareNode {
