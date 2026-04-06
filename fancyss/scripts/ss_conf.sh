@@ -132,6 +132,9 @@ backup_tar(){
 	if [ -x "/koolshare/bin/sub-tool" ];then
 		cp /koolshare/bin/sub-tool ${TARGET_FOLDER}/bin/
 	fi
+	if [ -x "/koolshare/bin/node-tool" ];then
+		cp /koolshare/bin/node-tool ${TARGET_FOLDER}/bin/
+	fi
 	cp /koolshare/bin/curl-fancyss ${TARGET_FOLDER}/bin/
 	cp /koolshare/bin/dnsclient ${TARGET_FOLDER}/bin/
 	if [ -f "/koolshare/bin/sslocal" ];then

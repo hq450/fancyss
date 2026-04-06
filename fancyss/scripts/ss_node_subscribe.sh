@@ -500,6 +500,22 @@ pick_sub_tool(){
 	return 1
 }
 
+pick_node_tool(){
+	if command -v node-tool >/dev/null 2>&1; then
+		if "$(command -v node-tool)" version >/dev/null 2>&1; then
+			command -v node-tool
+			return 0
+		fi
+	fi
+	if [ -x "/koolshare/bin/node-tool" ];then
+		if /koolshare/bin/node-tool version >/dev/null 2>&1; then
+			echo "/koolshare/bin/node-tool"
+			return 0
+		fi
+	fi
+	return 1
+}
+
 sub_tool_inspect_file(){
 	local file_path="$1"
 	local output_file="$2"
@@ -1548,6 +1564,28 @@ sub_prepare_schema2_raw_jsonl(){
 sub_prepare_schema2_export_jsonl(){
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
 	[ -f "${SCHEMA2_EXPORT_JSONL}" ] && return 0
+	local node_tool=""
+	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+	if [ -n "${node_tool}" ];then
+		if "${node_tool}" node2json --format jsonl > "${SCHEMA2_EXPORT_JSONL}.tmp.$$" 2>/dev/null;then
+			if [ ! -s "${SCHEMA2_EXPORT_JSONL}.tmp.$$" ];then
+				: > "${SCHEMA2_EXPORT_JSONL}"
+				rm -f "${SCHEMA2_EXPORT_JSONL}.tmp.$$"
+				return 0
+			fi
+			if sub_file_has_identity_fields "${SCHEMA2_EXPORT_JSONL}.tmp.$$";then
+				mv -f "${SCHEMA2_EXPORT_JSONL}.tmp.$$" "${SCHEMA2_EXPORT_JSONL}"
+			else
+				sub_prepare_identity_view_file "${SCHEMA2_EXPORT_JSONL}.tmp.$$" "${SCHEMA2_EXPORT_JSONL}" "" "" "" "" || {
+					rm -f "${SCHEMA2_EXPORT_JSONL}.tmp.$$" "${SCHEMA2_EXPORT_JSONL}"
+					return 1
+				}
+				rm -f "${SCHEMA2_EXPORT_JSONL}.tmp.$$"
+			fi
+			return 0
+		fi
+		rm -f "${SCHEMA2_EXPORT_JSONL}.tmp.$$" >/dev/null 2>&1
+	fi
 	local tmp_export="${SCHEMA2_EXPORT_JSONL}.tmp.$$"
 	sub_prepare_schema2_raw_jsonl || return 1
 	if [ ! -s "${SCHEMA2_RAW_JSONL}" ];then
@@ -1748,8 +1786,14 @@ sub_find_node_id_by_identity_in_file(){
 
 sub_export_local_node_json(){
 	local node_id="$1"
+	local node_tool=""
 	[ -z "${node_id}" ] && return 1
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		if [ -n "${node_tool}" ];then
+			"${node_tool}" node2json --ids "${node_id}" --format jsonl 2>/dev/null | sed -n '1p'
+			return 0
+		fi
 		fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null | jq -c '
 			def normalize_json_config:
 				. as $raw
@@ -2730,6 +2774,8 @@ sub_apply_existing_ids_by_identity(){
 
 sub_write_nodes_schema2(){
 	local input_file="$1"
+	local node_tool=""
+	local export_tmp=""
 	local old_order_csv="" next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
 	local old_export_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
 	local new_ids_file="${input_file}.new_ids"
@@ -2739,6 +2785,19 @@ sub_write_nodes_schema2(){
 	local prepared_reuse_temp=0
 
 	[ -f "${input_file}" ] || return 1
+	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+	if [ -n "${node_tool}" ];then
+		if "${node_tool}" json2node --input "${input_file}" --mode replace --reuse-ids >/dev/null 2>&1;then
+			export_tmp="${input_file}.mapped.$$"
+			if "${node_tool}" node2json --format jsonl > "${export_tmp}" 2>/dev/null;then
+				mv -f "${export_tmp}" "${input_file}"
+			else
+				rm -f "${export_tmp}" >/dev/null 2>&1
+			fi
+			fss_clear_webtest_runtime_results
+			return 0
+		fi
+	fi
 	mapped_file="${input_file}.mapped"
 	meta_file="${input_file}.meta"
 	identity_file="${input_file}.identity"
@@ -2910,6 +2969,8 @@ sub_can_fast_append_schema2(){
 
 sub_append_nodes_schema2(){
 	local input_file="$1"
+	local node_tool=""
+	local export_tmp=""
 	local assigned_file="${input_file}.append"
 	local meta_file="${input_file}.append.meta"
 	local new_ids_file="${input_file}.append.ids"
@@ -2918,6 +2979,19 @@ sub_append_nodes_schema2(){
 
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
 	[ -f "${input_file}" ] || return 1
+	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+	if [ -n "${node_tool}" ];then
+		if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids >/dev/null 2>&1;then
+			export_tmp="${input_file}.append_export.$$"
+			if "${node_tool}" node2json --format jsonl > "${export_tmp}" 2>/dev/null;then
+				mv -f "${export_tmp}" "${input_file}"
+			else
+				rm -f "${export_tmp}" >/dev/null 2>&1
+			fi
+			fss_clear_webtest_runtime_results
+			return 0
+		fi
+	fi
 
 	old_order_csv=$(dbus get fss_node_order)
 	next_id=$(dbus get fss_node_next_id)
@@ -3814,9 +3888,15 @@ get_type_name() {
 remove_all_node(){
 	echo_date "删除所有节点信息！"
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		fss_clear_v2_nodes
-		dbus set fss_data_schema=2
-		dbus set fss_node_next_id=1
+		local node_tool=""
+		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		if [ -n "${node_tool}" ];then
+			"${node_tool}" delete-nodes --all >/dev/null 2>&1 || return 1
+		else
+			fss_clear_v2_nodes
+			dbus set fss_data_schema=2
+			dbus set fss_node_next_id=1
+		fi
 	else
 	confs=$(dbus list ssconf_basic_ | cut -d "=" -f1 | awk '{print $NF}')
 	for conf in ${confs}
@@ -3845,6 +3925,31 @@ remove_sub_node(){
 	echo_date "删除所有订阅节点信息...自添加的节点不受影响！"
 	#remove_node_info
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		local node_tool=""
+		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		if [ -n "${node_tool}" ];then
+			local subscribe_count
+			subscribe_count=$("${node_tool}" stat --format json 2>/dev/null | sed -n 's/.*"subscribe":\([0-9][0-9]*\).*/\1/p' | sed -n '1p')
+			[ -n "${subscribe_count}" ] || subscribe_count=0
+			if [ "${subscribe_count}" = "0" ];then
+				echo_date "节点列表内不存在任何订阅来源节点，退出！"
+				return 1
+			fi
+			"${node_tool}" delete-nodes --all-subscribe >/dev/null 2>&1 || return 1
+			for conf1 in $(dbus list ss_online_group|awk -F"=" '{print $1}')
+			do
+				dbus remove ${conf1}
+			done
+			for conf2 in $(dbus list ss_online_hash|awk -F"=" '{print $1}')
+			do
+				dbus remove ${conf2}
+			done
+			fss_refresh_node_direct_cache >/dev/null 2>&1
+			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
+			echo_date "所有订阅节点信息已经成功删除！"
+			sub_refresh_node_state
+			return 0
+		fi
 		local remove_flag=0
 		local keep_order=""
 		local first_keep=""

@@ -37,6 +37,7 @@ rm -rf /koolshare/bin/naive
 rm -rf /koolshare/bin/ipt2socks
 rm -rf /koolshare/bin/dnsclient
 rm -rf /koolshare/bin/sslocal
+rm -rf /koolshare/bin/node-tool
 
 # 如果系统里有jq，删掉/koolshare/bin/jq
 if [ -n /usr/bin/jq ];then

@@ -119,6 +119,15 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/sub-tool/sub-tool-${SUBTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-hnd/sub-tool
 	cp -rf ${CURR_PATH}/binaries/sub-tool/sub-tool-${SUBTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/sub-tool
 	cp -rf ${CURR_PATH}/binaries/sub-tool/sub-tool-${SUBTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/sub-tool
+
+	local NODETOOL_VER="v0.1.0"
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/node-tool
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/node-tool
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/node-tool
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/node-tool
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-hnd/node-tool
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/node-tool
+	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/node-tool
 }
 
 gen_folder(){
