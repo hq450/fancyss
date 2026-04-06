@@ -2587,13 +2587,35 @@ sub_node_tool_plan_failover_changed(){
 	' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null
 }
 
+sub_is_info_node_name(){
+	local name="$1"
+	case "${name}" in
+	Expire:*|Expire：*|Traffic:*|Traffic：*|Sync:*|Sync：*|剩余流量:*|剩余流量：*|套餐到期:*|套餐到期：*|订阅到期:*|订阅到期：*|到期时间:*|到期时间：*|流量重置:*|流量重置：*|更新于:*|更新于：*|更新时间:*|更新时间：*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
 sub_node_tool_plan_needs_runtime_cache_refresh(){
 	[ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 0
 	[ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 0
 	awk -F '\t' '
-		$1 == "add" || $1 == "remove" || $1 == "move" { found = 1; exit }
+		function is_info_name(name) {
+			return name ~ /^(Expire:|Expire：|Traffic:|Traffic：|Sync:|Sync：|剩余流量:|剩余流量：|套餐到期:|套餐到期：|订阅到期:|订阅到期：|到期时间:|到期时间：|流量重置:|流量重置：|更新于:|更新于：|更新时间:|更新时间：)/
+		}
+		$1 == "add" || $1 == "remove" || $1 == "move" {
+			if (!is_info_name($5)) { found = 1; exit }
+			next
+		}
+		$1 == "update" {
+			last_update_name = $5
+			next
+		}
 		$1 == "field" {
-			if ($3 != "name" && $3 != "group") { found = 1; exit }
+			if (is_info_name(last_update_name) && ($3 == "name" || $3 == "group")) next
+			found = 1
+			exit
 		}
 		END { exit(found ? 0 : 1) }
 	' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null
