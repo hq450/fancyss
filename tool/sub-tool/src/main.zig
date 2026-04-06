@@ -2914,7 +2914,7 @@ fn looksLikeTextError(input: []const u8) bool {
 
 fn maybeDecodeBase64Text(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
     if (!looksLikeBase64(input)) return null;
-    return decodeBase64SmartAlloc(allocator, input) catch null;
+    return decodeBase64TextRelaxedAlloc(allocator, input) catch null;
 }
 
 fn maybeDecodeBase64Utf8Alloc(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
@@ -2958,6 +2958,20 @@ fn maybeDecodeBase64JsonAlloc(allocator: std.mem.Allocator, input: []const u8) !
 fn maybeDecodeBase64Lossy(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
     if (!looksLikeBase64(input)) return null;
     return decodeBase64SmartAlloc(allocator, input) catch null;
+}
+
+fn decodeBase64TextRelaxedAlloc(allocator: std.mem.Allocator, input: []const u8) ![]u8 {
+    return decodeBase64SmartAlloc(allocator, input) catch |err| switch (err) {
+        error.InvalidBase64, error.InvalidPadding, error.InvalidCharacter => blk: {
+            const cleaned = try stripWhitespaceAlloc(allocator, input);
+            defer allocator.free(cleaned);
+            if (cleaned.len > 1 and cleaned.len % 4 == 1) {
+                break :blk try decodeBase64Alloc(allocator, cleaned[0 .. cleaned.len - 1], std.mem.indexOfAny(u8, cleaned, "-_") != null);
+            }
+            return err;
+        },
+        else => return err,
+    };
 }
 
 fn looksLikeBase64(input: []const u8) bool {
@@ -3141,6 +3155,14 @@ fn countUriSchemes(map: *std.StringHashMap(usize), content: []const u8) struct {
 test "inspect base64 uri lines" {
     const allocator = std.testing.allocator;
     const src = "c3M6Ly9ZV1Z6TFRJMU5pMW5ZMjA2Y0dGemN6QkFaWGhoYlhCc1pTNWpiMjA2TkRReg09I05vZGU=\n";
+    const info = try detectContentInfo(allocator, src);
+    defer allocator.free(info.content);
+    try std.testing.expectEqual(InputKind.base64_uri_lines, info.kind);
+}
+
+test "inspect malformed base64 uri lines with trailing char" {
+    const allocator = std.testing.allocator;
+    const src = "c3M6Ly9ZV1Z6TFRJMU5pMW5ZMjA2Y0dGemN6QkFaWGhoYlhCc1pTNWpiMjA2TkRReg09I05vZGU=o\n";
     const info = try detectContentInfo(allocator, src);
     defer allocator.free(info.content);
     try std.testing.expectEqual(InputKind.base64_uri_lines, info.kind);
