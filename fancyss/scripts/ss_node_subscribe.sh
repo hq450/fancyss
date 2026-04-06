@@ -905,7 +905,10 @@ sub_try_parse_uri_lines_with_tool(){
 	reuse_ids_from="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || reuse_ids_from=""
 	SUB_TOOL_DIFF_FILE_CURRENT=""
 	SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
-	sub_keyword_patterns_can_use_tool || tool_can_filter=0
+	if ! sub_keyword_patterns_can_use_tool;then
+		tool_can_filter=0
+		echo_date "⚠️当前订阅过滤表达式过于复杂，已回退到兼容模式。请改用简单关键词格式，多个关键词用英文逗号分隔，例如：香港,新加坡,JP"
+	fi
 	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
 	{
 		read -r effective_hy2_up
