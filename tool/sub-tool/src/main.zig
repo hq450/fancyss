@@ -177,7 +177,7 @@ pub fn main() void {
 }
 
 fn run() !void {
-    const allocator = if (builtin.link_libc) std.heap.c_allocator else std.heap.page_allocator;
+    const allocator = std.heap.c_allocator;
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -2544,8 +2544,8 @@ fn detectScheme(line: []const u8) ?[]const u8 {
 }
 
 fn requireBody(line: []const u8, expected_scheme: []const u8) ![]const u8 {
-    const prefix = try std.fmt.allocPrint(std.heap.page_allocator, "{s}://", .{expected_scheme});
-    defer std.heap.page_allocator.free(prefix);
+    const prefix = try std.fmt.allocPrint(std.heap.c_allocator, "{s}://", .{expected_scheme});
+    defer std.heap.c_allocator.free(prefix);
     if (!std.mem.startsWith(u8, line, prefix)) return error.InvalidUri;
     return line[prefix.len..];
 }
@@ -2668,16 +2668,16 @@ fn looksLikeJson(input: []const u8) bool {
 }
 
 fn looksLikeHtml(input: []const u8) bool {
-    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
-    defer std.heap.page_allocator.free(lower);
+    const lower = lowercaseHeadAlloc(std.heap.c_allocator, input) catch return false;
+    defer std.heap.c_allocator.free(lower);
     return std.mem.startsWith(u8, lower, "<!doctype html") or
         std.mem.startsWith(u8, lower, "<html") or
         std.mem.indexOf(u8, lower, "<html") != null;
 }
 
 fn looksLikeHtmlLoginPage(input: []const u8) bool {
-    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
-    defer std.heap.page_allocator.free(lower);
+    const lower = lowercaseHeadAlloc(std.heap.c_allocator, input) catch return false;
+    defer std.heap.c_allocator.free(lower);
     return std.mem.indexOf(u8, lower, "cloudflare access") != null or
         std.mem.indexOf(u8, lower, "sign in") != null or
         std.mem.indexOf(u8, lower, "login") != null or
@@ -2686,8 +2686,8 @@ fn looksLikeHtmlLoginPage(input: []const u8) bool {
 }
 
 fn looksLikeHtmlRedirectPage(input: []const u8) bool {
-    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
-    defer std.heap.page_allocator.free(lower);
+    const lower = lowercaseHeadAlloc(std.heap.c_allocator, input) catch return false;
+    defer std.heap.c_allocator.free(lower);
     return std.mem.indexOf(u8, lower, "window.location.replace(") != null or
         std.mem.indexOf(u8, lower, "window.location.href") != null or
         std.mem.indexOf(u8, lower, "window.location=") != null or
@@ -2799,8 +2799,8 @@ fn isMetaRefreshTerminator(ch: u8) bool {
 }
 
 fn looksLikeClashYaml(input: []const u8) bool {
-    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
-    defer std.heap.page_allocator.free(lower);
+    const lower = lowercaseHeadAlloc(std.heap.c_allocator, input) catch return false;
+    defer std.heap.c_allocator.free(lower);
     const has_proxies = std.mem.indexOf(u8, lower, "proxies:") != null or std.mem.indexOf(u8, lower, "\nproxies:") != null;
     if (!has_proxies) return false;
     return std.mem.indexOf(u8, lower, "proxy-groups:") != null or
@@ -2869,8 +2869,8 @@ fn isSupportedScheme(scheme: []const u8) bool {
 }
 
 fn looksLikeTextError(input: []const u8) bool {
-    const lower = lowercaseHeadAlloc(std.heap.page_allocator, input) catch return false;
-    defer std.heap.page_allocator.free(lower);
+    const lower = lowercaseHeadAlloc(std.heap.c_allocator, input) catch return false;
+    defer std.heap.c_allocator.free(lower);
     return std.mem.indexOf(u8, lower, "error:") != null or
         std.mem.indexOf(u8, lower, "参数缺失") != null or
         std.mem.indexOf(u8, lower, "请重新获取订阅") != null or
@@ -3064,7 +3064,7 @@ fn decodeOptionalB64QueryValue(allocator: std.mem.Allocator, query: []const u8, 
 }
 
 fn queryBoolValue(query: []const u8, key: []const u8) !?bool {
-    var buf_allocator = std.heap.page_allocator;
+    var buf_allocator = std.heap.c_allocator;
     const value = try queryValueAlloc(buf_allocator, query, key);
     defer if (value) |v| buf_allocator.free(v);
     if (value) |v| {
