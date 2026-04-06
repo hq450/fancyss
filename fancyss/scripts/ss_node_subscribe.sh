@@ -2743,20 +2743,13 @@ sub_apply_shunt_reference_rewrite(){
 
 sub_validate_jsonl_file(){
 	local file="$1"
-	local total=0 valid=0
 	[ -f "${file}" ] || return 1
-	while IFS= read -r line
-	do
-		[ -n "${line}" ] || continue
-		total=$((total + 1))
-		printf '%s\n' "${line}" | jq -c . >/dev/null 2>&1 || {
-			echo_date "⚠️检测到无效的节点JSON，第${total}行校验失败！"
-			return 1
-		}
-		valid=$((valid + 1))
-	done < "${file}"
-	[ "${total}" -gt 0 ] || return 1
-	[ "${valid}" = "${total}" ]
+	grep -q '[^[:space:]]' "${file}" 2>/dev/null || return 1
+	jq -e -s 'length > 0 and all(.[]; type == "object")' "${file}" >/dev/null 2>&1 || {
+		echo_date "⚠️检测到无效的节点JSON，文件整体校验失败！"
+		return 1
+	}
+	return 0
 }
 
 sub_count_group_nodes(){
@@ -2846,7 +2839,7 @@ sub_apply_existing_ids_by_identity(){
 sub_write_nodes_schema2(){
 	local input_file="$1"
 	local node_tool=""
-	local export_tmp=""
+	local normalized_tmp=""
 	local plan_tmp=""
 	local old_order_csv="" next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
 	local old_export_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
@@ -2861,18 +2854,18 @@ sub_write_nodes_schema2(){
 	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
 	if [ -n "${node_tool}" ];then
 		plan_tmp="${input_file}.plan.$$"
-		if "${node_tool}" json2node --input "${input_file}" --mode replace --reuse-ids --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
-			export_tmp="${input_file}.mapped.$$"
-			if "${node_tool}" node2json --format jsonl > "${export_tmp}" 2>/dev/null;then
-				mv -f "${export_tmp}" "${input_file}"
+		normalized_tmp="${input_file}.normalized.$$"
+		if "${node_tool}" json2node --input "${input_file}" --mode replace --reuse-ids --normalized-output "${normalized_tmp}" --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
+			if [ -f "${normalized_tmp}" ];then
+				mv -f "${normalized_tmp}" "${input_file}"
 			else
-				rm -f "${export_tmp}" >/dev/null 2>&1
+				rm -f "${normalized_tmp}" >/dev/null 2>&1
 			fi
 			[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
 			fss_clear_webtest_runtime_results
 			return 0
 		fi
-		rm -f "${plan_tmp}" >/dev/null 2>&1
+		rm -f "${plan_tmp}" "${normalized_tmp}" >/dev/null 2>&1
 	fi
 	mapped_file="${input_file}.mapped"
 	meta_file="${input_file}.meta"
@@ -3046,7 +3039,7 @@ sub_can_fast_append_schema2(){
 sub_append_nodes_schema2(){
 	local input_file="$1"
 	local node_tool=""
-	local export_tmp=""
+	local normalized_tmp=""
 	local assigned_file="${input_file}.append"
 	local meta_file="${input_file}.append.meta"
 	local new_ids_file="${input_file}.append.ids"
@@ -3057,16 +3050,17 @@ sub_append_nodes_schema2(){
 	[ -f "${input_file}" ] || return 1
 	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
 	if [ -n "${node_tool}" ];then
-		if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids >/dev/null 2>&1;then
-			export_tmp="${input_file}.append_export.$$"
-			if "${node_tool}" node2json --format jsonl > "${export_tmp}" 2>/dev/null;then
-				mv -f "${export_tmp}" "${input_file}"
+		normalized_tmp="${input_file}.append_normalized.$$"
+		if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids --normalized-output "${normalized_tmp}" >/dev/null 2>&1;then
+			if [ -f "${normalized_tmp}" ];then
+				mv -f "${normalized_tmp}" "${input_file}"
 			else
-				rm -f "${export_tmp}" >/dev/null 2>&1
+				rm -f "${normalized_tmp}" >/dev/null 2>&1
 			fi
 			fss_clear_webtest_runtime_results
 			return 0
 		fi
+		rm -f "${normalized_tmp}" >/dev/null 2>&1
 	fi
 
 	old_order_csv=$(dbus get fss_node_order)
