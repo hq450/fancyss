@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.5";
+const app_version = "0.1.6";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -137,6 +137,7 @@ const ContentInfo = struct {
 const ParseResult = struct {
     nodes: std.ArrayList(NormalizedNode),
     total_lines: usize = 0,
+    uri_lines: usize = 0,
     valid_lines: usize = 0,
     invalid_lines: usize = 0,
     ignored_lines: usize = 0,
@@ -611,6 +612,10 @@ fn writeFancyssParseSummaryFile(allocator: std.mem.Allocator, path: []const u8, 
     try writeJsonString(writer, "total_lines");
     try writer.writeAll(":");
     try writer.print("{d}", .{result.total_lines});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "uri_lines");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{result.uri_lines});
     try writer.writeAll(",");
     try writeJsonString(writer, "valid_lines");
     try writer.writeAll(":");
@@ -2071,6 +2076,9 @@ fn parseSubscription(allocator: std.mem.Allocator, raw: []const u8, options: Opt
         if (line[0] == '#') {
             result.ignored_lines += 1;
             continue;
+        }
+        if (detectScheme(line) != null) {
+            result.uri_lines += 1;
         }
 
         const node = parseLine(allocator, line, options) catch |err| switch (err) {

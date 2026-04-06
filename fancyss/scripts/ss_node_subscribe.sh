@@ -1273,6 +1273,7 @@ sub_log_fancyss_parse_summary_json(){
 	[ "${naive}" -gt "0" ] && echo_date "🟧Naïve节点：${naive}个"
 	[ "${tuic}" -gt "0" ] && echo_date "🟫tuic节点：${tuic}个"
 	[ "${hy2}" -gt "0" ] && echo_date "🟤hysteria2节点：${hy2}个"
+	return 0
 }
 
 sub_collect_protocol_counts_from_decoded_file(){
@@ -1307,7 +1308,8 @@ sub_collect_protocol_counts_from_summary(){
 		echo "0 0 0 0 0 0 0 0 0 0"
 		return 1
 	}
-	raw=$(sub_get_parse_summary_value "${file}" "total_lines")
+	raw=$(sub_get_parse_summary_value "${file}" "uri_lines")
+	[ -n "${raw}" ] || raw=$(sub_get_parse_summary_value "${file}" "total_lines")
 	ss=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "ss")
 	ssr=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "ssr")
 	vmess=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "vmess")
