@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.7";
+const app_version = "0.1.8";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -937,7 +937,9 @@ fn shouldKeepRenderedNode(allocator: std.mem.Allocator, node: CompareNode, exclu
 }
 
 fn loadCompareNodesAlloc(allocator: std.mem.Allocator, path: []const u8, keep_raw: bool) ![]CompareNode {
-    const raw = try std.fs.cwd().readFileAlloc(allocator, path, max_input_size);
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+    const raw = try readStreamCompatAlloc(allocator, file, max_input_size);
     defer allocator.free(raw);
 
     var nodes = std.ArrayList(CompareNode){};
@@ -1982,11 +1984,28 @@ fn isIpv6Literal(host: []const u8) bool {
     return std.mem.indexOfScalar(u8, host, ':') != null;
 }
 
+fn readStreamCompatAlloc(allocator: std.mem.Allocator, file: std.fs.File, max_bytes: usize) ![]u8 {
+    var list = std.ArrayList(u8){};
+    defer list.deinit(allocator);
+
+    var buf: [4096]u8 = undefined;
+    while (true) {
+        const n = try file.read(&buf);
+        if (n == 0) break;
+        if (list.items.len + n > max_bytes) return error.FileTooBig;
+        try list.appendSlice(allocator, buf[0..n]);
+    }
+
+    return try list.toOwnedSlice(allocator);
+}
+
 fn readInput(allocator: std.mem.Allocator, input_path: ?[]const u8) ![]u8 {
     if (input_path) |path| {
-        return try std.fs.cwd().readFileAlloc(allocator, path, max_input_size);
+        const file = try std.fs.cwd().openFile(path, .{});
+        defer file.close();
+        return try readStreamCompatAlloc(allocator, file, max_input_size);
     }
-    return try std.fs.File.stdin().readToEndAlloc(allocator, max_input_size);
+    return try readStreamCompatAlloc(allocator, std.fs.File.stdin(), max_input_size);
 }
 
 fn detectContentInfo(allocator: std.mem.Allocator, raw: []const u8) !ContentInfo {
