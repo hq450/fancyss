@@ -73,6 +73,8 @@ SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
 SUB_TOOL_DIFF_FILE_CURRENT=""
 SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
 SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT=""
+SUB_NODE_TOOL_PLAN_FILE_CURRENT=""
+SUB_REFERENCE_RESOLVED_IDENTITY=""
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -2470,6 +2472,41 @@ sub_collect_runtime_reference_notice_after_rewrite(){
 
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 0
 	[ -f "${input_file}" ] || return 0
+	if [ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] && [ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ];then
+		restored_current="$(awk -F '\t' '$1 == "current" {print $4; exit}' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null)"
+		restored_failover="$(awk -F '\t' '$1 == "failover" {print $4; exit}' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null)"
+		if [ -n "${CURR_NODE}" ] && [ -n "${restored_current}" ] && [ "${restored_current}" != "${CURR_NODE}" ];then
+			restored_current_name="$(sub_get_node_field_plain "${restored_current}" name)"
+			sub_reference_notice_add \
+				"current" \
+				"运行节点已调整" \
+				"原运行节点【${CURR_NODE_NAME:-ID ${CURR_NODE}}】已无法恢复，系统已切换到【${restored_current_name:-ID ${restored_current}}】。请确认当前运行节点。" \
+				"${CURR_NODE}" \
+				"${restored_current}" \
+				"fallback"
+		fi
+		if [ -n "${FAILOVER_NODE}" ];then
+			if [ -n "${restored_failover}" ] && [ "${restored_failover}" != "${FAILOVER_NODE}" ];then
+				restored_failover_name="$(sub_get_node_field_plain "${restored_failover}" name)"
+				sub_reference_notice_add \
+					"failover" \
+					"故障转移节点已调整" \
+					"原故障转移节点【${FAILOVER_NODE_NAME:-ID ${FAILOVER_NODE}}】已无法恢复，系统已改为【${restored_failover_name:-ID ${restored_failover}}】。请确认故障转移配置。" \
+					"${FAILOVER_NODE}" \
+					"${restored_failover}" \
+					"fallback"
+			elif [ -z "${restored_failover}" ];then
+				sub_reference_notice_add \
+					"failover" \
+					"故障转移节点已失效" \
+					"原故障转移节点【${FAILOVER_NODE_NAME:-ID ${FAILOVER_NODE}}】已无法恢复，当前已清空故障转移目标，请重新选择。" \
+					"${FAILOVER_NODE}" \
+					"" \
+					"missing"
+			fi
+		fi
+		return 0
+	fi
 	if sub_node_exists_in_order "${CURR_NODE}";then
 		if [ -z "${FAILOVER_NODE}" ] || sub_node_exists_in_order "${FAILOVER_NODE}";then
 			return 0
@@ -2524,19 +2561,51 @@ sub_collect_runtime_reference_notice_after_rewrite(){
 	fi
 }
 
+sub_resolve_reference_from_plan(){
+	local current_id="$1"
+	local current_identity="$2"
+	local line=""
+	[ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 1
+	[ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 1
+	if [ -n "${current_identity}" ];then
+		line=$(awk -F '\t' -v identity="${current_identity}" '$1 == "map" && $4 == identity {print $5 "\t" $6; exit}' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null)
+	fi
+	if [ -z "${line}" ] && [ -n "${current_id}" ];then
+		line=$(awk -F '\t' -v node_id="${current_id}" '$1 == "map" && $3 == node_id {print $5 "\t" $6; exit}' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null)
+	fi
+	[ -n "${line}" ] || return 1
+	printf '%s' "${line}"
+	return 0
+}
+
 sub_resolve_reference_new_id(){
 	local current_id="$1"
 	local current_identity="$2"
 	local mapped=""
+	local mapped_identity=""
+	local plan_result=""
 
+	SUB_REFERENCE_RESOLVED_IDENTITY=""
+	plan_result="$(sub_resolve_reference_from_plan "${current_id}" "${current_identity}" 2>/dev/null)" || plan_result=""
+	if [ -n "${plan_result}" ];then
+		mapped="$(printf '%s' "${plan_result}" | awk -F '\t' '{print $1}')"
+		mapped_identity="$(printf '%s' "${plan_result}" | awk -F '\t' '{print $2}')"
+		if [ -n "${mapped}" ];then
+			SUB_REFERENCE_RESOLVED_IDENTITY="${mapped_identity}"
+			printf '%s' "${mapped}"
+			return 0
+		fi
+	fi
 	if [ -n "${current_identity}" ];then
 		mapped="$(fss_find_node_id_by_identity "${current_identity}" 2>/dev/null)"
 		if [ -n "${mapped}" ];then
+			SUB_REFERENCE_RESOLVED_IDENTITY="$(fss_get_node_identity_by_id "${mapped}" 2>/dev/null)"
 			printf '%s' "${mapped}"
 			return 0
 		fi
 	fi
 	if [ -n "${current_id}" ] && fss_node_id_exists "${current_id}" 2>/dev/null;then
+		SUB_REFERENCE_RESOLVED_IDENTITY="$(fss_get_node_identity_by_id "${current_id}" 2>/dev/null)"
 		printf '%s' "${current_id}"
 		return 0
 	fi
@@ -2582,7 +2651,8 @@ sub_apply_shunt_reference_rewrite(){
 	*)
 		mapped_target="$(sub_resolve_reference_new_id "${default_target}" "${default_identity}" 2>/dev/null)"
 		if [ -n "${mapped_target}" ];then
-			mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
+			mapped_identity="${SUB_REFERENCE_RESOLVED_IDENTITY}"
+			[ -n "${mapped_identity}" ] || mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
 			if [ "${mapped_target}" != "${default_target}" ];then
 				dbus set ss_basic_shunt_default_node="${mapped_target}"
 				changed_default=$((changed_default + 1))
@@ -2637,7 +2707,8 @@ sub_apply_shunt_reference_rewrite(){
 		*)
 			mapped_target="$(sub_resolve_reference_new_id "${target_id}" "${target_identity}" 2>/dev/null)"
 			if [ -n "${mapped_target}" ];then
-				mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
+				mapped_identity="${SUB_REFERENCE_RESOLVED_IDENTITY}"
+				[ -n "${mapped_identity}" ] || mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
 				if [ "${mapped_target}" != "${target_id}" ];then
 					new_line="$(printf '%s' "${new_line}" | jq -c --arg target "${mapped_target}" '.target_node_id = $target' 2>/dev/null)"
 					changed_rules=$((changed_rules + 1))
@@ -2776,6 +2847,7 @@ sub_write_nodes_schema2(){
 	local input_file="$1"
 	local node_tool=""
 	local export_tmp=""
+	local plan_tmp=""
 	local old_order_csv="" next_id max_id reserved_max imported_order="" mapped_file meta_file now_ts identity_file reuse_file
 	local old_export_file="${SCHEMA2_BEFORE_EXPORT_JSONL}"
 	local new_ids_file="${input_file}.new_ids"
@@ -2785,18 +2857,22 @@ sub_write_nodes_schema2(){
 	local prepared_reuse_temp=0
 
 	[ -f "${input_file}" ] || return 1
+	SUB_NODE_TOOL_PLAN_FILE_CURRENT=""
 	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
 	if [ -n "${node_tool}" ];then
-		if "${node_tool}" json2node --input "${input_file}" --mode replace --reuse-ids >/dev/null 2>&1;then
+		plan_tmp="${input_file}.plan.$$"
+		if "${node_tool}" json2node --input "${input_file}" --mode replace --reuse-ids --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
 			export_tmp="${input_file}.mapped.$$"
 			if "${node_tool}" node2json --format jsonl > "${export_tmp}" 2>/dev/null;then
 				mv -f "${export_tmp}" "${input_file}"
 			else
 				rm -f "${export_tmp}" >/dev/null 2>&1
 			fi
+			[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
 			fss_clear_webtest_runtime_results
 			return 0
 		fi
+		rm -f "${plan_tmp}" >/dev/null 2>&1
 	fi
 	mapped_file="${input_file}.mapped"
 	meta_file="${input_file}.meta"
@@ -3167,6 +3243,15 @@ sub_append_nodes_schema2(){
 sub_restore_active_nodes_after_rewrite(){
 	local input_file="$1"
 	local restore_current="" restore_failover="" first_id=""
+
+	if [ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] && [ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ];then
+		restore_current="$(awk -F '\t' '$1 == "current" {print $4; exit}' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null)"
+		restore_failover="$(awk -F '\t' '$1 == "failover" {print $4; exit}' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null)"
+		[ -z "${restore_current}" ] && restore_current="$(sub_list_node_ids | sed -n '1p')"
+		fss_set_current_node_id "${restore_current}"
+		fss_set_failover_node_id "${restore_failover}"
+		return 0
+	fi
 
 	first_id=$(sub_list_node_ids | sed -n '1p')
 
@@ -3598,6 +3683,7 @@ sub_find_local_source_file(){
 }
 
 skipdb2json(){
+	local node_tool=""
 	if [ "${SEQ_NU}" == "0" ];then
 		return
 	fi
@@ -3606,6 +3692,19 @@ skipdb2json(){
 	LOCAL_SPLIT_META_VALID=0
 	sanitize_invalid_local_groups
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		if [ -n "${node_tool}" ];then
+			rm -rf "$DIR"/local_*.txt "${LOCAL_SPLIT_META}"
+			if "${node_tool}" export-sources --output-dir "${DIR}" --meta "${LOCAL_SPLIT_META}" --all-jsonl "${LOCAL_NODES_SPL}" >/dev/null 2>&1;then
+				if [ -f "${LOCAL_NODES_SPL}" ] && [ -s "${LOCAL_SPLIT_META}" ];then
+					LOCAL_SPLIT_META_VALID=1
+					echo_date "📁所有本地节点成功整理到文件：${LOCAL_NODES_SPL}"
+					cp -rf ${LOCAL_NODES_SPL} ${LOCAL_NODES_BAK}
+					return 0
+				fi
+				rm -rf "$DIR"/local_*.txt "${LOCAL_SPLIT_META}" "${LOCAL_NODES_SPL}" >/dev/null 2>&1
+			fi
+		fi
 		sub_prepare_schema2_export_jsonl || {
 			echo_date "⚠️节点文件处理失败！请重启路由器后重试！"
 			exit 1
@@ -3640,6 +3739,9 @@ skipdb2json(){
 nodes2files(){
 	if [ "${SEQ_NU}" == "0" ];then
 		return
+	fi
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ] && [ "${LOCAL_SPLIT_META_VALID}" = "1" ] && [ -s "${LOCAL_SPLIT_META}" ];then
+		return 0
 	fi
 	rm -rf "$DIR"/local_*.txt "${LOCAL_SPLIT_META}"
 	[ -f "${LOCAL_NODES_SPL}" ] || return 0
@@ -3801,6 +3903,29 @@ remove_null(){
 	fi
 	[ "${LOCAL_SPLIT_META_VALID}" = "1" ] && [ -s "${LOCAL_SPLIT_META}" ] || return
 	[ -s "${ACTIVE_SOURCE_TAGS}" ] || return
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		local node_tool=""
+		local prune_log=""
+		local removed_any=0
+		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		if [ -n "${node_tool}" ];then
+			prune_log="${LOCAL_SPLIT_META}.prune.$$"
+			if "${node_tool}" prune-export-sources --meta "${LOCAL_SPLIT_META}" --active-source-tags "${ACTIVE_SOURCE_TAGS}" --format shell > "${prune_log}" 2>/dev/null;then
+				while IFS='	' read -r action source_tag group_label count path
+				do
+					[ "${action}" = "remove" ] || continue
+					echo_date "⚠️检测到【${group_label:-${source_tag}}】机场已经不再订阅！尝试删除该订阅的节点！"
+					removed_any=1
+				done < "${prune_log}"
+				rm -f "${prune_log}" >/dev/null 2>&1
+				if [ "${removed_any}" = "1" ];then
+					SUB_LOCAL_CHANGED=1
+				fi
+				return 0
+			fi
+			rm -f "${prune_log}" >/dev/null 2>&1
+		fi
+	fi
 	local keep_hash_file tmp_meta removed_any=0
 	keep_hash_file="${ACTIVE_SOURCE_TAGS}"
 	tmp_meta="${LOCAL_SPLIT_META}.tmp"
