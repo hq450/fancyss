@@ -70,6 +70,7 @@ SUB_SOURCE_URL_HASH=""
 SUB_AIRPORT_IDENTITY=""
 SUB_SOURCE_SCOPE=""
 SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
+SUB_TOOL_DIFF_FILE_CURRENT=""
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -886,11 +887,13 @@ sub_try_parse_uri_lines_with_tool(){
 	local effective_hy2_cg=""
 	local subtool_log_level="summary"
 	local reuse_ids_from=""
+	local diff_output_file=""
 
 	[ -f "${input_file}" ] || return 1
 	[ -n "${output_file}" ] || return 1
 	sub_tool="$(pick_sub_tool 2>/dev/null)" || return 1
 	reuse_ids_from="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || reuse_ids_from=""
+	SUB_TOOL_DIFF_FILE_CURRENT=""
 	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
 	{
 		read -r effective_hy2_up
@@ -921,15 +924,20 @@ sub_try_parse_uri_lines_with_tool(){
 	[ -n "${SUB_AIRPORT_IDENTITY}" ] && set -- "$@" --airport-identity "${SUB_AIRPORT_IDENTITY}"
 	[ -n "${SUB_SOURCE_SCOPE}" ] && set -- "$@" --source-scope "${SUB_SOURCE_SCOPE}"
 	[ -n "${reuse_ids_from}" ] && set -- "$@" --reuse-ids-from "${reuse_ids_from}"
+	set -- "$@" --keep-info-node "${SUB_KEEP_INFO_NODE}"
+	if [ -n "${reuse_ids_from}" ] && [ -z "${KEY_WORDS_1_RAW}" ] && [ -z "${KEY_WORDS_2_RAW}" ];then
+		diff_output_file="${output_file}.diff.$$"
+		set -- "$@" --compare-with "${reuse_ids_from}" --diff-output "${diff_output_file}"
+	fi
 	[ -n "${effective_hy2_up}" ] && set -- "$@" --hy2-up "${effective_hy2_up}"
 	[ -n "${effective_hy2_dl}" ] && set -- "$@" --hy2-dl "${effective_hy2_dl}"
 	"${sub_tool}" "$@" >/dev/null 2>&1 || {
-		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" >/dev/null 2>&1
+		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" >/dev/null 2>&1
 		return 1
 	}
 
 	sub_filter_fancyss_jsonl_file "${tmp_output}" "${filtered_output}" || {
-		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" >/dev/null 2>&1
+		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" >/dev/null 2>&1
 		return 1
 	}
 	mv -f "${filtered_output}" "${output_file}"
@@ -937,7 +945,19 @@ sub_try_parse_uri_lines_with_tool(){
 	if [ -s "${output_file}" ];then
 		sub_log_fancyss_parse_summary "${output_file}"
 		sub_log_fancyss_parse_nodes "${output_file}"
+		if [ -z "${KEY_WORDS_1_RAW}" ] && [ -z "${KEY_WORDS_2_RAW}" ];then
+			local kept_total=0
+			kept_total=$(wc -l < "${output_file}" 2>/dev/null | tr -d ' ')
+			[ -n "${kept_total}" ] || kept_total=0
+			if [ -n "${NODE_NU_TT}" ] && [ "${NODE_NU_TT}" -ge "${kept_total}" ] 2>/dev/null;then
+				exclude=$((NODE_NU_TT - kept_total))
+			fi
+		fi
+		if [ -n "${diff_output_file}" ] && [ -f "${diff_output_file}" ];then
+			SUB_TOOL_DIFF_FILE_CURRENT="${diff_output_file}"
+		fi
 	else
+		rm -f "${diff_output_file}" >/dev/null 2>&1
 		rm -f "${output_file}" >/dev/null 2>&1
 	fi
 	return 0
@@ -2061,6 +2081,57 @@ sub_log_nodes_file_change_detail(){
 
 	rm -f "${local_identity_file}" "${online_identity_file}" "${local_map}" "${online_map}" "${old_used}" "${new_used}"
 	return 0
+}
+
+sub_log_nodes_diff_tsv_file(){
+	local diff_file="$1"
+	local line=""
+	local reason=""
+	local type_id=""
+	local xray_prot=""
+	local old_name=""
+	local new_name=""
+	local prefix=""
+	local param_changed=0
+	local renamed=0
+	local deleted=0
+	local added=0
+
+	[ -f "${diff_file}" ] || return 0
+	while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		reason=$(printf '%s\n' "${line}" | awk -F '\t' '{print $1}')
+		type_id=$(printf '%s\n' "${line}" | awk -F '\t' '{print $4}')
+		xray_prot=$(printf '%s\n' "${line}" | awk -F '\t' '{print $5}')
+		old_name=$(printf '%s\n' "${line}" | awk -F '\t' '{print $6}')
+		new_name=$(printf '%s\n' "${line}" | awk -F '\t' '{print $7}')
+		case "${reason}" in
+		param)
+			prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+			echo_date "${prefix}${new_name:-${old_name}}，发现节点参数改变。"
+			param_changed=$((param_changed + 1))
+			;;
+		rename)
+			prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+			echo_date "${prefix}${new_name}，发现节点名改变：${old_name} -> ${new_name}"
+			renamed=$((renamed + 1))
+			;;
+		deleted)
+			prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+			echo_date "${prefix}${old_name}，检测到节点已删除。"
+			deleted=$((deleted + 1))
+			;;
+		new)
+			prefix=$(sub_fancyss_type_prefix "${type_id}" "${xray_prot}")
+			echo_date "${prefix}${new_name}，检测到新增节点。"
+			added=$((added + 1))
+			;;
+		esac
+	done < "${diff_file}"
+	if [ "$((param_changed + renamed + deleted + added))" -gt "0" ];then
+		echo_date "ℹ️节点变更分类：参数改变${param_changed}个，名称改变${renamed}个，新增${added}个，删除${deleted}个。"
+	fi
 }
 
 sub_log_nodes_file_change_reason(){
@@ -5450,6 +5521,7 @@ get_online_rule_now(){
 	local RAW_SOURCE_TAG=""
 	local CANONICAL_SOURCE_TAG=""
 	local SUB_SOURCE_TAG=""
+	SUB_TOOL_DIFF_FILE_CURRENT=""
 
 	# 1. get domain name of node subscribe link
 	local DOMAIN_NAME="$(get_domain_name ${SUB_LINK})"
@@ -5689,7 +5761,11 @@ get_online_rule_now(){
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${ISLOCALFILE}"
 		else
 			sub_log_nodes_file_change_reason "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
-			sub_log_nodes_file_change_detail "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			if [ -n "${SUB_TOOL_DIFF_FILE_CURRENT}" ] && [ -f "${SUB_TOOL_DIFF_FILE_CURRENT}" ];then
+				sub_log_nodes_diff_tsv_file "${SUB_TOOL_DIFF_FILE_CURRENT}"
+			else
+				sub_log_nodes_file_change_detail "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			fi
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
 			# 将订阅后的文件，覆盖为本地的相同link hash的文件
 			rm -rf "${ISLOCALFILE}"

@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.2";
+const app_version = "0.1.3";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -70,12 +70,15 @@ const Options = struct {
     old_input: ?[]const u8 = null,
     new_input: ?[]const u8 = null,
     output: ?[]const u8 = null,
+    compare_with: ?[]const u8 = null,
+    diff_output: ?[]const u8 = null,
     group: ?[]const u8 = null,
     source_tag: ?[]const u8 = null,
     source_url_hash: ?[]const u8 = null,
     airport_identity: ?[]const u8 = null,
     source_scope: ?[]const u8 = null,
     reuse_ids_from: ?[]const u8 = null,
+    keep_info_node: bool = false,
     include_raw: bool = false,
     format: OutputFormat = .normalized,
     mode: ?[]const u8 = null,
@@ -190,7 +193,7 @@ fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         "Usage:\n" ++
         "  sub-tool inspect [--input path]\n" ++
-        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
         "  sub-tool compare-fancyss --old path --new path [--output path]\n" ++
         "  sub-tool summary [--input path]\n" ++
         "  sub-tool version\n",
@@ -230,6 +233,14 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.output = args[i];
+        } else if (std.mem.eql(u8, arg, "--compare-with")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.compare_with = args[i];
+        } else if (std.mem.eql(u8, arg, "--diff-output")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.diff_output = args[i];
         } else if (std.mem.eql(u8, arg, "--group")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -254,6 +265,10 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.reuse_ids_from = args[i];
+        } else if (std.mem.eql(u8, arg, "--keep-info-node")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.keep_info_node = parseBoolArg(args[i]);
         } else if (std.mem.eql(u8, arg, "--format")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -394,7 +409,13 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
                 const json = try buildFancyssNodeJsonAlloc(allocator, node, options);
                 if (json == null) continue;
                 defer allocator.free(json.?);
-                try rendered_nodes.append(allocator, try parseCompareNodeAlloc(allocator, json.?, true));
+                const parsed_node = try parseCompareNodeAlloc(allocator, json.?, true);
+                if (!options.keep_info_node and isInfoNodeName(parsed_node.name)) {
+                    var filtered = parsed_node;
+                    filtered.deinit(allocator);
+                    continue;
+                }
+                try rendered_nodes.append(allocator, parsed_node);
             }
 
             if (options.reuse_ids_from) |reuse_path| {
@@ -460,6 +481,19 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
                     try writer.writeAll(node.raw_json);
                     try writer.writeAll("\n");
                 }
+            }
+
+            if (options.compare_with) |compare_path| {
+                const diff_path = options.diff_output orelse return error.InvalidArguments;
+                const old_nodes = try loadCompareNodesAlloc(allocator, compare_path, false);
+                defer {
+                    for (old_nodes) |*node| node.deinit(allocator);
+                    allocator.free(old_nodes);
+                }
+
+                var diff_file = try std.fs.cwd().createFile(diff_path, .{ .truncate = true });
+                defer diff_file.close();
+                try writeCompareDiff(diff_file.deprecatedWriter(), allocator, old_nodes, rendered_nodes.items);
             }
         },
     }
@@ -538,11 +572,142 @@ const CompareNode = struct {
     }
 };
 
+fn canonicalSourceMetaAlloc(allocator: std.mem.Allocator, obj: std.json.ObjectMap) !struct {
+    airport_identity: []u8,
+    source_scope: []u8,
+    source_url_hash: []u8,
+} {
+    const source = (try jsonObjectTextAlloc(allocator, obj, "_source")) orelse try allocator.dupe(u8, "");
+    defer allocator.free(source);
+    const source_url_hash = (try jsonObjectTextAlloc(allocator, obj, "_source_url_hash")) orelse try allocator.dupe(u8, "");
+    errdefer allocator.free(source_url_hash);
+
+    if (std.mem.eql(u8, source, "subscribe")) {
+        const raw_group = (try jsonObjectTextAlloc(allocator, obj, "group")) orelse try allocator.dupe(u8, "");
+        defer allocator.free(raw_group);
+        const normalized_group = try normalizeGroupLabelAlloc(allocator, raw_group);
+        defer if (normalized_group) |value| allocator.free(value);
+        const airport_identity = if (normalized_group) |value|
+            try identitySlugifyAlloc(allocator, value, "sub")
+        else if (try jsonObjectTextAlloc(allocator, obj, "_airport_identity")) |value|
+            value
+        else
+            try allocator.dupe(u8, "sub");
+        errdefer allocator.free(airport_identity);
+        const source_scope = if (source_url_hash.len > 0)
+            try std.fmt.allocPrint(allocator, "{s}_{s}", .{ airport_identity, source_url_hash })
+        else
+            try allocator.dupe(u8, airport_identity);
+        errdefer allocator.free(source_scope);
+        return .{
+            .airport_identity = airport_identity,
+            .source_scope = source_scope,
+            .source_url_hash = source_url_hash,
+        };
+    }
+
+    const existing_scope = (try jsonObjectTextAlloc(allocator, obj, "_source_scope")) orelse try allocator.dupe(u8, "local");
+    errdefer allocator.free(existing_scope);
+    const existing_airport = (try jsonObjectTextAlloc(allocator, obj, "_airport_identity")) orelse try allocator.dupe(u8, if (std.mem.eql(u8, existing_scope, "local")) "local" else existing_scope);
+    errdefer allocator.free(existing_airport);
+    return .{
+        .airport_identity = existing_airport,
+        .source_scope = existing_scope,
+        .source_url_hash = source_url_hash,
+    };
+}
+
+fn writeCanonicalCompareValue(writer: anytype, allocator: std.mem.Allocator, key: []const u8, value: std.json.Value) !void {
+    if (value == .string) {
+        const raw = value.string;
+        if (std.mem.eql(u8, key, "password") or std.mem.eql(u8, key, "naive_pass")) {
+            if (try maybeDecodeBase64Lossy(allocator, raw)) |decoded| {
+                defer allocator.free(decoded);
+                try writeJsonString(writer, decoded);
+                return;
+            }
+        }
+        if (std.mem.eql(u8, key, "v2ray_json") or std.mem.eql(u8, key, "xray_json") or std.mem.eql(u8, key, "tuic_json")) {
+            var candidate = try allocator.dupe(u8, raw);
+            defer allocator.free(candidate);
+            if (try maybeDecodeBase64Lossy(allocator, raw)) |decoded| {
+                allocator.free(candidate);
+                candidate = decoded;
+            }
+            if (looksLikeJson(candidate)) {
+                var parsed = std.json.parseFromSlice(std.json.Value, allocator, candidate, .{}) catch null;
+                if (parsed) |*tree| {
+                    defer tree.deinit();
+                    try writer.print("{f}", .{std.json.fmt(tree.value, .{})});
+                    return;
+                }
+            }
+            try writeJsonString(writer, candidate);
+            return;
+        }
+    }
+    try writeCanonicalIdentityValue(writer, value);
+}
+
+fn buildCanonicalCompareSecondaryPayloadAlloc(allocator: std.mem.Allocator, obj: std.json.ObjectMap) ![]u8 {
+    var keys = std.ArrayList([]const u8){};
+    defer keys.deinit(allocator);
+    var it = obj.iterator();
+    while (it.next()) |entry| {
+        const key = entry.key_ptr.*;
+        if (std.mem.eql(u8, key, "name") or std.mem.eql(u8, key, "group") or std.mem.eql(u8, key, "mode")) continue;
+        if (key.len > 0 and key[0] == '_') continue;
+        if (std.mem.eql(u8, key, "server_ip") or std.mem.eql(u8, key, "latency") or std.mem.eql(u8, key, "ping")) continue;
+        try keys.append(allocator, key);
+    }
+    std.mem.sort([]const u8, keys.items, {}, struct {
+        fn lessThan(_: void, a: []const u8, b: []const u8) bool {
+            return std.mem.lessThan(u8, a, b);
+        }
+    }.lessThan);
+
+    var out = std.ArrayList(u8){};
+    defer out.deinit(allocator);
+    const writer = out.writer(allocator);
+    try writer.writeAll("{");
+    var first = true;
+    for (keys.items) |key| {
+        const value = obj.get(key) orelse continue;
+        if (first) {
+            first = false;
+        } else {
+            try writer.writeAll(",");
+        }
+        try writeJsonString(writer, key);
+        try writer.writeAll(":");
+        try writeCanonicalCompareValue(writer, allocator, key, value);
+    }
+    try writer.writeAll("}");
+    return try out.toOwnedSlice(allocator);
+}
+
 fn parseCompareNodeAlloc(allocator: std.mem.Allocator, line: []const u8, keep_raw: bool) !CompareNode {
     var parsed = try std.json.parseFromSlice(std.json.Value, allocator, line, .{});
     defer parsed.deinit();
     if (parsed.value != .object) return error.InvalidArguments;
     const obj = parsed.value.object;
+
+    const source_meta = try canonicalSourceMetaAlloc(allocator, obj);
+    defer allocator.free(source_meta.airport_identity);
+    defer allocator.free(source_meta.source_scope);
+    defer allocator.free(source_meta.source_url_hash);
+    const name = (try jsonObjectTextAlloc(allocator, obj, "name")) orelse try allocator.dupe(u8, "");
+    errdefer allocator.free(name);
+    const primary_input = try std.fmt.allocPrint(allocator, "{s}\x1f{s}", .{ source_meta.source_scope, name });
+    defer allocator.free(primary_input);
+    const primary = try identityHashHexAlloc(allocator, primary_input);
+    errdefer allocator.free(primary);
+    const secondary_payload = try buildCanonicalCompareSecondaryPayloadAlloc(allocator, obj);
+    defer allocator.free(secondary_payload);
+    const secondary = try identityHashHexAlloc(allocator, secondary_payload);
+    errdefer allocator.free(secondary);
+    const identity = try std.fmt.allocPrint(allocator, "{s}_{s}", .{ primary, secondary });
+    errdefer allocator.free(identity);
 
     return .{
         .raw_json = if (keep_raw) try allocator.dupe(u8, line) else try allocator.dupe(u8, ""),
@@ -551,13 +716,19 @@ fn parseCompareNodeAlloc(allocator: std.mem.Allocator, line: []const u8, keep_ra
             const created = try jsonObjectTextAlloc(allocator, obj, "_created_at");
             break :blk if (created) |value| value else try allocator.dupe(u8, "");
         },
-        .name = try allocator.dupe(u8, jsonObjectString(obj, "name") orelse ""),
-        .type_id = try allocator.dupe(u8, jsonObjectString(obj, "type") orelse ""),
-        .xray_prot = try allocator.dupe(u8, jsonObjectString(obj, "xray_prot") orelse ""),
-        .identity = try allocator.dupe(u8, jsonObjectString(obj, "_identity") orelse ""),
-        .primary = try allocator.dupe(u8, jsonObjectString(obj, "_identity_primary") orelse ""),
-        .secondary = try allocator.dupe(u8, jsonObjectString(obj, "_identity_secondary") orelse ""),
-        .source_scope = try allocator.dupe(u8, jsonObjectString(obj, "_source_scope") orelse ""),
+        .name = name,
+        .type_id = blk: {
+            const value = try jsonObjectTextAlloc(allocator, obj, "type");
+            break :blk if (value) |text| text else try allocator.dupe(u8, "");
+        },
+        .xray_prot = blk: {
+            const value = try jsonObjectTextAlloc(allocator, obj, "xray_prot");
+            break :blk if (value) |text| text else try allocator.dupe(u8, "");
+        },
+        .identity = identity,
+        .primary = primary,
+        .secondary = secondary,
+        .source_scope = try allocator.dupe(u8, source_meta.source_scope),
     };
 }
 
@@ -624,30 +795,7 @@ fn emitCompareLine(writer: anytype, reason: []const u8, old_node: ?CompareNode, 
     try writer.writeAll("\n");
 }
 
-fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
-    const old_path = options.old_input orelse return error.InvalidArguments;
-    const new_path = options.new_input orelse return error.InvalidArguments;
-    const old_nodes = try loadCompareNodesAlloc(allocator, old_path, false);
-    defer {
-        for (old_nodes) |*node| node.deinit(allocator);
-        allocator.free(old_nodes);
-    }
-    const new_nodes = try loadCompareNodesAlloc(allocator, new_path, false);
-    defer {
-        for (new_nodes) |*node| node.deinit(allocator);
-        allocator.free(new_nodes);
-    }
-
-    const writer_file = if (options.output) |path|
-        try std.fs.cwd().createFile(path, .{ .truncate = true })
-    else
-        null;
-    defer if (writer_file) |*file| file.close();
-    const writer = if (writer_file) |file|
-        file.deprecatedWriter()
-    else
-        std.fs.File.stdout().deprecatedWriter();
-
+fn writeCompareDiff(writer: anytype, allocator: std.mem.Allocator, old_nodes: []const CompareNode, new_nodes: []const CompareNode) !void {
     const old_used = try allocator.alloc(bool, old_nodes.len);
     defer allocator.free(old_used);
     @memset(old_used, false);
@@ -691,11 +839,70 @@ fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
     }
 }
 
+fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
+    const old_path = options.old_input orelse return error.InvalidArguments;
+    const new_path = options.new_input orelse return error.InvalidArguments;
+    const old_nodes = try loadCompareNodesAlloc(allocator, old_path, false);
+    defer {
+        for (old_nodes) |*node| node.deinit(allocator);
+        allocator.free(old_nodes);
+    }
+    const new_nodes = try loadCompareNodesAlloc(allocator, new_path, false);
+    defer {
+        for (new_nodes) |*node| node.deinit(allocator);
+        allocator.free(new_nodes);
+    }
+
+    const writer_file = if (options.output) |path|
+        try std.fs.cwd().createFile(path, .{ .truncate = true })
+    else
+        null;
+    defer if (writer_file) |*file| file.close();
+    const writer = if (writer_file) |file|
+        file.deprecatedWriter()
+    else
+        std.fs.File.stdout().deprecatedWriter();
+
+    try writeCompareDiff(writer, allocator, old_nodes, new_nodes);
+}
+
 fn parseBoolArg(value: []const u8) bool {
     return std.mem.eql(u8, value, "1") or
         stringEqualsIgnoreCase(value, "true") or
         stringEqualsIgnoreCase(value, "yes") or
         stringEqualsIgnoreCase(value, "on");
+}
+
+fn startsWithIgnoreAsciiCase(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len > haystack.len) return false;
+    var i: usize = 0;
+    while (i < needle.len) : (i += 1) {
+        if (std.ascii.toLower(haystack[i]) != std.ascii.toLower(needle[i])) return false;
+    }
+    return true;
+}
+
+fn isInfoNodeName(name: []const u8) bool {
+    return startsWithIgnoreAsciiCase(name, "Expire:") or
+        startsWithIgnoreAsciiCase(name, "Expire：") or
+        startsWithIgnoreAsciiCase(name, "Traffic:") or
+        startsWithIgnoreAsciiCase(name, "Traffic：") or
+        startsWithIgnoreAsciiCase(name, "Sync:") or
+        startsWithIgnoreAsciiCase(name, "Sync：") or
+        std.mem.startsWith(u8, name, "剩余流量:") or
+        std.mem.startsWith(u8, name, "剩余流量：") or
+        std.mem.startsWith(u8, name, "套餐到期:") or
+        std.mem.startsWith(u8, name, "套餐到期：") or
+        std.mem.startsWith(u8, name, "订阅到期:") or
+        std.mem.startsWith(u8, name, "订阅到期：") or
+        std.mem.startsWith(u8, name, "到期时间:") or
+        std.mem.startsWith(u8, name, "到期时间：") or
+        std.mem.startsWith(u8, name, "流量重置:") or
+        std.mem.startsWith(u8, name, "流量重置：") or
+        std.mem.startsWith(u8, name, "更新于:") or
+        std.mem.startsWith(u8, name, "更新于：") or
+        std.mem.startsWith(u8, name, "更新时间:") or
+        std.mem.startsWith(u8, name, "更新时间：");
 }
 
 fn writeParseLogs(writer: anytype, nodes: []const NormalizedNode, level: LogLevel) !void {
