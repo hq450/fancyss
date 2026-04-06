@@ -72,6 +72,7 @@ SUB_SOURCE_SCOPE=""
 SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
 SUB_TOOL_DIFF_FILE_CURRENT=""
 SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
+SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT=""
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -897,6 +898,7 @@ sub_try_parse_uri_lines_with_tool(){
 	local reuse_ids_from=""
 	local diff_output_file=""
 	local diff_summary_file=""
+	local summary_output_file=""
 	local tool_can_filter=1
 
 	[ -f "${input_file}" ] || return 1
@@ -905,6 +907,7 @@ sub_try_parse_uri_lines_with_tool(){
 	reuse_ids_from="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || reuse_ids_from=""
 	SUB_TOOL_DIFF_FILE_CURRENT=""
 	SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
+	SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT=""
 	if ! sub_keyword_patterns_can_use_tool;then
 		tool_can_filter=0
 		echo_date "⚠️当前订阅过滤表达式过于复杂，已回退到兼容模式。请改用简单关键词格式，多个关键词用英文逗号分隔，例如：香港,新加坡,JP"
@@ -947,10 +950,12 @@ sub_try_parse_uri_lines_with_tool(){
 		diff_summary_file="${output_file}.diff.summary.$$"
 		set -- "$@" --compare-with "${reuse_ids_from}" --diff-output "${diff_output_file}" --diff-summary-output "${diff_summary_file}"
 	fi
+	summary_output_file="${output_file}.summary.$$"
+	set -- "$@" --summary-output "${summary_output_file}"
 	[ -n "${effective_hy2_up}" ] && set -- "$@" --hy2-up "${effective_hy2_up}"
 	[ -n "${effective_hy2_dl}" ] && set -- "$@" --hy2-dl "${effective_hy2_dl}"
 	"${sub_tool}" "$@" >/dev/null 2>&1 || {
-		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" >/dev/null 2>&1
+		rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" "${diff_summary_file}" "${summary_output_file}" >/dev/null 2>&1
 		return 1
 	}
 
@@ -958,7 +963,7 @@ sub_try_parse_uri_lines_with_tool(){
 		mv -f "${tmp_output}" "${output_file}"
 	else
 		sub_filter_fancyss_jsonl_file "${tmp_output}" "${filtered_output}" || {
-			rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" >/dev/null 2>&1
+			rm -f "${tmp_output}" "${filtered_output}" "${subtool_log_file}" "${diff_output_file}" "${diff_summary_file}" "${summary_output_file}" >/dev/null 2>&1
 			return 1
 		}
 		mv -f "${filtered_output}" "${output_file}"
@@ -966,7 +971,11 @@ sub_try_parse_uri_lines_with_tool(){
 	fi
 	rm -f "${subtool_log_file}" >/dev/null 2>&1
 	if [ -s "${output_file}" ];then
-		sub_log_fancyss_parse_summary "${output_file}"
+		if [ -f "${summary_output_file}" ];then
+			sub_log_fancyss_parse_summary_json "${summary_output_file}" || sub_log_fancyss_parse_summary "${output_file}"
+		else
+			sub_log_fancyss_parse_summary "${output_file}"
+		fi
 		sub_log_fancyss_parse_nodes "${output_file}"
 		local kept_total=0
 		kept_total=$(wc -l < "${output_file}" 2>/dev/null | tr -d ' ')
@@ -980,9 +989,13 @@ sub_try_parse_uri_lines_with_tool(){
 		if [ -n "${diff_summary_file}" ] && [ -f "${diff_summary_file}" ];then
 			SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT="${diff_summary_file}"
 		fi
+		if [ -n "${summary_output_file}" ] && [ -f "${summary_output_file}" ];then
+			SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT="${summary_output_file}"
+		fi
 	else
 		rm -f "${diff_output_file}" >/dev/null 2>&1
 		rm -f "${diff_summary_file}" >/dev/null 2>&1
+		rm -f "${summary_output_file}" >/dev/null 2>&1
 		rm -f "${output_file}" >/dev/null 2>&1
 	fi
 	return 0
@@ -1214,6 +1227,148 @@ sub_log_fancyss_parse_summary(){
 	done
 }
 
+sub_get_parse_summary_value(){
+	local file="$1"
+	local key="$2"
+	[ -f "${file}" ] || return 1
+	jq -r --arg key "${key}" '.[$key] // 0' "${file}" 2>/dev/null | sed -n '1p'
+}
+
+sub_get_parse_summary_scheme_count(){
+	local file="$1"
+	local bucket="$2"
+	local key="$3"
+	[ -f "${file}" ] || return 1
+	jq -r --arg bucket "${bucket}" --arg key "${key}" '.[$bucket][$key] // 0' "${file}" 2>/dev/null | sed -n '1p'
+}
+
+sub_log_fancyss_parse_summary_json(){
+	local file="$1"
+	local total=0
+	[ -f "${file}" ] || return 1
+	total=$(sub_get_parse_summary_value "${file}" "kept_nodes")
+	[ -n "${total}" ] || total=0
+	echo_date "🧩sub-tool最终保留节点：${total}个。"
+	local ss=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "ss")
+	local ssr=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "ssr")
+	local vmess=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "vmess")
+	local vless=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "vless")
+	local trojan=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "trojan")
+	local naive=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "naive")
+	local tuic=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "tuic")
+	local hy2=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "hysteria2")
+	[ -n "${ss}" ] || ss=0
+	[ -n "${ssr}" ] || ssr=0
+	[ -n "${vmess}" ] || vmess=0
+	[ -n "${vless}" ] || vless=0
+	[ -n "${trojan}" ] || trojan=0
+	[ -n "${naive}" ] || naive=0
+	[ -n "${tuic}" ] || tuic=0
+	[ -n "${hy2}" ] || hy2=0
+	[ "${ss}" -gt "0" ] && echo_date "🟢SS节点：${ss}个"
+	[ "${ssr}" -gt "0" ] && echo_date "🔵SSR节点：${ssr}个"
+	[ "${vmess}" -gt "0" ] && echo_date "🟠vmess节点：${vmess}个"
+	[ "${vless}" -gt "0" ] && echo_date "🟣vless节点：${vless}个"
+	[ "${trojan}" -gt "0" ] && echo_date "🟡trojan节点：${trojan}个"
+	[ "${naive}" -gt "0" ] && echo_date "🟧Naïve节点：${naive}个"
+	[ "${tuic}" -gt "0" ] && echo_date "🟫tuic节点：${tuic}个"
+	[ "${hy2}" -gt "0" ] && echo_date "🟤hysteria2节点：${hy2}个"
+}
+
+sub_collect_protocol_counts_from_decoded_file(){
+	local file="$1"
+	local pkg_type="$2"
+	local raw=0 ss=0 ssr=0 vmess=0 vless=0 trojan=0 hy2=0 tuic=0 naive=0 total=0
+	[ -f "${file}" ] || {
+		echo "0 0 0 0 0 0 0 0 0 0"
+		return 1
+	}
+	raw=$(grep -c "://" "${file}" 2>/dev/null)
+	ss=$(grep -Ec "^ss://" "${file}" 2>/dev/null)
+	ssr=$(grep -Ec "^ssr://" "${file}" 2>/dev/null)
+	vmess=$(grep -Ec "^vmess://" "${file}" 2>/dev/null)
+	vless=$(grep -Ec "^vless://" "${file}" 2>/dev/null)
+	trojan=$(grep -Ec "^trojan://" "${file}" 2>/dev/null)
+	hy2=$(grep -Ec "^hysteria2://|^hy2://" "${file}" 2>/dev/null)
+	tuic=$(grep -Ec "^tuic://" "${file}" 2>/dev/null)
+	naive=$(grep -Ec "^naive\\+https://|^naive\\+quic://" "${file}" 2>/dev/null)
+	total=$((ss + ssr + vmess + vless + trojan + hy2))
+	if [ "${pkg_type}" = "full" ];then
+		total=$((total + tuic + naive))
+	fi
+	echo "${raw} ${ss} ${ssr} ${vmess} ${vless} ${trojan} ${hy2} ${tuic} ${naive} ${total}"
+}
+
+sub_collect_protocol_counts_from_summary(){
+	local file="$1"
+	local pkg_type="$2"
+	local raw=0 ss=0 ssr=0 vmess=0 vless=0 trojan=0 hy2=0 tuic=0 naive=0 total=0
+	[ -f "${file}" ] || {
+		echo "0 0 0 0 0 0 0 0 0 0"
+		return 1
+	}
+	raw=$(sub_get_parse_summary_value "${file}" "total_lines")
+	ss=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "ss")
+	ssr=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "ssr")
+	vmess=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "vmess")
+	vless=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "vless")
+	trojan=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "trojan")
+	hy2=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "hysteria2")
+	tuic=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "tuic")
+	naive=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "naive")
+	[ -n "${raw}" ] || raw=0
+	[ -n "${ss}" ] || ss=0
+	[ -n "${ssr}" ] || ssr=0
+	[ -n "${vmess}" ] || vmess=0
+	[ -n "${vless}" ] || vless=0
+	[ -n "${trojan}" ] || trojan=0
+	[ -n "${hy2}" ] || hy2=0
+	[ -n "${tuic}" ] || tuic=0
+	[ -n "${naive}" ] || naive=0
+	total=$((ss + ssr + vmess + vless + trojan + hy2))
+	if [ "${pkg_type}" = "full" ];then
+		total=$((total + tuic + naive))
+	fi
+	echo "${raw} ${ss} ${ssr} ${vmess} ${vless} ${trojan} ${hy2} ${tuic} ${naive} ${total}"
+}
+
+sub_log_protocol_counts(){
+	local raw="$1"
+	local ss="$2"
+	local ssr="$3"
+	local vmess="$4"
+	local vless="$5"
+	local trojan="$6"
+	local hy2="$7"
+	local tuic="$8"
+	local naive="$9"
+	local total="${10}"
+	local pkg_type="${11}"
+	[ -n "${raw}" ] || raw=0
+	[ -n "${total}" ] || total=0
+	echo_date "😀初步解析成功！共获得${raw}个节点！"
+	if [ "${total}" -eq "0" ] && [ "${pkg_type}" != "full" ] && [ $((tuic + naive)) -gt "0" ];then
+		echo_date "⚠️当前插件为lite版本，订阅中的TUIC/NaïveProxy节点均为full版专属，无法导入！"
+		return 1
+	fi
+	if [ "${total}" -lt "${raw}" ];then
+		echo_date "ℹ️${raw}个节点中，一共检测到${total}个支持节点！"
+	fi
+	echo_date "ℹ️具体情况如下："
+	[ "${ss}" -gt "0" ] && echo_date "🟢ss节点：${ss}个"
+	[ "${ssr}" -gt "0" ] && echo_date "🔵ssr节点：${ssr}个"
+	[ "${vmess}" -gt "0" ] && echo_date "🟠vmess节点：${vmess}个"
+	[ "${vless}" -gt "0" ] && echo_date "🟣vless节点：${vless}个"
+	[ "${trojan}" -gt "0" ] && echo_date "🟡trojan节点：${trojan}个"
+	[ "${hy2}" -gt "0" ] && echo_date "🟤hysteria2节点：${hy2}个"
+	[ "${tuic}" -gt "0" ] && echo_date "🟫tuic节点：${tuic}个"
+	[ "${naive}" -gt "0" ] && echo_date "🟧Naïve节点：${naive}个"
+	if [ "${pkg_type}" != "full" ] && [ $((tuic + naive)) -gt "0" ];then
+		echo_date "⚠️当前插件为lite版本，TUIC/NaïveProxy节点会被跳过。"
+	fi
+	return 0
+}
+
 sub_log_fancyss_parse_nodes(){
 	local file="$1"
 	local meta=""
@@ -1301,7 +1456,7 @@ sub_restore_from_parsed_cache(){
 	local sub_hash="$1"
 	local short_hash="$2"
 	local sub_count="$3"
-	local parsed_cache local_file parsed_md5 local_md5
+	local parsed_cache local_file parsed_md5 local_md5 sub_tool compare_file compare_summary_file
 
 	[ -n "${sub_hash}" ] || return 1
 	[ -n "${short_hash}" ] || return 1
@@ -1321,6 +1476,17 @@ sub_restore_from_parsed_cache(){
 		return 0
 	fi
 	echo_date "♻️原始订阅内容未变化，但当前订阅来源的本地节点被修改/删除，正在用上次成功解析结果恢复。"
+	if [ "${SUB_TOOL_NODE_LOG}" = "1" ] && [ -n "${local_file}" ];then
+		sub_tool="$(pick_sub_tool 2>/dev/null)" || sub_tool=""
+		if [ -n "${sub_tool}" ];then
+			compare_file="${parsed_cache}.restore.diff.$$"
+			compare_summary_file="${parsed_cache}.restore.summary.$$"
+			if "${sub_tool}" compare-fancyss --old "${local_file}" --new "${parsed_cache}" --output "${compare_file}" --diff-summary-output "${compare_summary_file}" >/dev/null 2>&1;then
+				sub_log_nodes_diff_tsv_file "${compare_file}" "${compare_summary_file}"
+			fi
+			rm -f "${compare_file}" "${compare_summary_file}" >/dev/null 2>&1
+		fi
+	fi
 	[ -n "${local_file}" ] && rm -f "${local_file}"
 	cp -f "${parsed_cache}" "${DIR}/local_${sub_count}_${short_hash}.txt"
 	sub_mark_active_source_tag "${short_hash}"
@@ -5625,67 +5791,36 @@ get_online_rule_now(){
 		sub_restore_from_parsed_cache "${SUB_LINK_HASH}" "${source_hash}" "${sub_count}" && return 0
 	fi
 	echo_date "🔍开始解析节点信息..."
-
-	local NODE_NU_RAW=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -c "://")
-	echo_date "😀初步解析成功！共获得${NODE_NU_RAW}个节点！"
-
-	# 11. 检测 ss ssr vmess
-	NODE_FORMAT1=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^ss://")
-	NODE_FORMAT2=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^ssr://")
-	NODE_FORMAT3=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vmess://")
-	NODE_FORMAT4=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^vless://")
-	NODE_FORMAT5=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^trojan://")
-	NODE_FORMAT6=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^hysteria2://|^hy2://")
-	NODE_FORMAT7=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^tuic://")
-	NODE_FORMAT8=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -E "^naive\\+https://|^naive\\+quic://")
-
-	local NODE_NU_SS=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ss://") || "0"
-	local NODE_NU_SR=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^ssr://") || "0"
-	local NODE_NU_VM=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vmess://") || "0"
-	local NODE_NU_VL=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^vless://") || "0"
-	local NODE_NU_TJ=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^trojan://") || "0"
-	local NODE_NU_H2=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^hysteria2://|^hy2://") || "0"
-	local NODE_NU_TC=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^tuic://") || "0"
-	local NODE_NU_NV=$(cat ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt | grep -Ec "^naive\\+https://|^naive\\+quic://") || "0"
+	local NODE_NU_RAW="0"
+	local NODE_NU_SS="0"
+	local NODE_NU_SR="0"
+	local NODE_NU_VM="0"
+	local NODE_NU_VL="0"
+	local NODE_NU_TJ="0"
+	local NODE_NU_H2="0"
+	local NODE_NU_TC="0"
+	local NODE_NU_NV="0"
 	local pkg_type=$(dbus get ss_basic_pkg_type)
 	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
-	local NODE_NU_TT=$((${NODE_NU_SS} + ${NODE_NU_SR} + ${NODE_NU_VM} + ${NODE_NU_VL} + ${NODE_NU_TJ} + ${NODE_NU_H2}))
-	if [ "${pkg_type}" == "full" ];then
-		NODE_NU_TT=$((${NODE_NU_TT} + ${NODE_NU_TC} + ${NODE_NU_NV}))
-	fi
-	if [ -z "${NODE_FORMAT1}" -a -z "${NODE_FORMAT2}" -a -z "${NODE_FORMAT3}" -a -z "${NODE_FORMAT4}" -a -z "${NODE_FORMAT5}" -a -z "${NODE_FORMAT6}" -a -z "${NODE_FORMAT7}" -a -z "${NODE_FORMAT8}" ];then
-		echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
-		return 1
-	fi
-	if [ "${NODE_NU_TT}" -eq "0" -a "${pkg_type}" != "full" -a $((${NODE_NU_TC} + ${NODE_NU_NV})) -gt "0" ];then
-		echo_date "⚠️当前插件为lite版本，订阅中的TUIC/NaïveProxy节点均为full版专属，无法导入！"
-		return 1
-	fi
-	if [ "${NODE_NU_TT}" -lt "${NODE_NU_RAW}" ];then
-		echo_date "ℹ️${NODE_NU_RAW}个节点中，一共检测到${NODE_NU_TT}个支持节点！"
-	fi
-	echo_date "ℹ️具体情况如下："
-	[ "${NODE_NU_SS}" -gt "0" ] && echo_date "🟢ss节点：${NODE_NU_SS}个"
-	[ "${NODE_NU_SR}" -gt "0" ] && echo_date "🔵ssr节点：${NODE_NU_SR}个"
-	[ "${NODE_NU_VM}" -gt "0" ] && echo_date "🟠vmess节点：${NODE_NU_VM}个"
-	[ "${NODE_NU_VL}" -gt "0" ] && echo_date "🟣vless节点：${NODE_NU_VL}个"
-	[ "${NODE_NU_TJ}" -gt "0" ] && echo_date "🟡trojan节点：${NODE_NU_TJ}个"
-	[ "${NODE_NU_H2}" -gt "0" ] && echo_date "🟤hysteria2节点：${NODE_NU_H2}个"
-	[ "${NODE_NU_TC}" -gt "0" ] && echo_date "🟫tuic节点：${NODE_NU_TC}个"
-	[ "${NODE_NU_NV}" -gt "0" ] && echo_date "🟧Naïve节点：${NODE_NU_NV}个"
-	sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
-	if [ "${pkg_type}" != "full" -a $((${NODE_NU_TC} + ${NODE_NU_NV})) -gt "0" ];then
-		echo_date "⚠️当前插件为lite版本，TUIC/NaïveProxy节点会被跳过。"
-	fi
-	echo_date "-------------------------------------------------------------------"
+	local NODE_NU_TT="0"
 
 	# 12. 开始解析并写入节点
 	local ONLINE_PARSED_FILE="${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 	local PARSED_BY_SUB_TOOL="0"
 	if pick_sub_tool >/dev/null 2>&1;then
 		echo_date "🧩检测到sub-tool，尝试使用新解析器..."
-		if sub_try_parse_uri_lines_with_tool "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt" "${ONLINE_PARSED_FILE}" "${DOMAIN_NAME}" "${SUB_SOURCE_TAG}" "${pkg_type}";then
+		if sub_try_parse_uri_lines_with_tool "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" "${ONLINE_PARSED_FILE}" "${DOMAIN_NAME}" "${SUB_SOURCE_TAG}" "${pkg_type}";then
 			PARSED_BY_SUB_TOOL="1"
+			read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_TT <<-EOF
+			$(sub_collect_protocol_counts_from_summary "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" "${pkg_type}")
+			EOF
+			if [ "${NODE_NU_TT}" = "0" ] && [ "${NODE_NU_RAW}" = "0" ];then
+				echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
+				return 1
+			fi
+			sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+			sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
+			echo_date "-------------------------------------------------------------------"
 			echo_date "🧩sub-tool解析完成。"
 		else
 			echo_date "⚠️sub-tool解析失败，回退旧订阅解析器。"
@@ -5693,6 +5828,16 @@ get_online_rule_now(){
 		fi
 	fi
 	if [ "${PARSED_BY_SUB_TOOL}" != "1" ];then
+		read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_TT <<-EOF
+		$(sub_collect_protocol_counts_from_decoded_file "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt" "${pkg_type}")
+		EOF
+		if [ "${NODE_NU_TT}" = "0" ] && [ "${NODE_NU_RAW}" = "0" ];then
+			echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
+			return 1
+		fi
+		sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+		sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
+		echo_date "-------------------------------------------------------------------"
 		while IFS= read -r node || [ -n "${node}" ]; do
 			local node_type=$(sub_uri_scheme "${node}")
 			local node_info=$(sub_uri_body "${node}")

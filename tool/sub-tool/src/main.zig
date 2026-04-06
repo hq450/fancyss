@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.4";
+const app_version = "0.1.5";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -73,6 +73,7 @@ const Options = struct {
     compare_with: ?[]const u8 = null,
     diff_output: ?[]const u8 = null,
     diff_summary_output: ?[]const u8 = null,
+    summary_output: ?[]const u8 = null,
     exclude_pattern: ?[]const u8 = null,
     include_pattern: ?[]const u8 = null,
     group: ?[]const u8 = null,
@@ -196,7 +197,7 @@ fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         "Usage:\n" ++
         "  sub-tool inspect [--input path]\n" ++
-        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--diff-summary-output path] [--exclude-pattern pattern] [--include-pattern pattern] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--diff-summary-output path] [--summary-output path] [--exclude-pattern pattern] [--include-pattern pattern] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
         "  sub-tool compare-fancyss --old path --new path [--output path]\n" ++
         "  sub-tool summary [--input path]\n" ++
         "  sub-tool version\n",
@@ -248,6 +249,10 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.diff_summary_output = args[i];
+        } else if (std.mem.eql(u8, arg, "--summary-output")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.summary_output = args[i];
         } else if (std.mem.eql(u8, arg, "--exclude-pattern")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -522,6 +527,10 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
                     );
                 }
             }
+
+            if (options.summary_output) |summary_path| {
+                try writeFancyssParseSummaryFile(allocator, summary_path, result, rendered_nodes.items);
+            }
         },
     }
 
@@ -530,6 +539,111 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
         defer log_file.close();
         try writeParseLogs(log_file.deprecatedWriter(), result.nodes.items, options.log_level);
     }
+}
+
+fn schemeSummaryKey(node: NormalizedNode) []const u8 {
+    if (std.mem.eql(u8, node.scheme, "hy2") or std.mem.eql(u8, node.scheme, "hysteria2")) return "hysteria2";
+    if (std.mem.eql(u8, node.scheme, "naive+https") or std.mem.eql(u8, node.scheme, "naive+quic")) return "naive";
+    return node.scheme;
+}
+
+fn renderSummaryKey(node: CompareNode) []const u8 {
+    if (std.mem.eql(u8, node.type_id, "0")) return "ss";
+    if (std.mem.eql(u8, node.type_id, "1")) return "ssr";
+    if (std.mem.eql(u8, node.type_id, "3")) return "vmess";
+    if (std.mem.eql(u8, node.type_id, "4")) {
+        if (std.mem.eql(u8, node.xray_prot, "vmess")) return "vmess";
+        if (std.mem.eql(u8, node.xray_prot, "vless")) return "vless";
+    }
+    if (std.mem.eql(u8, node.type_id, "5")) return "trojan";
+    if (std.mem.eql(u8, node.type_id, "6")) return "naive";
+    if (std.mem.eql(u8, node.type_id, "7")) return "tuic";
+    if (std.mem.eql(u8, node.type_id, "8")) return "hysteria2";
+    return "other";
+}
+
+fn writeCountObject(writer: anytype, counts: *const std.StringHashMap(usize)) !void {
+    try writer.writeAll("{");
+    var first = true;
+    var it = counts.iterator();
+    while (it.next()) |entry| {
+        if (!first) try writer.writeAll(",");
+        first = false;
+        try writeJsonString(writer, entry.key_ptr.*);
+        try writer.writeAll(":");
+        try writer.print("{d}", .{entry.value_ptr.*});
+    }
+    try writer.writeAll("}");
+}
+
+fn incrementCount(map: *std.StringHashMap(usize), key: []const u8) !void {
+    const entry = try map.getOrPut(key);
+    if (!entry.found_existing) entry.value_ptr.* = 0;
+    entry.value_ptr.* += 1;
+}
+
+fn writeFancyssParseSummaryFile(allocator: std.mem.Allocator, path: []const u8, result: ParseResult, rendered_nodes: []const CompareNode) !void {
+    var raw_counts = std.StringHashMap(usize).init(allocator);
+    defer raw_counts.deinit();
+    for (result.nodes.items) |node| {
+        try incrementCount(&raw_counts, schemeSummaryKey(node));
+    }
+
+    var kept_counts = std.StringHashMap(usize).init(allocator);
+    defer kept_counts.deinit();
+    for (rendered_nodes) |node| {
+        try incrementCount(&kept_counts, renderSummaryKey(node));
+    }
+
+    const filtered_nodes = if (result.nodes.items.len >= rendered_nodes.len)
+        result.nodes.items.len - rendered_nodes.len
+    else
+        0;
+
+    var file = try std.fs.cwd().createFile(path, .{ .truncate = true });
+    defer file.close();
+    const writer = file.deprecatedWriter();
+    try writer.writeAll("{");
+    try writeJsonString(writer, "kind");
+    try writer.writeAll(":");
+    try writeJsonString(writer, result.kind.name());
+    try writer.writeAll(",");
+    try writeJsonString(writer, "total_lines");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{result.total_lines});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "valid_lines");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{result.valid_lines});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "invalid_lines");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{result.invalid_lines});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "ignored_lines");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{result.ignored_lines});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "raw_supported_nodes");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{result.nodes.items.len});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "kept_nodes");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{rendered_nodes.len});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "filtered_nodes");
+    try writer.writeAll(":");
+    try writer.print("{d}", .{filtered_nodes});
+    try writer.writeAll(",");
+    try writeJsonString(writer, "raw_counts");
+    try writer.writeAll(":");
+    try writeCountObject(writer, &raw_counts);
+    try writer.writeAll(",");
+    try writeJsonString(writer, "kept_counts");
+    try writer.writeAll(":");
+    try writeCountObject(writer, &kept_counts);
+    try writer.writeAll("}\n");
 }
 
 fn runSummary(allocator: std.mem.Allocator, options: Options) !void {
@@ -961,7 +1075,15 @@ fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
     else
         std.fs.File.stdout().deprecatedWriter();
 
-    _ = try writeCompareDiff(writer, allocator, old_nodes, new_nodes);
+    const summary = try writeCompareDiff(writer, allocator, old_nodes, new_nodes);
+    if (options.diff_summary_output) |summary_path| {
+        var summary_file = try std.fs.cwd().createFile(summary_path, .{ .truncate = true });
+        defer summary_file.close();
+        try summary_file.deprecatedWriter().print(
+            "{{\"param\":{d},\"rename\":{d},\"new\":{d},\"deleted\":{d}}}\n",
+            .{ summary.param, summary.rename, summary.new, summary.deleted },
+        );
+    }
 }
 
 fn parseBoolArg(value: []const u8) bool {
