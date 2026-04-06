@@ -7,7 +7,6 @@ OUT_DIR="${OUT_DIR:-$ROOT_DIR/dist}"
 LOCAL_CACHE_BASE="${LOCAL_CACHE_BASE:-$ROOT_DIR/.zig-cache/release}"
 GLOBAL_CACHE_DIR="${GLOBAL_CACHE_DIR:-$ROOT_DIR/.zig-cache/release-global}"
 WITH_UPX=1
-UPX_BIN=""
 
 print_usage() {
     cat <<'EOF'
@@ -40,25 +39,44 @@ find_latest_zig() {
     printf '%s\n' "${candidates[@]}" | awk 'NF' | tail -n 1
 }
 
-find_upx_bin() {
-    local candidate=""
-    local version=""
-    if [[ -n "${UPX_BIN:-}" && -x "${UPX_BIN}" ]]; then
-        printf '%s\n' "${UPX_BIN}"
+find_required_command() {
+    local env_value="$1"
+    local command_name="$2"
+    local label="$3"
+
+    if [[ -n "$env_value" ]]; then
+        printf '%s\n' "$env_value"
         return 0
     fi
-    if command -v upx >/dev/null 2>&1; then
-        candidate="$(command -v upx)"
-        version="$("$candidate" -V 2>/dev/null | awk '/^UPX / {print $2; exit}')"
-        if [[ -n "${version}" ]] && [[ "${version}" =~ ^([0-9]+)\. ]]; then
-            if (( BASH_REMATCH[1] >= 5 )); then
-                printf '%s\n' "${candidate}"
-                return 0
-            fi
-        fi
+
+    if command -v "$command_name" >/dev/null 2>&1; then
+        command -v "$command_name"
+        return 0
     fi
-    echo "error: UPX >= 5 not found; rerun with --no-upx or set UPX_BIN=/path/to/upx" >&2
+
+    echo "error: ${label} not found. Set the environment variable or add ${command_name} to PATH." >&2
     exit 1
+}
+
+require_executable() {
+    local path="$1"
+    local name="$2"
+    if [[ ! -x "$path" ]]; then
+        echo "error: ${name} not found or not executable: $path" >&2
+        exit 1
+    fi
+}
+
+require_upx_version() {
+    local path="$1"
+    local expected="$2"
+    local actual
+
+    actual="$("$path" --version | sed -n '1s/^upx //p')"
+    if [[ "$actual" != "$expected" ]]; then
+        echo "error: expected UPX $expected at $path, got ${actual:-unknown}" >&2
+        exit 1
+    fi
 }
 
 build_target() {
@@ -67,10 +85,12 @@ build_target() {
     local cpu="$3"
     local output="$OUT_DIR/sub-tool-v${VERSION}-linux-$name"
     local local_cache_dir="$LOCAL_CACHE_BASE/$name"
+    local upx_bin=""
 
     mkdir -p "$OUT_DIR" "$local_cache_dir" "$GLOBAL_CACHE_DIR"
     rm -f "$output"
 
+    echo "==> building $name ($zig_target, cpu=$cpu)"
     ZIG_LOCAL_CACHE_DIR="$local_cache_dir" \
     ZIG_GLOBAL_CACHE_DIR="$GLOBAL_CACHE_DIR" \
     "$ZIG_BIN" build-exe "$ROOT_DIR/src/main.zig" \
@@ -83,7 +103,12 @@ build_target() {
         -femit-bin="$output"
 
     if [[ "$WITH_UPX" == "1" ]]; then
-        "$UPX_BIN" --lzma --ultra-brute "$output"
+        case "$name" in
+            armv5te) upx_bin="$UPX_4_2_4" ;;
+            *) upx_bin="$UPX_5_0_2" ;;
+        esac
+        echo "==> packing $name with $(basename "$upx_bin")"
+        "$upx_bin" --lzma --ultra-brute "$output"
     fi
 
     file "$output"
@@ -118,9 +143,24 @@ fi
 
 ZIG_BIN="$(find_latest_zig)"
 if [[ "$WITH_UPX" == "1" ]]; then
-    UPX_BIN="$(find_upx_bin)"
+    UPX_4_2_4="$(find_required_command "${UPX_4_2_4:-}" "upx-4.2.4" "UPX 4.2.4")"
+    UPX_5_0_2="$(find_required_command "${UPX_5_0_2:-}" "upx-5.0.2" "UPX 5.0.2")"
+    require_executable "$UPX_4_2_4" "UPX 4.2.4"
+    require_executable "$UPX_5_0_2" "UPX 5.0.2"
+    require_upx_version "$UPX_4_2_4" "4.2.4"
+    require_upx_version "$UPX_5_0_2" "5.0.2"
 fi
 mkdir -p "$OUT_DIR"
+
+echo "Version: $VERSION"
+echo "Using Zig: $ZIG_BIN ($("$ZIG_BIN" version))"
+if [[ "$WITH_UPX" == "1" ]]; then
+    echo "Using UPX 4.2.4: $UPX_4_2_4"
+    echo "Using UPX 5.0.2: $UPX_5_0_2"
+else
+    echo "UPX: disabled (--no-upx)"
+fi
+echo
 
 for target in "${TARGETS[@]}"; do
     case "$target" in

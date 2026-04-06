@@ -197,6 +197,23 @@ zig build test
 ./zig-out/bin/sub-tool
 ```
 
+如需一次性输出发布产物：
+
+```bash
+bash ./scripts/build-release.sh
+```
+
+发布脚本默认启用 UPX 压缩：
+
+- `armv5te` 使用 `UPX 4.2.4`
+- 其它目标使用 `UPX 5.0.2`
+
+关闭 UPX：
+
+```bash
+bash ./scripts/build-release.sh --no-upx
+```
+
 ## 使用示例
 
 识别订阅内容：

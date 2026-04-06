@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .link_libc = false,
+        .link_libc = true,
         .single_threaded = true,
         .strip = optimize != .Debug,
     });
