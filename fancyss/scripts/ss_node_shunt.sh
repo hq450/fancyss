@@ -839,15 +839,35 @@ fss_shunt_runtime_meta_get() {
 	sed -n "s/^${key}=//p" "${FSS_SHUNT_RUNTIME_META_FILE}" | sed -n '1p'
 }
 
+fss_shunt_enabled_rule_count() {
+	local json=""
+	local jq_bin=""
+
+	json="$(fss_shunt_rules_json)"
+	jq_bin="$(fss_pick_jq_bin)"
+	[ -n "${jq_bin}" ] || {
+		echo "0"
+		return 0
+	}
+	printf '%s' "${json}" | "${jq_bin}" -r '[.[]? | select((.enabled // 1 | tostring) != "0")] | length' 2>/dev/null | sed -n '1p'
+}
+
 fss_shunt_runtime_is_fresh() {
 	local current_key=""
 	local cached_key=""
+	local enabled_rules="0"
 
 	[ -f "${FSS_SHUNT_RUNTIME_META_FILE}" ] || return 1
 	current_key="$(fss_shunt_runtime_key)"
 	cached_key="$(fss_shunt_runtime_meta_get runtime_key)"
 	[ -n "${cached_key}" ] || return 1
-	[ "${cached_key}" = "${current_key}" ]
+	[ "${cached_key}" = "${current_key}" ] || return 1
+	enabled_rules="$(fss_shunt_enabled_rule_count)"
+	printf '%s' "${enabled_rules}" | grep -Eq '^[0-9]+$' || enabled_rules="0"
+	if [ "${enabled_rules}" -gt 0 ] 2>/dev/null; then
+		[ -s "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}" ] || return 1
+	fi
+	return 0
 }
 
 fss_shunt_write_runtime_meta() {
