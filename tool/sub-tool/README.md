@@ -2,6 +2,10 @@
 
 `sub-tool` 是一个使用 Zig 编写的轻量级订阅内容工具。
 
+维护文档：
+
+- [sub-tool 维护文档](../../doc/implementation/sub-tool-maintenance.md)
+
 它的定位不是立即“完全替代 `ss_node_subscribe.sh`”，而是先把订阅链路里最适合下沉到 Zig 的部分独立出来：
 
 - 订阅内容识别
@@ -27,7 +31,7 @@
 
 ## 当前版本
 
-`0.1.0`
+`0.1.7`
 
 当前代码按 Zig `0.15.2` 编写并验证。
 
