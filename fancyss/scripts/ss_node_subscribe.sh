@@ -2561,6 +2561,63 @@ sub_collect_runtime_reference_notice_after_rewrite(){
 	fi
 }
 
+sub_node_tool_plan_current_changed(){
+	[ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 1
+	[ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 1
+	awk -F '\t' '
+		$1 == "current" {
+			if ($2 != $4 || $3 != $5) found = 1
+			seen = 1
+			exit
+		}
+		END { exit(found ? 0 : 1) }
+	' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null
+}
+
+sub_node_tool_plan_failover_changed(){
+	[ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 1
+	[ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 1
+	awk -F '\t' '
+		$1 == "failover" {
+			if ($2 != $4 || $3 != $5) found = 1
+			seen = 1
+			exit
+		}
+		END { exit(found ? 0 : 1) }
+	' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null
+}
+
+sub_node_tool_plan_needs_runtime_cache_refresh(){
+	[ -n "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 0
+	[ -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || return 0
+	awk -F '\t' '
+		$1 == "add" || $1 == "remove" || $1 == "move" { found = 1; exit }
+		$1 == "field" {
+			if ($3 != "name" && $3 != "group") { found = 1; exit }
+		}
+		END { exit(found ? 0 : 1) }
+	' "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" 2>/dev/null
+}
+
+sub_should_run_reference_postwrite(){
+	local mode=""
+	mode="$(dbus get ss_basic_mode)"
+	if [ "${mode}" = "7" ];then
+		return 0
+	fi
+	if [ -z "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ] || [ ! -f "${SUB_NODE_TOOL_PLAN_FILE_CURRENT}" ];then
+		return 0
+	fi
+	sub_node_tool_plan_current_changed && return 0
+	sub_node_tool_plan_failover_changed && return 0
+	return 1
+}
+
+sub_should_refresh_runtime_caches(){
+	[ "${SUB_FAST_APPEND_USED}" = "1" ] && return 0
+	sub_node_tool_plan_needs_runtime_cache_refresh
+}
+
 sub_resolve_reference_from_plan(){
 	local current_id="$1"
 	local current_identity="$2"
@@ -2871,6 +2928,11 @@ sub_write_nodes_schema2(){
 	meta_file="${input_file}.meta"
 	identity_file="${input_file}.identity"
 	reuse_file="${input_file}.reuse"
+	if [ ! -f "${old_export_file}" ];then
+		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
+		[ -s "${SCHEMA2_EXPORT_JSONL}" ] && cp -f "${SCHEMA2_EXPORT_JSONL}" "${old_export_file}"
+	fi
+	[ -f "${old_export_file}" ] || : > "${old_export_file}"
 	: > "${mapped_file}"
 	if sub_file_has_complete_numeric_ids "${input_file}";then
 		reuse_file="${input_file}"
@@ -3040,6 +3102,7 @@ sub_append_nodes_schema2(){
 	local input_file="$1"
 	local node_tool=""
 	local normalized_tmp=""
+	local plan_tmp=""
 	local assigned_file="${input_file}.append"
 	local meta_file="${input_file}.append.meta"
 	local new_ids_file="${input_file}.append.ids"
@@ -3048,19 +3111,22 @@ sub_append_nodes_schema2(){
 
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
 	[ -f "${input_file}" ] || return 1
+	SUB_NODE_TOOL_PLAN_FILE_CURRENT=""
 	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
 	if [ -n "${node_tool}" ];then
 		normalized_tmp="${input_file}.append_normalized.$$"
-		if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids --normalized-output "${normalized_tmp}" >/dev/null 2>&1;then
+		plan_tmp="${input_file}.append.plan.$$"
+		if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids --normalized-output "${normalized_tmp}" --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
 			if [ -f "${normalized_tmp}" ];then
 				mv -f "${normalized_tmp}" "${input_file}"
 			else
 				rm -f "${normalized_tmp}" >/dev/null 2>&1
 			fi
+			[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
 			fss_clear_webtest_runtime_results
 			return 0
 		fi
-		rm -f "${normalized_tmp}" >/dev/null 2>&1
+		rm -f "${normalized_tmp}" "${plan_tmp}" >/dev/null 2>&1
 	fi
 
 	old_order_csv=$(dbus get fss_node_order)
@@ -3957,8 +4023,6 @@ clear_nodes(){
 			return 0
 		fi
 		sub_capture_active_nodes
-		sub_prepare_schema2_export_jsonl >/dev/null 2>&1 || true
-		[ -s "${SCHEMA2_EXPORT_JSONL}" ] && cp -f "${SCHEMA2_EXPORT_JSONL}" "${SCHEMA2_BEFORE_EXPORT_JSONL}"
 		SUB_REWRITE_ALL=1
 		echo_date "😀准备完成！"
 		return 0
@@ -6171,9 +6235,11 @@ get_online_rule_now(){
 				sub_log_nodes_file_change_detail "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			fi
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
-			# 将订阅后的文件，覆盖为本地的相同link hash的文件
-			rm -rf "${ISLOCALFILE}"
-			cp -rf "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			# 将订阅后的文件覆盖为本地同 source tag 文件，直接移动可减少一次复制 IO。
+			mv -f "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt" || {
+				echo_date "⚠️更新本地订阅节点文件失败：${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt -> ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+				return 1
+			}
 			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 			sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			SUB_LOCAL_CHANGED=1
@@ -6182,8 +6248,11 @@ get_online_rule_now(){
 	else
 		echo_date "🔶当前订阅链来源【${ONLINE_GROUP}】在本地尚无节点！"
 		echo_date "🆚对比结果：检测到新的订阅节点，生成节点添加文件！"
-		# 将订阅后的文件，覆盖为本地的相同link hash的文件
-		cp -rf ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt
+		# 将订阅后的文件落地为本地 source tag 文件，直接移动减少复制开销。
+		mv -f "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt" || {
+			echo_date "⚠️写入本地订阅节点文件失败：${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt -> ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			return 1
+		}
 		sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
 		sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
 		SUB_LOCAL_CHANGED=1
@@ -6316,14 +6385,16 @@ start_node_subscribe(){
 				echo_date "❌节点信息写入失败！"
 				exit_sub
 			fi
-			if [ "${SUB_FAST_APPEND_USED}" != "1" ];then
+			if [ "${SUB_FAST_APPEND_USED}" != "1" ] && sub_should_run_reference_postwrite;then
 				sub_reference_notice_reset
 				sub_apply_shunt_reference_rewrite
 				sub_collect_runtime_reference_notice_after_rewrite "$DIR/ss_nodes_new.txt"
 				sub_reference_notice_commit
 			fi
-			fss_refresh_node_direct_cache >/dev/null 2>&1
-			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
+			if sub_should_refresh_runtime_caches;then
+				fss_refresh_node_direct_cache >/dev/null 2>&1
+				fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
+			fi
 		else
 			echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
 		fi
