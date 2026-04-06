@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const app_version = "0.1.6";
+const app_version = "0.1.7";
 const max_input_size = 64 * 1024 * 1024;
 
 const Command = enum {
@@ -776,7 +776,7 @@ fn writeCanonicalCompareValue(writer: anytype, allocator: std.mem.Allocator, key
     if (value == .string) {
         const raw = value.string;
         if (std.mem.eql(u8, key, "password") or std.mem.eql(u8, key, "naive_pass")) {
-            if (try maybeDecodeBase64Lossy(allocator, raw)) |decoded| {
+            if (try maybeDecodeBase64PrintableAlloc(allocator, raw)) |decoded| {
                 defer allocator.free(decoded);
                 try writeJsonString(writer, decoded);
                 return;
@@ -785,7 +785,7 @@ fn writeCanonicalCompareValue(writer: anytype, allocator: std.mem.Allocator, key
         if (std.mem.eql(u8, key, "v2ray_json") or std.mem.eql(u8, key, "xray_json") or std.mem.eql(u8, key, "tuic_json")) {
             var candidate = try allocator.dupe(u8, raw);
             defer allocator.free(candidate);
-            if (try maybeDecodeBase64Lossy(allocator, raw)) |decoded| {
+            if (try maybeDecodeBase64JsonAlloc(allocator, raw)) |decoded| {
                 allocator.free(candidate);
                 candidate = decoded;
             }
@@ -2896,6 +2896,44 @@ fn looksLikeTextError(input: []const u8) bool {
 fn maybeDecodeBase64Text(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
     if (!looksLikeBase64(input)) return null;
     return decodeBase64SmartAlloc(allocator, input) catch null;
+}
+
+fn maybeDecodeBase64Utf8Alloc(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
+    if (!looksLikeBase64(input)) return null;
+    const decoded = decodeBase64SmartAlloc(allocator, input) catch return null;
+    errdefer allocator.free(decoded);
+    if (!std.unicode.utf8ValidateSlice(decoded)) {
+        allocator.free(decoded);
+        return null;
+    }
+    return decoded;
+}
+
+fn isLikelyPrintableText(input: []const u8) bool {
+    if (input.len == 0) return false;
+    for (input) |ch| {
+        if (ch == '\n' or ch == '\r' or ch == '\t') continue;
+        if (ch < 0x20 or ch == 0x7f) return false;
+    }
+    return true;
+}
+
+fn maybeDecodeBase64PrintableAlloc(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
+    const decoded = try maybeDecodeBase64Utf8Alloc(allocator, input) orelse return null;
+    if (!isLikelyPrintableText(decoded)) {
+        allocator.free(decoded);
+        return null;
+    }
+    return decoded;
+}
+
+fn maybeDecodeBase64JsonAlloc(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
+    const decoded = try maybeDecodeBase64Utf8Alloc(allocator, input) orelse return null;
+    if (!looksLikeJson(std.mem.trim(u8, decoded, " \t\r\n"))) {
+        allocator.free(decoded);
+        return null;
+    }
+    return decoded;
 }
 
 fn maybeDecodeBase64Lossy(allocator: std.mem.Allocator, input: []const u8) !?[]u8 {
