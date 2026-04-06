@@ -72,6 +72,7 @@ const Options = struct {
     output: ?[]const u8 = null,
     compare_with: ?[]const u8 = null,
     diff_output: ?[]const u8 = null,
+    diff_summary_output: ?[]const u8 = null,
     exclude_pattern: ?[]const u8 = null,
     include_pattern: ?[]const u8 = null,
     group: ?[]const u8 = null,
@@ -195,7 +196,7 @@ fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         "Usage:\n" ++
         "  sub-tool inspect [--input path]\n" ++
-        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--exclude-pattern pattern] [--include-pattern pattern] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
+        "  sub-tool parse-uri-lines [--input path] [--output path] [--format normalized|fancyss] [--group name] [--source-tag tag] [--source-url-hash hash] [--airport-identity value] [--source-scope value] [--reuse-ids-from path] [--compare-with path] [--diff-output path] [--diff-summary-output path] [--exclude-pattern pattern] [--include-pattern pattern] [--keep-info-node 0|1] [--mode value] [--pkg-type full|lite] [--sub-ai 0|1] [--hy2-up value] [--hy2-dl value] [--hy2-tfo-switch value] [--hy2-cg-opt value] [--log-level none|summary|verbose] [--log-output path] [--include-raw]\n" ++
         "  sub-tool compare-fancyss --old path --new path [--output path]\n" ++
         "  sub-tool summary [--input path]\n" ++
         "  sub-tool version\n",
@@ -243,6 +244,10 @@ fn parseArgs(args: []const []const u8) !Options {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
             options.diff_output = args[i];
+        } else if (std.mem.eql(u8, arg, "--diff-summary-output")) {
+            i += 1;
+            if (i >= args.len) return error.InvalidArguments;
+            options.diff_summary_output = args[i];
         } else if (std.mem.eql(u8, arg, "--exclude-pattern")) {
             i += 1;
             if (i >= args.len) return error.InvalidArguments;
@@ -507,7 +512,15 @@ fn runParseUriLines(allocator: std.mem.Allocator, options: Options) !void {
 
                 var diff_file = try std.fs.cwd().createFile(diff_path, .{ .truncate = true });
                 defer diff_file.close();
-                try writeCompareDiff(diff_file.deprecatedWriter(), allocator, old_nodes, rendered_nodes.items);
+                const summary = try writeCompareDiff(diff_file.deprecatedWriter(), allocator, old_nodes, rendered_nodes.items);
+                if (options.diff_summary_output) |summary_path| {
+                    var summary_file = try std.fs.cwd().createFile(summary_path, .{ .truncate = true });
+                    defer summary_file.close();
+                    try summary_file.deprecatedWriter().print(
+                        "{{\"param\":{d},\"rename\":{d},\"new\":{d},\"deleted\":{d}}}\n",
+                        .{ summary.param, summary.rename, summary.new, summary.deleted },
+                    );
+                }
             }
         },
     }
@@ -867,13 +880,21 @@ fn emitCompareLine(writer: anytype, reason: []const u8, old_node: ?CompareNode, 
     try writer.writeAll("\n");
 }
 
-fn writeCompareDiff(writer: anytype, allocator: std.mem.Allocator, old_nodes: []const CompareNode, new_nodes: []const CompareNode) !void {
+const DiffSummary = struct {
+    param: usize = 0,
+    rename: usize = 0,
+    deleted: usize = 0,
+    new: usize = 0,
+};
+
+fn writeCompareDiff(writer: anytype, allocator: std.mem.Allocator, old_nodes: []const CompareNode, new_nodes: []const CompareNode) !DiffSummary {
     const old_used = try allocator.alloc(bool, old_nodes.len);
     defer allocator.free(old_used);
     @memset(old_used, false);
     const new_used = try allocator.alloc(bool, new_nodes.len);
     defer allocator.free(new_used);
     @memset(new_used, false);
+    var summary = DiffSummary{};
 
     for (old_nodes, 0..) |old_node, old_idx| {
         const new_idx = findUnmatchedIdentity(new_nodes, new_used, .identity, old_node) orelse continue;
@@ -888,6 +909,7 @@ fn writeCompareDiff(writer: anytype, allocator: std.mem.Allocator, old_nodes: []
         old_used[old_idx] = true;
         new_used[new_idx] = true;
         try emitCompareLine(writer, "param", old_node, new_nodes[new_idx]);
+        summary.param += 1;
     }
 
     for (old_nodes, 0..) |old_node, old_idx| {
@@ -898,17 +920,21 @@ fn writeCompareDiff(writer: anytype, allocator: std.mem.Allocator, old_nodes: []
         new_used[new_idx] = true;
         if (!std.mem.eql(u8, old_node.name, new_nodes[new_idx].name)) {
             try emitCompareLine(writer, "rename", old_node, new_nodes[new_idx]);
+            summary.rename += 1;
         }
     }
 
     for (old_nodes, 0..) |old_node, old_idx| {
         if (old_used[old_idx]) continue;
         try emitCompareLine(writer, "deleted", old_node, null);
+        summary.deleted += 1;
     }
     for (new_nodes, 0..) |new_node, new_idx| {
         if (new_used[new_idx]) continue;
         try emitCompareLine(writer, "new", null, new_node);
+        summary.new += 1;
     }
+    return summary;
 }
 
 fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
@@ -935,7 +961,7 @@ fn runCompareFancyss(allocator: std.mem.Allocator, options: Options) !void {
     else
         std.fs.File.stdout().deprecatedWriter();
 
-    try writeCompareDiff(writer, allocator, old_nodes, new_nodes);
+    _ = try writeCompareDiff(writer, allocator, old_nodes, new_nodes);
 }
 
 fn parseBoolArg(value: []const u8) bool {

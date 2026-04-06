@@ -71,6 +71,7 @@ SUB_AIRPORT_IDENTITY=""
 SUB_SOURCE_SCOPE=""
 SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
 SUB_TOOL_DIFF_FILE_CURRENT=""
+SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -895,6 +896,7 @@ sub_try_parse_uri_lines_with_tool(){
 	local subtool_log_level="summary"
 	local reuse_ids_from=""
 	local diff_output_file=""
+	local diff_summary_file=""
 	local tool_can_filter=1
 
 	[ -f "${input_file}" ] || return 1
@@ -902,6 +904,7 @@ sub_try_parse_uri_lines_with_tool(){
 	sub_tool="$(pick_sub_tool 2>/dev/null)" || return 1
 	reuse_ids_from="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || reuse_ids_from=""
 	SUB_TOOL_DIFF_FILE_CURRENT=""
+	SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
 	sub_keyword_patterns_can_use_tool || tool_can_filter=0
 	effective_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
 	{
@@ -938,7 +941,8 @@ sub_try_parse_uri_lines_with_tool(){
 	set -- "$@" --keep-info-node "${SUB_KEEP_INFO_NODE}"
 	if [ -n "${reuse_ids_from}" ] && [ "${tool_can_filter}" = "1" ];then
 		diff_output_file="${output_file}.diff.$$"
-		set -- "$@" --compare-with "${reuse_ids_from}" --diff-output "${diff_output_file}"
+		diff_summary_file="${output_file}.diff.summary.$$"
+		set -- "$@" --compare-with "${reuse_ids_from}" --diff-output "${diff_output_file}" --diff-summary-output "${diff_summary_file}"
 	fi
 	[ -n "${effective_hy2_up}" ] && set -- "$@" --hy2-up "${effective_hy2_up}"
 	[ -n "${effective_hy2_dl}" ] && set -- "$@" --hy2-dl "${effective_hy2_dl}"
@@ -970,8 +974,12 @@ sub_try_parse_uri_lines_with_tool(){
 		if [ -n "${diff_output_file}" ] && [ -f "${diff_output_file}" ];then
 			SUB_TOOL_DIFF_FILE_CURRENT="${diff_output_file}"
 		fi
+		if [ -n "${diff_summary_file}" ] && [ -f "${diff_summary_file}" ];then
+			SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT="${diff_summary_file}"
+		fi
 	else
 		rm -f "${diff_output_file}" >/dev/null 2>&1
+		rm -f "${diff_summary_file}" >/dev/null 2>&1
 		rm -f "${output_file}" >/dev/null 2>&1
 	fi
 	return 0
@@ -2099,6 +2107,7 @@ sub_log_nodes_file_change_detail(){
 
 sub_log_nodes_diff_tsv_file(){
 	local diff_file="$1"
+	local summary_file="$2"
 	local line=""
 	local reason=""
 	local type_id=""
@@ -2143,6 +2152,12 @@ sub_log_nodes_diff_tsv_file(){
 			;;
 		esac
 	done < "${diff_file}"
+	if [ -f "${summary_file}" ];then
+		param_changed=$(jq -r '.param // 0' "${summary_file}" 2>/dev/null)
+		renamed=$(jq -r '.rename // 0' "${summary_file}" 2>/dev/null)
+		added=$(jq -r '.new // 0' "${summary_file}" 2>/dev/null)
+		deleted=$(jq -r '.deleted // 0' "${summary_file}" 2>/dev/null)
+	fi
 	if [ "$((param_changed + renamed + deleted + added))" -gt "0" ];then
 		echo_date "ℹ️节点变更分类：参数改变${param_changed}个，名称改变${renamed}个，新增${added}个，删除${deleted}个。"
 	fi
@@ -5536,6 +5551,7 @@ get_online_rule_now(){
 	local CANONICAL_SOURCE_TAG=""
 	local SUB_SOURCE_TAG=""
 	SUB_TOOL_DIFF_FILE_CURRENT=""
+	SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
 
 	# 1. get domain name of node subscribe link
 	local DOMAIN_NAME="$(get_domain_name ${SUB_LINK})"
@@ -5776,7 +5792,7 @@ get_online_rule_now(){
 		else
 			sub_log_nodes_file_change_reason "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			if [ -n "${SUB_TOOL_DIFF_FILE_CURRENT}" ] && [ -f "${SUB_TOOL_DIFF_FILE_CURRENT}" ];then
-				sub_log_nodes_diff_tsv_file "${SUB_TOOL_DIFF_FILE_CURRENT}"
+				sub_log_nodes_diff_tsv_file "${SUB_TOOL_DIFF_FILE_CURRENT}" "${SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT}"
 			else
 				sub_log_nodes_file_change_detail "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			fi
