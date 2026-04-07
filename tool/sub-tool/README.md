@@ -31,7 +31,7 @@
 
 ## 当前版本
 
-`0.1.7`
+`0.1.8`
 
 当前代码按 Zig `0.15.2` 编写并验证。
 
@@ -82,6 +82,13 @@ sub-tool version
 - `tuic`
 - `hy2`
 - `hysteria2`
+
+当前也支持解析 `Clash/Mihomo YAML` 订阅中的 `proxies` 节点，现阶段至少包括：
+
+- `ss`
+- `ss2022`
+- `ss + obfs`
+- `trojan`
 
 ### `summary`
 
@@ -170,7 +177,6 @@ sub-tool parse-uri-lines --format fancyss
 当前版本还没有实现：
 
 - `SSEP` 真正的会话解密
-- `Clash/Mihomo` 格式订阅解析
 - `Sing-box` 格式订阅解析
 - 节点 diff
 - 直接写入 `schema2`

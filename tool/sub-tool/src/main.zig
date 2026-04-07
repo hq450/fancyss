@@ -126,7 +126,53 @@ const NormalizedNode = struct {
     short_id: ?[]const u8 = null,
     spider_x: ?[]const u8 = null,
     allow_insecure: ?bool = null,
+    tfo: ?bool = null,
     raw_uri: ?[]const u8 = null,
+};
+
+const ClashProxy = struct {
+    name: ?[]u8 = null,
+    proxy_type: ?[]u8 = null,
+    server: ?[]u8 = null,
+    port_text: ?[]u8 = null,
+    cipher: ?[]u8 = null,
+    password: ?[]u8 = null,
+    plugin: ?[]u8 = null,
+    plugin_mode: ?[]u8 = null,
+    plugin_host: ?[]u8 = null,
+    network: ?[]u8 = null,
+    sni: ?[]u8 = null,
+    ws_path: ?[]u8 = null,
+    ws_host: ?[]u8 = null,
+    grpc_service_name: ?[]u8 = null,
+    reality_public_key: ?[]u8 = null,
+    reality_short_id: ?[]u8 = null,
+    fingerprint: ?[]u8 = null,
+    alpn: ?[]u8 = null,
+    skip_cert_verify: ?bool = null,
+    tfo: ?bool = null,
+    ss_opts_enabled: ?bool = null,
+
+    fn deinit(self: *ClashProxy, allocator: std.mem.Allocator) void {
+        if (self.name) |v| allocator.free(v);
+        if (self.proxy_type) |v| allocator.free(v);
+        if (self.server) |v| allocator.free(v);
+        if (self.port_text) |v| allocator.free(v);
+        if (self.cipher) |v| allocator.free(v);
+        if (self.password) |v| allocator.free(v);
+        if (self.plugin) |v| allocator.free(v);
+        if (self.plugin_mode) |v| allocator.free(v);
+        if (self.plugin_host) |v| allocator.free(v);
+        if (self.network) |v| allocator.free(v);
+        if (self.sni) |v| allocator.free(v);
+        if (self.ws_path) |v| allocator.free(v);
+        if (self.ws_host) |v| allocator.free(v);
+        if (self.grpc_service_name) |v| allocator.free(v);
+        if (self.reality_public_key) |v| allocator.free(v);
+        if (self.reality_short_id) |v| allocator.free(v);
+        if (self.fingerprint) |v| allocator.free(v);
+        if (self.alpn) |v| allocator.free(v);
+    }
 };
 
 const ContentInfo = struct {
@@ -1624,6 +1670,15 @@ fn buildFancyssNodeJsonAlloc(allocator: std.mem.Allocator, node: NormalizedNode,
         defer if (host_value) |v| allocator.free(v);
         const path_value = try rawUriQueryValueAlloc(allocator, node, "path");
         defer if (path_value) |v| allocator.free(v);
+        const effective_type = if (type_value) |v| v else node.network;
+        const effective_host = if (host_value) |v| v else node.host;
+        const effective_path = if (path_value) |v| v else node.path;
+        const effective_tfo = if (tfo_value) |v|
+            v
+        else if (node.tfo != null)
+            (if (node.tfo.?) @as([]const u8, "1") else @as([]const u8, "0"))
+        else
+            null;
         var trojan_plugin: ?[]const u8 = null;
         var trojan_obfs: ?[]const u8 = null;
         var trojan_obfshost: ?[]const u8 = null;
@@ -1633,12 +1688,12 @@ fn buildFancyssNodeJsonAlloc(allocator: std.mem.Allocator, node: NormalizedNode,
             if (extractPluginField(allocator, plugin_raw, "obfs")) |v| trojan_obfs = v;
             if (extractPluginField(allocator, plugin_raw, "obfs-host")) |v| trojan_obfshost = v;
             if (extractPluginField(allocator, plugin_raw, "obfs-uri")) |v| trojan_obfsuri = v;
-        } else if (type_value) |tv| {
+        } else if (effective_type) |tv| {
             if (std.mem.eql(u8, tv, "ws")) {
                 trojan_plugin = "obfs-local";
                 trojan_obfs = "websocket";
-                trojan_obfshost = host_value;
-                trojan_obfsuri = path_value;
+                trojan_obfshost = effective_host;
+                trojan_obfsuri = effective_path;
             }
         }
 
@@ -1651,7 +1706,7 @@ fn buildFancyssNodeJsonAlloc(allocator: std.mem.Allocator, node: NormalizedNode,
         try jsonFieldMaybeString(writer, &first, "trojan_ai", if (ai) "1" else null);
         try jsonFieldMaybeString(writer, &first, "trojan_pcs", pcs_value);
         try jsonFieldMaybeString(writer, &first, "trojan_sni", node.sni);
-        try jsonFieldMaybeString(writer, &first, "trojan_tfo", tfo_value);
+        try jsonFieldMaybeString(writer, &first, "trojan_tfo", effective_tfo);
         try jsonFieldMaybeString(writer, &first, "trojan_uuid", node.password);
         try jsonFieldMaybeString(writer, &first, "trojan_vcn", vcn_value);
         try jsonFieldMaybeString(writer, &first, "trojan_plugin", trojan_plugin);
@@ -2083,24 +2138,108 @@ fn parseSubscription(allocator: std.mem.Allocator, raw: []const u8, options: Opt
     result.kind = info.kind;
 
     switch (info.kind) {
-        .uri_lines, .base64_uri_lines => {},
+        .uri_lines, .base64_uri_lines, .clash_yaml => {},
         else => return error.UnsupportedInputKind,
     }
 
-    var lines = std.mem.tokenizeAny(u8, info.content, "\r\n");
-    while (lines.next()) |line_raw| {
-        const line = std.mem.trim(u8, line_raw, " \t");
-        if (line.len == 0) continue;
-        result.total_lines += 1;
-        if (line[0] == '#') {
-            result.ignored_lines += 1;
+    switch (info.kind) {
+        .clash_yaml => try parseClashYamlIntoResult(allocator, info.content, options, &result),
+        else => {
+            var lines = std.mem.tokenizeAny(u8, info.content, "\r\n");
+            while (lines.next()) |line_raw| {
+                const line = std.mem.trim(u8, line_raw, " \t");
+                if (line.len == 0) continue;
+                result.total_lines += 1;
+                if (line[0] == '#') {
+                    result.ignored_lines += 1;
+                    continue;
+                }
+                if (detectScheme(line) != null) {
+                    result.uri_lines += 1;
+                }
+
+                const node = parseLine(allocator, line, options) catch |err| switch (err) {
+                    error.UnsupportedScheme => {
+                        result.ignored_lines += 1;
+                        continue;
+                    },
+                    else => {
+                        result.invalid_lines += 1;
+                        continue;
+                    },
+                };
+
+                try result.nodes.append(allocator, node);
+                result.valid_lines += 1;
+            }
+        },
+    }
+
+    return result;
+}
+
+const ClashSection = enum {
+    root,
+    plugin_opts,
+    ws_opts,
+    ws_headers,
+    grpc_opts,
+    reality_opts,
+    alpn_list,
+    ss_opts,
+};
+
+fn parseClashYamlIntoResult(allocator: std.mem.Allocator, content: []const u8, options: Options, result: *ParseResult) !void {
+    var lines = std.ArrayList([]const u8){};
+    defer lines.deinit(allocator);
+
+    var split = std.mem.splitScalar(u8, trimBom(content), '\n');
+    while (split.next()) |line| {
+        try lines.append(allocator, std.mem.trimRight(u8, line, "\r"));
+    }
+
+    var in_proxies = false;
+    var proxies_indent: usize = 0;
+    var idx: usize = 0;
+    while (idx < lines.items.len) {
+        const raw_line = lines.items[idx];
+        const no_comment = trimYamlComment(raw_line);
+        const trimmed = std.mem.trim(u8, no_comment, " \t");
+
+        if (!in_proxies) {
+            if (trimmed.len == 0 or trimmed[0] == '#') {
+                idx += 1;
+                continue;
+            }
+            if (std.mem.eql(u8, trimmed, "proxies:")) {
+                in_proxies = true;
+                proxies_indent = countLeadingSpaces(raw_line);
+            }
+            idx += 1;
             continue;
         }
-        if (detectScheme(line) != null) {
-            result.uri_lines += 1;
+
+        if (trimmed.len == 0 or trimmed[0] == '#') {
+            idx += 1;
+            continue;
         }
 
-        const node = parseLine(allocator, line, options) catch |err| switch (err) {
+        const indent = countLeadingSpaces(raw_line);
+        if (indent <= proxies_indent and !std.mem.startsWith(u8, trimmed, "- ")) break;
+        if (!std.mem.startsWith(u8, trimmed, "- ")) {
+            idx += 1;
+            continue;
+        }
+
+        result.total_lines += 1;
+        result.uri_lines += 1;
+
+        var proxy = ClashProxy{};
+        defer proxy.deinit(allocator);
+        const next_idx = try parseClashProxyBlock(allocator, lines.items, idx, proxies_indent, &proxy);
+        idx = next_idx;
+
+        const node = clashProxyToNormalizedNode(allocator, proxy, options) catch |err| switch (err) {
             error.UnsupportedScheme => {
                 result.ignored_lines += 1;
                 continue;
@@ -2110,12 +2249,590 @@ fn parseSubscription(allocator: std.mem.Allocator, raw: []const u8, options: Opt
                 continue;
             },
         };
-
         try result.nodes.append(allocator, node);
         result.valid_lines += 1;
     }
+}
 
-    return result;
+fn parseClashProxyBlock(allocator: std.mem.Allocator, lines: []const []const u8, start_idx: usize, proxies_indent: usize, proxy: *ClashProxy) !usize {
+    const first_line = lines[start_idx];
+    const item_indent = countLeadingSpaces(first_line);
+    const trimmed_first = std.mem.trim(u8, trimYamlComment(first_line), " \t");
+    if (!std.mem.startsWith(u8, trimmed_first, "- ")) return error.InvalidUri;
+
+    const first_rest = std.mem.trim(u8, trimmed_first[2..], " \t");
+    if (first_rest.len > 0) {
+        if (first_rest[0] == '{') {
+            if (first_rest.len < 2 or first_rest[first_rest.len - 1] != '}') return error.InvalidUri;
+            try parseClashFlowMapIntoProxy(allocator, proxy, .root, first_rest[1 .. first_rest.len - 1]);
+        } else {
+            try parseClashYamlKeyValueLine(allocator, proxy, .root, first_rest);
+        }
+    }
+
+    var section: ClashSection = .root;
+    var section_indent: usize = item_indent;
+    var idx = start_idx + 1;
+    while (idx < lines.len) {
+        const raw_line = lines[idx];
+        const no_comment = trimYamlComment(raw_line);
+        const trimmed = std.mem.trim(u8, no_comment, " \t");
+        if (trimmed.len == 0 or trimmed[0] == '#') {
+            idx += 1;
+            continue;
+        }
+
+        const indent = countLeadingSpaces(raw_line);
+        if (indent <= proxies_indent) break;
+        if (indent == item_indent and std.mem.startsWith(u8, trimmed, "- ")) break;
+
+        if (section != .root and indent <= section_indent) {
+            section = .root;
+            continue;
+        }
+
+        switch (section) {
+            .root => {
+                if (indent <= item_indent) {
+                    idx += 1;
+                    continue;
+                }
+                const kv = splitYamlKeyValue(trimmed) orelse {
+                    idx += 1;
+                    continue;
+                };
+                if (kv.value.len == 0) {
+                    if (stringEqualsIgnoreCase(kv.key, "plugin-opts")) {
+                        section = .plugin_opts;
+                        section_indent = indent;
+                    } else if (stringEqualsIgnoreCase(kv.key, "ws-opts")) {
+                        section = .ws_opts;
+                        section_indent = indent;
+                    } else if (stringEqualsIgnoreCase(kv.key, "grpc-opts")) {
+                        section = .grpc_opts;
+                        section_indent = indent;
+                    } else if (stringEqualsIgnoreCase(kv.key, "reality-opts")) {
+                        section = .reality_opts;
+                        section_indent = indent;
+                    } else if (stringEqualsIgnoreCase(kv.key, "alpn")) {
+                        section = .alpn_list;
+                        section_indent = indent;
+                    } else if (stringEqualsIgnoreCase(kv.key, "ss-opts")) {
+                        section = .ss_opts;
+                        section_indent = indent;
+                    }
+                    idx += 1;
+                    continue;
+                }
+
+                if ((stringEqualsIgnoreCase(kv.key, "plugin-opts") or stringEqualsIgnoreCase(kv.key, "ws-opts") or stringEqualsIgnoreCase(kv.key, "grpc-opts") or stringEqualsIgnoreCase(kv.key, "reality-opts")) and kv.value[0] == '{' and kv.value[kv.value.len - 1] == '}') {
+                    const nested_section: ClashSection = if (stringEqualsIgnoreCase(kv.key, "plugin-opts"))
+                        .plugin_opts
+                    else if (stringEqualsIgnoreCase(kv.key, "ws-opts"))
+                        .ws_opts
+                    else if (stringEqualsIgnoreCase(kv.key, "grpc-opts"))
+                        .grpc_opts
+                    else
+                        .reality_opts;
+                    try parseClashFlowMapIntoProxy(allocator, proxy, nested_section, kv.value[1 .. kv.value.len - 1]);
+                    idx += 1;
+                    continue;
+                }
+                if (stringEqualsIgnoreCase(kv.key, "alpn")) {
+                    try parseClashYamlAlpnValue(allocator, proxy, kv.value);
+                    idx += 1;
+                    continue;
+                }
+                try assignClashProxyScalar(allocator, proxy, .root, kv.key, kv.value);
+                idx += 1;
+            },
+            .plugin_opts, .grpc_opts, .reality_opts, .ss_opts => {
+                const kv = splitYamlKeyValue(trimmed) orelse {
+                    idx += 1;
+                    continue;
+                };
+                try assignClashProxyScalar(allocator, proxy, section, kv.key, kv.value);
+                idx += 1;
+            },
+            .ws_opts => {
+                const kv = splitYamlKeyValue(trimmed) orelse {
+                    idx += 1;
+                    continue;
+                };
+                if (kv.value.len == 0 and stringEqualsIgnoreCase(kv.key, "headers")) {
+                    section = .ws_headers;
+                    section_indent = indent;
+                    idx += 1;
+                    continue;
+                }
+                if (stringEqualsIgnoreCase(kv.key, "headers") and kv.value.len > 1 and kv.value[0] == '{' and kv.value[kv.value.len - 1] == '}') {
+                    try parseClashFlowMapIntoProxy(allocator, proxy, .ws_headers, kv.value[1 .. kv.value.len - 1]);
+                    idx += 1;
+                    continue;
+                }
+                try assignClashProxyScalar(allocator, proxy, .ws_opts, kv.key, kv.value);
+                idx += 1;
+            },
+            .ws_headers => {
+                const kv = splitYamlKeyValue(trimmed) orelse {
+                    idx += 1;
+                    continue;
+                };
+                try assignClashProxyScalar(allocator, proxy, .ws_headers, kv.key, kv.value);
+                idx += 1;
+            },
+            .alpn_list => {
+                if (std.mem.startsWith(u8, trimmed, "- ")) {
+                    const value = std.mem.trim(u8, trimmed[2..], " \t");
+                    try appendClashProxyAlpn(allocator, proxy, value);
+                }
+                idx += 1;
+            },
+        }
+    }
+
+    return idx;
+}
+
+fn countLeadingSpaces(line: []const u8) usize {
+    var idx: usize = 0;
+    while (idx < line.len and line[idx] == ' ') : (idx += 1) {}
+    return idx;
+}
+
+fn trimYamlComment(line: []const u8) []const u8 {
+    var in_single = false;
+    var in_double = false;
+    var escape = false;
+    for (line, 0..) |ch, idx| {
+        if (escape) {
+            escape = false;
+            continue;
+        }
+        if (in_double and ch == '\\') {
+            escape = true;
+            continue;
+        }
+        if (!in_double and ch == '\'') {
+            in_single = !in_single;
+            continue;
+        }
+        if (!in_single and ch == '"') {
+            in_double = !in_double;
+            continue;
+        }
+        if (!in_single and !in_double and ch == '#') {
+            if (idx == 0 or line[idx - 1] == ' ' or line[idx - 1] == '\t') {
+                return std.mem.trimRight(u8, line[0..idx], " \t");
+            }
+        }
+    }
+    return std.mem.trimRight(u8, line, " \t");
+}
+
+fn splitYamlKeyValue(line: []const u8) ?struct { key: []const u8, value: []const u8 } {
+    const colon = findTopLevelColon(line) orelse return null;
+    const key = std.mem.trim(u8, line[0..colon], " \t");
+    const value = std.mem.trim(u8, line[colon + 1 ..], " \t");
+    if (key.len == 0) return null;
+    return .{ .key = key, .value = value };
+}
+
+fn findTopLevelColon(line: []const u8) ?usize {
+    var in_single = false;
+    var in_double = false;
+    var escape = false;
+    var brace_depth: usize = 0;
+    var bracket_depth: usize = 0;
+    for (line, 0..) |ch, idx| {
+        if (escape) {
+            escape = false;
+            continue;
+        }
+        if (in_double and ch == '\\') {
+            escape = true;
+            continue;
+        }
+        if (!in_double and ch == '\'') {
+            in_single = !in_single;
+            continue;
+        }
+        if (!in_single and ch == '"') {
+            in_double = !in_double;
+            continue;
+        }
+        if (in_single or in_double) continue;
+        switch (ch) {
+            '{' => brace_depth += 1,
+            '}' => {
+                if (brace_depth > 0) brace_depth -= 1;
+            },
+            '[' => bracket_depth += 1,
+            ']' => {
+                if (bracket_depth > 0) bracket_depth -= 1;
+            },
+            ':' => if (brace_depth == 0 and bracket_depth == 0) return idx,
+            else => {},
+        }
+    }
+    return null;
+}
+
+fn parseClashYamlKeyValueLine(allocator: std.mem.Allocator, proxy: *ClashProxy, section: ClashSection, line: []const u8) !void {
+    const kv = splitYamlKeyValue(line) orelse return;
+    try assignClashProxyScalar(allocator, proxy, section, kv.key, kv.value);
+}
+
+fn parseClashFlowMapIntoProxy(allocator: std.mem.Allocator, proxy: *ClashProxy, section: ClashSection, content: []const u8) !void {
+    var start: usize = 0;
+    var in_single = false;
+    var in_double = false;
+    var escape = false;
+    var brace_depth: usize = 0;
+    var bracket_depth: usize = 0;
+    var idx: usize = 0;
+    while (idx <= content.len) : (idx += 1) {
+        const at_end = idx == content.len;
+        if (!at_end) {
+            const ch = content[idx];
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (in_double and ch == '\\') {
+                escape = true;
+                continue;
+            }
+            if (!in_double and ch == '\'') {
+                in_single = !in_single;
+                continue;
+            }
+            if (!in_single and ch == '"') {
+                in_double = !in_double;
+                continue;
+            }
+            if (in_single or in_double) continue;
+            switch (ch) {
+                '{' => brace_depth += 1,
+                '}' => {
+                    if (brace_depth > 0) brace_depth -= 1;
+                },
+                '[' => bracket_depth += 1,
+                ']' => {
+                    if (bracket_depth > 0) bracket_depth -= 1;
+                },
+                ',' => if (brace_depth == 0 and bracket_depth == 0) {},
+                else => continue,
+            }
+            if (!(ch == ',' and brace_depth == 0 and bracket_depth == 0)) continue;
+        }
+
+        const segment = std.mem.trim(u8, content[start..idx], " \t");
+        if (segment.len > 0) {
+            const kv = splitYamlKeyValue(segment) orelse {
+                start = idx + 1;
+                continue;
+            };
+            if (section == .root and kv.value.len > 1 and kv.value[0] == '{' and kv.value[kv.value.len - 1] == '}') {
+                if (stringEqualsIgnoreCase(kv.key, "plugin-opts")) {
+                    try parseClashFlowMapIntoProxy(allocator, proxy, .plugin_opts, kv.value[1 .. kv.value.len - 1]);
+                } else if (stringEqualsIgnoreCase(kv.key, "ws-opts")) {
+                    try parseClashFlowMapIntoProxy(allocator, proxy, .ws_opts, kv.value[1 .. kv.value.len - 1]);
+                } else if (stringEqualsIgnoreCase(kv.key, "grpc-opts")) {
+                    try parseClashFlowMapIntoProxy(allocator, proxy, .grpc_opts, kv.value[1 .. kv.value.len - 1]);
+                } else if (stringEqualsIgnoreCase(kv.key, "reality-opts")) {
+                    try parseClashFlowMapIntoProxy(allocator, proxy, .reality_opts, kv.value[1 .. kv.value.len - 1]);
+                } else {
+                    try assignClashProxyScalar(allocator, proxy, section, kv.key, kv.value);
+                }
+            } else if (section == .ws_opts and stringEqualsIgnoreCase(kv.key, "headers") and kv.value.len > 1 and kv.value[0] == '{' and kv.value[kv.value.len - 1] == '}') {
+                try parseClashFlowMapIntoProxy(allocator, proxy, .ws_headers, kv.value[1 .. kv.value.len - 1]);
+            } else if (stringEqualsIgnoreCase(kv.key, "alpn")) {
+                try parseClashYamlAlpnValue(allocator, proxy, kv.value);
+            } else {
+                try assignClashProxyScalar(allocator, proxy, section, kv.key, kv.value);
+            }
+        }
+        start = idx + 1;
+    }
+}
+
+fn parseClashYamlAlpnValue(allocator: std.mem.Allocator, proxy: *ClashProxy, raw_value: []const u8) !void {
+    const value = std.mem.trim(u8, raw_value, " \t");
+    if (value.len >= 2 and value[0] == '[' and value[value.len - 1] == ']') {
+        var start: usize = 1;
+        var in_single = false;
+        var in_double = false;
+        var escape = false;
+        var idx: usize = 1;
+        while (idx <= value.len - 1) : (idx += 1) {
+            const at_end = idx == value.len - 1;
+            if (!at_end) {
+                const ch = value[idx];
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (in_double and ch == '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (!in_double and ch == '\'') {
+                    in_single = !in_single;
+                    continue;
+                }
+                if (!in_single and ch == '"') {
+                    in_double = !in_double;
+                    continue;
+                }
+                if (in_single or in_double or ch != ',') continue;
+            }
+            const segment = std.mem.trim(u8, value[start..idx], " \t");
+            if (segment.len > 0) try appendClashProxyAlpn(allocator, proxy, segment);
+            start = idx + 1;
+        }
+        return;
+    }
+    try appendClashProxyAlpn(allocator, proxy, value);
+}
+
+fn yamlScalarBool(value: []const u8) ?bool {
+    if (stringEqualsIgnoreCase(value, "true") or stringEqualsIgnoreCase(value, "yes") or stringEqualsIgnoreCase(value, "on") or std.mem.eql(u8, value, "1")) return true;
+    if (stringEqualsIgnoreCase(value, "false") or stringEqualsIgnoreCase(value, "no") or stringEqualsIgnoreCase(value, "off") or std.mem.eql(u8, value, "0")) return false;
+    return null;
+}
+
+fn yamlUnquoteAlloc(allocator: std.mem.Allocator, raw_value: []const u8) ![]u8 {
+    const value = std.mem.trim(u8, raw_value, " \t");
+    if (value.len >= 2 and value[0] == '"' and value[value.len - 1] == '"') {
+        var out = std.ArrayList(u8){};
+        defer out.deinit(allocator);
+        var idx: usize = 1;
+        while (idx + 1 < value.len) : (idx += 1) {
+            const ch = value[idx];
+            if (ch == '\\' and idx + 2 < value.len) {
+                idx += 1;
+                switch (value[idx]) {
+                    'n' => try out.append(allocator, '\n'),
+                    'r' => try out.append(allocator, '\r'),
+                    't' => try out.append(allocator, '\t'),
+                    else => try out.append(allocator, value[idx]),
+                }
+                continue;
+            }
+            try out.append(allocator, ch);
+        }
+        return try out.toOwnedSlice(allocator);
+    }
+    if (value.len >= 2 and value[0] == '\'' and value[value.len - 1] == '\'') {
+        var out = std.ArrayList(u8){};
+        defer out.deinit(allocator);
+        var idx: usize = 1;
+        while (idx + 1 < value.len) : (idx += 1) {
+            if (value[idx] == '\'' and idx + 2 < value.len and value[idx + 1] == '\'') {
+                try out.append(allocator, '\'');
+                idx += 1;
+                continue;
+            }
+            try out.append(allocator, value[idx]);
+        }
+        return try out.toOwnedSlice(allocator);
+    }
+    return try allocator.dupe(u8, value);
+}
+
+fn setOwnedOptionalString(allocator: std.mem.Allocator, slot: *?[]u8, owned: []u8) void {
+    if (slot.*) |value| allocator.free(value);
+    slot.* = owned;
+}
+
+fn appendClashProxyAlpn(allocator: std.mem.Allocator, proxy: *ClashProxy, raw_value: []const u8) !void {
+    const value = try yamlUnquoteAlloc(allocator, raw_value);
+    errdefer allocator.free(value);
+    if (value.len == 0) return;
+    if (proxy.alpn) |old| {
+        const joined = try std.fmt.allocPrint(allocator, "{s},{s}", .{ old, value });
+        allocator.free(old);
+        allocator.free(value);
+        proxy.alpn = joined;
+    } else {
+        proxy.alpn = value;
+    }
+}
+
+fn assignClashProxyScalar(allocator: std.mem.Allocator, proxy: *ClashProxy, section: ClashSection, raw_key: []const u8, raw_value: []const u8) !void {
+    if (raw_value.len == 0) return;
+    const key = std.mem.trim(u8, raw_key, " \t");
+    const value = try yamlUnquoteAlloc(allocator, raw_value);
+    errdefer allocator.free(value);
+
+    switch (section) {
+        .root => {
+            if (stringEqualsIgnoreCase(key, "name")) {
+                setOwnedOptionalString(allocator, &proxy.name, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "type")) {
+                setOwnedOptionalString(allocator, &proxy.proxy_type, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "server")) {
+                setOwnedOptionalString(allocator, &proxy.server, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "port")) {
+                setOwnedOptionalString(allocator, &proxy.port_text, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "cipher")) {
+                setOwnedOptionalString(allocator, &proxy.cipher, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "password")) {
+                setOwnedOptionalString(allocator, &proxy.password, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "plugin")) {
+                setOwnedOptionalString(allocator, &proxy.plugin, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "network")) {
+                setOwnedOptionalString(allocator, &proxy.network, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "sni") or stringEqualsIgnoreCase(key, "servername")) {
+                setOwnedOptionalString(allocator, &proxy.sni, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "client-fingerprint") or stringEqualsIgnoreCase(key, "fingerprint")) {
+                setOwnedOptionalString(allocator, &proxy.fingerprint, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "alpn")) {
+                try appendClashProxyAlpn(allocator, proxy, value);
+                allocator.free(value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "skip-cert-verify")) {
+                proxy.skip_cert_verify = yamlScalarBool(value);
+                allocator.free(value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "tfo")) {
+                proxy.tfo = yamlScalarBool(value);
+                allocator.free(value);
+                return;
+            }
+        },
+        .plugin_opts => {
+            if (stringEqualsIgnoreCase(key, "mode")) {
+                setOwnedOptionalString(allocator, &proxy.plugin_mode, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "host")) {
+                setOwnedOptionalString(allocator, &proxy.plugin_host, value);
+                return;
+            }
+        },
+        .ws_opts => {
+            if (stringEqualsIgnoreCase(key, "path")) {
+                setOwnedOptionalString(allocator, &proxy.ws_path, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "host")) {
+                setOwnedOptionalString(allocator, &proxy.ws_host, value);
+                return;
+            }
+        },
+        .ws_headers => {
+            if (stringEqualsIgnoreCase(key, "host")) {
+                setOwnedOptionalString(allocator, &proxy.ws_host, value);
+                return;
+            }
+        },
+        .grpc_opts => {
+            if (stringEqualsIgnoreCase(key, "grpc-service-name") or stringEqualsIgnoreCase(key, "serviceName")) {
+                setOwnedOptionalString(allocator, &proxy.grpc_service_name, value);
+                return;
+            }
+        },
+        .reality_opts => {
+            if (stringEqualsIgnoreCase(key, "public-key")) {
+                setOwnedOptionalString(allocator, &proxy.reality_public_key, value);
+                return;
+            }
+            if (stringEqualsIgnoreCase(key, "short-id")) {
+                setOwnedOptionalString(allocator, &proxy.reality_short_id, value);
+                return;
+            }
+        },
+        .alpn_list => {
+            try appendClashProxyAlpn(allocator, proxy, value);
+            allocator.free(value);
+            return;
+        },
+        .ss_opts => {
+            if (stringEqualsIgnoreCase(key, "enabled")) {
+                proxy.ss_opts_enabled = yamlScalarBool(value);
+                allocator.free(value);
+                return;
+            }
+        },
+    }
+
+    allocator.free(value);
+}
+
+fn clashProxyToNormalizedNode(allocator: std.mem.Allocator, proxy: ClashProxy, options: Options) !NormalizedNode {
+    const proxy_type = proxy.proxy_type orelse return error.InvalidUri;
+    const server = proxy.server orelse return error.InvalidUri;
+    const port_text = proxy.port_text orelse return error.InvalidUri;
+    const port = std.fmt.parseInt(u16, port_text, 10) catch return error.InvalidUri;
+    const name = proxy.name orelse server;
+
+    if (stringEqualsIgnoreCase(proxy_type, "ss")) {
+        const method = proxy.cipher orelse return error.InvalidUri;
+        const password = proxy.password orelse return error.InvalidUri;
+        if (proxy.plugin) |plugin| {
+            if (!stringEqualsIgnoreCase(plugin, "obfs") and !stringEqualsIgnoreCase(plugin, "obfs-local")) {
+                return error.UnsupportedScheme;
+            }
+        }
+        var node = try baseNode(allocator, "ss", name, server, port, options);
+        node.method = try allocator.dupe(u8, method);
+        node.password = try allocator.dupe(u8, password);
+        if (proxy.plugin_mode) |v| node.obfs = try allocator.dupe(u8, v);
+        if (proxy.plugin_host) |v| node.obfs_host = try allocator.dupe(u8, v);
+        node.tfo = proxy.tfo;
+        return node;
+    }
+
+    if (stringEqualsIgnoreCase(proxy_type, "trojan")) {
+        const password = proxy.password orelse return error.InvalidUri;
+        if (proxy.ss_opts_enabled != null and proxy.ss_opts_enabled.?) return error.UnsupportedScheme;
+        if (proxy.network) |network| {
+            if (!stringEqualsIgnoreCase(network, "tcp") and !stringEqualsIgnoreCase(network, "ws")) {
+                return error.UnsupportedScheme;
+            }
+        }
+        var node = try baseNode(allocator, "trojan", name, server, port, options);
+        node.password = try allocator.dupe(u8, password);
+        if (proxy.sni) |v| node.sni = try allocator.dupe(u8, v);
+        if (proxy.fingerprint) |v| node.fingerprint = try allocator.dupe(u8, v);
+        if (proxy.alpn) |v| node.alpn = try allocator.dupe(u8, v);
+        if (proxy.skip_cert_verify) |v| node.allow_insecure = v;
+        if (proxy.tfo) |v| node.tfo = v;
+        if (proxy.network) |network| {
+            if (!stringEqualsIgnoreCase(network, "tcp")) {
+                node.network = try allocator.dupe(u8, network);
+            }
+        }
+        if (proxy.ws_path) |v| node.path = try allocator.dupe(u8, v);
+        if (proxy.ws_host) |v| node.host = try allocator.dupe(u8, v);
+        return node;
+    }
+
+    return error.UnsupportedScheme;
 }
 
 fn parseLine(allocator: std.mem.Allocator, line: []const u8, options: Options) !NormalizedNode {
@@ -3224,6 +3941,78 @@ test "parse vmess link" {
     try std.testing.expectEqualStrings("vmess", node.scheme);
     try std.testing.expectEqualStrings("VMESS", node.name);
     try std.testing.expectEqualStrings("example.com", node.server);
+}
+
+test "parse clash yaml ss2022 flow proxy" {
+    const allocator = std.testing.allocator;
+    const sample =
+        "port: 7890\n" ++
+        "proxies:\n" ++
+        "  - {name: HK-SS2022, type: ss, server: example.com, port: 443, cipher: 2022-blake3-aes-128-gcm, password: foo:bar, udp: true, tfo: false}\n" ++
+        "proxy-groups:\n" ++
+        "  - {name: auto, type: select, proxies: [HK-SS2022]}\n";
+    var result = try parseSubscription(allocator, sample, .{ .command = .parse_uri_lines });
+    defer result.deinit(allocator);
+    try std.testing.expectEqual(InputKind.clash_yaml, result.kind);
+    try std.testing.expectEqual(@as(usize, 1), result.nodes.items.len);
+    try std.testing.expectEqualStrings("ss", result.nodes.items[0].scheme);
+    try std.testing.expectEqualStrings("HK-SS2022", result.nodes.items[0].name);
+    try std.testing.expectEqualStrings("2022-blake3-aes-128-gcm", result.nodes.items[0].method.?);
+    try std.testing.expectEqualStrings("foo:bar", result.nodes.items[0].password.?);
+}
+
+test "parse clash yaml ss obfs block proxy" {
+    const allocator = std.testing.allocator;
+    const sample =
+        "proxies:\n" ++
+        "  - name: HK-SS-OBFS\n" ++
+        "    type: ss\n" ++
+        "    server: obfs.example.com\n" ++
+        "    port: 8443\n" ++
+        "    cipher: aes-128-gcm\n" ++
+        "    password: pass123\n" ++
+        "    plugin: obfs\n" ++
+        "    plugin-opts:\n" ++
+        "      mode: tls\n" ++
+        "      host: cdn.example.com\n" ++
+        "rules:\n" ++
+        "  - MATCH,DIRECT\n";
+    var result = try parseSubscription(allocator, sample, .{ .command = .parse_uri_lines });
+    defer result.deinit(allocator);
+    try std.testing.expectEqual(@as(usize, 1), result.nodes.items.len);
+    try std.testing.expectEqualStrings("ss", result.nodes.items[0].scheme);
+    try std.testing.expectEqualStrings("tls", result.nodes.items[0].obfs.?);
+    try std.testing.expectEqualStrings("cdn.example.com", result.nodes.items[0].obfs_host.?);
+}
+
+test "parse clash yaml trojan ws block proxy" {
+    const allocator = std.testing.allocator;
+    const sample =
+        "proxies:\n" ++
+        "  - name: HK-TROJAN-WS\n" ++
+        "    type: trojan\n" ++
+        "    server: trojan.example.com\n" ++
+        "    port: 443\n" ++
+        "    password: trojan-pass\n" ++
+        "    sni: tls.example.com\n" ++
+        "    skip-cert-verify: true\n" ++
+        "    network: ws\n" ++
+        "    ws-opts:\n" ++
+        "      path: /ws\n" ++
+        "      headers:\n" ++
+        "        Host: ws.example.com\n" ++
+        "proxy-groups:\n" ++
+        "  - name: test\n";
+    var result = try parseSubscription(allocator, sample, .{ .command = .parse_uri_lines });
+    defer result.deinit(allocator);
+    try std.testing.expectEqual(@as(usize, 1), result.nodes.items.len);
+    try std.testing.expectEqualStrings("trojan", result.nodes.items[0].scheme);
+    try std.testing.expectEqualStrings("trojan-pass", result.nodes.items[0].password.?);
+    try std.testing.expectEqualStrings("tls.example.com", result.nodes.items[0].sni.?);
+    try std.testing.expectEqualStrings("ws", result.nodes.items[0].network.?);
+    try std.testing.expectEqualStrings("/ws", result.nodes.items[0].path.?);
+    try std.testing.expectEqualStrings("ws.example.com", result.nodes.items[0].host.?);
+    try std.testing.expectEqual(true, result.nodes.items[0].allow_insecure.?);
 }
 
 test "detect text error payloads" {
