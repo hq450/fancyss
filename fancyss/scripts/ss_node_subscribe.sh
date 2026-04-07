@@ -4265,7 +4265,7 @@ decode_urllink(){
 json2skipd(){
 	local file_name=$1
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		if [ "${SUB_FAST_APPEND}" = "1" ];then
+	if [ "${SUB_FAST_APPEND}" = "1" ];then
 			sub_append_nodes_schema2 "${DIR}/${file_name}.txt" "${SUB_FAST_APPEND_REUSE}" || {
 				SUB_FAST_APPEND=0
 				SUB_FAST_APPEND_REUSE=1
@@ -4281,6 +4281,7 @@ json2skipd(){
 			echo_date "😀节点信息写入成功！"
 			sync
 			sub_refresh_node_state
+			fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 			return 0
 		fi
 		sub_write_nodes_schema2 "${DIR}/${file_name}.txt" || return 1
@@ -4295,6 +4296,7 @@ json2skipd(){
 		echo_date "😀节点信息写入成功！"
 		sync
 		sub_refresh_node_state
+		fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 		return 0
 	fi
 	cat > $DIR/${file_name}.sh <<-EOF
@@ -4863,6 +4865,7 @@ remove_all_node(){
 		dbus remove ${conf2}
 	done
 	fss_refresh_node_direct_cache >/dev/null 2>&1
+	fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 	echo_date "删除成功！"
 }
 
@@ -4891,6 +4894,7 @@ remove_sub_node(){
 				dbus remove ${conf2}
 			done
 			fss_refresh_node_direct_cache >/dev/null 2>&1
+			fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 			echo_date "所有订阅节点信息已经成功删除！"
 			sub_refresh_node_state
@@ -4948,6 +4952,7 @@ remove_sub_node(){
 			dbus remove ${conf2}
 		done
 		fss_refresh_node_direct_cache >/dev/null 2>&1
+		fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 		fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		echo_date "所有订阅节点信息已经成功删除！"
 		sub_refresh_node_state
@@ -4976,6 +4981,7 @@ remove_sub_node(){
 		dbus remove ${conf2}
 	done
 	fss_refresh_node_direct_cache >/dev/null 2>&1
+	fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 	fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 	echo_date "所有订阅节点信息已经成功删除！"
 }

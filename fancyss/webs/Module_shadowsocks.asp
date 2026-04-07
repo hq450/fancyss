@@ -5937,7 +5937,7 @@ function remove_conf_table(o) {
 		}
 		var post_data_v2 = compfilter(get_compare_store(), fields_v2);
 		var id_2 = parseInt(Math.random() * 100000000);
-		var postData_v2 = {"id": id_2, "method": "dummy_script.sh", "params":[], "fields": post_data_v2 };
+		var postData_v2 = build_schema2_postsave_request(id_2, post_data_v2) || {"id": id_2, "method": "dummy_script.sh", "params":[], "fields": post_data_v2 };
 		$.ajax({
 			type: "POST",
 			cache:false,
@@ -6932,9 +6932,6 @@ function collect_schema2_postsave_node_ids(fields) {
 		}
 		match = key.match(/^fss_node_(\d+)$/);
 		if (!match) {
-			continue;
-		}
-		if (!fields[key]) {
 			continue;
 		}
 		if (seen[match[1]]) {

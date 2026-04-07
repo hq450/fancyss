@@ -57,6 +57,7 @@ $(printf '%s' "${ids_csv}" | tr ',' '\n' | sed '/^$/d')
 		fss_touch_node_config_ts >/dev/null 2>&1 || true
 		fss_touch_node_catalog_ts >/dev/null 2>&1 || true
 	fi
+	fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 	[ "${identity_changed}" = "1" ] && fss_clear_webtest_runtime_results >/dev/null 2>&1 || true
 }
 

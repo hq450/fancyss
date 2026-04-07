@@ -2115,6 +2115,41 @@ $(fss_get_node_server_host_port "${node_id}" 2>/dev/null)
 	fi
 }
 
+fss_prune_airport_runtime_entries() {
+	local runtime_file="${FSS_AIRPORT_RUNTIME_FILE}"
+	local tmp_file="${runtime_file}.tmp.$$"
+	local scope_file="${runtime_file}.scopes.$$"
+	local node_id=""
+	local scope=""
+
+	[ -f "${runtime_file}" ] || return 0
+	: > "${scope_file}"
+	for node_id in $(fss_list_node_ids)
+	do
+		[ -n "${node_id}" ] || continue
+		scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)"
+		[ -n "${scope}" ] || continue
+		echo "${scope}" >> "${scope_file}"
+	done
+	sort -u "${scope_file}" -o "${scope_file}" 2>/dev/null
+	jq --slurpfile scopes "${scope_file}" '
+		.version = (.version // 1)
+		| .entries = (
+			(.entries // [])
+			| map(select((.source_scope // "") as $s | ($scopes[0] | index($s))))
+		)
+	' "${runtime_file}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}" "${scope_file}"
+		return 1
+	}
+	if jq -e '((.entries // []) | length) == 0' "${tmp_file}" >/dev/null 2>&1;then
+		rm -f "${runtime_file}" "${tmp_file}" "${scope_file}"
+	else
+		mv -f "${tmp_file}" "${runtime_file}"
+		rm -f "${scope_file}"
+	fi
+}
+
 fss_refresh_node_json_cache() {
 	local cache_dir="${FSS_NODE_JSON_CACHE_DIR}"
 	local tmp_dir="${cache_dir}.tmp.$$"
