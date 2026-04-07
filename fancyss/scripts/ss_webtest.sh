@@ -450,6 +450,7 @@ wt_latency_state_is_terminal() {
 wt_init_batch_state_file() {
 	WT_WEBTEST_STATE_FILE="${TMP2}/webtest.state"
 	rm -f "${WT_WEBTEST_STATE_LOCK}"
+	[ -s "${TMP2}/nodes_index.txt" ] || wt_build_nodes_index >/dev/null 2>&1 || return 1
 	awk -F '|' '
 		NF > 0 && $1 != "" {
 			print $1 ">waiting..."
@@ -2309,6 +2310,7 @@ sort_nodes(){
 	if [ "$(fss_detect_storage_schema)" = "2" ]; then
 		rm -f "${TMP2}"/wt_*.txt "${TMP2}/nodes_file_name.txt" >/dev/null 2>&1
 		if wt_try_node_tool_webtest_groups; then
+			wt_build_nodes_index || return 1
 			return 0
 		fi
 	fi
