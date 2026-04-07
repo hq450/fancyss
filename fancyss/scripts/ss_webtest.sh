@@ -40,6 +40,33 @@ wt_cache_log() {
 	echo_date "$@"
 }
 
+wt_pick_node_tool() {
+	if command -v node-tool >/dev/null 2>&1; then
+		if "$(command -v node-tool)" version >/dev/null 2>&1; then
+			command -v node-tool
+			return 0
+		fi
+	fi
+	if [ -x "/koolshare/bin/node-tool" ];then
+		if /koolshare/bin/node-tool version >/dev/null 2>&1; then
+			echo "/koolshare/bin/node-tool"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+wt_try_node_tool_webtest_cache() {
+	local ids_file="$1"
+	local node_tool=""
+
+	[ -f "${ids_file}" ] || return 1
+	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
+	"${node_tool}" warm-cache --webtest --ids-file "${ids_file}" >/dev/null 2>&1 || return 1
+	wt_cache_log "ℹ️通过node-tool构建/复用webtest节点配置缓存。"
+	return 0
+}
+
 wt_has_active_test_runner() {
 	local self_pid="${1:-$$}"
 
@@ -1685,6 +1712,9 @@ wt_rebuild_webtest_cache_from_ids() {
 	local allow_incremental="0"
 
 	[ -f "${ids_file}" ] || return 1
+	if wt_try_node_tool_webtest_cache "${ids_file}"; then
+		return 0
+	fi
 	wt_webtest_cache_prepare_dirs || return 1
 	wt_webtest_cache_prune_stale "${ids_file}" >/dev/null 2>&1
 	xray_count=$(wc -l < "${ids_file}" | tr -d ' ')
