@@ -1216,8 +1216,15 @@ wt_build_nodes_index() {
 	local jq_bin=""
 	local json_files=""
 
-	if [ "${WT_NODE_CACHE_DIR}" = "${FSS_NODE_JSON_CACHE_DIR}" ] && [ -s "${FSS_NODE_JSON_INDEX_FILE}" ]; then
-		cp -f "${FSS_NODE_JSON_INDEX_FILE}" ${TMP2}/nodes_index.txt 2>/dev/null && return 0
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		if [ ! -s "${FSS_NODE_JSON_INDEX_FILE}" ]; then
+			wt_try_node_tool_json_cache >/dev/null 2>&1 || true
+		fi
+		if [ -s "${FSS_NODE_JSON_INDEX_FILE}" ]; then
+			cp -f "${FSS_NODE_JSON_INDEX_FILE}" ${TMP2}/nodes_index.txt 2>/dev/null || true
+			[ -f "${TMP2}/nodes_index.txt" ] && sort -t "|" -nk1 ${TMP2}/nodes_index.txt -o ${TMP2}/nodes_index.txt 2>/dev/null
+			[ -s "${TMP2}/nodes_index.txt" ] && return 0
+		fi
 	fi
 	if [ -n "${WT_NODE_CACHE_DIR}" ];then
 		jq_bin=$(fss_pick_jq_bin)
@@ -1950,6 +1957,14 @@ wt_ensure_webtest_cache_nodes_file() {
 	wt_build_nodes_index || return 1
 	wt_filter_supported_ids_file "${src_ids_file}" "${ids_file}" || return 1
 	[ -s "${ids_file}" ] || return 0
+	if wt_webtest_cache_is_globally_fresh "${ids_file}"; then
+		rm -f "${ids_file}" >/dev/null 2>&1
+		return 0
+	fi
+	if wt_try_node_tool_webtest_cache "${ids_file}"; then
+		rm -f "${ids_file}" >/dev/null 2>&1
+		return 0
+	fi
 	wt_webtest_cache_prepare_dirs || return 1
 	wt_webtest_cache_lock_acquire || return 1
 	if wt_webtest_cache_settings_match; then
@@ -1999,6 +2014,9 @@ wt_ensure_webtest_cache_ready() {
 	wt_build_nodes_index || return 1
 	wt_collect_xray_like_ids_file "${ids_file}" || return 1
 	if wt_webtest_cache_is_globally_fresh "${ids_file}"; then
+		return 0
+	fi
+	if wt_try_node_tool_webtest_cache "${ids_file}"; then
 		return 0
 	fi
 	wt_webtest_cache_lock_acquire || return 1
@@ -3245,12 +3263,14 @@ warm_webtest_cache() {
 
 	if [ "${scanned}" -gt 0 ]; then
 		if ! wt_webtest_cache_is_globally_fresh "${ids_file}"; then
-			wt_webtest_cache_lock_acquire || ret=1
-			if [ "${ret}" = "0" ]; then
-				if ! wt_webtest_cache_is_globally_fresh "${ids_file}"; then
-					wt_rebuild_webtest_cache_from_ids "${ids_file}" >/dev/null 2>&1 || ret=1
+			if ! wt_try_node_tool_webtest_cache "${ids_file}"; then
+				wt_webtest_cache_lock_acquire || ret=1
+				if [ "${ret}" = "0" ]; then
+					if ! wt_webtest_cache_is_globally_fresh "${ids_file}"; then
+						wt_rebuild_webtest_cache_from_ids "${ids_file}" >/dev/null 2>&1 || ret=1
+					fi
+					wt_webtest_cache_lock_release
 				fi
-				wt_webtest_cache_lock_release
 			fi
 		fi
 	fi
