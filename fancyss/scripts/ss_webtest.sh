@@ -67,6 +67,29 @@ wt_try_node_tool_webtest_cache() {
 	return 0
 }
 
+wt_try_node_tool_webtest_cache_all() {
+	local node_tool=""
+
+	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
+	"${node_tool}" warm-cache --webtest >/dev/null 2>&1 || return 1
+	wt_cache_log "ℹ️通过node-tool构建/复用webtest节点配置缓存。"
+	return 0
+}
+
+wt_try_node_tool_webtest_groups() {
+	local node_tool=""
+
+	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
+	"${node_tool}" webtest-groups --output-dir "${TMP2}" >/dev/null 2>&1 || return 1
+	wt_cache_log "ℹ️通过node-tool生成webtest分组清单。"
+	return 0
+}
+
+wt_get_webtest_cache_xray_count() {
+	[ -f "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" ] || return 1
+	sed -n 's/^xray_count=//p' "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" | sed -n '1p'
+}
+
 wt_try_node_tool_json_cache() {
 	local node_tool=""
 
@@ -1952,6 +1975,11 @@ wt_ensure_webtest_cache_nodes_file() {
 	local ret=0
 
 	[ -f "${src_ids_file}" ] || return 1
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		if wt_try_node_tool_webtest_cache "${src_ids_file}"; then
+			return 0
+		fi
+	fi
 	wt_prepare_node_cache >/dev/null 2>&1 || return 1
 	wt_ensure_node_direct_dns_ready >/dev/null 2>&1 || true
 	wt_build_nodes_index || return 1
@@ -2011,6 +2039,11 @@ wt_ensure_webtest_cache_ready() {
 	local ids_file="${TMP2}/xray_like_nodes.all"
 	local ret=0
 
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		if wt_try_node_tool_webtest_cache_all; then
+			return 0
+		fi
+	fi
 	wt_build_nodes_index || return 1
 	wt_collect_xray_like_ids_file "${ids_file}" || return 1
 	if wt_webtest_cache_is_globally_fresh "${ids_file}"; then
@@ -2273,6 +2306,12 @@ start_webtest(){
 }
 
 sort_nodes(){
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		rm -f "${TMP2}"/wt_*.txt "${TMP2}/nodes_file_name.txt" >/dev/null 2>&1
+		if wt_try_node_tool_webtest_groups; then
+			return 0
+		fi
+	fi
 	wt_build_nodes_index || return 1
 	rm -f "${TMP2}"/wt_*.txt "${TMP2}/nodes_file_name.txt" >/dev/null 2>&1
 	awk -F '|' -v tmp2="${TMP2}" '
@@ -3251,6 +3290,18 @@ warm_webtest_cache() {
 	TMP2="${cache_tmp2}"
 	mkdir -p "${TMP2}"
 	rm -rf "${TMP2}/node_cache" "${TMP2}/node_env" "${TMP2}/nodes_index.txt"
+	start_ts=$(date +%s)
+	if [ "$(fss_detect_storage_schema)" = "2" ]; then
+		if wt_try_node_tool_webtest_cache_all; then
+			end_ts=$(date +%s)
+			duration=$((end_ts - start_ts))
+			scanned=$(wt_get_webtest_cache_xray_count 2>/dev/null)
+			[ -n "${scanned}" ] || scanned=0
+			wt_cache_log "ℹ️测速配置缓存预热：${scanned} 个 xray 类节点缓存已就绪，耗时 ${duration}s。"
+			rm -rf "${TMP2}" >/dev/null 2>&1
+			return 0
+		fi
+	fi
 	wt_prepare_node_cache >/dev/null 2>&1 || return 1
 	wt_ensure_node_direct_dns_ready >/dev/null 2>&1 || true
 	wt_build_nodes_index || return 1
