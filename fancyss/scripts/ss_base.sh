@@ -17,6 +17,11 @@ source helper.sh
 fss_cleanup_acl_default_port_keys >/dev/null 2>&1
 eval $(dbus export ss | sed 's/export //' | sed 's/;export /\n/g;' | sed '/ssconf_.*$/d'|sed 's/^/export /' | tr '\n' ';')
 export FSS_GLOBAL_BASIC_MODE="${ss_basic_mode}"
+AIRPORT_DNS_ACTIVE="0"
+AIRPORT_DNS_SOURCE_SCOPE=""
+AIRPORT_DNS_AIRPORT_IDENTITY=""
+AIRPORT_DNS_AIRPORT_LABEL=""
+AIRPORT_DNS_PREFERRED_PLAN=""
 unset usb2jffs_time_hour
 unset usb2jffs_week
 unset usb2jffs_title
@@ -138,6 +143,61 @@ smartdns_json_encode_one_line() {
 
 smartdns_store_json_value() {
 	echo "${SMARTDNS_STORAGE_PREFIX}$(smartdns_json_encode_one_line "$1")"
+}
+
+fss_airport_runtime_current_entry_json() {
+	local current_scope=""
+	[ -f "${FSS_AIRPORT_RUNTIME_FILE}" ] || return 1
+	current_scope="$(fss_get_current_node_source_scope 2>/dev/null)" || return 1
+	[ -n "${current_scope}" ] || return 1
+	jq -c --arg source_scope "${current_scope}" '
+		(.entries // [])[]
+		| select((.source_scope // "") == $source_scope)
+		| select((.feature // "") == "node_domain_dns")
+	' "${FSS_AIRPORT_RUNTIME_FILE}" 2>/dev/null | sed -n '1p'
+}
+
+fss_airport_runtime_iter_current_dns_items_tsv() {
+	local entry_json=""
+	local sep="$(printf '\037')"
+	entry_json="$(fss_airport_runtime_current_entry_json 2>/dev/null)" || return 1
+	[ -n "${entry_json}" ] || return 1
+	printf '%s' "${entry_json}" | jq -r --arg sep "${sep}" '
+		(.dns_items // [])[]
+		| [
+			(.proto // ""),
+			(.raw // ""),
+			(.addr // ""),
+			((.port // "") | tostring),
+			(.host // ""),
+			(.host_ip // "")
+		] | join($sep)
+	' 2>/dev/null
+}
+
+fss_airport_dns_override_reset() {
+	AIRPORT_DNS_ACTIVE="0"
+	AIRPORT_DNS_SOURCE_SCOPE=""
+	AIRPORT_DNS_AIRPORT_IDENTITY=""
+	AIRPORT_DNS_AIRPORT_LABEL=""
+	AIRPORT_DNS_PREFERRED_PLAN=""
+	rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" >/dev/null 2>&1
+}
+
+fss_airport_dns_override_load() {
+	local entry_json=""
+	local current_scope=""
+	fss_airport_dns_override_reset
+	entry_json="$(fss_airport_runtime_current_entry_json 2>/dev/null)" || return 0
+	[ -n "${entry_json}" ] || return 0
+	current_scope="$(printf '%s' "${entry_json}" | jq -r '.source_scope // empty' 2>/dev/null)"
+	[ -n "${current_scope}" ] || return 0
+	AIRPORT_DNS_ACTIVE="1"
+	AIRPORT_DNS_SOURCE_SCOPE="${current_scope}"
+	AIRPORT_DNS_AIRPORT_IDENTITY="$(printf '%s' "${entry_json}" | jq -r '.airport_identity // empty' 2>/dev/null)"
+	AIRPORT_DNS_AIRPORT_LABEL="$(printf '%s' "${entry_json}" | jq -r '.airport_label // empty' 2>/dev/null)"
+	AIRPORT_DNS_PREFERRED_PLAN="$(printf '%s' "${entry_json}" | jq -r '.preferred_dns_plan // "smartdns"' 2>/dev/null)"
+	fss_refresh_airport_node_direct_runtime_by_scope "${AIRPORT_DNS_SOURCE_SCOPE}" >/dev/null 2>&1 || true
 }
 
 smartdns_decode_json_value() {

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "airport_identity": "nexitally",
+      "airport_label": "Nexitally",
+      "match": {
+        "payload_kinds": [
+          "clash-yaml"
+        ]
+      },
+      "specials": {
+        "node_domain_dns": {
+          "extractor": "clash.nameserver",
+          "preferred_dns_plan": "smartdns"
+        }
+      }
+    }
+  ]
+}

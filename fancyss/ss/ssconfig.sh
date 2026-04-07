@@ -1047,9 +1047,20 @@ current_node_server_uses_runtime_dns() {
 refresh_node_direct_domain_file() {
 	if server_resolv_mode_is_dynamic; then
 		fss_refresh_node_direct_cache
-		fss_sync_node_direct_runtime
+		if [ "${AIRPORT_DNS_ACTIVE}" = "1" ] && [ -n "${AIRPORT_DNS_SOURCE_SCOPE}" ];then
+			fss_refresh_airport_node_direct_runtime_by_scope "${AIRPORT_DNS_SOURCE_SCOPE}" >/dev/null 2>&1 || true
+			if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
+				cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
+			else
+				rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
+			fi
+		else
+			rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" >/dev/null 2>&1
+			fss_sync_node_direct_runtime
+		fi
 	else
 		rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
+		rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" >/dev/null 2>&1
 	fi
 }
 
@@ -1520,6 +1531,7 @@ init_current_node_server_state() {
 	clear_current_node_host_snapshot
 	clear_current_node_server_ip
 	resolve_current_node_server_meta
+	fss_airport_dns_override_load
 
 	ss_basic_server_orig="${CURRENT_NODE_SERVER_HOST}"
 	ss_basic_server="${CURRENT_NODE_SERVER_HOST}"
@@ -1687,6 +1699,11 @@ start_dns_x(){
 	set_default "ss_basic_dns_plan" "1"
 	set_default "ss_basic_dns_serverx" "0"
 	local runtime_mode="$(get_runtime_proxy_mode)"
+	local dns_plan_runtime="${ss_basic_dns_plan}"
+	if [ "${AIRPORT_DNS_ACTIVE}" = "1" ] && [ "${AIRPORT_DNS_PREFERRED_PLAN}" = "smartdns" ];then
+		[ "${ss_basic_dns_plan}" != "2" ] && echo_date "ℹ️检测到机场【${AIRPORT_DNS_AIRPORT_LABEL:-${AIRPORT_DNS_AIRPORT_IDENTITY}}】需要专属节点DNS，本次临时切换为smartdns方案。"
+		dns_plan_runtime="2"
+	fi
 	if [ "${ss_basic_type}" = "6" ];then
 		local trust_udp_fallback=""
 		local n=""
@@ -1703,7 +1720,7 @@ start_dns_x(){
 			echo_date "⚠️检测到 NaïveProxy 不支持 UDP 代理，smartdns gfw 组中的 UDP DNS 将在运行时按 TCP 上游处理。"
 		fi
 	fi
-	if [ "${ss_basic_dns_plan}" == "1" ];then
+	if [ "${dns_plan_runtime}" == "1" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
 		if [ "${runtime_mode}" == "1" ];then
 			if [ "${ss_basic_chng}" == "2" ];then
@@ -1722,7 +1739,7 @@ start_dns_x(){
 		fi
 	
 		start_chinadns_ng
-	elif [ "${ss_basic_dns_plan}" == "2" ];then
+	elif [ "${dns_plan_runtime}" == "2" ];then
 		# DNS分流模式和iptables分流需要匹配，不然效果不好，这里需要检测用户当前代理模式和当前DNS模式
 		if [ "${runtime_mode}" == "1" ];then
 			if [ "${ss_basic_smrt}" == "2" ];then
@@ -1872,6 +1889,41 @@ $(smartdns_group_items_tsv chn)
 EOF
 }
 
+smartdns_append_airport_node_servers() {
+	local outfile="$1"
+	local sep="$(printf '\037')"
+	local proto raw addr port host host_ip
+	[ "${AIRPORT_DNS_ACTIVE}" = "1" ] || return 0
+	fss_airport_runtime_iter_current_dns_items_tsv 2>/dev/null | while IFS="${sep}" read -r proto raw addr port host host_ip
+	do
+		[ -n "${proto}" ] || continue
+		case "${proto}" in
+		udp)
+			[ -n "${addr}" ] || continue
+			[ -n "${port}" ] || port="53"
+			echo "server $(smartdns_format_addr "${addr}" "${port}") -group airport_node -exclude-default-group" >> "${outfile}"
+			;;
+		tcp)
+			[ -n "${addr}" ] || continue
+			[ -n "${port}" ] || port="53"
+			echo "server-tcp $(smartdns_format_addr "${addr}" "${port}") -group airport_node -exclude-default-group" >> "${outfile}"
+			;;
+		tls)
+			[ -n "${raw}" ] || continue
+			echo "server-tls ${raw#tls://} -group airport_node -exclude-default-group" >> "${outfile}"
+			;;
+		https)
+			[ -n "${raw}" ] || continue
+			echo "server-https ${raw} -group airport_node -exclude-default-group" >> "${outfile}"
+			;;
+		quic)
+			[ -n "${raw}" ] || continue
+			echo "server-quic ${raw} -group airport_node -exclude-default-group" >> "${outfile}"
+			;;
+		esac
+	done
+}
+
 smartdns_append_ipv6_policy() {
 	local outfile="$1"
 	local mode="$2"
@@ -1945,6 +1997,7 @@ domain-set -name rotlist -file /koolshare/ss/rules/rotlist.txt
 domain-set -name white_list -file /tmp/white_list.txt
 domain-set -name black_list -file /tmp/black_list.txt
 EOF
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ] && echo "domain-set -name airport_node -file ${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" >> "${outfile}"
 	[ -s /tmp/ss_node_domains.txt ] && echo "domain-set -name node_direct -file /tmp/ss_node_domains.txt" >> "${outfile}"
 	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
 
@@ -1958,6 +2011,7 @@ EOF
 	cat >> "${outfile}" <<-'EOF'
 
 EOF
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ] && echo "domain-rules /domain-set:airport_node/ -c none -n airport_node" >> "${outfile}"
 	[ -s /tmp/ss_node_domains.txt ] && echo "domain-rules /domain-set:node_direct/ -c none -n node_direct" >> "${outfile}"
 	cat >> "${outfile}" <<-'EOF'
 
@@ -2030,6 +2084,11 @@ EOF
 		echo "" >> "${outfile}"
 		echo "# node direct upstreams" >> "${outfile}"
 		smartdns_append_node_direct_servers "${outfile}"
+	fi
+	if [ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ];then
+		echo "" >> "${outfile}"
+		echo "# airport special upstreams" >> "${outfile}"
+		smartdns_append_airport_node_servers "${outfile}"
 	fi
 	echo "" >> "${outfile}"
 	echo "# chn group upstreams" >> "${outfile}"

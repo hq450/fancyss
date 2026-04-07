@@ -689,6 +689,297 @@ sub_extract_filename_from_header_file(){
 	printf '%s\n' "${file_name}"
 }
 
+sub_airport_profile_match_node_domain_dns(){
+	local airport_identity="$1"
+	local payload_kind="$2"
+	[ -n "${airport_identity}" ] || return 1
+	[ -n "${payload_kind}" ] || return 1
+	[ -f "${FSS_AIRPORT_PROFILE_FILE}" ] || return 1
+	jq -e --arg airport_identity "${airport_identity}" --arg payload_kind "${payload_kind}" '
+		(.profiles // [])[]
+		| select((.airport_identity // "") == $airport_identity)
+		| select(((.match.payload_kinds // []) | length) == 0 or ((.match.payload_kinds // []) | index($payload_kind)))
+		| select((.specials.node_domain_dns.extractor // "") != "")
+	' "${FSS_AIRPORT_PROFILE_FILE}" >/dev/null 2>&1
+}
+
+sub_airport_profile_get_node_domain_dns_value(){
+	local airport_identity="$1"
+	local payload_kind="$2"
+	local field="$3"
+	[ -n "${airport_identity}" ] || return 1
+	[ -n "${payload_kind}" ] || return 1
+	[ -n "${field}" ] || return 1
+	[ -f "${FSS_AIRPORT_PROFILE_FILE}" ] || return 1
+	jq -r --arg airport_identity "${airport_identity}" --arg payload_kind "${payload_kind}" --arg field "${field}" '
+		(.profiles // [])[]
+		| select((.airport_identity // "") == $airport_identity)
+		| select(((.match.payload_kinds // []) | length) == 0 or ((.match.payload_kinds // []) | index($payload_kind)))
+		| .specials.node_domain_dns[$field] // empty
+	' "${FSS_AIRPORT_PROFILE_FILE}" 2>/dev/null | sed -n '1p'
+}
+
+sub_extract_clash_nameserver_lines(){
+	local file_path="$1"
+	[ -f "${file_path}" ] || return 1
+	awk '
+		function ltrim(s){ sub(/^[ \t]+/, "", s); return s }
+		function rtrim(s){ sub(/[ \t]+$/, "", s); return s }
+		function trim(s){ s = ltrim(s); s = rtrim(s); return s }
+		function emit(v){
+			v = trim(v)
+			gsub(/^["'\'']+|["'\'']+$/, "", v)
+			if (v != "") print v
+		}
+		{
+			line = $0
+			sub(/\r$/, "", line)
+			if (line ~ /^[[:space:]]*#/) next
+			pos = match(line, /[^ ]/)
+			if (pos == 0) next
+			indent = pos - 1
+			trimmed = trim(line)
+
+			if (state == "" && trimmed == "dns:") {
+				state = "dns"
+				dns_indent = indent
+				next
+			}
+			if (state == "dns" && indent <= dns_indent && trimmed != "dns:") {
+				state = ""
+			}
+			if (state == "") next
+
+			if (state == "dns") {
+				if (trimmed ~ /^nameserver:[[:space:]]*\[/) {
+					inline = trimmed
+					sub(/^nameserver:[[:space:]]*\[/, "", inline)
+					sub(/\][[:space:]]*$/, "", inline)
+					n = split(inline, arr, /,/)
+					for (i = 1; i <= n; i++) emit(arr[i])
+					next
+				}
+				if (trimmed == "nameserver:") {
+					state = "nameserver"
+					ns_indent = indent
+					next
+				}
+				next
+			}
+
+			if (state == "nameserver") {
+				if (indent <= ns_indent) {
+					state = "dns"
+				}
+				if (state == "nameserver" && trimmed ~ /^-[[:space:]]*/) {
+					item = trimmed
+					sub(/^-[[:space:]]*/, "", item)
+					emit(item)
+					next
+				}
+			}
+		}
+	' "${file_path}" 2>/dev/null
+}
+
+sub_build_airport_dns_item_json(){
+	local raw="$1"
+	local proto="" addr="" port="" host="" host_ip=""
+	raw=$(printf '%s' "${raw}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^"//;s/"$//;s/^'\''//;s/'\''$//')
+	[ -n "${raw}" ] || return 1
+	case "${raw}" in
+	https://*)
+		proto="https"
+		local https_hostport=$(printf '%s' "${raw#https://}" | sed 's#/.*$##')
+		port=$(printf '%s' "${https_hostport}" | awk -F: 'NF>1{print $NF}')
+		[ -n "${port}" ] || port="443"
+		;;
+	quic://*)
+		proto="quic"
+		local quic_hostport=$(printf '%s' "${raw#quic://}" | sed 's#/.*$##')
+		port=$(printf '%s' "${quic_hostport}" | awk -F: 'NF>1{print $NF}')
+		[ -n "${port}" ] || port="853"
+		;;
+	tls://*)
+		proto="tls"
+		local remain="${raw#tls://}"
+		host="${remain%%@*}"
+		[ "${remain#*@}" != "${remain}" ] && host_ip="${remain#*@}" || host_ip=""
+		port="853"
+		;;
+	tcp://*)
+		proto="tcp"
+		local remain="${raw#tcp://}"
+		addr="${remain%%:*}"
+		port="${remain##*:}"
+		[ "${addr}" = "${port}" ] && port="53"
+		;;
+	udp://*)
+		proto="udp"
+		local remain="${raw#udp://}"
+		addr="${remain%%:*}"
+		port="${remain##*:}"
+		[ "${addr}" = "${port}" ] && port="53"
+		;;
+	*)
+		if printf '%s' "${raw}" | grep -Eq '^([0-9]{1,3}[.]){3}[0-9]{1,3}(:[0-9]+)?$';then
+			proto="udp"
+			addr="${raw%%:*}"
+			port="${raw##*:}"
+			[ "${addr}" = "${port}" ] && port="53"
+		else
+			return 1
+		fi
+		;;
+	esac
+	jq -cn \
+		--arg raw "${raw}" \
+		--arg proto "${proto}" \
+		--arg addr "${addr}" \
+		--arg port "${port}" \
+		--arg host "${host}" \
+		--arg host_ip "${host_ip}" \
+		'{
+			raw: $raw,
+			proto: $proto
+		}
+		+ (if $addr != "" then {addr: $addr} else {} end)
+		+ (if $port != "" then {port: ($port | tonumber? // $port)} else {} end)
+		+ (if $host != "" then {host: $host} else {} end)
+		+ (if $host_ip != "" then {host_ip: $host_ip} else {} end)' 2>/dev/null
+}
+
+sub_build_airport_dns_items_json(){
+	local payload_file="$1"
+	local extractor="$2"
+	local list_file="${payload_file}.airport_dns.$$"
+	local item=""
+	local item_json=""
+	local first=1
+	[ -f "${payload_file}" ] || return 1
+	case "${extractor}" in
+	clash.nameserver)
+		sub_extract_clash_nameserver_lines "${payload_file}" | sed '/^$/d' > "${list_file}"
+		;;
+	*)
+		rm -f "${list_file}"
+		return 1
+		;;
+	esac
+	[ -s "${list_file}" ] || {
+		rm -f "${list_file}"
+		return 1
+	}
+	printf '['
+	while IFS= read -r item
+	do
+		[ -n "${item}" ] || continue
+		item_json="$(sub_build_airport_dns_item_json "${item}" 2>/dev/null)" || continue
+		[ -n "${item_json}" ] || continue
+		if [ "${first}" = "1" ];then
+			first=0
+		else
+			printf ','
+		fi
+		printf '%s' "${item_json}"
+	done < "${list_file}"
+	printf ']'
+	rm -f "${list_file}"
+}
+
+sub_remove_airport_runtime_entry(){
+	local source_scope="$1"
+	local runtime_file="${FSS_AIRPORT_RUNTIME_FILE}"
+	local tmp_file="${runtime_file}.tmp.$$"
+	[ -n "${source_scope}" ] || return 1
+	[ -f "${runtime_file}" ] || return 0
+	jq --arg source_scope "${source_scope}" '
+		.version = (.version // 1)
+		| .entries = ((.entries // []) | map(select((.source_scope // "") != $source_scope)))
+	' "${runtime_file}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${runtime_file}"
+}
+
+sub_upsert_airport_runtime_entry(){
+	local source_scope="$1"
+	local airport_identity="$2"
+	local airport_label="$3"
+	local payload_kind="$4"
+	local preferred_dns_plan="$5"
+	local extractor="$6"
+	local dns_items_json="$7"
+	local runtime_file="${FSS_AIRPORT_RUNTIME_FILE}"
+	local tmp_file="${runtime_file}.tmp.$$"
+	local runtime_dir="${runtime_file%/*}"
+	[ -n "${source_scope}" ] || return 1
+	[ -n "${airport_identity}" ] || return 1
+	[ -n "${airport_label}" ] || return 1
+	[ -n "${dns_items_json}" ] || return 1
+	mkdir -p "${runtime_dir}" || return 1
+	[ -f "${runtime_file}" ] || echo '{"version":1,"entries":[]}' > "${runtime_file}"
+	jq \
+		--arg source_scope "${source_scope}" \
+		--arg airport_identity "${airport_identity}" \
+		--arg airport_label "${airport_label}" \
+		--arg payload_kind "${payload_kind}" \
+		--arg preferred_dns_plan "${preferred_dns_plan}" \
+		--arg extractor "${extractor}" \
+		--argjson updated_at "$(date +%s)" \
+		--argjson dns_items "${dns_items_json}" '
+		.version = (.version // 1)
+		| .entries = (
+			((.entries // []) | map(select((.source_scope // "") != $source_scope)))
+			+ [{
+				source_scope: $source_scope,
+				airport_identity: $airport_identity,
+				airport_label: $airport_label,
+				payload_kind: $payload_kind,
+				feature: "node_domain_dns",
+				extractor: $extractor,
+				preferred_dns_plan: $preferred_dns_plan,
+				dns_items: $dns_items,
+				updated_at: $updated_at
+			}]
+		)
+	' "${runtime_file}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${runtime_file}"
+}
+
+sub_refresh_airport_runtime_for_source(){
+	local airport_identity="$1"
+	local airport_label="$2"
+	local payload_kind="$3"
+	local payload_file="$4"
+	local source_scope="$5"
+	local extractor=""
+	local preferred_dns_plan=""
+	local dns_items_json=""
+	[ -n "${source_scope}" ] || return 1
+	if ! sub_airport_profile_match_node_domain_dns "${airport_identity}" "${payload_kind}";then
+		sub_remove_airport_runtime_entry "${source_scope}" >/dev/null 2>&1 || true
+		return 0
+	fi
+	extractor="$(sub_airport_profile_get_node_domain_dns_value "${airport_identity}" "${payload_kind}" "extractor" 2>/dev/null)"
+	preferred_dns_plan="$(sub_airport_profile_get_node_domain_dns_value "${airport_identity}" "${payload_kind}" "preferred_dns_plan" 2>/dev/null)"
+	[ -n "${extractor}" ] || {
+		sub_remove_airport_runtime_entry "${source_scope}" >/dev/null 2>&1 || true
+		return 0
+	}
+	[ -n "${preferred_dns_plan}" ] || preferred_dns_plan="smartdns"
+	dns_items_json="$(sub_build_airport_dns_items_json "${payload_file}" "${extractor}" 2>/dev/null)"
+	if [ -z "${dns_items_json}" ] || [ "${dns_items_json}" = "[]" ];then
+		sub_remove_airport_runtime_entry "${source_scope}" >/dev/null 2>&1 || true
+		return 0
+	fi
+	sub_upsert_airport_runtime_entry "${source_scope}" "${airport_identity}" "${airport_label}" "${payload_kind}" "${preferred_dns_plan}" "${extractor}" "${dns_items_json}" >/dev/null 2>&1 || true
+}
+
 sub_resolve_redirect_url(){
 	local base_url="$1"
 	local redirect_target="$2"
@@ -6692,6 +6983,7 @@ get_online_rule_now(){
 	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}")
 	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
 	sub_rewrite_identity_fields_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" "${SUB_SOURCE_URL_HASH}" "subscribe" >/dev/null 2>&1 || true
+	sub_refresh_airport_runtime_for_source "${SUB_AIRPORT_IDENTITY}" "${ONLINE_GROUP}" "${SUB_PAYLOAD_KIND}" "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" "${SUB_SOURCE_SCOPE}"
 	sub_register_source_identity "${RAW_SOURCE_TAG}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" >/dev/null 2>&1
 	if [ -s "${ACTIVE_SOURCE_TAGS}" ] && grep -Fxq "${SUB_SOURCE_TAG}" "${ACTIVE_SOURCE_TAGS}";then
 		echo_date "⚠️检测到多个订阅链接属于同一机场【${ONLINE_GROUP}】，本次仅保留第一个来源。"

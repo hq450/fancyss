@@ -41,6 +41,8 @@ FSS_NODE_MIGRATION_LOCK="/var/lock/fss_node_migrate.lock"
 FSS_NODE_MIGRATION_KEEP=3
 FSS_NODE_DIRECT_CACHE_FILE="/koolshare/configs/fancyss/node_direct_domains.txt"
 FSS_NODE_DIRECT_RUNTIME_FILE="/tmp/ss_node_domains.txt"
+FSS_NODE_DIRECT_RUNTIME_OTHER_FILE="/tmp/ss_node_domains_other.txt"
+FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE="/tmp/ss_node_domains_airport.txt"
 FSS_NODE_DIRECT_CACHE_META_FILE="/koolshare/configs/fancyss/node_direct_domains.meta"
 FSS_NODE_JSON_CACHE_DIR="/koolshare/configs/fancyss/node_json_cache"
 FSS_NODE_JSON_CACHE_META_FILE="/koolshare/configs/fancyss/node_json_cache.meta"
@@ -65,6 +67,8 @@ FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY="fss_current_node_identity"
 FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY="fss_failover_node_identity"
 FSS_REFERENCE_NOTICE_DBUS_KEY_LEGACY="fss_reference_notice"
 FSS_REFERENCE_NOTICE_TS_DBUS_KEY_LEGACY="fss_reference_notice_ts"
+FSS_AIRPORT_PROFILE_FILE="/koolshare/ss/rules/airport-profile.json"
+FSS_AIRPORT_RUNTIME_FILE="/koolshare/configs/fancyss/airport.conf"
 
 fss_clear_webtest_cache_node() {
 	local node_id="$1"
@@ -1650,6 +1654,54 @@ fss_get_node_identity_by_id() {
 	printf '%s' "${node_identity}"
 }
 
+fss_get_node_source_scope_by_id() {
+	local node_id="$1"
+	local schema node_json node_scope=""
+
+	[ -n "${node_id}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+		node_scope=$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)
+	else
+		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
+		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+		node_scope=$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)
+	fi
+	printf '%s' "${node_scope}"
+}
+
+fss_get_node_airport_identity_by_id() {
+	local node_id="$1"
+	local schema node_json airport=""
+
+	[ -n "${node_id}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+		airport=$(printf '%s' "${node_json}" | jq -r '._airport_identity // empty' 2>/dev/null)
+	else
+		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
+		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+		airport=$(printf '%s' "${node_json}" | jq -r '._airport_identity // empty' 2>/dev/null)
+	fi
+	printf '%s' "${airport}"
+}
+
+fss_get_current_node_source_scope() {
+	local node_id
+	node_id=$(fss_get_current_node_id 2>/dev/null) || return 1
+	[ -n "${node_id}" ] || return 1
+	fss_get_node_source_scope_by_id "${node_id}"
+}
+
+fss_get_current_node_airport_identity() {
+	local node_id
+	node_id=$(fss_get_current_node_id 2>/dev/null) || return 1
+	[ -n "${node_id}" ] || return 1
+	fss_get_node_airport_identity_by_id "${node_id}"
+}
+
 fss_sync_reference_identity_shadows() {
 	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
 	fss_get_current_node_id >/dev/null 2>&1 || true
@@ -2010,6 +2062,56 @@ fss_refresh_node_direct_cache() {
 		fss_write_node_direct_cache_meta "${catalog_ts}"
 	else
 		rm -f "${tmp_file}" "${cache_file}" "${FSS_NODE_DIRECT_CACHE_META_FILE}"
+	fi
+}
+
+fss_refresh_airport_node_direct_runtime_by_scope() {
+	local source_scope="$1"
+	local airport_file="${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}"
+	local other_file="${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}"
+	local airport_tmp="${airport_file}.tmp.$$"
+	local other_tmp="${other_file}.tmp.$$"
+	local node_id=""
+	local node_scope=""
+	local host=""
+	local port=""
+
+	rm -f "${airport_tmp}" "${other_tmp}"
+	[ -n "${source_scope}" ] || {
+		rm -f "${airport_file}" "${other_file}"
+		return 0
+	}
+
+	for node_id in $(fss_list_node_ids)
+	do
+		[ -n "${node_id}" ] || continue
+		node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)"
+		{
+			read -r host
+			read -r port
+		} <<-EOF
+$(fss_get_node_server_host_port "${node_id}" 2>/dev/null)
+		EOF
+		[ -n "${host}" ] || continue
+		[ -n "$(fss_is_domain_name "${host}")" ] || continue
+		if [ "${node_scope}" = "${source_scope}" ];then
+			printf '%s\n' "${host}" >> "${airport_tmp}"
+		else
+			printf '%s\n' "${host}" >> "${other_tmp}"
+		fi
+	done
+
+	if [ -s "${airport_tmp}" ];then
+		sort -u "${airport_tmp}" -o "${airport_tmp}" 2>/dev/null
+		mv -f "${airport_tmp}" "${airport_file}"
+	else
+		rm -f "${airport_tmp}" "${airport_file}"
+	fi
+	if [ -s "${other_tmp}" ];then
+		sort -u "${other_tmp}" -o "${other_tmp}" 2>/dev/null
+		mv -f "${other_tmp}" "${other_file}"
+	else
+		rm -f "${other_tmp}" "${other_file}"
 	fi
 }
 
