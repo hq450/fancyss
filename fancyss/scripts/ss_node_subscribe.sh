@@ -49,6 +49,7 @@ FAILOVER_NODE_IDENTITY=""
 SUB_REWRITE_ALL=0
 SUB_FAST_APPEND=0
 SUB_FAST_APPEND_USED=0
+SUB_FAST_APPEND_REUSE=1
 SUB_LOCAL_CHANGED=0
 SUB_HAS_FAILURE=0
 SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
@@ -3205,6 +3206,7 @@ sub_can_fast_append_schema2(){
 
 sub_append_nodes_schema2(){
 	local input_file="$1"
+	local reuse_ids="${2:-1}"
 	local node_tool=""
 	local normalized_tmp=""
 	local plan_tmp=""
@@ -3221,15 +3223,28 @@ sub_append_nodes_schema2(){
 	if [ -n "${node_tool}" ];then
 		normalized_tmp="${input_file}.append_normalized.$$"
 		plan_tmp="${input_file}.append.plan.$$"
-		if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids --normalized-output "${normalized_tmp}" --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
-			if [ -f "${normalized_tmp}" ];then
-				mv -f "${normalized_tmp}" "${input_file}"
-			else
-				rm -f "${normalized_tmp}" >/dev/null 2>&1
+		if [ "${reuse_ids}" = "1" ];then
+			if "${node_tool}" json2node --input "${input_file}" --mode append --reuse-ids --normalized-output "${normalized_tmp}" --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
+				if [ -f "${normalized_tmp}" ];then
+					mv -f "${normalized_tmp}" "${input_file}"
+				else
+					rm -f "${normalized_tmp}" >/dev/null 2>&1
+				fi
+				[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+				fss_clear_webtest_runtime_results
+				return 0
 			fi
-			[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
-			fss_clear_webtest_runtime_results
-			return 0
+		else
+			if "${node_tool}" json2node --input "${input_file}" --mode append --normalized-output "${normalized_tmp}" --plan-output "${plan_tmp}" --plan-format shell >/dev/null 2>&1;then
+				if [ -f "${normalized_tmp}" ];then
+					mv -f "${normalized_tmp}" "${input_file}"
+				else
+					rm -f "${normalized_tmp}" >/dev/null 2>&1
+				fi
+				[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+				fss_clear_webtest_runtime_results
+				return 0
+			fi
 		fi
 		rm -f "${normalized_tmp}" "${plan_tmp}" >/dev/null 2>&1
 	fi
@@ -3744,9 +3759,14 @@ json2skipd(){
 	local file_name=$1
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
 		if [ "${SUB_FAST_APPEND}" = "1" ];then
-			sub_append_nodes_schema2 "${DIR}/${file_name}.txt" || return 1
+			sub_append_nodes_schema2 "${DIR}/${file_name}.txt" "${SUB_FAST_APPEND_REUSE}" || {
+				SUB_FAST_APPEND=0
+				SUB_FAST_APPEND_REUSE=1
+				return 1
+			}
 			SUB_FAST_APPEND_USED=1
 			SUB_FAST_APPEND=0
+			SUB_FAST_APPEND_REUSE=1
 			if [ -z "$(fss_get_current_node_id)" ];then
 				local first_id=$(sub_list_node_ids | sed -n '1p')
 				[ -n "${first_id}" ] && fss_set_current_node_id "${first_id}"
@@ -6676,6 +6696,8 @@ start_offline_update() {
 	echo_date "-------------------------------------------------------------------"
 	if [ -f "${DIR}/offline_node_new.txt" ];then
 		echo_date "ℹ️离线节点解析完毕，开始写入节点..."
+		SUB_FAST_APPEND=1
+		SUB_FAST_APPEND_REUSE=0
 		if json2skipd "offline_node_new"; then
 			fss_refresh_node_direct_cache >/dev/null 2>&1
 			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
