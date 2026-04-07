@@ -2125,12 +2125,21 @@ sub_filter_offline_duplicate_nodes(){
 	local input_file="$1"
 	local current_file="${input_file}.current.$$"
 	local identity_file="${input_file}.identity.$$"
-	local existing_pairs="${input_file}.existing_pairs.$$"
+	local seen_pairs="${input_file}.seen_pairs.$$"
 	local import_map="${input_file}.import_map.$$"
-	local kept_b64="${input_file}.kept_b64.$$"
 	local filtered_file="${input_file}.filtered.$$"
 	local duplicate_count=0
-	local kept_count=0
+	local salt_idx=0
+	local node_name=""
+	local node_secondary=""
+	local blob=""
+	local pair=""
+	local new_name=""
+	local new_pair=""
+	local raw_json=""
+	local renamed_json=""
+	local updated_json=""
+	local suffix=""
 
 	[ -s "${input_file}" ] || return 0
 	sub_prepare_current_nodes_identity_export "${current_file}" || return 0
@@ -2143,62 +2152,60 @@ sub_filter_offline_duplicate_nodes(){
 		return 0
 	}
 
-	run jq -r '[.name // "", ._identity_secondary // ""] | @tsv' "${current_file}" 2>/dev/null | sort -u > "${existing_pairs}" || {
-		rm -f "${current_file}" "${identity_file}" "${existing_pairs}"
+	run jq -r '[.name // "", ._identity_secondary // ""] | @tsv' "${current_file}" 2>/dev/null | sort -u > "${seen_pairs}" || {
+		rm -f "${current_file}" "${identity_file}" "${seen_pairs}"
 		return 0
 	}
 	run jq -r '[.name // "", ._identity_secondary // "", (. | @base64)] | @tsv' "${identity_file}" 2>/dev/null > "${import_map}" || {
-		rm -f "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}"
+		rm -f "${current_file}" "${identity_file}" "${seen_pairs}" "${import_map}"
 		return 0
 	}
 
-	: > "${kept_b64}"
-	awk -F '\t' -v keep_file="${kept_b64}" '
-		NR == FNR {
-			exists[$1 FS $2] = 1
-			next
-		}
-		{
-			key = $1 FS $2
-			if (key in exists) {
-				dup++
-			} else {
-				print $3 >> keep_file
-				keep++
-			}
-		}
-		END {
-			printf "%d\t%d\n", dup + 0, keep + 0
-		}
-	' "${existing_pairs}" "${import_map}" > "${import_map}.count"
-	duplicate_count=$(awk -F '\t' '{print $1}' "${import_map}.count" 2>/dev/null | sed -n '1p')
-	kept_count=$(awk -F '\t' '{print $2}' "${import_map}.count" 2>/dev/null | sed -n '1p')
-	[ -n "${duplicate_count}" ] || duplicate_count=0
-	[ -n "${kept_count}" ] || kept_count=0
+	: > "${filtered_file}"
+	while IFS='	' read -r node_name node_secondary blob
+	do
+		[ -n "${blob}" ] || continue
+		pair=$(printf '%s\t%s' "${node_name}" "${node_secondary}")
+		if grep -Fqx "${pair}" "${seen_pairs}" 2>/dev/null;then
+			duplicate_count=$((duplicate_count + 1))
+			raw_json=$(printf '%s' "${blob}" | base64 -d 2>/dev/null)
+			[ -n "${raw_json}" ] || continue
+			while : ;do
+				salt_idx=$((salt_idx + 1))
+				if [ -r "/proc/sys/kernel/random/uuid" ];then
+					suffix=$(cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' | cut -c1-4)
+				else
+					suffix=$(printf '%s' "${node_name}_${node_secondary}_${salt_idx}_$$_$(date +%s)" | fss_identity_hash_v1 | cut -c1-4)
+				fi
+				[ -n "${suffix}" ] || suffix=$(printf '%04d' "${salt_idx}")
+				new_name="${node_name}-${suffix}"
+				new_pair=$(printf '%s\t%s' "${new_name}" "${node_secondary}")
+				if ! grep -Fqx "${new_pair}" "${seen_pairs}" 2>/dev/null;then
+					break
+				fi
+			done
+			updated_json=$(printf '%s' "${raw_json}" | jq -c --arg name "${new_name}" '.name = $name' 2>/dev/null) || updated_json=""
+			[ -n "${updated_json}" ] || updated_json="${raw_json}"
+			renamed_json="${updated_json}"
+			updated_json=$(fss_enrich_node_identity_json "${renamed_json}" "local" "local" "" "manual" 2>/dev/null) || true
+			[ -n "${updated_json}" ] || updated_json="${renamed_json}"
+			printf '%s\n' "${updated_json}" >> "${filtered_file}"
+			printf '%s\n' "${new_pair}" >> "${seen_pairs}"
+			echo_date "ℹ️离线节点解析完毕，检测到名字和参数相同节点，已将节点名改为${new_name}"
+			continue
+		fi
+		printf '%s' "${blob}" | base64 -d >> "${filtered_file}" 2>/dev/null || true
+		echo >> "${filtered_file}"
+		printf '%s\n' "${pair}" >> "${seen_pairs}"
+	done < "${import_map}"
 
 	if [ "${duplicate_count}" -eq 0 ];then
-		rm -f "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}" "${import_map}.count" "${kept_b64}" "${filtered_file}"
+		rm -f "${current_file}" "${identity_file}" "${seen_pairs}" "${import_map}" "${filtered_file}"
 		return 0
 	fi
 
-	: > "${filtered_file}"
-	while IFS= read -r blob
-	do
-		[ -n "${blob}" ] || continue
-		printf '%s' "${blob}" | base64 -d >> "${filtered_file}" 2>/dev/null || true
-		echo >> "${filtered_file}"
-	done < "${kept_b64}"
-
-	if [ "${kept_count}" -eq 0 ];then
-		echo_date "ℹ️离线节点解析完毕，检测到已经有同名同参数节点"
-		echo_date "× 本次不添加"
-		rm -f "${input_file}" "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}" "${import_map}.count" "${kept_b64}" "${filtered_file}"
-		return 2
-	fi
-
-	echo_date "ℹ️离线节点解析完毕，检测到${duplicate_count}个已经有同名同参数节点，已跳过，开始写入其余${kept_count}个节点..."
 	mv -f "${filtered_file}" "${input_file}"
-	rm -f "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}" "${import_map}.count" "${kept_b64}"
+	rm -f "${current_file}" "${identity_file}" "${seen_pairs}" "${import_map}"
 	return 0
 }
 
@@ -6802,15 +6809,7 @@ start_offline_update() {
 	echo_date "-------------------------------------------------------------------"
 	if [ -f "${DIR}/offline_node_new.txt" ];then
 		sub_filter_offline_duplicate_nodes "${DIR}/offline_node_new.txt"
-		case "$?" in
-		2)
-			echo_date "==================================================================="
-			return 0
-			;;
-		0)
-			[ -f "${DIR}/offline_node_new.txt" ] && echo_date "ℹ️离线节点解析完毕，开始写入节点..."
-			;;
-		esac
+		[ -f "${DIR}/offline_node_new.txt" ] && echo_date "ℹ️离线节点解析完毕，开始写入节点..."
 		SUB_FAST_APPEND=1
 		SUB_FAST_APPEND_REUSE=0
 		if [ -f "${DIR}/offline_node_new.txt" ] && json2skipd "offline_node_new"; then
