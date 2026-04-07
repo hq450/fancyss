@@ -2096,6 +2096,112 @@ sub_prepare_canonical_identity_view_file(){
 	rm -f "${tmp_file}"
 }
 
+sub_prepare_current_nodes_identity_export(){
+	local output_file="$1"
+	local tmp_export=""
+	local node_id=""
+	[ -n "${output_file}" ] || return 1
+	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
+		sub_prepare_schema2_export_jsonl || return 1
+		cp -f "${SCHEMA2_EXPORT_JSONL}" "${output_file}"
+		return 0
+	fi
+	tmp_export="${output_file}.tmp.$$"
+	: > "${tmp_export}"
+	for node_id in $(sub_list_node_ids)
+	do
+		[ -n "${node_id}" ] || continue
+		sub_export_local_node_json "${node_id}" >> "${tmp_export}" || true
+		echo >> "${tmp_export}"
+	done
+	sub_prepare_identity_view_file "${tmp_export}" "${output_file}" "" "" "" "" || {
+		rm -f "${tmp_export}" "${output_file}"
+		return 1
+	}
+	rm -f "${tmp_export}"
+}
+
+sub_filter_offline_duplicate_nodes(){
+	local input_file="$1"
+	local current_file="${input_file}.current.$$"
+	local identity_file="${input_file}.identity.$$"
+	local existing_pairs="${input_file}.existing_pairs.$$"
+	local import_map="${input_file}.import_map.$$"
+	local kept_b64="${input_file}.kept_b64.$$"
+	local filtered_file="${input_file}.filtered.$$"
+	local duplicate_count=0
+	local kept_count=0
+
+	[ -s "${input_file}" ] || return 0
+	sub_prepare_current_nodes_identity_export "${current_file}" || return 0
+	[ -s "${current_file}" ] || {
+		rm -f "${current_file}"
+		return 0
+	}
+	sub_prepare_identity_view_file "${input_file}" "${identity_file}" "local" "local" "" "manual" || {
+		rm -f "${current_file}" "${identity_file}"
+		return 0
+	}
+
+	run jq -r '[.name // "", ._identity_secondary // ""] | @tsv' "${current_file}" 2>/dev/null | sort -u > "${existing_pairs}" || {
+		rm -f "${current_file}" "${identity_file}" "${existing_pairs}"
+		return 0
+	}
+	run jq -r '[.name // "", ._identity_secondary // "", (. | @base64)] | @tsv' "${identity_file}" 2>/dev/null > "${import_map}" || {
+		rm -f "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}"
+		return 0
+	}
+
+	: > "${kept_b64}"
+	awk -F '\t' -v keep_file="${kept_b64}" '
+		NR == FNR {
+			exists[$1 FS $2] = 1
+			next
+		}
+		{
+			key = $1 FS $2
+			if (key in exists) {
+				dup++
+			} else {
+				print $3 >> keep_file
+				keep++
+			}
+		}
+		END {
+			printf "%d\t%d\n", dup + 0, keep + 0
+		}
+	' "${existing_pairs}" "${import_map}" > "${import_map}.count"
+	duplicate_count=$(awk -F '\t' '{print $1}' "${import_map}.count" 2>/dev/null | sed -n '1p')
+	kept_count=$(awk -F '\t' '{print $2}' "${import_map}.count" 2>/dev/null | sed -n '1p')
+	[ -n "${duplicate_count}" ] || duplicate_count=0
+	[ -n "${kept_count}" ] || kept_count=0
+
+	if [ "${duplicate_count}" -eq 0 ];then
+		rm -f "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}" "${import_map}.count" "${kept_b64}" "${filtered_file}"
+		return 0
+	fi
+
+	: > "${filtered_file}"
+	while IFS= read -r blob
+	do
+		[ -n "${blob}" ] || continue
+		printf '%s' "${blob}" | base64 -d >> "${filtered_file}" 2>/dev/null || true
+		echo >> "${filtered_file}"
+	done < "${kept_b64}"
+
+	if [ "${kept_count}" -eq 0 ];then
+		echo_date "ℹ️离线节点解析完毕，检测到已经有同名同参数节点"
+		echo_date "× 本次不添加"
+		rm -f "${input_file}" "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}" "${import_map}.count" "${kept_b64}" "${filtered_file}"
+		return 2
+	fi
+
+	echo_date "ℹ️离线节点解析完毕，检测到${duplicate_count}个已经有同名同参数节点，已跳过，开始写入其余${kept_count}个节点..."
+	mv -f "${filtered_file}" "${input_file}"
+	rm -f "${current_file}" "${identity_file}" "${existing_pairs}" "${import_map}" "${import_map}.count" "${kept_b64}"
+	return 0
+}
+
 sub_file_identity_scope_matches(){
 	local file="$1"
 	local airport_identity="$2"
@@ -6695,10 +6801,19 @@ start_offline_update() {
 	dbus remove ss_base64_links
 	echo_date "-------------------------------------------------------------------"
 	if [ -f "${DIR}/offline_node_new.txt" ];then
-		echo_date "ℹ️离线节点解析完毕，开始写入节点..."
+		sub_filter_offline_duplicate_nodes "${DIR}/offline_node_new.txt"
+		case "$?" in
+		2)
+			echo_date "==================================================================="
+			return 0
+			;;
+		0)
+			[ -f "${DIR}/offline_node_new.txt" ] && echo_date "ℹ️离线节点解析完毕，开始写入节点..."
+			;;
+		esac
 		SUB_FAST_APPEND=1
 		SUB_FAST_APPEND_REUSE=0
-		if json2skipd "offline_node_new"; then
+		if [ -f "${DIR}/offline_node_new.txt" ] && json2skipd "offline_node_new"; then
 			fss_refresh_node_direct_cache >/dev/null 2>&1
 			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
 		fi
