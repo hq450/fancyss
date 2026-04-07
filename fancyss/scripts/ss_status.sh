@@ -9,6 +9,17 @@ LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 CURRENT=$(fss_get_current_node_id)
 CURRENT_NAME=$(fss_get_node_field_plain "${CURRENT}" name)
+CURRENT_SERVER_HOST=""
+CURRENT_SERVER_PORT=""
+CURRENT_SERVER_ADDR=""
+{
+	read -r CURRENT_SERVER_HOST
+	read -r CURRENT_SERVER_PORT
+} <<-EOF
+$(fss_get_node_server_host_port "${CURRENT}")
+EOF
+CURRENT_SERVER_ADDR="$(fss_get_node_field_plain "${CURRENT}" server_ip)"
+[ -z "${CURRENT_SERVER_ADDR}" ] && CURRENT_SERVER_ADDR="${CURRENT_SERVER_HOST}"
 HEART_STATUS=$(dbus get ss_heart_beat)
 eval $(dbus export ss_failover_enable)
 CHN_TEST_SITE="${ss_basic_curl}"
@@ -234,7 +245,39 @@ status_pick_better_tag(){
 }
 
 status_line_to_legacy(){
-	printf '%s' "$1" | awk -F '|' '{print $4 "|" $3 "|" $5}'
+	printf '%s' "$1" | awk -F '|' '{print $4 "|" $3 "|" $5 "|" $2}'
+}
+
+status_get_probe_mode_short(){
+	case "$(get_foreign_probe_mode)" in
+	direct)
+		echo "d"
+		;;
+	socks5|*)
+		echo "s5"
+		;;
+	esac
+}
+
+status_get_bin_short(){
+	[ -n "$1" ] && {
+		printf '%s' "$1"
+		return 0
+	}
+	echo "0"
+}
+
+status_build_foreign_fail_diag(){
+	local ret_exit="$1"
+	local mode="$(status_get_probe_mode_short)"
+	local socks_bin="$(status_get_bin_short "${SOCKS5_OPEN}")"
+	local redir_bin="$(status_get_bin_short "${REDIRC_OPEN}")"
+	local up_addr="${CURRENT_SERVER_ADDR}"
+
+	[ -n "${ret_exit}" ] || ret_exit="na"
+	[ -n "${up_addr}" ] || up_addr="-"
+	[ -n "${CURRENT_SERVER_PORT}" ] && up_addr="${up_addr}:${CURRENT_SERVER_PORT}"
+	printf ' 🔎 e=%s m=%s s5=%s rd=%s up=%s' "${ret_exit}" "${mode}" "${socks_bin}" "${redir_bin}" "${up_addr}"
 }
 
 launch_probe(){
@@ -386,7 +429,7 @@ get_foreign_status_by_family(){
 
 	if [ "${ret0}" == "__UNAVAILABLE__" ];then
 		eval ${log_var}="'${label} 【${LOGTIME}】 <font color=\"#FF0000\">X</font>'"
-		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ ${CURRENT_NAME} 🧮${request_tag}"
+		local ret1="${LOGTIME1} ➡️ $(get_domain_name ${FRN_TEST_SITE}) ⏱ --- ms 🌎 001 failed ✈️ ${CURRENT_NAME}$(status_build_foreign_fail_diag "na") 🧮${request_tag}"
 		[ "${ss_failover_enable}" == "1" -a "${write_history}" == "1" ] && echo ${ret1} >> ${LOGFILE_F}
 		return 0
 	fi
@@ -394,6 +437,7 @@ get_foreign_status_by_family(){
 	local ret_time=$(echo $ret0 | awk -F "|" '{printf "%.2f\n", $1 * 1000}')
 	local ret_code=$(echo $ret0 | awk -F "|" '{print $2}')
 	local ret_addr=$(echo $ret0 | awk -F "|" '{print $3}')
+	local ret_exit=$(echo $ret0 | awk -F "|" '{print $4}')
 	if [ "${ret_addr}" == "127.0.0.1" ];then
 		local ret_addr=$(get_domain_name ${FRN_TEST_SITE})
 	fi
@@ -404,7 +448,7 @@ get_foreign_status_by_family(){
 	elif [ "${ret_code}" == "404" ];then
 		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ --- ms 🌎 ${ret_code} Not Found ✈️ ${CURRENT_NAME} 🧮${request_tag}"
 	else
-		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ --- ms 🌎 ${ret_code} failed ✈️ ${CURRENT_NAME} 🧮${request_tag}"
+		local ret1="${LOGTIME1} ➡️ ${ret_addr} ⏱ --- ms 🌎 ${ret_code} failed ✈️ ${CURRENT_NAME}$(status_build_foreign_fail_diag "${ret_exit}") 🧮${request_tag}"
 	fi
 	[ "${ss_failover_enable}" == "1" -a "${write_history}" == "1" ] && echo ${ret1} >> ${LOGFILE_F}
 
