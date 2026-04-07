@@ -553,6 +553,23 @@ pick_node_tool(){
 	return 1
 }
 
+node_tool_supports_command(){
+	local node_tool="$1"
+	local command_name="$2"
+	[ -n "${node_tool}" ] || return 1
+	[ -n "${command_name}" ] || return 1
+	"${node_tool}" --help 2>&1 | grep -Eq "^[[:space:]]*node-tool[[:space:]]+${command_name}([[:space:]]|$)"
+}
+
+pick_node_tool_command(){
+	local command_name="$1"
+	local node_tool=""
+	[ -n "${command_name}" ] || return 1
+	node_tool="$(pick_node_tool 2>/dev/null)" || return 1
+	node_tool_supports_command "${node_tool}" "${command_name}" || return 1
+	printf '%s\n' "${node_tool}"
+}
+
 sub_tool_inspect_file(){
 	local file_path="$1"
 	local output_file="$2"
@@ -3368,7 +3385,7 @@ sub_sync_single_source_schema2(){
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
 	[ -n "${source_tag}" ] || return 1
 	[ -f "${input_file}" ] || return 1
-	node_tool="$(pick_node_tool 2>/dev/null)" || return 1
+	node_tool="$(pick_node_tool_command "sync-source" 2>/dev/null)" || return 1
 	SUB_NODE_TOOL_PLAN_FILE_CURRENT=""
 	normalized_tmp="${input_file}.sync.normalized.$$"
 	plan_tmp="${input_file}.sync.plan.$$"
@@ -3389,6 +3406,7 @@ sub_sync_single_source_schema2(){
 sub_try_sync_single_source_fast_path(){
 	local source_tag=""
 	local input_file=""
+	local source_label=""
 
 	[ "${SUB_STORAGE_SCHEMA}" = "2" ] || return 1
 	[ ! -s "${SUB_REMOVED_SOURCE_TAGS_FILE}" ] || return 1
@@ -3397,13 +3415,17 @@ sub_try_sync_single_source_fast_path(){
 	[ "${source_tag}" != "user" ] || return 1
 	input_file="$(sub_find_local_source_file "${source_tag}" 2>/dev/null)" || return 1
 	[ -f "${input_file}" ] || return 1
+	source_label="$(get_group_label_from_file "${input_file}" "$(get_sub_group_fallback_by_hash "${source_tag}")")"
 
 	SUB_FAST_APPEND_USED=0
+	echo_date "🧭检测到仅【${source_label:-${source_tag}}】来源发生变化，尝试单来源快速同步..."
 	sub_capture_active_nodes
 	echo_date "⌛节点写入前准备..."
 	echo_date "😀准备完成！"
 	echo_date "ℹ️开始写入节点..."
+	echo_date "🧭正在执行来源级同步：生成变更计划并更新该来源节点..."
 	if ! sub_sync_single_source_schema2 "${source_tag}" "${input_file}";then
+		echo_date "⚠️来源级快速同步失败，回退全量写入路径。"
 		return 1
 	fi
 	echo_date "😀节点信息写入成功！"
@@ -3873,12 +3895,16 @@ skipdb2json(){
 	if [ "${SEQ_NU}" == "0" ];then
 		return
 	fi
-	echo_date "➡️开始整理本地节点到文件，请稍等..."
 	rm -f "${LOCAL_SPLIT_META}"
 	LOCAL_SPLIT_META_VALID=0
 	sanitize_invalid_local_groups
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		node_tool="$(pick_node_tool_command "export-sources" 2>/dev/null)" || node_tool=""
+		if [ -n "${node_tool}" ];then
+			echo_date "➡️使用node-tool整理本地节点到文件，请稍等..."
+		else
+			echo_date "➡️开始整理本地节点到文件，请稍等..."
+		fi
 		if [ -n "${node_tool}" ];then
 			rm -rf "$DIR"/local_*.txt "${LOCAL_SPLIT_META}"
 			if "${node_tool}" export-sources --output-dir "${DIR}" --meta "${LOCAL_SPLIT_META}" --all-jsonl "${LOCAL_NODES_SPL}" >/dev/null 2>&1;then
@@ -3890,6 +3916,7 @@ skipdb2json(){
 				fi
 				rm -rf "$DIR"/local_*.txt "${LOCAL_SPLIT_META}" "${LOCAL_NODES_SPL}" >/dev/null 2>&1
 			fi
+			echo_date "⚠️node-tool整理本地节点失败，回退脚本路径。"
 		fi
 		sub_prepare_schema2_export_jsonl || {
 			echo_date "⚠️节点文件处理失败！请重启路由器后重试！"
@@ -4093,7 +4120,7 @@ remove_null(){
 		local node_tool=""
 		local prune_log=""
 		local removed_any=0
-		node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+		node_tool="$(pick_node_tool_command "prune-export-sources" 2>/dev/null)" || node_tool=""
 		if [ -n "${node_tool}" ];then
 			prune_log="${LOCAL_SPLIT_META}.prune.$$"
 			if "${node_tool}" prune-export-sources --meta "${LOCAL_SPLIT_META}" --active-source-tags "${ACTIVE_SOURCE_TAGS}" --format shell > "${prune_log}" 2>/dev/null;then
@@ -6479,6 +6506,7 @@ start_node_subscribe(){
 	if [ "${SUB_HAS_FAILURE}" = "1" ];then
 		echo_date "⚠️本次订阅存在失败任务，跳过过期订阅来源清理，保留现有本地订阅节点。"
 	else
+		echo_date "ℹ️订阅来源处理完毕，开始整理本次变更并清理失效来源..."
 		remove_null
 		sub_prune_source_identity "${ACTIVE_SOURCE_TAGS}"
 	fi
@@ -6493,9 +6521,11 @@ start_node_subscribe(){
 	fi
 	local ISNEW=$(find $DIR -name "local_*_*.txt")
 	if [ -n "${ISNEW}" ];then
+		echo_date "ℹ️正在评估本次写入方式..."
 		if [ "${SUB_STORAGE_SCHEMA}" = "2" ] && sub_try_sync_single_source_fast_path;then
 			return 0
 		fi
+		echo_date "🧭未命中单来源快路径，回退全量写入流程..."
 		find $DIR -name "local_*.txt" | sort -n | xargs cat >$DIR/ss_nodes_new.txt
 		local md5sum_old=$(sub_nodes_file_md5 ${LOCAL_NODES_BAK})
 		local md5sum_new=$(sub_nodes_file_md5 $DIR/ss_nodes_new.txt)
