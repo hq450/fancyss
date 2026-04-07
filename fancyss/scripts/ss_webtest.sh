@@ -67,6 +67,24 @@ wt_try_node_tool_webtest_cache() {
 	return 0
 }
 
+wt_try_node_tool_json_cache() {
+	local node_tool=""
+
+	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
+	"${node_tool}" warm-cache --json >/dev/null 2>&1 || return 1
+	wt_cache_log "ℹ️通过node-tool构建/复用节点JSON缓存。"
+	return 0
+}
+
+wt_try_node_tool_env_cache() {
+	local node_tool=""
+
+	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
+	"${node_tool}" warm-cache --env >/dev/null 2>&1 || return 1
+	wt_cache_log "ℹ️通过node-tool构建/复用节点环境变量缓存。"
+	return 0
+}
+
 wt_has_active_test_runner() {
 	local self_pid="${1:-$$}"
 
@@ -1090,10 +1108,18 @@ wt_prepare_node_cache() {
 	WT_NODE_ENV_DIR=""
 	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
 	WT_NODE_CACHE_DIR="${FSS_NODE_JSON_CACHE_DIR}"
-	if type fss_refresh_node_json_cache >/dev/null 2>&1; then
-		fss_refresh_node_json_cache >/dev/null 2>&1 || {
+	if [ -n "${WT_NODE_CACHE_DIR}" ];then
+		if type fss_node_json_cache_is_fresh >/dev/null 2>&1 && fss_node_json_cache_is_fresh >/dev/null 2>&1; then
+			:
+		elif wt_try_node_tool_json_cache; then
+			:
+		elif type fss_refresh_node_json_cache >/dev/null 2>&1; then
+			fss_refresh_node_json_cache >/dev/null 2>&1 || {
+				WT_NODE_CACHE_DIR=""
+			}
+		else
 			WT_NODE_CACHE_DIR=""
-		}
+		fi
 	fi
 	if [ -n "${WT_NODE_CACHE_DIR}" ] && type fss_node_env_cache_is_fresh >/dev/null 2>&1; then
 		if fss_node_env_cache_is_fresh >/dev/null 2>&1; then
@@ -1156,6 +1182,14 @@ wt_prepare_node_env_cache() {
 
 	env_cache_dir="${FSS_NODE_ENV_CACHE_DIR}"
 	if [ "$(fss_detect_storage_schema)" = "2" ] && [ -n "${WT_NODE_CACHE_DIR}" ] && type fss_refresh_node_env_cache >/dev/null 2>&1; then
+		if fss_node_env_cache_is_fresh >/dev/null 2>&1 && ls "${env_cache_dir}"/*.env >/dev/null 2>&1; then
+			WT_NODE_ENV_DIR="${env_cache_dir}"
+			return 0
+		fi
+		if wt_try_node_tool_env_cache && ls "${env_cache_dir}"/*.env >/dev/null 2>&1; then
+			WT_NODE_ENV_DIR="${env_cache_dir}"
+			return 0
+		fi
 		if fss_refresh_node_env_cache >/dev/null 2>&1 && ls "${env_cache_dir}"/*.env >/dev/null 2>&1; then
 			WT_NODE_ENV_DIR="${env_cache_dir}"
 			return 0
