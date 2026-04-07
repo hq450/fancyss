@@ -3399,6 +3399,7 @@ function normalize_schema2_node_timestamp(value, fallbackValue) {
 function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, touchTs) {
 	var payload = {};
 	var raw = get_fss_raw_node(nodeId);
+	var effectiveSource = source || "";
 	var updatedAt = parseInt(touchTs, 10);
 	if (isNaN(updatedAt) || updatedAt <= 0) {
 		updatedAt = Date.now();
@@ -3414,7 +3415,10 @@ function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, 
 	payload["_id"] = String(nodeId);
 	payload["_rev"] = raw && raw["_rev"] ? parseInt(raw["_rev"], 10) + 1 : 1;
 	payload["_b64_mode"] = "raw";
-	payload["_source"] = source || payload["_source"] || "manual";
+	if (raw && preserveExisting && effectiveSource == "manual" && raw["_source"]) {
+		effectiveSource = String(raw["_source"] || "") || effectiveSource;
+	}
+	payload["_source"] = effectiveSource || payload["_source"] || "manual";
 	payload["_updated_at"] = updatedAt;
 	payload["_created_at"] = normalize_schema2_node_timestamp(payload["_created_at"], updatedAt);
 	if (payload["_source"] != "subscribe") {

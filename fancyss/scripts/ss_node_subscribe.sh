@@ -1041,12 +1041,6 @@ sub_try_parse_uri_lines_with_tool(){
 	fi
 	rm -f "${subtool_log_file}" >/dev/null 2>&1
 	if [ -s "${output_file}" ];then
-		if [ -f "${summary_output_file}" ];then
-			sub_log_fancyss_parse_summary_json "${summary_output_file}" || sub_log_fancyss_parse_summary "${output_file}"
-		else
-			sub_log_fancyss_parse_summary "${output_file}"
-		fi
-		sub_log_fancyss_parse_nodes "${output_file}"
 		local kept_total=0
 		kept_total=$(wc -l < "${output_file}" 2>/dev/null | tr -d ' ')
 		[ -n "${kept_total}" ] || kept_total=0
@@ -1267,7 +1261,7 @@ sub_log_fancyss_parse_summary(){
 	[ -f "${file}" ] || return 0
 	total=$(wc -l < "${file}" 2>/dev/null | tr -d ' ')
 	[ -n "${total}" ] || total=0
-	echo_date "🧩sub-tool最终保留节点：${total}个。"
+	echo_date "ℹ️最终保留${total}个节点，具体情况如下："
 	run jq -r '[.type // "", .xray_prot // ""] | @tsv' "${file}" 2>/dev/null | awk -F '\t' '
 		function label(type_id, xray_prot) {
 			if (type_id == "0") return "🟢SS节点";
@@ -1297,6 +1291,18 @@ sub_log_fancyss_parse_summary(){
 	done
 }
 
+sub_describe_filter_rules(){
+	if [ -n "${KEY_WORDS_1_RAW}" ] && [ -n "${KEY_WORDS_2_RAW}" ];then
+		printf '排除【%s】；保留【%s】' "${KEY_WORDS_1_RAW}" "${KEY_WORDS_2_RAW}"
+	elif [ -n "${KEY_WORDS_1_RAW}" ];then
+		printf '排除【%s】' "${KEY_WORDS_1_RAW}"
+	elif [ -n "${KEY_WORDS_2_RAW}" ];then
+		printf '保留【%s】' "${KEY_WORDS_2_RAW}"
+	else
+		printf '未设置额外过滤规则'
+	fi
+}
+
 sub_get_parse_summary_value(){
 	local file="$1"
 	local key="$2"
@@ -1315,10 +1321,34 @@ sub_get_parse_summary_scheme_count(){
 sub_log_fancyss_parse_summary_json(){
 	local file="$1"
 	local total=0
+	local kept=0
+	local filtered=0
+	local supported=0
+	local filter_desc=""
 	[ -f "${file}" ] || return 1
-	total=$(sub_get_parse_summary_value "${file}" "kept_nodes")
+	total=$(sub_get_parse_summary_value "${file}" "uri_lines")
+	kept=$(sub_get_parse_summary_value "${file}" "kept_nodes")
+	filtered=$(sub_get_parse_summary_value "${file}" "filtered_nodes")
+	supported=$(sub_get_parse_summary_value "${file}" "raw_supported_nodes")
 	[ -n "${total}" ] || total=0
-	echo_date "🧩sub-tool最终保留节点：${total}个。"
+	[ -n "${kept}" ] || kept=0
+	[ -n "${filtered}" ] || filtered=0
+	[ -n "${supported}" ] || supported=0
+	filter_desc="$(sub_describe_filter_rules)"
+	echo_date "😀解析完成！共获得${total}个节点！"
+	if [ -n "${KEY_WORDS_1_RAW}${KEY_WORDS_2_RAW}" ];then
+		if [ "${filtered}" -gt "0" ];then
+			echo_date "ℹ️根据用户定义的订阅过滤规则【${filter_desc}】，并结合当前插件支持情况，最终保留${kept}个节点，过滤掉${filtered}个，具体情况如下："
+		else
+			echo_date "ℹ️根据用户定义的订阅过滤规则【${filter_desc}】，并结合当前插件支持情况，最终保留${kept}个节点，具体情况如下："
+		fi
+	else
+		if [ "${supported}" -ne "${kept}" ];then
+			echo_date "ℹ️当前未设置额外订阅过滤规则，结合当前插件支持情况，最终保留${kept}个节点，具体情况如下："
+		else
+			echo_date "ℹ️当前未设置额外订阅过滤规则，最终保留${kept}个节点，具体情况如下："
+		fi
+	fi
 	local ss=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "ss")
 	local ssr=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "ssr")
 	local vmess=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "vmess")
@@ -6263,9 +6293,14 @@ get_online_rule_now(){
 				echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
 				return 1
 			fi
-			sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+			if [ -f "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" ];then
+				sub_log_fancyss_parse_summary_json "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" || sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+			else
+				sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+			fi
 			sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
 			echo_date "-------------------------------------------------------------------"
+			sub_log_fancyss_parse_nodes "${ONLINE_PARSED_FILE}"
 			echo_date "🧩sub-tool解析完成。"
 		else
 			echo_date "⚠️sub-tool解析失败，回退旧订阅解析器。"
