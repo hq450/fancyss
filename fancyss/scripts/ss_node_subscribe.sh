@@ -72,6 +72,9 @@ SUB_WEBTEST_WARM_LOG="/tmp/upload/ss_webtest_cache.log"
 SUB_SOURCE_URL_HASH=""
 SUB_AIRPORT_IDENTITY=""
 SUB_SOURCE_SCOPE=""
+SUB_PAYLOAD_KIND=""
+SUB_DOWNLOAD_FILENAME=""
+NODE_TOOL_CONF_FILE="/koolshare/ss/rules/node-tool.conf"
 SCHEMA2_REFERENCE_NOTICE_FILE="${DIR}/reference_notice.jsonl"
 SUB_TOOL_DIFF_FILE_CURRENT=""
 SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
@@ -605,6 +608,87 @@ sub_url_origin(){
 	printf '%s' "${url}" | sed -n 's#^\([A-Za-z][A-Za-z0-9+.-]*://[^/]*\).*#\1#p' | sed -n '1p'
 }
 
+sub_header_file_path(){
+	local short_hash="$1"
+	[ -n "${short_hash}" ] || return 1
+	printf '%s\n' "${DIR}/sub_file_header_${short_hash}.txt"
+}
+
+sub_conf_file_exists(){
+	[ -s "${NODE_TOOL_CONF_FILE}" ]
+}
+
+sub_conf_lookup_domain_airport_label(){
+	local domain_name="$1"
+	[ -n "${domain_name}" ] || return 1
+	sub_conf_file_exists || return 1
+	awk -v domain_name="${domain_name}" '
+		BEGIN {
+			target = tolower(domain_name)
+		}
+		/^[[:space:]]*#/ || NF < 3 { next }
+		tolower($1) == "domain" && tolower($2) == target {
+			$1 = ""
+			$2 = ""
+			sub(/^[[:space:]]+/, "")
+			print
+			exit
+		}
+	' "${NODE_TOOL_CONF_FILE}" 2>/dev/null | sed -n '1p'
+}
+
+sub_conf_lookup_clash_prefix_airport_label(){
+	local filename="$1"
+	local basename=""
+	[ -n "${filename}" ] || return 1
+	sub_conf_file_exists || return 1
+	basename=$(printf '%s' "${filename}" | sed 's#^.*/##' | sed 's/\.[^.]\+$//')
+	[ -n "${basename}" ] || return 1
+	awk -v filename="${basename}" '
+		BEGIN {
+			target = tolower(filename)
+			best_len = -1
+			best = ""
+		}
+		/^[[:space:]]*#/ || NF < 3 { next }
+		tolower($1) == "clash_file_prefix" || tolower($1) == "clash_file_perfix" {
+			prefix = $2
+			lower_prefix = tolower(prefix)
+			if (index(target, lower_prefix) == 1 && length(prefix) > best_len) {
+				$1 = ""
+				$2 = ""
+				sub(/^[[:space:]]+/, "")
+				best = $0
+				best_len = length(prefix)
+			}
+		}
+		END {
+			if (best != "") print best
+		}
+	' "${NODE_TOOL_CONF_FILE}" 2>/dev/null | sed -n '1p'
+}
+
+sub_extract_filename_from_header_file(){
+	local short_hash="$1"
+	local header_file=""
+	local header_line=""
+	local file_name=""
+	[ -n "${short_hash}" ] || return 1
+	header_file="$(sub_header_file_path "${short_hash}")" || return 1
+	[ -f "${header_file}" ] || return 1
+	header_line=$(tr -d '\r' < "${header_file}" | grep -i '^content-disposition:' | tail -n1)
+	[ -n "${header_line}" ] || return 1
+	file_name=$(printf '%s\n' "${header_line}" | sed -n "s/.*[Ff][Ii][Ll][Ee][Nn][Aa][Mm][Ee]\*=[Uu][Tt][Ff]-8''\\([^;]*\\).*/\\1/p" | sed -n '1p')
+	if [ -n "${file_name}" ];then
+		printf '%s' "${file_name}" | urldecode
+		return 0
+	fi
+	file_name=$(printf '%s\n' "${header_line}" | sed -n 's/.*[Ff][Ii][Ll][Ee][Nn][Aa][Mm][Ee]="\([^"]*\)".*/\1/p' | sed -n '1p')
+	[ -n "${file_name}" ] || file_name=$(printf '%s\n' "${header_line}" | sed -n 's/.*[Ff][Ii][Ll][Ee][Nn][Aa][Mm][Ee]=\([^;[:space:]]*\).*/\1/p' | sed -n '1p')
+	[ -n "${file_name}" ] || return 1
+	printf '%s\n' "${file_name}"
+}
+
 sub_resolve_redirect_url(){
 	local base_url="$1"
 	local redirect_target="$2"
@@ -711,13 +795,13 @@ sub_validate_downloaded_payload_with_tool(){
 	[ -f "${payload_file}" ] || return 1
 	sub_tool_inspect_file "${payload_file}" "${inspect_file}" || return 2
 	inspect_kind=$(sub_inspect_json_field "kind" "${inspect_file}")
+	SUB_PAYLOAD_KIND="${inspect_kind}"
 	case "${inspect_kind}" in
 	uri-lines|base64-uri-lines)
 		return 0
 		;;
 	clash-yaml)
-		echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
-		return 1
+		return 0
 		;;
 	empty)
 		echo_date "⚠️下载内容为空！️该订阅链接不包含任何节点信息"
@@ -786,6 +870,7 @@ sub_validate_downloaded_payload_legacy(){
 	local jump=""
 
 	[ -f "${payload_file}" ] || return 1
+	SUB_PAYLOAD_KIND=""
 
 	if [ "${download_mode}" = "curl" ];then
 		jump=$(grep -Eo "Redirecting|301" "${payload_file}")
@@ -809,6 +894,7 @@ sub_validate_downloaded_payload_legacy(){
 	fi
 
 	if [ "$(cat "${payload_file}" | grep -c proxies)" -ge "1" ];then
+		SUB_PAYLOAD_KIND="clash-yaml"
 		echo_date "⚠️请检查你是否使用了错误的订阅链接，如clash专用订阅链接！"
 		return 1
 	fi
@@ -1070,7 +1156,7 @@ sub_update_parsed_cache_meta(){
 	local sub_hash="$1"
 	local parsed_file="$2"
 	local meta_file filter_sig effective_sub_ai effective_hy2_up effective_hy2_dl effective_hy2_tfo effective_hy2_cg
-	local has_ai_sensitive has_hy2_sensitive
+	local has_ai_sensitive has_hy2_sensitive mapping_sig
 	[ -n "${sub_hash}" ] || return 1
 	meta_file=$(sub_get_parsed_cache_meta_file "${sub_hash}") || return 1
 	filter_sig=$(sub_get_filter_signature)
@@ -1083,6 +1169,7 @@ sub_update_parsed_cache_meta(){
 	} <<-EOF
 	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
 	EOF
+	mapping_sig=$(sub_get_airport_mapping_signature)
 	has_ai_sensitive="0"
 	has_hy2_sensitive="0"
 	if [ -f "${parsed_file}" ];then
@@ -1105,6 +1192,7 @@ sub_update_parsed_cache_meta(){
 	hy2_dl=${effective_hy2_dl}
 	hy2_tfo_switch=${effective_hy2_tfo}
 	hy2_cg_opt=${effective_hy2_cg}
+	airport_map_sig=${mapping_sig}
 	has_ai_sensitive=${has_ai_sensitive}
 	has_hy2_sensitive=${has_hy2_sensitive}
 	EOF
@@ -1113,8 +1201,8 @@ sub_update_parsed_cache_meta(){
 sub_parsed_cache_meta_matches(){
 	local sub_hash="$1"
 	local meta_file cached_schema cached_exclude cached_include cached_sub_mode cached_sub_ai cached_keep_info_node
-	local cached_hy2_up cached_hy2_dl cached_hy2_tfo cached_hy2_cg has_ai_sensitive has_hy2_sensitive
-	local current_sub_ai current_hy2_up current_hy2_dl current_hy2_tfo current_hy2_cg
+	local cached_hy2_up cached_hy2_dl cached_hy2_tfo cached_hy2_cg cached_mapping_sig has_ai_sensitive has_hy2_sensitive
+	local current_sub_ai current_hy2_up current_hy2_dl current_hy2_tfo current_hy2_cg current_mapping_sig
 	[ -n "${sub_hash}" ] || return 1
 	meta_file=$(sub_get_parsed_cache_meta_file "${sub_hash}") || return 1
 	[ -f "${meta_file}" ] || return 1
@@ -1128,6 +1216,7 @@ sub_parsed_cache_meta_matches(){
 	cached_hy2_dl=$(sed -n 's/^hy2_dl=//p' "${meta_file}" | sed -n '1p')
 	cached_hy2_tfo=$(sed -n 's/^hy2_tfo_switch=//p' "${meta_file}" | sed -n '1p')
 	cached_hy2_cg=$(sed -n 's/^hy2_cg_opt=//p' "${meta_file}" | sed -n '1p')
+	cached_mapping_sig=$(sed -n 's/^airport_map_sig=//p' "${meta_file}" | sed -n '1p')
 	has_ai_sensitive=$(sed -n 's/^has_ai_sensitive=//p' "${meta_file}" | sed -n '1p')
 	has_hy2_sensitive=$(sed -n 's/^has_hy2_sensitive=//p' "${meta_file}" | sed -n '1p')
 	current_sub_ai=$(sub_get_effective_sub_ai "${SUB_AI}")
@@ -1139,12 +1228,14 @@ sub_parsed_cache_meta_matches(){
 	} <<-EOF
 	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
 	EOF
+	current_mapping_sig=$(sub_get_airport_mapping_signature)
 	[ "${cached_schema}" = "${SUB_PARSED_CACHE_META_SCHEMA}" ] || return 1
 	[ -n "${cached_sub_mode}" ] || return 1
 	[ "${cached_exclude}" = "${KEY_WORDS_1_RAW}" ] || return 1
 	[ "${cached_include}" = "${KEY_WORDS_2_RAW}" ] || return 1
 	[ "${cached_sub_mode}" = "${SUB_MODE}" ] || return 1
 	[ "${cached_keep_info_node}" = "${SUB_KEEP_INFO_NODE}" ] || return 1
+	[ "${cached_mapping_sig}" = "${current_mapping_sig}" ] || return 1
 	if [ "${has_ai_sensitive}" = "1" ];then
 		[ "${cached_sub_ai}" = "${current_sub_ai}" ] || return 1
 	fi
@@ -1161,6 +1252,14 @@ sub_file_md5(){
 	local file_path="$1"
 	[ -f "${file_path}" ] || return 1
 	md5sum "${file_path}" | awk '{print $1}'
+}
+
+sub_get_airport_mapping_signature(){
+	if [ -f "${NODE_TOOL_CONF_FILE}" ];then
+		sub_file_md5 "${NODE_TOOL_CONF_FILE}" 2>/dev/null || echo "none"
+	else
+		echo "none"
+	fi
 }
 
 sub_log_node_success(){
@@ -1497,6 +1596,10 @@ sub_prepare_decoded_file(){
 	local head_count="0"
 
 	[ -f "${encoded_file}" ] || return 1
+	if [ "${SUB_PAYLOAD_KIND}" = "clash-yaml" ];then
+		cp -f "${encoded_file}" "${decoded_file}"
+		return 0
+	fi
 	head_count=$(grep -Ec "^ss://|^ssr://|^vmess://|^vless://|^trojan://|^hysteria2://|^hy2://|^tuic://|^naive\\+https://|^naive\\+quic://" "${encoded_file}")
 	if [ "${head_count}" -gt "0" ];then
 		echo_date "📄检测到明文的订阅格式，无需解码，继续！"
@@ -4032,6 +4135,57 @@ get_group_label_from_file(){
 	fi
 }
 
+sub_rewrite_group_label_for_file(){
+	local file_path="$1"
+	local group_label="$2"
+	local source_tag="$3"
+	local tmp_file="${file_path}.group.$$"
+	local group_hash=""
+	[ -f "${file_path}" ] || return 1
+	[ -n "${group_label}" ] || return 1
+	[ -n "${source_tag}" ] || return 1
+	group_hash="${group_label}_${source_tag}"
+	jq -c --arg group_hash "${group_hash}" '.group = $group_hash' "${file_path}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${file_path}"
+}
+
+sub_resolve_online_group_label(){
+	local file_path="$1"
+	local domain_name="$2"
+	local payload_kind="$3"
+	local download_filename="$4"
+	local raw_group=""
+	local domain_label=""
+	local file_label=""
+
+	[ -n "${domain_name}" ] || return 1
+	raw_group="$(get_group_label_from_file "${file_path}" "" 2>/dev/null)"
+	domain_label="$(sub_conf_lookup_domain_airport_label "${domain_name}" 2>/dev/null)"
+	if [ -n "${domain_label}" ];then
+		printf '%s\n' "${domain_label}"
+		return 0
+	fi
+	if [ -n "${raw_group}" ] && [ "${raw_group}" != "${domain_name}" ];then
+		printf '%s\n' "${raw_group}"
+		return 0
+	fi
+	if [ "${payload_kind}" = "clash-yaml" ] && [ -n "${download_filename}" ];then
+		file_label="$(sub_conf_lookup_clash_prefix_airport_label "${download_filename}" 2>/dev/null)"
+		if [ -n "${file_label}" ];then
+			printf '%s\n' "${file_label}"
+			return 0
+		fi
+	fi
+	if [ -n "${raw_group}" ];then
+		printf '%s\n' "${raw_group}"
+	else
+		printf '%s\n' "${domain_name}"
+	fi
+}
+
 sub_find_local_source_file(){
 	local source_tag="$1"
 	local matches=""
@@ -6204,6 +6358,7 @@ get_ua(){
 
 download_by_curl(){
 	local url_encode=$(echo "$1")
+	local header_file="$(sub_header_file_path "${SUB_LINK_HASH:0:4}")"
 	
 	echo_date "⬇️使用curl下载订阅..."
 	local UA=$(get_ua)
@@ -6222,7 +6377,8 @@ download_by_curl(){
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."
-		run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		rm -f "${header_file}" >/dev/null 2>&1
+		run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		if [ "$?" == "0" ]; then
 			return 0
 		fi
@@ -6232,7 +6388,8 @@ download_by_curl(){
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
-			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			rm -f "${header_file}" >/dev/null 2>&1
+			run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			echo_date "⚠️当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点工作异常，结束curl订阅下载！"
@@ -6244,7 +6401,8 @@ download_by_curl(){
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
-			run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			rm -f "${header_file}" >/dev/null 2>&1
+			run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 			return $?
 		else
 			local EXT_ARG=""
@@ -6254,13 +6412,15 @@ download_by_curl(){
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
 		echo_date "⬇️使用常规网络下载..."
-		run /tmp/curl-subscribe -sSk -L ${UA_ARG} --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		rm -f "${header_file}" >/dev/null 2>&1
+		run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
 		return $?
 	fi
 }
 
 download_by_wget(){
 	local url_encode=$(echo "$1")
+	local header_file="$(sub_header_file_path "${SUB_LINK_HASH:0:4}")"
 	#local url_encode="${url_encode}&flag=shadowrocket"
 	echo_date "⬇️使用wget下载订阅..."
 	local UA=$(get_ua)
@@ -6286,7 +6446,8 @@ download_by_wget(){
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
 		echo_date "➡️通过本地网络直连下载订阅..."
-		run5 wget -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		rm -f "${header_file}" >/dev/null 2>&1
+		run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
 		if [ "$?" == "0" ]; then
 			return 0
 		fi
@@ -6296,7 +6457,8 @@ download_by_wget(){
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
-			run5 wget -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			rm -f "${header_file}" >/dev/null 2>&1
+			run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
 		else
 			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
 			return 1
@@ -6307,7 +6469,8 @@ download_by_wget(){
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
-			run5 wget -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+			rm -f "${header_file}" >/dev/null 2>&1
+			run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
 		else
 			echo_date "⚠️当前订阅链接域名：${DOMAIN_NAME}解析失败，结束wget订阅下载！"
 			return 1
@@ -6316,7 +6479,8 @@ download_by_wget(){
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
 		echo_date "⬇️使用常规网络下载..."
-		run5 wget -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
+		rm -f "${header_file}" >/dev/null 2>&1
+		run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
 		return $?
 	fi
 }
@@ -6327,8 +6491,12 @@ get_online_rule_now(){
 	local RAW_SOURCE_TAG=""
 	local CANONICAL_SOURCE_TAG=""
 	local SUB_SOURCE_TAG=""
+	local DOMAIN_MAPPED_GROUP=""
+	local FILE_MAPPED_GROUP=""
 	SUB_TOOL_DIFF_FILE_CURRENT=""
 	SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
+	SUB_PAYLOAD_KIND=""
+	SUB_DOWNLOAD_FILENAME=""
 
 	# 1. get domain name of node subscribe link
 	local DOMAIN_NAME="$(get_domain_name ${SUB_LINK})"
@@ -6347,7 +6515,9 @@ get_online_rule_now(){
 		return 1
 	fi
 	SUB_SOURCE_URL_HASH="${SUB_LINK_HASH:0:4}"
-	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${DOMAIN_NAME}" "${SUB_SOURCE_TAG}")
+	DOMAIN_MAPPED_GROUP="$(sub_conf_lookup_domain_airport_label "${DOMAIN_NAME}" 2>/dev/null)"
+	[ -n "${DOMAIN_MAPPED_GROUP}" ] || DOMAIN_MAPPED_GROUP="${DOMAIN_NAME}"
+	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${DOMAIN_MAPPED_GROUP}" "${SUB_SOURCE_TAG}")
 	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
 	if [ -f "/$DIR/sublink_md5.txt" ];then
 		local IS_ADD=$(cat /$DIR/sublink_md5.txt | grep -Eo ${SUB_LINK_HASH})
@@ -6391,6 +6561,10 @@ get_online_rule_now(){
 	fi
 	
 	echo_date "😀下载内容检测完成！"
+	SUB_DOWNLOAD_FILENAME="$(sub_extract_filename_from_header_file "${SUB_LINK_HASH:0:4}" 2>/dev/null)" || SUB_DOWNLOAD_FILENAME=""
+	if [ "${SUB_PAYLOAD_KIND}" = "clash-yaml" ] && [ -n "${SUB_DOWNLOAD_FILENAME}" ];then
+		FILE_MAPPED_GROUP="$(sub_conf_lookup_clash_prefix_airport_label "${SUB_DOWNLOAD_FILENAME}" 2>/dev/null)"
+	fi
 	local decoded_hash="${SUB_LINK_HASH:0:4}"
 	local source_hash="${SUB_SOURCE_TAG}"
 	local decoded_file="${DIR}/sub_file_decode_${decoded_hash}.txt"
@@ -6417,7 +6591,7 @@ get_online_rule_now(){
 	local PARSED_BY_SUB_TOOL="0"
 	if pick_sub_tool >/dev/null 2>&1;then
 		echo_date "🧩检测到sub-tool，尝试使用新解析器..."
-		if sub_try_parse_uri_lines_with_tool "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" "${ONLINE_PARSED_FILE}" "${DOMAIN_NAME}" "${SUB_SOURCE_TAG}" "${pkg_type}";then
+		if sub_try_parse_uri_lines_with_tool "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" "${ONLINE_PARSED_FILE}" "${DOMAIN_MAPPED_GROUP}" "${SUB_SOURCE_TAG}" "${pkg_type}";then
 			PARSED_BY_SUB_TOOL="1"
 			read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_TT <<-EOF
 			$(sub_collect_protocol_counts_from_summary "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" "${pkg_type}")
@@ -6504,7 +6678,11 @@ get_online_rule_now(){
 		done < ${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt
 	fi
 	echo_date "-------------------------------------------------------------------"
-	local ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}")
+	local ONLINE_GROUP=$(sub_resolve_online_group_label "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}" "${SUB_PAYLOAD_KIND}" "${SUB_DOWNLOAD_FILENAME}")
+	local RAW_ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}")
+	if [ -n "${ONLINE_GROUP}" ] && [ "${ONLINE_GROUP}" != "${RAW_ONLINE_GROUP}" ];then
+		sub_rewrite_group_label_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" >/dev/null 2>&1 || true
+	fi
 	CANONICAL_SOURCE_TAG=$(sub_canonicalize_online_source "${sub_count}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" 2>/dev/null)
 	[ -n "${CANONICAL_SOURCE_TAG}" ] || CANONICAL_SOURCE_TAG="${SUB_SOURCE_TAG}"
 	if [ "${CANONICAL_SOURCE_TAG}" != "${SUB_SOURCE_TAG}" ];then
@@ -6513,9 +6691,7 @@ get_online_rule_now(){
 	fi
 	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}")
 	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
-	if [ "${PARSED_BY_SUB_TOOL}" != "1" ];then
-		sub_rewrite_identity_fields_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" "${SUB_SOURCE_URL_HASH}" "subscribe" >/dev/null 2>&1 || true
-	fi
+	sub_rewrite_identity_fields_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" "${SUB_SOURCE_URL_HASH}" "subscribe" >/dev/null 2>&1 || true
 	sub_register_source_identity "${RAW_SOURCE_TAG}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" >/dev/null 2>&1
 	if [ -s "${ACTIVE_SOURCE_TAGS}" ] && grep -Fxq "${SUB_SOURCE_TAG}" "${ACTIVE_SOURCE_TAGS}";then
 		echo_date "⚠️检测到多个订阅链接属于同一机场【${ONLINE_GROUP}】，本次仅保留第一个来源。"
