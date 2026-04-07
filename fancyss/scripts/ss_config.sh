@@ -5,6 +5,7 @@
 source /koolshare/scripts/base.sh
 ss_basic_enable=$(dbus get ss_basic_enable)
 LOCK_FILE=/var/lock/fancyss.lock
+SCHEMA2_POSTSAVE_IDS_KEY="fss_node_postsave_ids"
 
 set_lock(){
 	exec 1000>${LOCK_FILE}
@@ -75,6 +76,13 @@ pre_start(){
 
 	if [ "${flag_count}" -gt "0" ];then
 		dbus set ss_basic_status="1"
+	fi
+
+	local postsave_ids=""
+	postsave_ids="$(dbus get ${SCHEMA2_POSTSAVE_IDS_KEY})"
+	if [ -n "${postsave_ids}" ] && [ -x "/koolshare/scripts/ss_node_postsave.sh" ];then
+		sh /koolshare/scripts/ss_node_postsave.sh rebuild "${postsave_ids}" >/dev/null 2>&1 || true
+		dbus remove ${SCHEMA2_POSTSAVE_IDS_KEY}
 	fi
 }
 

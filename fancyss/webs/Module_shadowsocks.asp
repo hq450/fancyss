@@ -4956,7 +4956,11 @@ function save() {
 function push_data_ws(script, arg, obj, flag){
 	// just push data, show log through ws
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": obj};
+	var postData;
+	if (script == "ss_config.sh") {
+		attach_schema2_postsave_marker(obj);
+	}
+	postData = build_schema2_postsave_request(id, obj) || {"id": id, "method": "dummy_script.sh", "params":[], "fields": obj};
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -5027,6 +5031,9 @@ function should_use_shunt_hot_reload(post_dbus){
 function push_data(script, arg, obj, flag){
 	if (!flag) showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
+	if (script == "ss_config.sh") {
+		attach_schema2_postsave_marker(obj);
+	}
 	var postData = {"id": id, "method": script, "params":[arg], "fields": obj};
 	$.ajax({
 		type: "POST",
@@ -5846,8 +5853,9 @@ function add_ss_node_conf(flag) {
 		node_max = parseInt(node_id, 10);
 	}
 	//push data to add new node
+	var filtered_ns = compfilter(get_compare_store(), ns);
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": compfilter(get_compare_store(), ns) };
+	var postData = build_schema2_postsave_request(id, filtered_ns) || {"id": id, "method": "dummy_script.sh", "params":[], "fields": filtered_ns };
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -6285,8 +6293,9 @@ function edit_ss_node_conf(flag) {
 		strip_legacy_node_fields(ns, edit_id);
 	}
 	var nodeTableScrollTop = get_node_table_scroll_top();
+	var filtered_ns = compfilter(get_compare_store(), ns);
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": compfilter(get_compare_store(), ns) };
+	var postData = build_schema2_postsave_request(id, filtered_ns) || {"id": id, "method": "dummy_script.sh", "params":[], "fields": filtered_ns };
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -6907,6 +6916,51 @@ function refresh_html() {
 		  }
 		});
 	}
+}
+
+function collect_schema2_postsave_node_ids(fields) {
+	var ids = [];
+	var seen = {};
+	var key = "";
+	var match = null;
+	if (get_node_storage_schema() != 2 || !fields) {
+		return "";
+	}
+	for (key in fields) {
+		if (!fields.hasOwnProperty(key)) {
+			continue;
+		}
+		match = key.match(/^fss_node_(\d+)$/);
+		if (!match) {
+			continue;
+		}
+		if (!fields[key]) {
+			continue;
+		}
+		if (seen[match[1]]) {
+			continue;
+		}
+		seen[match[1]] = true;
+		ids.push(match[1]);
+	}
+	return ids.join(",");
+}
+
+function attach_schema2_postsave_marker(fields) {
+	var ids = collect_schema2_postsave_node_ids(fields);
+	if (!ids || !fields) {
+		return "";
+	}
+	fields["fss_node_postsave_ids"] = ids;
+	return ids;
+}
+
+function build_schema2_postsave_request(id, fields) {
+	var ids = collect_schema2_postsave_node_ids(fields);
+	if (!ids) {
+		return null;
+	}
+	return {"id": id, "method": "ss_node_postsave.sh", "params":["rebuild", ids], "fields": fields};
 }
 function hide_name(){
 	//var sw = $(".node_name").width();
