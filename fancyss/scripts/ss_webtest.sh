@@ -700,21 +700,6 @@ wt_build_node_env_file() {
 	return 0
 }
 
-wt_load_node_env() {
-	local node_id="$1"
-	local json_file=""
-
-	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
-	[ -n "${node_id}" ] || return 1
-	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
-	json_file="${WT_NODE_CACHE_DIR}/${node_id}.json"
-	[ -f "${json_file}" ] || return 1
-	WT_NODE_ACTIVE_JSON="$(cat "${json_file}" 2>/dev/null)" || return 1
-	[ -n "${WT_NODE_ACTIVE_JSON}" ] || return 1
-	WT_NODE_ACTIVE_ID="${node_id}"
-	WT_NODE_ACTIVE_FIELDS=""
-}
-
 wt_build_node_env_files_bulk() {
 	return 0
 }
@@ -947,7 +932,6 @@ wt_load_node_env() {
 	WT_NODE_ACTIVE_JSON="$(cat "${json_file}" 2>/dev/null)" || return 1
 	[ -n "${WT_NODE_ACTIVE_JSON}" ] || return 1
 	WT_NODE_ACTIVE_ID="${node_id}"
-	WT_NODE_ACTIVE_FIELDS=""
 }
 
 wt_node_get_plain_from_cache() {
@@ -1675,12 +1659,11 @@ wt_rebuild_webtest_cache_from_ids() {
 		wt_webtest_cache_write_all_outbounds "${ids_file}" >/dev/null 2>&1 || true
 		wt_webtest_cache_write_global_meta "${ids_file}" || return 1
 		return 0
-	}
-	wt_init_reserved_ports
-	wt_reset_active_node_env
-	WT_NODE_ENV_DIR=""
-	WT_CACHE_START_PORT_MAP_FILE="${TMP2}/cache_start_ports.txt"
-	wt_assign_webtest_cache_start_ports "${build_ids_file}" || return 1
+		}
+		wt_init_reserved_ports
+		wt_reset_active_node_env
+		WT_CACHE_START_PORT_MAP_FILE="${TMP2}/cache_start_ports.txt"
+		wt_assign_webtest_cache_start_ports "${build_ids_file}" || return 1
 	worker_threads=$(wt_get_cache_build_threads)
 	printf '%s' "${worker_threads}" | grep -Eq '^[0-9]+$' || worker_threads="1"
 	[ "${worker_threads}" -gt 0 ] || worker_threads="1"
@@ -1870,7 +1853,6 @@ wt_ensure_webtest_cache_nodes_file() {
 	if [ "${ret}" = "0" ] && [ -s "${build_ids_file}" ]; then
 		wt_init_reserved_ports
 		wt_reset_active_node_env
-		WT_NODE_ENV_DIR=""
 		if [ "${ret}" = "0" ]; then
 			while IFS= read -r node_id
 			do

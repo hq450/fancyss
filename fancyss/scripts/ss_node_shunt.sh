@@ -64,35 +64,28 @@ fss_shunt_cleanup_runtime() {
 	rm -rf "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1
 	rm -f "${FSS_SHUNT_RUNTIME_PROXY_FILE}" >/dev/null 2>&1
 	fss_shunt_reset_active_node_env >/dev/null 2>&1 || true
-	unset WT_NODE_CACHE_DIR WT_NODE_ENV_DIR WT_SERVER_RESOLV_MODE
+	unset WT_NODE_CACHE_DIR WT_NODE_ENV_DIR WT_NODE_ACTIVE_JSON WT_SERVER_RESOLV_MODE
 	unset FSS_SHUNT_RUNTIME_READY FSS_SHUNT_RUNTIME_READY_KEY
 }
 
 fss_shunt_reset_active_node_env() {
-	local field=""
-
-	for field in ${WT_NODE_ACTIVE_FIELDS}
-	do
-		unset WTN_${field}
-	done
-	unset WT_NODE_ENV_FIELDS
 	WT_NODE_ACTIVE_ID=""
-	WT_NODE_ACTIVE_FIELDS=""
+	WT_NODE_ACTIVE_JSON=""
 }
 
 fss_shunt_load_node_env() {
 	local node_id="$1"
-	local env_file=""
+	local json_file=""
 
-	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
+	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
 	[ -n "${node_id}" ] || return 1
 	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
-	env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
-	[ -f "${env_file}" ] || return 1
+	json_file="${WT_NODE_CACHE_DIR}/${node_id}.json"
+	[ -f "${json_file}" ] || return 1
 	fss_shunt_reset_active_node_env
-	. "${env_file}" || return 1
+	WT_NODE_ACTIVE_JSON="$(cat "${json_file}" 2>/dev/null)" || return 1
+	[ -n "${WT_NODE_ACTIVE_JSON}" ] || return 1
 	WT_NODE_ACTIVE_ID="${node_id}"
-	WT_NODE_ACTIVE_FIELDS="${WT_NODE_ENV_FIELDS}"
 }
 
 wt_node_get_plain_from_cache() {
@@ -100,13 +93,36 @@ wt_node_get_plain_from_cache() {
 	local field="$2"
 	local store_field=""
 	local value=""
+	local jq_bin=""
 
 	[ -n "${node_id}" ] || return 1
 	[ -n "${field}" ] || return 1
-	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
+	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
 	store_field=$(fss_resolve_node_field_name "${field}")
 	fss_shunt_load_node_env "${node_id}" || return 1
-	eval "value=\${WTN_${store_field}-}"
+	jq_bin=$(fss_pick_jq_bin)
+	[ -n "${jq_bin}" ] || return 1
+	value=$(printf '%s' "${WT_NODE_ACTIVE_JSON}" | "${jq_bin}" -r --arg field "${store_field}" '
+		def is_b64_field($key):
+			$key == "password"
+			or $key == "naive_pass"
+			or $key == "v2ray_json"
+			or $key == "xray_json"
+			or $key == "tuic_json";
+		. as $root
+		| ($root[$field] // empty) as $v
+		| if ($v | type) == "null" then
+			""
+		elif ($v | type) == "string" then
+			if is_b64_field($field) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
+				(try ($v | @base64d) catch $v)
+			else
+				$v
+			end
+		else
+			($v | tostring)
+		end
+	' 2>/dev/null) || return 1
 	printf '%s' "${value}"
 }
 
@@ -1613,11 +1629,7 @@ fss_shunt_prune_runtime_targets_by_cache() {
 fss_shunt_prepare_selected_node_env() {
 	local ids_file="$1"
 	local json_dir="${FSS_SHUNT_RUNTIME_NODE_JSON_DIR}"
-	local env_dir="${FSS_SHUNT_RUNTIME_NODE_ENV_DIR}"
-	local jq_bin=""
-	local json_files=""
 	local node_id=""
-	local line=""
 
 	WT_NODE_CACHE_DIR=""
 	WT_NODE_ENV_DIR=""
@@ -1635,12 +1647,8 @@ fss_shunt_prepare_selected_node_env() {
 			}
 		done < "${ids_file}"
 	fi
-	jq_bin=$(fss_pick_jq_bin)
-	[ -n "${jq_bin}" ] || return 1
-	rm -rf "${env_dir}" >/dev/null 2>&1
-	mkdir -p "${env_dir}" || return 1
 	if [ -z "${WT_NODE_CACHE_DIR}" ]; then
-		rm -rf "${json_dir}" >/dev/null 2>&1
+		rm -rf "${json_dir}" "${FSS_SHUNT_RUNTIME_NODE_ENV_DIR}" >/dev/null 2>&1
 		mkdir -p "${json_dir}" || return 1
 		while IFS= read -r node_id
 		do
@@ -1650,42 +1658,7 @@ fss_shunt_prepare_selected_node_env() {
 		ls "${json_dir}"/*.json >/dev/null 2>&1 || return 0
 		WT_NODE_CACHE_DIR="${json_dir}"
 	fi
-	json_files=$(ls "${WT_NODE_CACHE_DIR}"/*.json 2>/dev/null)
-	[ -n "${json_files}" ] || return 0
-	# shellcheck disable=SC2086
-	"${jq_bin}" -r '
-		def is_b64_field($key):
-			$key == "password"
-			or $key == "naive_pass"
-			or $key == "v2ray_json"
-			or $key == "xray_json"
-			or $key == "tuic_json";
-		def decode_value($root; $key; $value):
-			if is_b64_field($key) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
-				(try ($value | @base64d) catch $value)
-			else
-				$value
-			end;
-		. as $root
-		| [
-			to_entries[]
-			| select(.key | startswith("_") | not)
-			| .key as $k
-			| (.value | if type == "string" then . else tostring end) as $v
-			| select($v != "")
-			| {key: $k, value: decode_value($root; $k; $v)}
-		] as $entries
-		| (input_filename | split("/")[-1] | rtrimstr(".json")) as $id
-		| [$id, "WT_NODE_ENV_FIELDS=" + (($entries | map(.key) | join(" ")) | @sh)],
-		  ($entries[] | [$id, "WTN_" + .key + "=" + (.value | @sh)])
-		| @tsv
-	' ${json_files} 2>/dev/null | while IFS="$(printf '\t')" read -r node_id line
-	do
-		[ -n "${node_id}" ] || continue
-		printf '%s\n' "${line}" >> "${env_dir}/${node_id}.env"
-	done
-	ls "${env_dir}"/*.env >/dev/null 2>&1 || return 0
-	WT_NODE_ENV_DIR="${env_dir}"
+	ls "${WT_NODE_CACHE_DIR}"/*.json >/dev/null 2>&1 || return 0
 	return 0
 }
 
