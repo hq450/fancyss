@@ -3470,6 +3470,24 @@ var SCHEMA2_NODE_COMPARE_IGNORE_FIELDS = {
 	"_updated_at": true,
 	"_source": true
 };
+var SCHEMA2_NODE_POSTSAVE_IGNORE_FIELDS = {
+	"_rev": true,
+	"_updated_at": true,
+	"_source": true,
+	"_airport_identity": true,
+	"_source_scope": true,
+	"_source_url_hash": true,
+	"_identity": true,
+	"_identity_primary": true,
+	"_identity_secondary": true,
+	"_identity_ver": true,
+	"_schema": true,
+	"_id": true,
+	"_created_at": true,
+	"_b64_mode": true,
+	"group": true,
+	"mode": true
+};
 function get_schema2_touch_timestamp() {
 	return String(Date.now());
 }
@@ -3482,6 +3500,48 @@ function get_schema2_compare_field_value(raw, field) {
 		return value == "1" ? "1" : "0";
 	}
 	return value;
+}
+function decode_schema2_node_payload_value(value) {
+	if (!value) {
+		return null;
+	}
+	try {
+		return JSON.parse(Base64.decode(String(value)));
+	} catch (e) {
+		return null;
+	}
+}
+function schema2_payload_needs_postsave_rebuild(nodeId, payload) {
+	var raw = get_fss_raw_node(nodeId);
+	var keys = {};
+	var key = "";
+	if (!payload) {
+		return false;
+	}
+	if (!raw) {
+		return true;
+	}
+	for (key in raw) {
+		if (!raw.hasOwnProperty(key) || SCHEMA2_NODE_POSTSAVE_IGNORE_FIELDS[key] || is_node_runtime_field(key)) {
+			continue;
+		}
+		keys[key] = 1;
+	}
+	for (key in payload) {
+		if (!payload.hasOwnProperty(key) || SCHEMA2_NODE_POSTSAVE_IGNORE_FIELDS[key] || is_node_runtime_field(key)) {
+			continue;
+		}
+		keys[key] = 1;
+	}
+	for (key in keys) {
+		if (!keys.hasOwnProperty(key)) {
+			continue;
+		}
+		if (get_schema2_compare_field_value(raw, key) !== get_schema2_compare_field_value(payload, key)) {
+			return true;
+		}
+	}
+	return false;
 }
 function schema2_payload_has_material_changes(nodeId, payload) {
 	var raw = get_fss_raw_node(nodeId);
@@ -6923,6 +6983,7 @@ function collect_schema2_postsave_node_ids(fields) {
 	var seen = {};
 	var key = "";
 	var match = null;
+	var payload = null;
 	if (get_node_storage_schema() != 2 || !fields) {
 		return "";
 	}
@@ -6935,6 +6996,10 @@ function collect_schema2_postsave_node_ids(fields) {
 			continue;
 		}
 		if (seen[match[1]]) {
+			continue;
+		}
+		payload = decode_schema2_node_payload_value(fields[key]);
+		if (!schema2_payload_needs_postsave_rebuild(match[1], payload)) {
 			continue;
 		}
 		seen[match[1]] = true;

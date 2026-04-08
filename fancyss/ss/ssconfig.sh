@@ -1047,20 +1047,20 @@ current_node_server_uses_runtime_dns() {
 refresh_node_direct_domain_file() {
 	if server_resolv_mode_is_dynamic; then
 		fss_refresh_node_direct_cache
-		if [ "${AIRPORT_DNS_ACTIVE}" = "1" ] && [ -n "${AIRPORT_DNS_SOURCE_SCOPE}" ];then
-			fss_refresh_airport_node_direct_runtime_by_scope "${AIRPORT_DNS_SOURCE_SCOPE}" >/dev/null 2>&1 || true
+		if [ "${AIRPORT_DNS_ACTIVE}" = "1" ] && [ -n "${AIRPORT_DNS_AIRPORT_IDENTITY}" ];then
+			fss_refresh_airport_node_direct_runtime_by_airport "${AIRPORT_DNS_AIRPORT_IDENTITY}" >/dev/null 2>&1 || true
 			if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
 				cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 			else
 				rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 			fi
 		else
-			rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" >/dev/null 2>&1
+			rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >/dev/null 2>&1
 			fss_sync_node_direct_runtime
 		fi
 	else
 		rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
-		rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" >/dev/null 2>&1
+		rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >/dev/null 2>&1
 	fi
 }
 
@@ -1928,13 +1928,18 @@ smartdns_append_ipv6_policy() {
 	local outfile="$1"
 	local mode="$2"
 	local has_node_direct="0"
+	local has_airport_dns_upstream="0"
 	[ -s /tmp/ss_node_domains.txt ] && has_node_direct="1"
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" ] && has_airport_dns_upstream="1"
 	if [ "${ss_basic_proxy_ipv6}" = "1" ];then
 		cat >> "${outfile}" <<-'EOF'
 force-AAAA-SOA no
 EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
+		if [ "${has_airport_dns_upstream}" = "1" ];then
+			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
 		fi
 		return
 	fi
@@ -1949,6 +1954,9 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
+		if [ "${has_airport_dns_upstream}" = "1" ];then
+			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
+		fi
 		;;
 	2|3)
 		cat >> "${outfile}" <<-'EOF'
@@ -1959,6 +1967,9 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
+		if [ "${has_airport_dns_upstream}" = "1" ];then
+			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
+		fi
 		;;
 	5)
 		cat >> "${outfile}" <<-'EOF'
@@ -1968,6 +1979,9 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
+		if [ "${has_airport_dns_upstream}" = "1" ];then
+			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
+		fi
 		;;
 	*)
 		cat >> "${outfile}" <<-'EOF'
@@ -1975,6 +1989,9 @@ force-AAAA-SOA no
 EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
+		fi
+		if [ "${has_airport_dns_upstream}" = "1" ];then
+			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
 		fi
 		;;
 	esac
@@ -1997,6 +2014,7 @@ domain-set -name rotlist -file /koolshare/ss/rules/rotlist.txt
 domain-set -name white_list -file /tmp/white_list.txt
 domain-set -name black_list -file /tmp/black_list.txt
 EOF
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" ] && echo "domain-set -name airport_dns_upstream -file ${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >> "${outfile}"
 	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ] && echo "domain-set -name airport_node -file ${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" >> "${outfile}"
 	[ -s /tmp/ss_node_domains.txt ] && echo "domain-set -name node_direct -file /tmp/ss_node_domains.txt" >> "${outfile}"
 	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
@@ -2011,8 +2029,9 @@ EOF
 	cat >> "${outfile}" <<-'EOF'
 
 EOF
+	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" ] && echo "domain-rules /domain-set:airport_dns_upstream/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn" >> "${outfile}"
 	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ] && echo "domain-rules /domain-set:airport_node/ -c none -n airport_node" >> "${outfile}"
-	[ -s /tmp/ss_node_domains.txt ] && echo "domain-rules /domain-set:node_direct/ -c none -n node_direct" >> "${outfile}"
+	[ -s /tmp/ss_node_domains.txt ] && echo "domain-rules /domain-set:node_direct/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn" >> "${outfile}"
 	cat >> "${outfile}" <<-'EOF'
 
 domain-rules /domain-set:chnlist/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn
@@ -2080,11 +2099,6 @@ ca-file /etc/ssl/certs/ca-certificates.crt
 blacklist-ip 10.0.0.0/8
 proxy-server socks5://127.0.0.1:23456 -name fancy_proxy
 EOF
-	if [ -s /tmp/ss_node_domains.txt ];then
-		echo "" >> "${outfile}"
-		echo "# node direct upstreams" >> "${outfile}"
-		smartdns_append_node_direct_servers "${outfile}"
-	fi
 	if [ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ];then
 		echo "" >> "${outfile}"
 		echo "# airport special upstreams" >> "${outfile}"

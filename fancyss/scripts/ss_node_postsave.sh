@@ -11,13 +11,21 @@ fss_postsave_rebuild_identity_by_id() {
 	local updated_json=""
 	local old_identity=""
 	local new_identity=""
+	local source=""
+	local airport_identity=""
+	local source_scope=""
+	local source_url_hash=""
 
 	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
 	[ -n "${node_id}" ] || return 1
 	node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || return 1
 	[ -n "${node_json}" ] || return 1
 	old_identity="$(printf '%s' "${node_json}" | jq -r '._identity // empty' 2>/dev/null)"
-	updated_json="$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null)" || return 1
+	source="$(printf '%s' "${node_json}" | jq -r '._source // empty' 2>/dev/null)"
+	airport_identity="$(printf '%s' "${node_json}" | jq -r '._airport_identity // empty' 2>/dev/null)"
+	source_scope="$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)"
+	source_url_hash="$(printf '%s' "${node_json}" | jq -r '._source_url_hash // empty' 2>/dev/null)"
+	updated_json="$(fss_enrich_node_identity_json "${node_json}" "${airport_identity}" "${source_scope}" "${source_url_hash}" "${source}")" || return 1
 	new_identity="$(printf '%s' "${updated_json}" | jq -r '._identity // empty' 2>/dev/null)"
 	[ -n "${new_identity}" ] || return 1
 	if [ "${updated_json}" != "${node_json}" ];then
@@ -57,8 +65,26 @@ $(printf '%s' "${ids_csv}" | tr ',' '\n' | sed '/^$/d')
 		fss_touch_node_config_ts >/dev/null 2>&1 || true
 		fss_touch_node_catalog_ts >/dev/null 2>&1 || true
 	fi
-	fss_prune_airport_runtime_entries >/dev/null 2>&1 || true
 	[ "${identity_changed}" = "1" ] && fss_clear_webtest_runtime_results >/dev/null 2>&1 || true
+}
+
+compact_node_ids_if_needed() {
+	local threshold="${FSS_NODE_ID_COMPACT_THRESHOLD:-9999}"
+	local next_id=""
+	local node_tool=""
+
+	printf '%s' "${threshold}" | grep -Eq '^[0-9]+$' || threshold="9999"
+	next_id="$(dbus get fss_node_next_id)"
+	printf '%s' "${next_id}" | grep -Eq '^[0-9]+$' || return 0
+	[ "${next_id}" -gt "${threshold}" ] || return 0
+
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || return 0
+	fss_node_tool_supports_command "${node_tool}" "compact-ids" || return 0
+	"${node_tool}" compact-ids >/dev/null 2>&1 || return 1
+	fss_clear_webtest_cache_all >/dev/null 2>&1 || true
+	fss_clear_webtest_runtime_results >/dev/null 2>&1 || true
+	fss_refresh_node_direct_cache >/dev/null 2>&1 || true
+	return 0
 }
 
 ACTION=""
@@ -79,6 +105,7 @@ fi
 case "${ACTION}" in
 rebuild)
 	rebuild_nodes_identity "${IDS}"
+	compact_node_ids_if_needed >/dev/null 2>&1 || true
 	;;
 *)
 	;;

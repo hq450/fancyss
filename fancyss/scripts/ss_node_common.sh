@@ -40,9 +40,11 @@ FSS_NODE_MIGRATION_DIR="/koolshare/configs/fancyss/migration"
 FSS_NODE_MIGRATION_LOCK="/var/lock/fss_node_migrate.lock"
 FSS_NODE_MIGRATION_KEEP=3
 FSS_NODE_DIRECT_CACHE_FILE="/koolshare/configs/fancyss/node_direct_domains.txt"
+FSS_NODE_AIRPORT_DOMAIN_CACHE_FILE="/koolshare/configs/fancyss/node_airport_domains.txt"
 FSS_NODE_DIRECT_RUNTIME_FILE="/tmp/ss_node_domains.txt"
 FSS_NODE_DIRECT_RUNTIME_OTHER_FILE="/tmp/ss_node_domains_other.txt"
 FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE="/tmp/ss_node_domains_airport.txt"
+FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE="/tmp/ss_node_domains_airport_dns.txt"
 FSS_NODE_DIRECT_CACHE_META_FILE="/koolshare/configs/fancyss/node_direct_domains.meta"
 FSS_NODE_JSON_CACHE_DIR="/koolshare/configs/fancyss/node_json_cache"
 FSS_NODE_JSON_CACHE_META_FILE="/koolshare/configs/fancyss/node_json_cache.meta"
@@ -68,7 +70,92 @@ FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY="fss_failover_node_identity"
 FSS_REFERENCE_NOTICE_DBUS_KEY_LEGACY="fss_reference_notice"
 FSS_REFERENCE_NOTICE_TS_DBUS_KEY_LEGACY="fss_reference_notice_ts"
 FSS_AIRPORT_PROFILE_FILE="/koolshare/ss/rules/airport-profile.json"
-FSS_AIRPORT_RUNTIME_FILE="/koolshare/configs/fancyss/airport.conf"
+FSS_AIRPORT_SPECIAL_INDEX_FILE="/koolshare/configs/fancyss/airport_special.list"
+
+fss_pick_node_tool() {
+	if command -v node-tool >/dev/null 2>&1; then
+		if "$(command -v node-tool)" version >/dev/null 2>&1; then
+			command -v node-tool
+			return 0
+		fi
+	fi
+	if [ -x "/koolshare/bin/node-tool" ];then
+		if /koolshare/bin/node-tool version >/dev/null 2>&1; then
+			echo "/koolshare/bin/node-tool"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+fss_node_tool_supports_command() {
+	local node_tool="$1"
+	local command_name="$2"
+	[ -n "${node_tool}" ] || return 1
+	[ -n "${command_name}" ] || return 1
+	"${node_tool}" --help 2>&1 | grep -Eq "^[[:space:]]*node-tool[[:space:]]+${command_name}([[:space:]]|$)"
+}
+
+fss_airport_special_conf_path() {
+	local airport_identity="$1"
+	[ -n "${airport_identity}" ] || return 1
+	printf '%s/%s.conf\n' "/koolshare/configs/fancyss" "${airport_identity}"
+}
+
+fss_airport_special_conf_register() {
+	local airport_identity="$1"
+	local index_file="${FSS_AIRPORT_SPECIAL_INDEX_FILE}"
+	local tmp_file="${index_file}.tmp.$$"
+	local index_dir="${index_file%/*}"
+	[ -n "${airport_identity}" ] || return 1
+	mkdir -p "${index_dir}" || return 1
+	{
+		[ -f "${index_file}" ] && cat "${index_file}"
+		printf '%s\n' "${airport_identity}"
+	} | sed '/^$/d' | sort -u > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	mv -f "${tmp_file}" "${index_file}"
+}
+
+fss_airport_special_conf_unregister() {
+	local airport_identity="$1"
+	local index_file="${FSS_AIRPORT_SPECIAL_INDEX_FILE}"
+	local tmp_file="${index_file}.tmp.$$"
+	[ -n "${airport_identity}" ] || return 1
+	[ -f "${index_file}" ] || return 0
+	grep -Fvx "${airport_identity}" "${index_file}" > "${tmp_file}" 2>/dev/null || true
+	if [ -s "${tmp_file}" ];then
+		mv -f "${tmp_file}" "${index_file}"
+	else
+		rm -f "${tmp_file}" "${index_file}"
+	fi
+}
+
+fss_remove_airport_special_conf() {
+	local airport_identity="$1"
+	local conf_path=""
+	[ -n "${airport_identity}" ] || return 1
+	conf_path="$(fss_airport_special_conf_path "${airport_identity}" 2>/dev/null)" || return 1
+	rm -f "${conf_path}" >/dev/null 2>&1
+	fss_airport_special_conf_unregister "${airport_identity}" >/dev/null 2>&1 || true
+}
+
+fss_clear_airport_special_confs() {
+	local index_file="${FSS_AIRPORT_SPECIAL_INDEX_FILE}"
+	local airport_identity=""
+	local conf_path=""
+	if [ -f "${index_file}" ];then
+		while IFS= read -r airport_identity
+		do
+			[ -n "${airport_identity}" ] || continue
+			conf_path="$(fss_airport_special_conf_path "${airport_identity}" 2>/dev/null)" || continue
+			rm -f "${conf_path}" >/dev/null 2>&1
+		done < "${index_file}"
+	fi
+	rm -f "${index_file}" >/dev/null 2>&1
+}
 
 fss_clear_webtest_cache_node() {
 	local node_id="$1"
@@ -205,6 +292,7 @@ fss_node_direct_cache_is_fresh() {
 	local cached_ts=""
 
 	[ -s "${FSS_NODE_DIRECT_CACHE_FILE}" ] || return 1
+	[ -s "${FSS_NODE_AIRPORT_DOMAIN_CACHE_FILE}" ] || return 1
 	[ -f "${FSS_NODE_DIRECT_CACHE_META_FILE}" ] || return 1
 	catalog_ts=$(fss_get_node_catalog_ts)
 	[ "${catalog_ts}" != "0" ] || return 1
@@ -405,7 +493,7 @@ fss_identity_slugify() {
 	local fallback="$2"
 	local slug=""
 	slug=$(printf '%s' "${raw}" \
-		| tr '[:upper:]' '[:lower:]' \
+		| tr 'A-Z' 'a-z' \
 		| sed 's/[^a-z0-9]\+/_/g; s/^_//; s/_$//')
 	[ -n "${slug}" ] || slug="${fallback}"
 	printf '%s' "${slug}"
@@ -475,21 +563,17 @@ fss_enrich_node_identity_json() {
 	source_scope=$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)
 	[ -n "${explicit_scope}" ] && source_scope="${explicit_scope}"
 
-	if [ -z "${airport_identity}" ] || [ -z "${source_scope}" ]; then
+	if [ "${source}" = "subscribe" ]; then
 		case "${group_value}" in
 		*_[0-9a-f][0-9a-f][0-9a-f][0-9a-f])
 			group_base="${group_value%_*}"
 			group_hash_suffix="${group_value##*_}"
-			[ -n "${airport_identity}" ] || airport_identity=$(fss_identity_slugify "${group_base}" "sub")
-			if [ -z "${source_scope}" ] && [ -n "${airport_identity}" ] && [ -n "${group_hash_suffix}" ]; then
-				source_scope="${airport_identity}_${group_hash_suffix}"
+			[ -n "${explicit_airport}" ] || airport_identity=$(fss_identity_slugify "${group_base}" "sub")
+			if [ -z "${source_url_hash}" ] && [ -z "${explicit_url_hash}" ]; then
+				source_url_hash="${group_hash_suffix}"
 			fi
-			[ -n "${source_url_hash}" ] || source_url_hash="${group_hash_suffix}"
 			;;
 		esac
-	fi
-
-	if [ "${source}" = "subscribe" ]; then
 		if [ -z "${airport_identity}" ]; then
 			group_base="${group_value}"
 			case "${group_base}" in
@@ -499,7 +583,10 @@ fss_enrich_node_identity_json() {
 			esac
 			airport_identity=$(fss_identity_slugify "${group_base}" "sub")
 		fi
-		if [ -z "${source_scope}" ]; then
+		if [ -z "${explicit_scope}" ]; then
+			source_scope="${airport_identity}"
+			[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
+		elif [ -z "${source_scope}" ]; then
 			source_scope="${airport_identity}"
 			[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
 		fi
@@ -803,8 +890,13 @@ fss_clear_v2_nodes() {
 	fss_clear_webtest_cache_all
 	fss_clear_webtest_runtime_results
 	rm -f "${FSS_NODE_DIRECT_CACHE_FILE}" \
+		"${FSS_NODE_AIRPORT_DOMAIN_CACHE_FILE}" \
 		"${FSS_NODE_DIRECT_RUNTIME_FILE}" \
+		"${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" \
+		"${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" \
+		"${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" \
 		"${FSS_NODE_DIRECT_CACHE_META_FILE}" >/dev/null 2>&1
+	fss_clear_airport_special_confs >/dev/null 2>&1 || true
 	dbus list fss_node_ | while IFS= read -r line
 	do
 		[ -z "${line}" ] && continue
@@ -2043,63 +2135,104 @@ fss_list_node_server_domains() {
 	fss_list_node_server_domains_slow
 }
 
+fss_list_node_airport_domains() {
+	local node_id=""
+	local airport_identity=""
+	local host=""
+	local port=""
+
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		airport_identity="$(fss_get_node_airport_identity_by_id "${node_id}" 2>/dev/null)"
+		[ -n "${airport_identity}" ] || airport_identity="local"
+		{
+			read -r host
+			read -r port
+		} <<-EOF
+		$(fss_get_node_server_host_port "${node_id}" 2>/dev/null)
+		EOF
+		[ -n "${host}" ] || continue
+		[ -n "$(fss_is_domain_name "${host}")" ] || continue
+		printf '%s\t%s\n' "${airport_identity}" "${host}"
+	done <<-EOF
+	$(fss_list_node_ids)
+	EOF
+}
+
 fss_refresh_node_direct_cache() {
 	local cache_file="${FSS_NODE_DIRECT_CACHE_FILE}"
+	local airport_cache_file="${FSS_NODE_AIRPORT_DOMAIN_CACHE_FILE}"
 	local cache_dir="${cache_file%/*}"
 	local tmp_file="${cache_file}.tmp.$$"
+	local airport_tmp="${airport_cache_file}.tmp.$$"
 	local catalog_ts="0"
+	local node_tool=""
 
 	if [ "$(fss_detect_storage_schema)" = "2" ] && fss_node_direct_cache_is_fresh; then
 		return 0
 	fi
 	mkdir -p "${cache_dir}" || return 1
-	rm -f "${tmp_file}"
-	fss_list_node_server_domains | sort -u > "${tmp_file}"
+	rm -f "${tmp_file}" "${airport_tmp}"
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || node_tool=""
+	if [ -n "${node_tool}" ] && fss_node_tool_supports_command "${node_tool}" "airport-domains"; then
+		if "${node_tool}" warm-cache --direct-domains >/dev/null 2>&1 && "${node_tool}" airport-domains --format text > "${airport_tmp}" 2>/dev/null; then
+			sort -u "${airport_tmp}" -o "${airport_tmp}" 2>/dev/null || true
+			if [ -s "${airport_tmp}" ];then
+				mv -f "${airport_tmp}" "${airport_cache_file}"
+			else
+				rm -f "${airport_tmp}" "${airport_cache_file}"
+			fi
+			catalog_ts=$(fss_get_node_catalog_ts)
+			[ "${catalog_ts}" != "0" ] || catalog_ts=$(fss_touch_node_catalog_ts)
+			if [ -s "${FSS_NODE_DIRECT_CACHE_FILE}" ] && [ -s "${airport_cache_file}" ];then
+				fss_write_node_direct_cache_meta "${catalog_ts}"
+				return 0
+			fi
+		fi
+	fi
+	fss_list_node_airport_domains | sort -u > "${airport_tmp}"
+	awk -F '\t' 'NF >= 2 && $2 != "" {print $2}' "${airport_tmp}" | sort -u > "${tmp_file}"
 	catalog_ts=$(fss_get_node_catalog_ts)
 	[ "${catalog_ts}" != "0" ] || catalog_ts=$(fss_touch_node_catalog_ts)
-	if [ -s "${tmp_file}" ]; then
+	if [ -s "${tmp_file}" ] && [ -s "${airport_tmp}" ]; then
 		mv -f "${tmp_file}" "${cache_file}"
+		mv -f "${airport_tmp}" "${airport_cache_file}"
 		fss_write_node_direct_cache_meta "${catalog_ts}"
 	else
-		rm -f "${tmp_file}" "${cache_file}" "${FSS_NODE_DIRECT_CACHE_META_FILE}"
+		rm -f "${tmp_file}" "${airport_tmp}" "${cache_file}" "${airport_cache_file}" "${FSS_NODE_DIRECT_CACHE_META_FILE}"
 	fi
 }
 
-fss_refresh_airport_node_direct_runtime_by_scope() {
-	local source_scope="$1"
+fss_refresh_airport_node_direct_runtime_by_airport() {
+	local airport_identity="$1"
 	local airport_file="${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}"
 	local other_file="${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}"
 	local airport_tmp="${airport_file}.tmp.$$"
 	local other_tmp="${other_file}.tmp.$$"
-	local node_id=""
-	local node_scope=""
-	local host=""
-	local port=""
+	local line_airport=""
+	local line_host=""
 
 	rm -f "${airport_tmp}" "${other_tmp}"
-	[ -n "${source_scope}" ] || {
+	[ -n "${airport_identity}" ] || {
 		rm -f "${airport_file}" "${other_file}"
 		return 0
 	}
-
-	for node_id in $(fss_list_node_ids)
+	fss_refresh_node_direct_cache || return 1
+	[ -s "${FSS_NODE_AIRPORT_DOMAIN_CACHE_FILE}" ] || {
+		rm -f "${airport_file}" "${other_file}"
+		return 0
+	}
+	while IFS="$(printf '\t')" read -r line_airport line_host
 	do
-		[ -n "${node_id}" ] || continue
-		node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)"
-		{
-			read -r host
-			read -r port
-		} <<-EOF
-$(fss_get_node_server_host_port "${node_id}" 2>/dev/null)
-		EOF
-		[ -n "${host}" ] || continue
-		[ -n "$(fss_is_domain_name "${host}")" ] || continue
-		if [ "${node_scope}" = "${source_scope}" ];then
-			printf '%s\n' "${host}" >> "${airport_tmp}"
+		[ -n "${line_airport}" ] || continue
+		[ -n "${line_host}" ] || continue
+		if [ "${line_airport}" = "${airport_identity}" ];then
+			printf '%s\n' "${line_host}" >> "${airport_tmp}"
 		else
-			printf '%s\n' "${host}" >> "${other_tmp}"
+			printf '%s\n' "${line_host}" >> "${other_tmp}"
 		fi
-	done
+	done < "${FSS_NODE_AIRPORT_DOMAIN_CACHE_FILE}"
 
 	if [ -s "${airport_tmp}" ];then
 		sort -u "${airport_tmp}" -o "${airport_tmp}" 2>/dev/null
@@ -2112,41 +2245,6 @@ $(fss_get_node_server_host_port "${node_id}" 2>/dev/null)
 		mv -f "${other_tmp}" "${other_file}"
 	else
 		rm -f "${other_tmp}" "${other_file}"
-	fi
-}
-
-fss_prune_airport_runtime_entries() {
-	local runtime_file="${FSS_AIRPORT_RUNTIME_FILE}"
-	local tmp_file="${runtime_file}.tmp.$$"
-	local scope_file="${runtime_file}.scopes.$$"
-	local node_id=""
-	local scope=""
-
-	[ -f "${runtime_file}" ] || return 0
-	: > "${scope_file}"
-	for node_id in $(fss_list_node_ids)
-	do
-		[ -n "${node_id}" ] || continue
-		scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)"
-		[ -n "${scope}" ] || continue
-		echo "${scope}" >> "${scope_file}"
-	done
-	sort -u "${scope_file}" -o "${scope_file}" 2>/dev/null
-	jq --slurpfile scopes "${scope_file}" '
-		.version = (.version // 1)
-		| .entries = (
-			(.entries // [])
-			| map(select((.source_scope // "") as $s | ($scopes[0] | index($s))))
-		)
-	' "${runtime_file}" > "${tmp_file}" 2>/dev/null || {
-		rm -f "${tmp_file}" "${scope_file}"
-		return 1
-	}
-	if jq -e '((.entries // []) | length) == 0' "${tmp_file}" >/dev/null 2>&1;then
-		rm -f "${runtime_file}" "${tmp_file}" "${scope_file}"
-	else
-		mv -f "${tmp_file}" "${runtime_file}"
-		rm -f "${scope_file}"
 	fi
 }
 

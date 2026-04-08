@@ -18,7 +18,6 @@ fss_cleanup_acl_default_port_keys >/dev/null 2>&1
 eval $(dbus export ss | sed 's/export //' | sed 's/;export /\n/g;' | sed '/ssconf_.*$/d'|sed 's/^/export /' | tr '\n' ';')
 export FSS_GLOBAL_BASIC_MODE="${ss_basic_mode}"
 AIRPORT_DNS_ACTIVE="0"
-AIRPORT_DNS_SOURCE_SCOPE=""
 AIRPORT_DNS_AIRPORT_IDENTITY=""
 AIRPORT_DNS_AIRPORT_LABEL=""
 AIRPORT_DNS_PREFERRED_PLAN=""
@@ -146,58 +145,199 @@ smartdns_store_json_value() {
 }
 
 fss_airport_runtime_current_entry_json() {
-	local current_scope=""
-	[ -f "${FSS_AIRPORT_RUNTIME_FILE}" ] || return 1
-	current_scope="$(fss_get_current_node_source_scope 2>/dev/null)" || return 1
-	[ -n "${current_scope}" ] || return 1
-	jq -c --arg source_scope "${current_scope}" '
-		(.entries // [])[]
-		| select((.source_scope // "") == $source_scope)
-		| select((.feature // "") == "node_domain_dns")
-	' "${FSS_AIRPORT_RUNTIME_FILE}" 2>/dev/null | sed -n '1p'
+	return 1
+}
+
+fss_airport_special_current_conf_path() {
+	local airport_identity=""
+	local conf_path=""
+	airport_identity="$(fss_get_current_node_airport_identity 2>/dev/null)" || return 1
+	[ -n "${airport_identity}" ] || return 1
+	conf_path="$(fss_airport_special_conf_path "${airport_identity}" 2>/dev/null)" || return 1
+	[ -f "${conf_path}" ] || return 1
+	printf '%s\n' "${conf_path}"
+}
+
+fss_airport_special_conf_get_value() {
+	local conf_path="$1"
+	local key="$2"
+	[ -f "${conf_path}" ] || return 1
+	[ -n "${key}" ] || return 1
+	sed -n "s/^${key}=//p" "${conf_path}" | sed -n '1p'
+}
+
+fss_airport_special_conf_iter_dns_urls() {
+	local conf_path="$1"
+	[ -f "${conf_path}" ] || return 1
+	sed '/^[[:space:]]*#/d;/^[[:space:]]*$/d;/^[A-Za-z0-9_][A-Za-z0-9_]*=/d' "${conf_path}" 2>/dev/null
+}
+
+fss_airport_dns_raw_to_tsv() {
+	local raw="$1"
+	local proto="" addr="" port="" host="" host_ip="" hostport="" remain=""
+	local sep="$(printf '\037')"
+
+	raw=$(printf '%s' "${raw}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^"//;s/"$//;s/^'\''//;s/'\''$//')
+	[ -n "${raw}" ] || return 1
+	case "${raw}" in
+	https://*)
+		proto="https"
+		hostport=$(printf '%s' "${raw#https://}" | sed 's#/.*$##')
+		port=$(printf '%s' "${hostport}" | awk -F: 'NF>1{print $NF}')
+		[ -n "${port}" ] || port="443"
+		case "${hostport}" in
+		\[*\]:*)
+			host=$(printf '%s' "${hostport}" | sed -n 's/^\[\(.*\)\]:[0-9][0-9]*$/\1/p')
+			[ -n "${host}" ] || host=$(printf '%s' "${hostport}" | sed 's/^\[//;s/\]$//')
+			;;
+		*)
+			host=$(printf '%s' "${hostport}" | sed 's/:[0-9][0-9]*$//')
+			;;
+		esac
+		;;
+	quic://*)
+		proto="quic"
+		hostport=$(printf '%s' "${raw#quic://}" | sed 's#/.*$##')
+		port=$(printf '%s' "${hostport}" | awk -F: 'NF>1{print $NF}')
+		[ -n "${port}" ] || port="853"
+		case "${hostport}" in
+		\[*\]:*)
+			host=$(printf '%s' "${hostport}" | sed -n 's/^\[\(.*\)\]:[0-9][0-9]*$/\1/p')
+			[ -n "${host}" ] || host=$(printf '%s' "${hostport}" | sed 's/^\[//;s/\]$//')
+			;;
+		*)
+			host=$(printf '%s' "${hostport}" | sed 's/:[0-9][0-9]*$//')
+			;;
+		esac
+		;;
+	tls://*)
+		proto="tls"
+		remain="${raw#tls://}"
+		host="${remain%%@*}"
+		[ "${remain#*@}" != "${remain}" ] && host_ip="${remain#*@}" || host_ip=""
+		port="853"
+		;;
+	tcp://*)
+		proto="tcp"
+		remain="${raw#tcp://}"
+		addr="${remain%%:*}"
+		port="${remain##*:}"
+		[ "${addr}" = "${port}" ] && port="53"
+		[ -n "$(fss_is_domain_name "${addr}")" ] && host="${addr}"
+		;;
+	udp://*)
+		proto="udp"
+		remain="${raw#udp://}"
+		addr="${remain%%:*}"
+		port="${remain##*:}"
+		[ "${addr}" = "${port}" ] && port="53"
+		[ -n "$(fss_is_domain_name "${addr}")" ] && host="${addr}"
+		;;
+	*)
+		if printf '%s' "${raw}" | grep -Eq '^([0-9]{1,3}[.]){3}[0-9]{1,3}(:[0-9]+)?$';then
+			proto="udp"
+			addr="${raw%%:*}"
+			port="${raw##*:}"
+			[ "${addr}" = "${port}" ] && port="53"
+		else
+			return 1
+		fi
+		;;
+	esac
+	printf '%s%s%s%s%s%s%s%s%s%s%s\n' "${proto}" "${sep}" "${raw}" "${sep}" "${addr}" "${sep}" "${port}" "${sep}" "${host}" "${sep}" "${host_ip}"
 }
 
 fss_airport_runtime_iter_current_dns_items_tsv() {
-	local entry_json=""
+	local conf_path=""
+	conf_path="$(fss_airport_special_current_conf_path 2>/dev/null)" || return 1
+	fss_airport_special_conf_iter_dns_urls "${conf_path}" 2>/dev/null | while IFS= read -r raw
+	do
+		[ -n "${raw}" ] || continue
+		fss_airport_dns_raw_to_tsv "${raw}" 2>/dev/null || true
+	done
+}
+
+fss_airport_dns_item_effective_host() {
+	local proto="$1"
+	local raw="$2"
+	local addr="$3"
+	local host="$4"
+	local hostport=""
+	local remain=""
+
+	[ -n "${host}" ] || {
+		case "${proto}" in
+		https|quic)
+			hostport=$(printf '%s' "${raw#*://}" | sed 's#/.*$##')
+			case "${hostport}" in
+			\[*\]:*)
+				host=$(printf '%s' "${hostport}" | sed -n 's/^\[\(.*\)\]:[0-9][0-9]*$/\1/p')
+				[ -n "${host}" ] || host=$(printf '%s' "${hostport}" | sed 's/^\[//;s/\]$//')
+				;;
+			*)
+				host=$(printf '%s' "${hostport}" | sed 's/:[0-9][0-9]*$//')
+				;;
+			esac
+			;;
+		tls)
+			remain="${raw#tls://}"
+			host="${remain%%@*}"
+			;;
+		tcp|udp)
+			[ -n "$(fss_is_domain_name "${addr}")" ] && host="${addr}"
+			;;
+		esac
+	}
+	[ -n "${host}" ] || return 1
+	[ -n "$(fss_is_domain_name "${host}")" ] || return 1
+	printf '%s' "${host}"
+}
+
+fss_refresh_airport_dns_host_runtime_file() {
+	local runtime_file="${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}"
+	local tmp_file="${runtime_file}.tmp.$$"
 	local sep="$(printf '\037')"
-	entry_json="$(fss_airport_runtime_current_entry_json 2>/dev/null)" || return 1
-	[ -n "${entry_json}" ] || return 1
-	printf '%s' "${entry_json}" | jq -r --arg sep "${sep}" '
-		(.dns_items // [])[]
-		| [
-			(.proto // ""),
-			(.raw // ""),
-			(.addr // ""),
-			((.port // "") | tostring),
-			(.host // ""),
-			(.host_ip // "")
-		] | join($sep)
-	' 2>/dev/null
+	local proto="" raw="" addr="" port="" host="" host_ip=""
+	local effective_host=""
+
+	rm -f "${tmp_file}"
+	fss_airport_runtime_iter_current_dns_items_tsv 2>/dev/null | while IFS="${sep}" read -r proto raw addr port host host_ip
+	do
+		effective_host="$(fss_airport_dns_item_effective_host "${proto}" "${raw}" "${addr}" "${host}" 2>/dev/null)" || continue
+		printf '%s\n' "${effective_host}"
+	done | sort -u > "${tmp_file}" 2>/dev/null
+
+	if [ -s "${tmp_file}" ];then
+		mv -f "${tmp_file}" "${runtime_file}"
+	else
+		rm -f "${tmp_file}" "${runtime_file}"
+	fi
 }
 
 fss_airport_dns_override_reset() {
 	AIRPORT_DNS_ACTIVE="0"
-	AIRPORT_DNS_SOURCE_SCOPE=""
 	AIRPORT_DNS_AIRPORT_IDENTITY=""
 	AIRPORT_DNS_AIRPORT_LABEL=""
 	AIRPORT_DNS_PREFERRED_PLAN=""
-	rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" >/dev/null 2>&1
+	rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >/dev/null 2>&1
 }
 
 fss_airport_dns_override_load() {
-	local entry_json=""
-	local current_scope=""
+	local current_airport=""
+	local conf_path=""
 	fss_airport_dns_override_reset
-	entry_json="$(fss_airport_runtime_current_entry_json 2>/dev/null)" || return 0
-	[ -n "${entry_json}" ] || return 0
-	current_scope="$(printf '%s' "${entry_json}" | jq -r '.source_scope // empty' 2>/dev/null)"
-	[ -n "${current_scope}" ] || return 0
+	current_airport="$(fss_get_current_node_airport_identity 2>/dev/null)" || return 0
+	[ -n "${current_airport}" ] || return 0
+	conf_path="$(fss_airport_special_conf_path "${current_airport}" 2>/dev/null)" || return 0
+	[ -f "${conf_path}" ] || return 0
 	AIRPORT_DNS_ACTIVE="1"
-	AIRPORT_DNS_SOURCE_SCOPE="${current_scope}"
-	AIRPORT_DNS_AIRPORT_IDENTITY="$(printf '%s' "${entry_json}" | jq -r '.airport_identity // empty' 2>/dev/null)"
-	AIRPORT_DNS_AIRPORT_LABEL="$(printf '%s' "${entry_json}" | jq -r '.airport_label // empty' 2>/dev/null)"
-	AIRPORT_DNS_PREFERRED_PLAN="$(printf '%s' "${entry_json}" | jq -r '.preferred_dns_plan // "smartdns"' 2>/dev/null)"
-	fss_refresh_airport_node_direct_runtime_by_scope "${AIRPORT_DNS_SOURCE_SCOPE}" >/dev/null 2>&1 || true
+	AIRPORT_DNS_AIRPORT_IDENTITY="${current_airport}"
+	AIRPORT_DNS_AIRPORT_LABEL="$(fss_airport_special_conf_get_value "${conf_path}" "airport_label" 2>/dev/null)"
+	[ -n "${AIRPORT_DNS_AIRPORT_LABEL}" ] || AIRPORT_DNS_AIRPORT_LABEL="${current_airport}"
+	AIRPORT_DNS_PREFERRED_PLAN="$(fss_airport_special_conf_get_value "${conf_path}" "preferred_dns_plan" 2>/dev/null)"
+	[ -n "${AIRPORT_DNS_PREFERRED_PLAN}" ] || AIRPORT_DNS_PREFERRED_PLAN="smartdns"
+	fss_refresh_airport_node_direct_runtime_by_airport "${AIRPORT_DNS_AIRPORT_IDENTITY}" >/dev/null 2>&1 || true
+	fss_refresh_airport_dns_host_runtime_file >/dev/null 2>&1 || true
 }
 
 smartdns_decode_json_value() {
