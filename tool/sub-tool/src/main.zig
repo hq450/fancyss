@@ -3097,6 +3097,7 @@ fn parseVlessLike(allocator: std.mem.Allocator, scheme: []const u8, line: []cons
     var node = try baseNode(allocator, scheme, name, hp.host, hp.port, options);
     node.uuid = try allocator.dupe(u8, userinfo);
     if (query_main.query.len > 0) {
+        if (try queryValueAlloc(allocator, query_main.query, "encryption")) |v| node.method = v;
         if (try queryValueAlloc(allocator, query_main.query, "type")) |v| node.network = v;
         if (try queryValueAlloc(allocator, query_main.query, "security")) |v| node.security = v;
         if (try queryValueAlloc(allocator, query_main.query, "host")) |v| node.host = v;
@@ -3923,12 +3924,13 @@ test "parse ss link with plugin query" {
 
 test "parse vless link" {
     const allocator = std.testing.allocator;
-    const line = "vless://11111111-1111-1111-1111-111111111111@example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&sni=tls.example.com#VLESS";
+    const line = "vless://11111111-1111-1111-1111-111111111111@example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&sni=tls.example.com&encryption=mlkem768x25519plus.native.0rtt.test#VLESS";
     const node = try parseVlessLike(allocator, "vless", line, .{ .command = .parse_uri_lines });
     try std.testing.expectEqualStrings("vless", node.scheme);
     try std.testing.expectEqualStrings("VLESS", node.name);
     try std.testing.expectEqualStrings("example.com", node.server);
     try std.testing.expectEqual(@as(u16, 443), node.port);
+    try std.testing.expectEqualStrings("mlkem768x25519plus.native.0rtt.test", node.method.?);
 }
 
 test "parse vmess link" {
