@@ -4590,6 +4590,7 @@ function save() {
 	  "ss_basic_furl",
 	  "ss_basic_curl",
 	  "ss_basic_latency_batch",
+	  "ss_basic_lt_web_time",
 	  "ss_basic_lt_cru_opts",
 	  "ss_basic_lt_cru_time",
 	  "ss_basic_hy2_up_speed",
@@ -5675,6 +5676,7 @@ function update_visibility() {
 	var t1 = E("ss_basic_lt_cru_opts").value == "1";
 	var t2 = E("ss_basic_lt_cru_opts").value == "2";
 	showhide("ss_basic_lt_cru_time", t1 || t2);
+	showhide("ss_basic_lt_web_time", !t1 && !t2);
 
 	if (E("ss_basic_dns_plan").value == "1"){
 		$(".chng").show();
@@ -6943,7 +6945,7 @@ function refresh_html() {
 		//ss_node_sel();
 	}
 	// ask or not ask for webtest
-	if(db_ss["ss_basic_latency_val"]){
+	if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
 		latency_test(db_ss["ss_basic_latency_val"]);
 	}
 	// select default node
@@ -7790,6 +7792,7 @@ function save_latency_sett(){
 	dbus_post["ss_basic_furl"] = E("ss_basic_furl").value;
 	dbus_post["ss_basic_curl"] = E("ss_basic_curl").value;
 	dbus_post["ss_basic_latency_batch"] = E("ss_basic_latency_batch").value;
+	dbus_post["ss_basic_lt_web_time"] = E("ss_basic_lt_web_time").value;
 	dbus_post["ss_basic_lt_cru_opts"] = E("ss_basic_lt_cru_opts").value;
 	dbus_post["ss_basic_lt_cru_time"] = E("ss_basic_lt_cru_time").value;
 	var post_dbus = compfilter(db_ss, dbus_post);
@@ -8110,6 +8113,9 @@ function normalize_latency_val(){
 	if(db_ss["ss_basic_latency_val"] === undefined || db_ss["ss_basic_latency_val"] === null || db_ss["ss_basic_latency_val"] === ""){
 		db_ss["ss_basic_latency_val"] = "0";
 	}
+	if(db_ss["ss_basic_lt_web_time"] === undefined || db_ss["ss_basic_lt_web_time"] === null || db_ss["ss_basic_lt_web_time"] === ""){
+		db_ss["ss_basic_lt_web_time"] = "30";
+	}
 }
 function test_latency_single(node){
 	if(!node) return;
@@ -8230,6 +8236,7 @@ function latency_test(action) {
 				if(result.indexOf("ok1") === 0 || result.indexOf("ok4") === 0 || result.indexOf("ok5") === 0){
 					batch_test_running = true;
 					batch_stop_pending = false;
+					$(".latency .latency_val").html("waiting...");
 					if(result.indexOf("ok5") === 0){
 						$("#ss_wts_show").html("<em>【节点配置缓存重建中...】</em>");
 						$("#dropdown").width(320);
@@ -11030,12 +11037,21 @@ function toggleKeyMask(o, show){
 											["0", "关闭批量测速"],
 											["1", "开启批量测速"]
 										   ]
+								var lt_web = [
+											["0", "关闭页面自动测速"],
+											["5", "超过5分钟自动测速"],
+											["10", "超过10分钟自动测速"],
+											["15", "超过15分钟自动测速"],
+											["30", "超过30分钟自动测速"],
+											["60", "超过60分钟自动测速"]
+										   ]
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
 								$('#table_test').forms([
 									{ title: '延迟测试设置', thead:'1'},
 									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
 									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
 									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
+									{ title: '页面自动测速', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},

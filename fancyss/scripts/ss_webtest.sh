@@ -2189,6 +2189,7 @@ webtest_web(){
 		http_response "batch_disabled"
 		return 0
 	fi
+	set_default "ss_basic_lt_web_time" "30"
 	# 1. 如果没有结果文件，需要去获取webtest
 	if [ ! -f "${WT_WEBTEST_FILE}" ];then
 		local backup_usable=$(get_webtest_usable_count "${WT_WEBTEST_BACKUP}")
@@ -2221,11 +2222,16 @@ webtest_web(){
 	fi
 
 	# 4. 如果有结果该文件，且没有lock（webtest完成了的），且节点数和webtest结果数一致，比较下上次webtest结果生成的时间，如果是15分钟以内，则不需要重新webtest
+	if [ "${ss_basic_lt_cru_opts}" = "1" ] || [ "${ss_basic_lt_web_time}" = "0" ];then
+		http_response "ok2, webtest auto refresh disabled!"
+		return 0
+	fi
 	TS_LST=$(/bin/date -r "${WT_WEBTEST_FILE}" "+%s")
 	TS_NOW=$(/bin/date +%s)
 	TS_DUR=$((${TS_NOW} - ${TS_LST}))
-	if [ "${TS_DUR}" -lt "1800" ];then
-		http_response "ok2, webtest result in 30min, do not refresh!"
+	local web_refresh_secs=$((ss_basic_lt_web_time * 60))
+	if [ "${TS_DUR}" -lt "${web_refresh_secs}" ];then
+		http_response "ok2, webtest result in ${ss_basic_lt_web_time}min, do not refresh!"
 	else
 		clean_webtest
 		start_webtest
