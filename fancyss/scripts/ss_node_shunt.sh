@@ -1488,6 +1488,36 @@ fss_shunt_link_webtest_cache_outbounds() {
 	done < "${ids_file}"
 }
 
+fss_shunt_runtime_artifact_meta_get() {
+	local key="$1"
+	local meta_file="${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/cache.meta"
+
+	[ -n "${key}" ] || return 1
+	[ -f "${meta_file}" ] || return 1
+	sed -n "s/^${key}=//p" "${meta_file}" | sed -n '1p'
+}
+
+fss_shunt_log_node_tool_runtime_summary() {
+	local native=""
+	local shell=""
+	local missing=""
+	local other=""
+	local reasons=""
+
+	native="$(fss_shunt_runtime_artifact_meta_get "builder_native")"
+	shell="$(fss_shunt_runtime_artifact_meta_get "builder_shell")"
+	missing="$(fss_shunt_runtime_artifact_meta_get "builder_missing")"
+	other="$(fss_shunt_runtime_artifact_meta_get "builder_other")"
+	reasons="$(fss_shunt_runtime_artifact_meta_get "builder_shell_reasons")"
+	[ -n "${native}${shell}${missing}${other}${reasons}" ] || return 0
+	[ -n "${native}" ] || native="0"
+	[ -n "${shell}" ] || shell="0"
+	[ -n "${missing}" ] || missing="0"
+	[ -n "${other}" ] || other="0"
+	fss_shunt_log "ℹ️node-tool运行产物摘要：native ${native}，shell ${shell}，missing ${missing}，other ${other}。"
+	[ "${shell}" = "0" ] || [ -z "${reasons}" ] || fss_shunt_log "ℹ️shell回退原因：${reasons}"
+}
+
 fss_shunt_try_prepare_node_tool_runtime_artifacts() {
 	local ids_file="$1"
 	local node_tool=""
@@ -1512,6 +1542,7 @@ fss_shunt_try_prepare_node_tool_runtime_artifacts() {
 		ln -sf "${artifact_out}" "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" || return 1
 	done < "${ids_file}"
 	fss_shunt_log "ℹ️通过node-tool生成shunt统一运行产物。"
+	fss_shunt_log_node_tool_runtime_summary
 	return 0
 }
 

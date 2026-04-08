@@ -63,6 +63,7 @@ wt_try_node_tool_webtest_cache() {
 	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
 	"${node_tool}" warm-cache --webtest --ids-file "${ids_file}" >/dev/null 2>&1 || return 1
 	wt_cache_log "ℹ️通过node-tool构建/复用webtest节点配置缓存。"
+	wt_log_node_tool_webtest_summary
 	return 0
 }
 
@@ -72,6 +73,7 @@ wt_try_node_tool_webtest_cache_all() {
 	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
 	"${node_tool}" warm-cache --webtest >/dev/null 2>&1 || return 1
 	wt_cache_log "ℹ️通过node-tool构建/复用webtest节点配置缓存。"
+	wt_log_node_tool_webtest_summary
 	return 0
 }
 
@@ -87,6 +89,28 @@ wt_try_node_tool_webtest_groups() {
 wt_get_webtest_cache_xray_count() {
 	[ -f "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" ] || return 1
 	sed -n 's/^xray_count=//p' "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" | sed -n '1p'
+}
+
+wt_log_node_tool_webtest_summary() {
+	local native=""
+	local shell=""
+	local missing=""
+	local other=""
+	local reasons=""
+
+	[ -f "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" ] || return 0
+	native="$(wt_webtest_cache_global_meta_get "builder_native")"
+	shell="$(wt_webtest_cache_global_meta_get "builder_shell")"
+	missing="$(wt_webtest_cache_global_meta_get "builder_missing")"
+	other="$(wt_webtest_cache_global_meta_get "builder_other")"
+	reasons="$(wt_webtest_cache_global_meta_get "builder_shell_reasons")"
+	[ -n "${native}${shell}${missing}${other}${reasons}" ] || return 0
+	[ -n "${native}" ] || native="0"
+	[ -n "${shell}" ] || shell="0"
+	[ -n "${missing}" ] || missing="0"
+	[ -n "${other}" ] || other="0"
+	wt_cache_log "ℹ️node-tool构建摘要：native ${native}，shell ${shell}，missing ${missing}，other ${other}。"
+	[ "${shell}" = "0" ] || [ -z "${reasons}" ] || wt_cache_log "ℹ️shell回退原因：${reasons}"
 }
 
 wt_try_node_tool_json_cache() {
