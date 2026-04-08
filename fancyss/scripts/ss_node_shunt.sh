@@ -25,6 +25,7 @@ FSS_SHUNT_RUNTIME_ACTIVE_FILE="${FSS_SHUNT_RUNTIME_DIR}/active_rules.tsv"
 FSS_SHUNT_RUNTIME_TARGET_FILE="${FSS_SHUNT_RUNTIME_DIR}/target_nodes.txt"
 FSS_SHUNT_RUNTIME_META_FILE="${FSS_SHUNT_RUNTIME_DIR}/runtime.meta"
 FSS_SHUNT_RUNTIME_OUTBOUND_DIR="${FSS_SHUNT_RUNTIME_DIR}/outbounds"
+FSS_SHUNT_RUNTIME_ARTIFACT_DIR="${FSS_SHUNT_RUNTIME_DIR}/runtime_artifacts"
 FSS_SHUNT_RUNTIME_PROXY_FILE="/tmp/ss_shunt_proxy.txt"
 FSS_SHUNT_HOT_STATE_FILE="${FSS_SHUNT_RUNTIME_DIR}/hot_reload_state.tsv"
 FSS_SHUNT_RUNTIME_CHNLIST_FILE="/tmp/chnlist.txt"
@@ -1487,10 +1488,40 @@ fss_shunt_link_webtest_cache_outbounds() {
 	done < "${ids_file}"
 }
 
+fss_shunt_try_prepare_node_tool_runtime_artifacts() {
+	local ids_file="$1"
+	local node_tool=""
+	local node_id=""
+	local artifact_out=""
+
+	[ -f "${ids_file}" ] || return 1
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || return 1
+	fss_node_tool_supports_command "${node_tool}" "runtime-artifact" || return 1
+	fss_refresh_node_json_cache >/dev/null 2>&1 || return 1
+	"${node_tool}" runtime-artifact \
+		--profile shunt \
+		--ids-file "${ids_file}" \
+		--output-dir "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}" >/dev/null 2>&1 || return 1
+	rm -rf "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" >/dev/null 2>&1
+	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		artifact_out="${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/nodes/${node_id}_outbounds.json"
+		[ -s "${artifact_out}" ] || return 1
+		ln -sf "${artifact_out}" "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" || return 1
+	done < "${ids_file}"
+	fss_shunt_log "ℹ️通过node-tool生成shunt统一运行产物。"
+	return 0
+}
+
 fss_shunt_try_prepare_webtest_outbounds() {
 	local ids_file="$1"
 
 	[ -f "${ids_file}" ] || return 1
+	if fss_shunt_try_prepare_node_tool_runtime_artifacts "${ids_file}"; then
+		return 0
+	fi
 	WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
 	fss_refresh_node_json_cache >/dev/null 2>&1 || return 1
 	if fss_shunt_need_webtest_cache_rebuild "${ids_file}"; then
