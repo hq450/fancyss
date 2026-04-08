@@ -1049,6 +1049,12 @@ function openssHint(itemNum, flag) {
 		statusmenu += "缺点：会有轻微 DNS 泄露。";
 		statusmenu += "</div>";
 		_caption = "说明：";
+	} else if (itemNum == 156) {
+		width = "560px";
+		statusmenu = "1. 该选项仅在【定时测试节点延迟】关闭时生效。<br /><br />";
+		statusmenu += "2. 在设定分钟内再次访问节点列表，会直接复用现有测速结果；超过设定分钟后访问，页面会自动触发一次批量测速刷新。<br /><br />";
+		statusmenu += "3. 自动触发时会显示 waiting / loading / booting 等中间状态，不会再静默刷新。";
+		_caption = "说明：";
 	}
 	return overlib(statusmenu, OFFSETX, 30, OFFSETY, 10, RIGHT, STICKY, WIDTH, 'width', CAPTION, _caption, CLOSETITLE, '');
 

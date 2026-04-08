@@ -11054,7 +11054,7 @@ function toggleKeyMask(o, show){
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},
 									]},
-									{ title: '测速结果自动刷新', rid:'ss_basic_lt_web_time_row', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30', suffix:'<div style=\"margin-top:6px;font-size:11px;line-height:1.6;color:#9aa3ad;\">当【定时测试节点延迟】关闭时，你在设定分钟内访问节点列表，测速结果将保持；超过设定分钟后访问，测速结果将自动刷新。</div>'},
+									{ title: '测速结果自动刷新', rid:'ss_basic_lt_web_time_row', hint:'156', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
 								]);
 							</script>
 						</table>
