@@ -113,6 +113,10 @@ wt_cache_state_failed() {
 	wt_cache_state_write "failed" "failed" "${reason}" "${ids_file}" "${message}"
 }
 
+wt_cache_state_is_building() {
+	[ "$(wt_cache_state_get "status")" = "building" ]
+}
+
 wt_pick_node_tool() {
 	if command -v node-tool >/dev/null 2>&1; then
 		if "$(command -v node-tool)" version >/dev/null 2>&1; then
@@ -2081,6 +2085,7 @@ wt_prepare_webtest_preview() {
 	local curr_node=""
 	local max_show=""
 	local begn_node=""
+	local preview_ids_file="${TMP2}/xray_like_nodes.preview"
 
 	WT_PREVIEW_READY=0
 	detect_perf
@@ -2096,7 +2101,15 @@ wt_prepare_webtest_preview() {
 	fi
 
 	wt_prepare_group_order "${curr_node}" "${begn_node}" || return 1
-	http_response "ok4, webtest.txt generating..."
+	if [ -f "${TMP2}/nodes_index.txt" ]; then
+		wt_collect_xray_like_ids_file "${preview_ids_file}" >/dev/null 2>&1 || true
+	fi
+	if [ -s "${preview_ids_file}" ] && ! wt_webtest_cache_is_globally_fresh "${preview_ids_file}"; then
+		http_response "ok5, webtest cache rebuilding..."
+	else
+		http_response "ok4, webtest.txt generating..."
+	fi
+	rm -f "${preview_ids_file}" >/dev/null 2>&1
 	wt_show_current_group_preview "${WT_GROUP_PREVIEW_FILE}" "${WT_GROUP_CURRENT_TAG}"
 	WT_PREVIEW_READY=1
 }
@@ -2191,7 +2204,11 @@ webtest_web(){
 
 	# 2. 如果有结果文件，且lock 存在，说明正在webtest，那么告诉web自己去拿结果吧
 	if [ -f "/tmp/webtest.lock" ];then
-		http_response "ok1, lock exist, webtest is running..."
+		if wt_cache_state_is_building; then
+			http_response "ok5, webtest cache rebuilding..."
+		else
+			http_response "ok1, lock exist, webtest is running..."
+		fi
 		return 0
 	fi
 

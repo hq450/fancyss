@@ -8227,11 +8227,17 @@ function latency_test(action) {
 				return;
 			}
 			if(action == "2"){
-				if(result.indexOf("ok1") === 0 || result.indexOf("ok4") === 0){
+				if(result.indexOf("ok1") === 0 || result.indexOf("ok4") === 0 || result.indexOf("ok5") === 0){
 					batch_test_running = true;
 					batch_stop_pending = false;
-					$("#ss_wts_show").html("<em>【测速中...】</em>");
-					$("#dropdown").width(240);
+					if(result.indexOf("ok5") === 0){
+						$("#ss_wts_show").html("<em>【节点配置缓存重建中...】</em>");
+						$("#dropdown").width(320);
+						layer.msg("节点配置缓存正在重建，请稍候，请勿重复点击。", {time: 2500});
+					}else{
+						$("#ss_wts_show").html("<em>【测速中...】</em>");
+						$("#dropdown").width(240);
+					}
 					update_latency_action_links();
 					// 保留已有测速结果，避免刷新页面时单节点测速结果被 "waiting..." 覆盖。
 					if(start_latency_ws(action)){
