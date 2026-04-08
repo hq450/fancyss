@@ -12,6 +12,7 @@ INDEX=$2
 perpare(){
 	# remove config
 	[ -n "$(cat ${CONFIG}|grep no-resolv)" ] && sed -i '/no-resolv/d' ${CONFIG}
+	[ -n "$(cat ${CONFIG}|grep dhcp-script)" ] && sed -i '/dhcp-script/d' ${CONFIG}
 	[ -n "$(cat ${CONFIG}|grep servers-file)" ] && sed -i '/servers-file/d' ${CONFIG}
 	[ -n "$(cat ${CONFIG}|grep resolv-file)" ] && sed -i '/resolv-file/d' ${CONFIG}
 	
