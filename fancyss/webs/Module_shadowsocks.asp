@@ -11038,12 +11038,11 @@ function toggleKeyMask(o, show){
 											["1", "开启批量测速"]
 										   ]
 								var lt_web = [
-											["0", "关闭页面自动测速"],
-											["5", "超过5分钟自动测速"],
-											["10", "超过10分钟自动测速"],
-											["15", "超过15分钟自动测速"],
-											["30", "超过30分钟自动测速"],
-											["60", "超过60分钟自动测速"]
+											["0", "关闭自动刷新"],
+											["15", "15分钟"],
+											["20", "20分钟"],
+											["30", "30分钟"],
+											["60", "60分钟"]
 										   ]
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
 								$('#table_test').forms([
@@ -11051,7 +11050,7 @@ function toggleKeyMask(o, show){
 									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
 									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
 									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
-									{ title: '页面自动测速', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
+									{ title: '测速结果自动刷新', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},
@@ -11064,6 +11063,8 @@ function toggleKeyMask(o, show){
 			</tr>
 		</table>
 		<span style="margin-left:30px">【web延迟测试】中设置的国外网址，同样会用于插件顶部[插件运行状态]中的国外链接延迟测试</span>
+		<br />
+		<span style="margin-left:30px">当【定时测试节点延迟】关闭时，你在设定分钟内访问节点列表，测速结果将保持；超过设定分钟后访问，测速结果将自动刷新。</span>
 		<div style="padding-top:10px;padding-bottom:10px;width:100%;text-align:center;">
 			<input id="save_latency_sett" class="button_gen" type="button" onclick="save_latency_sett();" value="保存">
 			<input id="leav_test_sett" class="button_gen" type="button" onclick="leav_test_sett();" value="返回">
