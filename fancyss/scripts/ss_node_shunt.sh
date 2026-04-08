@@ -26,6 +26,9 @@ FSS_SHUNT_RUNTIME_TARGET_FILE="${FSS_SHUNT_RUNTIME_DIR}/target_nodes.txt"
 FSS_SHUNT_RUNTIME_META_FILE="${FSS_SHUNT_RUNTIME_DIR}/runtime.meta"
 FSS_SHUNT_RUNTIME_OUTBOUND_DIR="${FSS_SHUNT_RUNTIME_DIR}/outbounds"
 FSS_SHUNT_RUNTIME_ARTIFACT_DIR="${FSS_SHUNT_RUNTIME_DIR}/runtime_artifacts"
+FSS_SHUNT_RUNTIME_ARTIFACT_LOCK="/tmp/fss_runtime_artifact_shunt.lock"
+FSS_SHUNT_CACHE_STATE_DIR="/tmp/fancyss_cache_state"
+FSS_SHUNT_RUNTIME_STATE_FILE="${FSS_SHUNT_CACHE_STATE_DIR}/shunt.state"
 FSS_SHUNT_RUNTIME_PROXY_FILE="/tmp/ss_shunt_proxy.txt"
 FSS_SHUNT_HOT_STATE_FILE="${FSS_SHUNT_RUNTIME_DIR}/hot_reload_state.tsv"
 FSS_SHUNT_RUNTIME_CHNLIST_FILE="/tmp/chnlist.txt"
@@ -45,6 +48,105 @@ FSS_SCRIPT_DIR="${KSROOT}/scripts"
 
 fss_shunt_log() {
 	echo "【$(date +'%Y%m%d %H:%M:%S')】: $*"
+}
+
+fss_shunt_state_count_ids() {
+	local ids_file="$1"
+	local count="0"
+
+	[ -f "${ids_file}" ] || {
+		printf '%s' "0"
+		return 0
+	}
+	count=$(wc -l < "${ids_file}" | tr -d ' ')
+	[ -n "${count}" ] || count="0"
+	printf '%s' "${count}"
+}
+
+fss_shunt_state_write() {
+	local status="$1"
+	local phase="$2"
+	local reason="$3"
+	local ids_file="$4"
+	local message="$5"
+	local target_count=""
+
+	mkdir -p "${FSS_SHUNT_CACHE_STATE_DIR}" >/dev/null 2>&1 || return 1
+	target_count="$(fss_shunt_state_count_ids "${ids_file}")"
+	cat > "${FSS_SHUNT_RUNTIME_STATE_FILE}.tmp.$$" <<-EOF
+		status=${status}
+		phase=${phase}
+		reason=${reason}
+		pid=$$
+		target_count=${target_count}
+		message=${message}
+		updated_at=$(date +%s)
+	EOF
+	mv -f "${FSS_SHUNT_RUNTIME_STATE_FILE}.tmp.$$" "${FSS_SHUNT_RUNTIME_STATE_FILE}"
+}
+
+fss_shunt_state_get() {
+	local key="$1"
+
+	[ -n "${key}" ] || return 1
+	[ -f "${FSS_SHUNT_RUNTIME_STATE_FILE}" ] || return 1
+	sed -n "s/^${key}=//p" "${FSS_SHUNT_RUNTIME_STATE_FILE}" | sed -n '1p'
+}
+
+fss_shunt_state_begin() {
+	local reason="$1"
+	local ids_file="$2"
+	local message="$3"
+	fss_shunt_state_write "building" "init" "${reason}" "${ids_file}" "${message}"
+}
+
+fss_shunt_state_phase() {
+	local phase="$1"
+	local reason="$2"
+	local ids_file="$3"
+	local message="$4"
+	fss_shunt_state_write "building" "${phase}" "${reason}" "${ids_file}" "${message}"
+}
+
+fss_shunt_state_ready() {
+	local reason="$1"
+	local ids_file="$2"
+	local message="$3"
+	fss_shunt_state_write "ready" "done" "${reason}" "${ids_file}" "${message}"
+}
+
+fss_shunt_state_failed() {
+	local reason="$1"
+	local ids_file="$2"
+	local message="$3"
+	fss_shunt_state_write "failed" "failed" "${reason}" "${ids_file}" "${message}"
+}
+
+fss_shunt_runtime_artifact_lock_acquire() {
+	local waited=0
+	local owner_pid=""
+	local owner_phase=""
+	local owner_count=""
+
+	while ! mkdir "${FSS_SHUNT_RUNTIME_ARTIFACT_LOCK}" 2>/dev/null
+	do
+		owner_pid="$(sed -n '1p' "${FSS_SHUNT_RUNTIME_ARTIFACT_LOCK}/pid" 2>/dev/null)"
+		if [ -n "${owner_pid}" ] && kill -0 "${owner_pid}" 2>/dev/null; then
+			owner_phase="$(fss_shunt_state_get "phase")"
+			owner_count="$(fss_shunt_state_get "target_count")"
+			[ $((waited % 2)) -eq 0 ] && fss_shunt_log "ℹ️节点运行产物正在由其它任务重建，当前阶段：${owner_phase:-unknown}，目标节点：${owner_count:-0}，已等待 ${waited}s。"
+			[ "${waited}" -lt 60 ] || return 1
+			sleep 1
+			waited=$((waited + 1))
+			continue
+		fi
+		rm -rf "${FSS_SHUNT_RUNTIME_ARTIFACT_LOCK}" >/dev/null 2>&1
+	done
+	echo "$$" > "${FSS_SHUNT_RUNTIME_ARTIFACT_LOCK}/pid"
+}
+
+fss_shunt_runtime_artifact_lock_release() {
+	rm -rf "${FSS_SHUNT_RUNTIME_ARTIFACT_LOCK}" >/dev/null 2>&1
 }
 
 fss_shunt_mode_selected() {
@@ -1478,7 +1580,11 @@ fss_shunt_link_webtest_cache_outbounds() {
 
 	[ -f "${ids_file}" ] || return 1
 	rm -rf "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" >/dev/null 2>&1
-	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
+	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || {
+		fss_shunt_state_failed "runtime_artifact" "${ids_file}" "无法创建分流运行产物目录。"
+		fss_shunt_runtime_artifact_lock_release
+		return 1
+	}
 	while IFS= read -r node_id
 	do
 		[ -n "${node_id}" ] || continue
@@ -1518,29 +1624,71 @@ fss_shunt_log_node_tool_runtime_summary() {
 	[ "${shell}" = "0" ] || [ -z "${reasons}" ] || fss_shunt_log "ℹ️shell回退原因：${reasons}"
 }
 
+fss_shunt_runtime_artifacts_ready_for_ids() {
+	local ids_file="$1"
+	local node_id=""
+	local artifact_out=""
+	local meta_file="${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/cache.meta"
+
+	[ -f "${ids_file}" ] || return 1
+	[ -f "${meta_file}" ] || return 1
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		artifact_out="${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/nodes/${node_id}_outbounds.json"
+		[ -s "${artifact_out}" ] || return 1
+	done < "${ids_file}"
+	return 0
+}
+
 fss_shunt_try_prepare_node_tool_runtime_artifacts() {
 	local ids_file="$1"
 	local node_tool=""
 	local node_id=""
 	local artifact_out=""
+	local ret=0
 
 	[ -f "${ids_file}" ] || return 1
 	node_tool="$(fss_pick_node_tool 2>/dev/null)" || return 1
 	fss_node_tool_supports_command "${node_tool}" "runtime-artifact" || return 1
 	fss_refresh_node_json_cache >/dev/null 2>&1 || return 1
-	"${node_tool}" runtime-artifact \
-		--profile shunt \
-		--ids-file "${ids_file}" \
-		--output-dir "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}" >/dev/null 2>&1 || return 1
+	fss_shunt_runtime_artifact_lock_acquire || return 1
+	if ! fss_shunt_runtime_artifacts_ready_for_ids "${ids_file}"; then
+		fss_shunt_state_begin "runtime_artifact" "${ids_file}" "检测到分流运行产物缺失或已过期，开始重建。"
+		fss_shunt_log "ℹ️检测到分流运行产物缺失或已过期，开始重建。"
+		fss_shunt_state_phase "build" "runtime_artifact" "${ids_file}" "正在生成当前分流所需节点运行产物。"
+		fss_shunt_log "ℹ️正在生成当前分流所需节点运行产物。"
+		"${node_tool}" runtime-artifact \
+			--profile shunt \
+			--ids-file "${ids_file}" \
+			--output-dir "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}" >/dev/null 2>&1 || ret=1
+	else
+		fss_shunt_log "ℹ️等待中的节点运行产物已就绪，继续复用。"
+	fi
+	[ "${ret}" = "0" ] || {
+		fss_shunt_state_failed "runtime_artifact" "${ids_file}" "分流运行产物重建失败。"
+		fss_shunt_runtime_artifact_lock_release
+		return 1
+	}
 	rm -rf "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" >/dev/null 2>&1
 	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
 	while IFS= read -r node_id
 	do
 		[ -n "${node_id}" ] || continue
 		artifact_out="${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/nodes/${node_id}_outbounds.json"
-		[ -s "${artifact_out}" ] || return 1
-		ln -sf "${artifact_out}" "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" || return 1
+		[ -s "${artifact_out}" ] || {
+			fss_shunt_state_failed "runtime_artifact" "${ids_file}" "分流运行产物缺少必要节点出站。"
+			fss_shunt_runtime_artifact_lock_release
+			return 1
+		}
+		ln -sf "${artifact_out}" "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" || {
+			fss_shunt_state_failed "runtime_artifact" "${ids_file}" "无法链接分流运行产物。"
+			fss_shunt_runtime_artifact_lock_release
+			return 1
+		}
 	done < "${ids_file}"
+	fss_shunt_state_ready "runtime_artifact" "${ids_file}" "分流运行产物已就绪。"
+	fss_shunt_runtime_artifact_lock_release
 	fss_shunt_log "ℹ️通过node-tool生成shunt统一运行产物。"
 	fss_shunt_log_node_tool_runtime_summary
 	return 0

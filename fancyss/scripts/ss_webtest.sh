@@ -29,6 +29,8 @@ WT_BATCH_ABORT_REASON=""
 WT_WEBTEST_CACHE_REV="1"
 WT_WEBTEST_CACHE_GEN_REV="20260326_6"
 WT_WEBTEST_CACHE_LOCK="/tmp/fss_webtest_cache.lock"
+WT_WEBTEST_CACHE_STATE_DIR="/tmp/fancyss_cache_state"
+WT_WEBTEST_CACHE_STATE_FILE="${WT_WEBTEST_CACHE_STATE_DIR}/webtest.state"
 WT_MEM_TIER_MID_MB="768"
 WT_MEM_TIER_HIGH_MB="1536"
 WT_PERF_READY="0"
@@ -37,6 +39,78 @@ LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 wt_cache_log() {
 	[ "${WT_CACHE_LOGGING}" = "1" ] || return 0
 	echo_date "$@"
+}
+
+wt_cache_state_count_ids() {
+	local ids_file="$1"
+	local count="0"
+
+	[ -f "${ids_file}" ] || {
+		printf '%s' "0"
+		return 0
+	}
+	count=$(wc -l < "${ids_file}" | tr -d ' ')
+	[ -n "${count}" ] || count="0"
+	printf '%s' "${count}"
+}
+
+wt_cache_state_write() {
+	local status="$1"
+	local phase="$2"
+	local reason="$3"
+	local ids_file="$4"
+	local message="$5"
+	local target_count=""
+
+	mkdir -p "${WT_WEBTEST_CACHE_STATE_DIR}" >/dev/null 2>&1 || return 1
+	target_count="$(wt_cache_state_count_ids "${ids_file}")"
+	cat > "${WT_WEBTEST_CACHE_STATE_FILE}.tmp.$$" <<-EOF
+		status=${status}
+		phase=${phase}
+		reason=${reason}
+		pid=$$
+		target_count=${target_count}
+		message=${message}
+		updated_at=$(date +%s)
+	EOF
+	mv -f "${WT_WEBTEST_CACHE_STATE_FILE}.tmp.$$" "${WT_WEBTEST_CACHE_STATE_FILE}"
+}
+
+wt_cache_state_get() {
+	local key="$1"
+
+	[ -n "${key}" ] || return 1
+	[ -f "${WT_WEBTEST_CACHE_STATE_FILE}" ] || return 1
+	sed -n "s/^${key}=//p" "${WT_WEBTEST_CACHE_STATE_FILE}" | sed -n '1p'
+}
+
+wt_cache_state_begin() {
+	local reason="$1"
+	local ids_file="$2"
+	local message="$3"
+	wt_cache_state_write "building" "init" "${reason}" "${ids_file}" "${message}"
+}
+
+wt_cache_state_phase() {
+	local phase="$1"
+	local reason="$2"
+	local ids_file="$3"
+	local message="$4"
+	wt_cache_state_write "building" "${phase}" "${reason}" "${ids_file}" "${message}"
+}
+
+wt_cache_state_ready() {
+	local reason="$1"
+	local ids_file="$2"
+	local message="$3"
+	wt_cache_state_write "ready" "done" "${reason}" "${ids_file}" "${message}"
+}
+
+wt_cache_state_failed() {
+	local reason="$1"
+	local ids_file="$2"
+	local message="$3"
+	wt_cache_state_write "failed" "failed" "${reason}" "${ids_file}" "${message}"
 }
 
 wt_pick_node_tool() {
@@ -1520,11 +1594,18 @@ wt_webtest_cache_is_globally_fresh() {
 wt_webtest_cache_lock_acquire() {
 	local waited=0
 	local owner_pid=""
+	local owner_phase=""
+	local owner_count=""
 
 	while ! mkdir "${WT_WEBTEST_CACHE_LOCK}" 2>/dev/null
 	do
 		owner_pid=$(sed -n '1p' "${WT_WEBTEST_CACHE_LOCK}/pid" 2>/dev/null)
 		if [ -n "${owner_pid}" ] && kill -0 "${owner_pid}" 2>/dev/null; then
+			if [ "${WT_CACHE_LOGGING}" = "1" ]; then
+				owner_phase="$(wt_cache_state_get "phase")"
+				owner_count="$(wt_cache_state_get "target_count")"
+				[ $((waited % 3)) -eq 0 ] && wt_cache_log "ℹ️节点配置缓存正在由其它任务重建，当前阶段：${owner_phase:-unknown}，目标节点：${owner_count:-0}，已等待 ${waited}s。"
+			fi
 			[ "${waited}" -lt 120 ] || return 1
 			sleep 1
 			waited=$((waited + 1))
@@ -1662,9 +1743,13 @@ wt_rebuild_webtest_cache_from_ids() {
 	local allow_incremental="0"
 
 	[ -f "${ids_file}" ] || return 1
+	wt_cache_state_begin "webtest_rebuild" "${ids_file}" "检测到节点配置缓存缺失或已过期，开始重建。"
+	wt_cache_log "ℹ️检测到节点配置缓存缺失或已过期，开始重建。"
 	if wt_try_node_tool_webtest_cache "${ids_file}"; then
+		wt_cache_state_ready "webtest_rebuild" "${ids_file}" "node-tool 已完成节点配置缓存重建。"
 		return 0
 	fi
+	wt_cache_log "ℹ️node-tool 未完成缓存构建，回退 shell 生成器继续重建。"
 	wt_webtest_cache_prepare_dirs || return 1
 	wt_webtest_cache_prune_stale "${ids_file}" >/dev/null 2>&1
 	xray_count=$(wc -l < "${ids_file}" | tr -d ' ')
@@ -1673,26 +1758,37 @@ wt_rebuild_webtest_cache_from_ids() {
 		allow_incremental="1"
 	fi
 	if [ "${allow_incremental}" = "1" ]; then
+		wt_cache_state_phase "scan" "webtest_rebuild" "${ids_file}" "正在检查缺失或过期的节点配置缓存。"
+		wt_cache_log "ℹ️正在检查缺失或过期的节点配置缓存。"
 		wt_collect_missing_webtest_cache_ids "${ids_file}" "${build_ids_file}" || return 1
 	else
+		wt_cache_state_phase "full_rebuild" "webtest_rebuild" "${ids_file}" "当前缓存不可增量复用，准备全量重建。"
+		wt_cache_log "ℹ️当前缓存不可增量复用，准备全量重建。"
 		cp -f "${ids_file}" "${build_ids_file}" || return 1
 	fi
 	[ -s "${build_ids_file}" ] || {
+		wt_cache_state_phase "finalize" "webtest_rebuild" "${ids_file}" "缓存已是最新，正在整理索引。"
+		wt_cache_log "ℹ️缓存已是最新，正在整理索引。"
 		wt_webtest_cache_prune_stale "${ids_file}" >/dev/null 2>&1
 		wt_webtest_cache_write_materialize_index || return 1
 		wt_webtest_cache_write_all_outbounds "${ids_file}" >/dev/null 2>&1 || true
 		wt_webtest_cache_write_global_meta "${ids_file}" || return 1
+		wt_cache_state_ready "webtest_rebuild" "${ids_file}" "节点配置缓存已就绪。"
 		return 0
-		}
-		wt_init_reserved_ports
-		wt_reset_active_node_env
-		WT_CACHE_START_PORT_MAP_FILE="${TMP2}/cache_start_ports.txt"
-		wt_assign_webtest_cache_start_ports "${build_ids_file}" || return 1
+	}
+	wt_cache_state_phase "prepare" "webtest_rebuild" "${ids_file}" "正在准备测速运行产物。"
+	wt_cache_log "ℹ️正在准备测速运行产物。"
+	wt_init_reserved_ports
+	wt_reset_active_node_env
+	WT_CACHE_START_PORT_MAP_FILE="${TMP2}/cache_start_ports.txt"
+	wt_assign_webtest_cache_start_ports "${build_ids_file}" || return 1
 	worker_threads=$(wt_get_cache_build_threads)
 	printf '%s' "${worker_threads}" | grep -Eq '^[0-9]+$' || worker_threads="1"
 	[ "${worker_threads}" -gt 0 ] || worker_threads="1"
 	rm -f "${fail_file}"
 	wt_open_fifo_pool "${worker_threads}" "${worker_fifo}"
+	wt_cache_state_phase "build" "webtest_rebuild" "${ids_file}" "正在生成节点测速配置缓存。"
+	wt_cache_log "ℹ️正在生成节点测速配置缓存。"
 	while IFS= read -r node_id
 	do
 		[ -n "${node_id}" ] || continue
@@ -1712,10 +1808,14 @@ wt_rebuild_webtest_cache_from_ids() {
 	WT_CACHE_START_PORT_MAP_FILE=""
 	[ ! -s "${fail_file}" ] || return 1
 
+	wt_cache_state_phase "finalize" "webtest_rebuild" "${ids_file}" "正在整理测速缓存索引。"
+	wt_cache_log "ℹ️正在整理测速缓存索引。"
 	wt_webtest_cache_prune_stale "${ids_file}" >/dev/null 2>&1
 	wt_webtest_cache_write_materialize_index || return 1
 	wt_webtest_cache_write_all_outbounds "${ids_file}" >/dev/null 2>&1 || true
 	wt_webtest_cache_write_global_meta "${ids_file}" || return 1
+	wt_cache_state_ready "webtest_rebuild" "${ids_file}" "节点配置缓存重建完成。"
+	wt_cache_log "ℹ️节点配置缓存重建完成。"
 }
 
 wt_webtest_cache_build_node() {
@@ -1851,7 +1951,7 @@ wt_ensure_webtest_cache_nodes_file() {
 
 	[ -f "${src_ids_file}" ] || return 1
 	if [ "$(fss_detect_storage_schema)" = "2" ]; then
-		if wt_try_node_tool_webtest_cache "${src_ids_file}"; then
+	if wt_try_node_tool_webtest_cache "${src_ids_file}"; then
 			return 0
 		fi
 	fi
@@ -1893,6 +1993,7 @@ wt_ensure_webtest_cache_nodes_file() {
 	rm -f "${WT_CACHE_START_PORT_MAP_FILE}" "${build_ids_file}" "${ids_file}" >/dev/null 2>&1
 	WT_CACHE_START_PORT_MAP_FILE=""
 	wt_webtest_cache_lock_release
+	[ "${ret}" = "0" ] || wt_cache_state_failed "webtest_rebuild" "${src_ids_file}" "节点配置缓存重建失败。"
 	return "${ret}"
 }
 
@@ -1921,6 +2022,7 @@ wt_ensure_webtest_cache_ready() {
 	wt_rebuild_webtest_cache_from_ids "${ids_file}"
 	ret=$?
 	wt_webtest_cache_lock_release
+	[ "${ret}" = "0" ] || wt_cache_state_failed "webtest_rebuild" "${ids_file}" "节点配置缓存重建失败。"
 	return "${ret}"
 }
 
