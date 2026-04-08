@@ -2216,14 +2216,7 @@ webtest_web(){
 	local webtest_nu=$(cat "${WT_WEBTEST_FILE}" | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
 	local node_nu=$(wt_node_count)
 	if [ "${webtest_nu}" -ne "${node_nu}" ];then
-		local backup_usable=$(get_webtest_usable_count "${WT_WEBTEST_BACKUP}")
-		if [ "${backup_usable}" -gt "0" ];then
-			cp -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_FILE}" >/dev/null 2>&1
-			http_response "ok3, partial cache exists, keep it"
-			return 0
-		fi
-		clean_webtest
-		start_webtest
+		http_response "ok3, partial cache exists, keep it"
 		return 0
 	fi
 
