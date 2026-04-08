@@ -5677,7 +5677,6 @@ function update_visibility() {
 	var t2 = E("ss_basic_lt_cru_opts").value == "2";
 	showhide("ss_basic_lt_cru_time", t1 || t2);
 	showhide("ss_basic_lt_web_time_row", !t1 && !t2);
-	showhide("ss_basic_lt_web_time_note", !t1 && !t2);
 
 	if (E("ss_basic_dns_plan").value == "1"){
 		$(".chng").show();
@@ -11055,7 +11054,7 @@ function toggleKeyMask(o, show){
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},
 									]},
-									{ title: '测速结果自动刷新', rid:'ss_basic_lt_web_time_row', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
+									{ title: '测速结果自动刷新', rid:'ss_basic_lt_web_time_row', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30', suffix:'<div style=\"margin-top:6px;font-size:11px;line-height:1.6;color:#9aa3ad;\">当【定时测试节点延迟】关闭时，你在设定分钟内访问节点列表，测速结果将保持；超过设定分钟后访问，测速结果将自动刷新。</div>'},
 								]);
 							</script>
 						</table>
@@ -11064,10 +11063,6 @@ function toggleKeyMask(o, show){
 			</tr>
 		</table>
 		<span style="margin-left:30px">【web延迟测试】中设置的国外网址，同样会用于插件顶部[插件运行状态]中的国外链接延迟测试</span>
-		<div id="ss_basic_lt_web_time_note">
-			<br />
-			<span style="margin-left:30px">当【定时测试节点延迟】关闭时，你在设定分钟内访问节点列表，测速结果将保持；超过设定分钟后访问，测速结果将自动刷新。</span>
-		</div>
 		<div style="padding-top:10px;padding-bottom:10px;width:100%;text-align:center;">
 			<input id="save_latency_sett" class="button_gen" type="button" onclick="save_latency_sett();" value="保存">
 			<input id="leav_test_sett" class="button_gen" type="button" onclick="leav_test_sett();" value="返回">
