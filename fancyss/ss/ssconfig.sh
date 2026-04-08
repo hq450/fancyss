@@ -1047,8 +1047,9 @@ current_node_server_uses_runtime_dns() {
 refresh_node_direct_domain_file() {
 	if server_resolv_mode_is_dynamic; then
 		fss_refresh_node_direct_cache
-		if [ "${AIRPORT_DNS_ACTIVE}" = "1" ] && [ -n "${AIRPORT_DNS_AIRPORT_IDENTITY}" ];then
-			fss_refresh_airport_node_direct_runtime_by_airport "${AIRPORT_DNS_AIRPORT_IDENTITY}" >/dev/null 2>&1 || true
+		fss_airport_dns_override_load >/dev/null 2>&1 || true
+		if [ "${AIRPORT_DNS_ACTIVE}" = "1" ];then
+			fss_refresh_airport_special_runtime_domain_files >/dev/null 2>&1 || true
 			if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
 				cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 			else
@@ -1700,9 +1701,16 @@ start_dns_x(){
 	set_default "ss_basic_dns_serverx" "0"
 	local runtime_mode="$(get_runtime_proxy_mode)"
 	local dns_plan_runtime="${ss_basic_dns_plan}"
-	if [ "${AIRPORT_DNS_ACTIVE}" = "1" ] && [ "${AIRPORT_DNS_PREFERRED_PLAN}" = "smartdns" ];then
+	local special_smartdns_label=""
+	if [ "${AIRPORT_DNS_CURRENT_MATCHED}" = "1" ] && [ "${AIRPORT_DNS_PREFERRED_PLAN}" = "smartdns" ];then
 		[ "${ss_basic_dns_plan}" != "2" ] && echo_date "ℹ️检测到机场【${AIRPORT_DNS_AIRPORT_LABEL:-${AIRPORT_DNS_AIRPORT_IDENTITY}}】需要专属节点DNS，本次临时切换为smartdns方案。"
 		dns_plan_runtime="2"
+	else
+		special_smartdns_label="$(fss_airport_special_active_label_by_plan "smartdns" 2>/dev/null)"
+		if [ -n "${special_smartdns_label}" ];then
+			[ "${ss_basic_dns_plan}" != "2" ] && echo_date "ℹ️检测到机场【${special_smartdns_label}】需要使用smartdns，为保证使用节点和测速正常，将强制使用smartdns。"
+			dns_plan_runtime="2"
+		fi
 	fi
 	if [ "${ss_basic_type}" = "6" ];then
 		local trust_udp_fallback=""
@@ -1889,36 +1897,51 @@ $(smartdns_group_items_tsv chn)
 EOF
 }
 
-smartdns_append_airport_node_servers() {
+smartdns_airport_group_name() {
+	local airport_identity="$1"
+	[ -n "${airport_identity}" ] || return 1
+	printf 'airport_%s\n' "${airport_identity}"
+}
+
+smartdns_airport_dns_group_name() {
+	local airport_identity="$1"
+	[ -n "${airport_identity}" ] || return 1
+	printf 'airport_dns_%s\n' "${airport_identity}"
+}
+
+smartdns_append_airport_node_servers_by_identity() {
 	local outfile="$1"
+	local airport_identity="$2"
 	local sep="$(printf '\037')"
 	local proto raw addr port host host_ip
-	[ "${AIRPORT_DNS_ACTIVE}" = "1" ] || return 0
-	fss_airport_runtime_iter_current_dns_items_tsv 2>/dev/null | while IFS="${sep}" read -r proto raw addr port host host_ip
+	local group_name=""
+	[ -n "${airport_identity}" ] || return 0
+	group_name="$(smartdns_airport_group_name "${airport_identity}" 2>/dev/null)" || return 0
+	fss_airport_runtime_iter_dns_items_tsv_by_identity "${airport_identity}" 2>/dev/null | while IFS="${sep}" read -r proto raw addr port host host_ip
 	do
 		[ -n "${proto}" ] || continue
 		case "${proto}" in
 		udp)
 			[ -n "${addr}" ] || continue
 			[ -n "${port}" ] || port="53"
-			echo "server $(smartdns_format_addr "${addr}" "${port}") -group airport_node -exclude-default-group" >> "${outfile}"
+			echo "server $(smartdns_format_addr "${addr}" "${port}") -group ${group_name} -exclude-default-group" >> "${outfile}"
 			;;
 		tcp)
 			[ -n "${addr}" ] || continue
 			[ -n "${port}" ] || port="53"
-			echo "server-tcp $(smartdns_format_addr "${addr}" "${port}") -group airport_node -exclude-default-group" >> "${outfile}"
+			echo "server-tcp $(smartdns_format_addr "${addr}" "${port}") -group ${group_name} -exclude-default-group" >> "${outfile}"
 			;;
 		tls)
 			[ -n "${raw}" ] || continue
-			echo "server-tls ${raw#tls://} -group airport_node -exclude-default-group" >> "${outfile}"
+			echo "server-tls ${raw#tls://} -group ${group_name} -exclude-default-group" >> "${outfile}"
 			;;
 		https)
 			[ -n "${raw}" ] || continue
-			echo "server-https ${raw} -group airport_node -exclude-default-group" >> "${outfile}"
+			echo "server-https ${raw} -group ${group_name} -exclude-default-group" >> "${outfile}"
 			;;
 		quic)
 			[ -n "${raw}" ] || continue
-			echo "server-quic ${raw} -group airport_node -exclude-default-group" >> "${outfile}"
+			echo "server-quic ${raw} -group ${group_name} -exclude-default-group" >> "${outfile}"
 			;;
 		esac
 	done
@@ -1928,9 +1951,21 @@ smartdns_append_ipv6_policy() {
 	local outfile="$1"
 	local mode="$2"
 	local has_node_direct="0"
-	local has_airport_dns_upstream="0"
+	local airport_identity=""
+	local airport_dns_group=""
+	local airport_dns_file=""
 	[ -s /tmp/ss_node_domains.txt ] && has_node_direct="1"
-	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" ] && has_airport_dns_upstream="1"
+	smartdns_append_airport_dns_ipv6_lines() {
+		while IFS="$(printf '\037')" read -r airport_identity _airport_label _airport_plan
+		do
+			[ -n "${airport_identity}" ] || continue
+			airport_dns_group="$(smartdns_airport_dns_group_name "${airport_identity}" 2>/dev/null)" || continue
+			airport_dns_file="$(fss_airport_special_runtime_dns_file "${airport_identity}" 2>/dev/null)" || continue
+			[ -s "${airport_dns_file}" ] && echo "address /domain-set:${airport_dns_group}/-6" >> "${outfile}"
+		done <<-EOF
+$(fss_airport_special_iter_active_tsv 2>/dev/null)
+		EOF
+	}
 	if [ "${ss_basic_proxy_ipv6}" = "1" ];then
 		cat >> "${outfile}" <<-'EOF'
 force-AAAA-SOA no
@@ -1938,9 +1973,7 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
-		if [ "${has_airport_dns_upstream}" = "1" ];then
-			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
-		fi
+		smartdns_append_airport_dns_ipv6_lines
 		return
 	fi
 	case "${mode}" in
@@ -1954,9 +1987,7 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
-		if [ "${has_airport_dns_upstream}" = "1" ];then
-			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
-		fi
+		smartdns_append_airport_dns_ipv6_lines
 		;;
 	2|3)
 		cat >> "${outfile}" <<-'EOF'
@@ -1967,9 +1998,7 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
-		if [ "${has_airport_dns_upstream}" = "1" ];then
-			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
-		fi
+		smartdns_append_airport_dns_ipv6_lines
 		;;
 	5)
 		cat >> "${outfile}" <<-'EOF'
@@ -1979,9 +2008,7 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
-		if [ "${has_airport_dns_upstream}" = "1" ];then
-			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
-		fi
+		smartdns_append_airport_dns_ipv6_lines
 		;;
 	*)
 		cat >> "${outfile}" <<-'EOF'
@@ -1990,9 +2017,7 @@ EOF
 		if [ "${has_node_direct}" = "1" ];then
 			echo "address /domain-set:node_direct/-6" >> "${outfile}"
 		fi
-		if [ "${has_airport_dns_upstream}" = "1" ];then
-			echo "address /domain-set:airport_dns_upstream/-6" >> "${outfile}"
-		fi
+		smartdns_append_airport_dns_ipv6_lines
 		;;
 	esac
 }
@@ -2001,6 +2026,13 @@ smartdns_generate_runtime_conf() {
 	local outfile="$1"
 	local mode="$2"
 	local listen_port="7913"
+	local airport_identity=""
+	local airport_label=""
+	local airport_plan=""
+	local airport_group=""
+	local airport_dns_group=""
+	local airport_domain_file=""
+	local airport_dns_file=""
 	[ "${ss_basic_dns_serverx}" = "1" ] && listen_port="53"
 	: > "${outfile}"
 	[ "${mode}" = "3" ] && generate_smartdns_whitelist_file /tmp/whitelist_ip.txt
@@ -2014,8 +2046,18 @@ domain-set -name rotlist -file /koolshare/ss/rules/rotlist.txt
 domain-set -name white_list -file /tmp/white_list.txt
 domain-set -name black_list -file /tmp/black_list.txt
 EOF
-	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" ] && echo "domain-set -name airport_dns_upstream -file ${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >> "${outfile}"
-	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ] && echo "domain-set -name airport_node -file ${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" >> "${outfile}"
+	while IFS="$(printf '\037')" read -r airport_identity airport_label airport_plan
+	do
+		[ -n "${airport_identity}" ] || continue
+		airport_group="$(smartdns_airport_group_name "${airport_identity}" 2>/dev/null)" || continue
+		airport_dns_group="$(smartdns_airport_dns_group_name "${airport_identity}" 2>/dev/null)" || continue
+		airport_domain_file="$(fss_airport_special_runtime_domain_file "${airport_identity}" 2>/dev/null)" || continue
+		airport_dns_file="$(fss_airport_special_runtime_dns_file "${airport_identity}" 2>/dev/null)" || continue
+		[ -s "${airport_dns_file}" ] && echo "domain-set -name ${airport_dns_group} -file ${airport_dns_file}" >> "${outfile}"
+		[ -s "${airport_domain_file}" ] && echo "domain-set -name ${airport_group} -file ${airport_domain_file}" >> "${outfile}"
+	done <<-EOF
+$(fss_airport_special_iter_active_tsv 2>/dev/null)
+	EOF
 	[ -s /tmp/ss_node_domains.txt ] && echo "domain-set -name node_direct -file /tmp/ss_node_domains.txt" >> "${outfile}"
 	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
 
@@ -2029,8 +2071,18 @@ EOF
 	cat >> "${outfile}" <<-'EOF'
 
 EOF
-	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" ] && echo "domain-rules /domain-set:airport_dns_upstream/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn" >> "${outfile}"
-	[ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ] && echo "domain-rules /domain-set:airport_node/ -c none -n airport_node" >> "${outfile}"
+	while IFS="$(printf '\037')" read -r airport_identity airport_label airport_plan
+	do
+		[ -n "${airport_identity}" ] || continue
+		airport_group="$(smartdns_airport_group_name "${airport_identity}" 2>/dev/null)" || continue
+		airport_dns_group="$(smartdns_airport_dns_group_name "${airport_identity}" 2>/dev/null)" || continue
+		airport_domain_file="$(fss_airport_special_runtime_domain_file "${airport_identity}" 2>/dev/null)" || continue
+		airport_dns_file="$(fss_airport_special_runtime_dns_file "${airport_identity}" 2>/dev/null)" || continue
+		[ -s "${airport_dns_file}" ] && echo "domain-rules /domain-set:${airport_dns_group}/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn" >> "${outfile}"
+		[ -s "${airport_domain_file}" ] && echo "domain-rules /domain-set:${airport_group}/ -c none -n ${airport_group}" >> "${outfile}"
+	done <<-EOF
+$(fss_airport_special_iter_active_tsv 2>/dev/null)
+	EOF
 	[ -s /tmp/ss_node_domains.txt ] && echo "domain-rules /domain-set:node_direct/ -p #4:chnlist,#6:chnlist6 -c ping,tcp:80,tcp:443 -r first-ping -d yes -n chn" >> "${outfile}"
 	cat >> "${outfile}" <<-'EOF'
 
@@ -2099,11 +2151,17 @@ ca-file /etc/ssl/certs/ca-certificates.crt
 blacklist-ip 10.0.0.0/8
 proxy-server socks5://127.0.0.1:23456 -name fancy_proxy
 EOF
-	if [ -s "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" ];then
+	while IFS="$(printf '\037')" read -r airport_identity airport_label airport_plan
+	do
+		[ -n "${airport_identity}" ] || continue
+		airport_domain_file="$(fss_airport_special_runtime_domain_file "${airport_identity}" 2>/dev/null)" || continue
+		[ -s "${airport_domain_file}" ] || continue
 		echo "" >> "${outfile}"
-		echo "# airport special upstreams" >> "${outfile}"
-		smartdns_append_airport_node_servers "${outfile}"
-	fi
+		echo "# airport special upstreams: ${airport_label:-${airport_identity}}" >> "${outfile}"
+		smartdns_append_airport_node_servers_by_identity "${outfile}" "${airport_identity}"
+	done <<-EOF
+$(fss_airport_special_iter_active_tsv 2>/dev/null)
+	EOF
 	echo "" >> "${outfile}"
 	echo "# chn group upstreams" >> "${outfile}"
 	smartdns_append_group_servers "${outfile}" "${mode}" "chn" "chn_group"

@@ -401,7 +401,7 @@ wt_allocate_ports_and_lists() {
 			id = $1
 			cache_out = $2
 			socks5_port = $4
-			printf "\t\t{\"port\": %s, \"protocol\": \"socks\", \"settings\": {\"auth\": \"noauth\", \"udp\": true}, \"tag\": \"socks%s\"}\n", socks5_port, id >> inbound_items
+			printf "\t\t{\"listen\": \"127.0.0.1\", \"port\": %s, \"protocol\": \"socks\", \"settings\": {\"auth\": \"noauth\", \"udp\": true}, \"tag\": \"socks%s\"}\n", socks5_port, id >> inbound_items
 			printf "\t\t{\"type\": \"field\", \"inboundTag\": [\"socks%s\"], \"outboundTag\": \"proxy%s\"}\n", id, id >> routing_items
 			print cache_out >> outbound_list
 			print id >> valid_nodes_file
