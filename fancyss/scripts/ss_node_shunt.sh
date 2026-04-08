@@ -1618,44 +1618,39 @@ fss_shunt_prepare_selected_node_env() {
 	local json_files=""
 	local node_id=""
 	local line=""
-	local use_global_cache="0"
 
 	WT_NODE_CACHE_DIR=""
 	WT_NODE_ENV_DIR=""
 	fss_shunt_reset_active_node_env
 	[ -f "${ids_file}" ] || return 1
 	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
-	if fss_refresh_node_env_cache >/dev/null 2>&1; then
-		use_global_cache="1"
+	if fss_refresh_node_json_cache >/dev/null 2>&1; then
+		WT_NODE_CACHE_DIR="${FSS_NODE_JSON_CACHE_DIR}"
 		while IFS= read -r node_id
 		do
 			[ -n "${node_id}" ] || continue
-			[ -f "${FSS_NODE_JSON_CACHE_DIR}/${node_id}.json" ] || {
-				use_global_cache="0"
-				break
-			}
-			[ -f "${FSS_NODE_ENV_CACHE_DIR}/${node_id}.env" ] || {
-				use_global_cache="0"
+			[ -f "${WT_NODE_CACHE_DIR}/${node_id}.json" ] || {
+				WT_NODE_CACHE_DIR=""
 				break
 			}
 		done < "${ids_file}"
-		if [ "${use_global_cache}" = "1" ]; then
-			WT_NODE_CACHE_DIR="${FSS_NODE_JSON_CACHE_DIR}"
-			WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
-			return 0
-		fi
 	fi
 	jq_bin=$(fss_pick_jq_bin)
 	[ -n "${jq_bin}" ] || return 1
-	rm -rf "${json_dir}" "${env_dir}" >/dev/null 2>&1
-	mkdir -p "${json_dir}" "${env_dir}" || return 1
-	while IFS= read -r node_id
-	do
-		[ -n "${node_id}" ] || continue
-		fss_v2_get_node_json_by_id "${node_id}" > "${json_dir}/${node_id}.json" 2>/dev/null || rm -f "${json_dir}/${node_id}.json"
-	done < "${ids_file}"
-	ls "${json_dir}"/*.json >/dev/null 2>&1 || return 0
-	json_files=$(ls "${json_dir}"/*.json 2>/dev/null)
+	rm -rf "${env_dir}" >/dev/null 2>&1
+	mkdir -p "${env_dir}" || return 1
+	if [ -z "${WT_NODE_CACHE_DIR}" ]; then
+		rm -rf "${json_dir}" >/dev/null 2>&1
+		mkdir -p "${json_dir}" || return 1
+		while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			fss_v2_get_node_json_by_id "${node_id}" > "${json_dir}/${node_id}.json" 2>/dev/null || rm -f "${json_dir}/${node_id}.json"
+		done < "${ids_file}"
+		ls "${json_dir}"/*.json >/dev/null 2>&1 || return 0
+		WT_NODE_CACHE_DIR="${json_dir}"
+	fi
+	json_files=$(ls "${WT_NODE_CACHE_DIR}"/*.json 2>/dev/null)
 	[ -n "${json_files}" ] || return 0
 	# shellcheck disable=SC2086
 	"${jq_bin}" -r '
@@ -1690,7 +1685,6 @@ fss_shunt_prepare_selected_node_env() {
 		printf '%s\n' "${line}" >> "${env_dir}/${node_id}.env"
 	done
 	ls "${env_dir}"/*.env >/dev/null 2>&1 || return 0
-	WT_NODE_CACHE_DIR="${json_dir}"
 	WT_NODE_ENV_DIR="${env_dir}"
 	return 0
 }

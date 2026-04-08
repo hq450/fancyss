@@ -336,38 +336,24 @@ fss_node_json_cache_is_fresh() {
 }
 
 fss_get_node_env_cache_meta_value() {
-	local key="$1"
-
-	[ -f "${FSS_NODE_ENV_CACHE_META_FILE}" ] || return 1
-	sed -n "s/^${key}=//p" "${FSS_NODE_ENV_CACHE_META_FILE}" | sed -n '1p'
+	return 1
 }
 
 fss_write_node_env_cache_meta() {
-	local config_ts="$1"
-	local cache_dir="${FSS_NODE_ENV_CACHE_META_FILE%/*}"
-	local tmp_file="${FSS_NODE_ENV_CACHE_META_FILE}.tmp.$$"
-
-	mkdir -p "${cache_dir}" || return 1
-	cat > "${tmp_file}" <<-EOF
-		config_ts=${config_ts}
-		built_at=$(date +%s)
-	EOF
-	mv -f "${tmp_file}" "${FSS_NODE_ENV_CACHE_META_FILE}"
+	return 1
 }
 
 fss_node_env_cache_is_fresh() {
-	local config_ts=""
-	local cached_ts=""
+	return 1
+}
 
-	ls "${FSS_NODE_ENV_CACHE_DIR}"/*.env >/dev/null 2>&1 || return 1
-	[ -f "${FSS_NODE_ENV_CACHE_META_FILE}" ] || return 1
-	[ -f "${FSS_NODE_ENV_CACHE_OBFS_FILE}" ] || return 1
-	config_ts=$(fss_get_node_config_ts)
-	[ "${config_ts}" != "0" ] || return 1
-	cached_ts=$(fss_get_node_env_cache_meta_value "config_ts")
-	[ -n "${cached_ts}" ] || cached_ts=$(fss_get_node_env_cache_meta_value "catalog_ts")
-	[ -n "${cached_ts}" ] || return 1
-	[ "${cached_ts}" = "${config_ts}" ]
+fss_clear_node_env_cache_artifacts() {
+	rm -rf "${FSS_NODE_ENV_CACHE_DIR}" \
+		"${FSS_NODE_ENV_CACHE_DIR}.tmp."* \
+		"${FSS_NODE_ENV_CACHE_DIR}.old."* \
+		"${FSS_NODE_ENV_CACHE_DIR}.tmp.node_tool" \
+		"${FSS_NODE_ENV_CACHE_DIR}.old.node_tool" >/dev/null 2>&1
+	rm -f "${FSS_NODE_ENV_CACHE_META_FILE}" >/dev/null 2>&1
 }
 
 fss_schedule_webtest_cache_warm() {
@@ -2301,93 +2287,8 @@ fss_refresh_node_json_cache() {
 }
 
 fss_refresh_node_env_cache() {
-	local cache_dir="${FSS_NODE_ENV_CACHE_DIR}"
-	local tmp_dir="${cache_dir}.tmp.$$"
-	local old_dir="${cache_dir}.old.$$"
-	local json_dir="${FSS_NODE_JSON_CACHE_DIR}"
-	local config_ts="0"
-	local jq_bin=""
-	local json_files=""
-	local node_id=""
-	local line=""
-	local env_tmp=""
-
-	if [ "$(fss_detect_storage_schema)" = "2" ] && fss_node_env_cache_is_fresh; then
-		return 0
-	fi
-	fss_refresh_node_json_cache || return 1
-	ls "${json_dir}"/*.json >/dev/null 2>&1 || return 1
-	jq_bin=$(fss_pick_jq_bin)
-	[ -n "${jq_bin}" ] || return 1
-	mkdir -p "${cache_dir%/*}" || return 1
-	rm -rf "${tmp_dir}" "${old_dir}"
-	mkdir -p "${tmp_dir}" || return 1
-	json_files=$(ls "${json_dir}"/*.json 2>/dev/null)
-	[ -n "${json_files}" ] || {
-		rm -rf "${tmp_dir}"
-		return 1
-	}
-
-	# shellcheck disable=SC2086
-	"${jq_bin}" -r '
-		def is_b64_field($key):
-			$key == "password"
-			or $key == "naive_pass"
-			or $key == "v2ray_json"
-			or $key == "xray_json"
-			or $key == "tuic_json";
-		def decode_value($root; $key; $value):
-			if is_b64_field($key) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
-				(try ($value | @base64d) catch $value)
-			else
-				$value
-			end;
-		. as $root
-		| [
-			to_entries[]
-			| select(.key | startswith("_") | not)
-			| .key as $k
-			| (.value | if type == "string" then . else tostring end) as $v
-			| select($v != "")
-			| {key: $k, value: decode_value($root; $k; $v)}
-		] as $entries
-		| (input_filename | split("/")[-1] | rtrimstr(".json")) as $id
-		| [$id, "WT_NODE_ENV_FIELDS=" + (($entries | map(.key) | join(" ")) | @sh)],
-		  ($entries[] | [$id, "WTN_" + .key + "=" + (.value | @sh)])
-		| @tsv
-	' ${json_files} 2>/dev/null | while IFS="$(printf '\t')" read -r node_id line
-	do
-		[ -n "${node_id}" ] || continue
-		printf '%s\n' "${line}" >> "${tmp_dir}/${node_id}.env.tmp"
-	done
-
-	# Shadowsocks + obfs 节点需要预留本地 sidecar 端口，单独落一份索引给测速缓存使用。
-	# shellcheck disable=SC2086
-	"${jq_bin}" -r '
-		select((.type // "") == "0" and (((.ss_obfs // "") == "http") or ((.ss_obfs // "") == "tls")))
-		| (input_filename | split("/")[-1] | rtrimstr(".json"))
-	' ${json_files} 2>/dev/null | sort -u > "${tmp_dir}/ss_obfs_ids.txt"
-
-	for env_tmp in "${tmp_dir}"/*.env.tmp
-	do
-		[ -f "${env_tmp}" ] || continue
-		mv -f "${env_tmp}" "${env_tmp%.tmp}"
-	done
-	ls "${tmp_dir}"/*.env >/dev/null 2>&1 || {
-		rm -rf "${tmp_dir}"
-		return 1
-	}
-
-	config_ts=$(fss_get_node_config_ts)
-	[ "${config_ts}" != "0" ] || config_ts=$(fss_touch_node_config_ts)
-	[ -d "${cache_dir}" ] && mv -f "${cache_dir}" "${old_dir}" >/dev/null 2>&1
-	mv -f "${tmp_dir}" "${cache_dir}" || {
-		rm -rf "${tmp_dir}"
-		[ -d "${old_dir}" ] && mv -f "${old_dir}" "${cache_dir}" >/dev/null 2>&1
-		return 1
-	}
-	rm -rf "${old_dir}"
-	fss_write_node_env_cache_meta "${config_ts}"
+	fss_clear_node_env_cache_artifacts >/dev/null 2>&1 || true
+	return 1
 }
 
 fss_sync_node_direct_runtime() {

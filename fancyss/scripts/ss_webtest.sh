@@ -15,9 +15,8 @@ WT_WEBTEST_STATE_LOCK=/tmp/webtest.state.lock
 WT_SERVER_RESOLV_MODE=$(dbus get ss_basic_server_resolv_mode)
 [ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
 WT_NODE_CACHE_DIR=""
-WT_NODE_ENV_DIR=""
 WT_NODE_ACTIVE_ID=""
-WT_NODE_ACTIVE_FIELDS=""
+WT_NODE_ACTIVE_JSON=""
 WT_PREVIEW_READY=0
 WT_GROUP_ORDER_PREPARED=0
 WT_GROUP_CURRENT_TAG=""
@@ -100,12 +99,7 @@ wt_try_node_tool_json_cache() {
 }
 
 wt_try_node_tool_env_cache() {
-	local node_tool=""
-
-	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
-	"${node_tool}" warm-cache --env >/dev/null 2>&1 || return 1
-	wt_cache_log "ℹ️通过node-tool构建/复用节点环境变量缓存。"
-	return 0
+	return 1
 }
 
 wt_has_active_test_runner() {
@@ -698,127 +692,31 @@ wt_request_stop_batch() {
 }
 
 wt_reset_active_node_env() {
-	local field=""
-
-	for field in ${WT_NODE_ACTIVE_FIELDS}
-	do
-		unset WTN_${field}
-	done
-	unset WT_NODE_ENV_FIELDS
 	WT_NODE_ACTIVE_ID=""
-	WT_NODE_ACTIVE_FIELDS=""
+	WT_NODE_ACTIVE_JSON=""
 }
 
 wt_build_node_env_file() {
+	return 0
+}
+
+wt_load_node_env() {
 	local node_id="$1"
 	local json_file=""
-	local env_file=""
-	local jq_bin=""
 
 	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
-	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
 	[ -n "${node_id}" ] || return 1
+	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
 	json_file="${WT_NODE_CACHE_DIR}/${node_id}.json"
-	env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
 	[ -f "${json_file}" ] || return 1
-	jq_bin=$(fss_pick_jq_bin)
-	[ -n "${jq_bin}" ] || return 1
-
-	"${jq_bin}" -r '
-		def is_b64_field($key):
-			$key == "password"
-			or $key == "naive_pass"
-			or $key == "v2ray_json"
-			or $key == "xray_json"
-			or $key == "tuic_json";
-		def decode_value($key; $value):
-			if is_b64_field($key) and ((._b64_mode // "") != "raw") and ((._source // "") == "subscribe") then
-				(try ($value | @base64d) catch $value)
-			else
-				$value
-			end;
-		[
-			to_entries[]
-			| select(.key | startswith("_") | not)
-			| .key as $k
-			| (.value | if type == "string" then . else tostring end) as $v
-			| select($v != "")
-			| {key: $k, value: decode_value($k; $v)}
-		] as $entries
-		| "WT_NODE_ENV_FIELDS=" + (($entries | map(.key) | join(" ")) | @sh),
-		  ($entries[] | "WTN_" + .key + "=" + (.value | @sh))
-	' "${json_file}" > "${env_file}.tmp" 2>/dev/null || {
-		rm -f "${env_file}.tmp"
-		return 1
-	}
-	mv -f "${env_file}.tmp" "${env_file}"
+	WT_NODE_ACTIVE_JSON="$(cat "${json_file}" 2>/dev/null)" || return 1
+	[ -n "${WT_NODE_ACTIVE_JSON}" ] || return 1
+	WT_NODE_ACTIVE_ID="${node_id}"
+	WT_NODE_ACTIVE_FIELDS=""
 }
 
 wt_build_node_env_files_bulk() {
-	local ids_file="$1"
-	local jq_bin=""
-	local node_id=""
-	local json_files=""
-	local env_file=""
-	local tmp_file=""
-	local line=""
-
-	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
-	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
-	[ -f "${ids_file}" ] || return 1
-	jq_bin=$(fss_pick_jq_bin)
-	[ -n "${jq_bin}" ] || return 1
-
-	while IFS= read -r node_id
-	do
-		[ -n "${node_id}" ] || continue
-		[ -f "${WT_NODE_CACHE_DIR}/${node_id}.json" ] || continue
-		json_files="${json_files} ${WT_NODE_CACHE_DIR}/${node_id}.json"
-		rm -f "${WT_NODE_ENV_DIR}/${node_id}.env" "${WT_NODE_ENV_DIR}/${node_id}.env.tmp"
-	done < "${ids_file}"
-	[ -n "${json_files}" ] || return 0
-
-	# shellcheck disable=SC2086
-	"${jq_bin}" -r '
-		def is_b64_field($key):
-			$key == "password"
-			or $key == "naive_pass"
-			or $key == "v2ray_json"
-			or $key == "xray_json"
-			or $key == "tuic_json";
-		def decode_value($root; $key; $value):
-			if is_b64_field($key) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
-				(try ($value | @base64d) catch $value)
-			else
-				$value
-			end;
-		. as $root
-		| [
-			to_entries[]
-			| select(.key | startswith("_") | not)
-			| .key as $k
-			| (.value | if type == "string" then . else tostring end) as $v
-			| select($v != "")
-			| {key: $k, value: decode_value($root; $k; $v)}
-		] as $entries
-		| (input_filename | split("/")[-1] | rtrimstr(".json")) as $id
-		| [$id, "WT_NODE_ENV_FIELDS=" + (($entries | map(.key) | join(" ")) | @sh)],
-		  ($entries[] | [$id, "WTN_" + .key + "=" + (.value | @sh)])
-		| @tsv
-	' ${json_files} 2>/dev/null | while IFS="$(printf '\t')" read -r node_id line
-	do
-		[ -n "${node_id}" ] || continue
-		printf '%s\n' "${line}" >> "${WT_NODE_ENV_DIR}/${node_id}.env.tmp"
-	done
-
-	while IFS= read -r node_id
-	do
-		[ -n "${node_id}" ] || continue
-		tmp_file="${WT_NODE_ENV_DIR}/${node_id}.env.tmp"
-		env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
-		[ -f "${tmp_file}" ] || continue
-		mv -f "${tmp_file}" "${env_file}"
-	done < "${ids_file}"
+	return 0
 }
 
 wt_get_router_model() {
@@ -1000,8 +898,8 @@ wt_assign_webtest_cache_start_ports() {
 	[ -n "${WT_CACHE_START_PORT_MAP_FILE}" ] || return 1
 	: > "${WT_CACHE_START_PORT_MAP_FILE}"
 	: > "${ids_tmp}"
-	if [ "${WT_NODE_ENV_DIR}" = "${FSS_NODE_ENV_CACHE_DIR}" ] && [ -f "${FSS_NODE_ENV_CACHE_OBFS_FILE}" ]; then
-		grep -Fxf "${FSS_NODE_ENV_CACHE_OBFS_FILE}" "${ids_file}" > "${ids_tmp}" 2>/dev/null || true
+	if [ -s "${FSS_NODE_JSON_INDEX_FILE}" ]; then
+		awk -F '|' 'NR == FNR {want[$1]=1; next} ($1 in want) && $2 == "00" && ($3 == "http" || $3 == "tls") {print $1}' "${ids_file}" "${FSS_NODE_JSON_INDEX_FILE}" > "${ids_tmp}" 2>/dev/null || true
 	else
 		while IFS= read -r node_id
 		do
@@ -1038,18 +936,18 @@ wt_assign_webtest_cache_start_ports() {
 
 wt_load_node_env() {
 	local node_id="$1"
-	local env_file=""
+	local json_file=""
 
 	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
-	[ -n "${WT_NODE_ENV_DIR}" ] || return 1
 	[ -n "${node_id}" ] || return 1
 	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
-	env_file="${WT_NODE_ENV_DIR}/${node_id}.env"
-	[ -f "${env_file}" ] || wt_build_node_env_file "${node_id}" || return 1
+	json_file="${WT_NODE_CACHE_DIR}/${node_id}.json"
+	[ -f "${json_file}" ] || return 1
 	wt_reset_active_node_env
-	. "${env_file}" || return 1
+	WT_NODE_ACTIVE_JSON="$(cat "${json_file}" 2>/dev/null)" || return 1
+	[ -n "${WT_NODE_ACTIVE_JSON}" ] || return 1
 	WT_NODE_ACTIVE_ID="${node_id}"
-	WT_NODE_ACTIVE_FIELDS="${WT_NODE_ENV_FIELDS}"
+	WT_NODE_ACTIVE_FIELDS=""
 }
 
 wt_node_get_plain_from_cache() {
@@ -1057,13 +955,36 @@ wt_node_get_plain_from_cache() {
 	local field="$2"
 	local store_field=""
 	local value=""
+	local jq_bin=""
 
 	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
 	[ -n "${node_id}" ] || return 1
 	[ -n "${field}" ] || return 1
 	store_field=$(fss_resolve_node_field_name "${field}")
 	wt_load_node_env "${node_id}" || return 1
-	eval "value=\${WTN_${store_field}-}"
+	jq_bin=$(fss_pick_jq_bin)
+	[ -n "${jq_bin}" ] || return 1
+	value=$(printf '%s' "${WT_NODE_ACTIVE_JSON}" | "${jq_bin}" -r --arg field "${store_field}" '
+		def is_b64_field($key):
+			$key == "password"
+			or $key == "naive_pass"
+			or $key == "v2ray_json"
+			or $key == "xray_json"
+			or $key == "tuic_json";
+		. as $root
+		| ($root[$field] // empty) as $v
+		| if ($v | type) == "null" then
+			""
+		elif ($v | type) == "string" then
+			if is_b64_field($field) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
+				(try ($v | @base64d) catch $v)
+			else
+				$v
+			end
+		else
+			($v | tostring)
+		end
+	' 2>/dev/null) || return 1
 	printf '%s' "${value}"
 }
 
@@ -1125,11 +1046,9 @@ wt_prepare_node_cache() {
 	local node_id=""
 	local blob=""
 	local node_cache_dir=""
-	local env_cache_ready="0"
 
 	wt_reset_active_node_env
 	WT_NODE_CACHE_DIR=""
-	WT_NODE_ENV_DIR=""
 	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
 	WT_NODE_CACHE_DIR="${FSS_NODE_JSON_CACHE_DIR}"
 	if [ -n "${WT_NODE_CACHE_DIR}" ];then
@@ -1145,15 +1064,7 @@ wt_prepare_node_cache() {
 			WT_NODE_CACHE_DIR=""
 		fi
 	fi
-	if [ -n "${WT_NODE_CACHE_DIR}" ] && type fss_node_env_cache_is_fresh >/dev/null 2>&1; then
-		if fss_node_env_cache_is_fresh >/dev/null 2>&1; then
-			env_cache_ready="1"
-		fi
-	fi
 	if [ -n "${WT_NODE_CACHE_DIR}" ] && ls "${WT_NODE_CACHE_DIR}"/*.json >/dev/null 2>&1; then
-		if [ "${env_cache_ready}" = "1" ]; then
-			WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
-		fi
 		return 0
 	fi
 
@@ -1163,18 +1074,11 @@ wt_prepare_node_cache() {
 		WT_NODE_CACHE_DIR=""
 		return 1
 	}
-	mkdir -p "${WT_NODE_ENV_DIR}" || {
-		WT_NODE_CACHE_DIR=""
-		WT_NODE_ENV_DIR=""
-		return 1
-	}
 	rm -f ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1
-	rm -f ${WT_NODE_ENV_DIR}/*.env >/dev/null 2>&1
 	if type fss_dump_v2_node_json_dir >/dev/null 2>&1; then
 		fss_dump_v2_node_json_dir "${WT_NODE_CACHE_DIR}" >/dev/null 2>&1 && {
 			ls ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1 || {
 				WT_NODE_CACHE_DIR=""
-				WT_NODE_ENV_DIR=""
 				return 1
 			}
 			return 0
@@ -1191,40 +1095,13 @@ wt_prepare_node_cache() {
 	done
 	ls ${WT_NODE_CACHE_DIR}/*.json >/dev/null 2>&1 || {
 		WT_NODE_CACHE_DIR=""
-		WT_NODE_ENV_DIR=""
 		return 1
 	}
 }
 
 wt_prepare_node_env_cache() {
-	local env_cache_dir=""
-
 	[ -n "${WT_NODE_CACHE_DIR}" ] || wt_prepare_node_cache || return 1
-	if [ -n "${WT_NODE_ENV_DIR}" ] && ls "${WT_NODE_ENV_DIR}"/*.env >/dev/null 2>&1; then
-		return 0
-	fi
-
-	env_cache_dir="${FSS_NODE_ENV_CACHE_DIR}"
-	if [ "$(fss_detect_storage_schema)" = "2" ] && [ -n "${WT_NODE_CACHE_DIR}" ] && type fss_refresh_node_env_cache >/dev/null 2>&1; then
-		if fss_node_env_cache_is_fresh >/dev/null 2>&1 && ls "${env_cache_dir}"/*.env >/dev/null 2>&1; then
-			WT_NODE_ENV_DIR="${env_cache_dir}"
-			return 0
-		fi
-		if wt_try_node_tool_env_cache && ls "${env_cache_dir}"/*.env >/dev/null 2>&1; then
-			WT_NODE_ENV_DIR="${env_cache_dir}"
-			return 0
-		fi
-		if fss_refresh_node_env_cache >/dev/null 2>&1 && ls "${env_cache_dir}"/*.env >/dev/null 2>&1; then
-			WT_NODE_ENV_DIR="${env_cache_dir}"
-			return 0
-		fi
-	fi
-
-	WT_NODE_ENV_DIR="${TMP2}/node_env"
-	mkdir -p "${WT_NODE_ENV_DIR}" || {
-		WT_NODE_ENV_DIR=""
-		return 1
-	}
+	fss_clear_node_env_cache_artifacts >/dev/null 2>&1 || true
 	return 0
 }
 
@@ -1802,17 +1679,6 @@ wt_rebuild_webtest_cache_from_ids() {
 	wt_init_reserved_ports
 	wt_reset_active_node_env
 	WT_NODE_ENV_DIR=""
-	if [ "$(fss_detect_storage_schema)" = "2" ]; then
-		if fss_refresh_node_env_cache >/dev/null 2>&1 && ls "${FSS_NODE_ENV_CACHE_DIR}"/*.env >/dev/null 2>&1; then
-			WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
-		fi
-	fi
-	if [ -z "${WT_NODE_ENV_DIR}" ]; then
-		WT_NODE_ENV_DIR="${TMP2}/node_env"
-		mkdir -p "${WT_NODE_ENV_DIR}" || return 1
-		rm -f "${WT_NODE_ENV_DIR}"/*.env >/dev/null 2>&1
-		wt_build_node_env_files_bulk "${build_ids_file}" >/dev/null 2>&1 || return 1
-	fi
 	WT_CACHE_START_PORT_MAP_FILE="${TMP2}/cache_start_ports.txt"
 	wt_assign_webtest_cache_start_ports "${build_ids_file}" || return 1
 	worker_threads=$(wt_get_cache_build_threads)
@@ -2005,19 +1871,6 @@ wt_ensure_webtest_cache_nodes_file() {
 		wt_init_reserved_ports
 		wt_reset_active_node_env
 		WT_NODE_ENV_DIR=""
-		if [ "$(fss_detect_storage_schema)" = "2" ]; then
-			if fss_refresh_node_env_cache >/dev/null 2>&1 && ls "${FSS_NODE_ENV_CACHE_DIR}"/*.env >/dev/null 2>&1; then
-				WT_NODE_ENV_DIR="${FSS_NODE_ENV_CACHE_DIR}"
-			fi
-		fi
-		if [ -z "${WT_NODE_ENV_DIR}" ]; then
-			WT_NODE_ENV_DIR="${TMP2}/node_env"
-			mkdir -p "${WT_NODE_ENV_DIR}" || ret=1
-			if [ "${ret}" = "0" ]; then
-				rm -f "${WT_NODE_ENV_DIR}"/*.env >/dev/null 2>&1
-				wt_build_node_env_files_bulk "${build_ids_file}" >/dev/null 2>&1 || ret=1
-			fi
-		fi
 		if [ "${ret}" = "0" ]; then
 			while IFS= read -r node_id
 			do
