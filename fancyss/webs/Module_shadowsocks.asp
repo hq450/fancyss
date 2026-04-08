@@ -5676,7 +5676,7 @@ function update_visibility() {
 	var t1 = E("ss_basic_lt_cru_opts").value == "1";
 	var t2 = E("ss_basic_lt_cru_opts").value == "2";
 	showhide("ss_basic_lt_cru_time", t1 || t2);
-	showhide("ss_basic_lt_web_time", !t1 && !t2);
+	showhide("ss_basic_lt_web_time_row", !t1 && !t2);
 
 	if (E("ss_basic_dns_plan").value == "1"){
 		$(".chng").show();
@@ -11050,11 +11050,11 @@ function toggleKeyMask(o, show){
 									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
 									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
 									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
-									{ title: '测速结果自动刷新', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
 									{ title: '定时测试节点延迟', multi: [
 										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},
 									]},
+									{ title: '测速结果自动刷新', rid:'ss_basic_lt_web_time_row', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
 								]);
 							</script>
 						</table>
