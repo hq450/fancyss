@@ -24,8 +24,6 @@ FSS_SHUNT_RUNTIME_RULE_DIR="${FSS_SHUNT_RUNTIME_DIR}/rules"
 FSS_SHUNT_RUNTIME_ACTIVE_FILE="${FSS_SHUNT_RUNTIME_DIR}/active_rules.tsv"
 FSS_SHUNT_RUNTIME_TARGET_FILE="${FSS_SHUNT_RUNTIME_DIR}/target_nodes.txt"
 FSS_SHUNT_RUNTIME_META_FILE="${FSS_SHUNT_RUNTIME_DIR}/runtime.meta"
-FSS_SHUNT_RUNTIME_NODE_JSON_DIR="${FSS_SHUNT_RUNTIME_DIR}/node_json"
-FSS_SHUNT_RUNTIME_NODE_ENV_DIR="${FSS_SHUNT_RUNTIME_DIR}/node_env"
 FSS_SHUNT_RUNTIME_OUTBOUND_DIR="${FSS_SHUNT_RUNTIME_DIR}/outbounds"
 FSS_SHUNT_RUNTIME_PROXY_FILE="/tmp/ss_shunt_proxy.txt"
 FSS_SHUNT_HOT_STATE_FILE="${FSS_SHUNT_RUNTIME_DIR}/hot_reload_state.tsv"
@@ -63,105 +61,8 @@ fss_shunt_is_active() {
 fss_shunt_cleanup_runtime() {
 	rm -rf "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1
 	rm -f "${FSS_SHUNT_RUNTIME_PROXY_FILE}" >/dev/null 2>&1
-	fss_shunt_reset_active_node_env >/dev/null 2>&1 || true
-	unset WT_NODE_CACHE_DIR WT_NODE_ENV_DIR WT_NODE_ACTIVE_JSON WT_SERVER_RESOLV_MODE
+	unset WT_SERVER_RESOLV_MODE
 	unset FSS_SHUNT_RUNTIME_READY FSS_SHUNT_RUNTIME_READY_KEY
-}
-
-fss_shunt_reset_active_node_env() {
-	WT_NODE_ACTIVE_ID=""
-	WT_NODE_ACTIVE_JSON=""
-}
-
-fss_shunt_load_node_env() {
-	local node_id="$1"
-	local json_file=""
-
-	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
-	[ -n "${node_id}" ] || return 1
-	[ "${WT_NODE_ACTIVE_ID}" = "${node_id}" ] && return 0
-	json_file="${WT_NODE_CACHE_DIR}/${node_id}.json"
-	[ -f "${json_file}" ] || return 1
-	fss_shunt_reset_active_node_env
-	WT_NODE_ACTIVE_JSON="$(cat "${json_file}" 2>/dev/null)" || return 1
-	[ -n "${WT_NODE_ACTIVE_JSON}" ] || return 1
-	WT_NODE_ACTIVE_ID="${node_id}"
-}
-
-wt_node_get_plain_from_cache() {
-	local node_id="$1"
-	local field="$2"
-	local store_field=""
-	local value=""
-	local jq_bin=""
-
-	[ -n "${node_id}" ] || return 1
-	[ -n "${field}" ] || return 1
-	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
-	store_field=$(fss_resolve_node_field_name "${field}")
-	fss_shunt_load_node_env "${node_id}" || return 1
-	jq_bin=$(fss_pick_jq_bin)
-	[ -n "${jq_bin}" ] || return 1
-	value=$(printf '%s' "${WT_NODE_ACTIVE_JSON}" | "${jq_bin}" -r --arg field "${store_field}" '
-		def is_b64_field($key):
-			$key == "password"
-			or $key == "naive_pass"
-			or $key == "v2ray_json"
-			or $key == "xray_json"
-			or $key == "tuic_json";
-		. as $root
-		| ($root[$field] // empty) as $v
-		| if ($v | type) == "null" then
-			""
-		elif ($v | type) == "string" then
-			if is_b64_field($field) and (($root._b64_mode // "") != "raw") and (($root._source // "") == "subscribe") then
-				(try ($v | @base64d) catch $v)
-			else
-				$v
-			end
-		else
-			($v | tostring)
-		end
-	' 2>/dev/null) || return 1
-	printf '%s' "${value}"
-}
-
-wt_node_get() {
-	local field="$1"
-	local node_id="$2"
-	local store_field=""
-	local value=""
-
-	if value=$(wt_node_get_plain_from_cache "${node_id}" "${field}" 2>/dev/null); then
-		store_field=$(fss_resolve_node_field_name "${field}")
-		[ -n "${value}" ] || return 0
-		if fss_is_bool_field "${store_field}"; then
-			[ "${value}" = "1" ] || return 0
-		fi
-		if fss_is_b64_field "${store_field}"; then
-			case "${store_field}" in
-			v2ray_json|xray_json|tuic_json)
-				value=$(fss_compact_json_value "${value}")
-				;;
-			esac
-			value=$(fss_b64_encode "${value}")
-		fi
-		printf '%s' "${value}"
-		return 0
-	fi
-	fss_get_node_field_legacy "${node_id}" "${field}"
-}
-
-wt_node_get_plain() {
-	local field="$1"
-	local node_id="$2"
-	local value=""
-
-	if value=$(wt_node_get_plain_from_cache "${node_id}" "${field}" 2>/dev/null); then
-		printf '%s' "${value}"
-		return 0
-	fi
-	fss_get_node_field_plain "${node_id}" "${field}"
 }
 
 wt_server_resolv_mode_is_dynamic() {
@@ -1626,95 +1527,6 @@ fss_shunt_prune_runtime_targets_by_cache() {
 	fi
 }
 
-fss_shunt_prepare_selected_node_env() {
-	local ids_file="$1"
-	local json_dir="${FSS_SHUNT_RUNTIME_NODE_JSON_DIR}"
-	local node_id=""
-
-	WT_NODE_CACHE_DIR=""
-	WT_NODE_ENV_DIR=""
-	fss_shunt_reset_active_node_env
-	[ -f "${ids_file}" ] || return 1
-	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
-	if fss_refresh_node_json_cache >/dev/null 2>&1; then
-		WT_NODE_CACHE_DIR="${FSS_NODE_JSON_CACHE_DIR}"
-		while IFS= read -r node_id
-		do
-			[ -n "${node_id}" ] || continue
-			[ -f "${WT_NODE_CACHE_DIR}/${node_id}.json" ] || {
-				WT_NODE_CACHE_DIR=""
-				break
-			}
-		done < "${ids_file}"
-	fi
-	if [ -z "${WT_NODE_CACHE_DIR}" ]; then
-		rm -rf "${json_dir}" "${FSS_SHUNT_RUNTIME_NODE_ENV_DIR}" >/dev/null 2>&1
-		mkdir -p "${json_dir}" || return 1
-		while IFS= read -r node_id
-		do
-			[ -n "${node_id}" ] || continue
-			fss_v2_get_node_json_by_id "${node_id}" > "${json_dir}/${node_id}.json" 2>/dev/null || rm -f "${json_dir}/${node_id}.json"
-		done < "${ids_file}"
-		ls "${json_dir}"/*.json >/dev/null 2>&1 || return 0
-		WT_NODE_CACHE_DIR="${json_dir}"
-	fi
-	ls "${WT_NODE_CACHE_DIR}"/*.json >/dev/null 2>&1 || return 0
-	return 0
-}
-
-fss_shunt_build_runtime_outbound() {
-	local node_id="$1"
-	local node_type=""
-	local out_file="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json"
-	local old_tmp2="${TMP2}"
-	local mark="shunt_${node_id}"
-
-	[ -n "${node_id}" ] || return 1
-	node_type=$(wt_node_get_plain type "${node_id}")
-	[ -n "${node_type}" ] || return 1
-	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
-	rm -f "${out_file}" >/dev/null 2>&1
-	TMP2="${FSS_SHUNT_RUNTIME_DIR}"
-	WT_GEN_OUT_FILE="${out_file}"
-	WT_GEN_START_FILE=""
-	WT_GEN_STOP_FILE=""
-	WT_OUTBOUND_OBJECT_ONLY="1"
-	WT_LAST_START_PORT=""
-	WT_PRESET_START_PORT=""
-	case "${node_type}" in
-	0)
-		wt_gen_ss_outbound "${node_id}" "${mark}"
-		;;
-	3)
-		wt_gen_vmess_outbound "${node_id}" "${mark}"
-		;;
-	4)
-		wt_gen_vless_outbound "${node_id}" "${mark}"
-		;;
-	5)
-		wt_gen_trojan_outbound "${node_id}" "${mark}"
-		;;
-	8)
-		wt_gen_hy2_outbound "${node_id}" "${mark}"
-		;;
-	*)
-		rm -f "${out_file}" >/dev/null 2>&1
-		TMP2="${old_tmp2}"
-		WT_OUTBOUND_OBJECT_ONLY=""
-		WT_GEN_OUT_FILE=""
-		WT_GEN_START_FILE=""
-		WT_GEN_STOP_FILE=""
-		return 1
-		;;
-	esac
-	TMP2="${old_tmp2}"
-	WT_OUTBOUND_OBJECT_ONLY=""
-	WT_GEN_OUT_FILE=""
-	WT_GEN_START_FILE=""
-	WT_GEN_STOP_FILE=""
-	[ -s "${out_file}" ]
-}
-
 fss_shunt_prepare_outbound_cache() {
 	local current_id="$1"
 	local runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${current_id}_outbounds.json"
@@ -1736,24 +1548,8 @@ fss_shunt_prepare_outbound_cache() {
 		fss_shunt_prune_runtime_targets_by_cache "${current_id}"
 		return 0
 	fi
-	WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
-	fss_shunt_prepare_selected_node_env "${ids_file}" || return 1
-	rm -rf "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" >/dev/null 2>&1
-	mkdir -p "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}" || return 1
-	while IFS= read -r node_id
-	do
-		[ -n "${node_id}" ] || continue
-		fss_shunt_build_runtime_outbound "${node_id}" || return 1
-	done < "${ids_file}"
-	[ -s "${runtime_out}" ] || return 1
-	fss_shunt_prune_runtime_targets_by_cache "${current_id}"
-	if [ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ]; then
-		while IFS= read -r node_id
-		do
-			[ -n "${node_id}" ] || continue
-			[ -s "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" ] || return 1
-		done < "${FSS_SHUNT_RUNTIME_TARGET_FILE}"
-	fi
+	fss_shunt_log "⚠️复用webtest节点配置缓存失败，无法继续构建shunt运行时出站。"
+	return 1
 }
 
 fss_shunt_build_xray_config() {
