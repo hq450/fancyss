@@ -1781,6 +1781,7 @@ wt_webtest_cache_build_node() {
 		ss_basic_tfo=${ss_basic_tfo}
 		server_resolv_mode=${WT_SERVER_RESOLV_MODE}
 		server_resolver=${server_resolver}
+		builder=shell
 		has_start=0
 		has_stop=0
 		start_port=${WT_LAST_START_PORT}
