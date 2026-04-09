@@ -308,6 +308,7 @@ var statusFrontPending = false;
 var statusFrontWsWatchdog = null;
 var statusFrontHttpWatchdog = null;
 var statusFrontAbortController = null;
+var statusFrontRequestSeq = 0;
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -9440,26 +9441,30 @@ function get_ss_status_front_httpd() {
 		schedule_next_front_status_poll(5000);
 		return false;
 	}
-	if (statusFrontPending) {
-		return false;
-	}
-
 	statusFrontPending = true;
-	clear_front_status_http_abort();
+	statusFrontRequestSeq += 1;
+	var requestSeq = statusFrontRequestSeq;
+	if (statusFrontAbortController) {
+		try {
+			statusFrontAbortController.abort();
+		} catch (e) {}
+	}
 	statusFrontAbortController = (window.AbortController ? new AbortController() : null);
 	clear_front_status_http_watchdog();
 	statusFrontHttpWatchdog = setTimeout(function() {
+		if (requestSeq !== statusFrontRequestSeq) {
+			return;
+		}
 		if (statusFrontAbortController) {
 			try {
 				statusFrontAbortController.abort();
 			} catch (e) {}
-			statusFrontAbortController = null;
 		}
-		if (statusFrontPending) {
-			statusFrontPending = false;
-			schedule_next_front_status_poll(get_status_refresh_delay_ms());
-		}
+		statusFrontAbortController = null;
+		statusFrontPending = false;
+		schedule_next_front_status_poll(get_status_refresh_delay_ms());
 	}, Math.max(12000, get_status_refresh_delay_ms() + 3000));
+	schedule_next_front_status_poll(get_status_refresh_delay_ms());
 	fetch('/_temp/ss_status_front.txt?_=' + new Date().getTime(), {
 		method: 'GET',
 		cache: 'no-store',
@@ -9470,17 +9475,21 @@ function get_ss_status_front_httpd() {
 		}
 		return response.text();
 	}).then(function(responseText) {
+		if (requestSeq !== statusFrontRequestSeq) {
+			return;
+		}
 		var res = String(responseText || "").trim();
 		apply_ss_status(res, false);
 		statusFrontPending = false;
 		clear_front_status_http_watchdog();
 		statusFrontAbortController = null;
-		schedule_next_front_status_poll(get_status_refresh_delay_ms());
 	}).catch(function() {
+		if (requestSeq !== statusFrontRequestSeq) {
+			return;
+		}
 		statusFrontPending = false;
 		clear_front_status_http_watchdog();
 		statusFrontAbortController = null;
-		schedule_next_front_status_poll(get_status_refresh_delay_ms());
 	});
 }
 function get_ss_status_front_websocket() {
