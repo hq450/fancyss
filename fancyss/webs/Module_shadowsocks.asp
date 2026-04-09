@@ -309,6 +309,7 @@ var statusFrontWsWatchdog = null;
 var statusFrontHttpWatchdog = null;
 var statusFrontAbortController = null;
 var statusFrontRequestSeq = 0;
+var statusFrontSocket = null;
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -4138,7 +4139,13 @@ function schedule_next_front_status_poll(delayMs) {
 	clear_front_status_poll_timer();
 	statusFrontPollTimer = setTimeout(function() {
 		statusFrontPollTimer = null;
-		get_ss_status_front_httpd();
+		if (db_ss && db_ss["ss_failover_enable"] == "1") {
+			get_ss_status_front_httpd();
+		} else if (ws_flag == 1) {
+			get_ss_status_front_websocket();
+		} else {
+			get_ss_status_front_httpd();
+		}
 	}, delayMs);
 }
 function finish_front_status_poll() {
@@ -9429,7 +9436,7 @@ function get_ss_status(use_ws) {
 	}
 }
 function get_ss_status_front() {
-	get_ss_status_front_httpd();
+	get_ss_status_front_websocket();
 }
 
 function get_ss_status_front_httpd() {
@@ -9457,19 +9464,62 @@ function get_ss_status_front_websocket() {
 		schedule_next_front_status_poll(5000);
 		return false;
 	}
-	if (statusFrontPending) {
-		return false;
-	}
 	statusFrontPending = true;
+	if (statusFrontSocket) {
+		try {
+			statusFrontSocket.close();
+		} catch (e) {}
+		statusFrontSocket = null;
+	}
 	clear_front_status_ws_watchdog();
+	statusFrontSocket = new WebSocket("ws://" + hostname + ":803/");
 	statusFrontWsWatchdog = setTimeout(function() {
-		if (statusFrontPending) {
-			statusFrontPending = false;
-			schedule_next_front_status_poll(get_status_refresh_delay_ms());
+		if (statusFrontSocket) {
+			try {
+				statusFrontSocket.close();
+			} catch (e) {}
+			statusFrontSocket = null;
 		}
-	}, Math.max(45000, get_status_refresh_delay_ms() + 5000));
+		statusFrontPending = false;
+		get_ss_status_front_httpd();
+	}, Math.max(15000, get_status_refresh_delay_ms() + 5000));
 	try {
-		wss.send("sh /koolshare/scripts/ss_status.sh ws");
+		statusFrontSocket.onopen = function() {
+			try {
+				statusFrontSocket.send("sh /koolshare/scripts/ss_status.sh ws");
+			} catch (e) {
+				throw e;
+			}
+		};
+		statusFrontSocket.onmessage = function(event) {
+			clear_front_status_ws_watchdog();
+			statusFrontPending = false;
+			var res = String(event.data || "").trim();
+			apply_ss_status(res, false);
+			if (statusFrontSocket) {
+				try {
+					statusFrontSocket.close();
+				} catch (e) {}
+				statusFrontSocket = null;
+			}
+			schedule_next_front_status_poll(get_status_refresh_delay_ms());
+		};
+		statusFrontSocket.onerror = function() {
+			clear_front_status_ws_watchdog();
+			statusFrontPending = false;
+			if (statusFrontSocket) {
+				try {
+					statusFrontSocket.close();
+				} catch (e) {}
+				statusFrontSocket = null;
+			}
+			get_ss_status_front_httpd();
+		};
+		statusFrontSocket.onclose = function() {
+			if (statusFrontSocket) {
+				statusFrontSocket = null;
+			}
+		};
 	} catch (ex) {
 		statusFrontPending = false;
 		clear_front_status_ws_watchdog();
