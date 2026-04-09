@@ -5,6 +5,12 @@
 source /koolshare/scripts/base.sh
 eval $(dbus export ss_basic_)
 alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+run(){
+	env -i PATH=${PATH} "$@"
+}
+run_bg(){
+	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
+}
 XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 url_main="https://raw.githubusercontent.com/hq450/fancyss/3.0/binaries/xray"
 
@@ -57,7 +63,7 @@ get_latest_version(){
 			echo_date "xray安装文件丢失！重新下载！"
 			CUR_VER="0"
 		else
-			CUR_VER=$(xray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
+			CUR_VER=$(run xray -version 2>/dev/null | head -n 1 | cut -d " " -f2 | sed 's/v//g')
 			[ -z "${CUR_VER}" ] && CUR_VER="0"
 			echo_date "当前已安装Xray版本：${CUR_VER}"
 		fi
@@ -161,8 +167,8 @@ move_binary(){
 	if [ -f ${_TARGET_FILE} -a ! -f /koolshare/bin/xray ];then
 		ln -sf ${_TARGET_FILE} /koolshare/bin/xray
 	fi
-	XRAY_LOCAL_VER=$(/koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
-	XRAY_LOCAL_DATE=$(/koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f5)
+	XRAY_LOCAL_VER=$(run /koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f2)
+	XRAY_LOCAL_DATE=$(run /koolshare/bin/xray -version 2>/dev/null | head -n 1 | cut -d " " -f5)
 	[ -n "$XRAY_LOCAL_VER" ] && dbus set ss_basic_xray_version="$XRAY_LOCAL_VER"
 	[ -n "$XRAY_LOCAL_DATE" ] && dbus set ss_basic_xray_date="$XRAY_LOCAL_DATE"
 	echo_date "xray二进制文件更新成功... "
@@ -190,11 +196,11 @@ start_xray() {
 		EOF
 		chmod +x /koolshare/perp/xray/rc.main
 		chmod +t /koolshare/perp/xray/
-		perpctl -u xray >/dev/null 2>&1
+		run perpctl -u xray >/dev/null 2>&1
 	else
 		echo_date "开启Xray主进程..."
 		cd /koolshare/bin
-		xray run -c $XRAY_CONFIG_FILE >/dev/null 2>&1 &
+		run_bg xray run -c $XRAY_CONFIG_FILE
 	fi
 	local XPID
 	local i=25

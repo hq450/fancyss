@@ -68,13 +68,13 @@ failover_action(){
 		dbus set ss_basic_enable="0"
 		# 关闭
 		dbus set ss_heart_beat="1"
-		start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
+		run start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
 	elif [ "$ss_failover_s4_1" == "1" ];then
 		[ "$FLAG" == "1" ] && LOGM "$LOGTIME1 fancyss：检测到连续$ss_failover_s1个状态故障，重启插件！"
 		[ "$FLAG" == "2" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s2_1个状态中，故障次数超过$ss_failover_s2_2个，重启插件！"
 		[ "$FLAG" == "3" ] && LOGM "$LOGTIME1 fancyss：检测到最近$ss_failover_s3_1个状态平均延迟:$PING超过$ss_failover_s3_2 ms，重启插件！"
 		# 重启
-		start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+		run start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 	elif [ "$ss_failover_s4_1" == "2" ];then
 		if [ "$ss_failover_s4_2" == "3" ];then
 			if [ ! -f "/tmp/upload/webtest_bakcup.txt" ];then
@@ -100,7 +100,7 @@ failover_action(){
 			# 降级
 			fss_set_failover_node_id "${current_id}"
 			# 重启
-			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			run start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 			dbus set ss_heart_beat="1"
 		elif [ "$ss_failover_s4_2" == "2" ];then
 			NEXT_NODE=$(fss_get_next_node_id_in_order "${current_id}")
@@ -112,7 +112,7 @@ failover_action(){
 			if [ "${NODE_COUNT}" -le "1" ];then
 				LOGM "$LOGTIME1 fancyss：检测到你只有一个节点！无法切换到下一个节点！只好关闭插件了！"
 				dbus set ss_basic_enable="0"
-				start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
+				run start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
 			fi
 			# 切换
 			fss_set_current_node_id "${NEXT_NODE}"
@@ -123,13 +123,13 @@ failover_action(){
 			echo_date "故障转移：重启fancyss！" >>/tmp/upload/ss_log.txt
 			echo_date "" >>/tmp/upload/ss_log.txt
 			echo_date "========================================================================" >>/tmp/upload/ss_log.txt
-			start-stop-daemon -S -q -x /koolshare/ss/ssconfig.sh -- restart >>/tmp/upload/ss_log.txt
+			run start-stop-daemon -S -q -x /koolshare/ss/ssconfig.sh -- restart >>/tmp/upload/ss_log.txt
 			
 			dbus set ss_heart_beat="1"
 		elif [ "$ss_failover_s4_2" == "3" ];then
 			LOGM "$LOGTIME1 fancyss：切换到web延迟最低节点：[$(get_node_name_by_id "${FAST_NODE}")]..."
 			fss_set_current_node_id "${FAST_NODE}"
-			start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
+			run start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- restart
 			dbus set ss_heart_beat="1"
 		fi
 	fi	

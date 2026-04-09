@@ -82,7 +82,7 @@ hot_verify_targets_loaded() {
 hot_remove_rule() {
 	local tag="$1"
 	[ -n "${tag}" ] || return 0
-	"${XAPI_TOOL_BIN}" routing-remove-rule --server "${XRAY_API_SERVER}" --rule-tag "${tag}" >/dev/null 2>&1 || return 1
+	run "${XAPI_TOOL_BIN}" routing-remove-rule --server "${XRAY_API_SERVER}" --rule-tag "${tag}" >/dev/null 2>&1 || return 1
 }
 
 hot_add_rule() {
@@ -127,7 +127,7 @@ hot_add_rule() {
 	if [ -z "${domain_files}${ip_files}${domain_rules}${ip_rules}" ]; then
 		set -- "$@" --match-all
 	fi
-	"${XAPI_TOOL_BIN}" "$@" >/dev/null 2>&1
+	run "${XAPI_TOOL_BIN}" "$@" >/dev/null 2>&1
 	local ret=$?
 	rm -f "${ip_rule_file}" >/dev/null 2>&1 || true
 	[ "${ret}" = "0" ] || return 1
@@ -168,7 +168,7 @@ hot_remove_rules_from_file() {
 }
 
 hot_runtime_managed_rule_tags() {
-	"${XAPI_TOOL_BIN}" routing-list-rule --server "${XRAY_API_SERVER}" 2>/dev/null | run jq -r '.rules[]? | (.rule_tag // empty)' 2>/dev/null | awk '/^fss_/'
+	run "${XAPI_TOOL_BIN}" routing-list-rule --server "${XRAY_API_SERVER}" 2>/dev/null | run jq -r '.rules[]? | (.rule_tag // empty)' 2>/dev/null | awk '/^fss_/'
 }
 
 hot_remove_runtime_rules_except() {
