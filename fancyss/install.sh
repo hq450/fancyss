@@ -1106,10 +1106,6 @@ install_now(){
 		rm -rf /tmp/shadowsocks/bin/uredir
 	fi
 	
-	if [ -f "/koolshrae/bin/websocketd" ];then
-		rm -rf /tmp/shadowsocks/bin/websocketd
-	fi
-
 	# 将一些较大的二进制文件安装到/data分区，以节约jffs分区空间
 	# 1. 卸载的时候记得删除/data分区内的二进制
 	# 2. 打包的时候应该用/data分区内的二进制

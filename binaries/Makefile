@@ -62,9 +62,10 @@ update_node_tool:
 	cp -f ../tool/node-tool/dist/SHA256SUMS-v$$(cat ../tool/node-tool/VERSION) node-tool/
 
 update_websocketd:
-	cd ../tool/ws-tool && rm -f dist/websocketd-v$$(cat VERSION)-linux-armv7a dist/websocketd-v$$(cat VERSION)-linux-armv7hf dist/websocketd-v$$(cat VERSION)-linux-aarch64 dist/websocketd-v$$(cat VERSION)-linux-x86_64 dist/SHA256SUMS-v$$(cat VERSION) && bash scripts/build-release.sh armv7a armv7hf aarch64 x86_64
+	cd ../tool/ws-tool && rm -f dist/websocketd-v$$(cat VERSION)-linux-armv5te dist/websocketd-v$$(cat VERSION)-linux-armv7a dist/websocketd-v$$(cat VERSION)-linux-armv7hf dist/websocketd-v$$(cat VERSION)-linux-aarch64 dist/websocketd-v$$(cat VERSION)-linux-x86_64 dist/SHA256SUMS-v$$(cat VERSION) && bash scripts/build-release.sh armv5te armv7a armv7hf aarch64 x86_64
 	mkdir -p websocketd
-	rm -f websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv7a websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv7hf websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-aarch64 websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-x86_64 websocketd/SHA256SUMS-v$$(cat ../tool/ws-tool/VERSION)
+	rm -f websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv5te websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv7a websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv7hf websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-aarch64 websocketd/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-x86_64 websocketd/SHA256SUMS-v$$(cat ../tool/ws-tool/VERSION)
+	cp -f ../tool/ws-tool/dist/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv5te websocketd/
 	cp -f ../tool/ws-tool/dist/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv7a websocketd/
 	cp -f ../tool/ws-tool/dist/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-armv7hf websocketd/
 	cp -f ../tool/ws-tool/dist/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-aarch64 websocketd/

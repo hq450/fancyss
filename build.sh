@@ -136,6 +136,7 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/websocketd/websocketd-${WEBSOCKETD_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/websocketd
 	cp -rf ${CURR_PATH}/binaries/websocketd/websocketd-${WEBSOCKETD_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/websocketd
 	cp -rf ${CURR_PATH}/binaries/websocketd/websocketd-${WEBSOCKETD_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/websocketd
+	cp -rf ${CURR_PATH}/binaries/websocketd/websocketd-${WEBSOCKETD_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/websocketd
 }
 
 gen_folder(){
@@ -275,9 +276,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/ipt2socks
 		rm -rf ./shadowsocks/bin/haveged
 
-		if [ "${platform}" == "hnd" -o "${platform}" == "ipq32" ];then
-			rm -rf ./shadowsocks/bin/websocketd
-		fi
 		# remove scripts
 		rm -rf ./shadowsocks/scripts/ss_v2ray.sh
 		# remove rules
