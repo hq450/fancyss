@@ -9425,15 +9425,11 @@ function get_ss_status(use_ws) {
 			get_ss_status_back_httpd();
 		}
 	}else{
-		if (use_ws){
-			get_ss_status_front();
-		}else{
-			get_ss_status_front_httpd();
-		}
+		get_ss_status_front_httpd();
 	}
 }
 function get_ss_status_front() {
-	setup_status_ws(get_ss_status_front_httpd, false, get_ss_status_front_websocket);
+	get_ss_status_front_httpd();
 }
 
 function get_ss_status_front_httpd() {
