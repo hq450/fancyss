@@ -4138,11 +4138,7 @@ function schedule_next_front_status_poll(delayMs) {
 	clear_front_status_poll_timer();
 	statusFrontPollTimer = setTimeout(function() {
 		statusFrontPollTimer = null;
-		if (ws_flag == 1) {
-			get_ss_status_front_websocket();
-		} else {
-			get_ss_status_front_httpd();
-		}
+		get_ss_status_front_httpd();
 	}, delayMs);
 }
 function finish_front_status_poll() {
