@@ -303,6 +303,9 @@ var wss_open;
 var wss;
 var wswt;
 var ws_probe_pending = false;
+var statusFrontPollTimer = null;
+var statusFrontPending = false;
+var statusFrontWsWatchdog = null;
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -4097,6 +4100,69 @@ function wait_ws_probe_then_start_status(retry){
 	get_ss_status(ws_flag == 1);
 	return true;
 }
+function clear_front_status_poll_timer() {
+	if (statusFrontPollTimer) {
+		clearTimeout(statusFrontPollTimer);
+		statusFrontPollTimer = null;
+	}
+}
+function clear_front_status_ws_watchdog() {
+	if (statusFrontWsWatchdog) {
+		clearTimeout(statusFrontWsWatchdog);
+		statusFrontWsWatchdog = null;
+	}
+}
+function get_status_refresh_delay_ms() {
+	var time_plus = Math.pow("2", String(db_ss['ss_basic_interval'] || "2")) * 1000;
+	var time_base = time_plus - 1000;
+	return Math.floor(Math.random() * time_base) + time_plus;
+}
+function schedule_next_front_status_poll(delayMs) {
+	clear_front_status_poll_timer();
+	statusFrontPollTimer = setTimeout(function() {
+		statusFrontPollTimer = null;
+		if (ws_flag == 1) {
+			get_ss_status_front_websocket();
+		} else {
+			get_ss_status_front_httpd();
+		}
+	}, delayMs);
+}
+function finish_front_status_poll() {
+	statusFrontPending = false;
+	clear_front_status_ws_watchdog();
+	schedule_next_front_status_poll(get_status_refresh_delay_ms());
+}
+function is_private_ipv4_host(host) {
+	if (!host || !/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+		return false;
+	}
+	var parts = host.split(".");
+	var a = parseInt(parts[0], 10);
+	var b = parseInt(parts[1], 10);
+	if (a == 10) {
+		return true;
+	}
+	if (a == 172 && b >= 16 && b <= 31) {
+		return true;
+	}
+	if (a == 192 && b == 168) {
+		return true;
+	}
+	if (a == 127) {
+		return true;
+	}
+	return false;
+}
+function ws_host_allowed(host) {
+	if (!host) {
+		return false;
+	}
+	if (host == lan_ipaddr || host == "localhost") {
+		return true;
+	}
+	return is_private_ipv4_host(host);
+}
 function try_ws_connect(probeOnly){
 	probeOnly = (probeOnly === true);
 	if (ws_enable != 1){
@@ -4127,7 +4193,7 @@ function try_ws_connect(probeOnly){
 		}
 		return false;
 	}
-	if (hostname != lan_ipaddr){
+	if (!ws_host_allowed(hostname)){
 		ws_probe_pending = false;
 		ws_flag = 0;
 		if (wss){
@@ -9195,6 +9261,13 @@ function handle_ss_status_heartbeat(showRefreshPrompt) {
 }
 
 function apply_ss_status(res, with_heartbeat, showRefreshPrompt) {
+	if (typeof res != "string") {
+		if (res === null || typeof res == "undefined") {
+			res = "";
+		} else {
+			res = String(res);
+		}
+	}
 	if (res && res.indexOf("@@") != -1){
 		var arr = res.split("@@");
 		var ipv6Mode = with_heartbeat ? (arr.length >= 4) : (arr.length >= 3);
@@ -9228,15 +9301,26 @@ function setup_status_ws(onFail, with_heartbeat, onReady) {
 		wss.onerror = function(event) {
 			//console.log('WS Error: ' + event.data);
 			wss_open = 0;
+			if (!with_heartbeat && statusFrontPending) {
+				statusFrontPending = false;
+				clear_front_status_ws_watchdog();
+			}
 			onFail();
 		};
 		wss.onclose = function() {
 			//console.log('WS DISCONNECT');
 			wss_open = 0;
+			if (!with_heartbeat && statusFrontPending) {
+				statusFrontPending = false;
+				clear_front_status_ws_watchdog();
+			}
 			onFail();
 		};
 		wss.onmessage = function(event) {
 			apply_ss_status(event.data, with_heartbeat);
+			if (!with_heartbeat && statusFrontPending) {
+				finish_front_status_poll();
+			}
 		};
 		if (typeof onReady === "function") {
 			onReady();
@@ -9278,6 +9362,10 @@ function setup_status_ws(onFail, with_heartbeat, onReady) {
 		clearTimeout(ws_test_timer);
 		//console.log('WS Error: ' + event.data);
 		wss_open = 0;
+		if (!with_heartbeat && statusFrontPending) {
+			statusFrontPending = false;
+			clear_front_status_ws_watchdog();
+		}
 		onFail();
 	};
 	wss.onclose = function() {
@@ -9287,10 +9375,17 @@ function setup_status_ws(onFail, with_heartbeat, onReady) {
 		clearTimeout(ws_test_timer);
 		//console.log('WS DISCONNECT');
 		wss_open = 0;
+		if (!with_heartbeat && statusFrontPending) {
+			statusFrontPending = false;
+			clear_front_status_ws_watchdog();
+		}
 		onFail();
 	};
 	wss.onmessage = function(event) {
 		apply_ss_status(event.data, with_heartbeat);
+		if (!with_heartbeat && statusFrontPending) {
+			finish_front_status_poll();
+		}
 	};
 	return true;
 }
@@ -9299,6 +9394,9 @@ function get_ss_status(use_ws) {
 	if (typeof use_ws == "undefined"){
 		use_ws = (ws_flag == 1);
 	}
+	clear_front_status_poll_timer();
+	clear_front_status_ws_watchdog();
+	statusFrontPending = false;
 	set_ss_status_waiting("Waiting..");
 	if (db_ss['ss_basic_enable'] != "1") {
 		return false;
@@ -9311,60 +9409,68 @@ function get_ss_status(use_ws) {
 			get_ss_status_back_httpd();
 		}
 	}else{
-		if (use_ws){
-			get_ss_status_front();
-		}else{
-			get_ss_status_front_httpd();
-		}
+		get_ss_status_front_httpd();
 	}
 }
 function get_ss_status_front() {
-	setup_status_ws(get_ss_status_front_httpd, false, get_ss_status_front_websocket);
+	get_ss_status_front_httpd();
 }
 
 function get_ss_status_front_httpd() {
 	if (submit_flag == "1") {
-		//console.log("wait for 5s to get next status...")
-		setTimeout(get_ss_status_front_httpd, 5000);
+		schedule_next_front_status_poll(5000);
+		return false;
+	}
+	if (statusFrontPending) {
 		return false;
 	}
 
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
+	statusFrontPending = true;
 	$.ajax({
-		type: "POST",
-		url: "/_api/",
+		url: '/_temp/ss_status_front.txt?_=' + new Date().getTime(),
+		type: 'GET',
+		dataType: 'html',
 		async: true,
 		cache: false,
-		data: JSON.stringify(postData),
 		success: function(response) {
-			apply_ss_status(response.result, false);
+			var res = String(response || "").trim();
+			apply_ss_status(res, false);
+		},
+		error: function() {
+			statusFrontPending = false;
+			schedule_next_front_status_poll(get_status_refresh_delay_ms());
+		},
+		complete: function() {
+			if (statusFrontPending) {
+				statusFrontPending = false;
+				schedule_next_front_status_poll(get_status_refresh_delay_ms());
+			}
 		}
 	});
-	//refreshRate = Math.floor(Math.random() * 4000) + 4000;
-	//1: 2-3s, 2:4-7s, 3:8-15s, 4:16-31s, 5:32-63s
-	var time_plus = Math.pow("2", String(db_ss['ss_basic_interval']||"2")) * 1000;
-	var time_base = time_plus - 1000;
-	refreshRate = Math.floor(Math.random() * time_base) + time_plus ;
-	setTimeout(get_ss_status_front_httpd, refreshRate);
 }
 function get_ss_status_front_websocket() {
 	if (submit_flag == "1") {
-		//console.log("wait for 5s to get next status...")
-		setTimeout(get_ss_status_front_websocket, 5000);
+		schedule_next_front_status_poll(5000);
 		return false;
 	}
-	
-	try {
-		wss.send("sh /koolshare/scripts/ss_status.sh ws");
-	} catch (ex) {
-		console.log('Cannot send: ' + ex);
+	if (statusFrontPending) {
+		return false;
 	}
-	if (wss_open == "1"){
-		var time_plus = Math.pow("2", String(db_ss['ss_basic_interval']||"2")) * 1000;
-		var time_base = time_plus - 1000;
-		refreshRate = Math.floor(Math.random() * time_base) + time_plus ;
-		setTimeout(get_ss_status_front_websocket, refreshRate);
+	statusFrontPending = true;
+	clear_front_status_ws_watchdog();
+	statusFrontWsWatchdog = setTimeout(function() {
+		if (statusFrontPending) {
+			statusFrontPending = false;
+			schedule_next_front_status_poll(get_status_refresh_delay_ms());
+		}
+	}, Math.max(45000, get_status_refresh_delay_ms() + 5000));
+	try {
+		wss.send("cat /tmp/upload/ss_status_front.txt");
+	} catch (ex) {
+		statusFrontPending = false;
+		clear_front_status_ws_watchdog();
+		console.log('Cannot send: ' + ex);
+		schedule_next_front_status_poll(get_status_refresh_delay_ms());
 	}
 }
 function get_ss_status_back() {

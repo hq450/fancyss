@@ -30,9 +30,183 @@ PROXY_IPV6=$(dbus get ss_basic_proxy_ipv6)
 SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "ss-local|sslocal|v2ray|xray|trojan|naive|tuic|hysteria"|head -n1)
 REDIRC_OPEN=$(netstat -nlp 2>/dev/null|grep -w "3333"|grep -Eo "ss-redir|sslocal|v2ray|xray|trojan|ipt2socks|hysteria"|head -n1)
 STATUS_HISTORY_DIR=/tmp/upload/ss_status_history
+STATUS_WS_LOCK_DIR=/tmp/fancyss_status_ws.lock
+STATUS_WS_CACHE_FILE=/tmp/upload/ss_status_ws.txt
+STATUS_TOOL_TIMEOUT_MS=3000
 
 run(){
 	env -i PATH=${PATH} "$@"
+}
+
+pick_status_tool(){
+	if [ -x "/koolshare/bin/status-tool" ];then
+		echo "/koolshare/bin/status-tool"
+		return 0
+	fi
+	if command -v status-tool >/dev/null 2>&1;then
+		echo "$(command -v status-tool)"
+		return 0
+	fi
+	return 1
+}
+
+status_tool_escape_json(){
+	printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+status_tool_write_probe_json(){
+	local cfg_file="$1"
+	local comma="$2"
+	local name="$3"
+	local url="$4"
+	local family="$5"
+	local mode="$6"
+	local proxy="$7"
+	local warmup="$8"
+	local attempts="$9"
+	local timeout_ms="${10}"
+	local esc_name esc_url esc_proxy
+	esc_name=$(status_tool_escape_json "${name}")
+	esc_url=$(status_tool_escape_json "${url}")
+	esc_proxy=$(status_tool_escape_json "${proxy}")
+	if [ -n "${proxy}" ];then
+		cat >>"${cfg_file}" <<-EOF
+		${comma}{
+		  "name": "${esc_name}",
+		  "url": "${esc_url}",
+		  "family": "${family}",
+		  "mode": "${mode}",
+		  "warmup": ${warmup},
+		  "attempts": ${attempts},
+		  "timeout_ms": ${timeout_ms},
+		  "proxy": "${esc_proxy}"
+		}
+		EOF
+	else
+		cat >>"${cfg_file}" <<-EOF
+		${comma}{
+		  "name": "${esc_name}",
+		  "url": "${esc_url}",
+		  "family": "${family}",
+		  "mode": "${mode}",
+		  "warmup": ${warmup},
+		  "attempts": ${attempts},
+		  "timeout_ms": ${timeout_ms}
+		}
+		EOF
+	fi
+}
+
+status_tool_cleanup_tmp(){
+	rm -f "$1" "$2" >/dev/null 2>&1
+}
+
+status_tool_get_legacy_result(){
+	local json_file="$1"
+	local probe_name="$2"
+	jq -r --arg name "${probe_name}" '
+		(.results // [])
+		| map(select(.name == $name))
+		| if length == 0 then
+			""
+		  else
+			.[0] as $item
+			| "\((($item.elapsed_ms // 0) / 1000))|\(($item.status_code // 0))|\(($item.remote_addr // ""))|\(($item.error // ""))"
+		  end
+	' "${json_file}" 2>/dev/null
+}
+
+status_tool_probe_all(){
+	local status_tool="$1"
+	local request_tag="$2"
+	local cfg_file="/tmp/status-tool-status.${$}.json"
+	local out_file="/tmp/status-tool-status.${$}.out"
+	local china_result=""
+	local foreign4_result=""
+	local foreign6_result=""
+	local probe_count=0
+	local comma=""
+	local foreign_mode="direct"
+	local foreign_proxy=""
+
+	cat >"${cfg_file}" <<-EOF
+	{
+	  "output": "json",
+	  "probes": [
+	EOF
+
+	status_tool_write_probe_json "${cfg_file}" "" "china" "${CHN_TEST_SITE}" "ipv4" "direct" "" 0 1 "${STATUS_TOOL_TIMEOUT_MS}"
+	probe_count=$((probe_count + 1))
+	comma=","
+
+	if [ "${PROXY_IPV6}" = "1" ];then
+		if [ -n "${REDIRC_OPEN}" ];then
+			status_tool_write_probe_json "${cfg_file}" "${comma}" "foreign4" "${FRN_TEST_SITE}" "ipv4" "direct" "" 1 2 "${STATUS_TOOL_TIMEOUT_MS}"
+			comma=","
+			status_tool_write_probe_json "${cfg_file}" "${comma}" "foreign6" "${FRN_TEST_SITE}" "ipv6" "direct" "" 1 2 "${STATUS_TOOL_TIMEOUT_MS}"
+			probe_count=$((probe_count + 2))
+		fi
+	else
+		if [ -n "${SOCKS5_OPEN}" -a -n "${REDIRC_OPEN}" ];then
+			foreign_mode="socks5"
+			foreign_proxy="socks5://127.0.0.1:23456"
+			status_tool_write_probe_json "${cfg_file}" "${comma}" "foreign4" "${FRN_TEST_SITE}" "ipv4" "${foreign_mode}" "${foreign_proxy}" 1 2 "${STATUS_TOOL_TIMEOUT_MS}"
+			probe_count=$((probe_count + 1))
+		fi
+	fi
+
+	cat >>"${cfg_file}" <<-EOF
+	  ]
+	}
+	EOF
+
+	[ "${probe_count}" -gt 0 ] || {
+		status_tool_cleanup_tmp "${cfg_file}" "${out_file}"
+		return 1
+	}
+	"${status_tool}" once --config "${cfg_file}" --format json > "${out_file}" 2>/dev/null || {
+		status_tool_cleanup_tmp "${cfg_file}" "${out_file}"
+		return 1
+	}
+
+	china_result=$(status_tool_get_legacy_result "${out_file}" "china")
+	[ -n "${china_result}" ] || china_result="0|000||StatusTool"
+	get_china_status "${request_tag}" "${china_result}"
+
+	if [ "${PROXY_IPV6}" = "1" ];then
+		foreign4_result=$(status_tool_get_legacy_result "${out_file}" "foreign4")
+		foreign6_result=$(status_tool_get_legacy_result "${out_file}" "foreign6")
+		[ -n "${foreign4_result}" ] || foreign4_result="__UNAVAILABLE__"
+		[ -n "${foreign6_result}" ] || foreign6_result="__UNAVAILABLE__"
+		get_foreign_status_by_family "4" "国外IPv4" "log1" "1" "${request_tag}" "${foreign4_result}"
+		get_foreign_status_by_family "6" "国外IPv6" "log3" "0" "${request_tag}" "${foreign6_result}"
+	else
+		foreign4_result=$(status_tool_get_legacy_result "${out_file}" "foreign4")
+		[ -n "${foreign4_result}" ] || foreign4_result="__UNAVAILABLE__"
+		get_foreign_status_by_family "4" "国外链接" "log1" "1" "${request_tag}" "${foreign4_result}"
+	fi
+
+	status_tool_cleanup_tmp "${cfg_file}" "${out_file}"
+	return 0
+}
+
+acquire_status_ws_lock(){
+	mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+}
+
+release_status_ws_lock(){
+	rmdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+}
+
+read_status_ws_cache(){
+	[ -s "${STATUS_WS_CACHE_FILE}" ] || return 1
+	cat "${STATUS_WS_CACHE_FILE}" 2>/dev/null
+}
+
+write_status_ws_cache(){
+	local payload="$1"
+	[ -n "${payload}" ] || return 1
+	printf '%s' "${payload}" > "${STATUS_WS_CACHE_FILE}" 2>/dev/null
 }
 
 cleanup_status_probes(){
@@ -512,11 +686,21 @@ prepare(){
 
 if [ -z "$1" -a -z "$2" ];then
 	prepare
-	start_status_probes
-	wait_status_probes
-	get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
-	get_foreign_status $1
-	cleanup_status_probes
+	if status_tool_bin="$(pick_status_tool)"; then
+		if ! status_tool_probe_all "${status_tool_bin}" "$1"; then
+			start_status_probes
+			wait_status_probes
+			get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+			get_foreign_status $1
+			cleanup_status_probes
+		fi
+	else
+		start_status_probes
+		wait_status_probes
+		get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+		get_foreign_status $1
+		cleanup_status_probes
+	fi
 	echo "$(get_status_payload)"
 	exit
 fi
@@ -526,34 +710,76 @@ case $1 in
 		if [ "$(dbus get ss_basic_wait)" == "1" ];then
 			set_waiting_status
 		else
+			if ! acquire_status_ws_lock; then
+				if cached_payload="$(read_status_ws_cache)"; then
+					echo "${cached_payload}"
+				else
+					set_waiting_status
+					echo "$(get_status_payload)"
+				fi
+				exit 0
+			fi
+			trap 'release_status_ws_lock' EXIT INT TERM
 			prepare
-			start_status_probes
-			wait_status_probes
-			get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
-			get_foreign_status $1
-			cleanup_status_probes
+			if status_tool_bin="$(pick_status_tool)"; then
+				if ! status_tool_probe_all "${status_tool_bin}" "$1"; then
+					start_status_probes
+					wait_status_probes
+					get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+					get_foreign_status $1
+					cleanup_status_probes
+				fi
+			else
+				start_status_probes
+				wait_status_probes
+				get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+				get_foreign_status $1
+				cleanup_status_probes
+			fi
 		fi
-		echo "$(get_status_payload)"
+		payload="$(get_status_payload)"
+		write_status_ws_cache "${payload}" >/dev/null 2>&1
+		echo "${payload}"
 	;;
 	*)
 		if [ "${ss_failover_enable}" == "1" ];then
 			prepare
-			start_status_probes
-			wait_status_probes
-			get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
-			get_foreign_status $1
-			cleanup_status_probes
+			if status_tool_bin="$(pick_status_tool)"; then
+				if ! status_tool_probe_all "${status_tool_bin}" "$1"; then
+					start_status_probes
+					wait_status_probes
+					get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+					get_foreign_status $1
+					cleanup_status_probes
+				fi
+			else
+				start_status_probes
+				wait_status_probes
+				get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+				get_foreign_status $1
+				cleanup_status_probes
+			fi
 			echo -e -n  "$(get_status_payload)@@${HEART_STATUS}\n" >/tmp/upload/ss_status.txt
 		else
 			if [ "$(dbus get ss_basic_wait)" == "1" ];then
 				set_waiting_status
 			else
 				prepare
-				start_status_probes
-				wait_status_probes
-				get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
-				get_foreign_status $1
-				cleanup_status_probes
+				if status_tool_bin="$(pick_status_tool)"; then
+					if ! status_tool_probe_all "${status_tool_bin}" "$1"; then
+						start_status_probes
+						wait_status_probes
+						get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+						get_foreign_status $1
+						cleanup_status_probes
+					fi
+				else
+					start_status_probes
+					wait_status_probes
+					get_china_status "$1" "$(read_probe_result "${CHINA_PROBE_FILE}")"
+					get_foreign_status $1
+					cleanup_status_probes
+				fi
 			fi
 			http_response "$(get_status_payload)"
 		fi

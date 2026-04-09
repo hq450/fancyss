@@ -6,11 +6,14 @@ source /koolshare/scripts/ss_base.sh
 
 LOGFILE_F=/tmp/upload/ssf_status.txt
 LOGFILE_C=/tmp/upload/ssc_status.txt
+STATUS_FRONT_CACHE=/tmp/upload/ss_status_front.txt
+STATUS_BACK_CACHE=/tmp/upload/ss_status.txt
 #LOGTIME1=📅$(TZ=UTC-8 date -R "+%m-%d/%H:%M:%S")
 LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
 CURRENT=$(fss_get_current_node_id)
 CHK_INTER=$(dbus get ss_basic_interval)
 COUNT=1
+LAST_CACHE=""
 rm -rf /tmp/upload/test.txt
 
 get_node_name_by_id() {
@@ -34,6 +37,56 @@ clean_c_log() {
 LOGM() {
 	echo $1
 	logger $1
+}
+
+extract_status_ms() {
+	printf '%s' "$1" | grep -Eo '[0-9]+ ms' | tail -n1 | awk '{print $1}'
+}
+
+status_line_ok() {
+	printf '%s' "$1" | grep -q "✓"
+}
+
+status_cache_foreign_line() {
+	printf '%s' "$1" | awk -F '@@' '{print $1}'
+}
+
+status_cache_china_line() {
+	printf '%s' "$1" | awk -F '@@' '{print $NF}'
+}
+
+write_status_logs_from_cache() {
+	local cache_payload="$1"
+	local current_name="$(get_node_name_by_id "$(fss_get_current_node_id)")"
+	local foreign_line="$(status_cache_foreign_line "${cache_payload}")"
+	local china_line="$(status_cache_china_line "${cache_payload}")"
+	local foreign_ms="$(extract_status_ms "${foreign_line}")"
+	local china_ms="$(extract_status_ms "${china_line}")"
+
+	LOGTIME1=⌚$(TZ=UTC-8 date -R "+%H:%M:%S")
+	if status_line_ok "${foreign_line}"; then
+		echo "${LOGTIME1} ➡️ daemon-cache ⏱ ${foreign_ms} ms 🌎 200 OK ✈️ ${current_name} 🧮cache" >> "${LOGFILE_F}"
+	else
+		echo "${LOGTIME1} ➡️ daemon-cache ⏱ --- ms 🌎 000 failed ✈️ ${current_name} 🧮cache" >> "${LOGFILE_F}"
+	fi
+	if status_line_ok "${china_line}"; then
+		echo "${LOGTIME1} ➡️ daemon-cache ⏱ ${china_ms} ms 🌎 200 OK 🧮cache" >> "${LOGFILE_C}"
+	else
+		echo "${LOGTIME1} ➡️ daemon-cache ⏱ --- ms 🌎 000 failed 🧮cache" >> "${LOGFILE_C}"
+	fi
+}
+
+refresh_status_cache_files() {
+	local cache_payload=""
+	cache_payload="$(cat "${STATUS_FRONT_CACHE}" 2>/dev/null)"
+	[ -n "${cache_payload}" ] || return 1
+	printf '%s@@%s\n' "${cache_payload}" "$(dbus get ss_heart_beat)" > "${STATUS_BACK_CACHE}"
+	if [ "${cache_payload}" != "${LAST_CACHE}" ];then
+		LAST_CACHE="${cache_payload}"
+		write_status_logs_from_cache "${cache_payload}"
+		return 0
+	fi
+	return 2
 }
 
 _get_interval() {
@@ -210,20 +263,16 @@ main(){
 		# exit loop when fancyss not enabled
 		[ "$(dbus get ss_basic_enable)" != "1" ] && exit
 		
+		if ! ps | grep -E "ss_status_daemon\\.sh loop" | grep -v grep >/dev/null 2>&1; then
+			sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
+		fi
+
 		if [ "$(ps|grep ssconfig.sh|grep -v grep)" ];then
 			# wait until ssconfig.sh finished running
 			echo ${LOGTIME1} ssconfig.sh running "[$(get_node_name_by_id "$(fss_get_current_node_id)")]" >> $LOGFILE_F
 			#continue
 		else
-			# kill the last status script if exist
-			killall curl-status >/dev/null 2>&1
-			if [ -n "$(pidof ss_status.sh)" ];then
-				kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
-				echo ${LOGTIME1} script run time out "[$(get_node_name_by_id "$(fss_get_current_node_id)")]" >> $LOGFILE_F
-			fi
-			# call ss_status.sh to get status, start-stop-daemon consume more cpu, use sh instead.
-			# start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status.sh
-			sh /koolshare/scripts/ss_status.sh "${COUNT}"
+			refresh_status_cache_files >/dev/null 2>&1
 		fi
 
 		# do health check after result obtain

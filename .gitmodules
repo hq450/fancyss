@@ -13,3 +13,6 @@
 [submodule "tool/ws-tool"]
 	path = tool/ws-tool
 	url = git@github1.com:hq450/ws-tool.git
+[submodule "tool/status-tool"]
+	path = tool/status-tool
+	url = git@github1.com:hq450/status-tool.git

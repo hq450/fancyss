@@ -1,6 +1,6 @@
-.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd
+.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd update_status_tool
 
-all: update_kcptun update_ss_rust update_v2ray update_xray update_naive update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd
+all: update_kcptun update_ss_rust update_v2ray update_xray update_naive update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd update_status_tool
 
 update_kcptun:
 	kcptun/get_latest.sh
@@ -71,3 +71,14 @@ update_websocketd:
 	cp -f ../tool/ws-tool/dist/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-aarch64 websocketd/
 	cp -f ../tool/ws-tool/dist/websocketd-v$$(cat ../tool/ws-tool/VERSION)-linux-x86_64 websocketd/
 	cp -f ../tool/ws-tool/dist/SHA256SUMS-v$$(cat ../tool/ws-tool/VERSION) websocketd/
+
+update_status_tool:
+	cd ../tool/status-tool && rm -f dist/status-tool-v$$(cat VERSION)-linux-armv5te dist/status-tool-v$$(cat VERSION)-linux-armv7a dist/status-tool-v$$(cat VERSION)-linux-armv7hf dist/status-tool-v$$(cat VERSION)-linux-aarch64 dist/status-tool-v$$(cat VERSION)-linux-x86_64 dist/SHA256SUMS-v$$(cat VERSION) && bash scripts/build-release.sh armv5te armv7a armv7hf aarch64 x86_64
+	mkdir -p status-tool
+	rm -f status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/SHA256SUMS-v$$(cat ../tool/status-tool/VERSION)
+	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/
+	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/
+	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/
+	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/
+	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/
+	cp -f ../tool/status-tool/dist/SHA256SUMS-v$$(cat ../tool/status-tool/VERSION) status-tool/
