@@ -1,5 +1,18 @@
 fancyss Changelog
 
+3.5.11（20260409）
+   - note	本次更新重点围绕两条主线继续推进：一是彻底移除节点服务器预解析及其派生设置，统一收敛到动态解析；二是继续瘦身启动链和 WebSocket 通道实现，降低弱性能机型上的启动等待与常驻负担。
+   - add	新增 `ws-tool` 轻量级 `websocketd` 替代实现，并作为独立 Zig 工具项目引入；当前已覆盖 fancyss 前端实际使用的 WebSocket 场景，包括 `echo ws_ok`、`show_message`、实时日志、`. script arg` 指令和 `follow_webtest` 流式输出。
+   - update	插件 WebSocket 通道已切换到新的 `ws-tool` 发布链路：二进制仍保持 `websocketd` 命名，`build.sh` 与 `binaries/Makefile` 已接入新的多平台产物；`hnd` 平台使用 `armv7hf`，`qca/ipq32` 使用 `armv7a`，`hnd_v8/mtk/ipq64` 使用 `aarch64`。
+   - update	`websocketd` 现已随所有平台、所有安装包一并分发，前端 `ws_ok` 连通性探测不再对特定 `lite` 包关闭；弱性能平台也可统一使用 WebSocket 实时日志与测速状态回传能力。
+   - update	启动链路继续瘦身：`ssconfig.sh` 顶层 `nvram/ps/dbus` 初始化改为进入启动流程后再执行；`ss_base.sh` 当前节点环境导出、分流函数和 SmartDNS/机场特调辅助函数改为按需加载，显著缩短弱性能机型上点击后首行日志出现时间。
+   - update	外围脚本中的若干二进制调用进一步统一为 `run/run_bg` 的干净环境启动方式，减少杂乱环境变量对子进程的影响，统一 `xray` 更新、故障转移和分流热重载等路径的行为。
+   - update	更新 bundled Zig 工具二进制：同步刷新 `node-tool`、`sub-tool`、`xapi-tool`、`geotool` 的发布产物和打包链路，修正 `hnd` 平台 Zig 工具架构映射，提升不同平台上的一致性。
+   - update	移除前后端“插件触发重启设定”功能及相关逻辑，避免在动态解析模式下继续保留已经失效的基于节点 IP 变化触发重启配置。
+   - update	节点服务器预解析相关前后端配置已完全移除，普通启动、`webtest`、节点分流和故障转移相关链路统一围绕动态解析工作；插件启动末尾仍保留“节点服务器解析地址”日志，便于继续观察当前节点最终解析结果。
+   - fix	修复 RT-BE88U 等机型在订阅完成后，因旧版 `node-tool` 缺少 `airport-domains` 能力而回退 shell 慢路径，导致“节点信息写入成功”后仍额外等待较长时间的问题；更新后的 `node-tool` 可正确支撑机场域名缓存刷新。
+   - fix	修复离线安装或插件重启早期阶段中，`smartdns_ensure_dns_groups` 初始化顺序不当导致的报错；同时为 SmartDNS relay 端口范围补充数值兜底，避免异常环境变量触发启动阶段的越界错误。
+
 3.5.10（20260327）
    - note1	重要！！此版本定义为非稳定版本/尝鲜版本，升级前请备份设置，如在你的机型和固件版本上有问题，请及时回滚
 			1. 目前测试过mtk，hndv8，hnd，qca的部分机型
@@ -38,7 +51,6 @@ fancyss Changelog
    - fix	修复通过分享链接离线添加节点时，重复节点处理策略异常的问题；当前策略改为自动调整重复名称，避免误覆盖现有节点。
    - fix	修复节点编辑和“保存&应用”后，部分订阅节点的`_source_scope / _source_url_hash / _identity`被错误改写，导致后续订阅误判为新增/删除的问题。
    - fix	修复`sub-tool`、`node-tool`、`webtest`和统一运行产物在不同平台、不同缓存状态下的一系列兼容性问题，包括 malformed base64 订阅容错、结果摘要一致性、缓存索引一致性、运行产物输出目录一致性以及 ARM 平台打包适配问题。
-
 
 3.5.9（20260327）
    - note	本次更新重点围绕web延迟测速和运行状态探测做整体重构：重新梳理了测速链路、结果回传、线程调度、节点域名缓存与运行状态延迟检测，让节点较多、协议较杂的场景下也能获得更快、更稳定、更可中断的测速体验。

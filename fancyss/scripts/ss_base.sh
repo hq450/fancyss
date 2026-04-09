@@ -513,8 +513,6 @@ run_bg(){
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
-smartdns_ensure_dns_groups
-
 __timeout_init() {
 	# Determine best available timeout implementation:
 	# 1) system timeout (GNU/coreutils or BusyBox applet)
@@ -894,8 +892,12 @@ kill_used_port(){
 	# ports will be used in fancyss
 	local ports="3333 3334 23456 7913 1051 1052 2051 2052 2055 2056 1091 1092 1093"
 	local relay_port
-	relay_port=${SMARTDNS_RELAY_PORT_BASE}
-	while [ "${relay_port}" -le "${SMARTDNS_RELAY_PORT_MAX}" ]
+	local relay_port_base="${SMARTDNS_RELAY_PORT_BASE}"
+	local relay_port_max="${SMARTDNS_RELAY_PORT_MAX}"
+	printf '%s' "${relay_port_base}" | grep -Eq '^[0-9]+$' || relay_port_base=1055
+	printf '%s' "${relay_port_max}" | grep -Eq '^[0-9]+$' || relay_port_max=1070
+	relay_port=${relay_port_base}
+	while [ "${relay_port}" -le "${relay_port_max}" ]
 	do
 		ports="${ports} ${relay_port}"
 		relay_port=$((relay_port + 1))
