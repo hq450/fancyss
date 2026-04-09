@@ -9408,28 +9408,32 @@ function get_ss_status(use_ws) {
 	if (typeof use_ws == "undefined"){
 		use_ws = (ws_flag == 1);
 	}
-	clear_front_status_poll_timer();
-	clear_front_status_ws_watchdog();
-	clear_front_status_http_watchdog();
-	clear_front_status_http_abort();
-	statusFrontPending = false;
 	set_ss_status_waiting("Waiting..");
 	if (db_ss['ss_basic_enable'] != "1") {
 		return false;
 	}
 
 	if(db_ss["ss_failover_enable"] == "1"){
+		clear_front_status_poll_timer();
+		clear_front_status_ws_watchdog();
+		clear_front_status_http_watchdog();
+		clear_front_status_http_abort();
+		statusFrontPending = false;
 		if (use_ws){
 			get_ss_status_back();
 		}else{
 			get_ss_status_back_httpd();
 		}
 	}else{
-		get_ss_status_front_httpd();
+		if (use_ws){
+			get_ss_status_front();
+		}else{
+			get_ss_status_front_httpd();
+		}
 	}
 }
 function get_ss_status_front() {
-	get_ss_status_front_httpd();
+	setup_status_ws(get_ss_status_front_httpd, false, get_ss_status_front_websocket);
 }
 
 function get_ss_status_front_httpd() {
@@ -9437,15 +9441,17 @@ function get_ss_status_front_httpd() {
 		schedule_next_front_status_poll(5000);
 		return false;
 	}
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
 	$.ajax({
-		url: '/_temp/ss_status_front.txt?_=' + new Date().getTime(),
-		type: 'GET',
-		dataType: 'html',
+		type: "POST",
+		url: "/_api/",
 		async: true,
 		cache: false,
+		timeout: Math.max(10000, get_status_refresh_delay_ms() + 2000),
+		data: JSON.stringify(postData),
 		success: function(response) {
-			var res = String(response || "").trim();
-			apply_ss_status(res, false);
+			apply_ss_status(response.result, false);
 		}
 	});
 	schedule_next_front_status_poll(get_status_refresh_delay_ms());
@@ -9467,7 +9473,7 @@ function get_ss_status_front_websocket() {
 		}
 	}, Math.max(45000, get_status_refresh_delay_ms() + 5000));
 	try {
-		wss.send("cat /tmp/upload/ss_status_front.txt");
+		wss.send("sh /koolshare/scripts/ss_status.sh ws");
 	} catch (ex) {
 		statusFrontPending = false;
 		clear_front_status_ws_watchdog();

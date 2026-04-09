@@ -134,12 +134,29 @@ resolve_payload(){
 	return 0
 }
 
+resolve_payload_once_only(){
+	local payload=""
+	if status_tool_bin="$(pick_status_tool)"; then
+		if payload="$(refresh_payload_once "${status_tool_bin}")"; then
+			printf '%s' "${payload}"
+			return 0
+		fi
+	fi
+	set_waiting_status
+	get_status_payload
+	return 0
+}
+
 if [ -z "$1" ] && [ -z "$2" ];then
 	if ! prepare >/dev/null 2>&1; then
 		get_status_payload
 		exit
 	fi
-	resolve_payload
+	if [ "${ss_failover_enable}" = "1" ];then
+		resolve_payload
+	else
+		resolve_payload_once_only
+	fi
 	exit
 fi
 
@@ -154,12 +171,20 @@ ws)
 			if payload="$(read_ws_cache)"; then
 				printf '%s' "${payload}"
 			else
-				resolve_payload
+				if [ "${ss_failover_enable}" = "1" ];then
+					resolve_payload
+				else
+					resolve_payload_once_only
+				fi
 			fi
 			exit 0
 		fi
 		trap 'release_status_ws_lock' EXIT INT TERM
-		payload="$(resolve_payload)"
+		if [ "${ss_failover_enable}" = "1" ];then
+			payload="$(resolve_payload)"
+		else
+			payload="$(resolve_payload_once_only)"
+		fi
 		write_ws_cache "${payload}" >/dev/null 2>&1
 		printf '%s' "${payload}"
 		;;
@@ -168,7 +193,11 @@ ws)
 			set_waiting_status
 			payload="$(get_status_payload)"
 		else
-			payload="$(resolve_payload)"
+			if [ "${ss_failover_enable}" = "1" ];then
+				payload="$(resolve_payload)"
+			else
+				payload="$(resolve_payload_once_only)"
+			fi
 		fi
 		if [ "${ss_failover_enable}" = "1" ];then
 			printf '%s@@%s\n' "${payload}" "${HEART_STATUS}" > "${STATUS_BACK_CACHE}"

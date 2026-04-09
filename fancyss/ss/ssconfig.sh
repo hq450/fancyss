@@ -6662,11 +6662,13 @@ finish_start(){
 
 check_status() {
 	dbus remove ss_basic_wait
-	sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 	if [ "$ss_failover_enable" == "1" ]; then
+		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
 		run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	else
+		sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
 	fi
 
 	(

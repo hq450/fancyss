@@ -20,11 +20,13 @@ stop_status(){
 }
 
 check_status(){
-	sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 	if [ "$ss_failover_enable" == "1" ];then
+		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 		echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_F
 		echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_C
 		start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+	else
+		sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
 	fi
 }
 
