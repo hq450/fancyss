@@ -14,4 +14,5 @@ Purpose:
 Packaging note:
 - `bin-arm` is not bundled yet
 - armv5 / old arm builds still fall back to `xray api`
-- `v0.2.1` is bundled without UPX; GS7 rejected the UPX-packed binary with `PROT_EXEC|PROT_WRITE failed`
+- current bundled `v0.2.1` artifacts are UPX-packed
+- verified on GS7 (`aarch64`) and TUF-AX3000 (`armv7a` / `armv7hf`) that the bundled binaries can start normally
