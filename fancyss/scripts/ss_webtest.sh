@@ -12,8 +12,7 @@ WT_WEBTEST_BACKUP=/tmp/upload/webtest_bakcup.txt
 WT_WEBTEST_STOP_FLAG=/tmp/webtest.stop
 WT_WEBTEST_PID_FILE=/tmp/webtest.pid
 WT_WEBTEST_STATE_LOCK=/tmp/webtest.state.lock
-WT_SERVER_RESOLV_MODE=$(dbus get ss_basic_server_resolv_mode)
-[ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
+WT_SERVER_RESOLV_MODE="1"
 WT_NODE_CACHE_DIR=""
 WT_NODE_ACTIVE_ID=""
 WT_NODE_ACTIVE_JSON=""
@@ -27,7 +26,7 @@ WT_BATCH_ACTIVE=0
 WT_BATCH_FINALIZED=0
 WT_BATCH_ABORT_REASON=""
 WT_WEBTEST_CACHE_REV="1"
-WT_WEBTEST_CACHE_GEN_REV="20260326_6"
+WT_WEBTEST_CACHE_GEN_REV="20260409_1"
 WT_WEBTEST_CACHE_LOCK="/tmp/fss_webtest_cache.lock"
 WT_WEBTEST_CACHE_STATE_DIR="/tmp/fancyss_cache_state"
 WT_WEBTEST_CACHE_STATE_FILE="${WT_WEBTEST_CACHE_STATE_DIR}/webtest.state"
@@ -1120,14 +1119,6 @@ run(){
 	env -i PATH=${PATH} "$@"
 }
 
-wt_server_resolv_mode_is_dynamic() {
-	[ "${WT_SERVER_RESOLV_MODE}" = "1" ]
-}
-
-wt_server_resolv_mode_is_preresolve() {
-	[ "${WT_SERVER_RESOLV_MODE}" = "2" ]
-}
-
 wt_prepare_node_cache() {
 	local node_id=""
 	local blob=""
@@ -1517,15 +1508,12 @@ wt_md5_of_file() {
 wt_webtest_cache_write_global_meta() {
 	local ids_file="$1"
 	local tmp_file="${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}.tmp.$$"
-	local server_resolver=""
 	local node_config_ts=""
 	local xray_count=""
 	local xray_ids_md5=""
 
 	[ -f "${ids_file}" ] || return 1
 	wt_webtest_cache_prepare_dirs || return 1
-	server_resolver=$(dbus get ss_basic_server_resolv)
-	[ -n "${server_resolver}" ] || server_resolver="-1"
 	node_config_ts=$(fss_get_node_config_ts)
 	[ "${node_config_ts}" != "0" ] || node_config_ts=$(fss_touch_node_config_ts)
 	xray_count=$(wc -l < "${ids_file}" | tr -d ' ')
@@ -1536,8 +1524,6 @@ wt_webtest_cache_write_global_meta() {
 		gen_rev=${WT_WEBTEST_CACHE_GEN_REV}
 		linux_ver=${LINUX_VER}
 		ss_basic_tfo=${ss_basic_tfo}
-		server_resolv_mode=${WT_SERVER_RESOLV_MODE}
-		server_resolver=${server_resolver}
 		node_config_ts=${node_config_ts}
 		xray_count=${xray_count}
 		xray_ids_md5=${xray_ids_md5}
@@ -1548,7 +1534,6 @@ wt_webtest_cache_write_global_meta() {
 
 wt_webtest_cache_is_globally_fresh() {
 	local ids_file="$1"
-	local server_resolver=""
 	local node_config_ts=""
 	local current_count=""
 	local current_ids_md5=""
@@ -1556,8 +1541,6 @@ wt_webtest_cache_is_globally_fresh() {
 	local gen_rev=""
 	local linux_ver=""
 	local cache_tfo=""
-	local cache_resolv_mode=""
-	local cache_resolver=""
 	local cache_node_config_ts=""
 	local cache_xray_count=""
 	local cache_xray_ids_md5=""
@@ -1572,21 +1555,14 @@ wt_webtest_cache_is_globally_fresh() {
 	gen_rev=$(wt_webtest_cache_global_meta_get "gen_rev")
 	linux_ver=$(wt_webtest_cache_global_meta_get "linux_ver")
 	cache_tfo=$(wt_webtest_cache_global_meta_get "ss_basic_tfo")
-	cache_resolv_mode=$(wt_webtest_cache_global_meta_get "server_resolv_mode")
-	cache_resolver=$(wt_webtest_cache_global_meta_get "server_resolver")
 	cache_node_config_ts=$(wt_webtest_cache_global_meta_get "node_config_ts")
 	cache_xray_count=$(wt_webtest_cache_global_meta_get "xray_count")
 	cache_xray_ids_md5=$(wt_webtest_cache_global_meta_get "xray_ids_md5")
-	server_resolver=$(dbus get ss_basic_server_resolv)
-	[ -n "${server_resolver}" ] || server_resolver="-1"
 	node_config_ts=$(fss_get_node_config_ts)
-	[ -n "${cache_resolver}" ] || cache_resolver="-1"
 	[ "${cache_rev}" = "${WT_WEBTEST_CACHE_REV}" ] || return 1
 	[ "${gen_rev}" = "${WT_WEBTEST_CACHE_GEN_REV}" ] || return 1
 	[ "${linux_ver}" = "${LINUX_VER}" ] || return 1
 	[ "${cache_tfo}" = "${ss_basic_tfo}" ] || return 1
-	[ "${cache_resolv_mode}" = "${WT_SERVER_RESOLV_MODE}" ] || return 1
-	[ "${cache_resolver}" = "${server_resolver}" ] || return 1
 	[ "${cache_node_config_ts}" = "${node_config_ts}" ] || return 1
 	[ "${cache_xray_count}" = "${current_count}" ] || return 1
 	[ "${cache_xray_ids_md5}" = "${current_ids_md5}" ] || return 1
@@ -1658,30 +1634,20 @@ wt_webtest_cache_prune_stale() {
 }
 
 wt_webtest_cache_settings_match() {
-	local server_resolver=""
 	local cache_rev=""
 	local gen_rev=""
 	local linux_ver=""
 	local cache_tfo=""
-	local cache_resolv_mode=""
-	local cache_resolver=""
 
 	[ -f "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" ] || return 1
 	cache_rev=$(wt_webtest_cache_global_meta_get "cache_rev")
 	gen_rev=$(wt_webtest_cache_global_meta_get "gen_rev")
 	linux_ver=$(wt_webtest_cache_global_meta_get "linux_ver")
 	cache_tfo=$(wt_webtest_cache_global_meta_get "ss_basic_tfo")
-	cache_resolv_mode=$(wt_webtest_cache_global_meta_get "server_resolv_mode")
-	cache_resolver=$(wt_webtest_cache_global_meta_get "server_resolver")
-	server_resolver=$(dbus get ss_basic_server_resolv)
-	[ -n "${server_resolver}" ] || server_resolver="-1"
-	[ -n "${cache_resolver}" ] || cache_resolver="-1"
 	[ "${cache_rev}" = "${WT_WEBTEST_CACHE_REV}" ] || return 1
 	[ "${gen_rev}" = "${WT_WEBTEST_CACHE_GEN_REV}" ] || return 1
 	[ "${linux_ver}" = "${LINUX_VER}" ] || return 1
 	[ "${cache_tfo}" = "${ss_basic_tfo}" ] || return 1
-	[ "${cache_resolv_mode}" = "${WT_SERVER_RESOLV_MODE}" ] || return 1
-	[ "${cache_resolver}" = "${server_resolver}" ] || return 1
 }
 
 wt_node_json_meta_get() {
@@ -1835,15 +1801,12 @@ wt_webtest_cache_build_node() {
 	local tmp_start=""
 	local tmp_stop=""
 	local current_rev="0"
-	local server_resolver=""
 
 	[ -n "${node_id}" ] || return 1
 	[ -n "${WT_NODE_CACHE_DIR}" ] || return 1
 	[ -n "${LINUX_VER}" ] || LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="$(dbus get ss_basic_tfo)"
 	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="0"
-	[ -n "${WT_SERVER_RESOLV_MODE}" ] || WT_SERVER_RESOLV_MODE="$(dbus get ss_basic_server_resolv_mode)"
-	[ "${WT_SERVER_RESOLV_MODE}" = "2" ] || WT_SERVER_RESOLV_MODE="1"
 	wt_webtest_cache_prepare_dirs || return 1
 	node_type=$(wt_node_get type "${node_id}")
 	cache_mark="cache_${node_id}"
@@ -1900,15 +1863,11 @@ wt_webtest_cache_build_node() {
 	}
 
 	current_rev=$(wt_node_current_rev_get "${node_id}")
-	server_resolver=$(dbus get ss_basic_server_resolv)
-	[ -n "${server_resolver}" ] || server_resolver="-1"
 	cat > "${tmp_meta}" <<-EOF
 		node_type=${node_type}
 		node_rev=${current_rev}
 		linux_ver=${LINUX_VER}
 		ss_basic_tfo=${ss_basic_tfo}
-		server_resolv_mode=${WT_SERVER_RESOLV_MODE}
-		server_resolver=${server_resolver}
 		builder=shell
 		has_start=0
 		has_stop=0
@@ -2730,11 +2689,7 @@ test_11_nv(){
 			# 2. start naiveproxy
 			socks5_port=$(get_rand_port)
 			wt_set_batch_state "${nu}" "booting..."
-			if [ -z "${_server_ip}" ];then
-				run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) >/dev/null 2>&1 &
-			else
-				run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) --host-resolver-rules="MAP $(wt_node_get naive_server ${nu}) ${_server_ip}" >/dev/null 2>&1 &
-			fi
+			run ${TMP2}/wt-naive --listen=socks://127.0.0.1:${socks5_port} --proxy=$(wt_node_get naive_prot ${nu})://$(wt_node_get naive_user ${nu}):$(wt_node_get naive_pass ${nu} | base64_decode)@$(wt_node_get naive_server ${nu}):$(wt_node_get naive_port ${nu}) >/dev/null 2>&1 &
 
 			wait_local_port "${socks5_port}" 20 100000 || sleep 1
 
@@ -3346,7 +3301,7 @@ _get_server_ip() {
 		if [ -n "${SERVER_IP}" ]; then
 			echo $SERVER_IP
 		else
-			echo $1
+			echo ""
 		fi
 		return 0
 	fi
@@ -3365,105 +3320,8 @@ _get_server_ip() {
 		return 0
 	fi
 
-	wt_server_resolv_mode_is_dynamic && {
-		echo ""
-		return 0
-	}
-
-	local ss_basic_server_resolv=$(dbus get ss_basic_server_resolv)
-	[ -n "${ss_basic_server_resolv}" ] || ss_basic_server_resolv="-1"
-
-	if [ "${ss_basic_server_resolv}" -le "0" ];then
-		local count=0
-		local current=$(dbus get ss_basic_lastru)
-		if [ $(number_test ${current}) != "0" ];then
-			if [ "${ss_basic_server_resolv}" == "0" ];then
-				current=$(shuf -i 1-18 -n 1)
-			elif [ "${ss_basic_server_resolv}" == "-1" ];then
-				current=$(shuf -i 1-8 -n 1)
-			elif [ "${ss_basic_server_resolv}" == "-2" ];then
-				current=$(shuf -i 11-18 -n 1)
-			fi
-		fi
-		if [ "${ss_basic_server_resolv}" == "0" ];then
-			if [ ${current} -gt 8 -a ${current} -lt 11 ];then
-				current=11
-			fi
-			if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-				current=1
-			fi
-		fi
-		if [ "${ss_basic_server_resolv}" == "-1" ];then
-			if [ ${current} -lt 1 -o ${current} -gt 8 ];then
-				current=1
-			fi
-		fi
-		if [ "${ss_basic_server_resolv}" == "-2" ];then
-			if [ ${current} -lt 11 -o ${current} -gt 18 ];then
-				current=11
-			fi
-		fi
-		until [ ${count} -eq 18 ]; do
-			SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null | head -n1)
-			__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
-			if [ "$?" != "0" -a "$?" != "1" ]; then
-				SERVER_IP=""
-			fi
-			if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
-				dbus set ss_basic_lastru=${current}
-				break
-			fi
-			let current++
-			if [ "${ss_basic_server_resolv}" == "0" ];then
-				if [ ${current} -gt 8 -a ${current} -lt 11 ];then
-					current=11
-				fi
-				if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-					current=1
-				fi
-			elif [ "${ss_basic_server_resolv}" == "-1" ];then
-				if [ ${current} -lt 1 -o ${current} -gt 8 ];then
-					current=1
-				fi
-			elif [ "${ss_basic_server_resolv}" == "-2" ];then
-				if [ ${current} -lt 11 -o ${current} -gt 18 ];then
-					current=11
-				fi
-			fi
-			let count++
-		done
-	elif [ "${ss_basic_server_resolv}" == "99" ];then
-		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
-		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
-		if [ "$?" != "0" -a "$?" != "1" ]; then
-			SERVER_IP=""
-		fi
-	else
-		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
-		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
-		if [ "$?" != "0" -a "$?" != "1" ]; then
-			SERVER_IP=""
-		fi
-	fi
-
-	# resolve failed
-	if [ -z "${SERVER_IP}" ]; then
-		#echo "$1 域名解析失败！" >>${TMP2}/webtest_log.txt
-		echo ""
-		return 1
-	fi
-
-	# resolve failed
-	if [ "${SERVER_IP}" == "127.0.0.1" ]; then
-		#echo "$1 解析结果为127.0.0.1，域名解析失败！" >>${TMP2}/webtest_log.txt
-		echo ""
-		return 1
-	fi
-	
-	# success resolved
-	#echo "$1 域名解析成功，解析结果：${SERVER_IP}" >>${TMP2}/webtest_log.txt
-	echo $SERVER_IP
-	return 0
+	echo ""
+	return 1
 }
 
 wt_json_escape_simple() {
@@ -3510,85 +3368,6 @@ wt_build_tuic_runtime_json() {
 	escaped_local_addr=$(wt_json_escape_simple "${local_addr}")
 	raw_json=$(printf '%s' "${raw_json}" | sed 's/}[[:space:]]*$/,"local":{"server":"'"${escaped_local_addr}"'"}}/')
 	printf '%s' "${raw_json}" > "${out_file}"
-}
-
-__get_server_resolver() {
-	local idx=$1
-	local res
-	# tcp/udp servers
-	# ------------------ 国内 -------------------
-	# 阿里dns
-	[ "${idx}" == "1" ] && res="223.5.5.5"
-	# DNSPod dns
-	[ "${idx}" == "2" ] && res="119.29.29.29"
-	# 114 dns
-	[ "${idx}" == "3" ] && res="114.114.114.114"
-	# oneDNS 拦截版
-	[ "${idx}" == "4" ] && res="52.80.66.66"
-	# 360安全DNS 电信/铁通/移动
-	[ "${idx}" == "5" ] && res="218.30.118.6"
-	# 360安全DNS 联通
-	[ "${idx}" == "6" ] && res="123.125.81.6"
-	# 清华大学TUNA DNS
-	[ "${idx}" == "7" ] && res="101.6.6.6"
-	# 百度DNS
-	[ "${idx}" == "8" ] && res="180.76.76.76"
-	# ------------------ 国外 -------------------
-	# Google DNS
-	[ "${idx}" == "11" ] && res="8.8.8.8"
-	# Cloudflare DNS
-	[ "${idx}" == "12" ] && res="1.1.1.1"
-	# Quad9 Secured 
-	[ "${idx}" == "13" ] && res="9.9.9.11"
-	# OpenDNS
-	[ "${idx}" == "14" ] && res="208.67.222.222"
-	# DNS.SB
-	[ "${idx}" == "15" ] && res="185.222.222.222"
-	# AdGuard Default servers
-	[ "${idx}" == "16" ] && res="94.140.14.14"
-	# Quad 101 (TaiWan Province)
-	[ "${idx}" == "17" ] && res="101.101.101.101"
-	# CleanBrowsing
-	[ "${idx}" == "18" ] && res="185.228.168.9"
-	if [ "${idx}" == "99" ]; then
-		local user_content=$(dbus get ss_basic_server_resolv_user)
-		if [ -n "${user_content}" ];then
-			local res_ip=$(echo "${user_content}"|awk -F"#|:" '{print $1}')
-			local res_ip=$(__valid_ip ${res_ip})
-			if [ -n "${res_ip}" ];then
-				res="${res_ip}"
-			else
-				res="114.114.114.114"
-			fi
-		else
-			res="114.114.114.114"
-		fi
-	fi
-	echo ${res}
-}
-
-__get_server_resolver_port() {
-	local idx=$1
-	local res
-	if [ "${idx}" == "99" ]; then
-		local user_content=$(dbus get ss_basic_server_resolv_user)
-		if [ -n "${user_content}" ];then
-			local res_port=$(echo "${user_content}"|awk -F"#|:" '{print $2}')
-			local res_port=$(__valid_port ${res_port})
-			if [ -n "${res_port}" ];then
-				res="${res_port}"
-			else
-				res="53"
-			fi
-		else
-			res="53"
-		fi
-	elif [ "${idx}" == "7" -o "${idx}" == "14" ]; then
-		res="5353"
-	else
-		res="53"
-	fi
-	echo ${res}
 }
 
 wait_program(){

@@ -2,24 +2,27 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 
+export FSS_BASE_EAGER_NODE_ENV=0
+export FSS_BASE_SKIP_SHUNT_SOURCE=1
 source /koolshare/scripts/ss_base.sh
+unset FSS_BASE_EAGER_NODE_ENV
+unset FSS_BASE_SKIP_SHUNT_SOURCE
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
 #-----------------------------------------------
 # Variable definitions
-THREAD=$(grep -c '^processor' /proc/cpuinfo)
-dbus set ss_basic_version_local=$(cat /koolshare/ss/version)
+THREAD=""
 LOG_FILE=/tmp/upload/ss_log.txt
 CONFIG_FILE=/koolshare/ss/ssr.json
 LOCK_FILE=/var/lock/koolss.lock
 DNSC_PORT=53
-ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
-ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
-lan_ipaddr=$(nvram get lan_ipaddr)
-ip_prefix_hex=$(nvram get lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("00/0xffffff00\n")}')
-WAN_ACTION=$(ps | grep /jffs/scripts/wan-start | grep -v grep)
-NAT_ACTION=$(ps | grep /jffs/scripts/nat-start | grep -v grep)
-WEB_ACTION=$(ps | grep "ss_config.sh" | grep -v grep)
+ISP_DNS1=""
+ISP_DNS2=""
+lan_ipaddr=""
+ip_prefix_hex=""
+WAN_ACTION=""
+NAT_ACTION=""
+WEB_ACTION=""
 ARG_OBFS=""
 OUTBOUNDS="[]"
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
@@ -34,6 +37,18 @@ set_lock() {
 unset_lock() {
 	flock -u 1000
 	rm -rf "$LOCK_FILE"
+}
+
+refresh_runtime_context() {
+	[ -n "${THREAD}" ] || THREAD=$(grep -c '^processor' /proc/cpuinfo)
+	dbus set ss_basic_version_local=$(cat /koolshare/ss/version)
+	ISP_DNS1=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 1p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+	ISP_DNS2=$(nvram get wan0_dns | sed 's/ /\n/g' | grep -v 0.0.0.0 | grep -v 127.0.0.1 | sed -n 2p | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:")
+	lan_ipaddr=$(nvram get lan_ipaddr)
+	ip_prefix_hex=$(nvram get lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("00/0xffffff00\n")}')
+	WAN_ACTION=$(ps | grep /jffs/scripts/wan-start | grep -v grep)
+	NAT_ACTION=$(ps | grep /jffs/scripts/nat-start | grep -v grep)
+	WEB_ACTION=$(ps | grep "ss_config.sh" | grep -v grep)
 }
 
 get_model_name(){
@@ -600,10 +615,12 @@ check_chn_public_ip(){
 prepare_system() {
 	# prepare system
 	echo_date "🛠️ 一些准备工作，请稍后..."
+	fss_base_load_current_node_env
+	refresh_runtime_context
 	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
 	set_default "ss_basic_block_quic" "1"
 	set_default "ss_basic_proxy_ipv6" "0"
-	set_default "ss_basic_server_resolv_mode" "1"
+	normalize_server_resolv_mode
 	
 	# 0. set skin, 不管是否能启动成功，都检测下皮肤是否正确，如果不对，则设置下皮肤
 	set_skin
@@ -875,32 +892,15 @@ get_tproxy_port6() {
 }
 
 normalize_server_resolv_mode() {
-	case "${ss_basic_server_resolv_mode}" in
-	1|2)
-		;;
-	*)
-		ss_basic_server_resolv_mode="1"
-		dbus set ss_basic_server_resolv_mode="1"
-		;;
-	esac
+	ss_basic_server_resolv_mode="1"
+	dbus set ss_basic_server_resolv_mode="1"
+	dbus remove ss_basic_server_resolv
+	dbus remove ss_basic_server_resolv_user
+	dbus remove ss_basic_lastru
 }
 
 server_resolv_mode_is_dynamic() {
-	[ "${ss_basic_server_resolv_mode}" = "1" ]
-}
-
-server_resolv_mode_is_preresolve() {
-	[ "${ss_basic_server_resolv_mode}" = "2" ]
-}
-
-clear_current_node_host_snapshot() {
-	rm -f /tmp/ss_host.conf
-}
-
-write_current_node_host_snapshot() {
-	[ -n "${ss_basic_server_orig}" ] || return 1
-	[ -n "${ss_basic_server_ip}" ] || return 1
-	echo "address=/${ss_basic_server_orig}/${ss_basic_server_ip}" >/tmp/ss_host.conf
+	return 0
 }
 
 clear_current_node_server_ip() {
@@ -1037,37 +1037,25 @@ current_node_server_is_domain_target() {
 	[ -n "$(is_domain "${CURRENT_NODE_SERVER_HOST}")" ]
 }
 
-current_node_server_uses_runtime_dns() {
-	normalize_server_resolv_mode
-	server_resolv_mode_is_dynamic || return 1
-	current_node_server_is_domain_target || return 1
-	return 0
-}
-
 refresh_node_direct_domain_file() {
-	if server_resolv_mode_is_dynamic; then
-		fss_refresh_node_direct_cache
-		fss_airport_dns_override_load >/dev/null 2>&1 || true
-		if [ "${AIRPORT_DNS_ACTIVE}" = "1" ];then
-			fss_refresh_airport_special_runtime_domain_files >/dev/null 2>&1 || true
-			if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
-				cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
-			else
-				rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
-			fi
+	fss_require_base_dns >/dev/null 2>&1 || true
+	fss_refresh_node_direct_cache
+	fss_airport_dns_override_load >/dev/null 2>&1 || true
+	if [ "${AIRPORT_DNS_ACTIVE}" = "1" ];then
+		fss_refresh_airport_special_runtime_domain_files >/dev/null 2>&1 || true
+		if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
+			cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 		else
-			rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >/dev/null 2>&1
-			fss_sync_node_direct_runtime
+			rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 		fi
 	else
-		rm -f "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 		rm -f "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_FILE}" "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_AIRPORT_DNS_FILE}" >/dev/null 2>&1
+		fss_sync_node_direct_runtime
 	fi
 }
 
 refresh_node_direct_dns() {
 	refresh_node_direct_domain_file || return 1
-	server_resolv_mode_is_dynamic || return 0
 	[ "${ss_basic_enable}" = "1" ] || return 0
 	case "${ss_basic_dns_plan}" in
 	1|2)
@@ -1103,7 +1091,6 @@ refresh_current_node_server_ip_runtime() {
 }
 
 should_bootstrap_dns_before_proxy() {
-	server_resolv_mode_is_dynamic || return 1
 	[ -n "${ss_basic_server_orig}" ] || return 1
 	[ -n "$(is_domain "${ss_basic_server_orig}")" ] || return 1
 	return 0
@@ -1132,227 +1119,6 @@ rewrite_xray_like_outbound_server() {
 	esac
 
 	mv -f "${tmp_file}" "${config_file}"
-}
-
-__get_server_resolver() {
-	local idx=$1
-	local res
-		# tcp/udp servers
-		# ------------------ 国内 -------------------
-		# 阿里dns
-		[ "${idx}" == "1" ] && res="223.5.5.5"
-		# DNSPod dns
-		[ "${idx}" == "2" ] && res="119.29.29.29"
-		# 114 dns
-		[ "${idx}" == "3" ] && res="114.114.114.114"
-		# oneDNS 拦截版
-		[ "${idx}" == "4" ] && res="52.80.66.66"
-		# 360安全DNS 电信/铁通/移动
-		[ "${idx}" == "5" ] && res="218.30.118.6"
-		# 360安全DNS 联通
-		[ "${idx}" == "6" ] && res="123.125.81.6"
-		# 清华大学TUNA DNS
-		[ "${idx}" == "7" ] && res="101.6.6.6"
-		# 百度DNS
-		[ "${idx}" == "8" ] && res="180.76.76.76"
-		# ------------------ 国外 -------------------
-		# Google DNS
-		[ "${idx}" == "11" ] && res="8.8.8.8"
-		# Cloudflare DNS
-		[ "${idx}" == "12" ] && res="1.1.1.1"
-		# Quad9 Secured 
-		[ "${idx}" == "13" ] && res="9.9.9.11"
-		# OpenDNS
-		[ "${idx}" == "14" ] && res="208.67.222.222"
-		# DNS.SB
-		[ "${idx}" == "15" ] && res="185.222.222.222"
-		# AdGuard Default servers
-		[ "${idx}" == "16" ] && res="94.140.14.14"
-		# Quad 101 (TaiWan Province)
-		[ "${idx}" == "17" ] && res="101.101.101.101"
-		# CleanBrowsing
-		[ "${idx}" == "18" ] && res="185.228.168.9"
-
-	if [ "${idx}" == "99" ]; then
-		local user_content=${ss_basic_server_resolv_user}
-		if [ -n "${user_content}" ];then
-			local res_ip=$(echo "${user_content}"|awk -F"#|:" '{print $1}')
-			local res_ip=$(__valid_ip ${res_ip})
-			if [ -n "${res_ip}" ];then
-				res="${res_ip}"
-			else
-				res="114.114.114.114"
-			fi
-		else
-			res="114.114.114.114"
-		fi
-	fi
-	echo ${res}
-}
-
-__get_server_resolver_port() {
-	local idx=$1
-	local res
-	if [ "${idx}" == "99" ]; then
-		local user_content=${ss_basic_server_resolv_user}
-		if [ -n "${user_content}" ];then
-			local res_port=$(echo "${user_content}"|awk -F"#|:" '{print $2}')
-			local res_port=$(__valid_port ${res_port})
-			if [ -n "${res_port}" ];then
-				res="${res_port}"
-			else
-				res="53"
-			fi
-		else
-			res="53"
-		fi
-	elif [ "${idx}" == "7" -o "${idx}" == "14" ]; then
-		res="5353"
-	else
-		res="53"
-	fi
-	echo ${res}
-}
-
-__resolve_server_domain() {
-	local domain1=$(echo "$1" | grep -E "^https://|^http://|/")
-	local domain2=$(echo "$1" | grep -E "\.")
-	if [ -n "${domain1}" -o -z "${domain2}" ]; then
-		# not ip, not domain
-		return 2
-	fi
-
-	if [ -z "${ss_basic_server_resolv}" ];then
-		ss_basic_server_resolv="-1"
-		dbus set ss_basic_server_resolv="-1"
-	fi
-
-	# start to resolv, udp dns lookup
-	if [ "${ss_basic_server_resolv}" -le "0" ];then
-		local count=0
-		local current=${ss_basic_lastru}
-		if [ $(number_test ${current}) != "0" ];then
-			# 如果上次解析成功的DNS不存在，则随机一个
-			if [ "${ss_basic_server_resolv}" == "0" ];then
-				local current=$(shuf -i 1-18 -n 1)
-			elif [ "${ss_basic_server_resolv}" == "-1" ];then
-				local current=$(shuf -i 1-8 -n 1)
-			elif [ "${ss_basic_server_resolv}" == "-2" ];then
-				local current=$(shuf -i 11-18 -n 1)
-			fi
-		fi
-		# check current value
-		if [ "${ss_basic_server_resolv}" == "0" ];then
-			# 国内 + 国外自动选择，区间为 1-7和11-18
-			if [ ${current} -gt 8 -a ${current} -lt 11 ];then
-				current=11
-			fi
-			if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-				current=1
-			fi
-		fi
-		if [ "${ss_basic_server_resolv}" == "-1" ];then
-			# 国内自动选择，区间为 1-7
-			if [ ${current} -lt 1 -o ${current} -gt 8 ];then
-				current=1
-			fi
-		fi
-		if [ "${ss_basic_server_resolv}" == "-2" ];then
-			# 国外自动选择，区间为 11-18
-			if [ ${current} -lt 11 -o ${current} -gt 18 ];then
-				current=11
-			fi
-		fi
-		# 只解析一轮
-		until [ ${count} -eq 18 ]; do
-			echo_date "尝试解析$(__get_type_abbr_name)服务器域名，自动选取DNS-${current}：$(__get_server_resolver ${current}):$(__get_server_resolver_port ${current})"
-			SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${current}) -t 2 -i 1 @$(__get_server_resolver ${current}) $1 2>/dev/null | head -n1)
-			__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
-			if [ "$?" != "0" -a "$?" != "1" ]; then
-				SERVER_IP=""
-			fi
-			if [ -n "${SERVER_IP}" -a "${SERVER_IP}" != "127.0.0.1" ]; then
-				dbus set ss_basic_lastru=${current}
-				break
-			fi
-			
-			let current++
-			if [ "${ss_basic_server_resolv}" == "0" ];then
-				if [ ${current} -gt 8 -a ${current} -lt 11 ];then
-					echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
-					current=11
-				fi
-				if [ ${current} -lt 1 -o ${current} -gt 18 ];then
-					current=1
-					echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
-				else
-					echo_date "解析失败！自动切换到下一个DNS服务器！"
-				fi
-			elif [ "${ss_basic_server_resolv}" == "-1" ];then
-				if [ ${current} -lt 1 -o ${current} -gt 8 ];then
-					current=1
-					echo_date "解析失败！自动切换到国内组列表第一个DNS服务器！"
-				else
-					echo_date "解析失败！自动切换到国内组列表下一个DNS服务器！"
-				fi
-			elif [ "${ss_basic_server_resolv}" == "-2" ];then
-				if [ ${current} -lt 11 -o ${current} -gt 18 ];then
-					current=11
-					echo_date "解析失败！自动切换到国外组列表第一个DNS服务器！"
-				else
-					echo_date "解析失败！自动切换到国外组列表下一个DNS服务器！"
-				fi
-			fi
-			
-			let count++
-		done
-	elif [ "${ss_basic_server_resolv}" == "99" ];then
-		# 自定义udp解析服务器
-		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用自定义DNS服务器：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
-		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
-		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
-		if [ "$?" != "0" -a "$?" != "1" ]; then
-			SERVER_IP=""
-		fi
-		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
-		fi
-	else
-		# 指定udp解析服务器
-		if [ -z "${ss_basic_server_resolv}" ];then
-			ss_basic_server_resolv=3
-		fi
-		if [ "${ss_basic_server_resolv}" == "2" -a -z "${ISP_DNS2}" ];then
-			# 如果ISPDNS-2不存在，强制使用ISPDNS-1
-			ss_basic_server_resolv=1
-		fi
-		if [ "${ss_basic_server_resolv}" == "1" -a -z "${ISP_DNS1}" ];then
-			# 如果ISPDNS-1不存在，强制使用公共DNS：223.5.5.5
-			ss_basic_server_resolv=3
-		fi
-		echo_date "尝试解析$(__get_type_abbr_name)服务器域名，使用指定DNS-${ss_basic_server_resolv}：$(__get_server_resolver ${ss_basic_server_resolv}):$(__get_server_resolver_port ${ss_basic_server_resolv})"
-		SERVER_IP=$(run dnsclient -46 -p $(__get_server_resolver_port ${ss_basic_server_resolv}) -t 2 -i 1 @$(__get_server_resolver ${ss_basic_server_resolv}) $1 2>/dev/null | head -n1)
-		__valid_ip46 "${SERVER_IP}" >/dev/null 2>&1
-		if [ "$?" != "0" -a "$?" != "1" ]; then
-			SERVER_IP=""
-		fi
-		if [ -z "${SERVER_IP}" -o "${SERVER_IP}" == "127.0.0.1" ]; then
-			echo_date "解析失败！请选择其它DNS服务器 或 其它节点域名解析方案！"
-		fi
-	fi
-
-	# resolve failed
-	if [ -z "${SERVER_IP}" ]; then
-		return 1
-	fi
-
-	# resolve failed
-	if [ "${SERVER_IP}" == "127.0.0.1" ]; then
-		return 1
-	fi
-	
-	# success resolved
-	return 0
 }
 
 # ================================= ss stop ===============================
@@ -1529,9 +1295,9 @@ shunt_configs_equivalent() {
 
 init_current_node_server_state() {
 	normalize_server_resolv_mode
-	clear_current_node_host_snapshot
 	clear_current_node_server_ip
 	resolve_current_node_server_meta
+	fss_require_base_dns >/dev/null 2>&1 || true
 	fss_airport_dns_override_load
 
 	ss_basic_server_orig="${CURRENT_NODE_SERVER_HOST}"
@@ -1570,33 +1336,8 @@ resolv_server_ip() {
 	esac
 
 	echo_date "检测到你的$(__get_type_abbr_name)服务器：【${ss_basic_server_orig}】不是ip格式！"
-	if server_resolv_mode_is_dynamic; then
-		echo_date "当前使用【动态解析】模式，保留域名写入配置，并交由DNS方案中的直连上游解析。"
-		return 0
-	fi
-
-	__resolve_server_domain "${ss_basic_server_orig}"
-	case $? in
-	0)
-		echo_date "$(__get_type_abbr_name)服务器【${ss_basic_server_orig}】的ip地址解析成功：${SERVER_IP}"
-		ss_basic_server="${SERVER_IP}"
-		record_current_node_server_ip "${SERVER_IP}"
-		write_current_node_host_snapshot >/dev/null 2>&1
-		;;
-	1)
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		echo_date "$(__get_type_abbr_name)服务器的ip地址解析失败，预解析模式将回退为写入原始域名继续运行！"
-		echo_date "请尝试在【DNS设定】-【预解析所用DNS方案】处更换节点服务器的解析方案后重试！"
-		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-		clear_current_node_server_ip
-		ss_basic_server="${ss_basic_server_orig}"
-		;;
-	2)
-		echo_date "错误2！！检测到你设置的服务器:${ss_basic_server_orig}既不是ip地址，也不是域名格式！"
-		echo_date "请更正你的错误然后重试！！"
-		close_in_five flag
-		;;
-	esac
+	echo_date "当前使用【动态解析】模式，保留域名写入配置，并交由DNS方案中的直连上游解析。"
+	return 0
 }
 
 # create shadowsocks config file...
@@ -1697,6 +1438,7 @@ dbus_eset(){
 }
 
 start_dns_x(){
+	fss_require_base_dns >/dev/null 2>&1 || true
 	set_default "ss_basic_dns_plan" "1"
 	set_default "ss_basic_dns_serverx" "0"
 	local runtime_mode="$(get_runtime_proxy_mode)"
@@ -5033,11 +4775,7 @@ start_naive(){
 	detect_running_status2 ipt2socks 23456
 	
 	echo_date "开启NaïveProxy主进程..."
-	if server_resolv_mode_is_preresolve && [ -n "${ss_basic_server_ip}" ] && [ -n "$(is_domain "${ss_basic_server_orig}")" ];then
-		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server_orig}:${ss_basic_naive_port} --host-resolver-rules="MAP ${ss_basic_server_orig} ${ss_basic_server_ip}"
-	else
-		run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server}:${ss_basic_naive_port}
-	fi
+	run_bg naive --listen=socks://127.0.0.1:23456 --proxy=${ss_basic_naive_prot}://${ss_basic_naive_user}:${ss_basic_password}@${ss_basic_server}:${ss_basic_naive_port}
 	detect_running_status2 naive 23456
 }
 
@@ -5099,20 +4837,11 @@ start_tuic(){
 
 	local tuic_server_is_domain=""
 	[ -n "$(is_domain "${tuic_server}")" ] && tuic_server_is_domain="1"
-	if [ -n "${tuic_server_is_domain}" ] && server_resolv_mode_is_preresolve && [ -n "${ss_basic_server_ip}" ];then
-		echo_date "检测到tuic节点使用【预解析】模式，写入 relay.ip：${ss_basic_server_ip}"
-		cat /koolshare/ss/tuic.json | run jq --arg addr "${ss_basic_server_ip}" '.relay.ip = $addr' | run sponge /koolshare/ss/tuic.json
+	cat /koolshare/ss/tuic.json | run jq 'del(.relay.ip)' | run sponge /koolshare/ss/tuic.json
+	if [ -n "${tuic_server_is_domain}" ];then
+		echo_date "检测到tuic节点使用【动态解析】模式，移除 relay.ip，保留 relay.server 域名直连解析。"
 	else
-		cat /koolshare/ss/tuic.json | run jq 'del(.relay.ip)' | run sponge /koolshare/ss/tuic.json
-		if [ -n "${tuic_server_is_domain}" ];then
-			if server_resolv_mode_is_dynamic; then
-				echo_date "检测到tuic节点使用【动态解析】模式，移除 relay.ip，保留 relay.server 域名直连解析。"
-			else
-				echo_date "检测到tuic节点未拿到有效的预解析结果，移除 relay.ip，保留 relay.server 继续启动。"
-			fi
-		else
-			echo_date "检测到tuic配置server已直接使用ip地址：${tuic_server}，跳过域名解析。"
-		fi
+		echo_date "检测到tuic配置server已直接使用ip地址：${tuic_server}，跳过域名解析。"
 	fi
 	
 	echo_date "开启ipt2socks进程..."
@@ -6765,29 +6494,7 @@ set_ss_reboot_job() {
 
 remove_ss_trigger_job() {
 	if [ -n "$(cru l | grep ss_tri_check)" ]; then
-		echo_date "删除插件触发重启定时任务..."
 		sed -i '/ss_tri_check/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
-	fi
-}
-
-set_ss_trigger_job() {
-	if current_node_server_uses_runtime_dns; then
-		echo_date "检测到当前节点使用【动态解析】且服务器地址为域名，跳过触发重启任务设置。"
-		remove_ss_trigger_job
-		return 0
-	fi
-
-	if [ "$ss_basic_tri_reboot_time" == "0" ]; then
-		remove_ss_trigger_job
-	else
-		if [ "$ss_basic_tri_reboot_policy" == "1" ]; then
-			echo_date "设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启科学上网插件..."
-		else
-			echo_date "设置每隔$ss_basic_tri_reboot_time分钟检查服务器IP地址，如果IP发生变化，则重启dnsmasq..."
-		fi
-		echo_date "科学上网插件触发重启功能的日志将显示再系统日志内。"
-		cru d ss_tri_check >/dev/null 2>&1
-		cru a ss_tri_check "*/$ss_basic_tri_reboot_time * * * * /koolshare/scripts/ss_reboot_job.sh check_ip"
 	fi
 }
 
@@ -6910,6 +6617,9 @@ check_frn_public_ip(){
 
 
 	# 检测节点解析结果
+	if [ -z "${ss_basic_server_ip}" ] && [ -n "${ss_basic_server_orig}" ] && [ -n "$(is_domain "${ss_basic_server_orig}")" ]; then
+		refresh_current_node_server_ip_runtime >/dev/null 2>&1 || true
+	fi
 	if [ -n "${ss_basic_server_ip}" ]; then
 		__valid_ip46 "${ss_basic_server_ip}"
 		if [ "$?" == "0" ]; then
@@ -6983,6 +6693,10 @@ disable_ss() {
 	flush_ipset
 	kill_cron_job
 	rm -rf /tmp/upload/fancyss_node_name.txt
+	dbus remove ss_basic_tri_reboot_time
+	dbus remove ss_basic_server_resolv
+	dbus remove ss_basic_server_resolv_user
+	dbus remove ss_basic_lastru
 	dbus set ss_basic_status="0"
 	echo_date ------------------------ 【科学上网】已关闭 ----------------------------
 }
@@ -7083,7 +6797,6 @@ apply_ss() {
 	auto_start
 	write_cron_job
 	set_ss_reboot_job
-	set_ss_trigger_job
 	write_numbers
 	finish_start
 	ss_post_start

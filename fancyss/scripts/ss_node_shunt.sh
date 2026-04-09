@@ -164,16 +164,7 @@ fss_shunt_is_active() {
 fss_shunt_cleanup_runtime() {
 	rm -rf "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1
 	rm -f "${FSS_SHUNT_RUNTIME_PROXY_FILE}" >/dev/null 2>&1
-	unset WT_SERVER_RESOLV_MODE
 	unset FSS_SHUNT_RUNTIME_READY FSS_SHUNT_RUNTIME_READY_KEY
-}
-
-wt_server_resolv_mode_is_dynamic() {
-	[ "${WT_SERVER_RESOLV_MODE}" = "1" ]
-}
-
-wt_server_resolv_mode_is_preresolve() {
-	[ "${WT_SERVER_RESOLV_MODE}" = "2" ]
 }
 
 fss_shunt_runtime_mode() {
@@ -1418,14 +1409,6 @@ fss_shunt_emit_routing_rules_json() {
 	done < "${FSS_SHUNT_RUNTIME_ACTIVE_FILE}"
 }
 
-fss_shunt_get_server_resolv_mode() {
-	local mode="${ss_basic_server_resolv_mode}"
-
-	[ -n "${mode}" ] || mode="$(dbus get ss_basic_server_resolv_mode)"
-	[ "${mode}" = "2" ] || mode="1"
-	printf '%s\n' "${mode}"
-}
-
 fss_shunt_write_hot_reload_state() {
 	local out_file="${1:-${FSS_SHUNT_HOT_STATE_FILE}}"
 	local backend=""
@@ -1503,24 +1486,15 @@ fss_shunt_get_webtest_cache_meta() {
 fss_shunt_webtest_cache_settings_match() {
 	local cache_linux_ver=""
 	local cache_tfo=""
-	local cache_resolv_mode=""
-	local cache_resolver=""
-	local server_resolver=""
 
 	[ -n "${LINUX_VER}" ] || LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="$(dbus get ss_basic_tfo)"
 	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="0"
 	cache_linux_ver="$(fss_shunt_get_webtest_cache_meta linux_ver)"
 	cache_tfo="$(fss_shunt_get_webtest_cache_meta ss_basic_tfo)"
-	cache_resolv_mode="$(fss_shunt_get_webtest_cache_meta server_resolv_mode)"
-	cache_resolver="$(fss_shunt_get_webtest_cache_meta server_resolver)"
-	server_resolver="$(dbus get ss_basic_server_resolv)"
-	[ -n "${server_resolver}" ] || server_resolver="-1"
-	[ -n "${cache_resolver}" ] || cache_resolver="-1"
 	[ "${cache_linux_ver}" = "${LINUX_VER}" ] || return 1
 	[ "${cache_tfo}" = "${ss_basic_tfo}" ] || return 1
-	[ "${cache_resolv_mode}" = "${WT_SERVER_RESOLV_MODE}" ] || return 1
-	[ "${cache_resolver}" = "${server_resolver}" ]
+	return 0
 }
 
 fss_shunt_webtest_cache_node_is_fresh() {
@@ -1531,9 +1505,6 @@ fss_shunt_webtest_cache_node_is_fresh() {
 	local cached_rev=""
 	local cache_linux_ver=""
 	local cache_tfo=""
-	local cache_resolv_mode=""
-	local cache_resolver=""
-	local server_resolver=""
 
 	[ -n "${node_id}" ] || return 1
 	[ -s "${cache_out}" ] || return 1
@@ -1541,23 +1512,16 @@ fss_shunt_webtest_cache_node_is_fresh() {
 	[ -n "${LINUX_VER}" ] || LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="$(dbus get ss_basic_tfo)"
 	[ -n "${ss_basic_tfo}" ] || ss_basic_tfo="0"
-	[ -n "${WT_SERVER_RESOLV_MODE}" ] || WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
-	server_resolver="$(dbus get ss_basic_server_resolv)"
-	[ -n "${server_resolver}" ] || server_resolver="-1"
 	current_rev="$(fss_get_node_field_plain "${node_id}" "_rev" 2>/dev/null)"
 	[ -n "${current_rev}" ] || current_rev="0"
 	cached_rev="$(sed -n 's/^node_rev=//p' "${meta_file}" | sed -n '1p')"
 	[ -n "${cached_rev}" ] || cached_rev="0"
 	cache_linux_ver="$(sed -n 's/^linux_ver=//p' "${meta_file}" | sed -n '1p')"
 	cache_tfo="$(sed -n 's/^ss_basic_tfo=//p' "${meta_file}" | sed -n '1p')"
-	cache_resolv_mode="$(sed -n 's/^server_resolv_mode=//p' "${meta_file}" | sed -n '1p')"
-	cache_resolver="$(sed -n 's/^server_resolver=//p' "${meta_file}" | sed -n '1p')"
 	[ "${cached_rev}" = "${current_rev}" ] || return 1
 	[ "${cache_linux_ver}" = "${LINUX_VER}" ] || return 1
 	[ "${cache_tfo}" = "${ss_basic_tfo}" ] || return 1
-	[ "${cache_resolv_mode}" = "${WT_SERVER_RESOLV_MODE}" ] || return 1
-	[ -n "${cache_resolver}" ] || cache_resolver="-1"
-	[ "${cache_resolver}" = "${server_resolver}" ]
+	return 0
 }
 
 fss_shunt_need_webtest_cache_rebuild() {
@@ -1701,7 +1665,6 @@ fss_shunt_try_prepare_webtest_outbounds() {
 	if fss_shunt_try_prepare_node_tool_runtime_artifacts "${ids_file}"; then
 		return 0
 	fi
-	WT_SERVER_RESOLV_MODE="$(fss_shunt_get_server_resolv_mode)"
 	fss_refresh_node_json_cache >/dev/null 2>&1 || return 1
 	if fss_shunt_need_webtest_cache_rebuild "${ids_file}"; then
 		fss_shunt_log "复用webtest节点配置缓存：检测到缺失或过期，开始增量更新。"

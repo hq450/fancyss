@@ -4455,17 +4455,6 @@ function refresh_options() {
 	}
 	option0.val(get_saved_current_node_id() || get_first_node_id());
 	option3.val(get_failover_node_id() || get_first_node_id());
-	// refresh node dns resolv option
-	if ((db_ss["ss_basic_server_resolv_mode"] || "1") == "2"){
-		if (db_ss["ss_basic_server_resolv"] <= "0"){
-			var option_value = db_ss["ss_basic_lastru"];
-			var option_text = $("#ss_basic_server_resolv").find('option[value=' + option_value + ']').text();
-			$('#ss_basic_server_resolv option[value=' + option_value + ']').text(option_text + '✅');
-		}else{
-			var option_text = $("#ss_basic_server_resolv").find('option[value=' + db_ss["ss_basic_server_resolv"] + ']').text();
-			$('#ss_basic_server_resolv option[value=' + db_ss["ss_basic_server_resolv"] + ']').text(option_text + '✅');
-		}
-	}
 	// 节点列表显示行数
 	$("#ss_basic_row").find('option').remove().end();
 	for (var i = 10; i <= 27; i++) {
@@ -4583,10 +4572,6 @@ function save() {
 	  "ss_basic_inter_pre",
 	  "ss_basic_time_hour",
 	  "ss_basic_time_min",
-	  "ss_basic_tri_reboot_time",
-	  "ss_basic_server_resolv_mode",
-	  "ss_basic_server_resolv",
-	  "ss_basic_server_resolv_user",
 	  "ss_basic_furl",
 	  "ss_basic_curl",
 	  "ss_basic_latency_batch",
@@ -5570,24 +5555,13 @@ function sync_chinadns_ipv6_drop_proxy_ui() {
 function update_visibility() {
 	var a  = E("ss_basic_rule_update").value == "1";
 	var b  = E("ss_basic_node_update").value == "1";
-	var d  = E("ss_basic_tri_reboot_time").value;
-	var e0 = E("ss_basic_server_resolv_mode").value;
-	var e = E("ss_basic_server_resolv").value;
 	var f = E("ss_basic_dig_opt").value;
 
 	showhide("ss_basic_rule_update_time", a);
 	showhide("update_choose", a);
 	showhide("ss_basic_node_update_day", b);
 	showhide("ss_basic_node_update_hr", b);
-	showhide("ss_basic_tri_reboot_time_note", (d != "0"));
-	showhide("server_resolve_dns_row", e0 == "2");
-	showhide("ss_basic_server_resolv_user", e0 == "2" && e == "99");
 	showhide("ss_basic_dig_opt_usr", f == "99");
-	if (e0 == "2") {
-		setTimeout(function() {
-			change_select_width('#ss_basic_server_resolv');
-		}, 0);
-	}
 
 	// china-1
 	var i  = E("ss_basic_chng_china_dns_1_chk").checked;
@@ -8920,8 +8894,6 @@ var tab_actions = {
 		for (var i = 0; i < selects.length; i++) {
 			change_select_width(selects[i], '1');
 		}
-		change_select_width('#ss_basic_server_resolv_mode');
-		change_select_width('#ss_basic_server_resolv');
 		change_select_width('#ss_basic_dig_opt');
 		update_visibility();
 		autoTextarea(E("ss_dnsmasq"), 0, 500);
@@ -10942,13 +10914,6 @@ function set_cron(action) {
 		} else {
 			dbus_post["ss_basic_custom"] = Base64.encode(E("ss_basic_custom").value);
 		}
-	}else if(action == 2){
-		//设定触发重启
-		db_ss["ss_basic_action"] = "17";
-		var cron_params2 = ["ss_basic_tri_reboot_time"]; //for ss
-		for (var i = 0; i < cron_params2.length; i++) {
-			dbus_post[cron_params2[i]] = E(cron_params2[i]).value;
-		}
 	}
 	push_data("ss_reboot_job.sh", action, dbus_post);
 }
@@ -11579,37 +11544,6 @@ function toggleKeyMask(o, show){
 																  ["1", "chinadns-ng"]
 																  ,["2", "smartdns"]
 																  ];
-														// 节点域名解析DNS方案： udp选项
-														option_server_resolve = [
-																			 ["group", "自动选取"],
-																			 ["-1", "自动选取模式（国内组）"],
-																			 ["-2", "自动选取模式（仅国组）"],
-																			 ["0", "自动选取模式（国内组 + 国外组）"],
-																			 ["group", "国内DNS"],
-																			 ["1", "阿里DNS【223.5.5.5】"],
-																			 ["2", "DNSPod DNS【119.29.29.29】"],
-																			 ["3", "114DNS【114.114.114.114】"],
-																			 ["4", "OneDNS【52.80.66.66】"],
-																			 ["5", "360安全DNS 电信/铁通/移动【218.30.118.6】"],
-																			 ["6", "360安全DNS 联通【123.125.81.6】"],
-																			 ["7", "清华大学TUNA DNS【101.6.6.6:5353】"],
-																			 ["8", "百度DNS【180.76.76.76】"],
-																			 ["group", "国外DNS"],
-																			 ["11", "Google DNS【8.8.8.8】"],
-																			 ["12", "CloudFlare DNS【1.1.1.1】"],
-																			 ["13", "Quad9 Secured【9.9.9.11】"],
-																			 ["14", "OpenDNS【208.67.222.222】"],
-																			 ["15", "DNS.SB【185.222.222.222】"],
-																			 ["16", "AdGuard【94.140.14.14】"],
-																			 ["17", "Quad101【101.101.101.101】"],
-																			 ["18", "CleanBrowsing【185.228.168.9】"],
-																			 ["group", "自定义DNS"],
-																			 ["99", "自定义DNS (udp)"]
-																			 ];
-														option_server_resolve_mode = [
-																			 ["1", "动态解析"],
-																			 ["2", "预解析"]
-																			 ];
 														option_domain_for_dig = [
 																			 ["group", "国内域名"],
 																			 ["www.baidu.com", "www.baidu.com"],
@@ -11764,15 +11698,7 @@ function toggleKeyMask(o, show){
 															{ title: '重启dnsmasq', rid: 'ss_dnsmasq_restart', multi: [	
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="restart_dnsmaq()">重启dnsmasq</a>'},
 															]},	
-															// server dns resolver
-																{ title: '节点服务器地址解析方式', multi: [
-																	{ id: 'ss_basic_server_resolv_mode', type:'select', func:'u', options:option_server_resolve_mode, style:'width:112px;', value:'1'},
-																]},
-																{ title: '预解析所用DNS方案', rid:'server_resolve_dns_row', hint:'107', multi: [
-																	{ id: 'ss_basic_server_resolv', type:'select', func:'u', options:option_server_resolve, style:'width:160px;', value:'-1'},
-																	{ id: 'ss_basic_server_resolv_user', type: 'text', style:'width:145px;', ph:'176.103.130.130:5353', value:'176.103.130.130:5353'},
-																]},
-																{ title: '自定义dnsmasq', rid: 'ss_dnsmasq_cus', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
+															{ title: '自定义dnsmasq', rid: 'ss_dnsmasq_cus', id:'ss_dnsmasq', type:'textarea', hint:'34', rows:'12', ph:ph3},
 															]);
 															// chinadns-ng preset DNS servers moved to /res/dns_servers.json.js
 
@@ -12204,7 +12130,6 @@ function toggleKeyMask(o, show){
 															_tmp[1] = _i + "分";
 															option_rebm.push(_tmp);
 														}
-														var option_trit = [["0", "关闭"], ["2", "每隔2分钟"], ["5", "每隔5分钟"], ["10", "每隔10分钟"], ["15", "每隔15分钟"], ["20", "每隔20分钟"], ["25", "每隔25分钟"], ["30", "每隔30分钟"]];
 														var weburl = ["developer.google.cn/generate_204", "connectivitycheck.gstatic.com/generate_204", "www.gstatic.com/generate_204"];
 														$('#table_addons').forms([
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">备份/恢复</td></tr>'},
@@ -12236,11 +12161,6 @@ function toggleKeyMask(o, show){
 																{ id:'ss_basic_time_min', type:'select', style:'width:auto', css:'re1 re2 re3 re4_3 re5', options:option_rebm, value:'0'},
 																{ suffix:'&nbsp;<span class="re1 re2 re3 re4 re5">重启插件</span>'},
 																{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="set_cron(1)">保存设置</a>'},
-															]},
-															{ title: '插件触发重启设定', multi: [
-																{ id:'ss_basic_tri_reboot_time', type:'select', style:'width:auto', hint:'109', func:'u', options:option_trit, value:'0'},
-																{ suffix:'<span id="ss_basic_tri_reboot_time_note">&nbsp;解析服务器IP，如果发生变更，则重启插件！</span>'},
-																{ suffix:'&nbsp;<a type="button" class="ss_btn" style="cursor:pointer" onclick="set_cron(2)">保存设置</a>'},
 															]},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">节点列表</td></tr>'},
 															{ title: '节点列表最大显示行数', id:'ss_basic_row', type:'select', func:'onchange="save_row();"', style:'width:auto', options:[]},
