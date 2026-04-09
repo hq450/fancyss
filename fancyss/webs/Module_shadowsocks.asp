@@ -9441,56 +9441,18 @@ function get_ss_status_front_httpd() {
 		schedule_next_front_status_poll(5000);
 		return false;
 	}
-	statusFrontPending = true;
-	statusFrontRequestSeq += 1;
-	var requestSeq = statusFrontRequestSeq;
-	if (statusFrontAbortController) {
-		try {
-			statusFrontAbortController.abort();
-		} catch (e) {}
-	}
-	statusFrontAbortController = (window.AbortController ? new AbortController() : null);
-	clear_front_status_http_watchdog();
-	statusFrontHttpWatchdog = setTimeout(function() {
-		if (requestSeq !== statusFrontRequestSeq) {
-			return;
+	$.ajax({
+		url: '/_temp/ss_status_front.txt?_=' + new Date().getTime(),
+		type: 'GET',
+		dataType: 'html',
+		async: true,
+		cache: false,
+		success: function(response) {
+			var res = String(response || "").trim();
+			apply_ss_status(res, false);
 		}
-		if (statusFrontAbortController) {
-			try {
-				statusFrontAbortController.abort();
-			} catch (e) {}
-		}
-		statusFrontAbortController = null;
-		statusFrontPending = false;
-		schedule_next_front_status_poll(get_status_refresh_delay_ms());
-	}, Math.max(12000, get_status_refresh_delay_ms() + 3000));
-	schedule_next_front_status_poll(get_status_refresh_delay_ms());
-	fetch('/_temp/ss_status_front.txt?_=' + new Date().getTime(), {
-		method: 'GET',
-		cache: 'no-store',
-		signal: statusFrontAbortController ? statusFrontAbortController.signal : undefined
-	}).then(function(response) {
-		if (!response.ok) {
-			throw new Error('HTTP ' + response.status);
-		}
-		return response.text();
-	}).then(function(responseText) {
-		if (requestSeq !== statusFrontRequestSeq) {
-			return;
-		}
-		var res = String(responseText || "").trim();
-		apply_ss_status(res, false);
-		statusFrontPending = false;
-		clear_front_status_http_watchdog();
-		statusFrontAbortController = null;
-	}).catch(function() {
-		if (requestSeq !== statusFrontRequestSeq) {
-			return;
-		}
-		statusFrontPending = false;
-		clear_front_status_http_watchdog();
-		statusFrontAbortController = null;
 	});
+	schedule_next_front_status_poll(get_status_refresh_delay_ms());
 }
 function get_ss_status_front_websocket() {
 	if (submit_flag == "1") {
