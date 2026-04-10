@@ -1187,20 +1187,13 @@ install_now(){
 	chmod 755 /koolshare/bin/* >/dev/null 2>&1
 	
 	# kill some process before fancyss start
-	ret_0=$(ps | grep "websocketd" | grep "/bin/sh")
-	if [ -n "${ret_0}" ];then
-		killall websocketd >/dev/null 2>&1
-		sleep 1
-		sync
-	fi
+	ps w | grep -F "websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill "${pid}" >/dev/null 2>&1
+	done
+	killall websocketd >/dev/null 2>&1
+	sleep 1
+	sync
 
-	# start some process before fancyss start
-	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket" ];then
-		if [ -z "$(pidof websocketd)" ];then
-			run_bg websocketd --port=803 /koolshare/ss/websocket
-		fi
-	fi
-	
 	# intall different UI
 	set_skin
 
