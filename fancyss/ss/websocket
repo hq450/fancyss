@@ -92,6 +92,10 @@ do
 			sleep 6
 		done
 		exit 0
+	elif [ "${MSG}" == "status_probe_once" ]; then
+		/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock probe-once 2>/dev/null
+	elif [ "${MSG}" == "status_get_cache" ]; then
+		/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock get-cache 2>/dev/null
 	elif [ -n "${RET_3}" -o -n "${RET_4}" ]; then
 		echo "不允许命令：${MSG}"
 		exit

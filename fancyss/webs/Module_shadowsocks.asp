@@ -9432,7 +9432,11 @@ function get_ss_status(use_ws) {
 			get_ss_status_back_httpd();
 		}
 	}else{
-		get_ss_status_front_httpd();
+		if (use_ws){
+			get_ss_status_front_websocket();
+		}else{
+			get_ss_status_front_httpd();
+		}
 	}
 }
 function get_ss_status_front() {
@@ -9465,67 +9469,18 @@ function get_ss_status_front_websocket() {
 		return false;
 	}
 	statusFrontPending = true;
-	if (statusFrontSocket) {
-		try {
-			statusFrontSocket.close();
-		} catch (e) {}
-		statusFrontSocket = null;
-	}
 	clear_front_status_ws_watchdog();
-	statusFrontSocket = new WebSocket("ws://" + hostname + ":803/");
 	statusFrontWsWatchdog = setTimeout(function() {
-		if (statusFrontSocket) {
-			try {
-				statusFrontSocket.close();
-			} catch (e) {}
-			statusFrontSocket = null;
-		}
 		statusFrontPending = false;
 		get_ss_status_front_httpd();
 	}, Math.max(15000, get_status_refresh_delay_ms() + 5000));
-	try {
-		statusFrontSocket.onopen = function() {
-			try {
-				statusFrontSocket.send("sh /koolshare/scripts/ss_status.sh ws");
-			} catch (e) {
-				throw e;
-			}
-		};
-		statusFrontSocket.onmessage = function(event) {
-			clear_front_status_ws_watchdog();
-			statusFrontPending = false;
-			var res = String(event.data || "").trim();
-			apply_ss_status(res, false);
-			if (statusFrontSocket) {
-				try {
-					statusFrontSocket.close();
-				} catch (e) {}
-				statusFrontSocket = null;
-			}
-			schedule_next_front_status_poll(get_status_refresh_delay_ms());
-		};
-		statusFrontSocket.onerror = function() {
-			clear_front_status_ws_watchdog();
-			statusFrontPending = false;
-			if (statusFrontSocket) {
-				try {
-					statusFrontSocket.close();
-				} catch (e) {}
-				statusFrontSocket = null;
-			}
-			get_ss_status_front_httpd();
-		};
-		statusFrontSocket.onclose = function() {
-			if (statusFrontSocket) {
-				statusFrontSocket = null;
-			}
-		};
-	} catch (ex) {
-		statusFrontPending = false;
-		clear_front_status_ws_watchdog();
-		console.log('Cannot send: ' + ex);
-		schedule_next_front_status_poll(get_status_refresh_delay_ms());
-	}
+	setup_status_ws(get_ss_status_front_httpd, false, function() {
+		try {
+			wss.send("status_probe_once");
+		} catch (ex) {
+			throw ex;
+		}
+	});
 }
 function get_ss_status_back() {
 	if (E("ss_basic_interval").value == "1"){

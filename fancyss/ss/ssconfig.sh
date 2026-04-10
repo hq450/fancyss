@@ -15,6 +15,7 @@ THREAD=""
 LOG_FILE=/tmp/upload/ss_log.txt
 CONFIG_FILE=/koolshare/ss/ssr.json
 LOCK_FILE=/var/lock/koolss.lock
+WS_PIDFILE=/var/run/fancyss-websocketd.pid
 DNSC_PORT=53
 ISP_DNS1=""
 ISP_DNS2=""
@@ -6529,6 +6530,12 @@ ss_pre_stop() {
 stop_status() {
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
+	ps w | grep -F "sh /koolshare/scripts/ss_status_main.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill -9 "${pid}" >/dev/null 2>&1
+	done
+	ps w | grep -F "sh /koolshare/scripts/ss_status.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill -9 "${pid}" >/dev/null 2>&1
+	done
 	killall curl-status >/dev/null 2>&1
 	sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
@@ -6666,9 +6673,9 @@ check_status() {
 		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
-		run start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+		sh /koolshare/scripts/ss_status_main.sh >/dev/null 2>&1 &
 	else
-		sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
+		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 	fi
 
 	(
@@ -6688,6 +6695,7 @@ disable_ss() {
 	set_skin
 	dbus remove ss_basic_server_ip
 	stop_status
+	stop_ws
 	kill_process
 	remove_ss_trigger_job
 	remove_ss_reboot_job
@@ -6860,11 +6868,20 @@ apply_ss_by_nat() {
 }
 
 start_ws(){
+	stop_ws
 	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket" ];then
-		if [ -z "$(pidof websocketd)" ];then
-			run_bg websocketd --port=803 /koolshare/ss/websocket
-		fi
+		start-stop-daemon -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket
 	fi
+}
+
+stop_ws(){
+	if [ -f "${WS_PIDFILE}" ];then
+		start-stop-daemon -K -q -p "${WS_PIDFILE}" >/dev/null 2>&1
+	fi
+	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill "${pid}" >/dev/null 2>&1
+	done
+	rm -f "${WS_PIDFILE}" >/dev/null 2>&1
 }
 
 # =========================================================================

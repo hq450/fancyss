@@ -13,6 +13,12 @@ LOGFILE=/tmp/upload/ss_log.txt
 stop_status(){
 	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
 	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
+	ps w | grep -F "sh /koolshare/scripts/ss_status_main.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill -9 "${pid}" >/dev/null 2>&1
+	done
+	ps w | grep -F "sh /koolshare/scripts/ss_status.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill -9 "${pid}" >/dev/null 2>&1
+	done
 	killall curl-status >/dev/null 2>&1
 	sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
@@ -24,9 +30,9 @@ check_status(){
 		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 		echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_F
 		echo "=========================================== 故障检测脚本重启 ==========================================" >> $LOGFILE_C
-		start-stop-daemon -S -q -b -x /koolshare/scripts/ss_status_main.sh
+		sh /koolshare/scripts/ss_status_main.sh >/dev/null 2>&1 &
 	else
-		sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
+		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 	fi
 }
 
@@ -40,8 +46,9 @@ if [ "$ss_failover_enable" == "1" ];then
 	check_status
 	echo_date "完成！" >> $LOGFILE
 else
-	echo_date "关闭故障转移功能" >> $LOGFILE
+	echo_date "关闭故障转移功能，切换为前台按需检测" >> $LOGFILE
 	stop_status
+	check_status
 	echo_date "完成！" >> $LOGFILE
 fi
 echo XU6J03M6 >> $LOGFILE

@@ -251,6 +251,7 @@ main(){
 	
 		# refresh dbus data in every loop
 		eval $(dbus export ss_failover)
+		[ "${ss_failover_enable}" != "1" ] && exit
 		LOG_MAX=${ss_failover_s5}
 		[ -z "${LOG_MAX}" ] && LOG_MAX=2000
 		
@@ -263,7 +264,7 @@ main(){
 		# exit loop when fancyss not enabled
 		[ "$(dbus get ss_basic_enable)" != "1" ] && exit
 		
-		if ! ps | grep -E "ss_status_daemon\\.sh loop" | grep -v grep >/dev/null 2>&1; then
+		if ! ps | grep -E "/koolshare/bin/status-tool daemon" | grep -v grep >/dev/null 2>&1; then
 			sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
 		fi
 

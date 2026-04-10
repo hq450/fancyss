@@ -73,12 +73,17 @@ update_websocketd:
 	cp -f ../tool/ws-tool/dist/SHA256SUMS-v$$(cat ../tool/ws-tool/VERSION) websocketd/
 
 update_status_tool:
-	cd ../tool/status-tool && rm -f dist/status-tool-v$$(cat VERSION)-linux-armv5te dist/status-tool-v$$(cat VERSION)-linux-armv7a dist/status-tool-v$$(cat VERSION)-linux-armv7hf dist/status-tool-v$$(cat VERSION)-linux-aarch64 dist/status-tool-v$$(cat VERSION)-linux-x86_64 dist/SHA256SUMS-v$$(cat VERSION) && bash scripts/build-release.sh armv5te armv7a armv7hf aarch64 x86_64
+	cd ../tool/status-tool && rm -f dist/status-tool-v$$(cat VERSION)-linux-armv5te dist/status-tool-v$$(cat VERSION)-linux-armv7a dist/status-tool-v$$(cat VERSION)-linux-armv7hf dist/status-tool-v$$(cat VERSION)-linux-aarch64 dist/status-tool-v$$(cat VERSION)-linux-x86_64 dist/statusctl-v$$(cat VERSION)-linux-armv5te dist/statusctl-v$$(cat VERSION)-linux-armv7a dist/statusctl-v$$(cat VERSION)-linux-armv7hf dist/statusctl-v$$(cat VERSION)-linux-aarch64 dist/statusctl-v$$(cat VERSION)-linux-x86_64 dist/SHA256SUMS-v$$(cat VERSION) && bash scripts/build-release.sh armv5te armv7a armv7hf aarch64 x86_64
 	mkdir -p status-tool
-	rm -f status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/SHA256SUMS-v$$(cat ../tool/status-tool/VERSION)
+	rm -f status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/SHA256SUMS-v$$(cat ../tool/status-tool/VERSION)
 	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/
 	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/
 	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/
 	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/
 	cp -f ../tool/status-tool/dist/status-tool-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/
+	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-armv5te status-tool/
+	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-armv7a status-tool/
+	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-armv7hf status-tool/
+	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/
+	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/
 	cp -f ../tool/status-tool/dist/SHA256SUMS-v$$(cat ../tool/status-tool/VERSION) status-tool/

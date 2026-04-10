@@ -4,8 +4,10 @@ source /koolshare/scripts/ss_base.sh
 
 STATUS_TOOL_BIN="/koolshare/bin/status-tool"
 STATUS_DAEMON_PIDFILE="/var/run/status-tool.pid"
+STATUS_SERVE_PIDFILE="/var/run/status-tool-serve.pid"
 STATUS_DAEMON_STATE="/tmp/upload/ss_status_daemon.json"
 STATUS_DAEMON_LEGACY="/tmp/upload/ss_status_front.txt"
+STATUS_SERVE_SOCKET="/tmp/status-tool.sock"
 
 pick_status_interval_ms() {
 	case "$(dbus get ss_basic_interval)" in
@@ -62,22 +64,59 @@ start_status_daemon() {
 		--legacy-file "${STATUS_DAEMON_LEGACY}"
 }
 
+start_status_serve() {
+	[ -x "${STATUS_TOOL_BIN}" ] || return 1
+	local chn_url
+	local frn_url
+	local proxy_ipv6
+	write_waiting_cache
+	{
+		read -r chn_url
+		read -r frn_url
+	} <<-EOF
+	$(pick_status_urls)
+	EOF
+	proxy_ipv6="$(dbus get ss_basic_proxy_ipv6)"
+	rm -f "${STATUS_SERVE_SOCKET}" >/dev/null 2>&1
+	start-stop-daemon -S -q -b -m -p "${STATUS_SERVE_PIDFILE}" -x "${STATUS_TOOL_BIN}" -- serve \
+		--socket-path "${STATUS_SERVE_SOCKET}" \
+		--china-url "${chn_url}" \
+		--foreign-url "${frn_url}" \
+		--proxy-ipv6 "${proxy_ipv6:-0}" \
+		--foreign-proxy "socks5://127.0.0.1:23456" \
+		--state-file "${STATUS_DAEMON_STATE}" \
+		--legacy-file "${STATUS_DAEMON_LEGACY}"
+}
+
 stop_status_daemon() {
 	if [ -f "${STATUS_DAEMON_PIDFILE}" ];then
 		start-stop-daemon -K -q -p "${STATUS_DAEMON_PIDFILE}" >/dev/null 2>&1
 	fi
-	killall status-tool >/dev/null 2>&1
-	rm -f "${STATUS_DAEMON_PIDFILE}" "${STATUS_DAEMON_STATE}" "${STATUS_DAEMON_LEGACY}" >/dev/null 2>&1
+	if [ -f "${STATUS_SERVE_PIDFILE}" ];then
+		start-stop-daemon -K -q -p "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
+	fi
+	ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve)( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill "${pid}" >/dev/null 2>&1
+	done
+	rm -f "${STATUS_DAEMON_PIDFILE}" "${STATUS_SERVE_PIDFILE}" "${STATUS_DAEMON_STATE}" "${STATUS_DAEMON_LEGACY}" "${STATUS_SERVE_SOCKET}" >/dev/null 2>&1
 }
 
 restart_status_daemon() {
 	stop_status_daemon
-	start_status_daemon
+	if [ "$(dbus get ss_failover_enable)" = "1" ];then
+		start_status_daemon
+	else
+		start_status_serve
+	fi
 }
 
 case "$1" in
 start)
-	start_status_daemon
+	if [ "$(dbus get ss_failover_enable)" = "1" ];then
+		start_status_daemon
+	else
+		start_status_serve
+	fi
 	;;
 stop)
 	stop_status_daemon

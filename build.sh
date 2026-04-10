@@ -146,6 +146,13 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/status-tool/status-tool-${STATUSTOOL_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/status-tool
 	cp -rf ${CURR_PATH}/binaries/status-tool/status-tool-${STATUSTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/status-tool
 	cp -rf ${CURR_PATH}/binaries/status-tool/status-tool-${STATUSTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/status-tool
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/statusctl
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/statusctl
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/statusctl
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/statusctl
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/statusctl
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/statusctl
+	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/statusctl
 }
 
 gen_folder(){

@@ -6,6 +6,8 @@ STATUS_FRONT_CACHE=/tmp/upload/ss_status_front.txt
 STATUS_BACK_CACHE=/tmp/upload/ss_status.txt
 STATUS_WS_CACHE_FILE=/tmp/upload/ss_status_ws.txt
 STATUS_WS_LOCK_DIR=/tmp/fancyss_status_ws.lock
+STATUS_SERVE_SOCKET=/tmp/status-tool.sock
+STATUS_CTL_BIN=/koolshare/bin/statusctl
 
 LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 HEART_STATUS=$(dbus get ss_heart_beat)
@@ -88,20 +90,22 @@ json_probe_line(){
 
 refresh_payload_once(){
 	local status_tool="$1"
-	local json_text=""
-	local now="$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")"
-	local payload=""
-
 	if [ "${PROXY_IPV6}" = "1" ];then
-		json_text="$("${status_tool}" daemon --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 1 --interval-ms 3500 --stdout --once 2>/dev/null)" || return 1
-		payload="$(json_probe_line "${json_text}" china "国内连接" "${now}")"
-		payload="$(json_probe_line "${json_text}" foreign4 "国外IPv4" "${now}")@@$(json_probe_line "${json_text}" foreign6 "国外IPv6" "${now}")@@${payload}"
+		"${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 1 2>/dev/null || return 1
 	else
-		json_text="$("${status_tool}" daemon --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 0 --foreign-proxy "socks5://127.0.0.1:23456" --interval-ms 3500 --stdout --once 2>/dev/null)" || return 1
-		payload="$(json_probe_line "${json_text}" foreign4 "国外链接" "${now}")@@$(json_probe_line "${json_text}" china "国内连接" "${now}")"
+		"${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 0 --foreign-proxy "socks5://127.0.0.1:23456" 2>/dev/null || return 1
 	fi
+}
 
-	printf '%s' "${payload}"
+refresh_payload_via_ctl(){
+	local payload=""
+	payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" probe-once 2>/dev/null)" || payload=""
+	case "${payload}" in
+	""|cache-miss*)
+		payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" get-cache 2>/dev/null)" || return 1
+		;;
+	esac
+	printf '%s' "${payload}" | sed 's/[[:space:]]*$//'
 }
 
 prepare(){
@@ -136,6 +140,12 @@ resolve_payload(){
 
 resolve_payload_once_only(){
 	local payload=""
+	if [ -x "${STATUS_CTL_BIN}" ] && [ -S "${STATUS_SERVE_SOCKET}" ];then
+		if payload="$(refresh_payload_via_ctl)"; then
+			printf '%s' "${payload}"
+			return 0
+		fi
+	fi
 	if status_tool_bin="$(pick_status_tool)"; then
 		if payload="$(refresh_payload_once "${status_tool_bin}")"; then
 			printf '%s' "${payload}"
