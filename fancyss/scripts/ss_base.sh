@@ -470,12 +470,20 @@ if [ "${ss_basic_type}" == "6" ];then
 fi
 
 if [ "${ss_basic_type}" == "6" ];then
-	ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
+		ss_basic_password="${ss_basic_naive_pass}"
+	else
+		ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
+	fi
 	ss_basic_server=${ss_basic_naive_server}
 elif [ "${ss_basic_type}" == "8" ];then
 	ss_basic_server=${ss_basic_hy2_server}
 else
-	ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
+		:
+	else
+		ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
+	fi
 fi
 
 ss_basic_server_orig=${ss_basic_server}

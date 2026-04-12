@@ -5056,7 +5056,11 @@ add_ss_node(){
 		password=$(echo "${urllink}" | sed 's/[@:/?#]/\n/g' | sed -n '2p')
 	fi
 
-	password=$(echo ${password} | base64_encode | sed 's/[[:space:]]//g')
+	if [ "${action}" == "2" ];then
+		password=$(printf '%s' "${password}" | sed 's/[[:space:]]$//g')
+	else
+		password=$(echo ${password} | base64_encode | sed 's/[[:space:]]//g')
+	fi
 	ss_obfs="0"
 	ss_obfs_host=""
 
@@ -5084,7 +5088,11 @@ add_ss_node(){
 	# echo ss_obfs_host: ${ss_obfs_host}
 	# echo ------------------------
 
-	if [ -z "${server}" -o -z "${remarks}" -o -z "${server_port}" -o -z "${password}" -o -z "${encrypt_method}" ]; then
+	if [ -z "${remarks}" ] && [ -n "${server}" ] && [ -n "${server_port}" ]; then
+		remarks="${server}:${server_port}"
+	fi
+
+	if [ -z "${server}" -o -z "${server_port}" -o -z "${password}" -o -z "${encrypt_method}" ]; then
 		local _shadowtls=$(echo "${urllink}" | grep -Eo "shadow-tls")
 		if [ -n "${_shadowtls}" ]; then
 			echo_date "🔴SS节点：这是一个shadow-tls节点，不支持，跳过！"

@@ -17,6 +17,42 @@ run_bg(){
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
+invalidate_runtime_caches_after_install() {
+	rm -rf /koolshare/configs/fancyss/node_json_cache >/dev/null 2>&1
+	rm -f /koolshare/configs/fancyss/node_json_cache.meta >/dev/null 2>&1
+	fss_clear_node_env_cache_artifacts >/dev/null 2>&1 || true
+	fss_clear_webtest_cache_all >/dev/null 2>&1 || true
+	fss_clear_webtest_runtime_results >/dev/null 2>&1 || true
+	rm -rf /tmp/fancyss_webtest >/dev/null 2>&1
+	rm -rf /tmp/fancyss_cache_state >/dev/null 2>&1
+}
+
+refresh_runtime_caches_after_install() {
+	invalidate_runtime_caches_after_install
+	fss_refresh_node_json_cache >/dev/null 2>&1 || true
+	fss_schedule_webtest_cache_warm >/dev/null 2>&1 || true
+}
+
+restart_websocketd_async() {
+	local helper="/tmp/fancyss_restart_websocketd.sh"
+	cat > "${helper}" <<-'EOF'
+		#!/bin/sh
+		sleep 2
+		killall websocketd >/dev/null 2>&1 || true
+		ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+		do
+			[ -n "${pid}" ] || continue
+			kill "${pid}" >/dev/null 2>&1 || true
+		done
+		if [ -x "/koolshare/bin/websocketd" ] && [ -f "/koolshare/ss/websocket" ]; then
+			/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
+		fi
+		rm -f "$0" >/dev/null 2>&1
+	EOF
+	chmod +x "${helper}" >/dev/null 2>&1
+	sh "${helper}" >/dev/null 2>&1 &
+}
+
 report_install_migration_progress() {
 	echo_date "$1"
 }
@@ -1230,14 +1266,6 @@ install_now(){
 	chmod 755 /koolshare/scripts/ss* >/dev/null 2>&1
 	chmod 755 /koolshare/bin/* >/dev/null 2>&1
 	
-	# kill some process before fancyss start
-	ps w | grep -F "websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
-		kill "${pid}" >/dev/null 2>&1
-	done
-	killall websocketd >/dev/null 2>&1
-	sleep 1
-	sync
-
 	# intall different UI
 	set_skin
 
@@ -1355,6 +1383,9 @@ install_now(){
 		;;
 	esac
 
+	echo_date "刷新节点运行缓存..."
+	refresh_runtime_caches_after_install
+
 	# dbus value
 	echo_date "设置插件安装参数..."
 	dbus set ss_basic_version_local="${PLVER}"
@@ -1371,8 +1402,9 @@ install_now(){
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
 		echo_date 重启科学上网插件！
 		sh /koolshare/ss/ssconfig.sh restart
+	else
+		restart_websocketd_async
 	fi
-	fss_schedule_webtest_cache_warm >/dev/null 2>&1
 
 	echo_date "更新完毕，请等待网页自动刷新！"
 	exit_install

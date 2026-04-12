@@ -5101,11 +5101,11 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 	var resolvedWsCmd = ws_cmd || "";
 	if (!resolvedWsCmd && script == "ss_config.sh") {
 		if (arg == "start") {
-			resolvedWsCmd = "run_ss_config_start";
+			resolvedWsCmd = "sh /koolshare/scripts/ss_config.sh start_by_ws";
 		} else if (arg == "stop") {
-			resolvedWsCmd = "run_ss_config_stop";
+			resolvedWsCmd = "sh /koolshare/scripts/ss_config.sh stop";
 		} else if (arg == "start_shunt_hot") {
-			resolvedWsCmd = "run_ss_config_start_shunt_hot";
+			resolvedWsCmd = "sh /koolshare/scripts/ss_config.sh start_shunt_hot";
 		}
 	}
 	if (script == "ss_config.sh") {
@@ -7687,10 +7687,14 @@ function makeQRcode(node){
 	id = ids[ids.length - 1];
 	var c = confs[id];
 	if(c["type"] == "0"){
-		if(c["ss_obfs"] == "1"){
-			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"])) + "@" + c["server"] + ":" + c["port"] + "/?plugin=obfs-local%3Bobfs%3D" + c["ss_obfs"] + "%3Bobfs-host%3D" + c["ss_obfs_host"] + "#" + c["name"];
+		var ssUserInfo = Base64.encode(c["method"] + ":" + Base64.decode(c["password"]) + "@" + format_share_remote_host(c["server"]) + ":" + c["port"]);
+		if(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls"){
+			code = "ss://" + ssUserInfo + "/?plugin=obfs-local%3Bobfs%3D" + c["ss_obfs"] + "%3Bobfs-host%3D" + encodeURIComponent(c["ss_obfs_host"] || "");
 		}else{
-			var code = "ss://" + Base64.encode(c["method"] + ":" + Base64.decode(c["password"]) + "@" + c["server"] + ":" + c["port"] + "#" + c["name"]);
+			code = "ss://" + ssUserInfo;
+		}
+		if (c["name"]) {
+			code += "#" + encodeURIComponent(c["name"]);
 		}
 	}
 	else if(c["type"] == "1"){
