@@ -76,16 +76,51 @@ do
 		WEBTEST_STREAM=/tmp/upload/webtest.stream
 		[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
 		[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
-		STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
-		[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
-		cat "${WEBTEST_FILE}"
+		LAST_STREAM_INODE=""
+		LAST_STREAM_LINES=0
+		IDLE_LOOPS=0
+		if [ -f "${WEBTEST_FILE}" ]; then
+			cat "${WEBTEST_FILE}" || exit 0
+		fi
 		if grep -q '^stop>stop$' "${WEBTEST_FILE}" 2>/dev/null; then
 			exit 0
 		fi
-		tail -n +"$((STREAM_LINES + 1))" -f "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
+		while true
 		do
-			echo "${line}"
-			[ "${line}" = "stop>stop" ] && break
+			[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
+			[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
+			STREAM_INODE=$(ls -i "${WEBTEST_STREAM}" 2>/dev/null | awk '{print $1}')
+			if [ -z "${STREAM_INODE}" ]; then
+				sleep 1
+				continue
+			fi
+			if [ "${STREAM_INODE}" != "${LAST_STREAM_INODE}" ]; then
+				LAST_STREAM_INODE="${STREAM_INODE}"
+				LAST_STREAM_LINES=0
+			fi
+			STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
+			[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
+			if [ "${STREAM_LINES}" -gt "${LAST_STREAM_LINES}" ]; then
+				sed -n "$((LAST_STREAM_LINES + 1)),${STREAM_LINES}p" "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
+				do
+					[ -n "${line}" ] || continue
+					echo "${line}" || exit 0
+					[ "${line}" = "stop>stop" ] && exit 0
+				done
+				LAST_STREAM_LINES="${STREAM_LINES}"
+				IDLE_LOOPS=0
+			elif [ -f "/tmp/webtest.lock" ]; then
+				IDLE_LOOPS=0
+			else
+				IDLE_LOOPS=$((IDLE_LOOPS + 1))
+			fi
+			if grep -q '^stop>stop$' "${WEBTEST_FILE}" 2>/dev/null; then
+				exit 0
+			fi
+			if [ "${IDLE_LOOPS}" -ge 8 ]; then
+				exit 0
+			fi
+			sleep 1
 		done
 		exit 0
 	elif [ "${MSG}" == "follow_shunt_stats" ]; then
@@ -141,6 +176,33 @@ do
 		/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock get-cache 2>/dev/null
 	elif [ "${MSG}" == "run_status_reset" ]; then
 		env -i PATH=${PATH} HOME=/root USER=${USER:-admin} sh /koolshare/scripts/ss_status_reset.sh 2>&1
+	elif [ "${MSG}" == "run_ss_webtest_start_batch" ]; then
+		dbus set ss_basic_latency_val=2 >/dev/null 2>&1
+		sh /koolshare/scripts/ss_webtest.sh clear_webtest >/dev/null 2>&1 || true
+		sh /koolshare/scripts/ss_webtest.sh web_webtest >/dev/null 2>&1 &
+		echo XU6J03M6
+	elif [ "${MSG}" == "run_ss_webtest_stop_batch" ]; then
+		sh /koolshare/scripts/ss_webtest.sh stop_webtest >/dev/null 2>&1 || true
+		echo XU6J03M6
+	elif [ "${MSG}" == "run_ss_webtest_clear_cache" ]; then
+		if [ -f "/tmp/webtest.lock" ];then
+			echo busy
+		else
+			sh /koolshare/scripts/ss_webtest.sh clear_webtest >/dev/null 2>&1 || true
+			echo XU6J03M6
+		fi
+	elif [ "${MSG}" == "run_ss_webtest_close" ]; then
+		dbus set ss_basic_latency_val=0 >/dev/null 2>&1
+		sh /koolshare/scripts/ss_webtest.sh close_latency_test >/dev/null 2>&1 || true
+		echo XU6J03M6
+	elif printf '%s' "${MSG}" | grep -q '^run_ss_webtest_single:'; then
+		NODE_ID="${MSG#run_ss_webtest_single:}"
+		if [ -f "/tmp/webtest.lock" ];then
+			echo busy
+		else
+			sh /koolshare/scripts/ss_webtest.sh single_test "${NODE_ID}" >/dev/null 2>&1 &
+			echo XU6J03M6
+		fi
 	elif [ "${MSG}" == "run_ss_config_start" ]; then
 		sh /koolshare/scripts/ss_config.sh start_by_ws 2>&1 | while IFS= read -r line
 		do

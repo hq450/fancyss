@@ -328,6 +328,9 @@ var batch_test_running = false;
 var batch_stop_pending = false;
 var batch_ws_fallback_started = false;
 var batch_ws_completed = false;
+var batch_ws_last_message_at = 0;
+var batch_ws_watchdog_timer = null;
+var singleLatencySocket = null;
 var fss_nodes_raw = {};
 var node_auto_migrate_attempted = false;
 var node_auto_migrate_layer = null;
@@ -7922,6 +7925,85 @@ function close_latency_ws(resetState) {
 		batch_ws_fallback_started = false;
 		batch_ws_completed = false;
 	}
+	if (batch_ws_watchdog_timer) {
+		clearInterval(batch_ws_watchdog_timer);
+		batch_ws_watchdog_timer = null;
+	}
+}
+function close_single_latency_ws() {
+	if (singleLatencySocket) {
+		try {
+			singleLatencySocket.close();
+		} catch (e) {}
+		singleLatencySocket = null;
+	}
+}
+function latency_table_is_fresh() {
+	var latencyCells = document.querySelectorAll('td.latency .latency_val').length;
+	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
+		return false;
+	}
+	if (latencyCells < node_nu) {
+		return false;
+	}
+	if (schema2NodeDirectTimer || schema2WebtestWarmTimer) {
+		return false;
+	}
+	return true;
+}
+function send_webtest_ws_command(command, onDone, onBusy, onError) {
+	if (ws_flag != 1) {
+		if (typeof onError === "function") onError();
+		return false;
+	}
+	var ctl = new WebSocket("ws://" + hostname + ":803/");
+	var finished = false;
+	var timer = setTimeout(function() {
+		if (!finished) {
+			finished = true;
+			try { ctl.close(); } catch (e) {}
+			if (typeof onError === "function") onError();
+		}
+	}, 5000);
+	ctl.onopen = function() {
+		try {
+			ctl.send(command);
+		} catch (e) {
+			clearTimeout(timer);
+			if (!finished) {
+				finished = true;
+				if (typeof onError === "function") onError();
+			}
+		}
+	};
+	ctl.onerror = function() {
+		clearTimeout(timer);
+		if (!finished) {
+			finished = true;
+			if (typeof onError === "function") onError();
+		}
+	};
+	ctl.onmessage = function(event) {
+		var msg = String(event.data || "");
+		if (msg == "busy") {
+			clearTimeout(timer);
+			if (!finished) {
+				finished = true;
+				try { ctl.close(); } catch (e) {}
+				if (typeof onBusy === "function") onBusy();
+			}
+			return;
+		}
+		if (msg.indexOf("XU6J03M6") != -1) {
+			clearTimeout(timer);
+			if (!finished) {
+				finished = true;
+				try { ctl.close(); } catch (e) {}
+				if (typeof onDone === "function") onDone();
+			}
+		}
+	};
+	return true;
 }
 function update_latency_finish_time() {
 	$.ajax({
@@ -8003,7 +8085,13 @@ function fetch_latency_snapshot_once(cb){
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
-			write_webtest(parse_webtest_lines(res));
+			var array = parse_webtest_lines(res);
+			write_webtest(array);
+			if(array.some(function(item) { return item[0] == "stop"; })){
+				batch_ws_completed = true;
+				close_latency_ws(false);
+				finish_latency_batch();
+			}
 			if(typeof cb === "function"){ cb(true); }
 		},
 		error: function() {
@@ -8029,6 +8117,7 @@ function handle_latency_ws_payload(payload) {
 		}
 	}
 	write_webtest(array);
+	batch_ws_last_message_at = Date.now();
 	var hasStop = array.some(function(item) {
 		return item[0] == "stop";
 	});
@@ -8053,7 +8142,20 @@ function start_latency_ws(action) {
 	close_latency_ws();
 	batch_ws_fallback_started = false;
 	batch_ws_completed = false;
+	batch_ws_last_message_at = Date.now();
 	wswt = new WebSocket("ws://" + hostname + ":803/");
+	batch_ws_watchdog_timer = setInterval(function() {
+		if (!batch_test_running || batch_ws_completed) {
+			return;
+		}
+		if ((Date.now() - batch_ws_last_message_at) >= 2500) {
+			fetch_latency_snapshot_once(function(ok) {
+				if (ok) {
+					batch_ws_last_message_at = Date.now();
+				}
+			});
+		}
+	}, 1500);
 	var ws_opened = false;
 	var ws_open_timer = setTimeout(function() {
 		if (!ws_opened) {
@@ -8062,6 +8164,7 @@ function start_latency_ws(action) {
 	}, 1200);
 	wswt.onopen = function() {
 		ws_opened = true;
+		batch_ws_last_message_at = Date.now();
 		clearTimeout(ws_open_timer);
 		try {
 			wswt.send("follow_webtest");
@@ -8086,6 +8189,43 @@ function start_latency_ws(action) {
 	};
 	return true;
 }
+function start_single_latency_ws(node) {
+	if (ws_flag != 1){
+		return false;
+	}
+	close_single_latency_ws();
+	singleLatencySocket = new WebSocket("ws://" + hostname + ":803/");
+	singleLatencySocket.onopen = function() {
+		try {
+			singleLatencySocket.send("follow_webtest");
+		} catch (ex) {
+			get_latency_data_single(node, 0);
+		}
+	};
+	singleLatencySocket.onerror = function() {
+		close_single_latency_ws();
+		get_latency_data_single(node, 0);
+	};
+	singleLatencySocket.onclose = function() {
+		singleLatencySocket = null;
+	};
+	singleLatencySocket.onmessage = function(event) {
+		const array = parse_webtest_lines(event.data);
+		for (var i = 0; i < array.length; i++) {
+			var item = array[i];
+			if (item[0] != String(node)) continue;
+			write_webtest([[String(node), item[1]]]);
+			if(!is_latency_transient_state(item[1])){
+				single_test_wait[node] = false;
+				single_test_running = false;
+				single_test_node = null;
+				enable_latency_buttons();
+				close_single_latency_ws();
+			}
+		}
+	};
+	return true;
+}
 function test_latency_now(test_flag) {
 	if(test_flag == 2 && db_ss["ss_basic_latency_batch"] != "1"){
 		layer.msg("批量测速已关闭");
@@ -8100,6 +8240,45 @@ function test_latency_now(test_flag) {
 		var post_para = "close_latency_test";
 	}else if(test_flag == 2){
 		var post_para = "manual_webtest";
+	}
+	if(ws_flag == 1 && test_flag == 2){
+		send_webtest_ws_command("run_ss_webtest_start_batch", function() {
+			close_latency_ws();
+			close_latency_flag = 0;
+			batch_test_running = true;
+			batch_stop_pending = false;
+			var startFollow = function() {
+				$(".latency .latency_val").html("waiting...");
+				$("#ss_wts_show").html("<em>【测速中...】</em>");
+				$("#dropdown").width(240);
+				update_latency_action_links();
+				start_latency_ws(2);
+			};
+			if(latency_table_is_fresh()){
+				startFollow();
+			}else{
+				refresh_table(startFollow);
+			}
+		}, null, function() {
+			layer.msg("测速启动失败，已回退到HTTP方式");
+		});
+		return;
+	}
+	if(ws_flag == 1 && test_flag == 0){
+		send_webtest_ws_command("run_ss_webtest_close", function() {
+			close_latency_ws();
+			refresh_table(function() {
+				close_latency_flag = 1;
+				batch_test_running = false;
+				batch_stop_pending = false;
+				$("#ss_wts_show").html("");
+				$("#dropdown").width(150);
+				update_latency_action_links();
+			});
+		}, null, function() {
+			layer.msg("关闭延迟测试失败，已回退到HTTP方式");
+		});
+		return;
 	}
 	//now post
 	var id = parseInt(Math.random() * 100000000);
@@ -8147,6 +8326,16 @@ function stop_latency_batch() {
 	if(db_ss["ss_basic_latency_batch"] != "1" || !batch_test_running || batch_stop_pending){
 		return;
 	}
+	if(ws_flag == 1){
+		batch_stop_pending = true;
+		update_latency_action_links();
+		$("#ss_wts_show").html("<em>【停止中...】</em>");
+		send_webtest_ws_command("run_ss_webtest_stop_batch", function() {}, null, function() {
+			batch_stop_pending = false;
+			update_latency_action_links();
+		});
+		return;
+	}
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_webtest.sh", "params":["stop_webtest"], "fields": {}};
 	batch_stop_pending = true;
@@ -8171,6 +8360,21 @@ function stop_latency_batch() {
 	});
 }
 function clear_latency_cache() {
+	if(ws_flag == 1){
+		send_webtest_ws_command("run_ss_webtest_clear_cache", function() {
+			close_latency_ws();
+			close_single_latency_ws();
+			batch_test_running = false;
+			batch_stop_pending = false;
+			$(".latency .latency_val").html("");
+			$("#ss_wts_show").html("");
+			$("#dropdown").width(150);
+			update_latency_action_links();
+		}, function() {
+			layer.msg("正在测速，请稍后重试");
+		});
+		return;
+	}
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_webtest.sh", "params":["clear_webtest"], "fields": {}};
 	$.ajax({
@@ -8252,6 +8456,24 @@ function test_latency_single(node){
 	single_test_node = node;
 	write_webtest([[String(node), "waiting..."]]);
 	disable_latency_buttons(node);
+	if(ws_flag == 1){
+		send_webtest_ws_command("run_ss_webtest_single:" + String(node), function() {
+			start_single_latency_ws(node);
+		}, function() {
+			if(cell.length){
+				cell.html("busy");
+			}
+			layer.msg("后台正在进行批量测速，请稍后再试");
+			single_test_running = false;
+			single_test_node = null;
+			enable_latency_buttons();
+		}, function() {
+			single_test_running = false;
+			single_test_node = null;
+			enable_latency_buttons();
+		});
+		return;
+	}
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_webtest.sh", "params":["single_test", String(node)], "fields": {}};
 	$.ajax({

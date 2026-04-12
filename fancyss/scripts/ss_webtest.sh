@@ -34,6 +34,12 @@ WT_MEM_TIER_MID_MB="768"
 WT_MEM_TIER_HIGH_MB="1536"
 WT_PERF_READY="0"
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
+WT_CAN_HTTP_RESPONSE=0
+
+wt_http_response() {
+	[ "${WT_CAN_HTTP_RESPONSE}" = "1" ] || return 0
+	http_response "$@" >/dev/null 2>&1
+}
 
 wt_cache_log() {
 	[ "${WT_CACHE_LOGGING}" = "1" ] || return 0
@@ -262,6 +268,7 @@ wt_webtest_tool_build_job() {
 	local live_stream_file="$8"
 	local jq_bin=""
 	local effective_concurrency="1"
+	local group_label=""
 	local first=1
 	local node_id=""
 	local test_port=""
@@ -276,6 +283,7 @@ wt_webtest_tool_build_job() {
 	[ -f "${pairs_file}" ] || return 1
 	[ -n "${concurrency}" ] || concurrency="1"
 	effective_concurrency="${concurrency}"
+	group_label="$(wt_webtest_group_label "${batch_tag}")"
 
 	{
 		printf '[\n'
@@ -327,7 +335,13 @@ wt_webtest_tool_build_job() {
 		  "legacy_stream_file": "${live_stream_file}",
 		  "legacy_emit_stop": false,
 		  "runtime_root": "${TMP2}",
-		  "targets": $(cat "${job_file}.targets.tmp.$$")
+		  "groups": [
+		    {
+		      "name": "${group_label}",
+		      "concurrency": ${effective_concurrency},
+		      "targets": $(cat "${job_file}.targets.tmp.$$")
+		    }
+		  ]
 		}
 	EOF
 	rm -f "${job_file}.targets.tmp.$$"
@@ -371,6 +385,50 @@ wt_webtest_tool_import_results() {
 	return 0
 }
 
+wt_wait_pid_with_timeout() {
+	local pid="$1"
+	local timeout_secs="$2"
+	local elapsed=0
+
+	[ -n "${pid}" ] || return 1
+	[ -n "${timeout_secs}" ] || timeout_secs=30
+	while kill -0 "${pid}" >/dev/null 2>&1
+	do
+		[ "${elapsed}" -ge "${timeout_secs}" ] && return 1
+		sleep 1
+		elapsed=$((elapsed + 1))
+	done
+	return 0
+}
+
+wt_calc_batch_timeout_secs() {
+	local target_count="$1"
+	local concurrency="$2"
+	local wait_timeout_ms="$3"
+	local probe_timeout_ms="$4"
+	local warmup="$5"
+	local attempts="$6"
+	local wave_count=1
+	local per_target_secs=0
+	local total_secs=0
+
+	printf '%s' "${target_count}" | grep -Eq '^[0-9]+$' || target_count=1
+	printf '%s' "${concurrency}" | grep -Eq '^[0-9]+$' || concurrency=1
+	printf '%s' "${wait_timeout_ms}" | grep -Eq '^[0-9]+$' || wait_timeout_ms=0
+	printf '%s' "${probe_timeout_ms}" | grep -Eq '^[0-9]+$' || probe_timeout_ms=3000
+	printf '%s' "${warmup}" | grep -Eq '^[0-9]+$' || warmup=1
+	printf '%s' "${attempts}" | grep -Eq '^[0-9]+$' || attempts=2
+	[ "${target_count}" -gt 0 ] || target_count=1
+	[ "${concurrency}" -gt 0 ] || concurrency=1
+
+	wave_count=$(((target_count + concurrency - 1) / concurrency))
+	per_target_secs=$(((wait_timeout_ms + 999) / 1000))
+	per_target_secs=$((per_target_secs + (((warmup + attempts + 1) * probe_timeout_ms + 999) / 1000) + 2))
+	total_secs=$((wave_count * per_target_secs + 15))
+	[ "${total_secs}" -lt 20 ] && total_secs=20
+	printf '%s\n' "${total_secs}"
+}
+
 wt_try_webtest_tool_batch() {
 	local pairs_file="$1"
 	local batch_tag="$2"
@@ -383,32 +441,63 @@ wt_try_webtest_tool_batch() {
 	local daemon_pid=""
 	local follower_pid=""
 	local follower_script="${TMP2}/webtest_tool_${batch_tag}.follow.sh"
+	local follower_stop="${TMP2}/webtest_tool_${batch_tag}.follow.stop"
+	local target_count=0
+	local timeout_secs=0
 
 	webtest_tool="$(wt_pick_webtest_tool 2>/dev/null)" || return 1
 	[ -f "${pairs_file}" ] || return 1
-	rm -f "${output_json}" "${output_stream}" "${job_file}" "${live_result_file}" "${live_stream_file}" "${follower_script}"
+	target_count=$(wc -l < "${pairs_file}" | tr -d ' ')
+	[ -n "${target_count}" ] || target_count=0
+	rm -f "${output_json}" "${output_stream}" "${job_file}" "${live_result_file}" "${live_stream_file}" "${follower_script}" "${follower_stop}"
 	: > "${live_stream_file}"
 	: > "${live_result_file}"
 	wt_webtest_tool_build_job "${pairs_file}" "${job_file}" "${output_json}" "${output_stream}" "${WT_XRAY_THREADS}" "${batch_tag}" "${live_result_file}" "${live_stream_file}" || return 1
+	timeout_secs=$(wt_calc_batch_timeout_secs "${target_count}" "${WT_XRAY_THREADS}" 0 3000 1 2)
 	cat > "${follower_script}" <<-EOF
 		#!/bin/sh
-		tail -n +1 -f "${live_stream_file}" 2>/dev/null | while IFS= read -r line
+		last_lines=0
+		while [ ! -f "${follower_stop}" ]
 		do
-			[ -n "\${line}" ] || continue
-			nu="\${line%%>*}"
-			state="\${line#*>}"
-			[ -n "\${nu}" ] || continue
-			[ -f "${WT_WEBTEST_STATE_FILE}" ] || continue
-			current=\$(awk -F '>' -v node="\${nu}" '\$1 == node { print \$2; exit }' "${WT_WEBTEST_STATE_FILE}" 2>/dev/null)
-			if [ "\${current}" != "\${state}" ]; then
-				if grep -q "^\${nu}>" "${WT_WEBTEST_STATE_FILE}" 2>/dev/null; then
-					sed -i "/^\${nu}>/c\\\${nu}>\${state}" "${WT_WEBTEST_STATE_FILE}"
-				else
-					echo "\${nu}>\${state}" >> "${WT_WEBTEST_STATE_FILE}"
-				fi
-				printf '%s\n' "\${line}" >> "${WT_WEBTEST_FILE}"
-				printf '%s\n' "\${line}" >> "${WT_WEBTEST_STREAM}"
+			[ -f "${live_stream_file}" ] || {
+				sleep 1
+				continue
+			}
+			current_lines=\$(wc -l < "${live_stream_file}" 2>/dev/null)
+			[ -n "\${current_lines}" ] || current_lines=0
+			if [ "\${current_lines}" -gt "\${last_lines}" ]; then
+				sed -n "$((last_lines + 1)),\${current_lines}p" "${live_stream_file}" 2>/dev/null | while IFS= read -r line
+				do
+					[ -n "\${line}" ] || continue
+					[ "\${line}" = "__FSS_WEBTEST_FOLLOWER_STOP__" ] && continue
+					nu="\${line%%>*}"
+					state="\${line#*>}"
+					[ -n "\${nu}" ] || continue
+					[ -f "${WT_WEBTEST_STATE_FILE}" ] || continue
+					current=\$(awk -F '>' -v node="\${nu}" '\$1 == node { print \$2; exit }' "${WT_WEBTEST_STATE_FILE}" 2>/dev/null)
+					if [ "\${current}" != "\${state}" ]; then
+						tmp_state_file="${WT_WEBTEST_STATE_FILE}.tmp.\$\$"
+						awk -F '>' -v node="\${nu}" -v state="\${state}" '
+							BEGIN { updated = 0 }
+							\$1 == node {
+								print node ">" state
+								updated = 1
+								next
+							}
+							{ print }
+							END {
+								if (updated == 0) {
+									print node ">" state
+								}
+							}
+						' "${WT_WEBTEST_STATE_FILE}" > "\${tmp_state_file}" 2>/dev/null && mv -f "\${tmp_state_file}" "${WT_WEBTEST_STATE_FILE}"
+						printf '%s\n' "\${line}" >> "${WT_WEBTEST_FILE}"
+						printf '%s\n' "\${line}" >> "${WT_WEBTEST_STREAM}"
+					fi
+				done
+				last_lines="\${current_lines}"
 			fi
+			sleep 1
 		done
 	EOF
 	chmod +x "${follower_script}"
@@ -416,19 +505,40 @@ wt_try_webtest_tool_batch() {
 	follower_pid="$!"
 	"${webtest_tool}" run --config "${job_file}" >/dev/null 2>&1 &
 	daemon_pid="$!"
+	if ! wt_wait_pid_with_timeout "${daemon_pid}" "${timeout_secs}"; then
+		kill -9 "${daemon_pid}" >/dev/null 2>&1 || true
+		: > "${follower_stop}"
+		printf '%s\n' "__FSS_WEBTEST_FOLLOWER_STOP__" >> "${live_stream_file}"
+		sleep 1
+		[ -n "${follower_pid}" ] && kill "${follower_pid}" >/dev/null 2>&1 || true
+		return 1
+	fi
 	wait "${daemon_pid}" >/dev/null 2>&1 || true
+	: > "${follower_stop}"
+	printf '%s\n' "__FSS_WEBTEST_FOLLOWER_STOP__" >> "${live_stream_file}"
 	sleep 1
 	if [ -n "${follower_pid}" ]; then
 		kill "${follower_pid}" >/dev/null 2>&1 || true
 	fi
 	[ -f "${output_json}" ] || return 1
 	if [ "${WT_SINGLE}" = "1" ]; then
-		rm -f "${follower_script}"
+		wt_webtest_tool_import_results "${output_json}" || return 1
+		rm -f "${follower_script}" "${follower_stop}"
 		return 0
 	fi
 	wt_webtest_tool_import_results "${output_json}" || return 1
-	rm -f "${follower_script}"
+	rm -f "${follower_script}" "${follower_stop}"
 	return 0
+}
+
+wt_webtest_group_label() {
+	case "$1" in
+	xg*) printf '%s\n' "xray-like" ;;
+	nv) printf '%s\n' "naive" ;;
+	tc) printf '%s\n' "tuic" ;;
+	01|single) printf '%s\n' "ssr" ;;
+	*) printf '%s\n' "$1" ;;
+	esac
 }
 
 wt_webtest_tool_build_targets_job() {
@@ -442,6 +552,7 @@ wt_webtest_tool_build_targets_job() {
 	local live_stream_file="$8"
 	local jq_bin=""
 	local effective_concurrency="1"
+	local group_label=""
 	local first=1
 	local node_id=""
 	local test_port=""
@@ -454,6 +565,7 @@ wt_webtest_tool_build_targets_job() {
 	[ -f "${targets_file}" ] || return 1
 	[ -n "${concurrency}" ] || concurrency="1"
 	effective_concurrency="${concurrency}"
+	group_label="$(wt_webtest_group_label "${batch_tag}")"
 
 	{
 		printf '[\n'
@@ -489,7 +601,13 @@ wt_webtest_tool_build_targets_job() {
 		  "legacy_stream_file": "${live_stream_file}",
 		  "legacy_emit_stop": false,
 		  "runtime_root": "${TMP2}",
-		  "targets": $(cat "${job_file}.targets.tmp.$$")
+		  "groups": [
+		    {
+		      "name": "${group_label}",
+		      "concurrency": ${effective_concurrency},
+		      "targets": $(cat "${job_file}.targets.tmp.$$")
+		    }
+		  ]
 		}
 	EOF
 	rm -f "${job_file}.targets.tmp.$$"
@@ -511,35 +629,66 @@ wt_try_webtest_tool_targets_batch() {
 	local daemon_pid=""
 	local follower_pid=""
 	local follower_script="${TMP2}/webtest_tool_${batch_tag}.follow.sh"
+	local follower_stop="${TMP2}/webtest_tool_${batch_tag}.follow.stop"
 	local nodes_file="${TMP2}/webtest_tool_${batch_tag}.nodes"
+	local target_count=0
+	local timeout_secs=0
 
 	webtest_tool="$(wt_pick_webtest_tool 2>/dev/null)" || return 1
 	[ -f "${targets_file}" ] || return 1
-	rm -f "${output_json}" "${output_stream}" "${job_file}" "${live_result_file}" "${live_stream_file}" "${follower_script}" "${nodes_file}"
+	target_count=$(wc -l < "${targets_file}" | tr -d ' ')
+	[ -n "${target_count}" ] || target_count=0
+	rm -f "${output_json}" "${output_stream}" "${job_file}" "${live_result_file}" "${live_stream_file}" "${follower_script}" "${follower_stop}" "${nodes_file}"
 	: > "${live_stream_file}"
 	: > "${live_result_file}"
 	wt_webtest_tool_build_targets_job "${targets_file}" "${job_file}" "${output_json}" "${output_stream}" "${concurrency}" "${batch_tag}" "${live_result_file}" "${live_stream_file}" || return 1
+	timeout_secs=$(wt_calc_batch_timeout_secs "${target_count}" "${concurrency}" 5000 3000 1 2)
 	awk -F '|' '{print $1}' "${targets_file}" > "${nodes_file}"
 	wt_set_batch_state_from_file "${nodes_file}" "queued..." ""
 	cat > "${follower_script}" <<-EOF
 		#!/bin/sh
-		tail -n +1 -f "${live_stream_file}" 2>/dev/null | while IFS= read -r line
+		last_lines=0
+		while [ ! -f "${follower_stop}" ]
 		do
-			[ -n "\${line}" ] || continue
-			nu="\${line%%>*}"
-			state="\${line#*>}"
-			[ -n "\${nu}" ] || continue
-			[ -f "${WT_WEBTEST_STATE_FILE}" ] || continue
-			current=\$(awk -F '>' -v node="\${nu}" '\$1 == node { print \$2; exit }' "${WT_WEBTEST_STATE_FILE}" 2>/dev/null)
-			if [ "\${current}" != "\${state}" ]; then
-				if grep -q "^\${nu}>" "${WT_WEBTEST_STATE_FILE}" 2>/dev/null; then
-					sed -i "/^\${nu}>/c\\\${nu}>\${state}" "${WT_WEBTEST_STATE_FILE}"
-				else
-					echo "\${nu}>\${state}" >> "${WT_WEBTEST_STATE_FILE}"
-				fi
-				printf '%s\n' "\${line}" >> "${WT_WEBTEST_FILE}"
-				printf '%s\n' "\${line}" >> "${WT_WEBTEST_STREAM}"
+			[ -f "${live_stream_file}" ] || {
+				sleep 1
+				continue
+			}
+			current_lines=\$(wc -l < "${live_stream_file}" 2>/dev/null)
+			[ -n "\${current_lines}" ] || current_lines=0
+			if [ "\${current_lines}" -gt "\${last_lines}" ]; then
+				sed -n "$((last_lines + 1)),\${current_lines}p" "${live_stream_file}" 2>/dev/null | while IFS= read -r line
+				do
+					[ -n "\${line}" ] || continue
+					[ "\${line}" = "__FSS_WEBTEST_FOLLOWER_STOP__" ] && continue
+					nu="\${line%%>*}"
+					state="\${line#*>}"
+					[ -n "\${nu}" ] || continue
+					[ -f "${WT_WEBTEST_STATE_FILE}" ] || continue
+					current=\$(awk -F '>' -v node="\${nu}" '\$1 == node { print \$2; exit }' "${WT_WEBTEST_STATE_FILE}" 2>/dev/null)
+					if [ "\${current}" != "\${state}" ]; then
+						tmp_state_file="${WT_WEBTEST_STATE_FILE}.tmp.\$\$"
+						awk -F '>' -v node="\${nu}" -v state="\${state}" '
+							BEGIN { updated = 0 }
+							\$1 == node {
+								print node ">" state
+								updated = 1
+								next
+							}
+							{ print }
+							END {
+								if (updated == 0) {
+									print node ">" state
+								}
+							}
+						' "${WT_WEBTEST_STATE_FILE}" > "\${tmp_state_file}" 2>/dev/null && mv -f "\${tmp_state_file}" "${WT_WEBTEST_STATE_FILE}"
+						printf '%s\n' "\${line}" >> "${WT_WEBTEST_FILE}"
+						printf '%s\n' "\${line}" >> "${WT_WEBTEST_STREAM}"
+					fi
+				done
+				last_lines="\${current_lines}"
 			fi
+			sleep 1
 		done
 	EOF
 	chmod +x "${follower_script}"
@@ -547,16 +696,27 @@ wt_try_webtest_tool_targets_batch() {
 	follower_pid="$!"
 	"${webtest_tool}" run --config "${job_file}" >/dev/null 2>&1 &
 	daemon_pid="$!"
+	if ! wt_wait_pid_with_timeout "${daemon_pid}" "${timeout_secs}"; then
+		kill -9 "${daemon_pid}" >/dev/null 2>&1 || true
+		: > "${follower_stop}"
+		printf '%s\n' "__FSS_WEBTEST_FOLLOWER_STOP__" >> "${live_stream_file}"
+		sleep 1
+		[ -n "${follower_pid}" ] && kill "${follower_pid}" >/dev/null 2>&1 || true
+		return 1
+	fi
 	wait "${daemon_pid}" >/dev/null 2>&1 || true
+	: > "${follower_stop}"
+	printf '%s\n' "__FSS_WEBTEST_FOLLOWER_STOP__" >> "${live_stream_file}"
 	sleep 1
 	[ -n "${follower_pid}" ] && kill "${follower_pid}" >/dev/null 2>&1 || true
 	[ -f "${output_json}" ] || return 1
 	if [ "${WT_SINGLE}" = "1" ]; then
-		rm -f "${follower_script}" "${nodes_file}"
+		wt_webtest_tool_import_results "${output_json}" || return 1
+		rm -f "${follower_script}" "${follower_stop}" "${nodes_file}"
 		return 0
 	fi
 	wt_webtest_tool_import_results "${output_json}" || return 1
-	rm -f "${follower_script}" "${nodes_file}"
+	rm -f "${follower_script}" "${follower_stop}" "${nodes_file}"
 	return 0
 }
 
@@ -639,6 +799,24 @@ wt_has_active_test_runner() {
 	'
 }
 
+wt_kill_stale_batch_runners() {
+	local self_pid="${1:-$$}"
+	local pid=""
+
+	ps w 2>/dev/null | awk -v self="${self_pid}" '
+		/ss_webtest\.sh/ && !/grep/ {
+			pid = $1
+			if (pid == self) next
+			if ($0 ~ /schedule_warm/ || $0 ~ /schedule_node_direct_refresh/ || $0 ~ /warm_cache/ || $0 ~ /node_direct_refresh/) next
+			print pid
+		}
+	' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill -9 "${pid}" >/dev/null 2>&1 || true
+	done
+}
+
 wt_ensure_webtest_dir() {
 	mkdir -p /tmp/upload
 }
@@ -652,6 +830,18 @@ wt_reset_webtest_output() {
 wt_init_reserved_ports() {
 	WT_RESERVED_PORTS_FILE="${TMP2}/reserved_ports.txt"
 	: > "${WT_RESERVED_PORTS_FILE}"
+}
+
+wt_get_reserved_port() {
+	local port=""
+
+	[ -n "${WT_RESERVED_PORTS_FILE}" ] || WT_RESERVED_PORTS_FILE="${TMP2}/reserved_ports.txt"
+	[ -f "${WT_RESERVED_PORTS_FILE}" ] || : > "${WT_RESERVED_PORTS_FILE}"
+	port=$(get_rand_port "${WT_RESERVED_PORTS_FILE}")
+	[ -n "${port}" ] || return 1
+	printf '%s\n' "${port}" >> "${WT_RESERVED_PORTS_FILE}"
+	sort -un "${WT_RESERVED_PORTS_FILE}" -o "${WT_RESERVED_PORTS_FILE}" 2>/dev/null
+	printf '%s\n' "${port}"
 }
 
 wt_append_webtest_line() {
@@ -1118,6 +1308,11 @@ wt_runtime_cleanup() {
 	killall wt-hy2 >/dev/null 2>&1
 	killall webtest-tool >/dev/null 2>&1
 	killall curl-fancyss >/dev/null 2>&1
+	ps w 2>/dev/null | grep -F '/tmp/fancyss_webtest/webtest_tool_' | grep -E 'follow\.sh|tail -n \+1 -f' | grep -v grep | awk '{print $1}' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill -9 "${pid}" >/dev/null 2>&1
+	done
 }
 
 wt_finalize_batch_output() {
@@ -2590,9 +2785,9 @@ wt_prepare_webtest_preview() {
 		wt_collect_xray_like_ids_file "${preview_ids_file}" >/dev/null 2>&1 || true
 	fi
 	if [ -s "${preview_ids_file}" ] && ! wt_webtest_cache_is_globally_fresh "${preview_ids_file}"; then
-		http_response "ok5, webtest cache rebuilding..."
+		wt_http_response "ok5, webtest cache rebuilding..."
 	else
-		http_response "ok4, webtest.txt generating..."
+		wt_http_response "ok4, webtest.txt generating..."
 	fi
 	rm -f "${preview_ids_file}" >/dev/null 2>&1
 	wt_show_current_group_preview "${WT_GROUP_PREVIEW_FILE}" "${WT_GROUP_CURRENT_TAG}"
@@ -2671,16 +2866,26 @@ get_webtest_usable_count(){
 webtest_web(){
 	ensure_latency_batch
 	if [ "${ss_basic_latency_batch}" != "1" ];then
-		http_response "batch_disabled"
+		wt_http_response "batch_disabled"
 		return 0
 	fi
 	set_default "ss_basic_lt_web_time" "30"
-	# 1. 如果没有结果文件，需要去获取webtest
-	if [ ! -f "${WT_WEBTEST_FILE}" ];then
+	# 1. 如果 lock 存在，说明正在 webtest，那么告诉 web 自己去拿结果吧
+	if [ -f "/tmp/webtest.lock" ];then
+		if wt_cache_state_is_building; then
+			wt_http_response "ok5, webtest cache rebuilding..."
+		else
+			wt_http_response "ok1, lock exist, webtest is running..."
+		fi
+		return 0
+	fi
+
+	# 2. 如果没有结果文件，或者文件为空，需要去获取 webtest
+	if [ ! -s "${WT_WEBTEST_FILE}" ];then
 		local backup_usable=$(get_webtest_usable_count "${WT_WEBTEST_BACKUP}")
 		if [ "${backup_usable}" -gt "0" ];then
 			cp -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_FILE}" >/dev/null 2>&1
-			http_response "ok3, partial cache exists, keep it"
+			wt_http_response "ok3, partial cache exists, keep it"
 			return 0
 		fi
 		clean_webtest
@@ -2688,27 +2893,17 @@ webtest_web(){
 		return 0
 	fi
 
-	# 2. 如果有结果文件，且lock 存在，说明正在webtest，那么告诉web自己去拿结果吧
-	if [ -f "/tmp/webtest.lock" ];then
-		if wt_cache_state_is_building; then
-			http_response "ok5, webtest cache rebuilding..."
-		else
-			http_response "ok1, lock exist, webtest is running..."
-		fi
-		return 0
-	fi
-
 	# 3. 如果有结果该文件，且没有lock（webtest完成了的），需要检测下节点数量和webtest数量是否一致，避免新增节点没有webtest
 	local webtest_nu=$(cat "${WT_WEBTEST_FILE}" | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
 	local node_nu=$(wt_node_count)
 	if [ "${webtest_nu}" -ne "${node_nu}" ];then
-		http_response "ok3, partial cache exists, keep it"
+		wt_http_response "ok3, partial cache exists, keep it"
 		return 0
 	fi
 
 	# 4. 如果有结果该文件，且没有lock（webtest完成了的），且节点数和webtest结果数一致，比较下上次webtest结果生成的时间，如果是15分钟以内，则不需要重新webtest
 	if [ "${ss_basic_lt_cru_opts}" = "1" ] || [ "${ss_basic_lt_web_time}" = "0" ];then
-		http_response "ok2, webtest auto refresh disabled!"
+		wt_http_response "ok2, webtest auto refresh disabled!"
 		return 0
 	fi
 	TS_LST=$(/bin/date -r "${WT_WEBTEST_FILE}" "+%s")
@@ -2716,7 +2911,7 @@ webtest_web(){
 	TS_DUR=$((${TS_NOW} - ${TS_LST}))
 	local web_refresh_secs=$((ss_basic_lt_web_time * 60))
 	if [ "${TS_DUR}" -lt "${web_refresh_secs}" ];then
-		http_response "ok2, webtest result in ${ss_basic_lt_web_time}min, do not refresh!"
+		wt_http_response "ok2, webtest result in ${ss_basic_lt_web_time}min, do not refresh!"
 	else
 		clean_webtest
 		start_webtest
@@ -2724,6 +2919,10 @@ webtest_web(){
 }
 
 start_webtest(){
+	wt_kill_stale_batch_runners "$$"
+	if wt_has_active_test_runner "$$"; then
+		return 0
+	fi
 	# create lock
 	touch /tmp/webtest.lock
 	rm -f "${WT_WEBTEST_STOP_FLAG}"
@@ -2839,7 +3038,7 @@ test_nodes(){
 
 	if [ "${WT_PREVIEW_READY}" != "1" ];then
 		wt_reset_webtest_output
-		http_response "ok4, webtest.txt generating..."
+		wt_http_response "ok4, webtest.txt generating..."
 		FIRST_EFFECTIVE_FILE=$(sed -n '1p' ${TMP2}/nodes_file_name.txt)
 		FIRST_EFFECTIVE_NAME=${FIRST_EFFECTIVE_FILE##*/}
 		FIRST_EFFECTIVE_TYPE=${FIRST_EFFECTIVE_NAME#wt_*_}
@@ -3000,7 +3199,7 @@ test_07_sr(){
 		if [ -z "${_server_ip}" ];then
 			_server_ip=$(wt_node_get server ${nu})
 		fi
-		socks5_port=$(get_rand_port)
+		socks5_port=$(wt_get_reserved_port)
 		[ -n "${socks5_port}" ] || {
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 			wt_append_webtest_file "${TMP2}/results/${nu}.txt"
@@ -3036,6 +3235,7 @@ test_07_sr(){
 		return 0
 	fi
 
+	wt_mark_failed_from_nodes_file "${valid_nodes_file}"
 	killall wt-rss-local >/dev/null 2>&1
 	rm -rf "${hooks_dir}" ${TMP2}/wt-rss-local
 }
@@ -3075,7 +3275,7 @@ test_11_nv(){
 	while read -r nu
 	do
 		[ -n "${nu}" ] || continue
-		socks5_port=$(get_rand_port)
+		socks5_port=$(wt_get_reserved_port)
 		[ -n "${socks5_port}" ] || {
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 			wt_append_webtest_file "${TMP2}/results/${nu}.txt"
@@ -3096,6 +3296,7 @@ test_11_nv(){
 		return 0
 	fi
 	
+	wt_mark_failed_from_nodes_file "${valid_nodes_file}"
 	killall wt-naive >/dev/null 2>&1
 	rm -rf ${TMP2}/wt-naive "${hooks_dir}"
 }
@@ -3136,7 +3337,7 @@ test_12_tc(){
 	while read -r nu
 	do
 		[ -n "${nu}" ] || continue
-		socks5_port=$(get_rand_port)
+		socks5_port=$(wt_get_reserved_port)
 		[ -n "${socks5_port}" ] || {
 			echo -en "${nu}>failed\n" >>${TMP2}/results/${nu}.txt
 			wt_append_webtest_file "${TMP2}/results/${nu}.txt"
@@ -3163,6 +3364,7 @@ test_12_tc(){
 		return 0
 	fi
 	
+	wt_mark_failed_from_nodes_file "${valid_nodes_file}"
 	killall wt-tuic >/dev/null 2>&1
 	rm -rf ${TMP2}/wt-tuic "${hooks_dir}"
 }
@@ -3216,7 +3418,7 @@ creat_trojan_json(){
 		sed -i '/tcpFastOpen/d' ${TMP2}/conf/${nu}_outbounds.json
 	fi
 	# inbounds
-	local socks5_port=$(get_rand_port)
+	local socks5_port=$(wt_get_reserved_port)
 	echo "export socks5_port_${nu}=${socks5_port}" >> ${TMP2}/socsk5_ports.txt
 	cat >>${TMP2}/conf/${nu}_inbounds.json <<-EOF
 		{
@@ -3304,7 +3506,7 @@ creat_hy2_yaml(){
 		EOF
 	fi
 
-	local socks5_port=$(get_rand_port)
+	local socks5_port=$(wt_get_reserved_port)
 	echo "export socks5_port_${nu}=${socks5_port}" >> ${TMP2}/socsk5_ports.txt
 	cat >> ${TMP2}/conf_${mark}/${nu}.yaml <<-EOF
 		transport:
@@ -3705,6 +3907,29 @@ set_latency_job() {
 	fi
 }
 
+wt_is_named_action() {
+	case "$1" in
+	schedule_warm|schedule_node_direct_refresh|warm_cache|ensure_cache_ids_file|node_direct_refresh|web_webtest|clear_webtest|cleanup_helpers|single_test|manual_webtest|close_latency_test|stop_webtest)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+WEBTEST_ACTION=""
+WEBTEST_ACTION_ARG=""
+if wt_is_named_action "$1"; then
+	WEBTEST_ACTION="$1"
+	WEBTEST_ACTION_ARG="$2"
+elif [ -n "$2" ]; then
+	WT_CAN_HTTP_RESPONSE=1
+	WEBTEST_ACTION="$2"
+	WEBTEST_ACTION_ARG="$3"
+else
+	WEBTEST_ACTION="$1"
+	WEBTEST_ACTION_ARG="$2"
+fi
+
 case $1 in
 2)
 	# start webtest by cron
@@ -3717,25 +3942,25 @@ case $1 in
 schedule_warm)
 	mkdir -p /tmp/upload >/dev/null 2>&1
 	if wt_has_active_test_runner "$$"; then
-		http_response "ok"
+		wt_http_response "ok"
 		exit 0
 	fi
 	if ! ps | grep -E "ss_webtest\\.sh warm_cache" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" warm_cache >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
-	http_response "ok"
+	wt_http_response "ok"
 	exit 0
 	;;
 schedule_node_direct_refresh)
 	mkdir -p /tmp/upload >/dev/null 2>&1
 	if wt_has_active_test_runner "$$"; then
-		http_response "ok"
+		wt_http_response "ok"
 		exit 0
 	fi
 	if ! ps | grep -E "ss_webtest\\.sh node_direct_refresh" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" node_direct_refresh >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
-	http_response "ok"
+	wt_http_response "ok"
 	exit 0
 	;;
 warm_cache)
@@ -3757,38 +3982,36 @@ node_direct_refresh)
 	;;
 esac
 
-
-case $2 in
+case $WEBTEST_ACTION in
 schedule_warm)
 	mkdir -p /tmp/upload >/dev/null 2>&1
 	if wt_has_active_test_runner "$$"; then
-		http_response "ok"
+		wt_http_response "ok"
 		exit 0
 	fi
 	if ! ps | grep -E "ss_webtest\\.sh warm_cache" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" warm_cache >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
-	http_response "ok"
+	wt_http_response "ok"
 	exit 0
 	;;
 schedule_node_direct_refresh)
 	mkdir -p /tmp/upload >/dev/null 2>&1
 	if wt_has_active_test_runner "$$"; then
-		http_response "ok"
+		wt_http_response "ok"
 		exit 0
 	fi
 	if ! ps | grep -E "ss_webtest\\.sh node_direct_refresh" | grep -v grep >/dev/null 2>&1; then
 		sh "${KSROOT}/scripts/ss_webtest.sh" node_direct_refresh >> /tmp/upload/ss_log.txt 2>&1 &
 	fi
-	http_response "ok"
+	wt_http_response "ok"
 	exit 0
 	;;
 warm_cache)
 	warm_webtest_cache
 	;;
 ensure_cache_ids_file)
-	shift 2
-	ensure_webtest_cache_nodes_file="$1"
+	ensure_webtest_cache_nodes_file="${WEBTEST_ACTION_ARG}"
 	[ -n "${ensure_webtest_cache_nodes_file}" ] || exit 1
 	WT_CACHE_LOGGING=0
 	LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
@@ -3806,49 +4029,53 @@ web_webtest)
 	;;
 clear_webtest)
 	if [ -f "/tmp/webtest.lock" ];then
-		http_response "busy"
+		wt_http_response "busy"
 		exit 0
 	fi
-	http_response $1
+	wt_http_response $1
 	clean_webtest
 	dbus remove ss_basic_webtest_ts
 	rm -f "${WT_WEBTEST_BACKUP}"
 	;;
+cleanup_helpers)
+	wt_runtime_cleanup
+	rm -rf "${TMP2}" >/dev/null 2>&1
+	;;
 single_test)
 	if [ -f "/tmp/webtest.lock" ];then
-		http_response "busy"
+		wt_http_response "busy"
 		exit 0
 	fi
-	http_response $1
-	single_test_node $3
+	wt_http_response $1
+	single_test_node "${WEBTEST_ACTION_ARG}"
 	;;
 manual_webtest)
 	ensure_latency_batch
 	if [ "${ss_basic_latency_batch}" != "1" ];then
-		http_response "batch_disabled"
+		wt_http_response "batch_disabled"
 		exit 0
 	fi
 	clean_webtest
 	rm -f "${WT_WEBTEST_BACKUP}"
 	dbus remove ss_basic_webtest_ts
-	http_response $1
+	wt_http_response $1
 	;;
 close_latency_test)
-	http_response $1
+	wt_http_response $1
 	clean_webtest
 	dbus remove ss_basic_webtest_ts
 	;;
 stop_webtest)
-	http_response $1
+	wt_http_response $1
 	wt_request_stop_batch
 	;;
 0)
-	http_response $1
+	wt_http_response $1
 	set_latency_job
 	;;
 1)
 	# webtest foreign url changed
-	http_response $1
+	wt_http_response $1
 	if [ "${ss_failover_enable}" == "1" ];then
 		echo "${LOGTIME1} fancyss：切换国外web延迟检测地址为：${ss_basic_furl}" >>/tmp/upload/ssf_status.txt
 	fi
@@ -3856,7 +4083,7 @@ stop_webtest)
 	;;
 2)
 	# webtest china url changed
-	http_response $1
+	wt_http_response $1
 	if [ "${ss_failover_enable}" == "1" ];then
 		echo "${LOGTIME1} fancyss：切换国内web延迟检测地址为：${ss_basic_curl}" >>/tmp/upload/ssc_status.txt
 	fi
@@ -3864,7 +4091,7 @@ stop_webtest)
 	;;
 3)
 	# webtest foreign + china url changed
-	http_response $1
+	wt_http_response $1
 	if [ "${ss_failover_enable}" == "1" ];then
 		echo "${LOGTIME1} fancyss：切换国外web延迟检测地址为：${ss_basic_furl}" >>/tmp/upload/ssf_status.txt
 		echo "${LOGTIME1} fancyss：切换国内web延迟检测地址为：${ss_basic_curl}" >>/tmp/upload/ssc_status.txt
