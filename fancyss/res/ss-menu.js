@@ -1,7 +1,6 @@
 function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
-console.log("[fancyss-ui] build 2026-02-09 codex");
 function isObjectEmpty(obj) {
 	return Object.keys(obj).length === 0;
 }

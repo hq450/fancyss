@@ -7020,10 +7020,6 @@ function refresh_html() {
 	// add dynamic table
 	$('#ss_list_table').before(html);
 	update_latency_action_links();
-	// load cached webtest results if available
-	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
-		load_latency_cache();
-	}
 	if(get_node_storage_schema() == 1 && node_max != 0 && node_max != node_nu ){
 		console.log("自动调整顺序！")
 		save_new_order();
@@ -8567,6 +8563,9 @@ function write_webtest(ps){
 	for(var i = 0; i<ps.length; i++){
 		var nu = ps[i][0];
 		var lag = ps[i][1];
+		if(nu != "stop" && nu != "refresh" && !/^[0-9]+$/.test(String(nu || ""))){
+			continue;
+		}
 		if(typeof lag === "string"){
 			lag = lag.replace(/\.{3,}/, "...");
 			if(lag.indexOf("testing") === 0){
@@ -8583,7 +8582,8 @@ function write_webtest(ps){
 				lag = "warming...";
 			}
 		}
-		var $cell = $('#ss_node_lt_' + nu);
+		var cellElem = document.getElementById('ss_node_lt_' + nu);
+		var $cell = cellElem ? $(cellElem) : $();
 		var $val = $cell.length ? $cell.find(".latency_val") : null;
 		if(typeof lag === "string" && is_latency_transient_state(lag)){
 			if($val && $val.length){
