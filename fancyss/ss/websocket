@@ -203,7 +203,7 @@ do
 			sh /koolshare/scripts/ss_webtest.sh single_test "${NODE_ID}" >/dev/null 2>&1 &
 			echo XU6J03M6
 		fi
-	elif [ "${MSG}" == "run_ss_config_start" ]; then
+	elif [ "${MSG}" == "run_ss_config_start" ] || [ "${MSG}" == "sh /koolshare/scripts/ss_config.sh start_by_ws" ]; then
 		sh /koolshare/scripts/ss_config.sh start_by_ws 2>&1 | while IFS= read -r line
 		do
 			echo "${line}"
@@ -214,7 +214,7 @@ do
 			esac
 		done
 		sleep 1
-	elif [ "${MSG}" == "run_ss_config_stop" ]; then
+	elif [ "${MSG}" == "run_ss_config_stop" ] || [ "${MSG}" == "sh /koolshare/scripts/ss_config.sh stop" ]; then
 		sh /koolshare/scripts/ss_config.sh stop 2>&1 | while IFS= read -r line
 		do
 			echo "${line}"
@@ -225,7 +225,7 @@ do
 			esac
 		done
 		sleep 1
-	elif [ "${MSG}" == "run_ss_config_start_shunt_hot" ]; then
+	elif [ "${MSG}" == "run_ss_config_start_shunt_hot" ] || [ "${MSG}" == "sh /koolshare/scripts/ss_config.sh start_shunt_hot" ]; then
 		sh /koolshare/scripts/ss_config.sh start_shunt_hot 2>&1 | while IFS= read -r line
 		do
 			echo "${line}"

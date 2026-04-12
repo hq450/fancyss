@@ -9784,6 +9784,10 @@ function get_ss_status_back() {
 }
 function get_ss_status_back_websocket() {
 	try {
+		if (!wss || wss.readyState !== 1) {
+			wss_open = 0;
+			return;
+		}
 		wss.send("cat /tmp/upload/ss_status.txt");
 	} catch (ex) {
 		console.log('Cannot send: ' + ex);
