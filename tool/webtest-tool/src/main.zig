@@ -41,6 +41,7 @@ const ProbeResult = struct {
 const TargetConfig = struct {
     id: []u8,
     identity: []u8,
+    group: []u8,
     test_port: u16,
     start_script: ?[]u8 = null,
     stop_script: ?[]u8 = null,
@@ -51,12 +52,20 @@ const TargetConfig = struct {
 const TargetResult = struct {
     id: []u8,
     identity: []u8,
+    group: []u8,
     test_port: u16,
     state: []const u8,
     latency_ms: ?u32 = null,
     response_code: ?u16 = null,
     err_text: ?[]u8 = null,
     updated_at_ms: i64 = 0,
+};
+
+const GroupConfig = struct {
+    name: []u8,
+    concurrency: u16,
+    start_index: usize,
+    target_count: usize,
 };
 
 const WebtestConfig = struct {
@@ -72,6 +81,7 @@ const WebtestConfig = struct {
     legacy_stream_file: ?[]u8 = null,
     legacy_emit_stop: bool = true,
     runtime_root: ?[]u8 = null,
+    groups: []GroupConfig,
     targets: []TargetConfig,
 };
 
@@ -103,9 +113,14 @@ const State = struct {
             if (cfg.legacy_result_file) |path| self.allocator.free(path);
             if (cfg.legacy_stream_file) |path| self.allocator.free(path);
             if (cfg.runtime_root) |path| self.allocator.free(path);
+            for (cfg.groups) |g| {
+                self.allocator.free(g.name);
+            }
+            if (cfg.groups.len != 0) self.allocator.free(cfg.groups);
             for (cfg.targets) |t| {
                 self.allocator.free(t.id);
                 self.allocator.free(t.identity);
+                self.allocator.free(t.group);
                 if (t.start_script) |path| self.allocator.free(path);
                 if (t.stop_script) |path| self.allocator.free(path);
             }
@@ -115,6 +130,7 @@ const State = struct {
         for (self.results) |r| {
             self.allocator.free(r.id);
             self.allocator.free(r.identity);
+            self.allocator.free(r.group);
             if (r.err_text) |msg| self.allocator.free(msg);
         }
         if (self.results.len != 0) self.allocator.free(self.results);
@@ -573,32 +589,7 @@ fn parseConfigFile(allocator: std.mem.Allocator, path: []const u8) !WebtestConfi
         else => return error.InvalidConfig,
     };
 
-    const targets_val = obj.get("targets") orelse return error.InvalidConfig;
-    if (targets_val != .array) return error.InvalidConfig;
-    const targets = try allocator.alloc(TargetConfig, targets_val.array.items.len);
-    for (targets_val.array.items, 0..) |item, idx| {
-        if (item != .object) return error.InvalidConfig;
-        const tobj = item.object;
-        targets[idx] = .{
-            .id = switch (tobj.get("id") orelse return error.InvalidConfig) {
-                .string => |v| try allocator.dupe(u8, v),
-                else => return error.InvalidConfig,
-            },
-            .identity = switch (tobj.get("identity") orelse return error.InvalidConfig) {
-                .string => |v| try allocator.dupe(u8, v),
-                else => return error.InvalidConfig,
-            },
-            .test_port = switch (tobj.get("test_port") orelse return error.InvalidConfig) {
-                .integer => |v| @as(u16, @intCast(v)),
-                .number_string => |v| @as(u16, @intCast(try parseU32(v))),
-                else => return error.InvalidConfig,
-            },
-            .start_script = try parseOptionalString(allocator, tobj, "start_script"),
-            .stop_script = try parseOptionalString(allocator, tobj, "stop_script"),
-            .wait_port = try parseOptionalU16(tobj, "wait_port"),
-            .wait_timeout_ms = try parseOptionalU32(tobj, "wait_timeout_ms"),
-        };
-    }
+    const ParsedPlan = try parseTargetsPlan(allocator, obj, concurrency);
 
     return .{
         .batch_id = batch_id,
@@ -613,8 +604,97 @@ fn parseConfigFile(allocator: std.mem.Allocator, path: []const u8) !WebtestConfi
         .legacy_stream_file = legacy_stream_file,
         .legacy_emit_stop = legacy_emit_stop,
         .runtime_root = runtime_root,
-        .targets = targets,
+        .groups = ParsedPlan.groups,
+        .targets = ParsedPlan.targets,
     };
+}
+
+const ParsedTargetsPlan = struct {
+    groups: []GroupConfig,
+    targets: []TargetConfig,
+};
+
+fn parseTargetConfig(allocator: std.mem.Allocator, item: std.json.Value, group_name: []const u8) !TargetConfig {
+    if (item != .object) return error.InvalidConfig;
+    const tobj = item.object;
+    const identity = if (tobj.get("identity")) |value| switch (value) {
+        .string => |v| try allocator.dupe(u8, v),
+        else => return error.InvalidConfig,
+    } else switch (tobj.get("id") orelse return error.InvalidConfig) {
+        .string => |v| try allocator.dupe(u8, v),
+        else => return error.InvalidConfig,
+    };
+    return .{
+        .id = switch (tobj.get("id") orelse return error.InvalidConfig) {
+            .string => |v| try allocator.dupe(u8, v),
+            else => return error.InvalidConfig,
+        },
+        .identity = identity,
+        .group = try allocator.dupe(u8, group_name),
+        .test_port = switch (tobj.get("test_port") orelse return error.InvalidConfig) {
+            .integer => |v| @as(u16, @intCast(v)),
+            .number_string => |v| @as(u16, @intCast(try parseU32(v))),
+            else => return error.InvalidConfig,
+        },
+        .start_script = try parseOptionalString(allocator, tobj, "start_script"),
+        .stop_script = try parseOptionalString(allocator, tobj, "stop_script"),
+        .wait_port = try parseOptionalU16(tobj, "wait_port"),
+        .wait_timeout_ms = try parseOptionalU32(tobj, "wait_timeout_ms"),
+    };
+}
+
+fn parseTargetsPlan(allocator: std.mem.Allocator, obj: std.json.ObjectMap, default_concurrency: u16) !ParsedTargetsPlan {
+    if (obj.get("groups")) |groups_val| {
+        if (groups_val != .array) return error.InvalidConfig;
+        if (groups_val.array.items.len == 0) return error.InvalidConfig;
+        var total_targets: usize = 0;
+        for (groups_val.array.items) |group_item| {
+            if (group_item != .object) return error.InvalidConfig;
+            const gobj = group_item.object;
+            const targets_val = gobj.get("targets") orelse return error.InvalidConfig;
+            if (targets_val != .array) return error.InvalidConfig;
+            total_targets += targets_val.array.items.len;
+        }
+
+        const groups = try allocator.alloc(GroupConfig, groups_val.array.items.len);
+        const targets = try allocator.alloc(TargetConfig, total_targets);
+        var target_index: usize = 0;
+        for (groups_val.array.items, 0..) |group_item, group_idx| {
+            const gobj = group_item.object;
+            const raw_name = switch (gobj.get("name") orelse return error.InvalidConfig) {
+                .string => |v| v,
+                else => return error.InvalidConfig,
+            };
+            const group_concurrency = (try parseOptionalU16(gobj, "concurrency")) orelse default_concurrency;
+            const targets_val = gobj.get("targets") orelse return error.InvalidConfig;
+            groups[group_idx] = .{
+                .name = try allocator.dupe(u8, raw_name),
+                .concurrency = if (group_concurrency == 0) 1 else group_concurrency,
+                .start_index = target_index,
+                .target_count = targets_val.array.items.len,
+            };
+            for (targets_val.array.items) |target_item| {
+                targets[target_index] = try parseTargetConfig(allocator, target_item, raw_name);
+                target_index += 1;
+            }
+        }
+        return .{ .groups = groups, .targets = targets };
+    }
+
+    const targets_val = obj.get("targets") orelse return error.InvalidConfig;
+    if (targets_val != .array) return error.InvalidConfig;
+    const groups = try allocator.alloc(GroupConfig, 1);
+    groups[0] = .{
+        .name = try allocator.dupe(u8, "default"),
+        .concurrency = if (default_concurrency == 0) 1 else default_concurrency,
+        .start_index = 0,
+        .target_count = targets_val.array.items.len,
+    };
+    const targets = try allocator.alloc(TargetConfig, targets_val.array.items.len);
+    for (targets_val.array.items, 0..) |item, idx| {
+        targets[idx] = try parseTargetConfig(allocator, item, "default");
+    }
+    return .{ .groups = groups, .targets = targets };
 }
 
 fn appendJsonlLine(path: []const u8, line: []const u8) !void {
@@ -650,6 +730,7 @@ fn writeSnapshot(state: *State) !void {
         timeout_ms: u32,
         warmup: u8,
         attempts: u8,
+        groups: []const GroupConfig,
         results: []const TargetResult,
     };
 
@@ -664,6 +745,7 @@ fn writeSnapshot(state: *State) !void {
         .timeout_ms = cfg.timeout_ms,
         .warmup = cfg.warmup,
         .attempts = cfg.attempts,
+        .groups = cfg.groups,
         .results = state.results,
     }, .{ .whitespace = .indent_2 }, &writer.writer);
     try writer.writer.writeByte('\n');
@@ -695,6 +777,7 @@ fn emitTestingState(state: *State, result: *TargetResult) void {
     defer event_writer.deinit();
     std.json.Stringify.value(.{
         .type = "state",
+        .group = result.group,
         .id = result.id,
         .identity = result.identity,
         .test_port = result.test_port,
@@ -716,6 +799,7 @@ fn emitFinalResult(state: *State, result: *TargetResult) void {
     defer event_writer.deinit();
     std.json.Stringify.value(.{
         .type = "result",
+        .group = result.group,
         .id = result.id,
         .identity = result.identity,
         .test_port = result.test_port,
@@ -758,6 +842,7 @@ fn processTarget(state: *State, idx: usize) void {
         writeSnapshot(state) catch {};
         return;
     }
+    state.mutex.unlock();
 
     if (target.start_script) |start_script| {
         debugLog("target {s} start hook begin wait_port={d}", .{ result.id, target.wait_port orelse 0 });
@@ -800,6 +885,8 @@ fn processTarget(state: *State, idx: usize) void {
         }
     }
 
+    state.mutex.lock();
+    result = &state.results[idx];
     result.state = "testing";
     result.updated_at_ms = nowMs();
     state.mutex.unlock();
@@ -852,14 +939,44 @@ fn processTarget(state: *State, idx: usize) void {
     writeSnapshot(state) catch {};
 }
 
-fn workerThread(state: *State, next_index: *std.atomic.Value(usize)) void {
+fn workerThread(state: *State, next_index: *std.atomic.Value(usize), start_index: usize, end_index: usize) void {
     while (true) {
-        const idx = next_index.fetchAdd(1, .monotonic);
-        state.mutex.lock();
-        const total = state.results.len;
-        state.mutex.unlock();
-        if (idx >= total) break;
+        const offset = next_index.fetchAdd(1, .monotonic);
+        const idx = start_index + offset;
+        if (idx >= end_index) break;
         processTarget(state, idx);
+    }
+}
+
+fn runGroupWorkers(state: *State, group: GroupConfig) void {
+    if (group.target_count == 0) return;
+    const start_index = group.start_index;
+    const end_index = group.start_index + group.target_count;
+    const configured_concurrency = if (group.concurrency == 0) 1 else group.concurrency;
+    const worker_count: usize = @min(@as(usize, configured_concurrency), group.target_count);
+    var next_index: std.atomic.Value(usize) = .init(0);
+    var threads = state.allocator.alloc(std.Thread, worker_count) catch {
+        state.mutex.lock();
+        state.phase = .failed;
+        state.worker_active = false;
+        state.mutex.unlock();
+        return;
+    };
+    defer state.allocator.free(threads);
+
+    for (threads, 0..) |*thread, idx| {
+        thread.* = std.Thread.spawn(.{}, workerThread, .{ state, &next_index, start_index, end_index }) catch {
+            for (threads[0..idx]) |started| started.join();
+            state.mutex.lock();
+            state.phase = .failed;
+            state.worker_active = false;
+            state.mutex.unlock();
+            return;
+        };
+    }
+
+    for (threads) |thread| {
+        thread.join();
     }
 }
 
@@ -875,36 +992,18 @@ fn workerMain(state: *State) void {
     state.phase = .running;
     state.stop_requested = false;
     state.worker_active = true;
-    const target_count = cfg.targets.len;
-    const configured_concurrency = if (cfg.concurrency == 0) 1 else cfg.concurrency;
     state.mutex.unlock();
 
     writeSnapshot(state) catch {};
 
-    const worker_count: usize = if (target_count == 0) 0 else @min(@as(usize, configured_concurrency), target_count);
-    var next_index: std.atomic.Value(usize) = .init(0);
-    var threads = state.allocator.alloc(std.Thread, worker_count) catch {
+    for (cfg.groups) |group| {
         state.mutex.lock();
-        state.phase = .failed;
-        state.worker_active = false;
+        const stop_now = state.stop_requested or state.phase == .failed;
         state.mutex.unlock();
-        return;
-    };
-    defer state.allocator.free(threads);
-
-    for (threads, 0..) |*thread, idx| {
-        thread.* = std.Thread.spawn(.{}, workerThread, .{ state, &next_index }) catch {
-            for (threads[0..idx]) |started| started.join();
-            state.mutex.lock();
-            state.phase = .failed;
-            state.worker_active = false;
-            state.mutex.unlock();
-            return;
-        };
-    }
-
-    for (threads) |thread| {
-        thread.join();
+        if (stop_now) break;
+        debugLog("group start name={s} concurrency={d} targets={d}", .{ group.name, group.concurrency, group.target_count });
+        runGroupWorkers(state, group);
+        debugLog("group done name={s}", .{group.name});
     }
 
     state.mutex.lock();
@@ -942,6 +1041,7 @@ fn runBatchOnce(allocator: std.mem.Allocator, config_path: []const u8) !void {
         state.results[idx] = .{
             .id = try state.allocator.dupe(u8, t.id),
             .identity = try state.allocator.dupe(u8, t.identity),
+            .group = try state.allocator.dupe(u8, t.group),
             .test_port = t.test_port,
             .state = "waiting",
             .updated_at_ms = nowMs(),
@@ -1003,6 +1103,7 @@ fn handleCommand(allocator: std.mem.Allocator, state: *State, command: []const u
             state.results[idx] = .{
                 .id = try state.allocator.dupe(u8, t.id),
                 .identity = try state.allocator.dupe(u8, t.identity),
+                .group = try state.allocator.dupe(u8, t.group),
                 .test_port = t.test_port,
                 .state = "waiting",
                 .updated_at_ms = nowMs(),
