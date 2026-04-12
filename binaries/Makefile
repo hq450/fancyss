@@ -1,6 +1,6 @@
-.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd update_status_tool
+.PHONY: all update_kcptun update_shadowsocks_rust update_v2ray update_xray update_naiveproxy update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd update_status_tool update_webtest_tool
 
-all: update_kcptun update_ss_rust update_v2ray update_xray update_naive update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd update_status_tool
+all: update_kcptun update_ss_rust update_v2ray update_xray update_naive update_ipt2socks update_tuic_client update_geotool update_xapi_tool update_sub_tool update_node_tool update_websocketd update_status_tool update_webtest_tool
 
 update_kcptun:
 	kcptun/get_latest.sh
@@ -87,3 +87,18 @@ update_status_tool:
 	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-aarch64 status-tool/
 	cp -f ../tool/status-tool/dist/statusctl-v$$(cat ../tool/status-tool/VERSION)-linux-x86_64 status-tool/
 	cp -f ../tool/status-tool/dist/SHA256SUMS-v$$(cat ../tool/status-tool/VERSION) status-tool/
+
+update_webtest_tool:
+	cd ../tool/webtest-tool && rm -f dist/webtest-tool-v$$(cat VERSION)-linux-armv5te dist/webtest-tool-v$$(cat VERSION)-linux-armv7a dist/webtest-tool-v$$(cat VERSION)-linux-armv7hf dist/webtest-tool-v$$(cat VERSION)-linux-aarch64 dist/webtest-tool-v$$(cat VERSION)-linux-x86_64 dist/webtestctl-v$$(cat VERSION)-linux-armv5te dist/webtestctl-v$$(cat VERSION)-linux-armv7a dist/webtestctl-v$$(cat VERSION)-linux-armv7hf dist/webtestctl-v$$(cat VERSION)-linux-aarch64 dist/webtestctl-v$$(cat VERSION)-linux-x86_64 && bash scripts/build-release.sh armv5te armv7a armv7hf aarch64 x86_64
+	mkdir -p webtest-tool
+	rm -f webtest-tool/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv5te webtest-tool/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7a webtest-tool/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7hf webtest-tool/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-aarch64 webtest-tool/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-x86_64 webtest-tool/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv5te webtest-tool/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7a webtest-tool/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7hf webtest-tool/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-aarch64 webtest-tool/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-x86_64
+	cp -f ../tool/webtest-tool/dist/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv5te webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7a webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7hf webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-aarch64 webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtest-tool-v$$(cat ../tool/webtest-tool/VERSION)-linux-x86_64 webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv5te webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7a webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-armv7hf webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-aarch64 webtest-tool/
+	cp -f ../tool/webtest-tool/dist/webtestctl-v$$(cat ../tool/webtest-tool/VERSION)-linux-x86_64 webtest-tool/

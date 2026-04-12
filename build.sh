@@ -153,6 +153,22 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/statusctl
 	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/statusctl
 	cp -rf ${CURR_PATH}/binaries/status-tool/statusctl-${STATUSTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/statusctl
+
+	local WEBTESTTOOL_VER="v0.1.0"
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtest-tool-${WEBTESTTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/webtest-tool
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/webtestctl
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/webtestctl
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/webtestctl
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/webtestctl
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/webtestctl
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/webtestctl
+	cp -rf ${CURR_PATH}/binaries/webtest-tool/webtestctl-${WEBTESTTOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/webtestctl
 }
 
 gen_folder(){

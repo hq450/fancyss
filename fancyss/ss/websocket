@@ -34,6 +34,7 @@ clean_log() {
 
 while read MSG;
 do
+	MSG="$(printf '%s' "${MSG}" | tr -d '\r')"
 	IP_CIDR=$(ip addr show br0 2>/dev/null | grep -E "inet " | awk '{print $2}')
 	IP_ADDR=${IP_CIDR%/*}
 	IP_ADDR=${IP_ADDR%.*}
@@ -60,7 +61,9 @@ do
 		echo "检测到你要执行路由器重启命令！拒绝！"
 		exit
 	elif [ "${MSG}" == "get_ssf_log" ]; then
-		cat /tmp/upload/ssf_status.txt | /usr/bin/tr '\n' '@@'
+		awk 'BEGIN{ORS="@@"}{print}' /tmp/upload/ssf_status.txt 2>/dev/null
+	elif [ "${MSG}" == "get_ssc_log" ]; then
+		awk 'BEGIN{ORS="@@"}{print}' /tmp/upload/ssc_status.txt 2>/dev/null
 	elif [ "${MSG}" == "get_real_log" ]; then
 		_log=$(cat /tmp/upload/ss_log.txt)
 		if [ -z "${_log}" ];then
@@ -92,10 +95,85 @@ do
 			sleep 6
 		done
 		exit 0
+	elif [ "${MSG}" == "follow_ssf_status" -o "${MSG}" == "follow_ssc_status" ]; then
+		if [ "${MSG}" = "follow_ssf_status" ]; then
+			STATUS_FILE=/tmp/upload/ssf_status.txt
+			STATUS_STREAM=/tmp/upload/ssf_status.stream
+		else
+			STATUS_FILE=/tmp/upload/ssc_status.txt
+			STATUS_STREAM=/tmp/upload/ssc_status.stream
+		fi
+		[ -f "${STATUS_FILE}" ] || : > "${STATUS_FILE}"
+		[ -f "${STATUS_STREAM}" ] || : > "${STATUS_STREAM}"
+		awk '
+			BEGIN {
+				print "__FSS_SNAPSHOT_BEGIN__"
+				chunk = ""
+				count = 0
+			}
+			{
+				gsub(/\r/, "")
+				chunk = chunk $0 "__FSS_NL__"
+				count++
+				if (count >= 64) {
+					print "__FSS_SNAPSHOT_CHUNK__" chunk
+					chunk = ""
+					count = 0
+				}
+			}
+			END {
+				if (count > 0) {
+					print "__FSS_SNAPSHOT_CHUNK__" chunk
+				}
+				print "__FSS_SNAPSHOT_END__"
+			}
+		' "${STATUS_FILE}" 2>/dev/null
+		STATUS_LINES=$(wc -l < "${STATUS_STREAM}" 2>/dev/null)
+		[ -n "${STATUS_LINES}" ] || STATUS_LINES=0
+		tail -n +"$((STATUS_LINES + 1))" -f "${STATUS_STREAM}" 2>/dev/null | while IFS= read -r line
+		do
+			echo "${line}"
+		done
+		exit 0
 	elif [ "${MSG}" == "status_probe_once" ]; then
 		/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock probe-once 2>/dev/null
 	elif [ "${MSG}" == "status_get_cache" ]; then
 		/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock get-cache 2>/dev/null
+	elif [ "${MSG}" == "run_status_reset" ]; then
+		env -i PATH=${PATH} HOME=/root USER=${USER:-admin} sh /koolshare/scripts/ss_status_reset.sh 2>&1
+	elif [ "${MSG}" == "run_ss_config_start" ]; then
+		sh /koolshare/scripts/ss_config.sh start_by_ws 2>&1 | while IFS= read -r line
+		do
+			echo "${line}"
+			case "${line}" in
+			*"【科学上网】 启动完毕"*|*"你已经成功关闭科学上网服务~"*)
+				echo XU6J03M6
+				;;
+			esac
+		done
+		sleep 1
+	elif [ "${MSG}" == "run_ss_config_stop" ]; then
+		sh /koolshare/scripts/ss_config.sh stop 2>&1 | while IFS= read -r line
+		do
+			echo "${line}"
+			case "${line}" in
+			*"你已经成功关闭科学上网服务~"*)
+				echo XU6J03M6
+				;;
+			esac
+		done
+		sleep 1
+	elif [ "${MSG}" == "run_ss_config_start_shunt_hot" ]; then
+		sh /koolshare/scripts/ss_config.sh start_shunt_hot 2>&1 | while IFS= read -r line
+		do
+			echo "${line}"
+			case "${line}" in
+			*"【科学上网】 启动完毕"*|*"你已经成功关闭科学上网服务~"*)
+				echo XU6J03M6
+				;;
+			esac
+		done
+		sleep 1
 	elif [ -n "${RET_3}" -o -n "${RET_4}" ]; then
 		echo "不允许命令：${MSG}"
 		exit

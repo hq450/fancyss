@@ -139,6 +139,38 @@ $(fss_airport_special_active_identities 2>/dev/null)
 	return 1
 }
 
+fss_airport_special_active_labels_by_plan() {
+	local preferred_plan="${1:-smartdns}"
+	local airport_identity=""
+	local conf_path=""
+	local conf_plan=""
+	local conf_label=""
+	local labels=""
+
+	while IFS= read -r airport_identity
+	do
+		[ -n "${airport_identity}" ] || continue
+		conf_path="$(fss_airport_special_conf_path "${airport_identity}" 2>/dev/null)" || continue
+		[ -f "${conf_path}" ] || continue
+		conf_plan="$(fss_airport_special_conf_get_value "${conf_path}" "preferred_dns_plan" 2>/dev/null)"
+		[ -n "${conf_plan}" ] || conf_plan="smartdns"
+		[ "${conf_plan}" = "${preferred_plan}" ] || continue
+		fss_airport_special_conf_has_active_nodes "${airport_identity}" || continue
+		conf_label="$(fss_airport_special_conf_get_value "${conf_path}" "airport_label" 2>/dev/null)"
+		[ -n "${conf_label}" ] || conf_label="${airport_identity}"
+		if [ -n "${labels}" ]; then
+			labels="${labels}、${conf_label}"
+		else
+			labels="${conf_label}"
+		fi
+	done <<-EOF
+$(fss_airport_special_active_identities 2>/dev/null)
+	EOF
+
+	[ -n "${labels}" ] || return 1
+	printf '%s\n' "${labels}"
+}
+
 fss_airport_special_iter_active_tsv() {
 	local airport_identity=""
 	local conf_path=""
@@ -757,4 +789,3 @@ conf-file ${policy_file}
 # END FANCYSS SMARTDNS RUNTIME POLICY
 EOF
 }
-

@@ -142,6 +142,7 @@
 .shunt-chip.shunt-latency-chip.latency-waiting .shunt-chip-value{color:#999999 !important;}
 .shunt-chip.shunt-latency-chip.latency-loading .shunt-chip-value{color:#66CCFF !important;}
 .shunt-chip.shunt-latency-chip.latency-booting .shunt-chip-value{color:#FFAA33 !important;}
+.shunt-chip.shunt-latency-chip.latency-queued .shunt-chip-value{color:#CC99FF !important;}
 .shunt-chip.shunt-latency-chip.latency-testing .shunt-chip-value{color:#00FFCC !important;}
 .shunt-chip.shunt-latency-chip.latency-failed .shunt-chip-value{color:#FF0000 !important;}
 .shunt-inline-warning{padding-top:10px;font-size:11px;line-height:1.6;color:#ff9e9e;font-weight:500;}
@@ -310,6 +311,10 @@ var statusFrontHttpWatchdog = null;
 var statusFrontAbortController = null;
 var statusFrontRequestSeq = 0;
 var statusFrontSocket = null;
+var statusHistorySocket = null;
+var statusHistoryType = 0;
+var statusHistorySnapshotActive = false;
+var statusHistorySnapshotBuffer = "";
 var hostname = document.domain;
 var lan_ipaddr = '<% nvram_get("lan_ipaddr"); %>';
 var mouse_status;
@@ -2241,7 +2246,7 @@ function normalize_shunt_latency_text(value) {
 	if (/^timeout!?$/i.test(text)) {
 		return "timeout!";
 	}
-	if (/^(waiting|loading|booting|testing|warming)(\.\.\.)?$/i.test(text)) {
+	if (/^(waiting|loading|booting|queued|testing|warming)(\.\.\.)?$/i.test(text)) {
 		return text.replace(/\.\.\.+$/, "") + "...";
 	}
 	return text;
@@ -2277,6 +2282,9 @@ function get_shunt_latency_chip_class(value) {
 	}
 	if (text == "booting...") {
 		return "latency-booting";
+	}
+	if (text == "queued...") {
+		return "latency-queued";
 	}
 	if (text == "testing..." || text == "warming...") {
 		return "latency-testing";
@@ -5083,10 +5091,20 @@ function save() {
 		}
 	}
 }
-function push_data_ws(script, arg, obj, flag){
+function push_data_ws(script, arg, obj, flag, ws_cmd){
 	// just push data, show log through ws
 	var id = parseInt(Math.random() * 100000000);
 	var postData;
+	var resolvedWsCmd = ws_cmd || "";
+	if (!resolvedWsCmd && script == "ss_config.sh") {
+		if (arg == "start") {
+			resolvedWsCmd = "run_ss_config_start";
+		} else if (arg == "stop") {
+			resolvedWsCmd = "run_ss_config_stop";
+		} else if (arg == "start_shunt_hot") {
+			resolvedWsCmd = "run_ss_config_start_shunt_hot";
+		}
+	}
 	if (script == "ss_config.sh") {
 		attach_schema2_postsave_marker(obj);
 	}
@@ -5103,7 +5121,11 @@ function push_data_ws(script, arg, obj, flag){
 				ws = new WebSocket("ws://" + hostname + ":803/");
 				ws.onopen = function() {
 					//console.log('ws：成功建立websocket链接，开始获取启动日志...');
-					ws.send(". " + script + " " + arg);
+					if (resolvedWsCmd) {
+						ws.send(resolvedWsCmd);
+					} else {
+						ws.send(". " + script + " " + arg);
+					}
 					if (flag != "1" && flag != "2"){
 						showSSLoadingBar();
 					}
@@ -7922,7 +7944,7 @@ function finish_latency_batch() {
 }
 function is_latency_transient_state(value){
 	value = String(value || "");
-	return value.indexOf("waiting") === 0 || value.indexOf("loading") === 0 || value.indexOf("booting") === 0 || value.indexOf("warming") === 0 || value.indexOf("testing") === 0;
+	return value.indexOf("waiting") === 0 || value.indexOf("loading") === 0 || value.indexOf("booting") === 0 || value.indexOf("queued") === 0 || value.indexOf("warming") === 0 || value.indexOf("testing") === 0;
 }
 function is_latency_terminal_state(value){
 	value = String(value || "");
@@ -7973,10 +7995,37 @@ function parse_webtest_lines(res){
 	});
 	return array;
 }
+function fetch_latency_snapshot_once(cb){
+	$.ajax({
+		url: '/_temp/webtest.txt',
+		type: 'GET',
+		cache:false,
+		dataType: 'text',
+		success: function(res) {
+			write_webtest(parse_webtest_lines(res));
+			if(typeof cb === "function"){ cb(true); }
+		},
+		error: function() {
+			if(typeof cb === "function"){ cb(false); }
+		}
+	});
+}
 function handle_latency_ws_payload(payload) {
 	var array = parse_webtest_lines(payload);
 	if(!array.length){
 		return;
+	}
+	var hasRefresh = array.some(function(item) {
+		return item[0] == "refresh" && item[1] == "snapshot";
+	});
+	if(hasRefresh){
+		fetch_latency_snapshot_once();
+		array = array.filter(function(item) {
+			return item[0] != "refresh";
+		});
+		if(!array.length){
+			return;
+		}
 	}
 	write_webtest(array);
 	var hasStop = array.some(function(item) {
@@ -8523,6 +8572,8 @@ function write_webtest(ps){
 				lag = "loading...";
 			}else if(lag.indexOf("booting") === 0){
 				lag = "booting...";
+			}else if(lag.indexOf("queued") === 0){
+				lag = "queued...";
 			}else if(lag.indexOf("warming") === 0){
 				lag = "warming...";
 			}
@@ -8561,6 +8612,8 @@ function write_webtest(ps){
 				test_result = '<font color="#66CCFF">loading...</font>';
 			}else if(lag == "booting..."){
 				test_result = '<font color="#FFAA33">booting...</font>';
+			}else if(lag == "queued..."){
+				test_result = '<font color="#CC99FF">queued...</font>';
 			}else if(lag == "testing..."){
 				test_result = '<font color="#00FFCC">testing...</font>';
 			}else if(lag == "warming..."){
@@ -9680,19 +9733,105 @@ function get_dns_log(s) {
 	});
 }
 function close_ssf_status() {
+	close_status_history_ws();
 	E("ssf_status_div").style.visibility = "hidden";
 	$('html, body').css({overflow: 'auto', height: 'auto'});
 	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
 	STATUS_FLAG = 0;
 }
 function close_ssc_status() {
+	close_status_history_ws();
 	E("ssc_status_div").style.visibility = "hidden";
 	$('html, body').css({overflow: 'auto', height: 'auto'});
 	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
 	STATUS_FLAG = 0;
 }
+function close_status_history_ws() {
+	if (statusHistorySocket) {
+		try {
+			statusHistorySocket.close();
+		} catch (e) {}
+		statusHistorySocket = null;
+	}
+	statusHistoryType = 0;
+	statusHistorySnapshotActive = false;
+	statusHistorySnapshotBuffer = "";
+}
+function append_status_log_chunk(s, chunk) {
+	var retArea = (s == 1) ? E("log_content_f") : E("log_content_c");
+	var text = String(chunk || "").replace(/\r/g, "");
+	if (!text) {
+		return;
+	}
+	if (text == "__FSS_SNAPSHOT_BEGIN__") {
+		statusHistorySnapshotActive = true;
+		statusHistorySnapshotBuffer = text;
+		return;
+	}
+	if (statusHistorySnapshotActive || text.indexOf("__FSS_SNAPSHOT_CHUNK__") !== -1 || text.indexOf("__FSS_SNAPSHOT_END__") !== -1) {
+		if (!statusHistorySnapshotActive) {
+			statusHistorySnapshotActive = true;
+			statusHistorySnapshotBuffer = "";
+		}
+		statusHistorySnapshotBuffer += text;
+		if (statusHistorySnapshotBuffer.indexOf("__FSS_SNAPSHOT_END__") !== -1) {
+			retArea.value = statusHistorySnapshotBuffer
+				.replace(/__FSS_SNAPSHOT_BEGIN__/g, "")
+				.replace(/__FSS_SNAPSHOT_CHUNK__/g, "")
+				.replace(/__FSS_SNAPSHOT_END__/g, "")
+				.split("__FSS_NL__").join("\n")
+				.replace(/\n+$/, "");
+			statusHistorySnapshotActive = false;
+			statusHistorySnapshotBuffer = "";
+			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
+				retArea.scrollTop = retArea.scrollHeight;
+			}
+		}
+		return;
+	}
+	if (!retArea.value) {
+		retArea.value = text.replace(/\n+$/, "");
+	} else {
+		var needBreak = retArea.value.charAt(retArea.value.length - 1) != "\n";
+		retArea.value += (needBreak ? "\n" : "") + text.replace(/\n+$/, "");
+	}
+	if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
+		retArea.scrollTop = retArea.scrollHeight;
+	}
+}
+function get_status_log_ws(s) {
+	if (STATUS_FLAG == 0) return false;
+	close_status_history_ws();
+	statusHistoryType = s;
+	var retArea = (s == 1) ? E("log_content_f") : E("log_content_c");
+	retArea.value = "";
+	statusHistorySocket = new WebSocket("ws://" + hostname + ":803/");
+	statusHistorySocket.onopen = function() {
+		statusHistorySocket.send(s == 1 ? "follow_ssf_status" : "follow_ssc_status");
+	};
+	statusHistorySocket.onmessage = function(event) {
+		if (STATUS_FLAG != 1 || statusHistoryType != s) {
+			return;
+		}
+		append_status_log_chunk(s, event.data);
+	};
+	statusHistorySocket.onerror = function() {
+		close_status_history_ws();
+		get_status_log_httpd(s);
+	};
+	statusHistorySocket.onclose = function() {
+		statusHistorySocket = null;
+		if (STATUS_FLAG == 1 && statusHistoryType == s) {
+			get_status_log_httpd(s);
+		}
+	};
+	return true;
+}
 function lookup_status_log(s) {
 	STATUS_FLAG = 1;
+	noChange_status = 0;
+	_responseLen = 0;
+	close_status_history_ws();
 	$('body').prepend(tableApi.genFullScreen());
 	$('.fullScreen').show();
 	document.scrollingElement.scrollTop = 0;
@@ -9722,6 +9861,12 @@ function lookup_status_log(s) {
 	$('html, body').css({overflow: 'hidden', height: '100%'});
 }
 function get_status_log(s) {
+	if (ws_flag == 1) {
+		return get_status_log_ws(s);
+	}
+	return get_status_log_httpd(s);
+}
+function get_status_log_httpd(s) {
 	if(STATUS_FLAG == 0) return;
 	
 	if(s == 1){
@@ -9746,11 +9891,11 @@ function get_status_log(s) {
 			} else {
 				noChange_status = 0;
 			}
-				if (noChange_status > 10) {
-					return false;
-				} else {
-					setTimeout(function() { get_status_log(s); }, 3123);
-				}
+			if (noChange_status > 10) {
+				return false;
+			} else {
+				setTimeout(function() { get_status_log_httpd(s); }, 3123);
+			}
 			retArea.value = response;
 			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
 				retArea.scrollTop = retArea.scrollHeight;
@@ -11040,7 +11185,11 @@ function save_failover() {
 	for (var i = 0; i < fov_chk.length; i++) {
 		dbus_post[fov_chk[i]] = E(fov_chk[i]).checked ? '1' : '0';
 	}
-	push_data("ss_status_reset.sh", "", dbus_post);
+	if(ws_flag == 1){
+		push_data_ws("ss_status_reset.sh", "", dbus_post, "", "run_status_reset");
+	}else{
+		push_data("ss_status_reset.sh", "", dbus_post);
+	}
 }
 function toggleKeyMask(o, show){
 	var el = $(o).attr("id");

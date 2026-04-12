@@ -52,6 +52,37 @@ refresh_runtime_context() {
 	WEB_ACTION=$(ps | grep "ss_config.sh" | grep -v grep)
 }
 
+normalize_ss2022_password() {
+	[ "${ss_basic_type}" = "0" ] || return 0
+	printf '%s' "${ss_basic_method}" | grep -q '^2022-' || return 0
+	printf '%s' "${ss_basic_password}" | grep -q ':' && return 0
+
+	local decoded=""
+	decoded="$(printf '%s' "${ss_basic_password}" | base64_decode 2>/dev/null)"
+	[ -n "${decoded}" ] || return 0
+	printf '%s' "${decoded}" | grep -q ':' || return 0
+
+	ss_basic_password="${decoded}"
+}
+
+refresh_schema2_secret_fields() {
+	local current_node_id=""
+	local raw_password=""
+
+	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
+	current_node_id="$(fss_get_current_node_id 2>/dev/null)"
+	[ -n "${current_node_id}" ] || return 0
+
+	case "${ss_basic_type}" in
+	0|1)
+		raw_password="$(fss_get_node_field_plain "${current_node_id}" password 2>/dev/null)"
+		if [ -n "${raw_password}" ] && [ "${raw_password}" != "${ss_basic_password}" ]; then
+			ss_basic_password="${raw_password}"
+		fi
+		;;
+	esac
+}
+
 get_model_name(){
 	local ODMPID=$(nvram get odmpid)
 	local PRODUCTID=$(nvram get productid)
@@ -618,6 +649,8 @@ prepare_system() {
 	echo_date "🛠️ 一些准备工作，请稍后..."
 	fss_base_load_current_node_env
 	refresh_runtime_context
+	refresh_schema2_secret_fields
+	normalize_ss2022_password
 	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
 	set_default "ss_basic_block_quic" "1"
 	set_default "ss_basic_proxy_ipv6" "0"
@@ -1445,16 +1478,26 @@ start_dns_x(){
 	local runtime_mode="$(get_runtime_proxy_mode)"
 	local dns_plan_runtime="${ss_basic_dns_plan}"
 	local special_smartdns_label=""
+	local special_dns_hint=""
 	if [ "${AIRPORT_DNS_CURRENT_MATCHED}" = "1" ] && [ "${AIRPORT_DNS_PREFERRED_PLAN}" = "smartdns" ];then
-		[ "${ss_basic_dns_plan}" != "2" ] && echo_date "ℹ️检测到机场【${AIRPORT_DNS_AIRPORT_LABEL:-${AIRPORT_DNS_AIRPORT_IDENTITY}}】需要专属节点DNS，本次临时切换为smartdns方案。"
+		if [ "${ss_basic_dns_plan}" = "2" ]; then
+			special_dns_hint="ℹ️检测到机场【${AIRPORT_DNS_AIRPORT_LABEL:-${AIRPORT_DNS_AIRPORT_IDENTITY}}】需要专属节点DNS，当前使用smartdns方案。"
+		else
+			special_dns_hint="ℹ️检测到机场【${AIRPORT_DNS_AIRPORT_LABEL:-${AIRPORT_DNS_AIRPORT_IDENTITY}}】需要专属节点DNS，本次临时切换为smartdns方案。"
+		fi
 		dns_plan_runtime="2"
 	else
-		special_smartdns_label="$(fss_airport_special_active_label_by_plan "smartdns" 2>/dev/null)"
+		special_smartdns_label="$(fss_airport_special_active_labels_by_plan "smartdns" 2>/dev/null)"
 		if [ -n "${special_smartdns_label}" ];then
-			[ "${ss_basic_dns_plan}" != "2" ] && echo_date "ℹ️检测到机场【${special_smartdns_label}】需要使用smartdns，为保证使用节点和测速正常，将强制使用smartdns。"
+			if [ "${ss_basic_dns_plan}" = "2" ]; then
+				special_dns_hint="ℹ️检测到机场【${special_smartdns_label}】需要使用smartdns，当前已使用smartdns方案。"
+			else
+				special_dns_hint="ℹ️检测到机场【${special_smartdns_label}】需要使用smartdns，为保证使用节点和测速正常，将强制使用smartdns。"
+			fi
 			dns_plan_runtime="2"
 		fi
 	fi
+	[ -n "${special_dns_hint}" ] && echo_date "${special_dns_hint}"
 	if [ "${ss_basic_type}" = "6" ];then
 		local trust_udp_fallback=""
 		local n=""

@@ -1,17 +1,28 @@
 fancyss Changelog
 
-3.5.11（20260409）
+3.5.11（20260412）
    - note	本次更新重点围绕两条主线继续推进：一是彻底移除节点服务器预解析及其派生设置，统一收敛到动态解析；二是继续瘦身启动链和 WebSocket 通道实现，降低弱性能机型上的启动等待与常驻负担。
    - add	新增 `ws-tool` 轻量级 `websocketd` 替代实现，并作为独立 Zig 工具项目引入；当前已覆盖 fancyss 前端实际使用的 WebSocket 场景，包括 `echo ws_ok`、`show_message`、实时日志、`. script arg` 指令和 `follow_webtest` 流式输出。
+   - add	新增 `status-tool` / `statusctl` 轻量状态检测工具，将前端按需状态检测和故障转移后台检测从多次 `curl` 调用迁移到 Zig 原生 HTTP/SOCKS5 探测；未开启故障转移时使用常驻 `serve` 按需检测，开启故障转移时使用 `daemon` 周期检测。
+   - add	新增 `webtest-tool` / `webtestctl` 批量测速工具，用 Zig 原生 SOCKS5 + HTTP 探测替代 `ss_webtest.sh` 中最重的 `curl_test` 链路；工具支持批任务 JSON、结果快照、事件流、并发 worker，以及 per-node `start_script / stop_script / wait_port` 钩子。
    - update	插件 WebSocket 通道已切换到新的 `ws-tool` 发布链路：二进制仍保持 `websocketd` 命名，`build.sh` 与 `binaries/Makefile` 已接入新的多平台产物；`hnd` 平台使用 `armv7hf`，`qca/ipq32` 使用 `armv7a`，`hnd_v8/mtk/ipq64` 使用 `aarch64`。
    - update	`websocketd` 现已随所有平台、所有安装包一并分发，前端 `ws_ok` 连通性探测不再对特定 `lite` 包关闭；弱性能平台也可统一使用 WebSocket 实时日志与测速状态回传能力。
    - update	启动链路继续瘦身：`ssconfig.sh` 顶层 `nvram/ps/dbus` 初始化改为进入启动流程后再执行；`ss_base.sh` 当前节点环境导出、分流函数和 SmartDNS/机场特调辅助函数改为按需加载，显著缩短弱性能机型上点击后首行日志出现时间。
+   - update	运行状态检测链路重构：前端状态检测优先通过 WebSocket 与 `status-tool serve` 通讯，HTTP API 仅作为兜底；故障转移后台检测由 `status-tool daemon` 生成统一状态缓存，历史状态日志改为 WebSocket 首屏快照 + 增量追加，避免频繁轮询拖垮路由器 `httpd`。
+   - update	故障转移保存逻辑接入 WebSocket 控制命令，并修复 HTTP fallback 下 `http_response` 的 `curl` 进度输出污染日志窗口的问题；保存本页设置时日志窗口只显示正常业务日志。
+   - update	批量 web 延迟测速主链路迁移到 `webtest-tool`：xray-like 节点一次性准备全部本地入口并以 12 并发交给工具测速；`SS + simple-obfs` 通过 per-node hook 在进入 `testing...` 前按需拉起 `obfs-local`，测速后自动关闭，避免一次性拉起大量 obfs 进程。
+   - update	`SSR / NaiveProxy / TUIC` 的 webtest 运行方式统一为 target manifest + hook 模型，由 `ss_webtest.sh` 生成 `start/stop/wait_port` 信息，再交给 `webtest-tool` 按协议线程限制执行，为后续迁移到 `node-tool` 生成测速运行产物做准备。
+   - update	webtest 状态展示进一步细化并稳定化：新增 `queued...` 状态表示端口已就绪但尚未进入 worker；`waiting / loading / booting / queued` 改为快照刷新，前端收到 `refresh>snapshot` 后整表刷新，避免大量节点时中间状态逐行爬升。
    - update	外围脚本中的若干二进制调用进一步统一为 `run/run_bg` 的干净环境启动方式，减少杂乱环境变量对子进程的影响，统一 `xray` 更新、故障转移和分流热重载等路径的行为。
    - update	更新 bundled Zig 工具二进制：同步刷新 `node-tool`、`sub-tool`、`xapi-tool`、`geotool` 的发布产物和打包链路，修正 `hnd` 平台 Zig 工具架构映射，提升不同平台上的一致性。
    - update	移除前后端“插件触发重启设定”功能及相关逻辑，避免在动态解析模式下继续保留已经失效的基于节点 IP 变化触发重启配置。
    - update	节点服务器预解析相关前后端配置已完全移除，普通启动、`webtest`、节点分流和故障转移相关链路统一围绕动态解析工作；插件启动末尾仍保留“节点服务器解析地址”日志，便于继续观察当前节点最终解析结果。
+   - update	机场特调 DNS 日志调整为汇总展示所有活跃特调机场；当多个机场均需要 SmartDNS 时，启动日志会以 `AmyTelecom、Nexitally` 这类形式同时显示，便于确认特调是否生效。
    - fix	修复 RT-BE88U 等机型在订阅完成后，因旧版 `node-tool` 缺少 `airport-domains` 能力而回退 shell 慢路径，导致“节点信息写入成功”后仍额外等待较长时间的问题；更新后的 `node-tool` 可正确支撑机场域名缓存刷新。
    - fix	修复离线安装或插件重启早期阶段中，`smartdns_ensure_dns_groups` 初始化顺序不当导致的报错；同时为 SmartDNS relay 端口范围补充数值兜底，避免异常环境变量触发启动阶段的越界错误。
+   - fix	修复 `ssconfig.sh` 懒加载当前节点环境后，schema 2 下 SS/SSR 的 `password` 可能沿用 legacy 兼容值并被写成 base64，导致 webtest 有延迟但正式启用 SS 节点无法代理的问题；启动时会从当前节点对象刷新 raw secret 字段，修正过程不再输出面向用户的内部日志。
+   - fix	修复 WebSocket 日志命令未同步导致前端发送 `run_ss_config_start` 时被当作普通命令执行并报 `not found` 的问题；节点应用、停止和分流热重载均改为预设安全命令。
+   - fix	修复通过 WebSocket 应用节点后，后续“查看日志”页面缺少本次启动日志的问题；`start_by_ws` 现在也会同步写入 `/tmp/upload/ss_log.txt`。
 
 3.5.10（20260327）
    - note1	重要！！此版本定义为非稳定版本/尝鲜版本，升级前请备份设置，如在你的机型和固件版本上有问题，请及时回滚

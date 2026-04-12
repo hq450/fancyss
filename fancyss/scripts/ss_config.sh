@@ -122,8 +122,9 @@ start_shunt_hot)
 	;;
 start_by_ws)
 	set_lock
+	true > /tmp/upload/ss_log.txt
 	pre_start
-	start_fancyss
+	start_fancyss 2>&1 | tee -a /tmp/upload/ss_log.txt
 	unset_lock
 	;;
 stop)
@@ -158,8 +159,9 @@ start_shunt_hot)
 	;;
 start_by_ws)
 	set_lock
+	true > /tmp/upload/ss_log.txt
 	pre_start
-	start_fancyss
+	start_fancyss | tee -a /tmp/upload/ss_log.txt 2>&1
 	unset_lock
 	;;
 stop)
