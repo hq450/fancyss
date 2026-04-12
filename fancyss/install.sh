@@ -701,19 +701,54 @@ full2lite(){
 		local old_failover="$(fss_get_failover_node_id 2>/dev/null)"
 		local new_current=""
 		local new_failover=""
+		local tmp_dir=""
+		local nodes_dir=""
+		local meta_file=""
+		local removed_ids=""
+		local json_file=""
+		local node_meta=""
+		local TY=""
+		local NAME=""
 		mkdir -p "${backup_dir}"
 		: > "${backup_file}"
-		for NU in $(fss_list_node_ids)
+		tmp_dir="$(fss_mktemp_dir full2lite 2>/dev/null)"
+		nodes_dir="${tmp_dir}/nodes"
+		meta_file="${tmp_dir}/nodes.meta.tsv"
+		if [ -n "${tmp_dir}" ] && fss_dump_v2_node_json_dir "${nodes_dir}" >/dev/null 2>&1; then
+			find "${nodes_dir}" -maxdepth 1 -type f -name '*.json' | sort | xargs -r jq -r '[._id, (.type // ""), (.name // "")] | @tsv' > "${meta_file}" 2>/dev/null || true
+		fi
+		while IFS= read -r NU
 		do
-			local TY=$(fss_get_node_field_plain "${NU}" type)
+			[ -n "${NU}" ] || continue
+			TY=""
+			NAME=""
+			json_file="${nodes_dir}/${NU}.json"
+			if [ -s "${meta_file}" ] && [ -f "${json_file}" ]; then
+				node_meta="$(grep -m1 "^${NU}	" "${meta_file}" 2>/dev/null)"
+				if [ -n "${node_meta}" ]; then
+					TY="$(printf '%s' "${node_meta}" | awk -F '\t' '{print $2}')"
+					NAME="$(printf '%s' "${node_meta}" | cut -f3-)"
+				fi
+			fi
+			if [ -z "${TY}" ]; then
+				TY="$(fss_get_node_field_plain "${NU}" type)"
+				NAME="$(fss_get_node_field_plain "${NU}" name)"
+			fi
 			case "${TY}" in
 			6|7)
-				echo_date "备份并从节点列表里移除第$NU个$(__get_name_by_type ${TY})节点：【$(fss_get_node_field_plain "${NU}" name)】"
-				fss_v2_get_node_json_by_id "${NU}" | jq -c '
-					with_entries(select(.value != "" and .value != null))
-					| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
-				' >> "${backup_file}"
-				fss_clear_webtest_cache_node "${NU}"
+				echo_date "备份并从节点列表里移除第$NU个$(__get_name_by_type ${TY})节点：【${NAME}】"
+				if [ -f "${json_file}" ]; then
+					jq -c '
+						with_entries(select(.value != "" and .value != null))
+						| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+					' "${json_file}" >> "${backup_file}"
+				else
+					fss_v2_get_node_json_by_id "${NU}" | jq -c '
+						with_entries(select(.value != "" and .value != null))
+						| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+					' >> "${backup_file}"
+				fi
+				removed_ids="${removed_ids} ${NU}"
 				dbus remove fss_node_${NU}
 				remove_flag=1
 				;;
@@ -724,11 +759,19 @@ full2lite(){
 				fi
 				;;
 			esac
-		done
+		done <<-EOF
+		$(fss_list_node_ids)
+		EOF
 		if [ "${remove_flag}" != "1" ];then
+			rm -rf "${tmp_dir}"
 			rm -rf "${backup_file}"
 			return
 		fi
+		for NU in ${removed_ids}
+		do
+			[ -n "${NU}" ] || continue
+			fss_clear_webtest_cache_node "${NU}"
+		done
 		[ -n "${keep_order}" ] && dbus set fss_node_order="${keep_order}" || dbus remove fss_node_order
 		if [ -n "${keep_order}" ];then
 			if printf '%s' "${keep_order}" | tr ',' '\n' | grep -Fxq "${old_current}" 2>/dev/null;then
@@ -751,6 +794,7 @@ full2lite(){
 		else
 			rm -rf "${backup_file}"
 		fi
+		rm -rf "${tmp_dir}"
 		return
 	fi
 	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >"${tmp_kv}"
