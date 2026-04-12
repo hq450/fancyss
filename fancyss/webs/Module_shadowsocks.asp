@@ -5139,17 +5139,22 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 					push_data(script, arg, obj, flag);
 				};
 				ws.onmessage = function(event) {
-					if(event.data == "XU6J03M6"){
+					var wsMsg = String(event.data || "");
+					if(wsMsg.indexOf("XU6J03M6") != -1){
+						var cleanMsg = wsMsg.myReplace("XU6J03M6", " ").replace(/^\s+|\s+$/g, "");
+						if(cleanMsg){
+							E('log_content3').value += cleanMsg + '\n';
+						}
 						E("ok_button").style.display = "";
 						count_down_close();
 						ws.close();
-					}else if(event.data == "fancyss"){
+					}else if(wsMsg == "fancyss"){
 						ws.close();
 						if (flag == "1"){
 							refreshpage();
 						}
 					}else{
-						E('log_content3').value += event.data + '\n';
+						E('log_content3').value += wsMsg + '\n';
 					}
 					E("log_content3").scrollTop = E("log_content3").scrollHeight;
 				};
