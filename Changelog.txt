@@ -1,5 +1,20 @@
 fancyss Changelog
 
+3.5.12（20260413）
+   - note	本次更新重点围绕升级后的一致性问题收口：补齐安装升级后的缓存刷新、修复 websocket 命令文件热更新失配、统一 schema 2 节点 secret 的 raw 语义，并刷新 `node-tool / sub-tool` 分发链路，避免路由器升级后继续复用旧缓存或旧工具产物。
+   - update	安装脚本升级后会默认刷新节点运行缓存：清理 `node_json_cache`、`node_env_cache`、`webtest_cache` 以及 `webtest` 运行态结果，并在安装完成后重新生成节点 JSON 缓存、异步预热测速缓存，减少“脚本/工具已更新但缓存仍是旧格式”带来的行为不一致。
+   - update	`websocketd` 更新后的切换流程强化：安装完成后若插件未启用，会异步延迟重启 `websocketd` 并清理旧的 `/koolshare/ss/websocket` 子进程，避免旧 websocket 进程继续持有旧脚本；若插件已启用，则由插件完整重启流程接管 websocket 服务切换。
+   - update	前端通过 WebSocket 提交 `ss_config` 时，重新改回直接执行脚本命令 `sh /koolshare/scripts/ss_config.sh ...`，不再强依赖 `/koolshare/ss/websocket` 中的预定义 `run_ss_config_*` 分支，降低更新过程中因 websocket 脚本未及时重启而出现 `not found` 的概率。
+   - update	`node-tool` webtest cache 生成逻辑修正：Hysteria2 节点在端口范围场景下，`settings.port` 现在正确写为 `null`，`udphop.port` 正确保留端口范围字符串，同时 `gen_rev` 对齐到 `20260409_1`，避免 RT-AX89X 等机型继续生成非法 JSON 并导致整组 xray-like 节点 `booting -> failed`。
+   - update	刷新 `node-tool v0.1.1` 分发产物并同步进入 `binaries/node-tool` 与 `fancyss/bin-*`，确保 `build.sh` 打包使用的是修复后的最新版本。
+   - update	刷新 `sub-tool v0.1.9` 分发产物并同步进入 `binaries/sub-tool` 与 `fancyss/bin-*`；`build.sh` 中 `SUBTOOL_VER` 已更新到 `v0.1.9`，后续打包会自动携带新版 `sub-tool`。
+   - fix	修复 RT-AX89X 上因旧版 `node-tool` webtest cache 对 Hysteria2 端口范围输出错误，导致 `wt-xray` 配置文件非法、整组节点测速全部 `failed` 的问题；修复后 RT-AX89X 上 xray-like 节点已可恢复正常测速，仅剩真实节点本身的超时/连接重置结果。
+   - fix	修复 schema 2 下当前节点环境导出与运行态 secret 处理不一致，导致 SS/Naive 等节点在 `webtest` 正常、但正式启用后运行时密码被错误二次处理的问题；schema 2 当前节点 secret 统一按 raw 导出，`ss_base.sh` 不再对 schema 2 的 `password / naive_pass` 做 legacy base64 解码。
+   - fix	修复 SS 分享 URI 导出兼容性：新的二维码/复制 URI 逻辑改为标准形式，只对 `method:password@server:port` 做 base64，节点名单独放到 `#encodeURIComponent(name)`，避免旧版“整段 base64 + emoji 节点名”生成无效 URI。
+   - fix	修复通过分享链接离线导入旧式 `ss://` 节点时，remark 非法 UTF-8 会被当成错误节点整体拒绝的问题；现在 shell 离线导入会在 remark 不可用时回退为 `server:port`，确保节点仍可写入。
+   - fix	`sub-tool` 新增对旧式整段 base64 `ss://` 的兼容解析：支持处理 base64 主体内嵌 `#remark`，并在 CESU-8/非法 UTF-8 场景下尽量恢复可读节点名。对于你提供的旧 URI，当前 `sub-tool` 已可恢复出 `🇭🇰 香港 11` 与正确密码。
+   - fix	优化 `full -> lite` 升级路径：schema 2 下的 `full2lite()` 现在先批量 dump 节点快照，再本地筛出 `naive/tuic` 等 lite 不支持节点并统一重写顺序，避免逐节点 `dbus + base64 + jq` 带来的长时间停顿。
+
 3.5.11（20260412）
    - note	本次更新重点围绕两条主线继续推进：一是彻底移除节点服务器预解析及其派生设置，统一收敛到动态解析；二是继续瘦身启动链和 WebSocket 通道实现，降低弱性能机型上的启动等待与常驻负担。
    - add	新增 `ws-tool` 轻量级 `websocketd` 替代实现，并作为独立 Zig 工具项目引入；当前已覆盖 fancyss 前端实际使用的 WebSocket 场景，包括 `echo ws_ok`、`show_message`、实时日志、`. script arg` 指令和 `follow_webtest` 流式输出。
