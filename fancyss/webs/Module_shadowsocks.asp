@@ -4292,6 +4292,11 @@ function try_ws_connect(probeOnly){
 		ws_flag = 1;
 		wss_open = 1;
 		//console.log('ws_test message_ok!');
+		try {
+			wss.close();
+		} catch (e) {}
+		wss = null;
+		wss_open = 0;
 		if (!probeOnly) {
 			get_ss_status(true);
 		}
@@ -9196,7 +9201,24 @@ function scroll_msg() {
 function update_ss() {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "7";
-	push_data("ss_update.sh", "update",  dbus_post);
+	showSSLoadingBar();
+	E('log_content3').value = "";
+	var id = parseInt(Math.random() * 100000000);
+	var postData = {"id": id, "method": "ss_update.sh", "params":["update"], "fields": dbus_post};
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		timeout: 3000,
+		data: JSON.stringify(postData),
+		dataType: "json",
+		beforeSend: function() {
+			setTimeout(get_realtime_log, 800);
+		},
+		error: function() {
+			// 后端会继续异步写日志文件，这里只保证前端已经开始轮询日志。
+		}
+	});
 }
 
 function tabSelect(w) {
@@ -9723,17 +9745,29 @@ function get_ss_status_front_httpd() {
 		schedule_next_front_status_poll(5000);
 		return false;
 	}
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
 	$.ajax({
-		type: "POST",
-		url: "/_api/",
+		url: "/_temp/ss_status_front.txt?_=" + new Date().getTime(),
+		type: "GET",
+		dataType: "text",
 		async: true,
 		cache: false,
 		timeout: Math.max(10000, get_status_refresh_delay_ms() + 2000),
-		data: JSON.stringify(postData),
 		success: function(response) {
-			apply_ss_status(response.result, false);
+			if (!apply_ss_status(response, false)) {
+				var id = parseInt(Math.random() * 100000000);
+				var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
+				$.ajax({
+					type: "POST",
+					url: "/_api/",
+					async: true,
+					cache: false,
+					timeout: Math.max(10000, get_status_refresh_delay_ms() + 2000),
+					data: JSON.stringify(postData),
+					success: function(apiResponse) {
+						apply_ss_status(apiResponse.result, false);
+					}
+				});
+			}
 		}
 	});
 	schedule_next_front_status_poll(get_status_refresh_delay_ms());
