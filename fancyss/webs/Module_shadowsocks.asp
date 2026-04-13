@@ -5198,7 +5198,7 @@ function schedule_realtime_log_start(delayMs){
 	realtimeLogStartTimer = setTimeout(function() {
 		realtimeLogStartTimer = null;
 		get_realtime_log();
-	}, delayMs || 800);
+	}, delayMs || 1500);
 }
 function push_data(script, arg, obj, flag){
 	if (!flag) showSSLoadingBar();
@@ -5216,7 +5216,7 @@ function push_data(script, arg, obj, flag){
 		beforeSend: function() {
 			if (should_use_realtime_log(script, flag)) {
 				E('log_content3').value = "";
-				schedule_realtime_log_start(800);
+				schedule_realtime_log_start(1500);
 			}
 		},
 		success: function(response){
@@ -9089,7 +9089,7 @@ function restore_ss_conf() {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		beforeSend: function() {
-			schedule_realtime_log_start(800);
+			schedule_realtime_log_start(1800);
 		},
 		success: function(response) {
 			// 日志轮询已在 beforeSend 中启动，这里无需等待 _api_ 成功后再开始。
@@ -9241,7 +9241,7 @@ function update_ss() {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		beforeSend: function() {
-			setTimeout(get_realtime_log, 800);
+			schedule_realtime_log_start(1800);
 		},
 		error: function() {
 			// 后端会继续异步写日志文件，这里只保证前端已经开始轮询日志。
