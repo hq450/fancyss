@@ -5099,15 +5099,6 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 	var id = parseInt(Math.random() * 100000000);
 	var postData;
 	var resolvedWsCmd = ws_cmd || "";
-	if (!resolvedWsCmd && script == "ss_config.sh") {
-		if (arg == "start") {
-			resolvedWsCmd = "sh /koolshare/scripts/ss_config.sh start_by_ws";
-		} else if (arg == "stop") {
-			resolvedWsCmd = "sh /koolshare/scripts/ss_config.sh stop";
-		} else if (arg == "start_shunt_hot") {
-			resolvedWsCmd = "sh /koolshare/scripts/ss_config.sh start_shunt_hot";
-		}
-	}
 	if (script == "ss_config.sh") {
 		attach_schema2_postsave_marker(obj);
 	}
@@ -8246,7 +8237,7 @@ function test_latency_now(test_flag) {
 		var post_para = "manual_webtest";
 	}
 	if(ws_flag == 1 && test_flag == 2){
-		send_webtest_ws_command("run_ss_webtest_start_batch", function() {
+		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_start_batch", function() {
 			close_latency_ws();
 			close_latency_flag = 0;
 			batch_test_running = true;
@@ -8269,7 +8260,7 @@ function test_latency_now(test_flag) {
 		return;
 	}
 	if(ws_flag == 1 && test_flag == 0){
-		send_webtest_ws_command("run_ss_webtest_close", function() {
+		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_close_latency", function() {
 			close_latency_ws();
 			refresh_table(function() {
 				close_latency_flag = 1;
@@ -8334,7 +8325,7 @@ function stop_latency_batch() {
 		batch_stop_pending = true;
 		update_latency_action_links();
 		$("#ss_wts_show").html("<em>【停止中...】</em>");
-		send_webtest_ws_command("run_ss_webtest_stop_batch", function() {}, null, function() {
+		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_stop_batch", function() {}, null, function() {
 			batch_stop_pending = false;
 			update_latency_action_links();
 		});
@@ -8365,7 +8356,7 @@ function stop_latency_batch() {
 }
 function clear_latency_cache() {
 	if(ws_flag == 1){
-		send_webtest_ws_command("run_ss_webtest_clear_cache", function() {
+		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_clear_cache", function() {
 			close_latency_ws();
 			close_single_latency_ws();
 			batch_test_running = false;
@@ -8461,7 +8452,7 @@ function test_latency_single(node){
 	write_webtest([[String(node), "waiting..."]]);
 	disable_latency_buttons(node);
 	if(ws_flag == 1){
-		send_webtest_ws_command("run_ss_webtest_single:" + String(node), function() {
+		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_single_test " + String(node), function() {
 			start_single_latency_ws(node);
 		}, function() {
 			if(cell.length){
@@ -9760,7 +9751,7 @@ function get_ss_status_front_websocket() {
 	}, Math.max(15000, get_status_refresh_delay_ms() + 5000));
 	setup_status_ws(get_ss_status_front_httpd, false, function() {
 		try {
-			wss.send("status_probe_once");
+			wss.send("/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock probe-once");
 		} catch (ex) {
 			throw ex;
 		}
@@ -11421,7 +11412,7 @@ function save_failover() {
 		dbus_post[fov_chk[i]] = E(fov_chk[i]).checked ? '1' : '0';
 	}
 	if(ws_flag == 1){
-		push_data_ws("ss_status_reset.sh", "", dbus_post, "", "run_status_reset");
+		push_data_ws("ss_status_reset.sh", "", dbus_post);
 	}else{
 		push_data("ss_status_reset.sh", "", dbus_post);
 	}
