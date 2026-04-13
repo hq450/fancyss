@@ -11280,34 +11280,112 @@ function hideClients_Block() {
 	E('ClientList_Block').style.display = 'none';
 }
 function close_proc_status() {
+	if (window.procStatusWs) {
+		try {
+			window.procStatusWs.close();
+		} catch (e) {}
+		window.procStatusWs = null;
+	}
 	$("#detail_status").fadeOut(200);
 }
 function get_proc_status() {
+	if (ws_flag == 1) {
+		return get_proc_status_ws();
+	}
+	return get_proc_status_httpd();
+}
+function get_proc_status_ws() {
+	$('#proc_status').val("请稍后，正在获取状态中...");
+	$("#detail_status").fadeIn(500);
+	if (window.procStatusWs) {
+		try {
+			window.procStatusWs.close();
+		} catch (e) {}
+		window.procStatusWs = null;
+	}
+	var gotData = false;
+	var ws = new WebSocket("ws://" + hostname + ":803/");
+	window.procStatusWs = ws;
+	ws.onopen = function() {
+		$('#proc_status').val("");
+		ws.send("sh /koolshare/scripts/ss_proc_status.sh ws");
+	};
+	ws.onerror = function() {
+		if (!gotData) {
+			get_proc_status_httpd();
+		}
+	};
+	ws.onclose = function() {
+		if (window.procStatusWs === ws) {
+			window.procStatusWs = null;
+		}
+	};
+	ws.onmessage = function(event) {
+		var msg = String(event.data || "");
+		if (msg.indexOf("XU6J03M6") != -1) {
+			msg = msg.myReplace("XU6J03M6", " ").replace(/^\s+|\s+$/g, "");
+			if (msg) {
+				gotData = true;
+				$('#proc_status').val($('#proc_status').val() + msg + '\n');
+			}
+			try {
+				ws.close();
+			} catch (e) {}
+			return;
+		}
+		gotData = true;
+		$('#proc_status').val($('#proc_status').val() + msg + '\n');
+		E("proc_status").scrollTop = E("proc_status").scrollHeight;
+	};
+}
+function get_proc_status_httpd() {
 	$('#proc_status').val("请稍后，正在获取状态中...");
 	$("#detail_status").fadeIn(500);
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_proc_status.sh", "params":[], "fields": ""};
+	setTimeout(function() {
+		write_proc_status(0);
+	}, 300);
 	$.ajax({
 		type: "POST",
 		cache: false,
 		url: "/_api/",
+		timeout: 3000,
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
 			if(response.result == id){
-				write_proc_status();
+				write_proc_status(0);
 			}
+		},
+		error: function() {
+			write_proc_status(0);
 		}
 	});
 }
-function write_proc_status() {
+function write_proc_status(retryCount) {
+	retryCount = retryCount || 0;
 	$.ajax({
 		url: '/_temp/ss_proc_status.txt',
 		type: 'GET',
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
-			$('#proc_status').val(res);
+			var text = String(res || "");
+			if (!text.trim() && retryCount < 40) {
+				setTimeout(function() {
+					write_proc_status(retryCount + 1);
+				}, 250);
+				return;
+			}
+			$('#proc_status').val(text);
+		},
+		error: function() {
+			if (retryCount < 40) {
+				setTimeout(function() {
+					write_proc_status(retryCount + 1);
+				}, 250);
+			}
 		}
 	});
 }

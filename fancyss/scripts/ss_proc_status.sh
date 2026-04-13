@@ -495,42 +495,78 @@ if [ "${current_type}" == "1" ]; then
 	echo --------------------------------------------------------------------------------------------------------
 }
 
+get_zig_tool_version() {
+	local bin="$1"
+	[ -x "${bin}" ] || return 1
+	case "${bin##*/}" in
+	node-tool|sub-tool|xapi-tool)
+		"${bin}" version 2>/dev/null | sed -n '1p' | tr -d '\r'
+		;;
+	geotool|statusctl|webtestctl|websocketd)
+		"${bin}" --version 2>/dev/null | sed -n '1p' | tr -d '\r'
+		;;
+	status-tool|webtest-tool)
+		printf '%s' "-"
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+print_bin_version_line() {
+	local name="$1"
+	local version="$2"
+	local note="$3"
+	[ -n "${version}" ] || version="-"
+	printf '%-16s %-16s %s\n' "${name}" "${version}" "${note}"
+}
+
 ECHO_VERSION(){
 	echo
 	echo "2️⃣插件主要二进制程序版本："
 	echo "--------------------------------------------------------------------------------------------------------"
-	echo "程序			版本			备注"
+	printf '%-16s %-16s %s\n' "程序" "版本" "备注"
 	if [ -x "/koolshare/bin/xray" ];then
-		echo "xray			$(run xray -version|head -n1|awk '{print $2}')			https://github.com/XTLS/Xray-core"
+		printf '%-16s %-16s %s\n' "xray" "$(run xray -version|head -n1|awk '{print $2}')" "https://github.com/XTLS/Xray-core"
 	fi
 	if [ -x "/koolshare/bin/v2ray" ];then
 		local v2_info_all=$(run v2ray version|head -n1)
-		echo "v2ray			$(echo ${v2_info_all}|awk '{print $2}')			https://github.com/v2fly/v2ray-core"
+		printf '%-16s %-16s %s\n' "v2ray" "$(echo ${v2_info_all}|awk '{print $2}')" "https://github.com/v2fly/v2ray-core"
 	fi
 	if [ -x "/koolshare/bin/naive" ];then
-		echo "naive			$(run naive --version|awk '{print $NF}')		https://github.com/klzgrad/naiveproxy"
+		printf '%-16s %-16s %s\n' "naive" "$(run naive --version|awk '{print $NF}')" "https://github.com/klzgrad/naiveproxy"
 	fi
 	if [ -x "/koolshare/bin/tuic-client" ];then
-		echo "tuic-client		$(run tuic-client -V|awk '{print $NF}')			https://github.com/Itsusinn/tuic"
+		printf '%-16s %-16s %s\n' "tuic-client" "$(run tuic-client -V|awk '{print $NF}')" "https://github.com/Itsusinn/tuic"
 	fi
 	if [ -x "/koolshare/bin/ipt2socks" ];then
-		echo "ipt2socks		$(run /koolshare/bin/ipt2socks -V|awk '{print $2}')			https://github.com/zfl9/ipt2socks"
+		printf '%-16s %-16s %s\n' "ipt2socks" "$(run /koolshare/bin/ipt2socks -V|awk '{print $2}')" "https://github.com/zfl9/ipt2socks"
 	fi
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
 		if [ -n "${SSRUST_VER}" ];then
-			echo "sslocal			${SSRUST_VER}			https://github.com/shadowsocks/shadowsocks-rust"
+			printf '%-16s %-16s %s\n' "sslocal" "${SSRUST_VER}" "https://github.com/shadowsocks/shadowsocks-rust"
 		fi
 	fi
-	echo "obfs-local		$(run obfs-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')			https://github.com/shadowsocks/simple-obfs"
-	echo "ssr-redir		$(run rss-redir -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
-	echo "ssr-local		$(run rss-local -h|sed '/^$/d'|head -n1|awk '{print $2}')			https://github.com/shadowsocksrr/shadowsocksr-libev"
+	printf '%-16s %-16s %s\n' "obfs-local" "$(run obfs-local -h|sed '/^$/d'|head -n1|awk '{print $NF}')" "https://github.com/shadowsocks/simple-obfs"
+	printf '%-16s %-16s %s\n' "ssr-redir" "$(run rss-redir -h|sed '/^$/d'|head -n1|awk '{print $2}')" "https://github.com/shadowsocksrr/shadowsocksr-libev"
+	printf '%-16s %-16s %s\n' "ssr-local" "$(run rss-local -h|sed '/^$/d'|head -n1|awk '{print $2}')" "https://github.com/shadowsocksrr/shadowsocksr-libev"
 	if [ -x "/koolshare/bin/chinadns-ng" ];then
-		echo "chinadns-ng		$(run chinadns-ng -V | awk '{print $2}')		https://github.com/zfl9/chinadns-ng"
+		printf '%-16s %-16s %s\n' "chinadns-ng" "$(run chinadns-ng -V | awk '{print $2}')" "https://github.com/zfl9/chinadns-ng"
 	fi
 	if [ -x "/koolshare/bin/smartdns" ];then
-		echo "smartdns		$(run smartdns -v|awk '{print $2}')	https://github.com/pymumu/smartdns"
+		printf '%-16s %-16s %s\n' "smartdns" "$(run smartdns -v|awk '{print $2}')" "https://github.com/pymumu/smartdns"
 	fi
+	print_bin_version_line "node-tool" "$(get_zig_tool_version /koolshare/bin/node-tool)" "fancyss Zig / 节点运行产物构建"
+	print_bin_version_line "sub-tool" "$(get_zig_tool_version /koolshare/bin/sub-tool)" "fancyss Zig / 订阅解析器"
+	print_bin_version_line "xapi-tool" "$(get_zig_tool_version /koolshare/bin/xapi-tool)" "fancyss Zig / Xray API 客户端"
+	print_bin_version_line "status-tool" "$(get_zig_tool_version /koolshare/bin/status-tool)" "fancyss Zig / 运行状态探测"
+	print_bin_version_line "statusctl" "$(get_zig_tool_version /koolshare/bin/statusctl)" "fancyss Zig / status-tool 控制端"
+	print_bin_version_line "webtest-tool" "$(get_zig_tool_version /koolshare/bin/webtest-tool)" "fancyss Zig / 批量测速引擎"
+	print_bin_version_line "webtestctl" "$(get_zig_tool_version /koolshare/bin/webtestctl)" "fancyss Zig / webtest-tool 控制端"
+	print_bin_version_line "geotool" "$(get_zig_tool_version /koolshare/bin/geotool)" "fancyss Zig / geosite geoip 规则导出"
+	print_bin_version_line "websocketd" "$(get_zig_tool_version /koolshare/bin/websocketd)" "fancyss Zig / WebSocket 命令通道"
 	echo --------------------------------------------------------------------------------------------------------
 }
 
@@ -600,7 +636,7 @@ check_status() {
 	echo "🟠 白名单数：域名 ${CURR_WHTD}条，IP/CIDR ${CURR_WHTI}条"
 	echo "🟠 订阅数量：${CURR_SUBS}个"
 	echo "🟠 节点数量：${CURR_NODE}个"
-	echo "🟠 节点分布：$(GET_NODES_TYPE)"
+	echo "🟠 节点分布：统计中..."
 	echo "🟠 规则版本：gfwlist ${GFWVERSIN} | chnlist ${CDNVERSIN} | chnroute ${CHNVERSIN}"
 	echo "🟠 规则更新：$(GET_RULE_UPDATE)"
 	echo "🟠 订阅更新：$(GET_SUBS_UPDATE)"
@@ -615,15 +651,37 @@ check_status() {
 	if [ "${ss_basic_proxy_ipv6}" = "1" ];then
 		ECHO_IP6TABLES
 	fi
+
+	echo
+	echo "5️⃣节点分布统计："
+	echo "🟠 节点分布：$(GET_NODES_TYPE)"
 }
 
-true > /tmp/upload/ss_proc_status.txt
-if [ "${ss_basic_enable}" == "1" ]; then
-	check_status | tee /tmp/upload/ss_proc_status.txt 2>&1
-else
-	echo "插件尚未启用！" | tee /tmp/upload/ss_proc_status.txt 2>&1
+if [ "$1" = "ws" ];then
+	if [ "${ss_basic_enable}" == "1" ]; then
+		check_status
+	else
+		echo "插件尚未启用！"
+	fi
+	echo XU6J03M6
+	exit 0
 fi
 
 if [ "$#" == "1" ];then
 	http_response $1
 fi
+
+PROC_STATUS_FILE="/tmp/upload/ss_proc_status.txt"
+PROC_STATUS_TMP="${PROC_STATUS_FILE}.tmp.$$"
+
+rm -f "${PROC_STATUS_TMP}" "${PROC_STATUS_FILE}"
+true > "${PROC_STATUS_TMP}"
+exec >> "${PROC_STATUS_TMP}" 2>&1
+
+if [ "${ss_basic_enable}" == "1" ]; then
+	check_status
+else
+	echo "插件尚未启用！"
+fi
+
+mv -f "${PROC_STATUS_TMP}" "${PROC_STATUS_FILE}"

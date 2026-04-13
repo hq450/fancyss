@@ -132,6 +132,93 @@ version_lt() {
 	[ "$(version_to_num "${left}")" -lt "$(version_to_num "${right}")" ]
 }
 
+schema2_secret_decode_candidate() {
+	local value="$1"
+	local decoded=""
+	local normalized=""
+
+	[ -n "${value}" ] || return 1
+	printf '%s' "${value}" | grep -Eq '^[A-Za-z0-9+/=]+$' || return 1
+	[ $(( ${#value} % 4 )) -eq 0 ] || return 1
+
+	decoded="$(printf '%s' "${value}" | base64_decode 2>/dev/null)" || return 1
+	[ -n "${decoded}" ] || return 1
+
+	normalized="$(printf '%s' "${decoded}" | base64_encode 2>/dev/null)"
+	[ -n "${normalized}" ] || return 1
+	[ "${normalized}" = "${value}" ] || return 1
+	[ "${decoded}" != "${value}" ] || return 1
+
+	printf '%s' "${decoded}"
+}
+
+normalize_schema2_secret_fields_after_install() {
+	local reason="$1"
+	local node_id=""
+	local field=""
+	local raw_value=""
+	local plain_value=""
+	local decoded=""
+	local node_json=""
+	local updated_json=""
+	local updated_at=""
+	local changed_nodes=0
+	local changed_fields=0
+	local fields="password naive_pass"
+
+	[ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] || return 0
+
+	for node_id in $(fss_list_node_ids)
+	do
+		[ -n "${node_id}" ] || continue
+		node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || continue
+		updated_json="${node_json}"
+		updated_at="$(fss_now_ts_ms)"
+		local node_changed=0
+
+		for field in ${fields}
+		do
+			raw_value="$(printf '%s' "${updated_json}" | jq -r --arg f "${field}" '.[$f] // empty' 2>/dev/null)"
+			[ -n "${raw_value}" ] || continue
+
+			plain_value="$(fss_get_node_field_plain "${node_id}" "${field}" 2>/dev/null)"
+			decoded=""
+
+			if [ -n "${plain_value}" ] && [ "${plain_value}" != "${raw_value}" ]; then
+				decoded="${plain_value}"
+			else
+				decoded="$(schema2_secret_decode_candidate "${raw_value}")" || decoded=""
+			fi
+
+			[ -n "${decoded}" ] || continue
+			[ "${decoded}" != "${raw_value}" ] || continue
+
+			updated_json="$(printf '%s' "${updated_json}" | jq -c \
+				--arg f "${field}" \
+				--arg v "${decoded}" \
+				--argjson updated_at "${updated_at}" \
+				'.[$f] = $v
+				| ._b64_mode = "raw"
+				| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+				| ._updated_at = $updated_at' 2>/dev/null)" || continue
+			node_changed=1
+			changed_fields=$((changed_fields + 1))
+			echo_date "校正 schema2 节点 ${node_id} 的 ${field} 字段：base64 -> raw（${reason}）"
+		done
+
+		if [ "${node_changed}" = "1" ]; then
+			dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
+			changed_nodes=$((changed_nodes + 1))
+		fi
+	done
+
+	if [ "${changed_nodes}" -gt 0 ]; then
+		fss_touch_node_catalog_ts >/dev/null 2>&1 || true
+		fss_touch_node_config_ts >/dev/null 2>&1 || true
+		echo_date "已完成 schema2 密码字段校正：节点 ${changed_nodes} 个，字段 ${changed_fields} 项。"
+	fi
+}
+
 cleanup_legacy_smartdns_user_configs() {
 	local old_ver="$1"
 	[ -n "${old_ver}" ] || return 0
@@ -988,7 +1075,9 @@ install_now(){
 	# default value
 	local PLVER=$(cat ${DIR}/ss/version)
 	local OLD_VER="$(dbus get ss_basic_version_local)"
+	local FORCE_LEGACY_CACHE_RESET=0
 	[ -z "${OLD_VER}" -a -f "/koolshare/ss/version" ] && OLD_VER="$(cat /koolshare/ss/version 2>/dev/null)"
+	[ -n "${OLD_VER}" ] && version_lt "${OLD_VER}" "3.6.0" && FORCE_LEGACY_CACHE_RESET=1
 
 	#local PKG_ARCH_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 	#local PKG_TYPE_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_TYPE=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
@@ -1368,6 +1457,7 @@ install_now(){
 
 	# 节点存储自动迁移：升级到支持 schema 2 的版本后，直接切换到新结构。
 	export PATH=/koolshare/bin:${PATH}
+	local STORAGE_SCHEMA_BEFORE="$(fss_detect_storage_schema 2>/dev/null)"
 	fss_auto_migrate_if_needed 1 report_install_migration_progress
 	case "$?" in
 	0)
@@ -1383,8 +1473,24 @@ install_now(){
 		;;
 	esac
 
-	echo_date "刷新节点运行缓存..."
-	refresh_runtime_caches_after_install
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
+		if [ "${STORAGE_SCHEMA_BEFORE}" != "2" ];then
+			normalize_schema2_secret_fields_after_install "schema1 -> schema2 升级"
+		elif [ -n "${OLD_VER}" ] && version_lt "${OLD_VER}" "3.6.0"; then
+			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏"
+		fi
+	fi
+
+	if [ "${FORCE_LEGACY_CACHE_RESET}" = "1" ];then
+		echo_date "检测到旧版 fancyss（${OLD_VER} < 3.6.0），强制清理节点配置缓存和 webtest 缓存..."
+		invalidate_runtime_caches_after_install
+		echo_date "重建节点运行缓存..."
+		fss_refresh_node_json_cache >/dev/null 2>&1 || true
+		fss_schedule_webtest_cache_warm >/dev/null 2>&1 || true
+	else
+		echo_date "刷新节点运行缓存..."
+		refresh_runtime_caches_after_install
+	fi
 
 	# dbus value
 	echo_date "设置插件安装参数..."
