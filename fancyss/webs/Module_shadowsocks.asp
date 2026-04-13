@@ -5184,6 +5184,22 @@ function should_use_shunt_hot_reload(post_dbus){
 	}
 	return has_real_change;
 }
+var realtimeLogStartTimer = null;
+function should_use_realtime_log(script, flag){
+	if(flag && (flag == "1" || flag == "2")){
+		return false;
+	}
+	return /^(ss_config\.sh|ss_conf\.sh|ss_rule_update\.sh|ss_node_subscribe\.sh|ss_xray\.sh|ss_reboot_job\.sh|ss_status_reset\.sh|ss_update\.sh)$/.test(String(script || ""));
+}
+function schedule_realtime_log_start(delayMs){
+	if (realtimeLogStartTimer){
+		clearTimeout(realtimeLogStartTimer);
+	}
+	realtimeLogStartTimer = setTimeout(function() {
+		realtimeLogStartTimer = null;
+		get_realtime_log();
+	}, delayMs || 800);
+}
 function push_data(script, arg, obj, flag){
 	if (!flag) showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
@@ -5197,6 +5213,12 @@ function push_data(script, arg, obj, flag){
 		url: "/_api/",
 		data: JSON.stringify(postData),
 		dataType: "json",
+		beforeSend: function() {
+			if (should_use_realtime_log(script, flag)) {
+				E('log_content3').value = "";
+				schedule_realtime_log_start(800);
+			}
+		},
 		success: function(response){
 			if(response.result == id){
 				if(flag && flag == "1"){
@@ -5205,7 +5227,9 @@ function push_data(script, arg, obj, flag){
 					//continue;
 					//do nothing
 				}else{
-					get_realtime_log();
+					if (!should_use_realtime_log(script, flag)) {
+						get_realtime_log();
+					}
 				}
 			}
 		}
@@ -9056,6 +9080,7 @@ function restore_ss_conf() {
 		return;
 	}
 	showSSLoadingBar();
+	E('log_content3').value = "";
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_conf.sh", "params": ["4"], "fields": ""};
 	$.ajax({
@@ -9063,8 +9088,11 @@ function restore_ss_conf() {
 		url: "/_api/",
 		data: JSON.stringify(postData),
 		dataType: "json",
+		beforeSend: function() {
+			schedule_realtime_log_start(800);
+		},
 		success: function(response) {
-			get_realtime_log();
+			// 日志轮询已在 beforeSend 中启动，这里无需等待 _api_ 成功后再开始。
 		}
 	});
 }
