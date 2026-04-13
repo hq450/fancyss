@@ -1,5 +1,20 @@
 fancyss Changelog
 
+3.5.13（20260413）
+   - note	本次更新是 3.5.12 之后的收口版本，重点围绕三个方向继续修正一致性问题：一是安装升级链路中 schema 2 secret 与缓存的历史兼容问题；二是“详细状态”页面在 GS7 等机型上的交互体验和输出稳定性；三是统一刷新并确认所有会进入安装包的 Zig 工具分发产物，避免打包时继续混入旧二进制。
+   - update	`install.sh` 现在会在安装阶段显式处理 schema 2 secret 兼容：
+			1. `schema1 -> schema2` 迁移完成后，会再次校正 `password / naive_pass`，确保最终落成 raw；
+			2. 如果当前节点存储已经是 schema 2，但旧插件版本低于 `3.6.0`，安装时会自动探测节点里的 `password / naive_pass` 是否仍误存为 base64，若识别为 base64 则统一纠正为 raw。
+   - update	针对旧版 `< 3.6.0` 的升级路径，`install.sh` 现在会明确强制清理节点运行缓存和 `webtest` 缓存，然后再重建 `node_json_cache` 并预热测速缓存，避免旧缓存格式在安装后继续污染运行时行为。
+   - update	“详细状态”页面重新改为更符合预期的实时执行模型：当前端 WebSocket 可用时，点击“详细状态”会直接通过 `ws` 执行 `ss_proc_status.sh ws`，并将 stdout 流式回传到前端，不再依赖旧的“先执行后台脚本、再读缓存文件”方式，因此不会再优先显示上一次缓存内容。
+   - update	`ss_proc_status.sh` 对详细状态输出顺序做了调整：将最慢的“节点分布”统计移到最后，保证 GS7 这类节点较多的场景下，基础信息、二进制版本和 iptables 状态可以更快显示，不会长时间卡在“节点数量”后面。
+   - update	详细状态页中的“插件主要二进制程序版本”现已补充 fancyss 自带 Zig 工具的版本与备注说明，涵盖 `node-tool`、`sub-tool`、`xapi-tool`、`statusctl`、`webtestctl`、`geotool`、`websocketd` 等工具，并统一为固定宽度排版，便于阅读和排障。
+   - update	恢复 `websocketd` 的旧兼容模型：前端 `push_data_ws()` 重新回到原样发命令，`/koolshare/ss/websocket` 也去掉了大部分 `run_*` 桥接分支，恢复到“前端发什么，后端脚本就执行什么”的模式，降低升级后因 websocket 脚本未及时重启而出现命令不匹配的概率。
+   - update	刷新并重新确认所有会进入安装包的 Zig 工具分发产物：`geotool / node-tool / sub-tool / xapi-tool / status-tool / statusctl / webtest-tool / webtestctl / websocketd` 均已重新走发布构建并同步回 `binaries/`，后续 `build.sh` 打包会统一携带这批最新产物。
+   - fix	修复 GS7 等机型在点击“详细状态”后，弹窗长期停留在“请稍后，正在获取状态中...”，或者第一次显示旧缓存、第二次又不再刷新的问题；当前链路在 GS7 上已完成实机验证。
+   - fix	修复详细状态页面在读取 `ss_proc_status.txt` 时可能读到半截内容、导致文本一开始只显示到“节点数量”，随后又跳变成另一段的问题；现在 HTTP fallback 路径改为临时文件原子落盘，避免读取半成品。
+   - fix	修复详细状态页面中 Zig 工具版本探测串行超时过长，导致“插件主要二进制程序版本”整块刷新过慢的问题；现已改为对可快速返回版本号的工具直接调用固定命令读取。
+
 3.5.12（20260413）
    - note	本次更新重点围绕升级后的一致性问题收口：补齐安装升级后的缓存刷新、修复 websocket 命令文件热更新失配、统一 schema 2 节点 secret 的 raw 语义，并刷新 `node-tool / sub-tool` 分发链路，避免路由器升级后继续复用旧缓存或旧工具产物。
    - update	安装脚本升级后会默认刷新节点运行缓存：清理 `node_json_cache`、`node_env_cache`、`webtest_cache` 以及 `webtest` 运行态结果，并在安装完成后重新生成节点 JSON 缓存、异步预热测速缓存，减少“脚本/工具已更新但缓存仍是旧格式”带来的行为不一致。

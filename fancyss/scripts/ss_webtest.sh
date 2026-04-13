@@ -3909,7 +3909,7 @@ set_latency_job() {
 
 wt_is_named_action() {
 	case "$1" in
-	schedule_warm|schedule_node_direct_refresh|warm_cache|ensure_cache_ids_file|node_direct_refresh|web_webtest|clear_webtest|cleanup_helpers|single_test|manual_webtest|close_latency_test|stop_webtest)
+	schedule_warm|schedule_node_direct_refresh|warm_cache|ensure_cache_ids_file|node_direct_refresh|web_webtest|clear_webtest|cleanup_helpers|single_test|manual_webtest|close_latency_test|stop_webtest|ws_start_batch|ws_stop_batch|ws_clear_cache|ws_close_latency|ws_single_test)
 		return 0
 		;;
 	esac
@@ -4068,6 +4068,49 @@ close_latency_test)
 stop_webtest)
 	wt_http_response $1
 	wt_request_stop_batch
+	;;
+ws_start_batch)
+	ensure_latency_batch
+	if [ "${ss_basic_latency_batch}" != "1" ];then
+		echo "batch_disabled"
+		exit 0
+	fi
+	dbus set ss_basic_latency_val=2 >/dev/null 2>&1
+	clean_webtest
+	sh /koolshare/scripts/ss_webtest.sh web_webtest >/dev/null 2>&1 &
+	echo XU6J03M6
+	;;
+ws_stop_batch)
+	wt_request_stop_batch
+	echo XU6J03M6
+	;;
+ws_clear_cache)
+	if [ -f "/tmp/webtest.lock" ];then
+		echo busy
+	else
+		clean_webtest
+		dbus remove ss_basic_webtest_ts
+		rm -f "${WT_WEBTEST_BACKUP}"
+		echo XU6J03M6
+	fi
+	;;
+ws_close_latency)
+	dbus set ss_basic_latency_val=0 >/dev/null 2>&1
+	clean_webtest
+	dbus remove ss_basic_webtest_ts
+	echo XU6J03M6
+	;;
+ws_single_test)
+	if [ -z "${WEBTEST_ACTION_ARG}" ];then
+		echo busy
+		exit 0
+	fi
+	if [ -f "/tmp/webtest.lock" ];then
+		echo busy
+	else
+		sh /koolshare/scripts/ss_webtest.sh single_test "${WEBTEST_ACTION_ARG}" >/dev/null 2>&1 &
+		echo XU6J03M6
+	fi
 	;;
 0)
 	wt_http_response $1

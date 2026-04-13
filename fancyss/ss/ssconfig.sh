@@ -6924,9 +6924,6 @@ stop_ws(){
 	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
 		kill "${pid}" >/dev/null 2>&1
 	done
-	ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
-		kill "${pid}" >/dev/null 2>&1
-	done
 	rm -f "${WS_PIDFILE}" >/dev/null 2>&1
 }
 
