@@ -5,7 +5,7 @@
 source /koolshare/scripts/base.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
 MODEL=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
@@ -164,13 +164,19 @@ normalize_schema2_secret_fields_after_install() {
 	local updated_at=""
 	local changed_nodes=0
 	local changed_fields=0
+	local scanned_nodes=0
+	local total_nodes=0
 	local fields="password naive_pass"
 
 	[ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] || return 0
+	total_nodes="$(fss_list_node_ids | awk 'NF{c++} END{print c+0}')"
+	[ -n "${total_nodes}" ] || total_nodes=0
+	echo_date "开始校正 schema2 密码字段（${reason}），共 ${total_nodes} 个节点..."
 
 	for node_id in $(fss_list_node_ids)
 	do
 		[ -n "${node_id}" ] || continue
+		scanned_nodes=$((scanned_nodes + 1))
 		node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || continue
 		updated_json="${node_json}"
 		updated_at="$(fss_now_ts_ms)"
@@ -210,12 +216,17 @@ normalize_schema2_secret_fields_after_install() {
 			dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
 			changed_nodes=$((changed_nodes + 1))
 		fi
+		if [ "${scanned_nodes}" = "1" ] || [ $((scanned_nodes % 20)) -eq 0 ] || [ "${scanned_nodes}" = "${total_nodes}" ]; then
+			echo_date "schema2 密码字段校正进度：${scanned_nodes}/${total_nodes}"
+		fi
 	done
 
 	if [ "${changed_nodes}" -gt 0 ]; then
 		fss_touch_node_catalog_ts >/dev/null 2>&1 || true
 		fss_touch_node_config_ts >/dev/null 2>&1 || true
 		echo_date "已完成 schema2 密码字段校正：节点 ${changed_nodes} 个，字段 ${changed_fields} 项。"
+	else
+		echo_date "schema2 密码字段校正完成：未发现需要修正的节点。"
 	fi
 }
 
@@ -1076,8 +1087,10 @@ install_now(){
 	local PLVER=$(cat ${DIR}/ss/version)
 	local OLD_VER="$(dbus get ss_basic_version_local)"
 	local FORCE_LEGACY_CACHE_RESET=0
+	local FORCE_SCHEMA2_SECRET_NORMALIZE=0
 	[ -z "${OLD_VER}" -a -f "/koolshare/ss/version" ] && OLD_VER="$(cat /koolshare/ss/version 2>/dev/null)"
 	[ -n "${OLD_VER}" ] && version_lt "${OLD_VER}" "3.6.0" && FORCE_LEGACY_CACHE_RESET=1
+	[ -n "${OLD_VER}" ] && version_lt "${OLD_VER}" "3.5.13" && FORCE_SCHEMA2_SECRET_NORMALIZE=1
 
 	#local PKG_ARCH_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_ARCH=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
 	#local PKG_TYPE_OLD=$(cat /koolshare/webs/Module_shadowsocks.asp 2>/dev/null | grep -Eo "PKG_TYPE=.+" | awk -F"=" '{print $2}' |sed 's/"//g')
@@ -1476,7 +1489,7 @@ install_now(){
 	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
 		if [ "${STORAGE_SCHEMA_BEFORE}" != "2" ];then
 			normalize_schema2_secret_fields_after_install "schema1 -> schema2 升级"
-		elif [ -n "${OLD_VER}" ] && version_lt "${OLD_VER}" "3.6.0"; then
+		elif [ "${FORCE_SCHEMA2_SECRET_NORMALIZE}" = "1" ]; then
 			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏"
 		fi
 	fi
@@ -1486,10 +1499,10 @@ install_now(){
 		invalidate_runtime_caches_after_install
 		echo_date "重建节点运行缓存..."
 		fss_refresh_node_json_cache >/dev/null 2>&1 || true
-		fss_schedule_webtest_cache_warm >/dev/null 2>&1 || true
 	else
 		echo_date "刷新节点运行缓存..."
-		refresh_runtime_caches_after_install
+		invalidate_runtime_caches_after_install
+		fss_refresh_node_json_cache >/dev/null 2>&1 || true
 	fi
 
 	# dbus value

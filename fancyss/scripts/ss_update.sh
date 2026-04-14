@@ -4,7 +4,7 @@
 
 source /koolshare/scripts/ss_base.sh
 mkdir -p /tmp/upload
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
 main_url="https://raw.githubusercontent.com/hq450/fancyss/3.0/packages"
 
 # --------------------------------------
