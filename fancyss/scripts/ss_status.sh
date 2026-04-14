@@ -29,6 +29,12 @@ pick_status_tool(){
 	return 1
 }
 
+status_socks5_ready() {
+	netstat -nlp 2>/dev/null \
+		| grep -w "23456" \
+		| grep -Eq "xray|v2ray|naive|tuic|rss-local"
+}
+
 set_waiting_status(){
 	if [ "${PROXY_IPV6}" = "1" ];then
 		log1="国外IPv4 【${LOGTIME}】：等待..."
@@ -114,7 +120,15 @@ prepare(){
 		set_waiting_status
 		return 1
 	fi
+	if [ "$(dbus get ss_basic_wait)" = "1" ];then
+		set_waiting_status
+		return 1
+	fi
 	if ps | grep "ssconfig.sh" | grep -v grep >/dev/null 2>&1;then
+		set_waiting_status
+		return 1
+	fi
+	if [ "${ss_failover_enable}" != "1" ] && ! status_socks5_ready;then
 		set_waiting_status
 		return 1
 	fi
@@ -172,7 +186,7 @@ fi
 
 case "$1" in
 ws)
-		if [ "$(dbus get ss_basic_wait)" = "1" ];then
+		if ! prepare >/dev/null 2>&1; then
 			set_waiting_status
 			get_status_payload
 			exit 0
@@ -199,7 +213,7 @@ ws)
 		printf '%s' "${payload}"
 		;;
 	*)
-		if [ "$(dbus get ss_basic_wait)" = "1" ];then
+		if ! prepare >/dev/null 2>&1; then
 			set_waiting_status
 			payload="$(get_status_payload)"
 		else

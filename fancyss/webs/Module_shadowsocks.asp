@@ -9606,6 +9606,11 @@ function handle_ss_status_heartbeat(showRefreshPrompt) {
 	}
 }
 
+function status_payload_is_waiting(res) {
+	res = String(res || "");
+	return res.indexOf("等待") != -1 || res.indexOf("Waiting") != -1;
+}
+
 function apply_ss_status(res, with_heartbeat, showRefreshPrompt) {
 	if (typeof res != "string") {
 		if (res === null || typeof res == "undefined") {
@@ -9781,7 +9786,8 @@ function get_ss_status_front_httpd() {
 		cache: false,
 		timeout: Math.max(10000, get_status_refresh_delay_ms() + 2000),
 		success: function(response) {
-			if (!apply_ss_status(response, false)) {
+			var text = String(response || "");
+			if (status_payload_is_waiting(text) || !apply_ss_status(text, false)) {
 				var id = parseInt(Math.random() * 100000000);
 				var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
 				$.ajax({
