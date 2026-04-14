@@ -5185,11 +5185,25 @@ function should_use_shunt_hot_reload(post_dbus){
 	return has_real_change;
 }
 var realtimeLogStartTimer = null;
-function should_use_realtime_log(script, flag){
+var textFilePollStates = {};
+function get_backend_action_profile(script, flag){
+	var profile = {
+		logMode: "none",
+		logDelay: 1500
+	};
 	if(flag && (flag == "1" || flag == "2")){
-		return false;
+		return profile;
 	}
-	return /^(ss_config\.sh|ss_conf\.sh|ss_rule_update\.sh|ss_node_subscribe\.sh|ss_xray\.sh|ss_reboot_job\.sh|ss_status_reset\.sh|ss_update\.sh)$/.test(String(script || ""));
+	if (/^(ss_config\.sh|ss_conf\.sh|ss_rule_update\.sh|ss_node_subscribe\.sh|ss_xray\.sh|ss_reboot_job\.sh|ss_status_reset\.sh|ss_update\.sh)$/.test(String(script || ""))) {
+		profile.logMode = "realtime";
+		if (script == "ss_conf.sh" || script == "ss_update.sh") {
+			profile.logDelay = 1800;
+		}
+	}
+	return profile;
+}
+function should_use_realtime_log(script, flag){
+	return get_backend_action_profile(script, flag).logMode == "realtime";
 }
 function schedule_realtime_log_start(delayMs){
 	if (realtimeLogStartTimer){
@@ -5200,9 +5214,94 @@ function schedule_realtime_log_start(delayMs){
 		get_realtime_log();
 	}, delayMs || 1500);
 }
+function get_text_file_poll_state(key){
+	if (!textFilePollStates[key]){
+		textFilePollStates[key] = {
+			timer: null,
+			responseLen: -1,
+			noChange: 0,
+			attempt: 0
+		};
+	}
+	return textFilePollStates[key];
+}
+function clear_text_file_poll_state(key){
+	var state = textFilePollStates[key];
+	if (state && state.timer){
+		clearTimeout(state.timer);
+	}
+	delete textFilePollStates[key];
+}
+function schedule_text_file_poll(key, delay, runner){
+	var state = get_text_file_poll_state(key);
+	if (state.timer){
+		clearTimeout(state.timer);
+	}
+	state.timer = setTimeout(function() {
+		state.timer = null;
+		runner();
+	}, delay);
+}
+function note_text_file_poll_progress(state, response){
+	var len = String(response || "").length;
+	if (state.responseLen === len){
+		state.noChange++;
+	}else{
+		state.noChange = 0;
+	}
+	state.responseLen = len;
+}
+function poll_text_file(opts){
+	var key = opts.key;
+	var state = get_text_file_poll_state(key);
+	if (opts.reset){
+		state.responseLen = -1;
+		state.noChange = 0;
+		state.attempt = 0;
+		if (state.timer){
+			clearTimeout(state.timer);
+			state.timer = null;
+		}
+	}
+	$.ajax({
+		url: opts.url,
+		type: opts.type || "GET",
+		dataType: opts.dataType || "text",
+		async: true,
+		cache: false,
+		timeout: opts.timeout,
+		success: function(response) {
+			state.attempt++;
+			var result = opts.onSuccess ? opts.onSuccess(response, state) : null;
+			if (result && result.done === false){
+				schedule_text_file_poll(key, result.delay || 0, function() {
+					poll_text_file($.extend({}, opts, {reset: false}));
+				});
+				return;
+			}
+			if (!(result && result.keepState)) {
+				clear_text_file_poll_state(key);
+			}
+		},
+		error: function(xhr) {
+			state.attempt++;
+			var result = opts.onError ? opts.onError(xhr, state) : null;
+			if (result && result.done === false){
+				schedule_text_file_poll(key, result.delay || 0, function() {
+					poll_text_file($.extend({}, opts, {reset: false}));
+				});
+				return;
+			}
+			if (!(result && result.keepState)) {
+				clear_text_file_poll_state(key);
+			}
+		}
+	});
+}
 function push_data(script, arg, obj, flag){
 	if (!flag) showSSLoadingBar();
 	var id = parseInt(Math.random() * 100000000);
+	var actionProfile = get_backend_action_profile(script, flag);
 	if (script == "ss_config.sh") {
 		attach_schema2_postsave_marker(obj);
 	}
@@ -5214,9 +5313,9 @@ function push_data(script, arg, obj, flag){
 		data: JSON.stringify(postData),
 		dataType: "json",
 		beforeSend: function() {
-			if (should_use_realtime_log(script, flag)) {
+			if (actionProfile.logMode == "realtime") {
 				E('log_content3').value = "";
-				schedule_realtime_log_start(1500);
+				schedule_realtime_log_start(actionProfile.logDelay);
 			}
 		},
 		success: function(response){
@@ -5227,7 +5326,7 @@ function push_data(script, arg, obj, flag){
 					//continue;
 					//do nothing
 				}else{
-					if (!should_use_realtime_log(script, flag)) {
+					if (actionProfile.logMode != "realtime") {
 						get_realtime_log();
 					}
 				}
@@ -9079,22 +9178,7 @@ function restore_ss_conf() {
 		push_data_ws("ss_conf.sh", "4", {});
 		return;
 	}
-	showSSLoadingBar();
-	E('log_content3').value = "";
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_conf.sh", "params": ["4"], "fields": ""};
-	$.ajax({
-		type: "POST",
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		beforeSend: function() {
-			schedule_realtime_log_start(1800);
-		},
-		success: function(response) {
-			// 日志轮询已在 beforeSend 中启动，这里无需等待 _api_ 成功后再开始。
-		}
-	});
+	push_data("ss_conf.sh", "4", "");
 }
 function remove_SS_node() {
 	db_ss["ss_basic_action"] = "10";
@@ -9229,24 +9313,7 @@ function scroll_msg() {
 function update_ss() {
 	var dbus_post = {};
 	db_ss["ss_basic_action"] = "7";
-	showSSLoadingBar();
-	E('log_content3').value = "";
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_update.sh", "params":["update"], "fields": dbus_post};
-	$.ajax({
-		type: "POST",
-		cache:false,
-		url: "/_api/",
-		timeout: 3000,
-		data: JSON.stringify(postData),
-		dataType: "json",
-		beforeSend: function() {
-			schedule_realtime_log_start(1800);
-		},
-		error: function() {
-			// 后端会继续异步写日志文件，这里只保证前端已经开始轮询日志。
-		}
-	});
+	push_data("ss_update.sh", "update", dbus_post);
 }
 
 function tabSelect(w) {
@@ -9992,42 +10059,37 @@ function get_dns_log(s) {
 	else if(s == 6){
 		var file = '/_temp/dns_dig_result.txt';
 	}
-	$.ajax({
+	poll_text_file({
+		key: "dns_log_" + String(s),
+		reset: true,
 		url: file,
-		type: 'GET',
 		dataType: 'html',
-		async: true,
-		cache: false,
-		success: function(response) {
+		onSuccess: function(response, state) {
 			if(E("tablet_3").style.display == "none"){
-				return false;
+				return {done: true};
 			}
 			if (response.search("XU6J03M6") != -1) {
 				retArea.value = response.myReplace("XU6J03M6", " ");
 				retArea.scrollTop = retArea.scrollHeight;
-				return true;
+				return {done: true};
 			}
-			if (_responseLen == response.length) {
-				noChange_dns++;
-			} else {
-				noChange_dns = 0;
-			}
-				if (noChange_dns > 20) {
-					return false;
-				} else {
-					setTimeout(function() { get_dns_log(s); }, 500);
-				}
+			note_text_file_poll_progress(state, response);
 			retArea.value = response.myReplace("XU6J03M6", " ");
 			retArea.scrollTop = retArea.scrollHeight;
-			_responseLen = response.length;
+			if (state.noChange > 20) {
+				return {done: true};
+			}
+			return {done: false, delay: 500};
 		},
-		error: function(xhr) {
+		onError: function(xhr) {
 			retArea.value = "暂无任何日志，获取日志失败！";
+			return {done: true};
 		}
 	});
 }
 function close_ssf_status() {
 	close_status_history_ws();
+	clear_text_file_poll_state("status_log_1");
 	E("ssf_status_div").style.visibility = "hidden";
 	$('html, body').css({overflow: 'auto', height: 'auto'});
 	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
@@ -10035,6 +10097,7 @@ function close_ssf_status() {
 }
 function close_ssc_status() {
 	close_status_history_ws();
+	clear_text_file_poll_state("status_log_2");
 	E("ssc_status_div").style.visibility = "hidden";
 	$('html, body').css({overflow: 'auto', height: 'auto'});
 	$("body").find(".fullScreen").fadeOut(300, function() { tableApi.removeElement("fullScreen"); });
@@ -10166,38 +10229,34 @@ function get_status_log_httpd(s) {
 	if(s == 1){
 		var file = '/_temp/ssf_status.txt';
 		var retArea = E("log_content_f");
+		var pollKey = "status_log_1";
 	}else{
 		var file = '/_temp/ssc_status.txt';
 		var retArea = E("log_content_c");
+		var pollKey = "status_log_2";
 	}
-	$.ajax({
+	poll_text_file({
+		key: pollKey,
+		reset: true,
 		url: file,
-		type: 'GET',
 		dataType: 'html',
-		async: true,
-		cache:false,
-		success: function(response) {
+		onSuccess: function(response, state) {
 			if(E("tablet_2").style.display == "none"){
-				return false;
+				return {done: true};
 			}
-			if (_responseLen == response.length) {
-				noChange_status++;
-			} else {
-				noChange_status = 0;
-			}
-			if (noChange_status > 10) {
-				return false;
-			} else {
-				setTimeout(function() { get_status_log_httpd(s); }, 3123);
-			}
+			note_text_file_poll_progress(state, response);
 			retArea.value = response;
 			if(E("ss_failover_c4").checked == false && E("ss_failover_c5").checked == false){
 				retArea.scrollTop = retArea.scrollHeight;
 			}
-			_responseLen = response.length;
+			if (state.noChange > 10) {
+				return {done: true};
+			}
+			return {done: false, delay: 3123};
 		},
-		error: function(xhr) {
+		onError: function(xhr) {
 			retArea.value = "暂无任何日志，获取日志失败！";
+			return {done: true};
 		}
 	});
 }
@@ -10229,13 +10288,12 @@ function get_log() {
 	};
 }
 function get_log_httpd() {
-	$.ajax({
+	poll_text_file({
+		key: "main_log",
+		reset: true,
 		url: '/_temp/ss_log.txt',
-		type: 'GET',
 		dataType: 'html',
-		async: true,
-		cache:false,
-		success: function(response) {
+		onSuccess: function(response, state) {
 			var retArea = E("log_content1");
 			if (response.search("XU6J03M6") != -1) {
 				retArea.value = response.myReplace("XU6J03M6", " ");
@@ -10245,37 +10303,28 @@ function get_log_httpd() {
 				}else{
 					autoTextarea(E("log_content1"), 0, 980);
 				}
-				return true;
+				return {done: true};
 			}
-			if (_responseLen == response.length) {
-				noChange++;
-			} else {
-				noChange = 0;
+			note_text_file_poll_progress(state, response);
+			if (state.noChange > 5 || E("tablet_9").style.display == "none"){
+				return {done: true};
 			}
-				if (noChange > 5) {
-					return false;
-				} else {
-					setTimeout(get_log_httpd, 100);
-				}
 			retArea.value = response;
-			_responseLen = response.length;
-			if(E("tablet_9").style.display == "none"){
-				return false;
-			}
+			return {done: false, delay: 100};
 		},
-		error: function(xhr) {
+		onError: function(xhr) {
 			E("log_content1").value = "获取日志失败！";
+			return {done: true};
 		}
 	});
 }
 function get_realtime_log() {
-	$.ajax({
+	poll_text_file({
+		key: "realtime_log",
+		reset: true,
 		url: '/_temp/ss_log.txt',
-		type: 'GET',
-		async: true,
-		cache:false,
 		dataType: 'text',
-		success: function(response) {
+		onSuccess: function(response, state) {
 			var retArea = E("log_content3");
 			if (response.search("XU6J03M6") != -1) {
 				retArea.value = response.myReplace("XU6J03M6", " ");
@@ -10283,28 +10332,22 @@ function get_realtime_log() {
 				retArea.scrollTop = retArea.scrollHeight;
 				count_down_close();
 				submit_flag="0";
-				return true;
+				return {done: true};
 			}
-			if (_responseLen == response.length) {
-				noChange++;
-			} else {
-				noChange = 0;
+			note_text_file_poll_progress(state, response);
+			if (state.noChange > 1000) {
+				console.log("log time out!!");
+				return {done: true};
 			}
-				if (noChange > 1000) {
-					console.log("log time out!!")
-					return false;
-				} else {
-					setTimeout(get_realtime_log, 100);
-				}
 			retArea.value = response.myReplace("XU6J03M6", " ");
 			retArea.scrollTop = retArea.scrollHeight;
-			_responseLen = response.length;
+			return {done: false, delay: 100};
 		},
-			error: function() {
-				setTimeout(get_realtime_log, 500);
-			}
-		});
-	}
+		onError: function() {
+			return {done: false, delay: 500};
+		}
+	});
+}
 function count_down_close() {
 	if (x == "0") {
 		hideSSLoadingBar();
@@ -11354,6 +11397,7 @@ function close_proc_status() {
 		} catch (e) {}
 		window.procStatusWs = null;
 	}
+	clear_text_file_poll_state("proc_status");
 	$("#detail_status").fadeOut(200);
 }
 function get_proc_status() {
@@ -11412,7 +11456,7 @@ function get_proc_status_httpd() {
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_proc_status.sh", "params":[], "fields": ""};
 	setTimeout(function() {
-		write_proc_status(0);
+		write_proc_status(true);
 	}, 300);
 	$.ajax({
 		type: "POST",
@@ -11423,37 +11467,33 @@ function get_proc_status_httpd() {
 		dataType: "json",
 		success: function(response) {
 			if(response.result == id){
-				write_proc_status(0);
+				write_proc_status(false);
 			}
 		},
 		error: function() {
-			write_proc_status(0);
+			write_proc_status(false);
 		}
 	});
 }
-function write_proc_status(retryCount) {
-	retryCount = retryCount || 0;
-	$.ajax({
+function write_proc_status(reset) {
+	poll_text_file({
+		key: "proc_status",
+		reset: reset === true,
 		url: '/_temp/ss_proc_status.txt',
-		type: 'GET',
-		cache:false,
 		dataType: 'text',
-		success: function(res) {
+		onSuccess: function(res, state) {
 			var text = String(res || "");
-			if (!text.trim() && retryCount < 40) {
-				setTimeout(function() {
-					write_proc_status(retryCount + 1);
-				}, 250);
-				return;
+			if (!text.trim() && state.attempt < 40) {
+				return {done: false, delay: 250};
 			}
 			$('#proc_status').val(text);
+			return {done: true};
 		},
-		error: function() {
-			if (retryCount < 40) {
-				setTimeout(function() {
-					write_proc_status(retryCount + 1);
-				}, 250);
+		onError: function(xhr, state) {
+			if (state.attempt < 40) {
+				return {done: false, delay: 250};
 			}
+			return {done: true};
 		}
 	});
 }
