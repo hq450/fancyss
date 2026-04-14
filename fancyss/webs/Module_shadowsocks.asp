@@ -202,17 +202,19 @@ body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.1) !important;color:#e2e8f0 !important;}
 .submgr-entry{padding:6px 0;color:#dbe7f3;}
 .submgr-entry-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.submgr-entry-note{padding-top:10px;font-size:12px;line-height:1.7;color:#8fa4ba;}
-.submgr-shell{padding:18px 20px 10px;color:#fff;min-height:470px;max-height:500px;overflow:auto;}
+.submgr-shell{padding:18px 20px 10px;color:#fff;min-height:360px;max-height:410px;overflow:auto;}
 .submgr-tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
 .submgr-tab{display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:34px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#cfe0f1;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;}
 .submgr-tab.active{background:linear-gradient(135deg,#2563eb,#37b4ff);border-color:rgba(70,160,255,0.48);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,0.24);}
-.submgr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.submgr-toolbar{display:flex;justify-content:flex-start;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 .submgr-toolbar-note{font-size:12px;line-height:1.7;color:#8fa4ba;}
 .submgr-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
 .submgr-card{position:relative;padding:14px 14px 12px;border:1px solid rgba(69,93,120,0.28);border-radius:12px;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));box-shadow:0 12px 24px rgba(0,0,0,0.16),inset 0 1px 0 rgba(255,255,255,0.03);}
 .submgr-card.is-disabled{border-color:rgba(242,153,74,0.3);background:linear-gradient(180deg,rgba(44,32,22,0.97),rgba(28,22,16,0.95));}
 .submgr-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.submgr-card-delete{position:absolute;top:-10px;right:-8px;width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:16px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.8);box-shadow:0 8px 16px rgba(159,38,38,0.3);transition:all .2s cubic-bezier(0.34,1.56,0.64,1);}
+.submgr-card:hover .submgr-card-delete,.submgr-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
+.submgr-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.45);transform:scale(1.1);}
 .submgr-card-title{font-size:16px;line-height:1.3;color:#fff;font-weight:600;word-break:break-word;}
 .submgr-card-subtitle{padding-top:5px;font-size:11px;line-height:1.6;color:#8fa4ba;word-break:break-all;}
 .submgr-chip-row{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;}
@@ -221,13 +223,22 @@ body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,
 .submgr-chip-value{font-weight:700;}
 .submgr-chip.warn{background:rgba(242,153,74,0.16);color:#ffd1b5;border-color:rgba(242,153,74,0.22);}
 .submgr-chip.ok{background:rgba(41,179,111,0.16);color:#bdf5d2;border-color:rgba(41,179,111,0.24);}
-.submgr-card-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:14px;}
+.submgr-card-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:14px;}
+.submgr-card-btn{display:inline-flex;align-items:center;justify-content:center;min-width:72px;height:32px;padding:0 14px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;color:#fff;box-shadow:0 10px 20px rgba(0,0,0,0.18);}
+.submgr-card-btn.edit{background:linear-gradient(135deg,#2563eb,#37b4ff);}
+.submgr-card-btn.sync{background:linear-gradient(135deg,#159957,#38d27a);}
 .submgr-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:14px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
+.submgr-empty-ad{display:block;margin-top:10px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,62,62,0.2));border:1px solid rgba(255,140,0,0.35);color:#ffd166 !important;font-weight:700;line-height:1.8;text-decoration:none;box-shadow:0 12px 26px rgba(255,94,0,0.12);}
+.submgr-empty-ad strong{color:#ff7b00;}
 .submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:12px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
 .submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
+body .submgr-layer .layui-layer-btn{text-align:center !important;padding:0 16px 14px !important;}
+body .submgr-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;color:#fff !important;}
+body .submgr-layer .layui-layer-btn .layui-layer-btn1{background:#159957 !important;border-color:#159957 !important;color:#fff !important;}
+body .submgr-layer .layui-layer-btn .layui-layer-btn2{background:rgba(255,255,255,0.08) !important;border-color:rgba(255,255,255,0.18) !important;color:#f3f7fb !important;}
 @media (max-width: 900px){
 	.submgr-card-list{grid-template-columns:1fr;}
-	.submgr-shell{min-height:360px;max-height:420px;}
+	.submgr-shell{min-height:320px;max-height:380px;}
 	.shunt-rule-shell{display:block;padding-right:0;min-height:auto;}
 	.shunt-flow-link{width:100%;height:22px;margin:2px 0 4px;}
 	.shunt-flow-panel--source,.shunt-flow-panel--target{max-width:none;}
@@ -4070,9 +4081,8 @@ function render_subscription_manager_entry() {
 		'<td>' +
 		'<div class="submgr-entry">' +
 		'<div class="submgr-entry-actions">' +
-		'<a type="button" class="ss_btn" style="cursor:pointer;display:inline-block;min-width:168px;text-align:center;" onclick="open_subscription_manager()">打开订阅管理</a>' +
+		'<a type="button" class="ss_btn" style="cursor:pointer;display:inline-block;min-width:182px;text-align:center;white-space:nowrap;" onclick="open_subscription_manager()">打开订阅管理</a>' +
 		'</div>' +
-		'<div class="submgr-entry-note">每个订阅链接独立保存为一个订阅配置。弹窗内默认显示“订阅”标签页，也可切换到“URI 导入”快速添加单条分享链接。</div>' +
 		'</div>' +
 		'</td>' +
 		'</tr>';
@@ -4245,7 +4255,7 @@ function get_subscription_schedule_label(day, hour) {
 }
 function render_subscription_profiles_cards() {
 	if (!subscribeProfilesState.length) {
-		return '<div class="submgr-empty">当前还没有订阅配置。<br />点击上方“新增订阅”开始创建机场级配置。</div>';
+		return '<div class="submgr-empty">当前还没有订阅配置。<br />点击下方“新增订阅”开始创建机场级配置。<a class="submgr-empty-ad" target="_blank" href="https://123s.co/#/register?code=yf6ozeEO">🚀没有订阅地址？试试 <strong>ssLinks</strong> 机场，全中转 / 多国线路 / 流媒体解锁，优惠码: fancyss</a></div>';
 	}
 	var html = '<div class="submgr-card-list">';
 	for (var i = 0; i < subscribeProfilesState.length; i++) {
@@ -4255,6 +4265,7 @@ function render_subscription_profiles_cards() {
 		var lastClass = item.last_error ? "warn" : (Number(item.last_ok_ts || 0) > 0 ? "ok" : "");
 		var scheduleText = item.schedule_enabled ? get_subscription_schedule_label(item.schedule_day, item.schedule_hour) : "未启用";
 		html += '<div class="submgr-card' + (item.enabled ? '' : ' is-disabled') + '">';
+		html += '<a href="javascript:void(0);" class="submgr-card-delete" onclick="delete_subscription_profile(\'' + htmlEscape(String(item.id || "")) + '\')" title="删除订阅">&times;</a>';
 		html += '<div class="submgr-card-head"><div><div class="submgr-card-title">' + htmlEscape(item.name || "未命名订阅") + '</div><div class="submgr-card-subtitle">' + htmlEscape(host || item.url || "") + '</div></div></div>';
 		html += '<div class="submgr-chip-row">';
 		html += render_subscription_chip("状态", item.enabled ? "启用" : "停用", item.enabled ? "ok" : "warn");
@@ -4274,9 +4285,8 @@ function render_subscription_profiles_cards() {
 		html += '</div>';
 		html += '<div class="submgr-card-actions">';
 		var payloadB64 = base64_encode_utf8(JSON.stringify(item || {}));
-		html += '<a type="button" class="ss_btn" style="cursor:pointer" onclick="sync_subscription_profiles(\'' + htmlEscape(String(item.id || "")) + '\')">同步</a>';
-		html += '<a type="button" class="ss_btn" style="cursor:pointer" onclick="open_subscription_profile_editor_by_payload(\'' + payloadB64 + '\')">编辑</a>';
-		html += '<a type="button" class="ss_btn" style="cursor:pointer" onclick="delete_subscription_profile(\'' + htmlEscape(String(item.id || "")) + '\')">删除</a>';
+		html += '<a class="submgr-card-btn edit" href="javascript:void(0);" onclick="open_subscription_profile_editor_by_payload(\'' + payloadB64 + '\')">编辑</a>';
+		html += '<a class="submgr-card-btn sync" href="javascript:void(0);" onclick="sync_subscription_profiles(\'' + htmlEscape(String(item.id || "")) + '\')">同步</a>';
 		html += '</div>';
 		html += '</div>';
 	}
@@ -4286,15 +4296,14 @@ function render_subscription_profiles_cards() {
 function render_subscription_manager_body() {
 	var html = '<div class="submgr-shell">';
 	html += '<div class="submgr-tabs">';
-	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "profiles" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'profiles\')">订阅</a>';
-	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "uri" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'uri\')">URI 导入</a>';
+	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "profiles" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'profiles\')">订阅配置管理</a>';
+	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "uri" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'uri\')">分享链接导入</a>';
 	html += '</div>';
 	if (subscribeManagerActiveTab == "uri") {
 		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">用于快速解析单条或多条分享链接，沿用现有 URI 导入逻辑，不进入订阅 profile。</div></div>';
 		html += '<div class="submgr-uri-box"><textarea id="submgr_uri_input" placeholder="填入 ss://、ssr://、vmess://、vless://、trojan://、hy2://、hysteria2://、tuic://、naive+https://、naive+quic:// 等链接，支持多行。"></textarea></div>';
 		html += '<div class="shunt-action-group" style="padding-top:14px;"><a type="button" class="ss_btn" style="cursor:pointer" onclick="submit_subscription_uri_from_manager()">解析并保存为节点</a></div>';
 	} else {
-		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">每个订阅链接独立配置 UA、过滤条件、下载策略和计划任务。第一层弹窗只负责列表与概览，新增订阅和全部同步已放到底部按钮区。</div></div>';
 		html += render_subscription_profiles_cards();
 	}
 	html += '</div>';
@@ -4319,13 +4328,13 @@ function open_subscription_manager() {
 	layer.open({
 		type: 1,
 		title: "订阅管理",
-		skin: "shunt-editor-layer",
-		area: [$(window).width() < 760 ? '92%' : '920px', $(window).width() < 760 ? '88%' : '650px'],
-		maxHeight: 650,
+		skin: "shunt-editor-layer submgr-layer",
+		area: [$(window).width() < 760 ? '92%' : '920px', $(window).width() < 760 ? '88%' : '560px'],
+		maxHeight: 560,
 		shadeClose: false,
 		content: '<div id="subscription_manager_root"><div class="submgr-shell"><div class="submgr-empty">正在加载订阅配置...</div></div></div>',
-		btn: ["新增订阅", "全部同步", "关闭"],
-		btnAlign: "l",
+		btn: ["新增订阅", "全部同步", "关闭窗口"],
+		btnAlign: "c",
 		success: function(layero, index) {
 			subscribeManagerLayerIndex = index;
 			load_subscription_profiles(function() {
