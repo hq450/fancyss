@@ -4081,7 +4081,7 @@ function render_subscription_manager_entry() {
 		'<td>' +
 		'<div class="submgr-entry">' +
 		'<div class="submgr-entry-actions">' +
-		'<a type="button" class="ss_btn" style="cursor:pointer;display:inline-block;min-width:182px;text-align:center;white-space:nowrap;" onclick="open_subscription_manager()">打开订阅管理</a>' +
+		'<a type="button" class="ss_btn" style="cursor:pointer" onclick="open_subscription_manager()">打开订阅管理</a>' +
 		'</div>' +
 		'</div>' +
 		'</td>' +
@@ -4585,10 +4585,15 @@ function submit_subscription_uri_from_manager() {
 		alert("请填写至少一条分享链接。");
 		return false;
 	}
-	if (E("ss_base64_links")) {
-		E("ss_base64_links").value = value;
+	db_ss["ss_basic_action"] = "13";
+	var dbus_post = {
+		"ss_base64_links": Base64.encode(encodeURIComponent(value))
+	};
+	if (ws_flag == 1) {
+		push_data_ws("ss_node_subscribe.sh", "4", dbus_post);
+	} else {
+		push_data("ss_node_subscribe.sh", "4", dbus_post);
 	}
-	get_online_nodes(4);
 	return false;
 }
 function get_legacy_node_ids() {
@@ -13307,16 +13312,6 @@ function toggleKeyMask(o, show){
 																{ suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(3)">保存并订阅</a>'},
 																{ prefix: '&nbsp;&nbsp;订阅高级设定', id: 'ss_adv_sub', type: 'checkbox', value:false, func:'v' },
 															]}
-														]);
-													</script>
-												</table>
-												<table id="table_link" style="margin:8px 0px 0px 0px;" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
-													<script type="text/javascript">
-														var ph1 = "填入以ss://、ssr://、vmess://、vless://、trojan://、hysteria2://、hy2://、tuic://、naive+https://、naive+quic://开头的链接，多个链接请分行填写";
-														$('#table_subscribe').forms([
-															{ title: '通过分享链接添加节点', thead:'1'},
-															{ title: '分享链接', id:'ss_base64_links', type:'textarea', hint:117, rows:'11', ph:ph1},
-															{ title: '操作', suffix:'<a type="button" class="ss_btn" style="cursor:pointer" onclick="get_online_nodes(4)">解析并保存为节点</a>'},
 														]);
 													</script>
 												</table>
