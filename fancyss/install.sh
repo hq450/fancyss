@@ -10,6 +10,7 @@ MODEL=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
 [ -f "${DIR}/scripts/ss_node_common.sh" ] && source "${DIR}/scripts/ss_node_common.sh"
+[ -f "${DIR}/scripts/ss_subscribe_profile_lib.sh" ] && source "${DIR}/scripts/ss_subscribe_profile_lib.sh"
 module=${DIR##*/}
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
@@ -1492,6 +1493,13 @@ install_now(){
 		elif [ "${FORCE_SCHEMA2_SECRET_NORMALIZE}" = "1" ]; then
 			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏"
 		fi
+	fi
+
+	if subprof_migrate_legacy_profiles_if_needed >/tmp/sub_profile_migrate.count 2>/dev/null; then
+		local migrated_profiles="$(cat /tmp/sub_profile_migrate.count 2>/dev/null)"
+		[ -n "${migrated_profiles}" ] && echo_date "旧版订阅地址已迁移为 ${migrated_profiles} 个独立订阅配置。"
+		subprof_rebuild_cron_jobs >/dev/null 2>&1 || true
+		rm -f /tmp/sub_profile_migrate.count >/dev/null 2>&1
 	fi
 
 	if [ "${FORCE_LEGACY_CACHE_RESET}" = "1" ];then

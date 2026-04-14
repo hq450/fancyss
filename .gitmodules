@@ -16,3 +16,6 @@
 [submodule "tool/status-tool"]
 	path = tool/status-tool
 	url = git@github1.com:hq450/status-tool.git
+[submodule "tool/sub-get"]
+	path = tool/sub-get
+	url = git@github1.com:hq450/sub-get.git

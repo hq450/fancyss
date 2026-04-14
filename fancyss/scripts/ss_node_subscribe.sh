@@ -3,6 +3,7 @@
 # fancyss subscribe script for asuswrt/merlin based router with software center
 source /koolshare/scripts/base.sh
 source /koolshare/scripts/ss_node_common.sh
+[ -f /koolshare/scripts/ss_subscribe_profile_lib.sh ] && source /koolshare/scripts/ss_subscribe_profile_lib.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
 LC_ALL=C
@@ -34,6 +35,7 @@ SUB_MODE=$(dbus get ssr_subscribe_mode)
 HY2_UP_SPEED=$(dbus get ss_basic_hy2_up_speed)
 HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
 HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)
+HY2_CG_OPT=$(dbus get ss_basic_hy2_cg_opt)
 CURR_NODE=""
 FAILOVER_NODE=""
 CURR_NODE_NAME=""
@@ -81,6 +83,19 @@ SUB_TOOL_DIFF_SUMMARY_FILE_CURRENT=""
 SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT=""
 SUB_NODE_TOOL_PLAN_FILE_CURRENT=""
 SUB_REFERENCE_RESOLVED_IDENTITY=""
+SUB_ACTIVE_PROFILE_ID=""
+SUB_ACTIVE_PROFILE_NAME=""
+SUB_ACTIVE_UA_MODE=""
+SUB_ACTIVE_UA_PRESET=""
+SUB_ACTIVE_UA_CUSTOM=""
+SUB_LAST_ONLINE_GROUP=""
+SUB_LAST_URL_HASH=""
+SUB_LAST_DOWNLOAD_TOOL=""
+SUB_LAST_DOWNLOAD_PATH=""
+SUB_LAST_DOWNLOAD_MODE=""
+SUB_LAST_DOWNLOAD_UA=""
+SUB_LAST_DOWNLOAD_ERROR=""
+SUB_SINGLE_PROFILE_SYNC=0
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -137,8 +152,189 @@ sub_get_online_urls(){
 	printf '%s\n' "${SUB_ONLINE_URLS}" | sed '/^$/d'
 }
 
+sub_reset_active_profile_context() {
+	SUB_ACTIVE_PROFILE_ID=""
+	SUB_ACTIVE_PROFILE_NAME=""
+	SUB_ACTIVE_UA_MODE=""
+	SUB_ACTIVE_UA_PRESET=""
+	SUB_ACTIVE_UA_CUSTOM=""
+	SUB_BY_PROXY=$(dbus get ss_basic_online_links_proxy)
+	SUB_AI=$(dbus get ss_basic_sub_ai)
+	SUB_TOOL_NODE_LOG=$(dbus get ss_basic_sub_node_log)
+	SUB_KEEP_INFO_NODE=$(dbus get ss_basic_sub_keep_info_node)
+	[ -z "${SUB_BY_PROXY}" ] && SUB_BY_PROXY=0
+	[ -n "${SUB_TOOL_NODE_LOG}" ] || SUB_TOOL_NODE_LOG=0
+	[ -n "${SUB_KEEP_INFO_NODE}" ] || SUB_KEEP_INFO_NODE=0
+	SUB_MODE=$(dbus get ssr_subscribe_mode)
+	[ -z "${SUB_MODE}" ] && SUB_MODE=2
+	HY2_UP_SPEED=$(dbus get ss_basic_hy2_up_speed)
+	HY2_DL_SPEED=$(dbus get ss_basic_hy2_dl_speed)
+	HY2_TFO_SWITCH=$(dbus get ss_basic_hy2_tfo_switch)
+	HY2_CG_OPT=$(dbus get ss_basic_hy2_cg_opt)
+	KEY_WORDS_1_RAW=$(dbus get ss_basic_exclude | sed 's/,$//g')
+	KEY_WORDS_2_RAW=$(dbus get ss_basic_include | sed 's/,$//g')
+	KEY_WORDS_1=$(printf '%s' "${KEY_WORDS_1_RAW}" | sed 's/,/|/g')
+	KEY_WORDS_2=$(printf '%s' "${KEY_WORDS_2_RAW}" | sed 's/,/|/g')
+}
+
+sub_apply_active_profile_context() {
+	local profile_id="$1"
+	local profile_name="$2"
+	local subscribe_mode="$3"
+	local download_policy="$4"
+	local ua_mode="$5"
+	local ua_preset="$6"
+	local ua_custom="$7"
+	local exclude_raw="$8"
+	local include_raw="$9"
+	shift 9
+	local allow_insecure="$1"
+	local node_log="$2"
+	local keep_info_node="$3"
+	local hy2_up="$4"
+	local hy2_dl="$5"
+	local hy2_tfo_switch="$6"
+	local hy2_cg_opt="$7"
+
+	SUB_ACTIVE_PROFILE_ID="${profile_id}"
+	SUB_ACTIVE_PROFILE_NAME="${profile_name}"
+	SUB_MODE="${subscribe_mode}"
+	[ -n "${SUB_MODE}" ] || SUB_MODE=2
+	case "${download_policy}" in
+	proxy)
+		SUB_BY_PROXY=1
+		;;
+	direct)
+		SUB_BY_PROXY=2
+		;;
+	*)
+		SUB_BY_PROXY=0
+		;;
+	esac
+	SUB_ACTIVE_UA_MODE="${ua_mode}"
+	SUB_ACTIVE_UA_PRESET="${ua_preset}"
+	SUB_ACTIVE_UA_CUSTOM="${ua_custom}"
+	[ "${allow_insecure}" = "true" ] && SUB_AI=1 || SUB_AI=0
+	[ "${node_log}" = "true" ] && SUB_TOOL_NODE_LOG=1 || SUB_TOOL_NODE_LOG=0
+	[ "${keep_info_node}" = "true" ] && SUB_KEEP_INFO_NODE=1 || SUB_KEEP_INFO_NODE=0
+	KEY_WORDS_1_RAW="$(printf '%s' "${exclude_raw}" | sed 's/,$//g')"
+	KEY_WORDS_2_RAW="$(printf '%s' "${include_raw}" | sed 's/,$//g')"
+	KEY_WORDS_1="$(printf '%s' "${KEY_WORDS_1_RAW}" | sed 's/,/|/g')"
+	KEY_WORDS_2="$(printf '%s' "${KEY_WORDS_2_RAW}" | sed 's/,/|/g')"
+	HY2_UP_SPEED="${hy2_up}"
+	HY2_DL_SPEED="${hy2_dl}"
+	HY2_TFO_SWITCH="${hy2_tfo_switch}"
+	[ -n "${HY2_TFO_SWITCH}" ] || HY2_TFO_SWITCH=2
+	HY2_CG_OPT="${hy2_cg_opt}"
+	[ -n "${HY2_CG_OPT}" ] || HY2_CG_OPT="bbr"
+}
+
 sub_get_online_url_count(){
 	sub_get_online_urls | wc -l
+}
+
+sub_collect_active_link_hashes_from_profiles_file() {
+	local output_file="$1"
+	local profiles_file="$2"
+	local profile_url=""
+
+	[ -n "${output_file}" ] || return 1
+	[ -f "${profiles_file}" ] || return 1
+	: > "${output_file}"
+	while IFS='	' read -r _profile_id _profile_name profile_url _
+	do
+		[ -n "${profile_url}" ] || continue
+		printf '%s' "${profile_url}" | md5sum | awk '{print $1}' >> "${output_file}"
+		printf '\n' >> "${output_file}"
+	done < "${profiles_file}"
+}
+
+sub_prepare_enabled_profiles_file() {
+	local output_file="$1"
+	local selected_id="$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})"
+	local tmp_file=""
+
+	[ -n "${output_file}" ] || return 1
+	subprof_collect_enabled_profiles_tsv "${output_file}" >/dev/null 2>&1 || return 1
+	if [ -n "${selected_id}" ]; then
+		tmp_file="${output_file}.tmp.$$"
+		awk -F '\t' -v selected_id="${selected_id}" '$1 == selected_id {print}' "${output_file}" > "${tmp_file}" 2>/dev/null || true
+		mv -f "${tmp_file}" "${output_file}"
+	fi
+	[ -s "${output_file}" ]
+}
+
+sub_pick_jq() {
+	if [ -x "/koolshare/bin/jq" ]; then
+		printf '%s\n' "/koolshare/bin/jq"
+		return 0
+	fi
+	command -v jq 2>/dev/null
+}
+
+pick_sub_get() {
+	local sub_get_path=""
+	sub_get_path="$(type sub-get 2>/dev/null | awk '{print $NF}' | sed -n '1p')"
+	if [ -n "${sub_get_path}" ]; then
+		if "${sub_get_path}" version >/dev/null 2>&1; then
+			printf '%s\n' "${sub_get_path}"
+			return 0
+		fi
+	fi
+	if [ -x "/koolshare/bin/sub-get" ]; then
+		if /koolshare/bin/sub-get version >/dev/null 2>&1; then
+			printf '%s\n' "/koolshare/bin/sub-get"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+sub_get_supports_command() {
+	local sub_get_bin="$1"
+	local command_name="$2"
+	[ -n "${sub_get_bin}" ] || return 1
+	[ -n "${command_name}" ] || return 1
+	"${sub_get_bin}" --help 2>&1 | grep -Eq "^[[:space:]]*sub-get[[:space:]]+${command_name}([[:space:]]|$)"
+}
+
+sub_reset_download_trace() {
+	SUB_LAST_DOWNLOAD_TOOL=""
+	SUB_LAST_DOWNLOAD_PATH=""
+	SUB_LAST_DOWNLOAD_MODE=""
+	SUB_LAST_DOWNLOAD_UA=""
+	SUB_LAST_DOWNLOAD_ERROR=""
+}
+
+sub_write_sub_get_plan() {
+	local output_file="$1"
+	local url="$2"
+	local ua="$3"
+	local policy="$4"
+	local profile_id="$5"
+	local profile_name="$6"
+	local sub_get_jq=""
+
+	[ -n "${output_file}" ] || return 1
+	sub_get_jq="$(sub_pick_jq)" || return 1
+	"${sub_get_jq}" -cn \
+		--arg url "${url}" \
+		--arg ua "${ua}" \
+		--arg policy "${policy}" \
+		--arg profile_id "${profile_id}" \
+		--arg profile_name "${profile_name}" \
+		'{
+			version: 1,
+			url: $url,
+			policy: $policy,
+			profile: {
+				id: $profile_id,
+				name: $profile_name
+			},
+			ua: {
+				value: $ua
+			}
+		}' > "${output_file}" 2>/dev/null
 }
 
 sub_get_source_domain_from_url(){
@@ -510,7 +706,7 @@ sub_get_filter_signature(){
 		read -r effective_hy2_tfo
 		read -r effective_hy2_cg
 	} <<-EOF
-	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "${HY2_CG_OPT}")
 	EOF
 	printf '%s\n' \
 		"exclude=${KEY_WORDS_1_RAW}" \
@@ -971,51 +1167,60 @@ sub_validate_downloaded_payload_with_tool(){
 		return 0
 		;;
 	empty)
+		SUB_LAST_DOWNLOAD_ERROR="empty payload"
 		echo_date "⚠️下载内容为空！️该订阅链接不包含任何节点信息"
 		echo_date "⚠️请检查你的服务商是否更换了订阅链接！"
 		return 1
 		;;
 	html-login)
+		SUB_LAST_DOWNLOAD_ERROR="html login page"
 		echo_date "⚠️解析错误！原因：该订阅链接返回了登录/验证页面，当前无法直接获取订阅内容！"
 		preview=$(sub_payload_preview "${payload_file}")
 		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		return 1
 		;;
 	html-redirect)
+		SUB_LAST_DOWNLOAD_ERROR="html redirect unresolved"
 		echo_date "⚠️解析错误！原因：该订阅链接返回了HTML跳转页，但自动跟随未成功完成！"
 		preview=$(sub_payload_preview "${payload_file}")
 		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		return 1
 		;;
 	html-page)
+		SUB_LAST_DOWNLOAD_ERROR="html page"
 		echo_date "⚠️解析错误！原因：该订阅链接返回了HTML页面，而不是订阅内容！"
 		preview=$(sub_payload_preview "${payload_file}")
 		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		return 1
 		;;
 	json-error)
+		SUB_LAST_DOWNLOAD_ERROR="json error payload"
 		echo_date "⚠️解析错误！原因：该订阅链接返回了JSON错误响应！"
 		preview=$(sub_payload_preview "${payload_file}")
 		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		return 1
 		;;
 	json)
+		SUB_LAST_DOWNLOAD_ERROR="json payload"
 		echo_date "⚠️解析错误！原因：该订阅链接返回了JSON内容，而不是订阅内容！"
 		preview=$(sub_payload_preview "${payload_file}")
 		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		return 1
 		;;
 	text-error)
+		SUB_LAST_DOWNLOAD_ERROR="text error payload"
 		echo_date "⚠️解析错误！原因：该订阅链接返回了文本错误响应！"
 		preview=$(sub_payload_preview "${payload_file}")
 		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		return 1
 		;;
 	ssep-envelope)
+		SUB_LAST_DOWNLOAD_ERROR="ssep envelope unsupported"
 		echo_date "⚠️解析错误！原因：检测到SSEP加密订阅Envelope，当前版本暂未解密此订阅格式！"
 		return 1
 		;;
 	gzip)
+		SUB_LAST_DOWNLOAD_ERROR="gzip payload unsupported"
 		echo_date "⚠️解析错误！原因：检测到gzip压缩响应，当前订阅链路暂未处理此类返回内容！"
 		return 1
 		;;
@@ -1243,7 +1448,7 @@ sub_try_parse_uri_lines_with_tool(){
 		read -r effective_hy2_tfo
 		read -r effective_hy2_cg
 	} <<-EOF
-	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "${HY2_CG_OPT}")
 	EOF
 
 	[ "${SUB_TOOL_NODE_LOG}" = "1" ] && subtool_log_level="verbose"
@@ -1334,7 +1539,7 @@ sub_update_parsed_cache_meta(){
 		read -r effective_hy2_tfo
 		read -r effective_hy2_cg
 	} <<-EOF
-	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "${HY2_CG_OPT}")
 	EOF
 	mapping_sig=$(sub_get_airport_mapping_signature)
 	has_ai_sensitive="0"
@@ -1393,7 +1598,7 @@ sub_parsed_cache_meta_matches(){
 		read -r current_hy2_tfo
 		read -r current_hy2_cg
 	} <<-EOF
-	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "$(dbus get ss_basic_hy2_cg_opt)")
+	$(sub_get_effective_hy2_context "${HY2_UP_SPEED}" "${HY2_DL_SPEED}" "${HY2_TFO_SWITCH}" "${HY2_CG_OPT}")
 	EOF
 	current_mapping_sig=$(sub_get_airport_mapping_signature)
 	[ "${cached_schema}" = "${SUB_PARSED_CACHE_META_SCHEMA}" ] || return 1
@@ -1574,7 +1779,7 @@ sub_get_parse_summary_value(){
 	local file="$1"
 	local key="$2"
 	[ -f "${file}" ] || return 1
-	jq -r --arg key "${key}" '.[$key] // 0' "${file}" 2>/dev/null | sed -n '1p'
+	"$(sub_pick_jq)" -r --arg key "${key}" '.[$key] // 0' "${file}" 2>/dev/null | sed -n '1p'
 }
 
 sub_get_parse_summary_scheme_count(){
@@ -1582,7 +1787,7 @@ sub_get_parse_summary_scheme_count(){
 	local bucket="$2"
 	local key="$3"
 	[ -f "${file}" ] || return 1
-	jq -r --arg bucket "${bucket}" --arg key "${key}" '.[$bucket][$key] // 0' "${file}" 2>/dev/null | sed -n '1p'
+	"$(sub_pick_jq)" -r --arg bucket "${bucket}" --arg key "${key}" '.[$bucket][$key] // 0' "${file}" 2>/dev/null | sed -n '1p'
 }
 
 sub_log_fancyss_parse_summary_json(){
@@ -6265,7 +6470,7 @@ add_hy2_node(){
 		HY2_CG_OPT="bbr"
 	elif [ -n "${HY2_UP_SPEED}" -a -n "${HY2_DL_SPEED}" ];then
 		# echo_date "🔴hysteria2节点：congestion（拥塞算法）采用你设置的：${HY2_CG_OPT}！"
-		HY2_CG_OPT=$(dbus get ss_basic_hy2_cg_opt)
+		HY2_CG_OPT="${HY2_CG_OPT:-$(dbus get ss_basic_hy2_cg_opt)}"
 	fi
 
 	local hy2_main="${decode_link%%#*}"
@@ -6510,25 +6715,46 @@ get_ua(){
 	[ -n "${pkg_arch}" ] || pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local pkg_vers=$(dbus get ss_basic_version_local)
-	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN|Shadowrocket"
-	# echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
+	local ua_mode="${SUB_ACTIVE_UA_MODE}"
+	local ua_preset="${SUB_ACTIVE_UA_PRESET}"
+	local ua_custom="${SUB_ACTIVE_UA_CUSTOM}"
 
-	_UA=$(dbus get ss_basic_online_ua)
-	case ${_UA} in
-	0)
+	[ -n "${ua_mode}" ] || ua_mode="fixed"
+	case "${ua_mode}" in
+	custom)
+		printf '%s' "${ua_custom}"
+		return 0
+		;;
+	auto)
+		ua_preset="${ua_preset:-default}"
+		;;
+	inherit|"")
+		_UA=$(dbus get ss_basic_online_ua)
+		ua_preset="$(subprof_ua_preset_from_legacy_value "${_UA}")"
+		;;
+	fixed|*)
+		ua_preset="${ua_preset:-default}"
+		;;
+	esac
+
+	case "${ua_preset}" in
+	default)
 		echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
 		;;
-	1)
+	curl)
 		echo -n ""
 		;;
-	2)
+	v2rayn)
 		echo -n "v2rayn"
 		;;
-	3)
+	v2rayng)
 		echo -n "v2rayng"
 		;;
-	4)
+	shadowrocket)
 		echo -n "shadowrocket"
+		;;
+	*)
+		echo -n "${FW_TYPE}|${FW_MOD}|${MODEL}|${fw_version}|${pkg_name}|${pkg_arch}|${pkg_type}|${pkg_vers}|curl|v2rayN"
 		;;
 	esac
 	#&flag=shadowrocket
@@ -6541,6 +6767,9 @@ download_by_curl(){
 	
 	echo_date "⬇️使用curl下载订阅..."
 	local UA=$(get_ua)
+	SUB_LAST_DOWNLOAD_TOOL="curl"
+	SUB_LAST_DOWNLOAD_PATH="shell"
+	SUB_LAST_DOWNLOAD_UA="${UA}"
 	if [ -n "${UA}" ];then
 		echo_date "🪧使用UA：$UA"
 		local UA_ARG="--user-agent ${UA}"
@@ -6555,6 +6784,7 @@ download_by_curl(){
 	
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
+		SUB_LAST_DOWNLOAD_MODE="direct"
 		echo_date "➡️通过本地网络直连下载订阅..."
 		rm -f "${header_file}" >/dev/null 2>&1
 		run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
@@ -6566,6 +6796,7 @@ download_by_curl(){
 		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
+			SUB_LAST_DOWNLOAD_MODE="proxy"
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			rm -f "${header_file}" >/dev/null 2>&1
 			run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
@@ -6579,6 +6810,7 @@ download_by_curl(){
 		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
+			SUB_LAST_DOWNLOAD_MODE="proxy"
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			rm -f "${header_file}" >/dev/null 2>&1
 			run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 -x socks5h://127.0.0.1:23456 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
@@ -6590,6 +6822,7 @@ download_by_curl(){
 		fi
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
+		SUB_LAST_DOWNLOAD_MODE="direct"
 		echo_date "⬇️使用常规网络下载..."
 		rm -f "${header_file}" >/dev/null 2>&1
 		run /tmp/curl-subscribe -sSk -L ${UA_ARG} -D "${header_file}" --connect-timeout 5 -m 5 --retry 3 --retry-delay 1 "${url_encode}" 2>/dev/null >${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
@@ -6603,6 +6836,9 @@ download_by_wget(){
 	#local url_encode="${url_encode}&flag=shadowrocket"
 	echo_date "⬇️使用wget下载订阅..."
 	local UA=$(get_ua)
+	SUB_LAST_DOWNLOAD_TOOL="wget"
+	SUB_LAST_DOWNLOAD_PATH="shell"
+	SUB_LAST_DOWNLOAD_UA="${UA}"
 	if [ -n "${UA}" ];then
 		echo_date "🪧使用UA：$UA"
 		local UA_ARG="--user-agent ${UA}"
@@ -6624,6 +6860,7 @@ download_by_wget(){
 	
 	if [ "${SUB_BY_PROXY}" == "0" ]; then
 		# 先直连下载
+		SUB_LAST_DOWNLOAD_MODE="direct"
 		echo_date "➡️通过本地网络直连下载订阅..."
 		rm -f "${header_file}" >/dev/null 2>&1
 		run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
@@ -6635,6 +6872,7 @@ download_by_wget(){
 		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
+			SUB_LAST_DOWNLOAD_MODE="proxy"
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			rm -f "${header_file}" >/dev/null 2>&1
 			run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
@@ -6647,6 +6885,7 @@ download_by_wget(){
 		# 代理下载
 		proxy_rule add "${DOMAIN_NAME}"
 		if [ "$?" == "0" ];then
+			SUB_LAST_DOWNLOAD_MODE="proxy"
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
 			rm -f "${header_file}" >/dev/null 2>&1
 			run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
@@ -6657,11 +6896,75 @@ download_by_wget(){
 		proxy_rule del "${DOMAIN_NAME}"
 	elif [ "${SUB_BY_PROXY}" == "2" ]; then
 		# 直连下载
+		SUB_LAST_DOWNLOAD_MODE="direct"
 		echo_date "⬇️使用常规网络下载..."
 		rm -f "${header_file}" >/dev/null 2>&1
 		run5 wget -S -t 3 ${UA_ARG} -q ${EXT_OPT} "${url_encode}" -O ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt 2>"${header_file}"
 		return $?
 	fi
+}
+
+download_by_sub_get(){
+	local url_encode="$1"
+	local header_file="$(sub_header_file_path "${SUB_LINK_HASH:0:4}")"
+	local plan_file="${DIR}/sub_get_plan_${SUB_LINK_HASH:0:4}.json"
+	local sub_get_bin=""
+	local ua_value=""
+	local policy_value=""
+
+	sub_get_bin="$(pick_sub_get 2>/dev/null)" || return 2
+	sub_get_supports_command "${sub_get_bin}" "fetch" || return 2
+	ua_value="$(get_ua)"
+	case "${SUB_BY_PROXY}" in
+	1)
+		policy_value="proxy"
+		;;
+	2)
+		policy_value="direct"
+		;;
+	*)
+		policy_value="auto"
+		;;
+	esac
+	SUB_LAST_DOWNLOAD_TOOL="sub-get"
+	SUB_LAST_DOWNLOAD_PATH="sub-get"
+	SUB_LAST_DOWNLOAD_MODE="${policy_value}"
+	SUB_LAST_DOWNLOAD_UA="${ua_value}"
+	echo_date "🧩检测到sub-get，优先尝试使用独立下载器..."
+	sub_write_sub_get_plan "${plan_file}" "${url_encode}" "${ua_value}" "${policy_value}" "${SUB_ACTIVE_PROFILE_ID}" "${SUB_ACTIVE_PROFILE_NAME}" >/dev/null 2>&1 || true
+	rm -f "${header_file}" >/dev/null 2>&1
+	set -- fetch \
+		--url "${url_encode}" \
+		--output "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" \
+		--header-output "${header_file}" \
+		--policy "${policy_value}"
+	[ -n "${ua_value}" ] && set -- "$@" --user-agent "${ua_value}"
+	"${sub_get_bin}" "$@" >/dev/null 2>&1
+	return $?
+}
+
+download_subscription_payload(){
+	local url="$1"
+	sub_reset_download_trace
+	download_by_sub_get "${url}"
+	case "$?" in
+	0)
+		return 0
+		;;
+	2)
+		;;
+	*)
+		SUB_LAST_DOWNLOAD_ERROR="sub-get failed"
+		return 1
+		;;
+	esac
+	download_by_curl "${url}" && return 0
+	echo_date "⚠️使用curl下载订阅失败！"
+	rm -f "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" >/dev/null 2>&1
+	download_by_wget "${url}" && return 0
+	SUB_LAST_DOWNLOAD_ERROR="curl/wget failed"
+	echo_date "⚠️wget下载订阅失败！"
+	return 1
 }
 
 get_online_rule_now(){
@@ -6687,6 +6990,7 @@ get_online_rule_now(){
 
 	# 2. detect duplitcate sub
 	local SUB_LINK_HASH=$(echo "${SUB_LINK}" | md5sum | awk '{print $1}')
+	SUB_LAST_URL_HASH="${SUB_LINK_HASH:0:4}"
 	RAW_SOURCE_TAG=$(sub_get_source_tag_from_domain "${DOMAIN_NAME}")
 	SUB_SOURCE_TAG=$(sub_get_source_alias_tag "${RAW_SOURCE_TAG}")
 	if [ -z "${SUB_SOURCE_TAG}" ];then
@@ -6722,22 +7026,12 @@ get_online_rule_now(){
 	
 	# 7. download sublink
 	echo_date "📁准备下载订阅链接到本地临时文件，请稍等..."
-	download_by_curl "${SUB_LINK}"
-	if [ "$?" == "0" ]; then
-		echo_date "😀下载成功，继续检测下载内容..."
-		sub_validate_downloaded_payload "${SUB_LINK}" "${SUB_LINK_HASH:0:4}" "curl" || return 1
-	else
-		echo_date "⚠️使用curl下载订阅失败！"
-		rm ${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt
-		download_by_wget "${SUB_LINK}"
-
-		#返回错误
-		if [ "$?" != "0" ]; then
-			echo_date "⚠️wget下载订阅失败！"
-			return 1
-		fi
-		sub_validate_downloaded_payload "${SUB_LINK}" "${SUB_LINK_HASH:0:4}" "wget" || return 1
-	fi
+	download_subscription_payload "${SUB_LINK}" || return 1
+	echo_date "😀下载成功，继续检测下载内容..."
+	sub_validate_downloaded_payload "${SUB_LINK}" "${SUB_LINK_HASH:0:4}" "${SUB_LAST_DOWNLOAD_TOOL:-curl}" || {
+		[ -n "${SUB_LAST_DOWNLOAD_ERROR}" ] || SUB_LAST_DOWNLOAD_ERROR="payload validation failed"
+		return 1
+	}
 	
 	echo_date "😀下载内容检测完成！"
 	SUB_DOWNLOAD_FILENAME="$(sub_extract_filename_from_header_file "${SUB_LINK_HASH:0:4}" 2>/dev/null)" || SUB_DOWNLOAD_FILENAME=""
@@ -6858,6 +7152,7 @@ get_online_rule_now(){
 	fi
 	echo_date "-------------------------------------------------------------------"
 	local ONLINE_GROUP=$(sub_resolve_online_group_label "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}" "${SUB_PAYLOAD_KIND}" "${SUB_DOWNLOAD_FILENAME}")
+	SUB_LAST_ONLINE_GROUP="${ONLINE_GROUP}"
 	local RAW_ONLINE_GROUP=$(get_group_label_from_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DOMAIN_NAME}")
 	if [ -n "${ONLINE_GROUP}" ] && [ "${ONLINE_GROUP}" != "${RAW_ONLINE_GROUP}" ];then
 		sub_rewrite_group_label_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" >/dev/null 2>&1 || true
@@ -6947,7 +7242,7 @@ exit_sub(){
 }
 
 start_node_subscribe(){
-	local online_url_nu online_urls active_hash_file
+	local online_url_nu online_urls active_hash_file profiles_file use_profiles=0 selected_profile_id="" enabled_profile_count=0
 	echo_date "==================================================================="
 	echo_date "                服务器订阅程序(Shell by stones & sadog)"
 	echo_date "==================================================================="
@@ -6957,9 +7252,26 @@ start_node_subscribe(){
 	
 	# 0. var define
 	sub_refresh_node_state
+	sub_reset_active_profile_context
+	selected_profile_id="$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})"
+	SUB_SINGLE_PROFILE_SYNC=0
+	profiles_file="${DIR}/active_profiles.tsv"
+	enabled_profile_count="$(subprof_enabled_profile_count 2>/dev/null)"
+	if [ -n "${enabled_profile_count}" ] && [ "${enabled_profile_count}" -gt "0" ] 2>/dev/null; then
+		use_profiles=1
+		online_url_nu="${enabled_profile_count}"
+	else
+		online_urls=$(sub_get_online_urls)
+		online_url_nu=$(printf '%s\n' "${online_urls}" | sed '/^$/d' | wc -l)
+	fi
 
 	# 1. 检查订阅链接是否有效
-	if [ -z "$(dbus get ss_online_links)" ];then
+	if [ "${use_profiles}" = "0" ] && [ -n "${selected_profile_id}" ]; then
+		echo_date "⚠️未找到可同步的订阅配置：${selected_profile_id}"
+		echo_date "==================================================================="
+		return 1
+	fi
+	if [ "${use_profiles}" = "0" ] && [ -z "$(dbus get ss_online_links)" ];then
 		echo_date "🈳订阅地址输入框为空，准备清理现有订阅节点..."
 		remove_sub_node
 		fss_refresh_node_direct_cache >/dev/null 2>&1
@@ -6968,14 +7280,20 @@ start_node_subscribe(){
 		echo_date "==================================================================="
 		return 0
 	fi
-	online_urls=$(sub_get_online_urls)
-	online_url_nu=$(printf '%s\n' "${online_urls}" | sed '/^$/d' | wc -l)
+	if [ "${use_profiles}" = "0" ]; then
+		online_urls=$(sub_get_online_urls)
+		online_url_nu=$(printf '%s\n' "${online_urls}" | sed '/^$/d' | wc -l)
+	fi
 	if [ "${online_url_nu}" == "0" ];then
-		echo_date "🈳未发现任何有效的订阅地址，准备清理现有订阅节点..."
-		remove_sub_node
-		fss_refresh_node_direct_cache >/dev/null 2>&1
-		sub_clear_subscribe_cache
-		echo_date "🎉订阅节点清理完成！"
+		if [ "${use_profiles}" = "1" ]; then
+			echo_date "🈳未发现任何启用中的订阅配置，跳过本次订阅。"
+		else
+			echo_date "🈳未发现任何有效的订阅地址，准备清理现有订阅节点..."
+			remove_sub_node
+			fss_refresh_node_direct_cache >/dev/null 2>&1
+			sub_clear_subscribe_cache
+			echo_date "🎉订阅节点清理完成！"
+		fi
 		echo_date "==================================================================="
 		return 0
 	fi
@@ -6989,8 +7307,20 @@ start_node_subscribe(){
 	sub_reset_schema2_cache
 	: > "${ACTIVE_SOURCE_TAGS}"
 	active_hash_file="${DIR}/active_link_hashes.txt"
-	sub_collect_active_link_hashes "${active_hash_file}" "${online_urls}"
-	sub_prune_subscribe_cache "${active_hash_file}"
+	if [ "${use_profiles}" = "1" ]; then
+		sub_prepare_enabled_profiles_file "${profiles_file}" || {
+			echo_date "⚠️生成订阅配置执行清单失败，终止本次订阅。"
+			return 1
+		}
+		online_url_nu=$(awk 'NF{c++} END{print c+0}' "${profiles_file}")
+		[ -n "${selected_profile_id}" ] && SUB_SINGLE_PROFILE_SYNC=1
+		sub_collect_active_link_hashes_from_profiles_file "${active_hash_file}" "${profiles_file}"
+	else
+		sub_collect_active_link_hashes "${active_hash_file}" "${online_urls}"
+	fi
+	if [ "${SUB_SINGLE_PROFILE_SYNC}" != "1" ]; then
+		sub_prune_subscribe_cache "${active_hash_file}"
+	fi
 
 	# 3.订阅前检查节点是否储存正常，不需要了
 	# check_nodes
@@ -7006,33 +7336,85 @@ start_node_subscribe(){
 	
 	# 6. 下载/解析订阅节点
 	sub_count=0
-	until [ "${sub_count}" == "${online_url_nu}" ]; do
-		let sub_count+=1
-		url=$(printf '%s\n' "${online_urls}" | sed -n "${sub_count}p")
-		[ -z "${url}" ] && continue
-		echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
-		[ "${online_url_nu}" -gt "1" ] && echo_date "📢开始第【${sub_count}】个订阅！订阅链接如下："
-		[ "${online_url_nu}" -eq "1" ] && echo_date "📢开始订阅！订阅链接如下："
-		echo_date "🌎${url}"
-		exclude=0
-		get_online_rule_now "${url}"
-		case $? in
-		0)
-			continue
-			;;
-		*)
-			SUB_HAS_FAILURE=1
-			subscribe_failed
-			;;
-		esac
-	done
+	if [ "${use_profiles}" = "1" ]; then
+		local profile_line=""
+		while IFS= read -r profile_line
+		do
+			[ -n "${profile_line}" ] || continue
+			profile_id="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $1}')"
+			profile_name="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $2}')"
+			url="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $3}')"
+			subscribe_mode="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $4}')"
+			download_policy="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $5}')"
+			ua_mode="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $6}')"
+			ua_preset="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $7}')"
+			ua_custom="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $8}')"
+			exclude_raw="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $9}')"
+			include_raw="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $10}')"
+			allow_insecure="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $11}')"
+			node_log="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $12}')"
+			keep_info_node="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $13}')"
+			hy2_up="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $14}')"
+			hy2_dl="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $15}')"
+			hy2_tfo_switch="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $16}')"
+			hy2_cg_opt="$(printf '%s\n' "${profile_line}" | awk -F '\t' '{print $17}')"
+			[ -n "${url}" ] || continue
+			let sub_count+=1
+			sub_reset_active_profile_context
+			sub_apply_active_profile_context "${profile_id}" "${profile_name}" "${subscribe_mode}" "${download_policy}" "${ua_mode}" "${ua_preset}" "${ua_custom}" "${exclude_raw}" "${include_raw}" "${allow_insecure}" "${node_log}" "${keep_info_node}" "${hy2_up}" "${hy2_dl}" "${hy2_tfo_switch}" "${hy2_cg_opt}"
+			SUB_LAST_ONLINE_GROUP=""
+			SUB_LAST_URL_HASH=""
+			echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
+			[ "${online_url_nu}" -gt "1" ] && echo_date "📢开始第【${sub_count}】个订阅配置：【${profile_name}】"
+			[ "${online_url_nu}" -eq "1" ] && echo_date "📢开始同步订阅配置：【${profile_name}】"
+			echo_date "🌎${url}"
+			exclude=0
+			get_online_rule_now "${url}"
+			case $? in
+			0)
+				subprof_mark_state_success "${profile_id}" "${SUB_LAST_URL_HASH}" "${SUB_LAST_ONLINE_GROUP}" "${SUB_LAST_DOWNLOAD_TOOL}" "${SUB_LAST_DOWNLOAD_PATH}" "${SUB_ACTIVE_UA_MODE}" "${SUB_ACTIVE_UA_PRESET}" >/dev/null 2>&1 || true
+				continue
+				;;
+			*)
+				SUB_HAS_FAILURE=1
+				subprof_mark_state_failure "${profile_id}" "${SUB_LAST_DOWNLOAD_ERROR:-订阅处理失败}" "${SUB_LAST_URL_HASH}" "${SUB_LAST_ONLINE_GROUP}" "${SUB_LAST_DOWNLOAD_TOOL}" "${SUB_LAST_DOWNLOAD_PATH}" "${SUB_ACTIVE_UA_MODE}" "${SUB_ACTIVE_UA_PRESET}" >/dev/null 2>&1 || true
+				subscribe_failed
+				;;
+			esac
+		done < "${profiles_file}"
+	else
+		until [ "${sub_count}" == "${online_url_nu}" ]; do
+			let sub_count+=1
+			url=$(printf '%s\n' "${online_urls}" | sed -n "${sub_count}p")
+			[ -z "${url}" ] && continue
+			echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
+			[ "${online_url_nu}" -gt "1" ] && echo_date "📢开始第【${sub_count}】个订阅！订阅链接如下："
+			[ "${online_url_nu}" -eq "1" ] && echo_date "📢开始订阅！订阅链接如下："
+			echo_date "🌎${url}"
+			exclude=0
+			get_online_rule_now "${url}"
+			case $? in
+			0)
+				continue
+				;;
+			*)
+				SUB_HAS_FAILURE=1
+				subscribe_failed
+				;;
+			esac
+		done
+	fi
 	echo_date "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
 	if [ "${SUB_HAS_FAILURE}" = "1" ];then
 		echo_date "⚠️本次订阅存在失败任务，跳过过期订阅来源清理，保留现有本地订阅节点。"
 	else
-		echo_date "ℹ️订阅来源处理完毕，开始整理本次变更并清理失效来源..."
-		remove_null
-		sub_prune_source_identity "${ACTIVE_SOURCE_TAGS}"
+		if [ "${SUB_SINGLE_PROFILE_SYNC}" = "1" ]; then
+			echo_date "ℹ️当前为单订阅配置同步，跳过其它订阅来源的清理与缓存裁剪。"
+		else
+			echo_date "ℹ️订阅来源处理完毕，开始整理本次变更并清理失效来源..."
+			remove_null
+			sub_prune_source_identity "${ACTIVE_SOURCE_TAGS}"
+		fi
 	fi
 
 	# 5. 写入所有节点
@@ -7239,6 +7621,7 @@ case $SH_ARG in
 	true > $LOG_FILE
 	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	start_node_subscribe | tee -a $LOG_FILE
+	dbus remove ${SUB_PROFILE_TMP_SYNC_ID_KEY} >/dev/null 2>&1 || true
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
 	;;

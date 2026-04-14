@@ -200,7 +200,34 @@ body .shunt-editor-layer{background:#0f172a !important;box-shadow:0 25px 50px -1
 body .shunt-editor-layer .layui-layer-title{background:rgba(255,255,255,0.02) !important;color:#f8fafc !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;font-size:16px !important;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;font-weight:600 !important;letter-spacing:0.5px;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.1) !important;color:#e2e8f0 !important;}
+.submgr-entry{padding:6px 0;color:#dbe7f3;}
+.submgr-entry-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.submgr-entry-note{padding-top:10px;font-size:12px;line-height:1.7;color:#8fa4ba;}
+.submgr-shell{padding:18px 20px 10px;color:#fff;min-height:470px;max-height:500px;overflow:auto;}
+.submgr-tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.submgr-tab{display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:34px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#cfe0f1;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;}
+.submgr-tab.active{background:linear-gradient(135deg,#2563eb,#37b4ff);border-color:rgba(70,160,255,0.48);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,0.24);}
+.submgr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.submgr-toolbar-note{font-size:12px;line-height:1.7;color:#8fa4ba;}
+.submgr-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.submgr-card{position:relative;padding:14px 14px 12px;border:1px solid rgba(69,93,120,0.28);border-radius:12px;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));box-shadow:0 12px 24px rgba(0,0,0,0.16),inset 0 1px 0 rgba(255,255,255,0.03);}
+.submgr-card.is-disabled{border-color:rgba(242,153,74,0.3);background:linear-gradient(180deg,rgba(44,32,22,0.97),rgba(28,22,16,0.95));}
+.submgr-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.submgr-card-title{font-size:16px;line-height:1.3;color:#fff;font-weight:600;word-break:break-word;}
+.submgr-card-subtitle{padding-top:5px;font-size:11px;line-height:1.6;color:#8fa4ba;word-break:break-all;}
+.submgr-chip-row{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;}
+.submgr-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.06);font-size:11px;line-height:1;color:#dbe9f8;border:1px solid rgba(255,255,255,0.06);}
+.submgr-chip-label{color:#9fb6d1;}
+.submgr-chip-value{font-weight:700;}
+.submgr-chip.warn{background:rgba(242,153,74,0.16);color:#ffd1b5;border-color:rgba(242,153,74,0.22);}
+.submgr-chip.ok{background:rgba(41,179,111,0.16);color:#bdf5d2;border-color:rgba(41,179,111,0.24);}
+.submgr-card-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:14px;}
+.submgr-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:14px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
+.submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:12px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
+.submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 @media (max-width: 900px){
+	.submgr-card-list{grid-template-columns:1fr;}
+	.submgr-shell{min-height:360px;max-height:420px;}
 	.shunt-rule-shell{display:block;padding-right:0;min-height:auto;}
 	.shunt-flow-link{width:100%;height:22px;margin:2px 0 4px;}
 	.shunt-flow-panel--source,.shunt-flow-panel--target{max-width:none;}
@@ -367,6 +394,12 @@ var shuntStatsWsReceived = false;
 var shuntUptimeTicker = null;
 var shuntUptimeBaseSeconds = -1;
 var shuntUptimeBaseClientMs = 0;
+var subscribeProfilesState = [];
+var subscribeProfileMap = {};
+var subscribeManagerLayerIndex = null;
+var subscribeProfileEditorLayerIndex = null;
+var subscribeManagerActiveTab = "profiles";
+var subscribeProfilesLoading = false;
 var SHUNT_STATS_REFRESH_INTERVAL = 6000;
 var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
@@ -4030,6 +4063,525 @@ function check_reference_notice() {
 	}
 	show_reference_notice(payload);
 }
+function render_subscription_manager_entry() {
+	return '' +
+		'<tr id="subscription_manager_row">' +
+		'<th>订阅管理</th>' +
+		'<td>' +
+		'<div class="submgr-entry">' +
+		'<div class="submgr-entry-actions">' +
+		'<a type="button" class="ss_btn" style="cursor:pointer;display:inline-block;min-width:168px;text-align:center;" onclick="open_subscription_manager()">打开订阅管理</a>' +
+		'</div>' +
+		'<div class="submgr-entry-note">每个订阅链接独立保存为一个订阅配置。弹窗内默认显示“订阅”标签页，也可切换到“URI 导入”快速添加单条分享链接。</div>' +
+		'</div>' +
+		'</td>' +
+		'</tr>';
+}
+function hide_subscription_legacy_row_by_selector(selector) {
+	var $el = $(selector);
+	if ($el.length) {
+		$el.closest("tr").css("display", "none");
+	}
+}
+function init_subscription_manager_entry() {
+	var $table = $("#table_subscribe");
+	if (!$table.length) {
+		return;
+	}
+	if (!$("#subscription_manager_row").length) {
+		var $rows = $table.find("tr");
+		if ($rows.length >= 2) {
+			$rows.eq(1).after(render_subscription_manager_entry());
+		} else {
+			$table.append(render_subscription_manager_entry());
+		}
+	}
+	hide_subscription_legacy_row_by_selector("#ss_online_links");
+	hide_subscription_legacy_row_by_selector("#ssr_subscribe_mode");
+	hide_subscription_legacy_row_by_selector("#ss_basic_hy2_up_speed");
+	hide_subscription_legacy_row_by_selector("#ss_basic_sub_ai");
+	hide_subscription_legacy_row_by_selector("#ss_basic_sub_node_log");
+	hide_subscription_legacy_row_by_selector("#ss_basic_sub_keep_info_node");
+	hide_subscription_legacy_row_by_selector("#ss_basic_online_links_proxy");
+	hide_subscription_legacy_row_by_selector("#ss_basic_online_ua");
+	hide_subscription_legacy_row_by_selector("#ss_basic_exclude");
+	hide_subscription_legacy_row_by_selector("#ss_basic_include");
+	hide_subscription_legacy_row_by_selector("#ss_basic_node_update");
+	hide_subscription_legacy_row_by_selector("#ss_basic_node_update_day");
+	hide_subscription_legacy_row_by_selector("#ss_basic_node_update_hr");
+	hide_subscription_legacy_row_by_selector("#ss_base64_links");
+	hide_subscription_legacy_row_by_selector("#ss_adv_sub");
+	$("#ss_basic_remove_node").hide();
+	$("#ss_sub_save_only").hide();
+	$("#table_link").css("display", "none");
+}
+function normalize_subscription_profiles_payload(payload) {
+	if (!payload || typeof payload != "object") {
+		return {version: 1, items: []};
+	}
+	if (!$.isArray(payload.items)) {
+		payload.items = [];
+	}
+	return payload;
+}
+function set_subscription_profiles_state(payload) {
+	payload = normalize_subscription_profiles_payload(payload);
+	subscribeProfilesState = payload.items || [];
+	subscribeProfileMap = {};
+	for (var i = 0; i < subscribeProfilesState.length; i++) {
+		var item = subscribeProfilesState[i] || {};
+		if (item.id) {
+			subscribeProfileMap[item.id] = item;
+		}
+	}
+}
+function fetch_subscription_profiles_file(cb) {
+	$.ajax({
+		type: "GET",
+		url: "/_temp/ss_subscribe_profiles.json?_=" + new Date().getTime(),
+		dataType: "json",
+		cache: false,
+		success: function(data) {
+			set_subscription_profiles_state(data || {version: 1, items: []});
+			if (typeof cb === "function") {
+				cb(true, subscribeProfilesState);
+			}
+		},
+		error: function() {
+			set_subscription_profiles_state({version: 1, items: []});
+			if (typeof cb === "function") {
+				cb(false, subscribeProfilesState);
+			}
+		}
+	});
+}
+function call_subscription_profile_api(action, fields, cb) {
+	var id = parseInt(Math.random() * 100000000);
+	$.ajax({
+		type: "POST",
+		cache: false,
+		url: "/_api/",
+		data: JSON.stringify({"id": id, "method": "ss_subscribe_profile.sh", "params": [action], "fields": fields || {}}),
+		dataType: "json",
+		success: function(response) {
+			if (response && String(response.result) == String(id)) {
+				if (typeof cb === "function") {
+					cb(true);
+				}
+			} else if (typeof cb === "function") {
+				cb(false);
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb(false);
+			}
+		}
+	});
+}
+function load_subscription_profiles(cb) {
+	if (subscribeProfilesLoading) {
+		return;
+	}
+	subscribeProfilesLoading = true;
+	call_subscription_profile_api("list", {}, function(ok) {
+		fetch_subscription_profiles_file(function(fetchOk) {
+			if ((!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
+				call_subscription_profile_api("migrate_legacy", {}, function() {
+					fetch_subscription_profiles_file(function() {
+						subscribeProfilesLoading = false;
+						if (typeof cb === "function") {
+							cb(true, subscribeProfilesState);
+						}
+					});
+				});
+				return;
+			}
+			subscribeProfilesLoading = false;
+			if (!ok && !fetchOk && typeof layer != "undefined" && layer.msg) {
+				layer.msg("读取订阅配置失败");
+			}
+			if (typeof cb === "function") {
+				cb(ok && fetchOk, subscribeProfilesState);
+			}
+		});
+	});
+}
+function format_subscription_timestamp(ts) {
+	var num = parseInt(ts, 10);
+	if (isNaN(num) || num <= 0) {
+		return "未同步";
+	}
+	if (num < 1000000000000) {
+		num = num * 1000;
+	}
+	var d = new Date(num);
+	var pad = function(v) { return v < 10 ? "0" + v : "" + v; };
+	return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+function get_subscription_profile_host(url) {
+	var match = String(url || "").match(/^[a-z][a-z0-9+.-]*:\/\/([^\/@:]+)/i);
+	return match ? match[1] : "";
+}
+function render_subscription_chip(label, value, extraClass) {
+	return '<span class="submgr-chip' + (extraClass ? (" " + extraClass) : "") + '"><span class="submgr-chip-label">' + htmlEscape(label) + '</span><span class="submgr-chip-value">' + htmlEscape(value) + '</span></span>';
+}
+function normalize_subscription_select_pairs(options) {
+	var out = [];
+	options = options || [];
+	for (var i = 0; i < options.length; i++) {
+		if ($.isArray(options[i])) {
+			out.push([options[i][0], options[i][1]]);
+		} else {
+			out.push([String(options[i]), String(options[i])]);
+		}
+	}
+	return out;
+}
+function get_subscription_schedule_label(day, hour) {
+	var dayTextMap = {"7": "每天", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六", "0": "周日"};
+	var dayText = dayTextMap[String(day || "7")] || ("周" + String(day || ""));
+	return dayText + " " + String(hour || "3") + "点";
+}
+function render_subscription_profiles_cards() {
+	if (!subscribeProfilesState.length) {
+		return '<div class="submgr-empty">当前还没有订阅配置。<br />点击上方“新增订阅”开始创建机场级配置。</div>';
+	}
+	var html = '<div class="submgr-card-list">';
+	for (var i = 0; i < subscribeProfilesState.length; i++) {
+		var item = subscribeProfilesState[i] || {};
+		var host = get_subscription_profile_host(item.url || "");
+		var lastStatus = item.last_error ? item.last_error : (Number(item.last_ok_ts || 0) > 0 ? "最近同步成功" : "尚未同步");
+		var lastClass = item.last_error ? "warn" : (Number(item.last_ok_ts || 0) > 0 ? "ok" : "");
+		var scheduleText = item.schedule_enabled ? get_subscription_schedule_label(item.schedule_day, item.schedule_hour) : "未启用";
+		html += '<div class="submgr-card' + (item.enabled ? '' : ' is-disabled') + '">';
+		html += '<div class="submgr-card-head"><div><div class="submgr-card-title">' + htmlEscape(item.name || "未命名订阅") + '</div><div class="submgr-card-subtitle">' + htmlEscape(host || item.url || "") + '</div></div></div>';
+		html += '<div class="submgr-chip-row">';
+		html += render_subscription_chip("状态", item.enabled ? "启用" : "停用", item.enabled ? "ok" : "warn");
+		html += render_subscription_chip("下载", item.download_policy || "auto");
+		html += render_subscription_chip("UA", item.ua_mode == "custom" ? "自定义" : (item.ua_mode == "auto" ? "自动" : (item.ua_preset || "default")));
+		html += render_subscription_chip("最近结果", lastStatus, lastClass);
+		html += '</div>';
+		html += '<div class="submgr-chip-row">';
+		html += render_subscription_chip("上次成功", format_subscription_timestamp(item.last_ok_ts || 0));
+		html += render_subscription_chip("计划任务", scheduleText, item.schedule_enabled ? "ok" : "");
+		if (item.exclude) {
+			html += render_subscription_chip("排除", item.exclude);
+		}
+		if (item.include) {
+			html += render_subscription_chip("包含", item.include);
+		}
+		html += '</div>';
+		html += '<div class="submgr-card-actions">';
+		var payloadB64 = base64_encode_utf8(JSON.stringify(item || {}));
+		html += '<a type="button" class="ss_btn" style="cursor:pointer" onclick="sync_subscription_profiles(\'' + htmlEscape(String(item.id || "")) + '\')">同步</a>';
+		html += '<a type="button" class="ss_btn" style="cursor:pointer" onclick="open_subscription_profile_editor_by_payload(\'' + payloadB64 + '\')">编辑</a>';
+		html += '<a type="button" class="ss_btn" style="cursor:pointer" onclick="delete_subscription_profile(\'' + htmlEscape(String(item.id || "")) + '\')">删除</a>';
+		html += '</div>';
+		html += '</div>';
+	}
+	html += '</div>';
+	return html;
+}
+function render_subscription_manager_body() {
+	var html = '<div class="submgr-shell">';
+	html += '<div class="submgr-tabs">';
+	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "profiles" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'profiles\')">订阅</a>';
+	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "uri" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'uri\')">URI 导入</a>';
+	html += '</div>';
+	if (subscribeManagerActiveTab == "uri") {
+		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">用于快速解析单条或多条分享链接，沿用现有 URI 导入逻辑，不进入订阅 profile。</div></div>';
+		html += '<div class="submgr-uri-box"><textarea id="submgr_uri_input" placeholder="填入 ss://、ssr://、vmess://、vless://、trojan://、hy2://、hysteria2://、tuic://、naive+https://、naive+quic:// 等链接，支持多行。"></textarea></div>';
+		html += '<div class="shunt-action-group" style="padding-top:14px;"><a type="button" class="ss_btn" style="cursor:pointer" onclick="submit_subscription_uri_from_manager()">解析并保存为节点</a></div>';
+	} else {
+		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">每个订阅链接独立配置 UA、过滤条件、下载策略和计划任务。第一层弹窗只负责列表与概览，新增订阅和全部同步已放到底部按钮区。</div></div>';
+		html += render_subscription_profiles_cards();
+	}
+	html += '</div>';
+	return html;
+}
+function render_subscription_manager() {
+	var root = $("#subscription_manager_root");
+	if (root.length) {
+		root.html(render_subscription_manager_body());
+	}
+}
+function handle_subscription_manager_tab(tabKey) {
+	subscribeManagerActiveTab = tabKey == "uri" ? "uri" : "profiles";
+	render_subscription_manager();
+}
+function open_subscription_manager() {
+	subscribeManagerActiveTab = subscribeManagerActiveTab || "profiles";
+	if (subscribeManagerLayerIndex !== null && typeof layer != "undefined" && layer.close) {
+		layer.close(subscribeManagerLayerIndex);
+		subscribeManagerLayerIndex = null;
+	}
+	layer.open({
+		type: 1,
+		title: "订阅管理",
+		skin: "shunt-editor-layer",
+		area: [$(window).width() < 760 ? '92%' : '920px', $(window).width() < 760 ? '88%' : '650px'],
+		maxHeight: 650,
+		shadeClose: false,
+		content: '<div id="subscription_manager_root"><div class="submgr-shell"><div class="submgr-empty">正在加载订阅配置...</div></div></div>',
+		btn: ["新增订阅", "全部同步", "关闭"],
+		btnAlign: "l",
+		success: function(layero, index) {
+			subscribeManagerLayerIndex = index;
+			load_subscription_profiles(function() {
+				render_subscription_manager();
+			});
+		},
+		yes: function(index) {
+			open_subscription_profile_editor('');
+			return false;
+		},
+		btn2: function(index) {
+			sync_subscription_profiles('');
+			return false;
+		},
+		btn3: function(index) {
+			layer.close(index);
+		},
+		end: function() {
+			subscribeManagerLayerIndex = null;
+		}
+	});
+}
+function build_subscription_profile_editor_defaults(profile) {
+	profile = profile || {};
+	return {
+		id: profile.id || "",
+		name: profile.name || "",
+		url: profile.url || "",
+		enabled: profile.enabled !== false,
+		subscribe_mode: String(profile.subscribe_mode || "2"),
+		download_policy: String(profile.download_policy || "auto"),
+		ua_mode: String(profile.ua_mode || "fixed"),
+		ua_preset: String(profile.ua_preset || "default"),
+		ua_custom: profile.ua_custom || "",
+		exclude: profile.exclude || "",
+		include: profile.include || "",
+		allow_insecure: profile.allow_insecure === true,
+		node_log: profile.node_log === true,
+		keep_info_node: profile.keep_info_node === true,
+		hy2_up: profile.hy2_up || "",
+		hy2_dl: profile.hy2_dl || "",
+		hy2_tfo_switch: String(profile.hy2_tfo_switch || "2"),
+		hy2_cg_opt: String(profile.hy2_cg_opt || "bbr"),
+		schedule_enabled: profile.schedule_enabled === true,
+		schedule_day: String(profile.schedule_day || "7"),
+		schedule_hour: String(profile.schedule_hour || "3")
+	};
+}
+function render_subscription_select_options(options, selected) {
+	var html = "";
+	options = normalize_subscription_select_pairs(options);
+	for (var i = 0; i < options.length; i++) {
+		html += '<option value="' + htmlEscape(String(options[i][0])) + '"' + (String(options[i][0]) == String(selected) ? ' selected' : '') + '>' + htmlEscape(String(options[i][1])) + '</option>';
+	}
+	return html;
+}
+function toggle_subscription_profile_ua_fields() {
+	var mode = $("#submgr_profile_ua_mode").val() || "fixed";
+	$("#submgr_profile_ua_custom_row").toggle(mode == "custom");
+	$("#submgr_profile_ua_hint").text(mode == "auto" ? "自动探测模式的 Zig 下载器尚在后续施工，本阶段先保留配置结构。" : (mode == "custom" ? "将直接使用你填写的 User-Agent 字符串。" : "固定预设模式会直接套用所选 UA。"));
+}
+function toggle_subscription_schedule_fields() {
+	var enabled = !!$("#submgr_profile_schedule_enabled").prop("checked");
+	$("#submgr_profile_schedule_fields").toggle(enabled);
+}
+function open_subscription_profile_editor(profileId) {
+	var profile = null;
+	if (profileId && subscribeProfileMap[profileId]) {
+		profile = subscribeProfileMap[profileId];
+	} else if (profileId && $.isArray(subscribeProfilesState)) {
+		for (var i = 0; i < subscribeProfilesState.length; i++) {
+			if (String((subscribeProfilesState[i] || {}).id || "") == String(profileId)) {
+				profile = subscribeProfilesState[i];
+				break;
+			}
+		}
+	}
+	var state = build_subscription_profile_editor_defaults(profile);
+	var html = "";
+	html += '<div class="shunt-editor">';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">别名</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_name" value="' + htmlEscape(state.name) + '" maxlength="64" placeholder="例如：sslinks 主号"></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">订阅链接</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_url" value="' + htmlEscape(state.url) + '" placeholder="https://example.com/..."></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">启用</div><div class="shunt-editor-control"><label><input type="checkbox" id="submgr_profile_enabled"' + (state.enabled ? ' checked' : '') + '> 启用该订阅配置</label></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">节点模式</div><div class="shunt-editor-control"><select id="submgr_profile_subscribe_mode">' + render_subscription_select_options(option_modes || [["2", "大陆白名单模式"]], state.subscribe_mode) + '</select></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">下载策略</div><div class="shunt-editor-control"><select id="submgr_profile_download_policy">' + render_subscription_select_options([["auto", "自动判断"], ["proxy", "走代理"], ["direct", "不走代理"]], state.download_policy) + '</select></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 模式</div><div class="shunt-editor-control"><select id="submgr_profile_ua_mode" onchange="toggle_subscription_profile_ua_fields()">' + render_subscription_select_options([["fixed", "固定预设"], ["custom", "自定义字符串"], ["auto", "自动探测（后续施工）"]], state.ua_mode) + '</select><div class="shunt-editor-hint" id="submgr_profile_ua_hint"></div></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 预设</div><div class="shunt-editor-control"><select id="submgr_profile_ua_preset">' + render_subscription_select_options([["default", "fancyss 默认"], ["curl", "curl/wget"], ["v2rayn", "V2rayN"], ["v2rayng", "V2rayNG"], ["shadowrocket", "Shadowrocket"]], state.ua_preset) + '</select></div></div>';
+	html += '<div class="shunt-editor-row" id="submgr_profile_ua_custom_row"><div class="shunt-editor-label">UA 自定义</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_ua_custom" value="' + htmlEscape(state.ua_custom) + '" placeholder="自定义 User-Agent 字符串"></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">排除关键词</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_exclude" value="' + htmlEscape(state.exclude) + '" placeholder="多个关键词用英文逗号分隔"></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">包含关键词</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_include" value="' + htmlEscape(state.include) + '" placeholder="多个关键词用英文逗号分隔"></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">附加选项</div><div class="shunt-editor-control">';
+	html += '<label style="display:inline-block;margin-right:14px;"><input type="checkbox" id="submgr_profile_allow_insecure"' + (state.allow_insecure ? ' checked' : '') + '> 允许不安全</label>';
+	html += '<label style="display:inline-block;margin-right:14px;"><input type="checkbox" id="submgr_profile_node_log"' + (state.node_log ? ' checked' : '') + '> 逐节点日志</label>';
+	html += '<label style="display:inline-block;"><input type="checkbox" id="submgr_profile_keep_info_node"' + (state.keep_info_node ? ' checked' : '') + '> 保留信息节点</label>';
+	html += '</div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">Hy2 默认</div><div class="shunt-editor-control"><div class="shunt-action-group" style="gap:10px;"><span>上行 <input type="text" id="submgr_profile_hy2_up" value="' + htmlEscape(state.hy2_up) + '" style="width:72px;height:34px;"> mbps</span><span>下行 <input type="text" id="submgr_profile_hy2_dl" value="' + htmlEscape(state.hy2_dl) + '" style="width:72px;height:34px;"> mbps</span></div><div class="shunt-action-group" style="gap:10px;padding-top:8px;"><span>TFO <select id="submgr_profile_hy2_tfo_switch" style="width:140px;">' + render_subscription_select_options([["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]], state.hy2_tfo_switch) + '</select></span><span>拥塞 <select id="submgr_profile_hy2_cg_opt" style="width:140px;">' + render_subscription_select_options(option_hy2_cg && option_hy2_cg.length ? option_hy2_cg : ["bbr", "brutal"], state.hy2_cg_opt) + '</select></span></div></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">定时更新</div><div class="shunt-editor-control"><label><input type="checkbox" id="submgr_profile_schedule_enabled" onchange="toggle_subscription_schedule_fields()"' + (state.schedule_enabled ? ' checked' : '') + '> 启用该订阅的独立计划任务</label><div id="submgr_profile_schedule_fields" style="padding-top:10px;"><span style="display:inline-block;margin-right:10px;">周期 <select id="submgr_profile_schedule_day" style="width:120px;">' + render_subscription_select_options([["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["0", "周日"]], state.schedule_day) + '</select></span><span style="display:inline-block;">时间 <select id="submgr_profile_schedule_hour" style="width:120px;">' + render_subscription_select_options(option_nodeh || [["3", "3点"]], state.schedule_hour) + '</select></span></div></div></div>';
+	html += '<div class="shunt-editor-hint">当前先落地 profile 存储和前后端管理骨架；UA 自动探测将等 Zig 下载器接入后再真正启用。</div>';
+	html += '</div>';
+	if (subscribeProfileEditorLayerIndex !== null && typeof layer != "undefined" && layer.close) {
+		layer.close(subscribeProfileEditorLayerIndex);
+		subscribeProfileEditorLayerIndex = null;
+	}
+	layer.open({
+		type: 1,
+		title: profile ? "编辑订阅配置" : "新增订阅配置",
+		skin: "shunt-editor-layer",
+		area: [$(window).width() < 760 ? '92%' : '760px', $(window).width() < 760 ? '88%' : 'auto'],
+		maxHeight: 720,
+		shadeClose: false,
+		content: html,
+		btn: ["保存并同步", "仅保存", "取消"],
+		success: function(layero, index) {
+			subscribeProfileEditorLayerIndex = index;
+			layero.attr("data-profile-id", state.id || "");
+			toggle_subscription_profile_ua_fields();
+			toggle_subscription_schedule_fields();
+		},
+		end: function() {
+			subscribeProfileEditorLayerIndex = null;
+		},
+		yes: function(index) {
+			return save_subscription_profile_from_editor(true);
+		},
+		btn2: function(index) {
+			return save_subscription_profile_from_editor(false);
+		}
+	});
+}
+function open_subscription_profile_editor_by_payload(payloadB64) {
+	var payload = null;
+	try {
+		payload = JSON.parse(base64_decode_utf8(payloadB64 || "") || "{}");
+	} catch (e) {
+		payload = null;
+	}
+	if (payload && payload.id && (!subscribeProfileMap[payload.id] || !subscribeProfileMap[payload.id].url)) {
+		subscribeProfileMap[payload.id] = payload;
+	}
+	open_subscription_profile_editor(payload && payload.id ? payload.id : "");
+	return false;
+}
+function get_subscription_profile_editor_payload() {
+	var profileId = "";
+	var layerWrap = $(".layui-layer:has(#submgr_profile_name)").last();
+	if (layerWrap.length) {
+		profileId = layerWrap.attr("data-profile-id") || "";
+	}
+	return {
+		id: profileId,
+		name: $.trim($("#submgr_profile_name").val() || ""),
+		url: $.trim($("#submgr_profile_url").val() || ""),
+		enabled: !!$("#submgr_profile_enabled").prop("checked"),
+		subscribe_mode: String($("#submgr_profile_subscribe_mode").val() || "2"),
+		download_policy: String($("#submgr_profile_download_policy").val() || "auto"),
+		ua_mode: String($("#submgr_profile_ua_mode").val() || "fixed"),
+		ua_preset: String($("#submgr_profile_ua_preset").val() || "default"),
+		ua_custom: $.trim($("#submgr_profile_ua_custom").val() || ""),
+		exclude: $.trim($("#submgr_profile_exclude").val() || ""),
+		include: $.trim($("#submgr_profile_include").val() || ""),
+		allow_insecure: !!$("#submgr_profile_allow_insecure").prop("checked"),
+		node_log: !!$("#submgr_profile_node_log").prop("checked"),
+		keep_info_node: !!$("#submgr_profile_keep_info_node").prop("checked"),
+		hy2_up: $.trim($("#submgr_profile_hy2_up").val() || ""),
+		hy2_dl: $.trim($("#submgr_profile_hy2_dl").val() || ""),
+		hy2_tfo_switch: String($("#submgr_profile_hy2_tfo_switch").val() || "2"),
+		hy2_cg_opt: String($("#submgr_profile_hy2_cg_opt").val() || "bbr"),
+		schedule_enabled: !!$("#submgr_profile_schedule_enabled").prop("checked"),
+		schedule_day: String($("#submgr_profile_schedule_day").val() || "7"),
+		schedule_hour: String($("#submgr_profile_schedule_hour").val() || "3")
+	};
+}
+function save_subscription_profile_from_editor(syncAfter) {
+	var payload = get_subscription_profile_editor_payload();
+	if (!payload.name) {
+		alert("请填写订阅别名。");
+		return false;
+	}
+	if (!payload.url || !/^https?:\/\//i.test(payload.url)) {
+		alert("请填写正确的 http(s) 订阅链接。");
+		return false;
+	}
+	call_subscription_profile_api("save", {"ss_subscribe_profile_payload": base64_encode_utf8(JSON.stringify(payload))}, function(ok) {
+		if (!ok) {
+			layer.msg("保存订阅配置失败");
+			return;
+		}
+		load_subscription_profiles(function() {
+			render_subscription_manager();
+			if (subscribeProfileEditorLayerIndex !== null) {
+				layer.close(subscribeProfileEditorLayerIndex);
+				subscribeProfileEditorLayerIndex = null;
+			}
+			if (syncAfter) {
+				var targetId = payload.id || "";
+				if (!targetId) {
+					for (var i = 0; i < subscribeProfilesState.length; i++) {
+						if (subscribeProfilesState[i].url == payload.url && subscribeProfilesState[i].name == payload.name) {
+							targetId = subscribeProfilesState[i].id;
+							break;
+						}
+					}
+				}
+				sync_subscription_profiles(targetId);
+			} else if (typeof layer != "undefined" && layer.msg) {
+				layer.msg("订阅配置已保存");
+			}
+		});
+	});
+	return false;
+}
+function delete_subscription_profile(profileId) {
+	if (!profileId) {
+		return false;
+	}
+	layer.confirm("确定删除这个订阅配置吗？", {
+		shade: 0.8
+	}, function(index) {
+		layer.close(index);
+		call_subscription_profile_api("delete", {"ss_subscribe_profile_id": profileId}, function(ok) {
+			if (!ok) {
+				layer.msg("删除订阅配置失败");
+				return;
+			}
+			load_subscription_profiles(function() {
+				render_subscription_manager();
+			});
+		});
+	});
+	return false;
+}
+function sync_subscription_profiles(profileId) {
+	var dbus_post = {};
+	db_ss["ss_basic_action"] = "13";
+	if (profileId) {
+		dbus_post["ss_subscribe_profile_selected"] = profileId;
+	}
+	if (ws_flag == 1) {
+		push_data_ws("ss_node_subscribe.sh", "3", dbus_post);
+	} else {
+		push_data("ss_node_subscribe.sh", "3", dbus_post);
+	}
+	return false;
+}
+function submit_subscription_uri_from_manager() {
+	var value = $("#submgr_uri_input").val() || "";
+	if (!$.trim(value)) {
+		alert("请填写至少一条分享链接。");
+		return false;
+	}
+	if (E("ss_base64_links")) {
+		E("ss_base64_links").value = value;
+	}
+	get_online_nodes(4);
+	return false;
+}
 function get_legacy_node_ids() {
 	var ids = [];
 	for (var field in db_ss) {
@@ -4348,12 +4900,14 @@ function get_dbus_data(cb) {
 					sync_shunt_state_from_dbus();
 					// generate node table
 					refresh_html();
+					init_subscription_manager_entry();
 					// fill node value
 					ss_node_sel();
 					refresh_shunt_ui();
 					check_reference_notice();
 					// define click action
 					toggle_func();
+					setTimeout(init_subscription_manager_entry, 0);
 					// try to get latest version of fancyss
 					version_show();
 					message_show();
@@ -9397,6 +9951,7 @@ var tab_actions = {
 		$('#ss_failover_save').hide();
 		verifyFields();
 		update_visibility();
+		init_subscription_manager_entry();
 	},
 	8: function() {
 		$('#apply_button').show();
