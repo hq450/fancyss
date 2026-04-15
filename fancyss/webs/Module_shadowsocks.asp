@@ -239,37 +239,29 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .submgr-empty-ad{display:block;margin-top:10px;padding:12px 14px;border-radius:5px;background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,62,62,0.2));border:1px solid rgba(255,140,0,0.35);color:#ffd166 !important;font-weight:700;line-height:1.8;text-decoration:none;box-shadow:0 12px 26px rgba(255,94,0,0.12);}
 .submgr-empty-ad strong{color:#ff7b00;}
 .node-card-shell{width:750px;overflow:hidden;}
-.node-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-content:start;padding:2px 12px 4px 2px;box-sizing:border-box;}
+.node-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-content:start;padding:2px 10px 4px 2px;box-sizing:border-box;}
 .node-card-grid::-webkit-scrollbar{width:8px;height:8px;}
 .node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
 .node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
-.node-card-sections{display:flex;flex-direction:column;gap:18px;padding:2px 12px 6px 2px;box-sizing:border-box;}
-.node-card-section{display:flex;flex-direction:column;gap:10px;}
-.node-card-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px 0 2px;}
-.node-card-section-title{font-size:15px;line-height:1.4;color:#f3f7fb;font-weight:700;letter-spacing:.2px;}
-.node-card-section-meta{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.node-card-section-count{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:rgba(70,160,255,0.12);color:#9fc7ff;font-size:11px;font-weight:700;}
-.node-card{position:relative;display:flex;flex-direction:column;gap:10px;min-height:164px;padding:14px 14px 12px;border-radius:12px;border:1px solid rgba(74,108,138,0.28);background:linear-gradient(180deg,rgba(19,27,38,0.98),rgba(12,18,27,0.96));box-shadow:0 12px 24px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
-.node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 16px 28px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.05);transform:translateY(-1px);}
-.node-card.is-current{border-color:rgba(41,179,111,0.52);background:linear-gradient(180deg,rgba(16,42,28,0.98),rgba(12,24,18,0.96));box-shadow:0 16px 30px rgba(0,0,0,0.24),0 0 0 1px rgba(41,179,111,0.08),inset 0 1px 0 rgba(255,255,255,0.05);}
-.node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-.node-card-order{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:24px;padding:0 8px;border-radius:999px;background:rgba(70,160,255,0.12);color:#9fc7ff;font-size:11px;font-weight:700;letter-spacing:.3px;}
-.node-card-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;}
-.node-card-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);color:#dbe9f8;font-size:11px;line-height:1;font-weight:600;}
-.node-card-badge.type{background:rgba(37,99,235,0.16);border-color:rgba(59,130,246,0.22);color:#bfdbfe;}
-.node-card-badge.source{background:rgba(41,179,111,0.16);border-color:rgba(41,179,111,0.22);color:#bdf5d2;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.node-card-badge.current{background:rgba(41,179,111,0.2);border-color:rgba(41,179,111,0.28);color:#d7ffe8;}
-.node-card-name{font-size:16px;line-height:1.3;color:#fff;font-weight:700;word-break:break-word;min-height:40px;}
-.node-card-server{font-size:12px;line-height:1.6;color:#8fa4ba;word-break:break-all;min-height:38px;}
-.node-card-meta{display:flex;flex-wrap:wrap;gap:8px;}
-.node-card-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;color:#dbe9f8;}
-.node-card-chip-label{color:#9fb6d1;}
-.node-card-chip-value{font-weight:700;}
-.node-card-latency{display:inline-flex;align-items:center;justify-content:center;min-width:78px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
-.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto;min-height:26px;}
-.node-card-actions .latency_btn{margin:0 !important;}
-.node-card-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
+.node-card{position:relative;display:flex;flex-direction:column;gap:8px;min-height:94px;padding:10px 12px;border-radius:10px;border:1px solid rgba(74,108,138,0.24);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:hidden;}
+.node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 14px 24px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
+.node-card.is-current{border-color:rgba(41,179,111,0.5);background:linear-gradient(180deg,rgba(14,39,27,0.98),rgba(10,22,17,0.96));box-shadow:0 14px 24px rgba(0,0,0,0.22),0 0 0 1px rgba(41,179,111,0.06),inset 0 1px 0 rgba(255,255,255,0.04);}
+.node-card.is-current:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#38d27a,#159957);}
+.node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-right:18px;}
+.node-card-status{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
+.node-card-dot{width:8px;height:8px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 8px;box-shadow:0 0 8px rgba(110,168,254,0.45);}
+.node-card.is-current .node-card-dot{background:#32c975;box-shadow:0 0 10px rgba(50,201,117,0.55);}
+.node-card-name{font-size:14px;line-height:1.34;color:#fff;font-weight:700;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px;}
+.node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;}
+.node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:11px;line-height:1;font-weight:700;}
+.node-card-type.current{background:rgba(41,179,111,0.18);border-color:rgba(41,179,111,0.24);color:#d7ffe8;}
+.node-card-latency{display:inline-flex;align-items:center;justify-content:center;min-width:64px;max-width:96px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
+.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:26px;}
+.node-card-delete{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:13px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.86);box-shadow:0 8px 16px rgba(159,38,38,0.28);transition:all .18s ease;z-index:3;}
+.node-card:hover .node-card-delete,.node-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
+.node-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.4);}
+.node-card-empty{padding:26px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
 .submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:5px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
 .submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 body .submgr-layer .layui-layer-btn{text-align:center !important;padding:0 16px 14px !important;}
@@ -283,7 +275,7 @@ body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-edito
 @media (max-width: 900px){
 	.submgr-card-list{grid-template-columns:1fr;}
 	.submgr-shell{min-height:320px;max-height:520px;}
-	.node-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+	.node-card-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 	.shunt-rule-shell{display:block;padding-right:0;min-height:auto;}
 	.shunt-flow-link{width:100%;height:22px;margin:2px 0 4px;}
 	.shunt-flow-panel--source,.shunt-flow-panel--target{max-width:none;}
@@ -293,7 +285,7 @@ body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-edito
 	.shunt-info-band{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 @media (max-width: 640px){
-	.node-card-grid{grid-template-columns:1fr;}
+	.node-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 	.node-card-shell{width:100%;}
 	.shunt-summary-grid{grid-template-columns:1fr;}
 	.shunt-info-band{grid-template-columns:1fr;}
@@ -7175,10 +7167,16 @@ function remove_conf_table(o) {
 	});
 }
 function edit_conf_table(o) {
-	var id = $(o).attr("id");
-	var ids = id.split("_");
+	var id = "";
+	var ids = [];
 	var p = "ssconf_basic";
-	id = ids[ids.length - 1];
+	if (typeof o == "string" || typeof o == "number") {
+		id = String(o);
+	} else {
+		id = $(o).attr("id");
+		ids = String(id || "").split("_");
+		id = ids[ids.length - 1];
+	}
 	edit_id = id;
 	if((String(get_saved_current_node_id()) == String(id)) && db_ss["ss_basic_enable"] == "1"){
 		alert("提醒：这个节点正在运行！\n如果更改了其中的参数，需要重新点击【保存&应用】才能生效！")
@@ -7905,16 +7903,18 @@ function sync_node_card_current_state(nodeId) {
 		return;
 	}
 	$(".node-card").removeClass("is-current");
-	$(".node-card-badge.current").remove();
+	$(".node-card-type").removeClass("current").text(function(_, text) {
+		return String(text || "").replace(/\s*·\s*当前$/, "");
+	});
 	if (!currentId) {
 		return;
 	}
 	var $card = $("#node_" + currentId);
 	if ($card.length) {
 		$card.addClass("is-current");
-		if (!$card.find(".node-card-badge.current").length) {
-			$card.find(".node-card-badges").prepend('<span class="node-card-badge current">当前运行</span>');
-		}
+		$card.find(".node-card-type").addClass("current").text(function(_, text) {
+			return String(text || "").indexOf("· 当前") >= 0 ? text : (text + " · 当前");
+		});
 	}
 }
 function render_node_list_footer_html() {
@@ -7949,85 +7949,37 @@ function render_node_list_footer_html() {
 }
 function render_node_cards_html(nodeH, noserver, hasLatency) {
 	var html = '';
-	var sections = [];
-	var sectionMap = {};
-	var sourceLabel = "";
 	var currentNodeId = String(get_saved_current_node_id() || "");
 	var currentEnabled = !!(E("ss_basic_enable") && E("ss_basic_enable").checked);
 	html += '<div class="nodeTable node-card-shell" style="height:' + nodeH + 'px;">';
-	html += '<div id="ss_node_list_table_main" style="height:' + nodeH + 'px;overflow:hidden scroll;">';
+	html += '<div id="ss_node_list_table_main" class="node-card-grid" style="height:' + nodeH + 'px;overflow:hidden scroll;">';
 	if (!node_nu) {
 		html += '<div class="node-card-empty">当前没有可显示的节点。<br />点击下方“添加节点”开始创建。</div>';
 	} else {
 		for (var i = 0; i < ss_nodes.length; i++) {
 			var c = confs[ss_nodes[i]];
-			sourceLabel = get_node_display_source_label(c);
-			if (!sectionMap[sourceLabel]) {
-				sectionMap[sourceLabel] = {
-					label: sourceLabel,
-					nodes: []
-				};
-				sections.push(sectionMap[sourceLabel]);
-			}
-			sectionMap[sourceLabel].nodes.push({
-				conf: c,
-				order: i + 1
-			});
-		}
-		html += '<div class="node-card-sections">';
-		for (var s = 0; s < sections.length; s++) {
-			var section = sections[s];
-			html += '<div class="node-card-section">';
-			html += '<div class="node-card-section-head">';
-			html += '<div class="node-card-section-title">' + htmlEscape(section.label) + '</div>';
-			html += '<div class="node-card-section-meta">';
-			html += '<span class="node-card-section-count">' + section.nodes.length + ' 个节点</span>';
+			var isCurrent = currentEnabled && String(currentNodeId) == String(c["node"]);
+			html += '<div class="node-card' + (isCurrent ? ' is-current' : '') + '" id="node_' + c["node"] + '" onclick="edit_conf_table(\'' + c["node"] + '\')">';
+			html += '<a href="javascript:void(0);" class="node-card-delete" id="td_node_' + c["node"] + '" onclick="event.stopPropagation();remove_conf_table(this);return false;" title="删除节点">&times;</a>';
+			html += '<div class="node-card-head">';
+			html += '<div class="node-card-status">';
+			html += '<span class="node-card-dot"></span>';
+			html += '<div class="node-card-name" title="' + htmlEscape(c["group"] || "") + '&#10;' + htmlEscape(c["name"] || "") + '">' + htmlEscape(c["name"] || "") + '</div>';
 			html += '</div>';
 			html += '</div>';
-			html += '<div class="node-card-grid">';
-			for (var n = 0; n < section.nodes.length; n++) {
-				var entry = section.nodes[n];
-				var c = entry.conf;
-				var isCurrent = currentEnabled && String(currentNodeId) == String(c["node"]);
-				html += '<div class="node-card' + (isCurrent ? ' is-current' : '') + '" id="node_' + c["node"] + '">';
-				html += '<div class="node-card-head">';
-				html += '<div class="node-card-order">#' + entry.order + '</div>';
-				html += '<div class="node-card-badges">';
-				if (isCurrent) {
-					html += '<span class="node-card-badge current">当前运行</span>';
-				}
-				html += '<span class="node-card-badge type">' + htmlEscape(get_node_display_type_label(c)) + '</span>';
-				if (sections.length > 1) {
-					html += '<span class="node-card-badge source" title="' + htmlEscape(section.label) + '">' + htmlEscape(section.label) + '</span>';
-				}
-				html += '</div>';
-				html += '</div>';
-				html += '<div class="node-card-name" title="' + htmlEscape(c["group"] || "") + '&#10;' + htmlEscape(c["name"] || "") + '">' + htmlEscape(c["name"] || "") + '</div>';
-				if (noserver != "1") {
-					var displayServer = c["type"] == 8 ? c["hy2_server"] : (c["type"] == 6 ? c["naive_server"] : c["server"]);
-					html += '<div class="node-card-server">' + htmlEscape(displayServer || "") + '</div>';
-				}
-				html += '<div class="node-card-meta">';
-				if (c["group"] && String(c["group"]) != String(section.label)) {
-					html += '<span class="node-card-chip"><span class="node-card-chip-label">分组</span><span class="node-card-chip-value">' + htmlEscape(c["group"]) + '</span></span>';
-				}
-				if (hasLatency) {
-					html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency"><span class="latency_val"></span></div>';
-				}
-				html += '</div>';
-				html += '<div class="node-card-actions">';
-				if (hasLatency) {
-					html += '<img src="/res/speed.png" class="latency_btn" data-node="' + c["node"] + '" style="width:22px;height:22px;cursor:pointer;vertical-align:middle;" title="点击后将测试此节点的web落地延迟！" onmouseover="this.src=\'/res/speed_blue.png\';" onmouseout="this.src=\'/res/speed.png\';" onclick="test_latency_single(' + c["node"] + ');return false;" />';
-				}
-				html += '<input style="margin:0;" id="dd_node_' + c["node"] + '" class="edit_btn" type="button" onclick="edit_conf_table(this);" value="">';
-				html += '<input style="margin:0;" id="td_node_' + c["node"] + '" class="remove_btn" type="button" onclick="remove_conf_table(this);" value="">';
-				html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:26px;height:26px;" id="apply_ss_node_' + c["node"] + '" onclick="apply_this_ss_node(this);"></div>';
-				html += '</div>';
-				html += '</div>';
+			html += '<div class="node-card-subrow">';
+			html += '<span class="node-card-type' + (isCurrent ? ' current' : '') + '">' + htmlEscape(get_node_display_type_label(c)) + (isCurrent ? ' · 当前' : '') + '</span>';
+			if (hasLatency) {
+				html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency"><span class="latency_val"></span></div>';
+			} else {
+				html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
 			}
+			html += '<div class="node-card-actions">';
+			html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:22px;height:22px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
+			html += '</div>';
+			html += '</div>';
 			html += '</div>';
 		}
-		html += '</div>';
 	}
 	html += '</div>';
 	html += '</div>';
@@ -8060,11 +8012,11 @@ function refresh_html() {
 	var cardMode = get_node_view_prefers_cards();
 	var hasLatency = node_nu && db_ss["ss_basic_latency_val"] != "0";
 	if (cardMode) {
-		var cardsPerRow = $(window).width() <= 640 ? 1 : ($(window).width() <= 900 ? 2 : 3);
+		var cardsPerRow = $(window).width() <= 640 ? 2 : ($(window).width() <= 900 ? 3 : 4);
 		var visibleCards = Math.max(1, Math.min(node_nu || 1, nodeN));
 		var visibleRows = Math.max(1, Math.ceil(visibleCards / cardsPerRow));
-		var cardHeight = 170;
-		var cardGap = 14;
+		var cardHeight = 98;
+		var cardGap = 10;
 		nodeH = visibleRows * cardHeight + ((visibleRows - 1) * cardGap) + 8;
 		if (node_nu > visibleCards) {
 			$("#ss_list_table").attr("style", "height:" + (nodeH + 56) + "px");
