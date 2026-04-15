@@ -1624,6 +1624,7 @@ fss_shunt_try_prepare_node_tool_runtime_artifacts() {
 		fss_shunt_log "ℹ️正在生成当前分流所需节点运行产物。"
 		"${node_tool}" runtime-artifact \
 			--profile shunt \
+			--effective \
 			--ids-file "${ids_file}" \
 			--output-dir "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}" >/dev/null 2>&1 || ret=1
 	else

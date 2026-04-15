@@ -144,7 +144,7 @@ wt_try_node_tool_webtest_cache() {
 
 	[ -f "${ids_file}" ] || return 1
 	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
-	"${node_tool}" warm-cache --webtest --ids-file "${ids_file}" >/dev/null 2>&1 || return 1
+	"${node_tool}" warm-cache --webtest --effective --ids-file "${ids_file}" >/dev/null 2>&1 || return 1
 	wt_cache_log "ℹ️通过node-tool构建/复用webtest节点配置缓存。"
 	wt_log_node_tool_webtest_summary
 	return 0
@@ -154,7 +154,7 @@ wt_try_node_tool_webtest_cache_all() {
 	local node_tool=""
 
 	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
-	"${node_tool}" warm-cache --webtest >/dev/null 2>&1 || return 1
+	"${node_tool}" warm-cache --webtest --effective >/dev/null 2>&1 || return 1
 	wt_cache_log "ℹ️通过node-tool构建/复用webtest节点配置缓存。"
 	wt_log_node_tool_webtest_summary
 	return 0
@@ -164,7 +164,7 @@ wt_try_node_tool_webtest_groups() {
 	local node_tool=""
 
 	node_tool="$(wt_pick_node_tool 2>/dev/null)" || return 1
-	"${node_tool}" webtest-groups --output-dir "${TMP2}" >/dev/null 2>&1 || return 1
+	"${node_tool}" webtest-groups --effective --output-dir "${TMP2}" >/dev/null 2>&1 || return 1
 	wt_cache_log "ℹ️通过node-tool生成webtest分组清单。"
 	return 0
 }

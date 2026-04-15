@@ -1756,6 +1756,23 @@ fss_get_node_source_scope_by_id() {
 	printf '%s' "${node_scope}"
 }
 
+fss_get_node_profile_id_by_id() {
+	local node_id="$1"
+	local schema node_json profile_id=""
+
+	[ -n "${node_id}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+		profile_id=$(printf '%s' "${node_json}" | jq -r '._profile_id // empty' 2>/dev/null)
+	else
+		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
+		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+		profile_id=$(printf '%s' "${node_json}" | jq -r '._profile_id // empty' 2>/dev/null)
+	fi
+	printf '%s' "${profile_id}"
+}
+
 fss_get_node_airport_identity_by_id() {
 	local node_id="$1"
 	local schema node_json airport=""

@@ -2,6 +2,7 @@
 
 [ -z "${KSROOT}" ] && export KSROOT=/koolshare
 [ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
+[ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
 
 SUB_PROFILE_ROOT="/koolshare/configs/fancyss/subscriptions"
 SUB_PROFILE_DIR="${SUB_PROFILE_ROOT}/profiles"
@@ -211,12 +212,17 @@ subprof_normalize_payload() {
 				or ((tostring | ascii_downcase) == "yes")
 				or ((tostring | ascii_downcase) == "on")
 			end;
+		def pick3($a; $b; $fallback):
+			if $a != null then $a
+			elif $b != null then $b
+			else $fallback
+			end;
 		{
 			version: 1,
 			id: ((.id // "") | tostring),
 			name: ((.name // "") | tostring),
 			url: ((.url // "") | tostring),
-			enabled: ((.enabled // true) | to_bool),
+			enabled: ((if .enabled == null then true else .enabled end) | to_bool),
 			subscribe_mode: ((.subscribe_mode // "2") | tostring | if . == "" then "2" else . end),
 			download: {
 				policy: (
@@ -244,11 +250,11 @@ subprof_normalize_payload() {
 			filter: {
 				exclude: ((.filter.exclude // .exclude // "") | tostring),
 				include: ((.filter.include // .include // "") | tostring),
-				keep_info_node: ((.filter.keep_info_node // .keep_info_node // false) | to_bool)
+				keep_info_node: (pick3(.filter.keep_info_node; .keep_info_node; false) | to_bool)
 			},
 			flags: {
-				allow_insecure: ((.flags.allow_insecure // .allow_insecure // false) | to_bool),
-				node_log: ((.flags.node_log // .node_log // false) | to_bool)
+				allow_insecure: (pick3(.flags.allow_insecure; .allow_insecure; false) | to_bool),
+				node_log: (pick3(.flags.node_log; .node_log; false) | to_bool)
 			},
 			hy2: {
 				up: ((.hy2.up // .hy2_up // "") | tostring),
@@ -257,7 +263,7 @@ subprof_normalize_payload() {
 				cg_opt: ((.hy2.cg_opt // .hy2_cg_opt // "bbr") | tostring | if . == "" then "bbr" else . end)
 			},
 			schedule: {
-				enabled: ((.schedule.enabled // .schedule_enabled // false) | to_bool),
+				enabled: (pick3(.schedule.enabled; .schedule_enabled; false) | to_bool),
 				day: ((.schedule.day // .schedule_day // "7") | tostring | if . == "" then "7" else . end),
 				hour: ((.schedule.hour // .schedule_hour // "3") | tostring | if . == "" then "3" else . end)
 			}
@@ -272,6 +278,9 @@ subprof_write_profile_json() {
 	local profile_url=""
 	local profile_file=""
 	local state_file=""
+	local existing_id=""
+	local existing_file=""
+	local existing_url=""
 
 	subprof_ensure_dirs || return 1
 	normalized="$(subprof_normalize_payload "${payload_json}")" || return 1
@@ -282,6 +291,17 @@ subprof_write_profile_json() {
 	profile_id="$(printf '%s' "${normalized}" | "$(subprof_jq_bin)" -r '.id // empty' 2>/dev/null)"
 	[ -n "${profile_id}" ] || profile_id="$(printf '%s' "${profile_url}" | md5sum | awk '{print substr($1,1,8)}')"
 	subprof_valid_profile_id "${profile_id}" || return 1
+	for existing_id in $(subprof_list_profile_ids)
+	do
+		[ -n "${existing_id}" ] || continue
+		[ "${existing_id}" = "${profile_id}" ] && continue
+		existing_file="$(subprof_profile_file "${existing_id}" 2>/dev/null)" || continue
+		[ -f "${existing_file}" ] || continue
+		existing_url="$("$(subprof_jq_bin)" -r '.url // empty' "${existing_file}" 2>/dev/null | sed -n '1p')"
+		if [ -n "${existing_url}" ] && [ "${existing_url}" = "${profile_url}" ]; then
+			return 1
+		fi
+	done
 	normalized="$(printf '%s' "${normalized}" | "$(subprof_jq_bin)" -c --arg id "${profile_id}" '.id = $id')" || return 1
 
 	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
@@ -323,6 +343,14 @@ subprof_merge_profile_and_state() {
 	local profile_id="$1"
 	local profile_file=""
 	local state_file=""
+	local node_count="0"
+	local airport_identity=""
+	local last_url_hash=""
+	local last_group=""
+	local source_scope=""
+	local node_id=""
+	local node_profile_id=""
+	local node_scope=""
 
 	[ -n "${profile_id}" ] || return 1
 	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
@@ -331,16 +359,49 @@ subprof_merge_profile_and_state() {
 	if [ ! -f "${state_file}" ]; then
 		"$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}' > "${state_file}" 2>/dev/null || printf '{}\n' > "${state_file}"
 	fi
+	last_group="$("$(subprof_jq_bin)" -r '.last_group // empty' "${state_file}" 2>/dev/null | sed -n '1p')"
+	last_url_hash="$("$(subprof_jq_bin)" -r '.last_url_hash // empty' "${state_file}" 2>/dev/null | sed -n '1p')"
+	if [ -n "${last_group}" ]; then
+		airport_identity="$(fss_identity_slugify "${last_group}" "sub" 2>/dev/null)"
+		source_scope="${airport_identity}"
+		[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
+	fi
+	node_count="$(
+		fss_list_node_ids | sed '/^$/d' | while IFS= read -r node_id
+		do
+			[ -n "${node_id}" ] || continue
+			node_profile_id="$(fss_get_node_profile_id_by_id "${node_id}" 2>/dev/null)" || node_profile_id=""
+			if [ -n "${node_profile_id}" ]; then
+				[ "${node_profile_id}" = "${profile_id}" ] && echo 1
+				continue
+			fi
+			[ -n "${source_scope}" ] || continue
+			node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)" || node_scope=""
+			[ "${node_scope}" = "${source_scope}" ] && echo 1
+		done | wc -l | tr -d ' '
+	)"
+	if [ -z "${node_count}" ] && [ -n "${source_scope}" ]; then
+		node_count="$(
+			fss_list_node_ids | sed '/^$/d' | while IFS= read -r node_id
+			do
+				[ -n "${node_id}" ] || continue
+				node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)" || node_scope=""
+				[ "${node_scope}" = "${source_scope}" ] && echo 1
+			done | wc -l | tr -d ' '
+		)"
+	fi
+	[ -n "${node_count}" ] || node_count="0"
 	"$(subprof_jq_bin)" -cn \
 		--slurpfile profile "${profile_file}" \
-		--slurpfile state "${state_file}" '
+		--slurpfile state "${state_file}" \
+		--argjson node_count "${node_count}" '
 		($profile[0] // {}) as $p
 		| ($state[0] // {}) as $s
 		| {
 			id: ($p.id // ""),
 			name: ($p.name // ""),
 			url: ($p.url // ""),
-			enabled: ($p.enabled // true),
+			enabled: (if $p.enabled == null then true else $p.enabled end),
 			subscribe_mode: ($p.subscribe_mode // "2"),
 			download_policy: ($p.download.policy // "auto"),
 			ua_mode: ($p.ua.mode // "fixed"),
@@ -348,14 +409,14 @@ subprof_merge_profile_and_state() {
 			ua_custom: ($p.ua.custom // ""),
 			exclude: ($p.filter.exclude // ""),
 			include: ($p.filter.include // ""),
-			keep_info_node: ($p.filter.keep_info_node // false),
-			allow_insecure: ($p.flags.allow_insecure // false),
-			node_log: ($p.flags.node_log // false),
+			keep_info_node: (if $p.filter.keep_info_node == null then false else $p.filter.keep_info_node end),
+			allow_insecure: (if $p.flags.allow_insecure == null then false else $p.flags.allow_insecure end),
+			node_log: (if $p.flags.node_log == null then false else $p.flags.node_log end),
 			hy2_up: ($p.hy2.up // ""),
 			hy2_dl: ($p.hy2.dl // ""),
 			hy2_tfo_switch: ($p.hy2.tfo_switch // "2"),
 			hy2_cg_opt: ($p.hy2.cg_opt // "bbr"),
-			schedule_enabled: ($p.schedule.enabled // false),
+			schedule_enabled: (if $p.schedule.enabled == null then false else $p.schedule.enabled end),
 			schedule_day: ($p.schedule.day // "7"),
 			schedule_hour: ($p.schedule.hour // "3"),
 			last_ok_ts: ($s.last_ok_ts // 0),
@@ -366,7 +427,8 @@ subprof_merge_profile_and_state() {
 			last_download_tool: ($s.last_download_tool // ""),
 			last_download_path: ($s.last_download_path // ""),
 			last_ua_mode: ($s.last_ua_mode // ""),
-			last_ua_preset: ($s.last_ua_preset // "")
+			last_ua_preset: ($s.last_ua_preset // ""),
+			node_count: $node_count
 		}
 	' 2>/dev/null
 }

@@ -65,20 +65,17 @@ profile_remove_bound_nodes() {
 	local failover_identity=""
 	local fallback_current=""
 	local node_scope=""
-	local enabled=""
 	local resolved_current=""
 	local resolved_failover=""
 	local node_tool=""
 	local node_tool_removed="0"
-	local only_when_disabled="${2:-0}"
+	local reason_label="${2:-删除}"
 
 	[ -n "${profile_id}" ] || return 0
 	[ -f "/koolshare/scripts/ss_node_subscribe.sh" ] || return 0
 	[ "$(fss_detect_storage_schema)" = "2" ] || return 0
 	profile_json="$(subprof_merge_profile_and_state "${profile_id}" 2>/dev/null)" || profile_json=""
 	[ -n "${profile_json}" ] || return 0
-	enabled="$(printf '%s' "${profile_json}" | "$(subprof_jq_bin)" -r 'if .enabled == null then true else .enabled end' 2>/dev/null)"
-	[ "${only_when_disabled}" = "1" ] && [ "${enabled}" = "false" ] || [ "${only_when_disabled}" != "1" ] || return 0
 	last_group="$(printf '%s' "${profile_json}" | "$(subprof_jq_bin)" -r '.last_group // empty' 2>/dev/null)"
 	last_url_hash="$(printf '%s' "${profile_json}" | "$(subprof_jq_bin)" -r '.last_url_hash // empty' 2>/dev/null)"
 	profile_url="$(printf '%s' "${profile_json}" | "$(subprof_jq_bin)" -r '.url // empty' 2>/dev/null)"
@@ -97,7 +94,7 @@ profile_remove_bound_nodes() {
 	failover_id="$(fss_get_failover_node_id 2>/dev/null)" || failover_id=""
 	[ -n "${current_id}" ] && current_identity="$(fss_get_node_identity_by_id "${current_id}" 2>/dev/null)" || current_identity=""
 	[ -n "${failover_id}" ] && failover_identity="$(fss_get_node_identity_by_id "${failover_id}" 2>/dev/null)" || failover_identity=""
-	node_tool="$(pick_node_tool 2>/dev/null)" || node_tool=""
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || node_tool=""
 
 	if [ -n "${node_tool}" ]; then
 		"${node_tool}" delete-nodes --profile-id "${profile_id}" >/dev/null 2>&1 && node_tool_removed="1"
@@ -107,7 +104,7 @@ profile_remove_bound_nodes() {
 		fss_clear_webtest_runtime_results
 		fss_touch_node_catalog_ts >/dev/null 2>&1
 		fss_touch_node_config_ts >/dev/null 2>&1
-		profile_log "订阅配置已停用，并按 _profile_id 清理对应节点：${profile_id}"
+		profile_log "订阅配置${reason_label}，并按 _profile_id 清理对应节点：${profile_id}"
 		return 0
 	fi
 
@@ -150,12 +147,8 @@ profile_remove_bound_nodes() {
 	fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
-	profile_log "已清理订阅 profile 对应节点：${profile_id} (${removed_count} 个)"
+	profile_log "订阅配置${reason_label}，并回退按 _source_scope 清理对应节点：${profile_id} (${removed_count} 个)"
 	return 0
-}
-
-profile_cleanup_disabled_nodes() {
-	profile_remove_bound_nodes "$1" "1"
 }
 
 profile_save() {
@@ -171,7 +164,6 @@ profile_save() {
 		profile_log "保存订阅配置失败，请检查别名和订阅链接。"
 		return 1
 	fi
-	profile_cleanup_disabled_nodes "${profile_id}" >/dev/null 2>&1 || true
 	subprof_rebuild_cron_jobs >/dev/null 2>&1 || true
 	profile_log "订阅配置已保存：${profile_id}"
 	profile_write_list || return 1
@@ -185,7 +177,7 @@ profile_delete() {
 		profile_log "缺少待删除的订阅配置 ID。"
 		return 1
 	}
-	profile_remove_bound_nodes "${profile_id}" "0" >/dev/null 2>&1 || true
+	profile_remove_bound_nodes "${profile_id}" "删除" >/dev/null 2>&1 || true
 	if ! subprof_remove_profile "${profile_id}"; then
 		profile_log "删除订阅配置失败：${profile_id}"
 		return 1
