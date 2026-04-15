@@ -238,6 +238,30 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .submgr-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:5px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
 .submgr-empty-ad{display:block;margin-top:10px;padding:12px 14px;border-radius:5px;background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,62,62,0.2));border:1px solid rgba(255,140,0,0.35);color:#ffd166 !important;font-weight:700;line-height:1.8;text-decoration:none;box-shadow:0 12px 26px rgba(255,94,0,0.12);}
 .submgr-empty-ad strong{color:#ff7b00;}
+.node-card-shell{width:750px;overflow:hidden;}
+.node-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-content:start;padding:2px 12px 4px 2px;box-sizing:border-box;}
+.node-card-grid::-webkit-scrollbar{width:8px;height:8px;}
+.node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
+.node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
+.node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
+.node-card{position:relative;display:flex;flex-direction:column;gap:10px;min-height:164px;padding:14px 14px 12px;border-radius:12px;border:1px solid rgba(74,108,138,0.28);background:linear-gradient(180deg,rgba(19,27,38,0.98),rgba(12,18,27,0.96));box-shadow:0 12px 24px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
+.node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 16px 28px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.05);transform:translateY(-1px);}
+.node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.node-card-order{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:24px;padding:0 8px;border-radius:999px;background:rgba(70,160,255,0.12);color:#9fc7ff;font-size:11px;font-weight:700;letter-spacing:.3px;}
+.node-card-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;}
+.node-card-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);color:#dbe9f8;font-size:11px;line-height:1;font-weight:600;}
+.node-card-badge.type{background:rgba(37,99,235,0.16);border-color:rgba(59,130,246,0.22);color:#bfdbfe;}
+.node-card-badge.source{background:rgba(41,179,111,0.16);border-color:rgba(41,179,111,0.22);color:#bdf5d2;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.node-card-name{font-size:16px;line-height:1.3;color:#fff;font-weight:700;word-break:break-word;min-height:40px;}
+.node-card-server{font-size:12px;line-height:1.6;color:#8fa4ba;word-break:break-all;min-height:38px;}
+.node-card-meta{display:flex;flex-wrap:wrap;gap:8px;}
+.node-card-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;color:#dbe9f8;}
+.node-card-chip-label{color:#9fb6d1;}
+.node-card-chip-value{font-weight:700;}
+.node-card-latency{display:inline-flex;align-items:center;justify-content:center;min-width:78px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
+.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto;min-height:26px;}
+.node-card-actions .latency_btn{margin:0 !important;}
+.node-card-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
 .submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:5px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
 .submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 body .submgr-layer .layui-layer-btn{text-align:center !important;padding:0 16px 14px !important;}
@@ -251,6 +275,7 @@ body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-edito
 @media (max-width: 900px){
 	.submgr-card-list{grid-template-columns:1fr;}
 	.submgr-shell{min-height:320px;max-height:520px;}
+	.node-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 	.shunt-rule-shell{display:block;padding-right:0;min-height:auto;}
 	.shunt-flow-link{width:100%;height:22px;margin:2px 0 4px;}
 	.shunt-flow-panel--source,.shunt-flow-panel--target{max-width:none;}
@@ -260,6 +285,8 @@ body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-edito
 	.shunt-info-band{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 @media (max-width: 640px){
+	.node-card-grid{grid-template-columns:1fr;}
+	.node-card-shell{width:100%;}
 	.shunt-summary-grid{grid-template-columns:1fr;}
 	.shunt-info-band{grid-template-columns:1fr;}
 	.shunt-rule-card,.shunt-fallback-card{padding:8px;}
@@ -5555,6 +5582,7 @@ function save() {
 	  "ss_adv_sub",
 	  "ss_basic_tablet",
 	  "ss_basic_noserver",
+	  "ss_basic_node_cards",
 	  "ss_basic_dragable",
 	  "ss_basic_qrcode",
 	  "ss_basic_enable",
@@ -6604,13 +6632,16 @@ function verifyFields(r) {
 	}
 	// push on click
 	var trid = $(r).attr("id")
-	if ( trid == "ss_basic_qrcode" || trid == "ss_basic_dragable" || trid == "ss_basic_tablet" || trid == "ss_basic_noserver") {
+	if ( trid == "ss_basic_qrcode" || trid == "ss_basic_dragable" || trid == "ss_basic_tablet" || trid == "ss_basic_noserver" || trid == "ss_basic_node_cards") {
 		var dbus_post = {};
 		dbus_post[trid] = E(trid).checked ? '1' : '0';
 		if(ws_flag == 1){
 			push_data_ws("ss_dummy.sh", "", dbus_post, "1");
 		}else{
 			push_data("dummy_script.sh", "", dbus_post, "1");
+		}
+		if ($("#tablet_1").is(":visible")) {
+			refresh_html();
 		}
 	}
 	if ( $(r).attr("id") == "ss_adv_sub" ) {
@@ -7123,11 +7154,15 @@ function remove_conf_table(o) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			$('#ss_node_list_table tr:nth-child(' + id + ')').remove();
-			refresh_dbss(function() {
-				reorder_trs();
-				refresh_options();
-			});
+			if (get_node_view_prefers_cards()) {
+				refresh_table();
+			} else {
+				$('#ss_node_list_table tr:nth-child(' + id + ')').remove();
+				refresh_dbss(function() {
+					reorder_trs();
+					refresh_options();
+				});
+			}
 		}
 	});
 }
@@ -7793,6 +7828,144 @@ function set_node_table_scroll_top(scrollTop) {
 	var maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
 	el.scrollTop = Math.min(Math.max(parseInt(scrollTop || 0, 10), 0), maxScroll);
 }
+function scroll_current_node_into_view(nodeId) {
+	var el = null;
+	nodeId = nodeId ? String(nodeId) : "";
+	if (!nodeId || !get_node_view_prefers_cards()) {
+		return false;
+	}
+	el = E("node_" + nodeId);
+	if (!el || !el.scrollIntoView) {
+		return false;
+	}
+	el.scrollIntoView({block: "nearest", inline: "nearest"});
+	return true;
+}
+function get_node_view_prefers_cards() {
+	if (E("ss_basic_node_cards")) {
+		return E("ss_basic_node_cards").checked;
+	}
+	return db_ss["ss_basic_node_cards"] == "1";
+}
+function get_node_display_type_label(c) {
+	switch(String(c["type"] || "")) {
+		case "0":
+			return (c["ss_obfs"] == "http" || c["ss_obfs"] == "tls") ? "ss[obfs]" : "ss";
+		case "1":
+			return "ssr";
+		case "3":
+			return c["protoc"] || "vmess";
+		case "4":
+			return c["protoc"] || c["xray_prot"] || "vless";
+		case "5":
+			return "trojan";
+		case "6":
+			return "Naive";
+		case "7":
+			return "tuic";
+		case "8":
+			return "hy2";
+		default:
+			return "unknown";
+	}
+}
+function get_node_display_source_label(c) {
+	var raw = null;
+	var profile = null;
+	if (!c || !c["node"]) {
+		return "本地节点";
+	}
+	raw = get_fss_raw_node(String(c["node"]));
+	if (raw && String(raw["_source"] || "") == "subscribe") {
+		profile = get_subscription_profile_for_node(raw);
+		if (profile && profile.name) {
+			return String(profile.name);
+		}
+		if (c["group"]) {
+			return String(c["group"]);
+		}
+		return "订阅节点";
+	}
+	if (c["group"]) {
+		return String(c["group"]);
+	}
+	return "本地节点";
+}
+function render_node_list_footer_html() {
+	var html = '';
+	html += '<div align="center" class="nodeTable" id="node_button" style="width: 750px;margin-top:20px">';
+	if(node_nu){
+		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">';
+		html += '<div class="dropdown" id="dropdown">';
+		if(db_ss["ss_basic_latency_batch"] == "1"){
+			html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>';
+			html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>';
+		}else{
+			html += '<a id="start_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed"></lable>批量测速已关闭</a>';
+			html += '<a id="stop_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed">停止批量测速</a>';
+		}
+		if(db_ss["ss_basic_latency_val"] == "0"){
+			html += '<a onclick="enable_latency_feature()" href="javascript:void(0);"></lable>开启延迟测试功能</a>';
+		}else{
+			html += '<a onclick="test_latency_now(0)" href="javascript:void(0);"></lable>关闭延迟测试功能</a>';
+		}
+		html += '<a onclick="clear_latency_cache()" href="javascript:void(0);"></lable>清空延迟测试结果</a>';
+		html += '<a onclick="open_latency_sett()" href="javascript:void(0);"></lable>设置</a>';
+		html += '</div>';
+	}
+	html += '<input style="margin-left:10px" id="add_ss_node" class="button_gen" onClick="Add_profile()" type="button" value="添加节点"/>';
+	if(node_nu){
+		html += '<input style="margin-left:10px" class="button_gen" type="button" onclick="save()" value="保存&应用">';
+	}
+	html += '<input id="reset_select" style="margin-left:10px; display:none" class="button_gen" onClick="select_default_node(1)" type="button" value="取消"/>';
+	html += '</div>';
+	return html;
+}
+function render_node_cards_html(nodeH, noserver, hasLatency) {
+	var html = '';
+	html += '<div class="nodeTable node-card-shell" style="height:' + nodeH + 'px;">';
+	html += '<div id="ss_node_list_table_main" class="node-card-grid" style="height:' + nodeH + 'px;overflow:hidden scroll;">';
+	if (!node_nu) {
+		html += '<div class="node-card-empty" style="grid-column:1/-1;">当前没有可显示的节点。<br />点击下方“添加节点”开始创建。</div>';
+	} else {
+		for (var i = 0; i < ss_nodes.length; i++) {
+			var c = confs[ss_nodes[i]];
+			var sourceLabel = get_node_display_source_label(c);
+			html += '<div class="node-card" id="node_' + c["node"] + '">';
+			html += '<div class="node-card-head">';
+			html += '<div class="node-card-order">#' + (i + 1) + '</div>';
+			html += '<div class="node-card-badges">';
+			html += '<span class="node-card-badge type">' + htmlEscape(get_node_display_type_label(c)) + '</span>';
+			html += '<span class="node-card-badge source" title="' + htmlEscape(sourceLabel) + '">' + htmlEscape(sourceLabel) + '</span>';
+			html += '</div>';
+			html += '</div>';
+			html += '<div class="node-card-name" title="' + htmlEscape(c["group"] || "") + '&#10;' + htmlEscape(c["name"] || "") + '">' + htmlEscape(c["name"] || "") + '</div>';
+			if (noserver != "1") {
+				var displayServer = c["type"] == 8 ? c["hy2_server"] : (c["type"] == 6 ? c["naive_server"] : c["server"]);
+				html += '<div class="node-card-server">' + htmlEscape(displayServer || "") + '</div>';
+			}
+			html += '<div class="node-card-meta">';
+			html += '<span class="node-card-chip"><span class="node-card-chip-label">来源</span><span class="node-card-chip-value">' + htmlEscape(sourceLabel) + '</span></span>';
+			if (hasLatency) {
+				html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency"><span class="latency_val"></span></div>';
+			}
+			html += '</div>';
+			html += '<div class="node-card-actions">';
+			if (hasLatency) {
+				html += '<img src="/res/speed.png" class="latency_btn" data-node="' + c["node"] + '" style="width:22px;height:22px;cursor:pointer;vertical-align:middle;" title="点击后将测试此节点的web落地延迟！" onmouseover="this.src=\'/res/speed_blue.png\';" onmouseout="this.src=\'/res/speed.png\';" onclick="test_latency_single(' + c["node"] + ');return false;" />';
+			}
+			html += '<input style="margin:0;" id="dd_node_' + c["node"] + '" class="edit_btn" type="button" onclick="edit_conf_table(this);" value="">';
+			html += '<input style="margin:0;" id="td_node_' + c["node"] + '" class="remove_btn" type="button" onclick="remove_conf_table(this);" value="">';
+			html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:26px;height:26px;" id="apply_ss_node_' + c["node"] + '" onclick="apply_this_ss_node(this);"></div>';
+			html += '</div>';
+			html += '</div>';
+		}
+	}
+	html += '</div>';
+	html += '</div>';
+	html += render_node_list_footer_html();
+	return html;
+}
 function refresh_html() {
 	var pageH = parseInt(E("FormTitle").style.height.split("px")[0]);
 	if(db_ss["ss_basic_row"]){
@@ -7816,6 +7989,49 @@ function refresh_html() {
 
 	// define col width in different situation
 	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
+	var cardMode = get_node_view_prefers_cards();
+	var hasLatency = node_nu && db_ss["ss_basic_latency_val"] != "0";
+	if (cardMode) {
+		var cardsPerRow = $(window).width() <= 640 ? 1 : ($(window).width() <= 900 ? 2 : 3);
+		var visibleCards = Math.max(1, Math.min(node_nu || 1, nodeN));
+		var visibleRows = Math.max(1, Math.ceil(visibleCards / cardsPerRow));
+		var cardHeight = 170;
+		var cardGap = 14;
+		nodeH = visibleRows * cardHeight + ((visibleRows - 1) * cardGap) + 8;
+		if (node_nu > visibleCards) {
+			$("#ss_list_table").attr("style", "height:" + (nodeH + 56) + "px");
+		} else {
+			$("#ss_list_table").removeAttr("style");
+		}
+		$('.nodeTable').remove();
+		$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
+		update_latency_action_links();
+		if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+			latency_test(db_ss["ss_basic_latency_val"]);
+		}
+		select_default_node(2);
+		if(node_nu){
+			const dropdownBtn = E("dropdownbtn");
+			const dropdownMenu = E("dropdown");
+			const toggleDropdown = function () {
+			  var lef = $('#dropdownbtn').offset().left;
+			  var top = $('#dropdownbtn').offset().top;
+			  var eleh = $("#dropdown").height();
+			  $('#dropdown').offset({left: lef, top: (top - eleh)});
+			  dropdownMenu.classList.toggle("show");
+			};
+			dropdownBtn.addEventListener("click", function (e) {
+			  e.stopPropagation();
+			  toggleDropdown();
+			});
+			E("app").addEventListener("click", function () {
+			  if (dropdownMenu.classList.contains("show")) {
+			    toggleDropdown();
+			  }
+			});
+		}
+		return;
+	}
 	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
 		//开启延迟测试
 		if(noserver == "1"){
@@ -7846,7 +8062,7 @@ function refresh_html() {
 		html += '<th style="width:' + width[3] + ';cursor:pointer" onclick="hide_server();" title="点我隐藏服务器信息!" >服务器地址</th>'
 	}
 	html += '<th style="width:' + width[4] + ';">类型</th>'
-	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+	if(hasLatency){
 		html += '<th style="width:' + width[5] + ';" id="depay_th">web落地延迟</th>'
 	}
 	html += '<th style="width:' + width[6] + ';">操作</th>'
@@ -7961,12 +8177,12 @@ function refresh_html() {
 		
 		html +='</td>';
 		//webtest
-		if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+		if(hasLatency){
 			html += '<td style="width:' + width[5] + ';overflow:hidden;text-overflow:clip;" id="ss_node_lt_' + c["node"] + '" class="latency"><span class="latency_val"></span></td>';
 		}
 		//节点操作
 		html += '<td style="width:' + width[6] + ';white-space:nowrap;">'
-		if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+		if(hasLatency){
 			html += '<img src="/res/speed.png" class="latency_btn" data-node="' + c["node"] + '" style="width:22px;height:22px;cursor:pointer;vertical-align:middle;margin:-2px 0px 0px 0px;" title="点击后将测试此节点的web落地延迟！" onmouseover="this.src=\'/res/speed_blue.png\';" onmouseout="this.src=\'/res/speed.png\';" onclick="test_latency_single(' + c["node"] + ');return false;" />'
 		}
 		html += '<input style="margin:-2px 0px -4px -2px;" id="dd_node_' + c["node"] + '" class="edit_btn" type="button" onclick="edit_conf_table(this);" value="">'
@@ -7979,32 +8195,7 @@ function refresh_html() {
 	html += '</div>'
 	html += '</div>'
 	// botton region
-	html += '<div align="center" class="nodeTable" id="node_button" style="width: 750px;margin-top:20px">'
-	if(node_nu){
-		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">'
-		html += '<div class="dropdown" id="dropdown">'
-		if(db_ss["ss_basic_latency_batch"] == "1"){
-			html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>'
-			html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>'
-		}else{
-			html += '<a id="start_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed"></lable>批量测速已关闭</a>'
-			html += '<a id="stop_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed">停止批量测速</a>'
-		}
-		if(db_ss["ss_basic_latency_val"] == "0"){
-			html += '<a onclick="enable_latency_feature()" href="javascript:void(0);"></lable>开启延迟测试功能</a>'
-		}else{
-			html += '<a onclick="test_latency_now(0)" href="javascript:void(0);"></lable>关闭延迟测试功能</a>'
-		}
-		html += '<a onclick="clear_latency_cache()" href="javascript:void(0);"></lable>清空延迟测试结果</a>'
-		html += '<a onclick="open_latency_sett()" href="javascript:void(0);"></lable>设置</a>'
-		html += '</div>'
-	}
-	html += '<input style="margin-left:10px" id="add_ss_node" class="button_gen" onClick="Add_profile()" type="button" value="添加节点"/>'
-	if(node_nu){
-		html += '<input style="margin-left:10px" class="button_gen" type="button" onclick="save()" value="保存&应用">'
-	}
-	html += '<input id="reset_select" style="margin-left:10px; display:none" class="button_gen" onClick="select_default_node(1)" type="button" value="取消"/>'
-	html += '</div>'
+	html += render_node_list_footer_html();
 	// remove dynamic table
 	$('.nodeTable').remove();
 	// add dynamic table
@@ -8290,7 +8481,7 @@ function select_default_node(o){
 			E("ss_basic_enable").checked = true;
 			$("#apply_ss_node_" + get_saved_current_node_id()).addClass("activate_icon");
 			$("#apply_ss_node_" + get_saved_current_node_id()).removeClass("deactivate_icon");
-			if(node_idx && node_nu > nodeN){
+			if(!scroll_current_node_into_view(get_saved_current_node_id()) && node_idx && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
 			}
@@ -8305,7 +8496,7 @@ function select_default_node(o){
 			//用户点击开启了总开关，节点选择为db_ss["ssconf_basic_node"]，没有就默认选1
 			$("#apply_ss_node_" + sel_node).addClass("activate_icon");
 			$("#apply_ss_node_" + sel_node).removeClass("deactivate_icon");
-			if(node_idx && node_nu > nodeN){
+			if(!scroll_current_node_into_view(sel_node) && node_idx && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
 			}
@@ -8316,7 +8507,7 @@ function select_default_node(o){
 			$("#apply_ss_node_" + sel_node).addClass("activate_icon");
 			$("#apply_ss_node_" + sel_node).removeClass("deactivate_icon");
 			node_idx_1 = $.inArray(E("ssconf_basic_node").value, ss_nodes) + 1;
-			if(node_idx_1 && node_nu > nodeN){
+			if(!scroll_current_node_into_view(sel_node) && node_idx_1 && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx_1*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
 			}
@@ -13698,6 +13889,7 @@ function toggleKeyMask(o, show){
 															{ title: '节点列表最大显示行数', id:'ss_basic_row', type:'select', func:'onchange="save_row();"', style:'width:auto', options:[]},
 															{ title: '开启生成二维码功能', id:'ss_basic_qrcode', func:'v', type:'checkbox', value:true},
 															{ title: '开启节点排序功能', id:'ss_basic_dragable', func:'v', type:'checkbox', value:true},
+															{ title: '节点管理使用卡片视图', id:'ss_basic_node_cards', func:'v', type:'checkbox', value:false},
 															{ title: '节点管理页面设为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 															{ title: '节点管理页面隐藏服务器地址', id:'ss_basic_noserver', func:'v', type:'checkbox', value:false},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">代理行为</td></tr>'},
