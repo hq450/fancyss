@@ -200,19 +200,27 @@ body .shunt-editor-layer{background:#0f172a !important;box-shadow:0 25px 50px -1
 body .shunt-editor-layer .layui-layer-title{background:rgba(255,255,255,0.02) !important;color:#f8fafc !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;font-size:16px !important;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;font-weight:600 !important;letter-spacing:0.5px;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.1) !important;color:#e2e8f0 !important;}
+body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .submgr-entry{padding:6px 0;color:#dbe7f3;}
 .submgr-entry-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.submgr-shell{padding:18px 20px 10px;color:#fff;min-height:360px;max-height:410px;overflow:auto;}
+.submgr-shell{padding:18px 20px 10px;color:#fff;min-height:360px;max-height:560px;overflow:visible;}
 .submgr-tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
-.submgr-tab{display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:34px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#cfe0f1;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;}
+.submgr-tab{display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:34px;padding:0 16px;border-radius:5px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#cfe0f1;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;}
 .submgr-tab.active{background:linear-gradient(135deg,#2563eb,#37b4ff);border-color:rgba(70,160,255,0.48);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,0.24);}
 .submgr-toolbar{display:flex;justify-content:flex-start;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 .submgr-toolbar-note{font-size:12px;line-height:1.7;color:#8fa4ba;}
-.submgr-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
-.submgr-card{position:relative;padding:14px 14px 12px;border:1px solid rgba(69,93,120,0.28);border-radius:12px;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));box-shadow:0 12px 24px rgba(0,0,0,0.16),inset 0 1px 0 rgba(255,255,255,0.03);}
+.submgr-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;overflow-x:hidden;}
+.submgr-card-list::-webkit-scrollbar{width:8px;height:8px;}
+.submgr-card-list::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
+.submgr-card-list::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
+.submgr-card-list::-webkit-scrollbar-corner{background:transparent;}
+.submgr-card-list{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
+.submgr-card{position:relative;padding:14px 14px 12px;border:1px solid rgba(69,93,120,0.28);border-radius:12px;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));box-shadow:0 12px 24px rgba(0,0,0,0.16),inset 0 1px 0 rgba(255,255,255,0.03);cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
+.submgr-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 16px 28px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
 .submgr-card.is-disabled{border-color:rgba(242,153,74,0.3);background:linear-gradient(180deg,rgba(44,32,22,0.97),rgba(28,22,16,0.95));}
-.submgr-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
-.submgr-card-delete{position:absolute;top:-10px;right:-8px;width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:16px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.8);box-shadow:0 8px 16px rgba(159,38,38,0.3);transition:all .2s cubic-bezier(0.34,1.56,0.64,1);}
+.submgr-card.is-disabled:hover{border-color:rgba(242,153,74,0.42);}
+.submgr-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-right:28px;}
+.submgr-card-delete{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:14px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.84);box-shadow:0 8px 16px rgba(159,38,38,0.3);transition:all .2s cubic-bezier(0.34,1.56,0.64,1);z-index:3;}
 .submgr-card:hover .submgr-card-delete,.submgr-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
 .submgr-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.45);transform:scale(1.1);}
 .submgr-card-title{font-size:16px;line-height:1.3;color:#fff;font-weight:600;word-break:break-word;}
@@ -224,21 +232,25 @@ body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,
 .submgr-chip.warn{background:rgba(242,153,74,0.16);color:#ffd1b5;border-color:rgba(242,153,74,0.22);}
 .submgr-chip.ok{background:rgba(41,179,111,0.16);color:#bdf5d2;border-color:rgba(41,179,111,0.24);}
 .submgr-card-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:14px;}
-.submgr-card-btn{display:inline-flex;align-items:center;justify-content:center;min-width:72px;height:32px;padding:0 14px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;color:#fff;box-shadow:0 10px 20px rgba(0,0,0,0.18);}
-.submgr-card-btn.edit{background:linear-gradient(135deg,#2563eb,#37b4ff);}
+.submgr-card-btn{display:inline-flex;align-items:center;justify-content:center;min-width:72px;height:32px;padding:0 14px;border-radius:5px;font-size:12px;font-weight:700;text-decoration:none;color:#fff;box-shadow:0 10px 20px rgba(0,0,0,0.18);}
 .submgr-card-btn.sync{background:linear-gradient(135deg,#159957,#38d27a);}
-.submgr-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:14px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
-.submgr-empty-ad{display:block;margin-top:10px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,62,62,0.2));border:1px solid rgba(255,140,0,0.35);color:#ffd166 !important;font-weight:700;line-height:1.8;text-decoration:none;box-shadow:0 12px 26px rgba(255,94,0,0.12);}
+.submgr-card-btn.sync.disabled{background:linear-gradient(135deg,#6b7280,#9ca3af);color:#eef2f7;box-shadow:none;cursor:not-allowed;pointer-events:none;}
+.submgr-empty{padding:34px 22px;border:1px dashed rgba(255,255,255,0.1);border-radius:5px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
+.submgr-empty-ad{display:block;margin-top:10px;padding:12px 14px;border-radius:5px;background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,62,62,0.2));border:1px solid rgba(255,140,0,0.35);color:#ffd166 !important;font-weight:700;line-height:1.8;text-decoration:none;box-shadow:0 12px 26px rgba(255,94,0,0.12);}
 .submgr-empty-ad strong{color:#ff7b00;}
-.submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:12px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
+.submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:5px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
 .submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 body .submgr-layer .layui-layer-btn{text-align:center !important;padding:0 16px 14px !important;}
 body .submgr-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;color:#fff !important;}
 body .submgr-layer .layui-layer-btn .layui-layer-btn1{background:#159957 !important;border-color:#159957 !important;color:#fff !important;}
 body .submgr-layer .layui-layer-btn .layui-layer-btn2{background:rgba(255,255,255,0.08) !important;border-color:rgba(255,255,255,0.18) !important;color:#f3f7fb !important;}
+body .submgr-layer .layui-layer-btn a{border-radius:5px !important;}
+body .submgr-editor-layer .layui-layer-btn a{border-radius:5px !important;}
+body .submgr-layer .ss_btn{border-radius:5px !important;}
+body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-editor-layer textarea{border-radius:5px !important;}
 @media (max-width: 900px){
 	.submgr-card-list{grid-template-columns:1fr;}
-	.submgr-shell{min-height:320px;max-height:380px;}
+	.submgr-shell{min-height:320px;max-height:520px;}
 	.shunt-rule-shell{display:block;padding-right:0;min-height:auto;}
 	.shunt-flow-link{width:100%;height:22px;margin:2px 0 4px;}
 	.shunt-flow-panel--source,.shunt-flow-panel--target{max-width:none;}
@@ -3533,6 +3545,7 @@ var SCHEMA2_NODE_POSTSAVE_IGNORE_FIELDS = {
 	"_rev": true,
 	"_updated_at": true,
 	"_source": true,
+	"_profile_id": true,
 	"_airport_identity": true,
 	"_source_scope": true,
 	"_source_url_hash": true,
@@ -4081,7 +4094,7 @@ function render_subscription_manager_entry() {
 		'<td>' +
 		'<div class="submgr-entry">' +
 		'<div class="submgr-entry-actions">' +
-		'<a type="button" class="ss_btn" style="cursor:pointer" onclick="open_subscription_manager()">打开订阅管理</a>' +
+		'<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;" onclick="open_subscription_manager()">打开订阅管理</a>' +
 		'</div>' +
 		'</div>' +
 		'</td>' +
@@ -4136,14 +4149,26 @@ function normalize_subscription_profiles_payload(payload) {
 }
 function set_subscription_profiles_state(payload) {
 	payload = normalize_subscription_profiles_payload(payload);
-	subscribeProfilesState = payload.items || [];
+	subscribeProfilesState = [];
 	subscribeProfileMap = {};
-	for (var i = 0; i < subscribeProfilesState.length; i++) {
-		var item = subscribeProfilesState[i] || {};
+	for (var i = 0; i < payload.items.length; i++) {
+		var item = payload.items[i] || {};
+		if (typeof item.enabled == "undefined" || item.enabled === null) {
+			item.enabled = true;
+		}
+		item.schedule_enabled = item.schedule_enabled === true;
+		item.node_count = parseInt(item.node_count, 10);
+		if (isNaN(item.node_count) || item.node_count < 0) {
+			item.node_count = 0;
+		}
+		subscribeProfilesState.push(item);
 		if (item.id) {
 			subscribeProfileMap[item.id] = item;
 		}
 	}
+}
+function subscription_profile_is_enabled(item) {
+	return !item || item.enabled !== false;
 }
 function fetch_subscription_profiles_file(cb) {
 	$.ajax({
@@ -4233,6 +4258,67 @@ function get_subscription_profile_host(url) {
 	var match = String(url || "").match(/^[a-z][a-z0-9+.-]*:\/\/([^\/@:]+)/i);
 	return match ? match[1] : "";
 }
+function normalize_subscription_profile_url(url) {
+	return $.trim(String(url || ""));
+}
+function find_subscription_profile_by_url(url, excludeId) {
+	var normalized = normalize_subscription_profile_url(url);
+	var exclude = String(excludeId || "");
+	if (!normalized) {
+		return null;
+	}
+	for (var i = 0; i < subscribeProfilesState.length; i++) {
+		var item = subscribeProfilesState[i] || {};
+		if (exclude && String(item.id || "") == exclude) {
+			continue;
+		}
+		if (normalize_subscription_profile_url(item.url || "") == normalized) {
+			return item;
+		}
+	}
+	return null;
+}
+function format_subscription_last_result(item) {
+	var raw = $.trim(String((item && item.last_error) || ""));
+	if (!raw) {
+		return Number((item && item.last_ok_ts) || 0) > 0 ? "同步成功" : "尚未同步";
+	}
+	var lowered = raw.toLowerCase();
+	if (lowered.indexOf("empty payload") >= 0) {
+		return "返回为空";
+	}
+	if (lowered.indexOf("payload validation failed") >= 0) {
+		return "结果无效";
+	}
+	if (lowered.indexOf("parse failed") >= 0 || lowered.indexOf("parser failed") >= 0) {
+		return "解析失败";
+	}
+	if (lowered.indexOf("download failed") >= 0) {
+		return "下载失败";
+	}
+	if (lowered.indexOf("timed out") >= 0 || lowered.indexOf("timeout") >= 0) {
+		return "请求超时";
+	}
+	if (lowered.indexOf("resolve host") >= 0 || lowered.indexOf("could not resolve host") >= 0 || lowered.indexOf("name lookup timed out") >= 0) {
+		return "域名解析失败";
+	}
+	if (lowered.indexOf("connection refused") >= 0) {
+		return "连接被拒绝";
+	}
+	if (lowered.indexOf("ssl") >= 0 || lowered.indexOf("tls") >= 0 || lowered.indexOf("certificate") >= 0) {
+		return "证书异常";
+	}
+	if (lowered.indexOf("proxy") >= 0 && lowered.indexOf("failed") >= 0) {
+		return "代理失败";
+	}
+	if (lowered.indexOf("no nodes") >= 0 || lowered.indexOf("not contain any") >= 0) {
+		return "无可用节点";
+	}
+	if (raw.length > 12) {
+		return "同步失败";
+	}
+	return raw;
+}
 function render_subscription_chip(label, value, extraClass) {
 	return '<span class="submgr-chip' + (extraClass ? (" " + extraClass) : "") + '"><span class="submgr-chip-label">' + htmlEscape(label) + '</span><span class="submgr-chip-value">' + htmlEscape(value) + '</span></span>';
 }
@@ -4260,15 +4346,18 @@ function render_subscription_profiles_cards() {
 	var html = '<div class="submgr-card-list">';
 	for (var i = 0; i < subscribeProfilesState.length; i++) {
 		var item = subscribeProfilesState[i] || {};
+		var enabled = subscription_profile_is_enabled(item);
 		var host = get_subscription_profile_host(item.url || "");
-		var lastStatus = item.last_error ? item.last_error : (Number(item.last_ok_ts || 0) > 0 ? "最近同步成功" : "尚未同步");
+		var lastStatus = format_subscription_last_result(item);
 		var lastClass = item.last_error ? "warn" : (Number(item.last_ok_ts || 0) > 0 ? "ok" : "");
 		var scheduleText = item.schedule_enabled ? get_subscription_schedule_label(item.schedule_day, item.schedule_hour) : "未启用";
-		html += '<div class="submgr-card' + (item.enabled ? '' : ' is-disabled') + '">';
-		html += '<a href="javascript:void(0);" class="submgr-card-delete" onclick="delete_subscription_profile(\'' + htmlEscape(String(item.id || "")) + '\')" title="删除订阅">&times;</a>';
+		var nodeCountText = String(item.node_count || "0");
+		html += '<div class="submgr-card' + (enabled ? '' : ' is-disabled') + '" onclick="open_subscription_profile_editor(\'' + htmlEscape(String(item.id || "")) + '\')" title="点击编辑订阅">';
+		html += '<a href="javascript:void(0);" class="submgr-card-delete" onclick="event.stopPropagation();delete_subscription_profile(\'' + htmlEscape(String(item.id || "")) + '\');return false;" title="删除订阅">&times;</a>';
 		html += '<div class="submgr-card-head"><div><div class="submgr-card-title">' + htmlEscape(item.name || "未命名订阅") + '</div><div class="submgr-card-subtitle">' + htmlEscape(host || item.url || "") + '</div></div></div>';
 		html += '<div class="submgr-chip-row">';
-		html += render_subscription_chip("状态", item.enabled ? "启用" : "停用", item.enabled ? "ok" : "warn");
+		html += render_subscription_chip("状态", enabled ? "启用" : "未启用", enabled ? "ok" : "warn");
+		html += render_subscription_chip("节点数量", nodeCountText);
 		html += render_subscription_chip("下载", item.download_policy || "auto");
 		html += render_subscription_chip("UA", item.ua_mode == "custom" ? "自定义" : (item.ua_mode == "auto" ? "自动" : (item.ua_preset || "default")));
 		html += render_subscription_chip("最近结果", lastStatus, lastClass);
@@ -4284,14 +4373,125 @@ function render_subscription_profiles_cards() {
 		}
 		html += '</div>';
 		html += '<div class="submgr-card-actions">';
-		var payloadB64 = base64_encode_utf8(JSON.stringify(item || {}));
-		html += '<a class="submgr-card-btn edit" href="javascript:void(0);" onclick="open_subscription_profile_editor_by_payload(\'' + payloadB64 + '\')">编辑</a>';
-		html += '<a class="submgr-card-btn sync" href="javascript:void(0);" onclick="sync_subscription_profiles(\'' + htmlEscape(String(item.id || "")) + '\')">同步</a>';
+		html += '<a class="submgr-card-btn sync' + (enabled ? '' : ' disabled') + '" href="javascript:void(0);" onclick="event.stopPropagation();' + (enabled ? ('sync_subscription_profiles(\'' + htmlEscape(String(item.id || "")) + '\');') : '') + 'return false;">同步</a>';
 		html += '</div>';
 		html += '</div>';
 	}
 	html += '</div>';
 	return html;
+}
+function adjust_subscription_manager_layer_height() {
+	if (subscribeManagerLayerIndex === null || typeof layer == "undefined") {
+		return;
+	}
+	var layero = $("#layui-layer" + subscribeManagerLayerIndex);
+	if (!layero.length) {
+		return;
+	}
+	var shell = layero.find(".submgr-shell").first();
+	var root = layero.find("#subscription_manager_root").first();
+	var layerContent = layero.children(".layui-layer-content").first();
+	var layerTitle = layero.children(".layui-layer-title").first();
+	var layerBtn = layero.children(".layui-layer-btn").first();
+	if (!shell.length) {
+		return;
+	}
+	if (subscribeManagerActiveTab != "profiles") {
+		shell.css({height: "auto", minHeight: "", maxHeight: "", overflowY: "visible"});
+		if (layerContent.length) {
+			layerContent.css({
+				height: (root.outerHeight() || shell.outerHeight()) + "px",
+				overflowY: "hidden"
+			});
+		}
+		layer.style(subscribeManagerLayerIndex, {
+			height: Math.ceil(
+				(root.outerHeight() || shell.outerHeight())
+				+ (layerTitle.outerHeight() || 0)
+				+ (layerBtn.outerHeight() || 0)
+				+ 4
+			) + "px"
+		});
+		return;
+	}
+	var cardList = shell.find(".submgr-card-list").first();
+	var cards = cardList.find(".submgr-card");
+	if (!cards.length) {
+		shell.css({height: "auto", minHeight: "", maxHeight: "", overflowY: "visible"});
+		cardList.css({height: "auto", overflowY: "visible", paddingRight: "0"});
+		if (layerContent.length) {
+			layerContent.css({
+				height: (root.outerHeight() || shell.outerHeight()) + "px",
+				overflowY: "hidden"
+			});
+		}
+		layer.style(subscribeManagerLayerIndex, {
+			height: Math.ceil(
+				(root.outerHeight() || shell.outerHeight())
+				+ (layerTitle.outerHeight() || 0)
+				+ (layerBtn.outerHeight() || 0)
+				+ 4
+			) + "px"
+		});
+		return;
+	}
+	var maxCards = Math.min(4, cards.length);
+	var columns = 2;
+	var templateColumns = cardList.css("grid-template-columns") || "";
+	if (templateColumns) {
+		columns = Math.max(1, templateColumns.split(" ").length);
+	}
+	var rowGap = parseFloat(cardList.css("row-gap") || cardList.css("gap") || "0") || 0;
+	var rowHeights = [];
+	cards.slice(0, maxCards).each(function(idx) {
+		var rowIndex = Math.floor(idx / columns);
+		var cardHeight = $(this).outerHeight() || 0;
+		rowHeights[rowIndex] = Math.max(rowHeights[rowIndex] || 0, cardHeight);
+	});
+	var visibleRows = 1;
+	if (columns <= 1) {
+		visibleRows = Math.min(cards.length, 4);
+	} else {
+		visibleRows = cards.length <= 2 ? 1 : 2;
+	}
+	var cardsHeight = 0;
+	for (var i = 0; i < rowHeights.length; i++) {
+		if (i >= visibleRows) {
+			break;
+		}
+		cardsHeight += rowHeights[i] || 0;
+	}
+	if (visibleRows > 1 && rowHeights.length > 1) {
+		cardsHeight += rowGap * (Math.min(rowHeights.length, visibleRows) - 1);
+	}
+	var hasScroll = cards.length > 4;
+	cardList.css({
+		height: Math.ceil(cardsHeight + (hasScroll ? 12 : 6)) + "px",
+		maxHeight: Math.ceil(cardsHeight + (hasScroll ? 12 : 6)) + "px",
+		overflowX: "hidden",
+		overflowY: hasScroll ? "auto" : "hidden",
+		paddingRight: hasScroll ? "4px" : "0"
+	});
+	shell.css({
+		height: "auto",
+		minHeight: "",
+		maxHeight: "",
+		overflowY: "visible"
+	});
+	if (layerContent.length) {
+		layerContent.css({
+			height: (root.outerHeight() || shell.outerHeight()) + "px",
+			overflowY: "hidden"
+		});
+	}
+	layer.style(subscribeManagerLayerIndex, {
+		height: Math.ceil(
+			(root.outerHeight() || shell.outerHeight())
+			+ (layerTitle.outerHeight() || 0)
+			+ (layerBtn.outerHeight() || 0)
+			+ 4
+		) + "px"
+	});
 }
 function render_subscription_manager_body() {
 	var html = '<div class="submgr-shell">';
@@ -4313,7 +4513,23 @@ function render_subscription_manager() {
 	var root = $("#subscription_manager_root");
 	if (root.length) {
 		root.html(render_subscription_manager_body());
+		adjust_subscription_manager_layer_height();
 	}
+}
+function wait_subscription_profiles_until(checkFn, cb, attempt) {
+	attempt = attempt || 0;
+	fetch_subscription_profiles_file(function(fetchOk, items) {
+		var matched = typeof checkFn === "function" ? !!checkFn(items || []) : !!fetchOk;
+		if (matched || attempt >= 12) {
+			if (typeof cb === "function") {
+				cb(matched, items || []);
+			}
+			return;
+		}
+		setTimeout(function() {
+			wait_subscription_profiles_until(checkFn, cb, attempt + 1);
+		}, 250);
+	});
 }
 function handle_subscription_manager_tab(tabKey) {
 	subscribeManagerActiveTab = tabKey == "uri" ? "uri" : "profiles";
@@ -4329,7 +4545,7 @@ function open_subscription_manager() {
 		type: 1,
 		title: "订阅管理",
 		skin: "shunt-editor-layer submgr-layer",
-		area: [$(window).width() < 760 ? '92%' : '920px', $(window).width() < 760 ? '88%' : '560px'],
+		area: [$(window).width() < 760 ? '92%' : '920px', $(window).width() < 760 ? '88%' : 'auto'],
 		maxHeight: 560,
 		shadeClose: false,
 		content: '<div id="subscription_manager_root"><div class="submgr-shell"><div class="submgr-empty">正在加载订阅配置...</div></div></div>',
@@ -4446,7 +4662,7 @@ function open_subscription_profile_editor(profileId) {
 		maxHeight: 720,
 		shadeClose: false,
 		content: html,
-		btn: ["保存并同步", "仅保存", "取消"],
+		btn: ["保存", "取消"],
 		success: function(layero, index) {
 			subscribeProfileEditorLayerIndex = index;
 			layero.attr("data-profile-id", state.id || "");
@@ -4457,9 +4673,6 @@ function open_subscription_profile_editor(profileId) {
 			subscribeProfileEditorLayerIndex = null;
 		},
 		yes: function(index) {
-			return save_subscription_profile_from_editor(true);
-		},
-		btn2: function(index) {
 			return save_subscription_profile_from_editor(false);
 		}
 	});
@@ -4509,6 +4722,7 @@ function get_subscription_profile_editor_payload() {
 }
 function save_subscription_profile_from_editor(syncAfter) {
 	var payload = get_subscription_profile_editor_payload();
+	var duplicated = null;
 	if (!payload.name) {
 		alert("请填写订阅别名。");
 		return false;
@@ -4517,29 +4731,46 @@ function save_subscription_profile_from_editor(syncAfter) {
 		alert("请填写正确的 http(s) 订阅链接。");
 		return false;
 	}
+	duplicated = find_subscription_profile_by_url(payload.url, payload.id);
+	if (duplicated) {
+		alert("检测到相同订阅链接已添加：" + (duplicated.name || duplicated.id || "该订阅"));
+		return false;
+	}
 	call_subscription_profile_api("save", {"ss_subscribe_profile_payload": base64_encode_utf8(JSON.stringify(payload))}, function(ok) {
+		var savedProfile = null;
 		if (!ok) {
 			layer.msg("保存订阅配置失败");
 			return;
 		}
-		load_subscription_profiles(function() {
+		wait_subscription_profiles_until(function(items) {
+			var i = 0;
+			if (payload.id) {
+				for (i = 0; i < items.length; i++) {
+					if (String((items[i] || {}).id || "") == String(payload.id || "")) {
+						savedProfile = items[i];
+						return normalize_subscription_profile_url(savedProfile.url || "") == normalize_subscription_profile_url(payload.url || "")
+							&& String((savedProfile.name || "")) == String(payload.name || "")
+							&& subscription_profile_is_enabled(savedProfile) === !!payload.enabled
+							&& String(savedProfile.subscribe_mode || "") == String(payload.subscribe_mode || "");
+					}
+				}
+			}
+			savedProfile = find_subscription_profile_by_url(payload.url, "");
+			return !!savedProfile
+				&& String((savedProfile.name || "")) == String(payload.name || "")
+				&& subscription_profile_is_enabled(savedProfile) === !!payload.enabled
+				&& String(savedProfile.subscribe_mode || "") == String(payload.subscribe_mode || "");
+		}, function(found) {
+			if (!found) {
+				layer.msg("保存订阅配置失败，请刷新页面后重试");
+				return;
+			}
 			render_subscription_manager();
 			if (subscribeProfileEditorLayerIndex !== null) {
 				layer.close(subscribeProfileEditorLayerIndex);
 				subscribeProfileEditorLayerIndex = null;
 			}
-			if (syncAfter) {
-				var targetId = payload.id || "";
-				if (!targetId) {
-					for (var i = 0; i < subscribeProfilesState.length; i++) {
-						if (subscribeProfilesState[i].url == payload.url && subscribeProfilesState[i].name == payload.name) {
-							targetId = subscribeProfilesState[i].id;
-							break;
-						}
-					}
-				}
-				sync_subscription_profiles(targetId);
-			} else if (typeof layer != "undefined" && layer.msg) {
+			if (typeof layer != "undefined" && layer.msg) {
 				layer.msg("订阅配置已保存");
 			}
 		});
@@ -4559,7 +4790,14 @@ function delete_subscription_profile(profileId) {
 				layer.msg("删除订阅配置失败");
 				return;
 			}
-			load_subscription_profiles(function() {
+			wait_subscription_profiles_until(function(items) {
+				for (var i = 0; i < items.length; i++) {
+					if (String((items[i] || {}).id || "") == String(profileId || "")) {
+						return false;
+					}
+				}
+				return true;
+			}, function() {
 				render_subscription_manager();
 			});
 		});
