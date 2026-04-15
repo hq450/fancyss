@@ -339,6 +339,50 @@ subprof_has_profiles() {
 	[ -n "$(subprof_list_profile_ids | sed -n '1p')" ]
 }
 
+subprof_count_profile_nodes_fast() {
+	local profile_id="$1"
+	local source_scope="$2"
+	local node_tool=""
+	local jq_bin=""
+	local count=""
+
+	[ -n "${profile_id}" ] || return 1
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || return 1
+	jq_bin="$(subprof_jq_bin)" || return 1
+	count="$(
+		"${node_tool}" stat --source subscribe --profile-id "${profile_id}" --format json 2>/dev/null \
+			| "${jq_bin}" -r '.total // empty' 2>/dev/null \
+			| sed -n '1p'
+	)"
+	printf '%s' "${count}" | grep -Eq '^[0-9]+$' || return 1
+	if [ "${count}" -gt 0 ] 2>/dev/null || [ -z "${source_scope}" ]; then
+		printf '%s\n' "${count}"
+		return 0
+	fi
+	return 1
+}
+
+subprof_count_profile_nodes_fallback() {
+	local profile_id="$1"
+	local source_scope="$2"
+	local node_id=""
+	local node_profile_id=""
+	local node_scope=""
+
+	fss_list_node_ids | sed '/^$/d' | while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		node_profile_id="$(fss_get_node_profile_id_by_id "${node_id}" 2>/dev/null)" || node_profile_id=""
+		if [ -n "${node_profile_id}" ]; then
+			[ "${node_profile_id}" = "${profile_id}" ] && echo 1
+			continue
+		fi
+		[ -n "${source_scope}" ] || continue
+		node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)" || node_scope=""
+		[ "${node_scope}" = "${source_scope}" ] && echo 1
+	done | wc -l | tr -d ' '
+}
+
 subprof_merge_profile_and_state() {
 	local profile_id="$1"
 	local profile_file=""
@@ -348,9 +392,6 @@ subprof_merge_profile_and_state() {
 	local last_url_hash=""
 	local last_group=""
 	local source_scope=""
-	local node_id=""
-	local node_profile_id=""
-	local node_scope=""
 
 	[ -n "${profile_id}" ] || return 1
 	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
@@ -366,30 +407,8 @@ subprof_merge_profile_and_state() {
 		source_scope="${airport_identity}"
 		[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
 	fi
-	node_count="$(
-		fss_list_node_ids | sed '/^$/d' | while IFS= read -r node_id
-		do
-			[ -n "${node_id}" ] || continue
-			node_profile_id="$(fss_get_node_profile_id_by_id "${node_id}" 2>/dev/null)" || node_profile_id=""
-			if [ -n "${node_profile_id}" ]; then
-				[ "${node_profile_id}" = "${profile_id}" ] && echo 1
-				continue
-			fi
-			[ -n "${source_scope}" ] || continue
-			node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)" || node_scope=""
-			[ "${node_scope}" = "${source_scope}" ] && echo 1
-		done | wc -l | tr -d ' '
-	)"
-	if [ -z "${node_count}" ] && [ -n "${source_scope}" ]; then
-		node_count="$(
-			fss_list_node_ids | sed '/^$/d' | while IFS= read -r node_id
-			do
-				[ -n "${node_id}" ] || continue
-				node_scope="$(fss_get_node_source_scope_by_id "${node_id}" 2>/dev/null)" || node_scope=""
-				[ "${node_scope}" = "${source_scope}" ] && echo 1
-			done | wc -l | tr -d ' '
-		)"
-	fi
+	node_count="$(subprof_count_profile_nodes_fast "${profile_id}" "${source_scope}" 2>/dev/null)" || node_count=""
+	[ -n "${node_count}" ] || node_count="$(subprof_count_profile_nodes_fallback "${profile_id}" "${source_scope}" 2>/dev/null)"
 	[ -n "${node_count}" ] || node_count="0"
 	"$(subprof_jq_bin)" -cn \
 		--slurpfile profile "${profile_file}" \

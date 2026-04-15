@@ -4520,7 +4520,7 @@ function wait_subscription_profiles_until(checkFn, cb, attempt) {
 	attempt = attempt || 0;
 	fetch_subscription_profiles_file(function(fetchOk, items) {
 		var matched = typeof checkFn === "function" ? !!checkFn(items || []) : !!fetchOk;
-		if (matched || attempt >= 12) {
+		if (matched || attempt >= 30) {
 			if (typeof cb === "function") {
 				cb(matched, items || []);
 			}
@@ -4528,7 +4528,7 @@ function wait_subscription_profiles_until(checkFn, cb, attempt) {
 		}
 		setTimeout(function() {
 			wait_subscription_profiles_until(checkFn, cb, attempt + 1);
-		}, 250);
+		}, 400);
 	});
 }
 function handle_subscription_manager_tab(tabKey) {
