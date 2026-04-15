@@ -1502,6 +1502,11 @@ install_now(){
 		rm -f /tmp/sub_profile_migrate.count >/dev/null 2>&1
 	fi
 
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] && [ -x "${DIR}/scripts/ss_node_profile_reconcile.sh" ]; then
+		echo_date "尝试为旧订阅节点补齐 _profile_id 绑定..."
+		sh "${DIR}/scripts/ss_node_profile_reconcile.sh" >/tmp/upload/ss_node_profile_reconcile.log 2>&1 || true
+	fi
+
 	if [ "${FORCE_LEGACY_CACHE_RESET}" = "1" ];then
 		echo_date "检测到旧版 fancyss（${OLD_VER} < 3.6.0），强制清理节点配置缓存和 webtest 缓存..."
 		invalidate_runtime_caches_after_install

@@ -1470,6 +1470,7 @@ sub_try_parse_uri_lines_with_tool(){
 	[ -n "${SUB_SOURCE_URL_HASH}" ] && set -- "$@" --source-url-hash "${SUB_SOURCE_URL_HASH}"
 	[ -n "${SUB_AIRPORT_IDENTITY}" ] && set -- "$@" --airport-identity "${SUB_AIRPORT_IDENTITY}"
 	[ -n "${SUB_SOURCE_SCOPE}" ] && set -- "$@" --source-scope "${SUB_SOURCE_SCOPE}"
+	[ -n "${SUB_ACTIVE_PROFILE_ID}" ] && set -- "$@" --profile-id "${SUB_ACTIVE_PROFILE_ID}"
 	[ -n "${reuse_ids_from}" ] && set -- "$@" --reuse-ids-from "${reuse_ids_from}"
 	[ "${tool_can_filter}" = "1" ] && [ -n "${KEY_WORDS_1}" ] && set -- "$@" --exclude-pattern "${KEY_WORDS_1}"
 	[ "${tool_can_filter}" = "1" ] && [ -n "${KEY_WORDS_2}" ] && set -- "$@" --include-pattern "${KEY_WORDS_2}"
@@ -4293,6 +4294,7 @@ json_write_object(){
 	local airport_identity="local"
 	local source_scope="local"
 	local source_url_hash=""
+	local profile_id=""
 	object_json=$(echo $NODE_DATA | sed '$ s/,$/}/g')
 	case "${output_file}" in
 	*/online_*|*/local_*)
@@ -4300,10 +4302,11 @@ json_write_object(){
 		airport_identity="${SUB_AIRPORT_IDENTITY}"
 		source_scope="${SUB_SOURCE_SCOPE}"
 		source_url_hash="${SUB_SOURCE_URL_HASH}"
+		profile_id="${SUB_ACTIVE_PROFILE_ID}"
 		;;
 	esac
 	if type fss_enrich_node_identity_json >/dev/null 2>&1;then
-		object_json=$(fss_enrich_node_identity_json "${object_json}" "${airport_identity}" "${source_scope}" "${source_url_hash}" "${source_type}") || return 1
+		object_json=$(fss_enrich_node_identity_json "${object_json}" "${airport_identity}" "${source_scope}" "${source_url_hash}" "${source_type}" "${profile_id}") || return 1
 	fi
 	printf '%s\n' "${object_json}" >> "${output_file}"
 }

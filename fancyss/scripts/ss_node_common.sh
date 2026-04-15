@@ -524,9 +524,11 @@ fss_enrich_node_identity_json() {
 	local explicit_scope="$3"
 	local explicit_url_hash="$4"
 	local explicit_source="$5"
+	local explicit_profile_id="$6"
 	local source=""
 	local raw_name=""
 	local group_value=""
+	local profile_id=""
 	local airport_identity=""
 	local source_scope=""
 	local source_url_hash=""
@@ -542,6 +544,8 @@ fss_enrich_node_identity_json() {
 	[ -n "${source}" ] || source="manual"
 	raw_name=$(printf '%s' "${node_json}" | jq -r '.name // empty' 2>/dev/null)
 	group_value=$(printf '%s' "${node_json}" | jq -r '.group // empty' 2>/dev/null)
+	profile_id=$(printf '%s' "${node_json}" | jq -r '._profile_id // empty' 2>/dev/null)
+	[ -n "${explicit_profile_id}" ] && profile_id="${explicit_profile_id}"
 	source_url_hash=$(printf '%s' "${node_json}" | jq -r '._source_url_hash // empty' 2>/dev/null)
 	[ -n "${explicit_url_hash}" ] && source_url_hash="${explicit_url_hash}"
 	airport_identity=$(printf '%s' "${node_json}" | jq -r '._airport_identity // empty' 2>/dev/null)
@@ -590,6 +594,7 @@ fss_enrich_node_identity_json() {
 
 	printf '%s' "${node_json}" | jq -c \
 		--arg source "${source}" \
+		--arg profile_id "${profile_id}" \
 		--arg airport_identity "${airport_identity}" \
 		--arg source_scope "${source_scope}" \
 		--arg source_url_hash "${source_url_hash}" \
@@ -598,6 +603,7 @@ fss_enrich_node_identity_json() {
 		'
 		. + {
 			"_source": (if (._source // "") == "" then $source else ._source end),
+			"_profile_id": $profile_id,
 			"_airport_identity": $airport_identity,
 			"_source_scope": $source_scope,
 			"_source_url_hash": $source_url_hash,
@@ -616,6 +622,7 @@ fss_enrich_node_identity_file() {
 	local explicit_scope="$4"
 	local explicit_url_hash="$5"
 	local explicit_source="$6"
+	local explicit_profile_id="$7"
 	local line=""
 
 	[ -f "${input_file}" ] || return 1
@@ -624,7 +631,7 @@ fss_enrich_node_identity_file() {
 	while IFS= read -r line || [ -n "${line}" ]
 	do
 		[ -n "${line}" ] || continue
-		fss_enrich_node_identity_json "${line}" "${explicit_airport}" "${explicit_scope}" "${explicit_url_hash}" "${explicit_source}" >> "${output_file}" || return 1
+		fss_enrich_node_identity_json "${line}" "${explicit_airport}" "${explicit_scope}" "${explicit_url_hash}" "${explicit_source}" "${explicit_profile_id}" >> "${output_file}" || return 1
 	done < "${input_file}"
 }
 
