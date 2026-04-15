@@ -257,7 +257,7 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
 .node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
-.node-card{position:relative;display:flex;flex-direction:column;gap:3px;min-height:70px;padding:7px 9px 6px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
+.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:48px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
 .node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 14px 24px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
 .node-card.is-current{border-color:rgba(41,179,111,0.5);background:linear-gradient(180deg,rgba(14,39,27,0.98),rgba(10,22,17,0.96));box-shadow:0 14px 24px rgba(0,0,0,0.22),0 0 0 1px rgba(41,179,111,0.06),inset 0 1px 0 rgba(255,255,255,0.04);}
 .node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;padding-right:6px;}
@@ -8034,7 +8034,7 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 						html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
 					}
 					html += '<div class="node-card-actions">';
-					html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:22px;height:22px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
+					html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:18px;height:18px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
 					html += '</div>';
 					html += '</div>';
 					html += '</div>';
