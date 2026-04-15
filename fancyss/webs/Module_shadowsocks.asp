@@ -419,6 +419,7 @@ var shuntUptimeBaseSeconds = -1;
 var shuntUptimeBaseClientMs = 0;
 var subscribeProfilesState = [];
 var subscribeProfileMap = {};
+var subscribeProfileScopeMap = {};
 var subscribeManagerLayerIndex = null;
 var subscribeProfileEditorLayerIndex = null;
 var subscribeManagerActiveTab = "profiles";
@@ -544,9 +545,11 @@ function get_fss_node_data(cb) {
 function refresh_fss_bundle(cb) {
 	get_fss_data(function() {
 		get_fss_node_data(function() {
-			if (typeof cb === "function") {
-				cb(db_fss);
-			}
+			fetch_subscription_profiles_file(function() {
+				if (typeof cb === "function") {
+					cb(db_fss);
+				}
+			});
 		});
 	});
 }
@@ -1052,6 +1055,53 @@ function get_fss_node_ids() {
 	}).map(function(key) {
 		return key.replace("fss_node_", "");
 	});
+}
+function slugify_subscription_profile_identity(raw, fallback) {
+	var slug = String(raw || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+	return slug || String(fallback || "sub");
+}
+function build_subscription_profile_scope(item) {
+	item = item || {};
+	var lastGroup = $.trim(String(item.last_group || ""));
+	var lastUrlHash = $.trim(String(item.last_url_hash || ""));
+	var scope = "";
+	if (!lastGroup) {
+		return "";
+	}
+	scope = slugify_subscription_profile_identity(lastGroup, "sub");
+	if (lastUrlHash) {
+		scope += "_" + lastUrlHash;
+	}
+	return scope;
+}
+function get_subscription_profile_for_node(raw) {
+	var profileId = "";
+	var sourceScope = "";
+	if (!raw || String(raw["_source"] || "") != "subscribe") {
+		return null;
+	}
+	profileId = String(raw["_profile_id"] || "");
+	if (profileId && subscribeProfileMap[profileId]) {
+		return subscribeProfileMap[profileId];
+	}
+	sourceScope = String(raw["_source_scope"] || "");
+	if (sourceScope && subscribeProfileScopeMap[sourceScope]) {
+		return subscribeProfileScopeMap[sourceScope];
+	}
+	return null;
+}
+function schema2_node_is_effective_for_ui(raw) {
+	var profile = get_subscription_profile_for_node(raw);
+	if (!raw) {
+		return false;
+	}
+	if (String(raw["_source"] || "") != "subscribe") {
+		return true;
+	}
+	if (!profile) {
+		return true;
+	}
+	return subscription_profile_is_enabled(profile);
 }
 function get_first_node_id() {
 	return ss_nodes.length ? String(ss_nodes[0]) : "";
@@ -4151,6 +4201,7 @@ function set_subscription_profiles_state(payload) {
 	payload = normalize_subscription_profiles_payload(payload);
 	subscribeProfilesState = [];
 	subscribeProfileMap = {};
+	subscribeProfileScopeMap = {};
 	for (var i = 0; i < payload.items.length; i++) {
 		var item = payload.items[i] || {};
 		if (typeof item.enabled == "undefined" || item.enabled === null) {
@@ -4164,6 +4215,10 @@ function set_subscription_profiles_state(payload) {
 		subscribeProfilesState.push(item);
 		if (item.id) {
 			subscribeProfileMap[item.id] = item;
+		}
+		var scope = build_subscription_profile_scope(item);
+		if (scope) {
+			subscribeProfileScopeMap[scope] = item;
 		}
 	}
 }
@@ -4765,6 +4820,7 @@ function save_subscription_profile_from_editor(syncAfter) {
 				layer.msg("保存订阅配置失败，请刷新页面后重试");
 				return;
 			}
+			refresh_table();
 			render_subscription_manager();
 			if (subscribeProfileEditorLayerIndex !== null) {
 				layer.close(subscribeProfileEditorLayerIndex);
@@ -4798,6 +4854,7 @@ function delete_subscription_profile(profileId) {
 				}
 				return true;
 			}, function() {
+				refresh_table();
 				render_subscription_manager();
 			});
 		});
@@ -7461,23 +7518,28 @@ function refresh_node_panel(cb) {
 }
 function generate_node_info() {
 	if (get_node_storage_schema() == 2) {
-		ss_nodes = get_fss_node_ids();
-		node_nu = ss_nodes.length;
-		node_max = ss_nodes.length > 0 ? Math.max.apply(null, ss_nodes.map(function(item) { return parseInt(item, 10); })) : 0;
-		node_idx = $.inArray(get_saved_current_node_id(), ss_nodes) + 1;
+		var allNodeIds = get_fss_node_ids();
+		ss_nodes = [];
 		confs = {};
 		fss_nodes_raw = {};
-		for (var j = 0; j < ss_nodes.length; j++) {
-			var idx = ss_nodes[j];
+		for (var j = 0; j < allNodeIds.length; j++) {
+			var idx = allNodeIds[j];
 			var raw = get_fss_raw_node(idx);
 			if (!raw) {
 				continue;
 			}
+			if (!schema2_node_is_effective_for_ui(raw)) {
+				continue;
+			}
+			ss_nodes.push(String(idx));
 			var obj = normalize_fss_node_for_ui(idx, raw);
 			if (obj != null) {
 				confs[idx] = obj;
 			}
 		}
+		node_nu = ss_nodes.length;
+		node_max = ss_nodes.length > 0 ? Math.max.apply(null, ss_nodes.map(function(item) { return parseInt(item, 10); })) : 0;
+		node_idx = $.inArray(get_saved_current_node_id(), ss_nodes) + 1;
 		return;
 	}
 	// 统计节点信息
