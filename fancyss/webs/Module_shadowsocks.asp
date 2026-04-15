@@ -239,26 +239,35 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .submgr-empty-ad{display:block;margin-top:10px;padding:12px 14px;border-radius:5px;background:linear-gradient(135deg,rgba(255,140,0,0.22),rgba(255,62,62,0.2));border:1px solid rgba(255,140,0,0.35);color:#ffd166 !important;font-weight:700;line-height:1.8;text-decoration:none;box-shadow:0 12px 26px rgba(255,94,0,0.12);}
 .submgr-empty-ad strong{color:#ff7b00;}
 .node-card-shell{width:750px;overflow:hidden;}
-.node-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-content:start;padding:2px 10px 4px 2px;box-sizing:border-box;}
+.node-card-sections{display:flex;flex-direction:column;gap:10px;padding:8px 10px 4px 2px;box-sizing:border-box;}
+.node-card-section{display:flex;flex-direction:column;gap:6px;}
+.node-card-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:30px;padding:0 12px;border-radius:10px;border:1px solid rgba(74,108,138,0.24);background:linear-gradient(180deg,rgba(24,34,48,0.96),rgba(16,24,34,0.94));box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);cursor:pointer;user-select:none;transition:border-color .18s ease,background .18s ease,transform .18s ease;}
+.node-card-section-head:hover{border-color:rgba(70,160,255,0.36);background:linear-gradient(180deg,rgba(28,40,56,0.98),rgba(18,28,40,0.96));transform:translateY(-1px);}
+.node-card-section-title{font-size:12px;line-height:1.3;color:#f3f7fb;font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.node-card-section-meta{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.node-card-section-count{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:rgba(70,160,255,0.12);color:#9fc7ff;font-size:10px;font-weight:700;}
+.node-card-section-arrow{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,0.06);color:#d7e4f2;font-size:11px;font-weight:700;transition:transform .18s ease,background .18s ease;}
+.node-card-section.is-collapsed .node-card-section-arrow{transform:rotate(-90deg);}
+.node-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-content:start;padding:0;box-sizing:border-box;}
 .node-card-grid::-webkit-scrollbar{width:8px;height:8px;}
 .node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
 .node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
-.node-card{position:relative;display:flex;flex-direction:column;gap:8px;min-height:94px;padding:10px 12px;border-radius:10px;border:1px solid rgba(74,108,138,0.24);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:hidden;}
+.node-card{position:relative;display:flex;flex-direction:column;gap:4px;min-height:76px;padding:8px 10px 7px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
 .node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 14px 24px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
 .node-card.is-current{border-color:rgba(41,179,111,0.5);background:linear-gradient(180deg,rgba(14,39,27,0.98),rgba(10,22,17,0.96));box-shadow:0 14px 24px rgba(0,0,0,0.22),0 0 0 1px rgba(41,179,111,0.06),inset 0 1px 0 rgba(255,255,255,0.04);}
 .node-card.is-current:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#38d27a,#159957);}
-.node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-right:18px;}
+.node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;padding-right:8px;}
 .node-card-status{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
-.node-card-dot{width:8px;height:8px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 8px;box-shadow:0 0 8px rgba(110,168,254,0.45);}
+.node-card-dot{width:6px;height:6px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 6px;box-shadow:0 0 6px rgba(110,168,254,0.45);}
 .node-card.is-current .node-card-dot{background:#32c975;box-shadow:0 0 10px rgba(50,201,117,0.55);}
-.node-card-name{font-size:14px;line-height:1.34;color:#fff;font-weight:700;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px;}
-.node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;}
-.node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:11px;line-height:1;font-weight:700;}
+.node-card-name{font-size:12px;line-height:1.25;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-height:auto;max-width:100%;}
+.node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;}
+.node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:10px;line-height:1;font-weight:700;white-space:nowrap;}
 .node-card-type.current{background:rgba(41,179,111,0.18);border-color:rgba(41,179,111,0.24);color:#d7ffe8;}
-.node-card-latency{display:inline-flex;align-items:center;justify-content:center;min-width:64px;max-width:96px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
-.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:26px;}
-.node-card-delete{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:13px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.86);box-shadow:0 8px 16px rgba(159,38,38,0.28);transition:all .18s ease;z-index:3;}
+.node-card-latency{display:inline-flex;align-items:center;justify-content:center;min-width:48px;max-width:72px;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:10px;line-height:1;}
+.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:22px;}
+.node-card-delete{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:12px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.86);box-shadow:0 8px 16px rgba(159,38,38,0.28);transition:all .18s ease;z-index:3;}
 .node-card:hover .node-card-delete,.node-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
 .node-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.4);}
 .node-card-empty{padding:26px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
@@ -414,6 +423,7 @@ var node_auto_migrate_layer = null;
 var prepared_route_files = {};
 var pending_route_callbacks = {};
 var referenceNoticeShownTs = "";
+var nodeCardCollapseState = {};
 var shuntRulesState = [];
 var shuntCustomPresetsState = [];
 var shuntPresetMap = {};
@@ -7894,8 +7904,43 @@ function get_node_display_source_label(c) {
 	}
 	return "本地节点";
 }
-function node_card_is_current(nodeId) {
-	return !!(E("ss_basic_enable") && E("ss_basic_enable").checked && String(get_saved_current_node_id() || "") == String(nodeId || ""));
+function get_node_card_section_key(label) {
+	return encodeURIComponent(String(label || ""));
+}
+function get_node_card_sections() {
+	var sections = [];
+	var sectionMap = {};
+	var label = "";
+	for (var i = 0; i < ss_nodes.length; i++) {
+		var nodeId = ss_nodes[i];
+		var conf = confs[nodeId];
+		if (!conf) {
+			continue;
+		}
+		label = get_node_display_source_label(conf);
+		if (!sectionMap[label]) {
+			sectionMap[label] = {
+				label: label,
+				key: get_node_card_section_key(label),
+				nodes: []
+			};
+			sections.push(sectionMap[label]);
+		}
+		sectionMap[label].nodes.push({
+			conf: conf,
+			order: i + 1
+		});
+	}
+	return sections;
+}
+function toggle_node_card_section(sectionKey) {
+	sectionKey = String(sectionKey || "");
+	if (!sectionKey) {
+		return false;
+	}
+	nodeCardCollapseState[sectionKey] = nodeCardCollapseState[sectionKey] ? 0 : 1;
+	refresh_html();
+	return false;
 }
 function sync_node_card_current_state(nodeId) {
 	var currentId = String(nodeId || "");
@@ -7951,33 +7996,52 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 	var html = '';
 	var currentNodeId = String(get_saved_current_node_id() || "");
 	var currentEnabled = !!(E("ss_basic_enable") && E("ss_basic_enable").checked);
+	var sections = get_node_card_sections();
 	html += '<div class="nodeTable node-card-shell" style="height:' + nodeH + 'px;">';
-	html += '<div id="ss_node_list_table_main" class="node-card-grid" style="height:' + nodeH + 'px;overflow:hidden scroll;">';
+	html += '<div id="ss_node_list_table_main" class="node-card-sections" style="height:' + nodeH + 'px;overflow:hidden scroll;">';
 	if (!node_nu) {
 		html += '<div class="node-card-empty">当前没有可显示的节点。<br />点击下方“添加节点”开始创建。</div>';
 	} else {
-		for (var i = 0; i < ss_nodes.length; i++) {
-			var c = confs[ss_nodes[i]];
-			var isCurrent = currentEnabled && String(currentNodeId) == String(c["node"]);
-			html += '<div class="node-card' + (isCurrent ? ' is-current' : '') + '" id="node_' + c["node"] + '" onclick="edit_conf_table(\'' + c["node"] + '\')">';
-			html += '<a href="javascript:void(0);" class="node-card-delete" id="td_node_' + c["node"] + '" onclick="event.stopPropagation();remove_conf_table(this);return false;" title="删除节点">&times;</a>';
-			html += '<div class="node-card-head">';
-			html += '<div class="node-card-status">';
-			html += '<span class="node-card-dot"></span>';
-			html += '<div class="node-card-name" title="' + htmlEscape(c["group"] || "") + '&#10;' + htmlEscape(c["name"] || "") + '">' + htmlEscape(c["name"] || "") + '</div>';
+		for (var s = 0; s < sections.length; s++) {
+			var section = sections[s];
+			var collapsed = nodeCardCollapseState[section.key] == 1;
+			html += '<div class="node-card-section' + (collapsed ? ' is-collapsed' : '') + '">';
+			html += '<div class="node-card-section-head" onclick="toggle_node_card_section(\'' + section.key + '\')">';
+			html += '<div class="node-card-section-title">' + htmlEscape(section.label) + '</div>';
+			html += '<div class="node-card-section-meta">';
+			html += '<span class="node-card-section-count">' + section.nodes.length + '</span>';
+			html += '<span class="node-card-section-arrow">▾</span>';
 			html += '</div>';
 			html += '</div>';
-			html += '<div class="node-card-subrow">';
-			html += '<span class="node-card-type' + (isCurrent ? ' current' : '') + '">' + htmlEscape(get_node_display_type_label(c)) + (isCurrent ? ' · 当前' : '') + '</span>';
-			if (hasLatency) {
-				html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency"><span class="latency_val"></span></div>';
-			} else {
-				html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
+			if (!collapsed) {
+				html += '<div class="node-card-grid">';
+				for (var n = 0; n < section.nodes.length; n++) {
+					var entry = section.nodes[n];
+					var c = entry.conf;
+					var isCurrent = currentEnabled && String(currentNodeId) == String(c["node"]);
+					html += '<div class="node-card' + (isCurrent ? ' is-current' : '') + '" id="node_' + c["node"] + '" onclick="edit_conf_table(\'' + c["node"] + '\')">';
+					html += '<a href="javascript:void(0);" class="node-card-delete" id="td_node_' + c["node"] + '" onclick="event.stopPropagation();remove_conf_table(this);return false;" title="删除节点">&times;</a>';
+					html += '<div class="node-card-head">';
+					html += '<div class="node-card-status">';
+					html += '<span class="node-card-dot"></span>';
+					html += '<div class="node-card-name" title="' + htmlEscape(c["group"] || "") + '&#10;' + htmlEscape(c["name"] || "") + '">' + htmlEscape(c["name"] || "") + '</div>';
+					html += '</div>';
+					html += '</div>';
+					html += '<div class="node-card-subrow">';
+					html += '<span class="node-card-type' + (isCurrent ? ' current' : '') + '">' + htmlEscape(get_node_display_type_label(c)) + '</span>';
+					if (hasLatency) {
+						html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency"><span class="latency_val"></span></div>';
+					} else {
+						html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
+					}
+					html += '<div class="node-card-actions">';
+					html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:22px;height:22px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
+					html += '</div>';
+					html += '</div>';
+					html += '</div>';
+				}
+				html += '</div>';
 			}
-			html += '<div class="node-card-actions">';
-			html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:22px;height:22px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
-			html += '</div>';
-			html += '</div>';
 			html += '</div>';
 		}
 	}
@@ -8013,11 +8077,21 @@ function refresh_html() {
 	var hasLatency = node_nu && db_ss["ss_basic_latency_val"] != "0";
 	if (cardMode) {
 		var cardsPerRow = $(window).width() <= 640 ? 2 : ($(window).width() <= 900 ? 3 : 4);
-		var visibleCards = Math.max(1, Math.min(node_nu || 1, nodeN));
+		var sections = get_node_card_sections();
+		var headerHeight = 36;
+		var sectionGap = 10;
+		var expandedCards = 0;
+		for (var si = 0; si < sections.length; si++) {
+			if (nodeCardCollapseState[sections[si].key] == 1) {
+				continue;
+			}
+			expandedCards += sections[si].nodes.length;
+		}
+		var visibleCards = Math.max(1, Math.min(expandedCards || node_nu || 1, nodeN));
 		var visibleRows = Math.max(1, Math.ceil(visibleCards / cardsPerRow));
-		var cardHeight = 98;
-		var cardGap = 10;
-		nodeH = visibleRows * cardHeight + ((visibleRows - 1) * cardGap) + 8;
+		var cardHeight = 82;
+		var cardGap = 8;
+		nodeH = (sections.length * headerHeight) + (Math.max(0, sections.length - 1) * sectionGap) + (visibleRows * cardHeight) + (Math.max(0, visibleRows - 1) * cardGap) + 12;
 		if (node_nu > visibleCards) {
 			$("#ss_list_table").attr("style", "height:" + (nodeH + 56) + "px");
 		} else {
@@ -9452,7 +9526,7 @@ function test_latency_now(test_flag) {
 			batch_test_running = true;
 			batch_stop_pending = false;
 			var startFollow = function() {
-				$(".latency .latency_val").html("waiting...");
+				$(".latency .latency_val").html("waiting");
 				$("#ss_wts_show").html("<em>【测速中...】</em>");
 				$("#dropdown").width(240);
 				update_latency_action_links();
@@ -9516,7 +9590,7 @@ function test_latency_now(test_flag) {
 					batch_test_running = true;
 					batch_stop_pending = false;
 					refresh_table(function() {
-						$(".latency .latency_val").html("waiting...");
+						$(".latency .latency_val").html("waiting");
 						$("#ss_wts_show").html("<em>【测速中...】</em>");
 						$("#dropdown").width(240);
 						update_latency_action_links();
@@ -9658,7 +9732,7 @@ function test_latency_single(node){
 	single_test_wait[node] = true;
 	single_test_running = true;
 	single_test_node = node;
-	write_webtest([[String(node), "waiting..."]]);
+	write_webtest([[String(node), "waiting"]]);
 	disable_latency_buttons(node);
 	if(ws_flag == 1){
 		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_single_test " + String(node), function() {
@@ -9770,7 +9844,7 @@ function latency_test(action) {
 				if(result.indexOf("ok1") === 0 || result.indexOf("ok4") === 0 || result.indexOf("ok5") === 0){
 					batch_test_running = true;
 					batch_stop_pending = false;
-					$(".latency .latency_val").html("waiting...");
+					$(".latency .latency_val").html("waiting");
 					if(result.indexOf("ok5") === 0){
 						$("#ss_wts_show").html("<em>【节点配置缓存重建中...】</em>");
 						$("#dropdown").width(320);
@@ -9993,19 +10067,19 @@ function write_webtest(ps){
 			continue;
 		}
 		if(typeof lag === "string"){
-			lag = lag.replace(/\.{3,}/, "...");
+			lag = lag.replace(/\.{3,}/, "");
 			if(lag.indexOf("testing") === 0){
-				lag = "testing...";
+				lag = "testing";
 			}else if(lag.indexOf("waiting") === 0){
-				lag = "waiting...";
+				lag = "waiting";
 			}else if(lag.indexOf("loading") === 0){
-				lag = "loading...";
+				lag = "loading";
 			}else if(lag.indexOf("booting") === 0){
-				lag = "booting...";
+				lag = "booting";
 			}else if(lag.indexOf("queued") === 0){
-				lag = "queued...";
+				lag = "queued";
 			}else if(lag.indexOf("warming") === 0){
-				lag = "warming...";
+				lag = "warming";
 			}
 		}
 		var cellElem = document.getElementById('ss_node_lt_' + nu);
@@ -10037,18 +10111,18 @@ function write_webtest(ps){
 				test_result = '<font color="#FF0000">timeout!</font>';
 			}else if(lag == "ns"){
 				test_result = '<font color="#FF0000">不支持!</font>';
-			}else if(lag == "waiting..."){
-				test_result = '<font color="#999999">waiting...</font>';
-			}else if(lag == "loading..."){
-				test_result = '<font color="#66CCFF">loading...</font>';
-			}else if(lag == "booting..."){
-				test_result = '<font color="#FFAA33">booting...</font>';
-			}else if(lag == "queued..."){
-				test_result = '<font color="#CC99FF">queued...</font>';
-			}else if(lag == "testing..."){
-				test_result = '<font color="#00FFCC">testing...</font>';
-			}else if(lag == "warming..."){
-				test_result = '<font color="#00FFCC">warming...</font>';
+			}else if(lag == "waiting"){
+				test_result = '<font color="#999999">waiting</font>';
+			}else if(lag == "loading"){
+				test_result = '<font color="#66CCFF">loading</font>';
+			}else if(lag == "booting"){
+				test_result = '<font color="#FFAA33">booting</font>';
+			}else if(lag == "queued"){
+				test_result = '<font color="#CC99FF">queued</font>';
+			}else if(lag == "testing"){
+				test_result = '<font color="#00FFCC">testing</font>';
+			}else if(lag == "warming"){
+				test_result = '<font color="#00FFCC">warming</font>';
 			}else if(lag == "stopped"){
 				test_result = '<font color="#999999">stopped</font>';
 			}else if(lag == "canceled"){
