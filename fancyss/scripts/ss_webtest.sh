@@ -4080,6 +4080,7 @@ manual_webtest)
 	rm -f "${WT_WEBTEST_BACKUP}"
 	dbus remove ss_basic_webtest_ts
 	wt_http_response $1
+	sh /koolshare/scripts/ss_webtest.sh web_webtest >/dev/null 2>&1 &
 	;;
 close_latency_test)
 	wt_http_response $1

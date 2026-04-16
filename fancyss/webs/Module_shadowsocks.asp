@@ -268,7 +268,10 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:auto;}
 .node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:9px;line-height:1;font-weight:700;white-space:nowrap;}
 .node-card-type.current{background:rgba(41,179,111,0.18);border-color:rgba(41,179,111,0.24);color:#d7ffe8;}
-.node-card-latency{display:inline-flex;align-items:center;justify-content:center;min-width:42px;max-width:58px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:9px;line-height:1;}
+.node-card-latency{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:42px;max-width:58px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:9px;line-height:1;}
+.node-card-latency.latency_btn{cursor:pointer;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;}
+.node-card-latency.latency_btn:hover{border-color:rgba(70,160,255,0.32);background:rgba(70,160,255,0.09);box-shadow:0 0 0 1px rgba(70,160,255,0.08);}
+.node-card-latency-icon{width:10px;height:10px;flex:0 0 10px;opacity:.88;pointer-events:none;}
 .node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:18px;}
 .node-card-delete{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:12px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.86);box-shadow:0 8px 16px rgba(159,38,38,0.28);transition:all .18s ease;z-index:3;}
 .node-card:hover .node-card-delete,.node-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
@@ -416,6 +419,8 @@ var single_test_node = null;
 var latencyVisualGuards = {};
 var singleLatencyVisualTimers = {};
 var batchLatencyVisualTimers = [];
+var singleLatencyPollingNode = null;
+var skipAutoLatencyTestOnce = false;
 var batch_test_running = false;
 var batch_stop_pending = false;
 var batch_ws_fallback_started = false;
@@ -8029,13 +8034,15 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 					html += '<div class="node-card-name" title="' + htmlEscape(c["group"] || "") + '&#10;' + htmlEscape(c["name"] || "") + '">' + htmlEscape(c["name"] || "") + '</div>';
 					html += '</div>';
 					html += '</div>';
-					html += '<div class="node-card-subrow">';
-					html += '<span class="node-card-type' + (isCurrent ? ' current' : '') + '">' + htmlEscape(get_node_display_type_label(c)) + '</span>';
-					if (hasLatency) {
-						html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency"><span class="latency_val"></span></div>';
-					} else {
-						html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
-					}
+						html += '<div class="node-card-subrow">';
+						html += '<span class="node-card-type' + (isCurrent ? ' current' : '') + '">' + htmlEscape(get_node_display_type_label(c)) + '</span>';
+						if (hasLatency) {
+							html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency latency_btn" data-node="' + c["node"] + '" title="点击测试此节点延迟" onclick="event.stopPropagation();test_latency_single(' + c["node"] + ');return false;">';
+							html += '<img class="node-card-latency-icon" src="/res/speed.png" alt="" />';
+							html += '<span class="latency_val"></span></div>';
+						} else {
+							html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
+						}
 					html += '<div class="node-card-actions">';
 					html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:18px;height:18px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
 					html += '</div>';
@@ -8099,13 +8106,11 @@ function refresh_html() {
 		} else {
 			$("#ss_list_table").removeAttr("style");
 		}
-		$('.nodeTable').remove();
-		$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
-		update_latency_action_links();
-		if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
-			latency_test(db_ss["ss_basic_latency_val"]);
-		}
-		select_default_node(2);
+			$('.nodeTable').remove();
+			$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
+			update_latency_action_links();
+			maybe_auto_latency_test();
+			select_default_node(2);
 		if(node_nu){
 			const dropdownBtn = E("dropdownbtn");
 			const dropdownMenu = E("dropdown");
@@ -8303,9 +8308,7 @@ function refresh_html() {
 		//ss_node_sel();
 	}
 	// ask or not ask for webtest
-	if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
-		latency_test(db_ss["ss_basic_latency_val"]);
-	}
+		maybe_auto_latency_test();
 	// select default node
 	select_default_node(2);
 	// make row moveable
@@ -9211,19 +9214,63 @@ function close_latency_ws(resetState) {
 		batch_ws_watchdog_timer = null;
 	}
 }
-function close_single_latency_ws() {
+function close_single_latency_ws(resetVisual) {
 	if (singleLatencySocket) {
 		try {
 			singleLatencySocket.close();
 		} catch (e) {}
 		singleLatencySocket = null;
 	}
-	if (single_test_node) {
+	if (resetVisual !== false && single_test_node) {
 		clear_single_latency_visual(single_test_node);
 	}
 }
+function latency_visual_guard_active(nodeId) {
+	nodeId = String(nodeId || "");
+	if (!nodeId) {
+		return false;
+	}
+	return (parseInt(latencyVisualGuards[nodeId] || 0, 10) || 0) > Date.now();
+}
+function get_latency_display_text(nodeId) {
+	var cellElem = document.getElementById('ss_node_lt_' + String(nodeId || ""));
+	var $cell = cellElem ? $(cellElem) : $();
+	var $val = $cell.length ? $cell.find(".latency_val") : null;
+	if ($val && $val.length) {
+		return $val.text().trim();
+	}
+	return $cell.length ? $cell.text().trim() : "";
+}
+function should_defer_latency_terminal(nodeId, value) {
+	if (!is_latency_terminal_state(value) || !latency_visual_guard_active(nodeId)) {
+		return false;
+	}
+	return is_latency_transient_state(get_latency_display_text(nodeId));
+}
+function get_latency_state_rank(value) {
+	value = String(value || "");
+	if (value.indexOf("waiting") === 0) {
+		return 1;
+	}
+	if (value.indexOf("loading") === 0) {
+		return 2;
+	}
+	if (value.indexOf("booting") === 0) {
+		return 3;
+	}
+	if (value.indexOf("queued") === 0) {
+		return 4;
+	}
+	if (value.indexOf("warming") === 0 || value.indexOf("testing") === 0) {
+		return 5;
+	}
+	if (is_latency_terminal_state(value)) {
+		return 99;
+	}
+	return 0;
+}
 function latency_table_is_fresh() {
-	var latencyCells = document.querySelectorAll('td.latency .latency_val').length;
+	var latencyCells = document.querySelectorAll('[id^="ss_node_lt_"] .latency_val').length;
 	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
 		return false;
 	}
@@ -9288,6 +9335,32 @@ function send_webtest_ws_command(command, onDone, onBusy, onError) {
 		}
 	};
 	return true;
+}
+function maybe_auto_latency_test() {
+	if (skipAutoLatencyTestOnce) {
+		skipAutoLatencyTestOnce = false;
+		return;
+	}
+	if (db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0") {
+		latency_test(db_ss["ss_basic_latency_val"]);
+	}
+}
+function ensure_single_latency_poll(node, delayMs) {
+	node = String(node || "");
+	delayMs = parseInt(delayMs || 0, 10) || 0;
+	if (!node) {
+		return;
+	}
+	setTimeout(function() {
+		if (!single_test_running || String(single_test_node || "") != node) {
+			return;
+		}
+		if (String(singleLatencyPollingNode || "") == node) {
+			return;
+		}
+		singleLatencyPollingNode = node;
+		get_latency_data_single(node, 0);
+	}, delayMs);
 }
 function update_latency_finish_time() {
 	$.ajax({
@@ -9511,7 +9584,7 @@ function start_latency_ws(action) {
 	if (ws_flag != 1){
 		return false;
 	}
-	close_latency_ws();
+	close_latency_ws(false);
 	batch_ws_fallback_started = false;
 	batch_ws_completed = false;
 	batch_ws_last_message_at = Date.now();
@@ -9565,27 +9638,33 @@ function start_single_latency_ws(node) {
 	if (ws_flag != 1){
 		return false;
 	}
-	close_single_latency_ws();
+	close_single_latency_ws(false);
 	singleLatencySocket = new WebSocket("ws://" + hostname + ":803/");
 	singleLatencySocket.onopen = function() {
 		try {
 			singleLatencySocket.send("follow_webtest");
 		} catch (ex) {
-			get_latency_data_single(node, 0);
+			ensure_single_latency_poll(node, 0);
 		}
 	};
 	singleLatencySocket.onerror = function() {
 		close_single_latency_ws();
-		get_latency_data_single(node, 0);
+		ensure_single_latency_poll(node, 0);
 	};
 	singleLatencySocket.onclose = function() {
 		singleLatencySocket = null;
 	};
 	singleLatencySocket.onmessage = function(event) {
 		const array = parse_webtest_lines(event.data);
+		if (array.some(function(item) { return item[0] == "refresh" && item[1] == "snapshot"; })) {
+			ensure_single_latency_poll(node, 0);
+		}
 		for (var i = 0; i < array.length; i++) {
 			var item = array[i];
 			if (item[0] != String(node)) continue;
+			if (should_defer_latency_terminal(node, item[1])) {
+				continue;
+			}
 			if(!is_latency_transient_state(item[1])){
 				single_test_wait[node] = false;
 				single_test_running = false;
@@ -9632,6 +9711,7 @@ function test_latency_now(test_flag) {
 			if(latency_table_is_fresh()){
 				startFollow();
 			}else{
+				skipAutoLatencyTestOnce = true;
 				refresh_table(startFollow);
 			}
 		}, null, function() {
@@ -9681,20 +9761,22 @@ function test_latency_now(test_flag) {
 						$("#dropdown").width(150);
 						update_latency_action_links();
 					});
-				}else if(test_flag == 2){
-					close_latency_ws();
-					close_latency_flag = 0;
-					batch_test_running = true;
-					batch_stop_pending = false;
-					refresh_table(function() {
-						$(".latency .latency_val").html("waiting");
-						start_batch_latency_visual();
-						$("#ss_wts_show").html("<em>【测速中...】</em>");
-						$("#dropdown").width(240);
-						update_latency_action_links();
-					});
+					}else if(test_flag == 2){
+						close_latency_ws();
+						close_latency_flag = 0;
+						batch_test_running = true;
+						batch_stop_pending = false;
+						skipAutoLatencyTestOnce = true;
+						refresh_table(function() {
+							$(".latency .latency_val").html("waiting");
+							start_batch_latency_visual();
+							$("#ss_wts_show").html("<em>【测速中...】</em>");
+							$("#dropdown").width(240);
+							update_latency_action_links();
+							get_latency_data(2);
+						});
+					}
 				}
-			}
 		}
 	});
 }
@@ -9836,6 +9918,7 @@ function test_latency_single(node){
 	if(ws_flag == 1){
 		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_single_test " + String(node), function() {
 			start_single_latency_ws(node);
+			ensure_single_latency_poll(node, 450);
 		}, function() {
 			if(cell.length){
 				cell.html("busy");
@@ -9981,6 +10064,7 @@ function latency_test(action) {
 }
 function get_latency_data_single(node, retry){
 	if(retry > 40){
+		singleLatencyPollingNode = null;
 		write_webtest([[String(node), "timeout"]]);
 		single_test_wait[node] = false;
 		single_test_running = false;
@@ -10004,25 +10088,33 @@ function get_latency_data_single(node, retry){
 					break;
 				}
 			}
-			if(!value){
+				if(!value){
+					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
+					return;
+				}
+				if(should_defer_latency_terminal(node, value)){
+					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 400);
+					return;
+				}
+				if(is_latency_transient_state(value)){
+					write_webtest([[String(node), value]]);
+					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
+				}else{
+					single_test_wait[node] = false;
+					single_test_running = false;
+					single_test_node = null;
+					singleLatencyPollingNode = null;
+					write_webtest([[String(node), value]]);
+					enable_latency_buttons();
+				}
+			},
+			error: function(){
+				if (!single_test_running || String(single_test_node || "") != String(node)) {
+					singleLatencyPollingNode = null;
+				}
 				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
-				return;
-			}
-			if(is_latency_transient_state(value)){
-				write_webtest([[String(node), value]]);
-				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
-			}else{
-				single_test_wait[node] = false;
-				single_test_running = false;
-				single_test_node = null;
-				write_webtest([[String(node), value]]);
-				enable_latency_buttons();
-			}
-		},
-		error: function(){
-			setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
-		},
-	});
+			},
+		});
 }
 
 function disable_latency_buttons(active_node){
@@ -10180,27 +10272,33 @@ function write_webtest(ps){
 			}else if(lag.indexOf("warming") === 0){
 				lag = "warming";
 			}
-		}
-		var cellElem = document.getElementById('ss_node_lt_' + nu);
-		var $cell = cellElem ? $(cellElem) : $();
-		var $val = $cell.length ? $cell.find(".latency_val") : null;
-		if(String(nu || "") == String(single_test_node || "") && single_test_running){
-			var incomingIsTransient = is_latency_transient_state(lag);
-			var incomingIsTerminal = !incomingIsTransient && is_latency_terminal_state(lag);
+			}
+			var cellElem = document.getElementById('ss_node_lt_' + nu);
+			var $cell = cellElem ? $(cellElem) : $();
+			var $val = $cell.length ? $cell.find(".latency_val") : null;
+			if (should_defer_latency_terminal(nu, lag)) {
+				continue;
+			}
+			if(String(nu || "") == String(single_test_node || "") && single_test_running){
+				var incomingIsTransient = is_latency_transient_state(lag);
+				var incomingIsTerminal = !incomingIsTransient && is_latency_terminal_state(lag);
 			var currentShown = $val && $val.length ? $val.text().trim() : "";
 			if(incomingIsTerminal && currentShown && is_latency_transient_state(currentShown)){
 				continue;
 			}
 		}
-		if(typeof lag === "string" && is_latency_transient_state(lag)){
-			if($val && $val.length){
-				var curr = $val.text().trim();
-				var allowSingleTransient = single_test_running && String(single_test_node) == String(nu);
-				if(!allowSingleTransient && curr && curr !== "-" && !is_latency_transient_state(curr)){
-					continue;
+			if(typeof lag === "string" && is_latency_transient_state(lag)){
+				if($val && $val.length){
+					var curr = $val.text().trim();
+					var allowSingleTransient = single_test_running && String(single_test_node) == String(nu);
+					if (is_latency_transient_state(curr) && get_latency_state_rank(lag) < get_latency_state_rank(curr)) {
+						continue;
+					}
+					if(!allowSingleTransient && curr && curr !== "-" && !is_latency_transient_state(curr)){
+						continue;
+					}
 				}
 			}
-		}
 		if($.isNumeric(lag)){
 			if (lag <= 100){
 				test_result = '<font color="#1bbf35">' + lag +' ms</font>';
