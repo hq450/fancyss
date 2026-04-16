@@ -1456,10 +1456,10 @@ install_now(){
 	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
-	# 延迟测试列默认开启（批量测速由独立开关控制）
-	if [ -z "${ss_basic_latency_val}" ]; then
-		case "${PKG_ARCH}" in
-		arm|hnd|ipq32)
+		# 延迟测试列默认开启
+		if [ -z "${ss_basic_latency_val}" ]; then
+			case "${PKG_ARCH}" in
+			arm|hnd|ipq32)
 			dbus set ss_basic_latency_val="0"
 			;;
 		*)
@@ -1468,26 +1468,10 @@ install_now(){
 		esac
 	fi
 
-	# 批量测速开关：低端设备默认关闭，高端设备默认开启
-	if [ -z "${ss_basic_latency_batch}" ]; then
-		if [ "${PKG_ARCH}" = "arm" -o "${PKG_ARCH}" = "hnd" -o "${PKG_ARCH}" = "ipq32" ]; then
-			dbus set ss_basic_latency_batch="0"
-		else
-			local CPU_CORES=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
-			local MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
-			if [ "${ROT_ARCH}" == "armv7l" ]; then
-				dbus set ss_basic_latency_batch="0"
-			elif [ "${ROT_ARCH}" == "aarch64" ]; then
-				if [ "${CPU_CORES}" -le 2 -o "${MEM_MB}" -lt 768 ]; then
-					dbus set ss_basic_latency_batch="0"
-				else
-					dbus set ss_basic_latency_batch="1"
-				fi
-			else
-				dbus set ss_basic_latency_batch="0"
-			fi
+		# 批量测速默认开启
+		if [ -z "${ss_basic_latency_batch}" ]; then
+			dbus set ss_basic_latency_batch="1"
 		fi
-	fi
 
 	# 因版本变化导致一些值没有了，更改一下
 	if [ "${ss_basic_chng_china_2_tcp}" == "5" ];then

@@ -2811,15 +2811,9 @@ detect_perf(){
 }
 
 ensure_latency_batch(){
-	if [ -z "${ss_basic_latency_batch}" ];then
-		detect_perf
-		if [ "${WT_LOW_END}" == "1" ];then
-			dbus set ss_basic_latency_batch="0"
-			ss_basic_latency_batch="0"
-		else
-			dbus set ss_basic_latency_batch="1"
-			ss_basic_latency_batch="1"
-		fi
+	if [ "${ss_basic_latency_batch}" != "1" ]; then
+		dbus set ss_basic_latency_batch="1"
+		ss_basic_latency_batch="1"
 	fi
 }
 
@@ -2873,10 +2867,6 @@ get_webtest_usable_count(){
 
 webtest_web(){
 	ensure_latency_batch
-	if [ "${ss_basic_latency_batch}" != "1" ];then
-		wt_http_response "batch_disabled"
-		return 0
-	fi
 	set_default "ss_basic_lt_web_time" "30"
 	# 1. 如果 lock 存在，说明正在 webtest，那么告诉 web 自己去拿结果吧
 	if [ -f "/tmp/webtest.lock" ];then
@@ -3917,11 +3907,6 @@ clean_webtest(){
 
 set_latency_job() {
 	ensure_latency_batch
-	if [ "${ss_basic_latency_batch}" != "1" ]; then
-		echo_date "批量web延迟测试已关闭!"
-		sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
-		return 0
-	fi
 	if [ "${ss_basic_lt_cru_opts}" == "0" ]; then
 		echo_date "定时测试节点延迟未开启!"
 		sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
@@ -4080,10 +4065,6 @@ single_test)
 	;;
 manual_webtest)
 	ensure_latency_batch
-	if [ "${ss_basic_latency_batch}" != "1" ];then
-		wt_http_response "batch_disabled"
-		exit 0
-	fi
 	clean_webtest
 	rm -f "${WT_WEBTEST_BACKUP}"
 	dbus remove ss_basic_webtest_ts
@@ -4101,10 +4082,6 @@ stop_webtest)
 	;;
 ws_start_batch)
 	ensure_latency_batch
-	if [ "${ss_basic_latency_batch}" != "1" ];then
-		echo "batch_disabled"
-		exit 0
-	fi
 	dbus set ss_basic_latency_val=2 >/dev/null 2>&1
 	clean_webtest
 	rm -f "${WT_WEBTEST_BACKUP}"

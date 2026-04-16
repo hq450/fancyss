@@ -5580,17 +5580,16 @@ function save() {
 	  "ss_basic_week",
 	  "ss_basic_day",
 	  "ss_basic_inter_min",
-	  "ss_basic_inter_hour",
-	  "ss_basic_inter_day",
-	  "ss_basic_inter_pre",
-	  "ss_basic_time_hour",
-	  "ss_basic_time_min",
-	  "ss_basic_furl",
-	  "ss_basic_curl",
-	  "ss_basic_latency_batch",
-	  "ss_basic_lt_web_time",
-	  "ss_basic_lt_cru_opts",
-	  "ss_basic_lt_cru_time",
+		  "ss_basic_inter_hour",
+		  "ss_basic_inter_day",
+		  "ss_basic_inter_pre",
+		  "ss_basic_time_hour",
+		  "ss_basic_time_min",
+		  "ss_basic_furl",
+		  "ss_basic_curl",
+		  "ss_basic_lt_web_time",
+		  "ss_basic_lt_cru_opts",
+		  "ss_basic_lt_cru_time",
 	  "ss_basic_hy2_up_speed",
 	  "ss_basic_hy2_dl_speed",
 	  "ss_basic_hy2_tfo_switch",
@@ -7977,13 +7976,8 @@ function render_node_list_footer_html() {
 	if(node_nu){
 		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">';
 		html += '<div class="dropdown" id="dropdown">';
-		if(db_ss["ss_basic_latency_batch"] == "1"){
-			html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>';
-			html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>';
-		}else{
-			html += '<a id="start_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed"></lable>批量测速已关闭</a>';
-			html += '<a id="stop_latency_batch" href="javascript:void(0);" style="color:#999;cursor:not-allowed">停止批量测速</a>';
-		}
+		html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>';
+		html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>';
 		if(db_ss["ss_basic_latency_val"] == "0"){
 			html += '<a onclick="enable_latency_feature()" href="javascript:void(0);"></lable>开启延迟测试功能</a>';
 		}else{
@@ -9164,7 +9158,6 @@ function save_latency_sett(){
 	var post_para = 0;
 	dbus_post["ss_basic_furl"] = E("ss_basic_furl").value;
 	dbus_post["ss_basic_curl"] = E("ss_basic_curl").value;
-	dbus_post["ss_basic_latency_batch"] = E("ss_basic_latency_batch").value;
 	dbus_post["ss_basic_lt_web_time"] = E("ss_basic_lt_web_time").value;
 	dbus_post["ss_basic_lt_cru_opts"] = E("ss_basic_lt_cru_opts").value;
 	dbus_post["ss_basic_lt_cru_time"] = E("ss_basic_lt_cru_time").value;
@@ -9356,10 +9349,9 @@ function is_latency_terminal_state(value){
 	return $.isNumeric(value) || value == "failed" || value == "timeout" || value == "ns" || value == "stopped" || value == "canceled";
 }
 function update_latency_action_links() {
-	var batchEnabled = db_ss["ss_basic_latency_batch"] == "1";
 	var running = batch_test_running;
-	var startEnabled = batchEnabled && !running;
-	var stopEnabled = batchEnabled && running && !batch_stop_pending;
+	var startEnabled = !running;
+	var stopEnabled = running && !batch_stop_pending;
 	var $start = $("#start_latency_batch");
 	var $stop = $("#stop_latency_batch");
 	if($start.length){
@@ -9606,10 +9598,6 @@ function start_single_latency_ws(node) {
 	return true;
 }
 function test_latency_now(test_flag) {
-	if(test_flag == 2 && db_ss["ss_basic_latency_batch"] != "1"){
-		layer.msg("批量测速已关闭");
-		return;
-	}
 	if(test_flag == 2){
 		cancel_schema2_postchange_jobs();
 	}
@@ -9669,10 +9657,6 @@ function test_latency_now(test_flag) {
 		data: JSON.stringify(postData),
 		dataType: "json",
 		success: function(response) {
-			if(response.result == "batch_disabled"){
-				layer.msg("批量测速已关闭");
-				return;
-			}
 			if (response.result == id){
 				$(".show-btn1").trigger("click");
 				if(test_flag == 0){
@@ -9703,7 +9687,7 @@ function test_latency_now(test_flag) {
 	});
 }
 function stop_latency_batch() {
-	if(db_ss["ss_basic_latency_batch"] != "1" || !batch_test_running || batch_stop_pending){
+	if(!batch_test_running || batch_stop_pending){
 		return;
 	}
 	if(ws_flag == 1){
@@ -9918,7 +9902,6 @@ function check_batch_status(cb){
 }
 function latency_test(action) {
 	if(action == "0") return;
-	if(db_ss["ss_basic_latency_batch"] != "1") return;
 	//console.log("start latency test")
 	
 	if(action == "2"){
@@ -9941,13 +9924,6 @@ function latency_test(action) {
 		dataType: "json",
 		success: function(response) {
 			var result = String(response.result || "");
-			if(result == "batch_disabled"){
-				batch_test_running = false;
-				batch_stop_pending = false;
-				close_latency_ws();
-				update_latency_action_links();
-				return;
-			}
 			if(action == "2"){
 				if(result.indexOf("ok1") === 0 || result.indexOf("ok4") === 0 || result.indexOf("ok5") === 0){
 					batch_test_running = true;
@@ -12949,25 +12925,20 @@ function toggleKeyMask(o, show){
 											["0", "关闭定时测试"],
 											["1", "定时测试web延迟"]
 										   ]
-								var lt_batch = [
-											["0", "关闭批量测速"],
-											["1", "开启批量测速"]
-										   ]
-								var lt_web = [
-											["0", "关闭自动刷新"],
-											["15", "15分钟"],
+									var lt_web = [
+												["0", "关闭自动刷新"],
+												["15", "15分钟"],
 											["20", "20分钟"],
 											["30", "30分钟"],
 											["60", "60分钟"]
 										   ]
 								var lt_time = [["15", "每隔15分钟"], ["20", "每隔20分钟"], ["30", "每隔30分钟"], ["60", "每隔60分钟"]];
-								$('#table_test').forms([
-									{ title: '延迟测试设置', thead:'1'},
-									{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
-									{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
-									{ title: '批量测速开关', id:'ss_basic_latency_batch', type:'select', style:'width:auto', options:lt_batch, value:''},
-									{ title: '定时测试节点延迟', multi: [
-										{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
+									$('#table_test').forms([
+										{ title: '延迟测试设置', thead:'1'},
+										{ title: '<a onmouseover="mOver(this, 147)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国外</a>', id:'ss_basic_furl', type:'select', style:'width:auto', options:furl, value:''},
+										{ title: '<a onmouseover="mOver(this, 148)" onmouseout="RunmOut(this)" class="hintstyle" style="color:#03a9f4;" href="javascript:void(0);">web延迟测试网址 - 国内</a>', id:'ss_basic_curl', type:'select', style:'width:auto', options:curl, value:''},
+										{ title: '定时测试节点延迟', multi: [
+											{id:'ss_basic_lt_cru_opts', type:'select', style:'width:auto', func:'u', options:lt_cru, value:'0'},
 										{id:'ss_basic_lt_cru_time', type:'select', style:'width:auto', options:lt_time, value:'0'},
 									]},
 									{ title: '测速结果自动刷新', rid:'ss_basic_lt_web_time_row', hint:'156', id:'ss_basic_lt_web_time', type:'select', style:'width:auto', options:lt_web, value:'30'},
