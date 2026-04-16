@@ -413,6 +413,9 @@ var node_form_defaults = null;
 var single_test_wait = {};
 var single_test_running = false;
 var single_test_node = null;
+var latencyVisualGuards = {};
+var singleLatencyVisualTimers = {};
+var batchLatencyVisualTimers = [];
 var batch_test_running = false;
 var batch_stop_pending = false;
 var batch_ws_fallback_started = false;
@@ -9201,6 +9204,7 @@ function close_latency_ws(resetState) {
 	if (resetState !== false) {
 		batch_ws_fallback_started = false;
 		batch_ws_completed = false;
+		clear_batch_latency_visual();
 	}
 	if (batch_ws_watchdog_timer) {
 		clearInterval(batch_ws_watchdog_timer);
@@ -9213,6 +9217,9 @@ function close_single_latency_ws() {
 			singleLatencySocket.close();
 		} catch (e) {}
 		singleLatencySocket = null;
+	}
+	if (single_test_node) {
+		clear_single_latency_visual(single_test_node);
 	}
 }
 function latency_table_is_fresh() {
@@ -9299,6 +9306,7 @@ function update_latency_finish_time() {
 function finish_latency_batch() {
 	batch_test_running = false;
 	batch_stop_pending = false;
+	clear_batch_latency_visual();
 	update_latency_action_links();
 	update_latency_finish_time();
 }
@@ -9309,6 +9317,93 @@ function is_latency_transient_state(value){
 function is_latency_terminal_state(value){
 	value = String(value || "");
 	return $.isNumeric(value) || value == "failed" || value == "timeout" || value == "ns" || value == "stopped" || value == "canceled";
+}
+function get_visible_latency_node_ids() {
+	return Array.from(document.querySelectorAll('[id^="ss_node_lt_"]')).map(function(el) {
+		return String((el.id || "").replace("ss_node_lt_", ""));
+	}).filter(function(id) {
+		return id !== "";
+	});
+}
+function set_latency_visual_guard(nodeIds, durationMs) {
+	var now = Date.now();
+	durationMs = parseInt(durationMs || 0, 10) || 0;
+	(nodeIds || []).forEach(function(nodeId) {
+		latencyVisualGuards[String(nodeId)] = now + durationMs;
+	});
+}
+function clear_latency_visual_guard(nodeIds) {
+	(nodeIds || []).forEach(function(nodeId) {
+		delete latencyVisualGuards[String(nodeId)];
+	});
+}
+function clear_single_latency_visual(nodeId) {
+	nodeId = String(nodeId || "");
+	if (!nodeId) {
+		return;
+	}
+	if (singleLatencyVisualTimers[nodeId]) {
+		singleLatencyVisualTimers[nodeId].forEach(function(timer) {
+			clearTimeout(timer);
+		});
+		delete singleLatencyVisualTimers[nodeId];
+	}
+	clear_latency_visual_guard([nodeId]);
+}
+function clear_batch_latency_visual() {
+	if (batchLatencyVisualTimers.length) {
+		batchLatencyVisualTimers.forEach(function(timer) {
+			clearTimeout(timer);
+		});
+		batchLatencyVisualTimers = [];
+	}
+	clear_latency_visual_guard(get_visible_latency_node_ids());
+}
+function write_latency_visual_state(nodeIds, state, isBatch) {
+	(nodeIds || []).forEach(function(nodeId) {
+		if (!nodeId) {
+			return;
+		}
+		if (isBatch && !batch_test_running) {
+			return;
+		}
+		if (!isBatch && (!single_test_running || String(single_test_node || "") != String(nodeId))) {
+			return;
+		}
+		write_webtest([[String(nodeId), state]]);
+	});
+}
+function start_single_latency_visual(nodeId) {
+	var nodeIds = [String(nodeId || "")];
+	var states = [
+		{delay: 120, state: "loading"},
+		{delay: 320, state: "booting"},
+		{delay: 620, state: "queued"},
+		{delay: 980, state: "testing"}
+	];
+	clear_single_latency_visual(nodeId);
+	set_latency_visual_guard(nodeIds, 1400);
+	singleLatencyVisualTimers[String(nodeId)] = states.map(function(item) {
+		return setTimeout(function() {
+			write_latency_visual_state(nodeIds, item.state, false);
+		}, item.delay);
+	});
+}
+function start_batch_latency_visual() {
+	var nodeIds = get_visible_latency_node_ids();
+	var states = [
+		{delay: 120, state: "loading"},
+		{delay: 320, state: "booting"},
+		{delay: 620, state: "queued"},
+		{delay: 980, state: "testing"}
+	];
+	clear_batch_latency_visual();
+	set_latency_visual_guard(nodeIds, 1400);
+	batchLatencyVisualTimers = states.map(function(item) {
+		return setTimeout(function() {
+			write_latency_visual_state(nodeIds, item.state, true);
+		}, item.delay);
+	});
 }
 function update_latency_action_links() {
 	var batchEnabled = db_ss["ss_basic_latency_batch"] == "1";
@@ -9528,6 +9623,7 @@ function test_latency_now(test_flag) {
 			batch_stop_pending = false;
 			var startFollow = function() {
 				$(".latency .latency_val").html("waiting");
+				start_batch_latency_visual();
 				$("#ss_wts_show").html("<em>【测速中...】</em>");
 				$("#dropdown").width(240);
 				update_latency_action_links();
@@ -9592,6 +9688,7 @@ function test_latency_now(test_flag) {
 					batch_stop_pending = false;
 					refresh_table(function() {
 						$(".latency .latency_val").html("waiting");
+						start_batch_latency_visual();
 						$("#ss_wts_show").html("<em>【测速中...】</em>");
 						$("#dropdown").width(240);
 						update_latency_action_links();
@@ -9734,6 +9831,7 @@ function test_latency_single(node){
 	single_test_running = true;
 	single_test_node = node;
 	write_webtest([[String(node), "waiting"]]);
+	start_single_latency_visual(node);
 	disable_latency_buttons(node);
 	if(ws_flag == 1){
 		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_single_test " + String(node), function() {
