@@ -3520,6 +3520,7 @@ creat_hy2_yaml(){
 
 single_test_node(){
 	local test_node="$1"
+	local prepared="${2:-0}"
 	if [ -z "${test_node}" ];then
 		return 1
 	fi
@@ -3541,12 +3542,15 @@ single_test_node(){
 	rm -rf ${TMP2}/conf/*
 	rm -rf ${TMP2}/pids/*
 	rm -rf ${TMP2}/results/*
-	: > "${WT_WEBTEST_STATE_FILE}"
+	[ -f "${WT_WEBTEST_STATE_FILE}" ] || : > "${WT_WEBTEST_STATE_FILE}"
 	wt_init_reserved_ports
-	wt_prune_webtest_entries "${test_node}"
+	if [ "${prepared}" != "1" ]; then
+		: > "${WT_WEBTEST_STATE_FILE}"
+		wt_prune_webtest_entries "${test_node}"
+		wt_set_batch_state "${test_node}" "waiting..."
+	fi
 	wt_prepare_node_cache >/dev/null 2>&1
 	wt_ensure_node_direct_dns_ready >/dev/null 2>&1
-	wt_set_batch_state "${test_node}" "waiting..."
 
 	local single_file="wt_single_${test_node}.txt"
 	echo "${test_node}" > ${TMP2}/${single_file}
@@ -3572,6 +3576,19 @@ single_test_node(){
 	# 避免内部测速函数复用局部变量名后把原节点序号冲掉。
 	update_single_backup "${test_node}"
 	wt_append_webtest_line "stop>stop"
+}
+
+wt_prepare_single_test_state() {
+	local test_node="$1"
+
+	[ -n "${test_node}" ] || return 1
+	WT_SINGLE=1
+	WT_WEBTEST_STATE_FILE="${TMP2}/webtest.single.state"
+	mkdir -p "${TMP2}" >/dev/null 2>&1 || return 1
+	: > "${WT_WEBTEST_STATE_FILE}"
+	wt_prune_webtest_entries "${test_node}"
+	wt_set_batch_state "${test_node}" "waiting..."
+	return 0
 }
 
 warm_webtest_cache() {
@@ -4046,8 +4063,12 @@ single_test)
 		wt_http_response "busy"
 		exit 0
 	fi
+	wt_prepare_single_test_state "${WEBTEST_ACTION_ARG}" >/dev/null 2>&1 || {
+		wt_http_response "busy"
+		exit 0
+	}
 	wt_http_response $1
-	single_test_node "${WEBTEST_ACTION_ARG}"
+	single_test_node "${WEBTEST_ACTION_ARG}" "1"
 	;;
 manual_webtest)
 	ensure_latency_batch
@@ -4108,8 +4129,12 @@ ws_single_test)
 	if [ -f "/tmp/webtest.lock" ];then
 		echo busy
 	else
-		sh /koolshare/scripts/ss_webtest.sh single_test "${WEBTEST_ACTION_ARG}" >/dev/null 2>&1 &
-		echo XU6J03M6
+		if wt_prepare_single_test_state "${WEBTEST_ACTION_ARG}" >/dev/null 2>&1; then
+			sh /koolshare/scripts/ss_webtest.sh single_test "${WEBTEST_ACTION_ARG}" >/dev/null 2>&1 &
+			echo XU6J03M6
+		else
+			echo busy
+		fi
 	fi
 	;;
 0)

@@ -9491,13 +9491,15 @@ function start_single_latency_ws(node) {
 		for (var i = 0; i < array.length; i++) {
 			var item = array[i];
 			if (item[0] != String(node)) continue;
-			write_webtest([[String(node), item[1]]]);
 			if(!is_latency_transient_state(item[1])){
 				single_test_wait[node] = false;
 				single_test_running = false;
 				single_test_node = null;
+				write_webtest([[String(node), item[1]]]);
 				enable_latency_buttons();
 				close_single_latency_ws();
+			}else{
+				write_webtest([[String(node), item[1]]]);
 			}
 		}
 	};
@@ -9908,14 +9910,14 @@ function get_latency_data_single(node, retry){
 				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
 				return;
 			}
-			write_webtest([[String(node), value]]);
 			if(is_latency_transient_state(value)){
-				single_test_wait[node] = false;
+				write_webtest([[String(node), value]]);
 				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 800);
 			}else{
 				single_test_wait[node] = false;
 				single_test_running = false;
 				single_test_node = null;
+				write_webtest([[String(node), value]]);
 				enable_latency_buttons();
 			}
 		},
@@ -10084,6 +10086,14 @@ function write_webtest(ps){
 		var cellElem = document.getElementById('ss_node_lt_' + nu);
 		var $cell = cellElem ? $(cellElem) : $();
 		var $val = $cell.length ? $cell.find(".latency_val") : null;
+		if(String(nu || "") == String(single_test_node || "") && single_test_running){
+			var incomingIsTransient = is_latency_transient_state(lag);
+			var incomingIsTerminal = !incomingIsTransient && is_latency_terminal_state(lag);
+			var currentShown = $val && $val.length ? $val.text().trim() : "";
+			if(incomingIsTerminal && currentShown && is_latency_transient_state(currentShown)){
+				continue;
+			}
+		}
 		if(typeof lag === "string" && is_latency_transient_state(lag)){
 			if($val && $val.length){
 				var curr = $val.text().trim();
