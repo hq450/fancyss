@@ -1222,6 +1222,14 @@ wt_set_batch_state_from_file() {
 	local old_state_file=""
 
 	[ -f "${file_path}" ] || return 0
+	if [ "${WT_SINGLE}" = "1" ]; then
+		while read node_id
+		do
+			[ -n "${node_id}" ] || continue
+			wt_set_batch_state "${node_id}" "${state}"
+		done < "${file_path}"
+		return 0
+	fi
 	if [ -z "${limit}" ] && [ -n "${WT_WEBTEST_STATE_FILE}" ] && [ -f "${WT_WEBTEST_STATE_FILE}" ]; then
 		old_state_file="${WT_WEBTEST_STATE_FILE}.bulk.$$"
 		cp -f "${WT_WEBTEST_STATE_FILE}" "${old_state_file}"
@@ -4099,6 +4107,7 @@ ws_start_batch)
 	fi
 	dbus set ss_basic_latency_val=2 >/dev/null 2>&1
 	clean_webtest
+	rm -f "${WT_WEBTEST_BACKUP}"
 	sh /koolshare/scripts/ss_webtest.sh web_webtest >/dev/null 2>&1 &
 	echo XU6J03M6
 	;;

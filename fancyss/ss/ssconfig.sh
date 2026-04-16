@@ -6910,19 +6910,55 @@ apply_ss_by_nat() {
 	echo_date ------------------------ 【科学上网】 启动完毕 ------------------------
 }
 
+pick_start_stop_daemon(){
+	for candidate in /sbin/start-stop-daemon /usr/sbin/start-stop-daemon /bin/start-stop-daemon /usr/bin/start-stop-daemon
+	do
+		[ -x "${candidate}" ] && {
+			echo "${candidate}"
+			return 0
+		}
+	done
+	return 1
+}
+
 start_ws(){
+	local ssd=""
 	stop_ws
 	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket" ];then
-		start-stop-daemon -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket
+		ssd="$(pick_start_stop_daemon 2>/dev/null)"
+		if [ -n "${ssd}" ]; then
+			"${ssd}" -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket
+		else
+			/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
+			echo $! > "${WS_PIDFILE}"
+		fi
 	fi
 }
 
 stop_ws(){
+	local ssd=""
+	local pid=""
+	ssd="$(pick_start_stop_daemon 2>/dev/null)"
 	if [ -f "${WS_PIDFILE}" ];then
-		start-stop-daemon -K -q -p "${WS_PIDFILE}" >/dev/null 2>&1
+		pid=$(cat "${WS_PIDFILE}" 2>/dev/null)
+		if [ -n "${ssd}" ]; then
+			"${ssd}" -K -q -p "${WS_PIDFILE}" >/dev/null 2>&1
+		fi
+		if [ -n "${pid}" ]; then
+			kill "${pid}" >/dev/null 2>&1
+			sleep 1
+			kill -9 "${pid}" >/dev/null 2>&1
+		fi
 	fi
 	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
 		kill "${pid}" >/dev/null 2>&1
+		sleep 1
+		kill -9 "${pid}" >/dev/null 2>&1
+	done
+	ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		kill "${pid}" >/dev/null 2>&1
+		sleep 1
+		kill -9 "${pid}" >/dev/null 2>&1
 	done
 	rm -f "${WS_PIDFILE}" >/dev/null 2>&1
 }

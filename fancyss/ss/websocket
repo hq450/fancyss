@@ -102,11 +102,37 @@ do
 			[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
 			if [ "${STREAM_LINES}" -gt "${LAST_STREAM_LINES}" ]; then
 				sed -n "$((LAST_STREAM_LINES + 1)),${STREAM_LINES}p" "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
-				do
-					[ -n "${line}" ] || continue
-					echo "${line}" || exit 0
-					[ "${line}" = "stop>stop" ] && exit 0
-				done
+					do
+						[ -n "${line}" ] || continue
+						if [ "${line}" = "refresh>snapshot" ]; then
+							awk '
+								BEGIN {
+									print "__FSS_WEBTEST_SNAPSHOT_BEGIN__"
+									chunk = ""
+									count = 0
+								}
+								{
+									gsub(/\r/, "")
+									chunk = chunk $0 "__FSS_NL__"
+									count++
+									if (count >= 64) {
+										print "__FSS_WEBTEST_SNAPSHOT_CHUNK__" chunk
+										chunk = ""
+										count = 0
+									}
+								}
+								END {
+									if (count > 0) {
+										print "__FSS_WEBTEST_SNAPSHOT_CHUNK__" chunk
+									}
+									print "__FSS_WEBTEST_SNAPSHOT_END__"
+								}
+							' "${WEBTEST_FILE}" 2>/dev/null
+							continue
+						fi
+						echo "${line}" || exit 0
+						[ "${line}" = "stop>stop" ] && exit 0
+					done
 				LAST_STREAM_LINES="${STREAM_LINES}"
 				IDLE_LOOPS=0
 			elif [ -f "/tmp/webtest.lock" ]; then
@@ -116,6 +142,58 @@ do
 			fi
 			if grep -q '^stop>stop$' "${WEBTEST_FILE}" 2>/dev/null; then
 				exit 0
+			fi
+			if [ "${IDLE_LOOPS}" -ge 8 ]; then
+				exit 0
+			fi
+			sleep 1
+		done
+		exit 0
+	elif echo "${MSG}" | grep -q '^follow_webtest_single '; then
+		WEBTEST_NODE="${MSG#follow_webtest_single }"
+		WEBTEST_FILE=/tmp/upload/webtest.txt
+		WEBTEST_STREAM=/tmp/upload/webtest.stream
+		[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
+		[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
+		[ -n "${WEBTEST_NODE}" ] || exit 0
+		CURRENT_LINE=$(awk -F '>' -v node="${WEBTEST_NODE}" '$1 == node {last=$0} END {if (last != "") print last}' "${WEBTEST_FILE}" 2>/dev/null)
+		[ -n "${CURRENT_LINE}" ] && echo "${CURRENT_LINE}"
+		LAST_STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
+		[ -n "${LAST_STREAM_LINES}" ] || LAST_STREAM_LINES=0
+		IDLE_LOOPS=0
+		while true
+		do
+			[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
+			STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
+			[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
+			if [ "${STREAM_LINES}" -gt "${LAST_STREAM_LINES}" ]; then
+				sed -n "$((LAST_STREAM_LINES + 1)),${STREAM_LINES}p" "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
+				do
+					[ -n "${line}" ] || continue
+					case "${line}" in
+						"${WEBTEST_NODE}>"*)
+							echo "${line}" || exit 0
+							state="${line#*>}"
+							case "${state}" in
+								waiting...|loading...|booting...|queued...|warming...|testing...)
+									;;
+								*)
+									exit 0
+									;;
+							esac
+							;;
+						"stop>stop")
+							echo "${line}" || exit 0
+							exit 0
+							;;
+					esac
+				done
+				LAST_STREAM_LINES="${STREAM_LINES}"
+				IDLE_LOOPS=0
+			elif [ -f "/tmp/webtest.lock" ]; then
+				IDLE_LOOPS=0
+			else
+				IDLE_LOOPS=$((IDLE_LOOPS + 1))
 			fi
 			if [ "${IDLE_LOOPS}" -ge 8 ]; then
 				exit 0

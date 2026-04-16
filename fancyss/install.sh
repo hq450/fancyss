@@ -38,15 +38,49 @@ restart_websocketd_async() {
 	local helper="/tmp/fancyss_restart_websocketd.sh"
 	cat > "${helper}" <<-'EOF'
 		#!/bin/sh
+		WS_PIDFILE="/var/run/fancyss-websocketd.pid"
+		SSD=""
+		for candidate in /sbin/start-stop-daemon /usr/sbin/start-stop-daemon /bin/start-stop-daemon /usr/bin/start-stop-daemon
+		do
+			[ -x "${candidate}" ] || continue
+			SSD="${candidate}"
+			break
+		done
 		sleep 2
+		if [ -f "${WS_PIDFILE}" ]; then
+			if [ -n "${SSD}" ]; then
+				"${SSD}" -K -q -p "${WS_PIDFILE}" >/dev/null 2>&1 || true
+			fi
+			pid="$(cat "${WS_PIDFILE}" 2>/dev/null)"
+			if [ -n "${pid}" ]; then
+				kill "${pid}" >/dev/null 2>&1 || true
+				sleep 1
+				kill -9 "${pid}" >/dev/null 2>&1 || true
+			fi
+		fi
 		killall websocketd >/dev/null 2>&1 || true
+		ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+		do
+			[ -n "${pid}" ] || continue
+			kill "${pid}" >/dev/null 2>&1 || true
+			sleep 1
+			kill -9 "${pid}" >/dev/null 2>&1 || true
+		done
 		ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
 		do
 			[ -n "${pid}" ] || continue
 			kill "${pid}" >/dev/null 2>&1 || true
+			sleep 1
+			kill -9 "${pid}" >/dev/null 2>&1 || true
 		done
+		rm -f "${WS_PIDFILE}" >/dev/null 2>&1 || true
 		if [ -x "/koolshare/bin/websocketd" ] && [ -f "/koolshare/ss/websocket" ]; then
-			/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
+			if [ -n "${SSD}" ]; then
+				"${SSD}" -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1
+			else
+				/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
+				echo $! > "${WS_PIDFILE}"
+			fi
 		fi
 		rm -f "$0" >/dev/null 2>&1
 	EOF
