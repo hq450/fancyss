@@ -47,6 +47,50 @@ subprof_valid_profile_id() {
 	printf '%s' "${profile_id}" | grep -Eq '^[A-Za-z0-9._-]+$'
 }
 
+subprof_profile_id_exists() {
+	local profile_id="$1"
+	local profile_file=""
+	local state_file=""
+
+	[ -n "${profile_id}" ] || return 1
+	profile_file="$(subprof_profile_file "${profile_id}" 2>/dev/null)" || return 1
+	state_file="$(subprof_state_file "${profile_id}" 2>/dev/null)" || return 1
+	[ -f "${profile_file}" ] && return 0
+	[ -f "${state_file}" ] && return 0
+	return 1
+}
+
+subprof_random_hex_id() {
+	local candidate=""
+
+	if [ -r "/proc/sys/kernel/random/uuid" ]; then
+		candidate="$(cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' | cut -c1-12)"
+	fi
+	if ! printf '%s' "${candidate}" | grep -Eq '^[a-f0-9]{12}$'; then
+		candidate="$(dd if=/dev/urandom bs=16 count=1 2>/dev/null | od -An -tx1 2>/dev/null | tr -d ' \n' | cut -c1-12)"
+	fi
+	if ! printf '%s' "${candidate}" | grep -Eq '^[a-f0-9]{12}$'; then
+		candidate="$(printf '%s' "$$_$(date +%s 2>/dev/null)_$(cat /proc/uptime 2>/dev/null)" | md5sum | awk '{print substr($1,1,12)}')"
+	fi
+	printf '%s\n' "${candidate}"
+}
+
+subprof_generate_profile_id() {
+	local candidate=""
+	local attempt=0
+
+	while [ "${attempt}" -lt 32 ]
+	do
+		candidate="$(subprof_random_hex_id 2>/dev/null)" || candidate=""
+		if printf '%s' "${candidate}" | grep -Eq '^[a-f0-9]{12}$' && ! subprof_profile_id_exists "${candidate}"; then
+			printf '%s\n' "${candidate}"
+			return 0
+		fi
+		attempt=$((attempt + 1))
+	done
+	return 1
+}
+
 subprof_extract_url_host() {
 	local url="$1"
 	printf '%s\n' "${url}" | sed -n 's#^[A-Za-z][A-Za-z0-9+.-]*://\([^/@:]*\).*$#\1#p' | sed -n '1p'
@@ -289,7 +333,7 @@ subprof_write_profile_json() {
 	printf '%s' "${profile_url}" | grep -Eq '^https?://' || return 1
 
 	profile_id="$(printf '%s' "${normalized}" | "$(subprof_jq_bin)" -r '.id // empty' 2>/dev/null)"
-	[ -n "${profile_id}" ] || profile_id="$(printf '%s' "${profile_url}" | md5sum | awk '{print substr($1,1,8)}')"
+	[ -n "${profile_id}" ] || profile_id="$(subprof_generate_profile_id 2>/dev/null)"
 	subprof_valid_profile_id "${profile_id}" || return 1
 	for existing_id in $(subprof_list_profile_ids)
 	do
@@ -711,7 +755,7 @@ subprof_migrate_legacy_profiles_if_needed() {
 	while IFS= read -r link
 	do
 		[ -n "${link}" ] || continue
-		profile_id="$(printf '%s' "${link}" | md5sum | awk '{print substr($1,1,8)}')"
+		profile_id="$(subprof_generate_profile_id 2>/dev/null)" || continue
 		profile_name="$(subprof_pretty_name_from_url "${link}")"
 		[ -n "${profile_name}" ] || profile_name="订阅"
 		unique_name="${profile_name}"

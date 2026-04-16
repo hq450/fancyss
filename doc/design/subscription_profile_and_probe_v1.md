@@ -60,7 +60,7 @@
 
 说明：
 
-- `id` 建议是稳定短 ID：优先 `md5(url)` 前 8 位，或 `uuid`（更安全）
+- `id` 建议是独立稳定短 ID：创建时生成随机十六进制字符串，后续不随 URL 变化
 - `state.json` 由后端更新，前端只读，不直接编辑
 - 订阅 raw/parsed cache 仍可继续用现有 `${SUB_RAW_CACHE_DIR}` / `${SUB_PARSED_CACHE_DIR}`，并以 `url_hash` 作为 key（便于兼容旧缓存）
 
@@ -416,7 +416,7 @@ URI 导入 Tab：
 
 - 仅提取 `https://` 链接（与现有做法一致也可放宽到 `http(s)://`，以实现时为准）
 - 每个链接生成一个 profile：
-  - `id = md5(url)[0..8]`
+  - `id = random_hex_id()`
   - `name`（别名）：
     - 优先：根据 URL host 走现有映射文件（例如 `node-tool.conf` 的 `domain -> label`）
     - 其次：host 本身（去掉常见前缀）
