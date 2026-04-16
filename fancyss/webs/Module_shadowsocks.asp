@@ -419,8 +419,8 @@ var single_test_node = null;
 var singleLatencyPollingNode = null;
 var singleLatencyWsFallbackStarted = false;
 var singleLatencyWsOpenTimer = null;
-var singleLatencyTerminalTimer = null;
-var singleLatencyReplayTimers = [];
+var singleLatencyWsLastMessageAt = 0;
+var singleLatencyWsWatchdogTimer = null;
 var batch_test_running = false;
 var batch_stop_pending = false;
 var batch_ws_fallback_started = false;
@@ -9230,15 +9230,9 @@ function close_single_latency_ws() {
 		clearTimeout(singleLatencyWsOpenTimer);
 		singleLatencyWsOpenTimer = null;
 	}
-	if (singleLatencyTerminalTimer) {
-		clearTimeout(singleLatencyTerminalTimer);
-		singleLatencyTerminalTimer = null;
-	}
-	if (singleLatencyReplayTimers.length) {
-		singleLatencyReplayTimers.forEach(function(timer) {
-			clearTimeout(timer);
-		});
-		singleLatencyReplayTimers = [];
+	if (singleLatencyWsWatchdogTimer) {
+		clearInterval(singleLatencyWsWatchdogTimer);
+		singleLatencyWsWatchdogTimer = null;
 	}
 }
 function fallback_single_latency_ws(node) {
@@ -9523,6 +9517,7 @@ function start_single_latency_ws(node) {
 	singleLatencySocket = new WebSocket("ws://" + hostname + ":803/");
 	var socketRef = singleLatencySocket;
 	var wsOpened = false;
+	singleLatencyWsLastMessageAt = Date.now();
 	singleLatencyWsOpenTimer = setTimeout(function() {
 		if (singleLatencySocket !== socketRef) {
 			return;
@@ -9531,6 +9526,17 @@ function start_single_latency_ws(node) {
 			fallback_single_latency_ws(node);
 		}
 	}, 1200);
+	singleLatencyWsWatchdogTimer = setInterval(function() {
+		if (singleLatencySocket !== socketRef) {
+			return;
+		}
+		if (!single_test_running || String(single_test_node || "") != String(node) || singleLatencyWsFallbackStarted) {
+			return;
+		}
+		if ((Date.now() - singleLatencyWsLastMessageAt) >= 2500) {
+			fallback_single_latency_ws(node);
+		}
+	}, 1000);
 	singleLatencySocket.onopen = function() {
 		if (singleLatencySocket !== socketRef) {
 			return;
@@ -9541,7 +9547,7 @@ function start_single_latency_ws(node) {
 			singleLatencyWsOpenTimer = null;
 		}
 		try {
-			singleLatencySocket.send("follow_webtest");
+			singleLatencySocket.send("follow_webtest_single " + String(node));
 		} catch (ex) {
 			fallback_single_latency_ws(node);
 		}
@@ -9575,49 +9581,27 @@ function start_single_latency_ws(node) {
 		if (singleLatencySocket !== socketRef) {
 			return;
 		}
+		singleLatencyWsLastMessageAt = Date.now();
 		const array = parse_webtest_lines(event.data);
-		var nodeItems = array.filter(function(item) {
-			return item[0] == String(node);
-		});
-		if (!nodeItems.length) {
+		if (!array.length) {
 			return;
 		}
-		var states = [];
-		nodeItems.forEach(function(item) {
-			var state = String(item[1] || "");
-			if (!states.length || states[states.length - 1] !== state) {
-				states.push(state);
+		for (var i = 0; i < array.length; i++) {
+			var item = array[i];
+			if (item[0] != String(node)) {
+				continue;
 			}
-		});
-		if (states.length > 1 && states[0].indexOf("waiting") === 0) {
-			states.shift();
+			write_webtest([[String(node), item[1]]]);
+			if (!is_latency_transient_state(item[1])) {
+				single_test_wait[node] = false;
+				single_test_running = false;
+				single_test_node = null;
+				singleLatencyWsFallbackStarted = false;
+				enable_latency_buttons();
+				close_single_latency_ws();
+				break;
+			}
 		}
-		if (!states.length) {
-			return;
-		}
-		if (singleLatencyReplayTimers.length) {
-			singleLatencyReplayTimers.forEach(function(timer) {
-				clearTimeout(timer);
-			});
-			singleLatencyReplayTimers = [];
-		}
-		states.forEach(function(state, idx) {
-			var timer = setTimeout(function() {
-				if (!single_test_running || String(single_test_node || "") != String(node)) {
-					return;
-				}
-				write_webtest([[String(node), state]]);
-				if (!is_latency_transient_state(state)) {
-					single_test_wait[node] = false;
-					single_test_running = false;
-					single_test_node = null;
-					singleLatencyWsFallbackStarted = false;
-					enable_latency_buttons();
-					close_single_latency_ws();
-				}
-			}, idx * 160);
-			singleLatencyReplayTimers.push(timer);
-		});
 	};
 	return true;
 }
