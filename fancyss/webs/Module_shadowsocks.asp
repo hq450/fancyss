@@ -209,7 +209,7 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .submgr-tab.active{background:linear-gradient(135deg,#2563eb,#37b4ff);border-color:rgba(70,160,255,0.48);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,0.24);}
 .submgr-toolbar{display:flex;justify-content:flex-start;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 .submgr-toolbar-note{font-size:12px;line-height:1.7;color:#8fa4ba;}
-.submgr-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;overflow-x:hidden;}
+.submgr-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;overflow-x:hidden;padding-top:3px;box-sizing:border-box;}
 .submgr-card-list::-webkit-scrollbar{width:8px;height:8px;}
 .submgr-card-list::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .submgr-card-list::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
@@ -252,23 +252,23 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-section-count{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:rgba(70,160,255,0.12);color:#9fc7ff;font-size:10px;font-weight:700;}
 .node-card-section-arrow{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,0.06);color:#d7e4f2;font-size:11px;font-weight:700;transition:transform .18s ease,background .18s ease;}
 .node-card-section.is-collapsed .node-card-section-arrow{transform:rotate(-90deg);}
-.node-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-content:start;padding:0;box-sizing:border-box;}
+.node-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-content:start;padding:0;box-sizing:border-box;}
 .node-card-grid::-webkit-scrollbar{width:8px;height:8px;}
 .node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
 .node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
-.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:48px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
+.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:60px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
 .node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 14px 24px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
 .node-card.is-current{border-color:rgba(41,179,111,0.5);background:linear-gradient(180deg,rgba(14,39,27,0.98),rgba(10,22,17,0.96));box-shadow:0 14px 24px rgba(0,0,0,0.22),0 0 0 1px rgba(41,179,111,0.06),inset 0 1px 0 rgba(255,255,255,0.04);}
 .node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;padding-right:6px;}
 .node-card-status{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
 .node-card-dot{width:6px;height:6px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 6px;box-shadow:0 0 6px rgba(110,168,254,0.45);}
 .node-card.is-current .node-card-dot{background:#32c975;box-shadow:0 0 10px rgba(50,201,117,0.55);}
-.node-card-name{font-size:11px;line-height:1.2;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-height:auto;max-width:100%;}
+.node-card-name{font-size:13px;line-height:1.2;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-height:auto;max-width:100%;}
 .node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:auto;}
-.node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:9px;line-height:1;font-weight:700;white-space:nowrap;}
+.node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:11px;line-height:1;font-weight:700;white-space:nowrap;}
 .node-card-type.current{background:rgba(41,179,111,0.18);border-color:rgba(41,179,111,0.24);color:#d7ffe8;}
-.node-card-latency{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:42px;max-width:58px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:9px;line-height:1;}
+.node-card-latency{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:42px;max-width:58px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
 .node-card-latency.latency_btn{cursor:pointer;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;}
 .node-card-latency.latency_btn:hover{border-color:rgba(70,160,255,0.32);background:rgba(70,160,255,0.09);box-shadow:0 0 0 1px rgba(70,160,255,0.08);}
 .node-card-latency-icon{width:10px;height:10px;flex:0 0 10px;opacity:.88;pointer-events:none;}
@@ -4463,8 +4463,6 @@ function render_subscription_profiles_cards() {
 		html += '<div class="submgr-chip-row">';
 		html += render_subscription_chip("状态", enabled ? "启用" : "未启用", enabled ? "ok" : "warn");
 		html += render_subscription_chip("节点数量", nodeCountText);
-		html += render_subscription_chip("下载", item.download_policy || "auto");
-		html += render_subscription_chip("UA", item.ua_mode == "custom" ? "自定义" : (item.ua_mode == "auto" ? "自动" : (item.ua_preset || "default")));
 		html += render_subscription_chip("最近结果", lastStatus, lastClass);
 		html += '</div>';
 		html += '<div class="submgr-chip-row">';
