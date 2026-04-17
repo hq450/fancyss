@@ -51,7 +51,7 @@ migrate_profile_files() {
 
 		# 写入 dbus (使用 base64 编码避免 JSON 嵌套问题)
 		profile_key="${DBUS_PREFIX}${profile_id}"
-		if dbus set "${profile_key}=$(printf '%s' "${profile_json}" | base64_encode)"; then
+		if dbus set "${profile_key}=$(printf '%s' "${profile_json}" | base64)"; then
 			migrate_log "  ✓ Profile 已写入 dbus: ${profile_key}"
 		else
 			migrate_log "  ✗ Profile 写入失败: ${profile_key}"
@@ -65,7 +65,7 @@ migrate_profile_files() {
 			state_json="$(cat "${state_file}" 2>/dev/null)"
 			if [ -n "${state_json}" ]; then
 				state_key="${DBUS_PREFIX}${profile_id}_state"
-				if dbus set "${state_key}=$(printf '%s' "${state_json}" | base64_encode)"; then
+				if dbus set "${state_key}=$(printf '%s' "${state_json}" | base64)"; then
 					migrate_log "  ✓ State 已写入 dbus: ${state_key}"
 				else
 					migrate_log "  ✗ State 写入失败: ${state_key}"

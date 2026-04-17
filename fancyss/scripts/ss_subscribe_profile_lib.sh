@@ -329,7 +329,7 @@ subprof_write_profile_json() {
 	do
 		[ -n "${existing_id}" ] || continue
 		[ "${existing_id}" = "${profile_id}" ] && continue
-		existing_json="$(dbus get "$(subprof_profile_key "${existing_id}")" 2>/dev/null | base64_decode)" || continue
+		existing_json="$(dbus get "$(subprof_profile_key "${existing_id}")" 2>/dev/null | base64 -d)" || continue
 		[ -n "${existing_json}" ] || continue
 		existing_url="$(printf '%s' "${existing_json}" | "$(subprof_jq_bin)" -r '.url // empty' 2>/dev/null | sed -n '1p')"
 		if [ -n "${existing_url}" ] && [ "${existing_url}" = "${profile_url}" ]; then
@@ -341,10 +341,10 @@ subprof_write_profile_json() {
 	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
 	state_key="$(subprof_state_key "${profile_id}")" || return 1
 	# Base64 encode JSON to avoid httpdb JSON nesting issues
-	dbus set "${profile_key}=$(printf '%s' "${normalized}" | base64_encode)" || return 1
+	dbus set "${profile_key}=$(printf '%s' "${normalized}" | base64)" || return 1
 	if ! dbus get "${state_key}" >/dev/null 2>&1; then
 		local state_json="$("$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}')"
-		dbus set "${state_key}=$(printf '%s' "${state_json}" | base64_encode)" 2>/dev/null || true
+		dbus set "${state_key}=$(printf '%s' "${state_json}" | base64)" 2>/dev/null || true
 	fi
 	subprof_add_profile_id "${profile_id}"
 	printf '%s\n' "${profile_id}"
@@ -464,13 +464,13 @@ subprof_merge_profile_and_state() {
 
 	[ -n "${profile_id}" ] || return 1
 	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
-	profile_json="$(dbus get "${profile_key}" 2>/dev/null | base64_decode)" || return 1
+	profile_json="$(dbus get "${profile_key}" 2>/dev/null | base64 -d)" || return 1
 	[ -n "${profile_json}" ] || return 1
 	state_key="$(subprof_state_key "${profile_id}")" || return 1
-	state_json="$(dbus get "${state_key}" 2>/dev/null | base64_decode)"
+	state_json="$(dbus get "${state_key}" 2>/dev/null | base64 -d)"
 	if [ -z "${state_json}" ]; then
 		state_json="$("$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}')"
-		dbus set "${state_key}=$(printf '%s' "${state_json}" | base64_encode)" 2>/dev/null || true
+		dbus set "${state_key}=$(printf '%s' "${state_json}" | base64)" 2>/dev/null || true
 	fi
 	last_group="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
 	last_url_hash="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
@@ -671,7 +671,7 @@ subprof_mark_state_success() {
 
 	[ -n "${profile_id}" ] || return 1
 	state_key="$(subprof_state_key "${profile_id}")" || return 1
-	state_json="$(dbus get "${state_key}" 2>/dev/null | base64_decode)"
+	state_json="$(dbus get "${state_key}" 2>/dev/null | base64 -d)"
 	now_ts="$(date +%s)"
 	new_state="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -c \
 		--arg id "${profile_id}" \
@@ -696,7 +696,7 @@ subprof_mark_state_success() {
 			last_ua_preset: $ua_preset
 		}
 	')" || return 1
-	dbus set "${state_key}=$(printf '%s' "${new_state}" | base64_encode)"
+	dbus set "${state_key}=$(printf '%s' "${new_state}" | base64)"
 }
 
 subprof_mark_state_failure() {
@@ -715,7 +715,7 @@ subprof_mark_state_failure() {
 
 	[ -n "${profile_id}" ] || return 1
 	state_key="$(subprof_state_key "${profile_id}")" || return 1
-	state_json="$(dbus get "${state_key}" 2>/dev/null | base64_decode)"
+	state_json="$(dbus get "${state_key}" 2>/dev/null | base64 -d)"
 	now_ts="$(date +%s)"
 	new_state="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -c \
 		--arg id "${profile_id}" \
@@ -740,7 +740,7 @@ subprof_mark_state_failure() {
 			last_ua_preset: $ua_preset
 		}
 	')" || return 1
-	dbus set "${state_key}=$(printf '%s' "${new_state}" | base64_encode)"
+	dbus set "${state_key}=$(printf '%s' "${new_state}" | base64)"
 }
 
 subprof_migrate_legacy_profiles_if_needed() {
@@ -757,7 +757,7 @@ subprof_migrate_legacy_profiles_if_needed() {
 	local payload_json=""
 
 	subprof_has_profiles && return 0
-	raw_links="$(dbus get ss_online_links | base64_decode 2>/dev/null)" || raw_links=""
+	raw_links="$(dbus get ss_online_links | base64 -d 2>/dev/null)" || raw_links=""
 	[ -n "${raw_links}" ] || return 1
 	tmp_links="/tmp/.subprof_links.$$"
 	seen_names="/tmp/.subprof_names.$$"

@@ -5508,8 +5508,8 @@ function conf2obj(obj, action) {
 			continue;
 		}
 		if (el != null) {
-			if(_base64.includes(field)){
-				// base64_decode then fill
+			if(_base64.includes(field) || field.indexOf("ss_subprof_") === 0){
+				// base64_decode then fill (including all ss_subprof_* fields)
 				el.value = Base64.decode(obj[field]);
 			}else{
 				// fill others

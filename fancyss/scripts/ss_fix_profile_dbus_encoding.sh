@@ -45,7 +45,7 @@ fix_profile_encoding() {
 			# 检查是否是明文 JSON（以 { 开头）
 			if printf '%s' "${profile_json}" | grep -q '^{'; then
 				# 明文 JSON，需要编码
-				if dbus set "${profile_key}=$(printf '%s' "${profile_json}" | base64_encode)"; then
+				if dbus set "${profile_key}=$(printf '%s' "${profile_json}" | base64)"; then
 					fix_log "  ✓ Profile 已重新编码: ${profile_key}"
 					fixed_count=$((fixed_count + 1))
 				else
@@ -67,7 +67,7 @@ fix_profile_encoding() {
 			# 检查是否是明文 JSON（以 { 开头）
 			if printf '%s' "${state_json}" | grep -q '^{'; then
 				# 明文 JSON，需要编码
-				if dbus set "${state_key}=$(printf '%s' "${state_json}" | base64_encode)"; then
+				if dbus set "${state_key}=$(printf '%s' "${state_json}" | base64)"; then
 					fix_log "  ✓ State 已重新编码: ${state_key}"
 				else
 					fix_log "  ✗ State 编码失败: ${state_key}"
@@ -103,7 +103,7 @@ verify_encoding() {
 		profile_key="${DBUS_PREFIX}${profile_id}"
 		profile_json="$(dbus get "${profile_key}" 2>/dev/null)"
 		if [ -n "${profile_json}" ]; then
-			decoded_json="$(printf '%s' "${profile_json}" | base64_decode 2>/dev/null)"
+			decoded_json="$(printf '%s' "${profile_json}" | base64 -d 2>/dev/null)"
 			if [ -n "${decoded_json}" ]; then
 				fix_log "  ✓ ${profile_id}: base64 编码正确"
 			else
