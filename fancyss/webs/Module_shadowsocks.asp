@@ -314,6 +314,184 @@ body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-edito
 	.shunt-editor-control{max-width:none;}
 	.shunt-editor{padding:16px 16px 4px;}
 }
+
+/* ========================================
+   皮肤主题适配样式
+   ======================================== */
+
+/* ROG 皮肤 (红黑色主题) - 保持当前样式 */
+body[skin="ROG"] .node-card-section-head {
+	border-color: rgba(74,108,138,0.24);
+	background: linear-gradient(180deg,rgba(24,34,48,0.96),rgba(16,24,34,0.94));
+}
+body[skin="ROG"] .node-card-section-head:hover {
+	border-color: rgba(255,70,70,0.36);
+	background: linear-gradient(180deg,rgba(40,28,28,0.98),rgba(28,18,18,0.96));
+}
+body[skin="ROG"] .node-card {
+	border-color: rgba(74,108,138,0.22);
+	background: linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));
+}
+body[skin="ROG"] .node-card:hover {
+	border-color: rgba(255,70,70,0.42);
+}
+body[skin="ROG"] .node-card-section-count {
+	background: rgba(255,70,70,0.12);
+	color: #ffb3b3;
+}
+body[skin="ROG"] .submgr-tab.active {
+	background: linear-gradient(135deg,#dc2626,#ff5757);
+	border-color: rgba(255,70,70,0.48);
+}
+body[skin="ROG"] .submgr-card {
+	border-color: rgba(120,60,60,0.28);
+	background: linear-gradient(180deg,rgba(32,24,24,0.97),rgba(22,16,16,0.95));
+}
+body[skin="ROG"] .submgr-card:hover {
+	border-color: rgba(255,70,70,0.42);
+}
+
+/* ASUSWRT 皮肤 (蓝灰色主题) */
+body[skin="ASUSWRT"] .node-card-section-head {
+	border-color: rgba(100,116,139,0.28);
+	background: linear-gradient(180deg,rgba(30,41,59,0.96),rgba(15,23,42,0.94));
+}
+body[skin="ASUSWRT"] .node-card-section-head:hover {
+	border-color: rgba(59,130,246,0.36);
+	background: linear-gradient(180deg,rgba(37,47,63,0.98),rgba(23,32,48,0.96));
+}
+body[skin="ASUSWRT"] .node-card {
+	border-color: rgba(100,116,139,0.24);
+	background: linear-gradient(180deg,rgba(30,41,59,0.98),rgba(15,23,42,0.96));
+	border-radius: 8px;
+}
+body[skin="ASUSWRT"] .node-card:hover {
+	border-color: rgba(59,130,246,0.42);
+}
+body[skin="ASUSWRT"] .node-card-section-count {
+	background: rgba(59,130,246,0.14);
+	color: #93c5fd;
+}
+body[skin="ASUSWRT"] .submgr-tab.active {
+	background: linear-gradient(135deg,#1e40af,#3b82f6);
+	border-color: rgba(59,130,246,0.48);
+}
+body[skin="ASUSWRT"] .submgr-card {
+	border-color: rgba(100,116,139,0.28);
+	background: linear-gradient(180deg,rgba(30,41,59,0.97),rgba(15,23,42,0.95));
+	border-radius: 10px;
+}
+body[skin="ASUSWRT"] .submgr-card:hover {
+	border-color: rgba(59,130,246,0.42);
+}
+body[skin="ASUSWRT"] .shunt-summary-card {
+	border-color: rgba(100,116,139,0.28);
+	background: linear-gradient(180deg,rgba(30,41,59,0.98),rgba(15,23,42,0.94));
+	border-radius: 8px;
+}
+
+/* TUF 皮肤 (橙黑色主题) */
+body[skin="TUF"] .node-card-section-head {
+	border-color: rgba(120,80,40,0.28);
+	background: linear-gradient(180deg,rgba(40,30,20,0.96),rgba(28,20,14,0.94));
+}
+body[skin="TUF"] .node-card-section-head:hover {
+	border-color: rgba(251,146,60,0.36);
+	background: linear-gradient(180deg,rgba(48,36,24,0.98),rgba(32,24,16,0.96));
+}
+body[skin="TUF"] .node-card {
+	border-color: rgba(120,80,40,0.24);
+	background: linear-gradient(180deg,rgba(32,24,18,0.98),rgba(22,16,12,0.96));
+	border-radius: 8px;
+}
+body[skin="TUF"] .node-card:hover {
+	border-color: rgba(251,146,60,0.42);
+}
+body[skin="TUF"] .node-card-section-count {
+	background: rgba(251,146,60,0.14);
+	color: #fed7aa;
+}
+body[skin="TUF"] .submgr-tab.active {
+	background: linear-gradient(135deg,#ea580c,#fb923c);
+	border-color: rgba(251,146,60,0.48);
+}
+body[skin="TUF"] .submgr-card {
+	border-color: rgba(120,80,40,0.28);
+	background: linear-gradient(180deg,rgba(36,28,20,0.97),rgba(24,18,12,0.95));
+	border-radius: 10px;
+}
+body[skin="TUF"] .submgr-card:hover {
+	border-color: rgba(251,146,60,0.42);
+}
+body[skin="TUF"] .shunt-summary-card {
+	border-color: rgba(120,80,40,0.28);
+	background: linear-gradient(180deg,rgba(36,28,20,0.98),rgba(24,18,12,0.94));
+	border-radius: 8px;
+}
+
+/* TS 皮肤 (青色主题) */
+body[skin="TS"] .node-card-section-head {
+	border-color: rgba(70,120,120,0.28);
+	background: linear-gradient(180deg,rgba(20,35,40,0.96),rgba(14,25,30,0.94));
+}
+body[skin="TS"] .node-card-section-head:hover {
+	border-color: rgba(34,211,238,0.36);
+	background: linear-gradient(180deg,rgba(24,42,48,0.98),rgba(16,30,36,0.96));
+}
+body[skin="TS"] .node-card {
+	border-color: rgba(70,120,120,0.24);
+	background: linear-gradient(180deg,rgba(20,32,36,0.98),rgba(14,22,26,0.96));
+	border-radius: 8px;
+}
+body[skin="TS"] .node-card:hover {
+	border-color: rgba(34,211,238,0.42);
+}
+body[skin="TS"] .node-card-section-count {
+	background: rgba(34,211,238,0.14);
+	color: #a5f3fc;
+}
+body[skin="TS"] .submgr-tab.active {
+	background: linear-gradient(135deg,#0891b2,#22d3ee);
+	border-color: rgba(34,211,238,0.48);
+}
+body[skin="TS"] .submgr-card {
+	border-color: rgba(70,120,120,0.28);
+	background: linear-gradient(180deg,rgba(22,34,38,0.97),rgba(16,24,28,0.95));
+	border-radius: 10px;
+}
+body[skin="TS"] .submgr-card:hover {
+	border-color: rgba(34,211,238,0.42);
+}
+body[skin="TS"] .shunt-summary-card {
+	border-color: rgba(70,120,120,0.28);
+	background: linear-gradient(180deg,rgba(22,34,38,0.98),rgba(16,24,28,0.94));
+	border-radius: 8px;
+}
+
+/* 通用优化：减小圆角 */
+body[skin="ASUSWRT"] .node-card-section-head,
+body[skin="TUF"] .node-card-section-head,
+body[skin="TS"] .node-card-section-head {
+	border-radius: 8px;
+}
+
+/* 通用优化：select option 背景色 */
+body[skin="ROG"] select option {
+	background: #1a1a1a;
+	color: #fff;
+}
+body[skin="ASUSWRT"] select option {
+	background: #1e293b;
+	color: #e2e8f0;
+}
+body[skin="TUF"] select option {
+	background: #1c1410;
+	color: #fef3c7;
+}
+body[skin="TS"] select option {
+	background: #0f1a1e;
+	color: #cffafe;
+}
 </style>
 <script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/layer/layer.js"></script>
