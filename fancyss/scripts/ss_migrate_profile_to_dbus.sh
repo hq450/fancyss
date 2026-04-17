@@ -5,11 +5,10 @@
 
 [ -z "${KSROOT}" ] && export KSROOT=/koolshare
 [ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
+[ -f "${KSROOT}/scripts/ss_subscribe_profile_lib.sh" ] && source ${KSROOT}/scripts/ss_subscribe_profile_lib.sh
 
 OLD_PROFILE_DIR="/koolshare/configs/fancyss/subscriptions/profiles"
 OLD_STATE_DIR="/koolshare/configs/fancyss/subscriptions/states"
-DBUS_PREFIX="ss_subprof_"
-DBUS_IDS_KEY="ss_subprof_ids"
 
 migrate_log() {
 	echo "【$(date +'%Y-%m-%d %H:%M:%S')】 $*"
@@ -50,8 +49,8 @@ migrate_profile_files() {
 		fi
 
 		# 写入 dbus (使用 base64 编码避免 JSON 嵌套问题)
-		profile_key="${DBUS_PREFIX}${profile_id}"
-		if dbus set "${profile_key}=$(printf '%s' "${profile_json}" | base64)"; then
+		profile_key="$(subprof_profile_key "${profile_id}")"
+		if subprof_dbus_set_json_by_key "${profile_key}" "${profile_json}"; then
 			migrate_log "  ✓ Profile 已写入 dbus: ${profile_key}"
 		else
 			migrate_log "  ✗ Profile 写入失败: ${profile_key}"
@@ -64,8 +63,8 @@ migrate_profile_files() {
 		if [ -f "${state_file}" ]; then
 			state_json="$(cat "${state_file}" 2>/dev/null)"
 			if [ -n "${state_json}" ]; then
-				state_key="${DBUS_PREFIX}${profile_id}_state"
-				if dbus set "${state_key}=$(printf '%s' "${state_json}" | base64)"; then
+				state_key="$(subprof_state_key "${profile_id}")"
+				if subprof_dbus_set_json_by_key "${state_key}" "${state_json}"; then
 					migrate_log "  ✓ State 已写入 dbus: ${state_key}"
 				else
 					migrate_log "  ✗ State 写入失败: ${state_key}"
@@ -74,7 +73,7 @@ migrate_profile_files() {
 		fi
 
 		# 添加到 ID 列表
-		current_ids="$(dbus get "${DBUS_IDS_KEY}" 2>/dev/null)"
+		current_ids="$(dbus get "${SUB_PROFILE_IDS_KEY}" 2>/dev/null)"
 		if [ -z "${current_ids}" ]; then
 			new_ids="${profile_id}"
 		elif ! printf '%s' "${current_ids}" | tr ',' '\n' | grep -qx "${profile_id}"; then
@@ -82,7 +81,7 @@ migrate_profile_files() {
 		else
 			new_ids="${current_ids}"
 		fi
-		dbus set "${DBUS_IDS_KEY}=${new_ids}"
+		dbus set "${SUB_PROFILE_IDS_KEY}=${new_ids}"
 
 		migrated_count=$((migrated_count + 1))
 	done
@@ -99,7 +98,7 @@ verify_migration() {
 
 	migrate_log "验证迁移结果..."
 
-	ids="$(dbus get "${DBUS_IDS_KEY}" 2>/dev/null)"
+	ids="$(dbus get "${SUB_PROFILE_IDS_KEY}" 2>/dev/null)"
 	if [ -z "${ids}" ]; then
 		migrate_log "  ✗ 未找到 Profile ID 列表"
 		return 1
@@ -110,8 +109,8 @@ verify_migration() {
 	for profile_id in $(printf '%s' "${ids}" | tr ',' '\n')
 	do
 		[ -n "${profile_id}" ] || continue
-		profile_key="${DBUS_PREFIX}${profile_id}"
-		profile_json="$(dbus get "${profile_key}" 2>/dev/null)"
+		profile_key="$(subprof_profile_key "${profile_id}")"
+		profile_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || profile_json=""
 		if [ -n "${profile_json}" ]; then
 			migrate_log "  ✓ ${profile_id}: 已存在于 dbus"
 		else
