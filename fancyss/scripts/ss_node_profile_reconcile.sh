@@ -11,8 +11,10 @@ reconcile_log() {
 
 reconcile_profile_scope_row() {
 	local profile_id="$1"
-	local profile_file=""
-	local state_file=""
+	local profile_key=""
+	local state_key=""
+	local profile_json=""
+	local state_json=""
 	local jq_bin=""
 	local profile_name=""
 	local profile_url=""
@@ -22,16 +24,18 @@ reconcile_profile_scope_row() {
 	local source_scope=""
 
 	[ -n "${profile_id}" ] || return 1
-	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
-	[ -f "${profile_file}" ] || return 1
-	state_file="$(subprof_state_file "${profile_id}")" || return 1
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	profile_json="$(dbus get "${profile_key}" 2>/dev/null)" || return 1
+	[ -n "${profile_json}" ] || return 1
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	state_json="$(dbus get "${state_key}" 2>/dev/null)"
 	jq_bin="$(subprof_jq_bin)" || return 1
 
-	profile_name="$("${jq_bin}" -r '.name // empty' "${profile_file}" 2>/dev/null | sed -n '1p')"
-	profile_url="$("${jq_bin}" -r '.url // empty' "${profile_file}" 2>/dev/null | sed -n '1p')"
-	if [ -f "${state_file}" ]; then
-		last_group="$("${jq_bin}" -r '.last_group // empty' "${state_file}" 2>/dev/null | sed -n '1p')"
-		last_url_hash="$("${jq_bin}" -r '.last_url_hash // empty' "${state_file}" 2>/dev/null | sed -n '1p')"
+	profile_name="$(printf '%s' "${profile_json}" | "${jq_bin}" -r '.name // empty' 2>/dev/null | sed -n '1p')"
+	profile_url="$(printf '%s' "${profile_json}" | "${jq_bin}" -r '.url // empty' 2>/dev/null | sed -n '1p')"
+	if [ -n "${state_json}" ]; then
+		last_group="$(printf '%s' "${state_json}" | "${jq_bin}" -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
+		last_url_hash="$(printf '%s' "${state_json}" | "${jq_bin}" -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
 	fi
 	[ -n "${last_group}" ] || last_group="${profile_name}"
 	if [ -z "${last_group}" ] && [ -n "${profile_url}" ]; then

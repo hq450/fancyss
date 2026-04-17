@@ -4,14 +4,13 @@
 [ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
 [ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
 
-SUB_PROFILE_ROOT="/koolshare/configs/fancyss/subscriptions"
-SUB_PROFILE_DIR="${SUB_PROFILE_ROOT}/profiles"
-SUB_PROFILE_STATE_DIR="${SUB_PROFILE_ROOT}/states"
 SUB_PROFILE_RUNTIME_JSON="/tmp/upload/ss_subscribe_profiles.json"
 SUB_PROFILE_TMP_PAYLOAD_KEY="ss_subscribe_profile_payload"
 SUB_PROFILE_TMP_ID_KEY="ss_subscribe_profile_id"
 SUB_PROFILE_TMP_SYNC_ID_KEY="ss_subscribe_profile_selected"
 SUB_PROFILE_SCHEMA_VERSION="1"
+SUB_PROFILE_DBUS_PREFIX="ss_subprof_"
+SUB_PROFILE_IDS_KEY="ss_subprof_ids"
 NODE_TOOL_CONF_FILE="/koolshare/ss/rules/node-tool.conf"
 
 subprof_jq_bin() {
@@ -22,24 +21,20 @@ subprof_jq_bin() {
 	type jq 2>/dev/null | awk '{print $NF}' | sed -n '1p'
 }
 
-subprof_ensure_dirs() {
-	mkdir -p "${SUB_PROFILE_DIR}" "${SUB_PROFILE_STATE_DIR}" >/dev/null 2>&1
-}
-
 subprof_runtime_json_file() {
 	printf '%s\n' "${SUB_PROFILE_RUNTIME_JSON}"
 }
 
-subprof_profile_file() {
+subprof_profile_key() {
 	local profile_id="$1"
 	[ -n "${profile_id}" ] || return 1
-	printf '%s/%s.json\n' "${SUB_PROFILE_DIR}" "${profile_id}"
+	printf '%s%s\n' "${SUB_PROFILE_DBUS_PREFIX}" "${profile_id}"
 }
 
-subprof_state_file() {
+subprof_state_key() {
 	local profile_id="$1"
 	[ -n "${profile_id}" ] || return 1
-	printf '%s/%s.state.json\n' "${SUB_PROFILE_STATE_DIR}" "${profile_id}"
+	printf '%s%s_state\n' "${SUB_PROFILE_DBUS_PREFIX}" "${profile_id}"
 }
 
 subprof_valid_profile_id() {
@@ -49,15 +44,11 @@ subprof_valid_profile_id() {
 
 subprof_profile_id_exists() {
 	local profile_id="$1"
-	local profile_file=""
-	local state_file=""
+	local profile_key=""
 
 	[ -n "${profile_id}" ] || return 1
-	profile_file="$(subprof_profile_file "${profile_id}" 2>/dev/null)" || return 1
-	state_file="$(subprof_state_file "${profile_id}" 2>/dev/null)" || return 1
-	[ -f "${profile_file}" ] && return 0
-	[ -f "${state_file}" ] && return 0
-	return 1
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	dbus get "${profile_key}" >/dev/null 2>&1
 }
 
 subprof_random_hex_id() {
@@ -320,13 +311,12 @@ subprof_write_profile_json() {
 	local normalized=""
 	local profile_id=""
 	local profile_url=""
-	local profile_file=""
-	local state_file=""
+	local profile_key=""
+	local state_key=""
 	local existing_id=""
-	local existing_file=""
+	local existing_json=""
 	local existing_url=""
 
-	subprof_ensure_dirs || return 1
 	normalized="$(subprof_normalize_payload "${payload_json}")" || return 1
 	profile_url="$(printf '%s' "${normalized}" | "$(subprof_jq_bin)" -r '.url // empty' 2>/dev/null)"
 	[ -n "${profile_url}" ] || return 1
@@ -339,48 +329,79 @@ subprof_write_profile_json() {
 	do
 		[ -n "${existing_id}" ] || continue
 		[ "${existing_id}" = "${profile_id}" ] && continue
-		existing_file="$(subprof_profile_file "${existing_id}" 2>/dev/null)" || continue
-		[ -f "${existing_file}" ] || continue
-		existing_url="$("$(subprof_jq_bin)" -r '.url // empty' "${existing_file}" 2>/dev/null | sed -n '1p')"
+		existing_json="$(dbus get "$(subprof_profile_key "${existing_id}")" 2>/dev/null)" || continue
+		[ -n "${existing_json}" ] || continue
+		existing_url="$(printf '%s' "${existing_json}" | "$(subprof_jq_bin)" -r '.url // empty' 2>/dev/null | sed -n '1p')"
 		if [ -n "${existing_url}" ] && [ "${existing_url}" = "${profile_url}" ]; then
 			return 1
 		fi
 	done
 	normalized="$(printf '%s' "${normalized}" | "$(subprof_jq_bin)" -c --arg id "${profile_id}" '.id = $id')" || return 1
 
-	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
-	state_file="$(subprof_state_file "${profile_id}")" || return 1
-	printf '%s\n' "${normalized}" > "${profile_file}" || return 1
-	if [ ! -s "${state_file}" ]; then
-		"$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}' > "${state_file}" 2>/dev/null || true
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	dbus set "${profile_key}=${normalized}" || return 1
+	if ! dbus get "${state_key}" >/dev/null 2>&1; then
+		dbus set "${state_key}=$("$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}')" 2>/dev/null || true
 	fi
+	subprof_add_profile_id "${profile_id}"
 	printf '%s\n' "${profile_id}"
 	return 0
 }
 
 subprof_remove_profile() {
 	local profile_id="$1"
-	local profile_file=""
-	local state_file=""
+	local profile_key=""
+	local state_key=""
 
 	[ -n "${profile_id}" ] || return 1
 	subprof_valid_profile_id "${profile_id}" || return 1
-	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
-	state_file="$(subprof_state_file "${profile_id}")" || return 1
-	rm -f "${profile_file}" "${state_file}" >/dev/null 2>&1
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	dbus remove "${profile_key}" >/dev/null 2>&1
+	dbus remove "${state_key}" >/dev/null 2>&1
+	subprof_remove_profile_id "${profile_id}"
 	return 0
 }
 
 subprof_list_profile_ids() {
-	[ -d "${SUB_PROFILE_DIR}" ] || return 0
-	find "${SUB_PROFILE_DIR}" -maxdepth 1 -type f -name '*.json' 2>/dev/null \
-		| sed 's#.*/##' \
-		| sed 's/\.json$//' \
-		| sort
+	dbus get "${SUB_PROFILE_IDS_KEY}" 2>/dev/null | tr ',' '\n' | grep -v '^$'
 }
 
 subprof_has_profiles() {
 	[ -n "$(subprof_list_profile_ids | sed -n '1p')" ]
+}
+
+subprof_add_profile_id() {
+	local profile_id="$1"
+	local current_ids=""
+	local new_ids=""
+
+	[ -n "${profile_id}" ] || return 1
+	current_ids="$(dbus get "${SUB_PROFILE_IDS_KEY}" 2>/dev/null)"
+
+	if [ -z "${current_ids}" ]; then
+		new_ids="${profile_id}"
+	elif ! printf '%s' "${current_ids}" | tr ',' '\n' | grep -qx "${profile_id}"; then
+		new_ids="${current_ids},${profile_id}"
+	else
+		return 0
+	fi
+
+	dbus set "${SUB_PROFILE_IDS_KEY}=${new_ids}"
+}
+
+subprof_remove_profile_id() {
+	local profile_id="$1"
+	local current_ids=""
+	local new_ids=""
+
+	[ -n "${profile_id}" ] || return 1
+	current_ids="$(dbus get "${SUB_PROFILE_IDS_KEY}" 2>/dev/null)"
+	[ -n "${current_ids}" ] || return 0
+
+	new_ids="$(printf '%s' "${current_ids}" | tr ',' '\n' | grep -vx "${profile_id}" | tr '\n' ',' | sed 's/,$//')"
+	dbus set "${SUB_PROFILE_IDS_KEY}=${new_ids}"
 }
 
 subprof_count_profile_nodes_fast() {
@@ -429,8 +450,10 @@ subprof_count_profile_nodes_fallback() {
 
 subprof_merge_profile_and_state() {
 	local profile_id="$1"
-	local profile_file=""
-	local state_file=""
+	local profile_key=""
+	local state_key=""
+	local profile_json=""
+	local state_json=""
 	local node_count="0"
 	local airport_identity=""
 	local last_url_hash=""
@@ -438,14 +461,17 @@ subprof_merge_profile_and_state() {
 	local source_scope=""
 
 	[ -n "${profile_id}" ] || return 1
-	profile_file="$(subprof_profile_file "${profile_id}")" || return 1
-	[ -f "${profile_file}" ] || return 1
-	state_file="$(subprof_state_file "${profile_id}")" || return 1
-	if [ ! -f "${state_file}" ]; then
-		"$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}' > "${state_file}" 2>/dev/null || printf '{}\n' > "${state_file}"
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	profile_json="$(dbus get "${profile_key}" 2>/dev/null)" || return 1
+	[ -n "${profile_json}" ] || return 1
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	state_json="$(dbus get "${state_key}" 2>/dev/null)"
+	if [ -z "${state_json}" ]; then
+		state_json="$("$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}')"
+		dbus set "${state_key}=${state_json}" 2>/dev/null || true
 	fi
-	last_group="$("$(subprof_jq_bin)" -r '.last_group // empty' "${state_file}" 2>/dev/null | sed -n '1p')"
-	last_url_hash="$("$(subprof_jq_bin)" -r '.last_url_hash // empty' "${state_file}" 2>/dev/null | sed -n '1p')"
+	last_group="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
+	last_url_hash="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
 	if [ -n "${last_group}" ]; then
 		airport_identity="$(fss_identity_slugify "${last_group}" "sub" 2>/dev/null)"
 		source_scope="${airport_identity}"
@@ -454,12 +480,10 @@ subprof_merge_profile_and_state() {
 	node_count="$(subprof_count_profile_nodes_fast "${profile_id}" "${source_scope}" 2>/dev/null)" || node_count=""
 	[ -n "${node_count}" ] || node_count="$(subprof_count_profile_nodes_fallback "${profile_id}" "${source_scope}" 2>/dev/null)"
 	[ -n "${node_count}" ] || node_count="0"
-	"$(subprof_jq_bin)" -cn \
-		--slurpfile profile "${profile_file}" \
-		--slurpfile state "${state_file}" \
+	printf '%s\n%s\n' "${profile_json}" "${state_json}" | "$(subprof_jq_bin)" -s \
 		--argjson node_count "${node_count}" '
-		($profile[0] // {}) as $p
-		| ($state[0] // {}) as $s
+		(.[0] // {}) as $p
+		| (.[1] // {}) as $s
 		| {
 			id: ($p.id // ""),
 			name: ($p.name // ""),
@@ -502,7 +526,6 @@ subprof_write_profiles_runtime_json() {
 	local profile_id=""
 	local first=1
 
-	subprof_ensure_dirs || return 1
 	runtime_json="$(subprof_runtime_json_file)"
 	tmp_file="${runtime_json}.tmp.$$"
 	{
@@ -639,16 +662,16 @@ subprof_mark_state_success() {
 	local download_path="$5"
 	local ua_mode="$6"
 	local ua_preset="$7"
-	local state_file=""
-	local tmp_file=""
+	local state_key=""
+	local state_json=""
+	local new_state=""
 	local now_ts=""
 
 	[ -n "${profile_id}" ] || return 1
-	state_file="$(subprof_state_file "${profile_id}")" || return 1
-	tmp_file="${state_file}.tmp.$$"
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	state_json="$(dbus get "${state_key}" 2>/dev/null)"
 	now_ts="$(date +%s)"
-	"$(subprof_jq_bin)" -cn \
-		--slurpfile old "${state_file}" \
+	new_state="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -c \
 		--arg id "${profile_id}" \
 		--arg url_hash "${url_hash}" \
 		--arg group_name "${group_name}" \
@@ -657,7 +680,7 @@ subprof_mark_state_success() {
 		--arg ua_mode "${ua_mode}" \
 		--arg ua_preset "${ua_preset}" \
 		--argjson now_ts "${now_ts}" '
-		(($old[0] // {}) + {
+		(. // {}) + {
 			version: 1,
 			id: $id,
 			last_ok_ts: $now_ts,
@@ -669,12 +692,9 @@ subprof_mark_state_success() {
 			last_download_path: $download_path,
 			last_ua_mode: $ua_mode,
 			last_ua_preset: $ua_preset
-		})
-	' > "${tmp_file}" 2>/dev/null || {
-		rm -f "${tmp_file}"
-		return 1
-	}
-	mv -f "${tmp_file}" "${state_file}"
+		}
+	')" || return 1
+	dbus set "${state_key}=${new_state}"
 }
 
 subprof_mark_state_failure() {
@@ -686,16 +706,16 @@ subprof_mark_state_failure() {
 	local download_path="$6"
 	local ua_mode="$7"
 	local ua_preset="$8"
-	local state_file=""
-	local tmp_file=""
+	local state_key=""
+	local state_json=""
+	local new_state=""
 	local now_ts=""
 
 	[ -n "${profile_id}" ] || return 1
-	state_file="$(subprof_state_file "${profile_id}")" || return 1
-	tmp_file="${state_file}.tmp.$$"
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	state_json="$(dbus get "${state_key}" 2>/dev/null)"
 	now_ts="$(date +%s)"
-	"$(subprof_jq_bin)" -cn \
-		--slurpfile old "${state_file}" \
+	new_state="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -c \
 		--arg id "${profile_id}" \
 		--arg error_text "${error_text}" \
 		--arg url_hash "${url_hash}" \
@@ -705,7 +725,7 @@ subprof_mark_state_failure() {
 		--arg ua_mode "${ua_mode}" \
 		--arg ua_preset "${ua_preset}" \
 		--argjson now_ts "${now_ts}" '
-		(($old[0] // {}) + {
+		(. // {}) + {
 			version: 1,
 			id: $id,
 			last_error_ts: $now_ts,
@@ -716,12 +736,9 @@ subprof_mark_state_failure() {
 			last_download_path: $download_path,
 			last_ua_mode: $ua_mode,
 			last_ua_preset: $ua_preset
-		})
-	' > "${tmp_file}" 2>/dev/null || {
-		rm -f "${tmp_file}"
-		return 1
-	}
-	mv -f "${tmp_file}" "${state_file}"
+		}
+	')" || return 1
+	dbus set "${state_key}=${new_state}"
 }
 
 subprof_migrate_legacy_profiles_if_needed() {
