@@ -638,6 +638,13 @@ var shuntStatsSummary = {};
 var shuntStatsTimer = null;
 var shuntStatsRequestPending = false;
 var shuntStatsWs = null;
+var schema2NodeDeleteQueue = [];
+var schema2NodeDeletePendingMap = {};
+var schema2NodeDeleteInFlight = false;
+var schema2NodeDeleteRefreshTimer = null;
+var schema2NodeDeleteRestoreScrollTop = null;
+var nodeTableRefreshSeq = 0;
+var nodeTableRefreshXhr = null;
 var shuntStatsWsOpenTimer = null;
 var shuntStatsWsInitTimer = null;
 var shuntStatsWsClosing = false;
@@ -5435,6 +5442,9 @@ function get_dbus_data(cb) {
 					sync_shunt_state_from_dbus();
 					// generate node table
 					refresh_html();
+					if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+						latency_test(db_ss["ss_basic_latency_val"]);
+					}
 					init_subscription_manager_entry();
 					// fill node value
 					ss_node_sel();
@@ -7276,45 +7286,7 @@ function remove_conf_table(o) {
 		return false;
 	}
 	if (get_node_storage_schema() == 2) {
-		var nodeTableScrollTop = get_node_table_scroll_top();
-		var new_nodes_v2 = ss_nodes.concat();
-		new_nodes_v2.splice(new_nodes_v2.indexOf(String(id)), 1);
-		var deleteImpact = collect_node_reference_delete_impact(String(id));
-		var removedNodeName = (confs[String(id)] && confs[String(id)]["name"]) ? String(confs[String(id)]["name"]) : ("ID " + String(id));
-		var fields_v2 = {};
-		var touchTs = get_schema2_touch_timestamp();
-		fields_v2["fss_node_" + id] = "";
-		fields_v2["fss_node_order"] = new_nodes_v2.join(",");
-		fields_v2["fss_node_catalog_ts"] = touchTs;
-		fields_v2["fss_node_config_ts"] = touchTs;
-		if (get_saved_current_node_id() == String(id)) {
-			var nextCurrentId = new_nodes_v2.length ? new_nodes_v2[0] : "";
-			fields_v2["fss_node_current"] = nextCurrentId;
-			fields_v2["fss_node_current_identity"] = nextCurrentId ? (get_node_identity(nextCurrentId) || "") : "";
-		}
-		if (get_failover_node_id() == String(id)) {
-			fields_v2["fss_node_failover_backup"] = "";
-			fields_v2["fss_node_failover_identity"] = "";
-		}
-		var post_data_v2 = compfilter(get_compare_store(), fields_v2);
-		var id_2 = parseInt(Math.random() * 100000000);
-		var postData_v2 = build_schema2_postsave_request(id_2, post_data_v2) || {"id": id_2, "method": "dummy_script.sh", "params":[], "fields": post_data_v2 };
-		$.ajax({
-			type: "POST",
-			cache:false,
-			url: "/_api/",
-			data: JSON.stringify(postData_v2),
-			dataType: "json",
-			success: function(response) {
-				schedule_schema2_node_direct_refresh();
-				invalidate_schema2_webtest_results();
-				schedule_schema2_webtest_warm();
-				refresh_table(function() {
-					set_node_table_scroll_top(nodeTableScrollTop);
-				});
-				show_deleted_node_reference_notice(removedNodeName, deleteImpact, new_nodes_v2.length ? String(new_nodes_v2[0]) : "");
-			}
-		});
+		enqueue_schema2_node_delete(String(id));
 		return;
 	}
 	//console.log("删除第", id, "个节点！！！")
@@ -7362,6 +7334,218 @@ function remove_conf_table(o) {
 				});
 			}
 		}
+	});
+}
+function set_schema2_node_delete_pending(nodeId, pending) {
+	nodeId = nodeId ? String(nodeId) : "";
+	if (!nodeId) {
+		return;
+	}
+	if (pending) {
+		schema2NodeDeletePendingMap[nodeId] = 1;
+	} else {
+		delete schema2NodeDeletePendingMap[nodeId];
+	}
+	var $trigger = $("#td_node_" + nodeId);
+	if ($trigger.length) {
+		if ($trigger.is("input,button")) {
+			$trigger.prop("disabled", !!pending);
+		}
+		$trigger.css({
+			"pointer-events": pending ? "none" : "",
+			"opacity": pending ? "0.45" : ""
+		});
+	}
+	update_node_delete_buttons_state();
+}
+function update_node_delete_buttons_state() {
+	var deleting = schema2NodeDeleteInFlight || schema2NodeDeleteQueue.length > 0;
+	var webtesting = batch_test_running || single_test_running || batch_stop_pending;
+	var disabled = deleting || webtesting;
+	var title = deleting ? "节点删除处理中，请稍候" : (webtesting ? "测速进行中，暂不可删除节点" : "");
+	$(".remove_btn, .node-card-delete").each(function() {
+		var $btn = $(this);
+		var isPendingNode = false;
+		var id = String($btn.attr("id") || "");
+		var nodeId = "";
+		if (id.indexOf("td_node_") === 0) {
+			nodeId = id.substring("td_node_".length);
+			isPendingNode = !!schema2NodeDeletePendingMap[String(nodeId)];
+		}
+		var locked = disabled || isPendingNode;
+		if ($btn.is("input,button")) {
+			$btn.prop("disabled", !!locked);
+		}
+		if (locked) {
+			if ($btn.data("orig-title") === undefined) {
+				$btn.data("orig-title", $btn.attr("title") || "");
+			}
+			if (title) {
+				$btn.attr("title", title);
+			}
+			$btn.css({
+				"pointer-events": "none",
+				"opacity": "0.35",
+				"cursor": "not-allowed"
+			});
+		} else {
+			if ($btn.data("orig-title") !== undefined) {
+				$btn.attr("title", $btn.data("orig-title"));
+			}
+			$btn.css({
+				"pointer-events": "",
+				"opacity": "",
+				"cursor": ""
+			});
+		}
+	});
+}
+function schedule_schema2_node_delete_refresh(scrollTop) {
+	if (typeof scrollTop != "undefined" && scrollTop !== null) {
+		schema2NodeDeleteRestoreScrollTop = parseInt(scrollTop, 10) || 0;
+	}
+	if (schema2NodeDeleteRefreshTimer) {
+		clearTimeout(schema2NodeDeleteRefreshTimer);
+	}
+	schema2NodeDeleteRefreshTimer = setTimeout(function() {
+		var restoreScrollTop = schema2NodeDeleteRestoreScrollTop;
+		schema2NodeDeleteRefreshTimer = null;
+		schema2NodeDeleteRestoreScrollTop = null;
+		refresh_table(function() {
+			if (restoreScrollTop !== null && typeof restoreScrollTop != "undefined") {
+				set_node_table_scroll_top(restoreScrollTop);
+			}
+		});
+	}, 160);
+}
+function apply_schema2_node_delete_local(nodeId) {
+	var nextCurrentId = "";
+	nodeId = nodeId ? String(nodeId) : "";
+	if (!nodeId || $.inArray(nodeId, ss_nodes) === -1) {
+		return;
+	}
+	delete db_fss["fss_node_" + nodeId];
+	delete fss_nodes_raw[nodeId];
+	delete confs[nodeId];
+	ss_nodes = ss_nodes.filter(function(item) {
+		return String(item) !== nodeId;
+	});
+	db_fss["fss_node_order"] = ss_nodes.join(",");
+	if (get_saved_current_node_id() == nodeId) {
+		nextCurrentId = ss_nodes.length ? String(ss_nodes[0]) : "";
+		db_fss["fss_node_current"] = nextCurrentId;
+		db_fss["fss_node_current_identity"] = nextCurrentId ? (get_node_identity(nextCurrentId) || "") : "";
+	}
+	if (get_failover_node_id() == nodeId) {
+		db_fss["fss_node_failover_backup"] = "";
+		db_fss["fss_node_failover_identity"] = "";
+	}
+	fss_nodes_raw = {};
+	confs = {};
+	generate_node_info();
+	refresh_options();
+	refresh_html();
+}
+function process_schema2_node_delete_queue() {
+	if (schema2NodeDeleteInFlight) {
+		return;
+	}
+	while (schema2NodeDeleteQueue.length) {
+		var id = String(schema2NodeDeleteQueue.shift() || "");
+		if (!id) {
+			continue;
+		}
+		if ($.inArray(id, ss_nodes) === -1) {
+			set_schema2_node_delete_pending(id, false);
+			continue;
+		}
+		schema2NodeDeleteInFlight = true;
+		var nodeTableScrollTop = get_node_table_scroll_top();
+		var new_nodes_v2 = ss_nodes.concat();
+		new_nodes_v2.splice(new_nodes_v2.indexOf(id), 1);
+		var deleteImpact = collect_node_reference_delete_impact(id);
+		var removedNodeName = (confs[id] && confs[id]["name"]) ? String(confs[id]["name"]) : ("ID " + id);
+		var fields_v2 = {};
+		var touchTs = get_schema2_touch_timestamp();
+		fields_v2["fss_node_" + id] = "";
+		fields_v2["fss_node_order"] = new_nodes_v2.join(",");
+		fields_v2["fss_node_catalog_ts"] = touchTs;
+		fields_v2["fss_node_config_ts"] = touchTs;
+		if (get_saved_current_node_id() == id) {
+			var nextCurrentId = new_nodes_v2.length ? new_nodes_v2[0] : "";
+			fields_v2["fss_node_current"] = nextCurrentId;
+			fields_v2["fss_node_current_identity"] = nextCurrentId ? (get_node_identity(nextCurrentId) || "") : "";
+		}
+		if (get_failover_node_id() == id) {
+			fields_v2["fss_node_failover_backup"] = "";
+			fields_v2["fss_node_failover_identity"] = "";
+		}
+		var post_data_v2 = compfilter(get_compare_store(), fields_v2);
+		apply_schema2_node_delete_local(id);
+		set_node_table_scroll_top(nodeTableScrollTop);
+		if (!Object.keys(post_data_v2).length) {
+			set_schema2_node_delete_pending(id, false);
+			schema2NodeDeleteInFlight = false;
+			process_schema2_node_delete_queue();
+			continue;
+		}
+		var requestId = parseInt(Math.random() * 100000000);
+		var postData_v2 = build_schema2_postsave_request(requestId, post_data_v2) || {"id": requestId, "method": "dummy_script.sh", "params":[], "fields": post_data_v2 };
+		$.ajax({
+			type: "POST",
+			cache:false,
+			url: "/_api/",
+			data: JSON.stringify(postData_v2),
+			dataType: "json",
+			complete: function() {
+				set_schema2_node_delete_pending(id, false);
+				schema2NodeDeleteInFlight = false;
+				if (!schema2NodeDeleteQueue.length) {
+					schedule_schema2_node_delete_refresh(nodeTableScrollTop);
+				}
+				process_schema2_node_delete_queue();
+			},
+			success: function() {
+				schedule_schema2_node_cache_prune(id);
+				show_deleted_node_reference_notice(removedNodeName, deleteImpact, new_nodes_v2.length ? String(new_nodes_v2[0]) : "");
+			},
+			error: function() {
+				console.log("schema2 node delete failed:", id);
+				schedule_schema2_node_delete_refresh(nodeTableScrollTop);
+			}
+		});
+		return;
+	}
+}
+function enqueue_schema2_node_delete(nodeId) {
+	nodeId = nodeId ? String(nodeId) : "";
+	if (!nodeId) {
+		return false;
+	}
+	if (batch_test_running || single_test_running || batch_stop_pending) {
+		return false;
+	}
+	if (schema2NodeDeletePendingMap[nodeId]) {
+		return false;
+	}
+	set_schema2_node_delete_pending(nodeId, true);
+	schema2NodeDeleteQueue.push(nodeId);
+	process_schema2_node_delete_queue();
+	return false;
+}
+function schedule_schema2_node_cache_prune(nodeId) {
+	var requestId;
+	nodeId = nodeId ? String(nodeId) : "";
+	if (!nodeId || get_node_storage_schema() != 2) {
+		return;
+	}
+	requestId = parseInt(Math.random() * 100000000);
+	$.ajax({
+		type: "POST",
+		cache:false,
+		url: "/_api/",
+		data: JSON.stringify({"id": requestId, "method": "ss_node_cache.sh", "params": ["drop_node_cache", nodeId], "fields": {}}),
+		dataType: "json"
 	});
 }
 function edit_conf_table(o) {
@@ -7996,15 +8180,27 @@ function generate_node_info() {
 	//console.log("所有节点信息：", confs);
 }
 function refresh_table(cb) {
-	return $.ajax({
+	var requestSeq = ++nodeTableRefreshSeq;
+	if (nodeTableRefreshXhr && nodeTableRefreshXhr.readyState && nodeTableRefreshXhr.readyState !== 4) {
+		try {
+			nodeTableRefreshXhr.abort();
+		} catch (e) {}
+	}
+	nodeTableRefreshXhr = $.ajax({
 		type: "GET",
 		url: "/_api/ss",
 		dataType: "json",
 		cache:false,
 		success: function(data) {
+			if (requestSeq !== nodeTableRefreshSeq) {
+				return;
+			}
 			db_ss = data.result[0];
 			normalize_latency_val();
 			refresh_fss_bundle(function() {
+				if (requestSeq !== nodeTableRefreshSeq) {
+					return;
+				}
 				generate_node_info();
 				refresh_options();
 				refresh_html();
@@ -8014,11 +8210,15 @@ function refresh_table(cb) {
 			});
 		},
 		error: function() {
+			if (requestSeq !== nodeTableRefreshSeq) {
+				return;
+			}
 			if (typeof cb === "function") {
 				cb();
 			}
 		}
 	});
+	return nodeTableRefreshXhr;
 }
 function get_node_table_scroll_top() {
 	var el = E("ss_node_list_table_main");
@@ -8278,13 +8478,13 @@ function refresh_html() {
 		} else {
 			$("#ss_list_table").removeAttr("style");
 		}
-		$('.nodeTable').remove();
-		$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
-		update_latency_action_links();
-		if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
-			latency_test(db_ss["ss_basic_latency_val"]);
-		}
-		select_default_node(2);
+			$('.nodeTable').remove();
+			$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
+			update_latency_action_links();
+			if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+				load_latency_cache();
+			}
+			select_default_node(2);
 		if(node_nu){
 			const dropdownBtn = E("dropdownbtn");
 			const dropdownMenu = E("dropdown");
@@ -8483,7 +8683,7 @@ function refresh_html() {
 	}
 	// ask or not ask for webtest
 	if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
-		latency_test(db_ss["ss_basic_latency_val"]);
+		load_latency_cache();
 	}
 	// select default node
 	select_default_node(2);
@@ -9548,6 +9748,7 @@ function update_latency_action_links() {
 			$stop.css({"color":"#999","cursor":"not-allowed"});
 		}
 	}
+	update_node_delete_buttons_state();
 }
 function parse_webtest_lines(res){
 	const array = [];

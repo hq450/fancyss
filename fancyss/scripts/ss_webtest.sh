@@ -1915,13 +1915,16 @@ wt_rotate_node_file_from_begin() {
 	local file_path="$1"
 	local begn_node="$2"
 	local first_bgn=""
+	local match_line=""
 
 	[ -f "${file_path}" ] || return 1
 	[ -n "${begn_node}" ] || return 0
 	first_bgn=$(sed -n '1p' "${file_path}")
 	if [ -n "${first_bgn}" ] && [ "${begn_node}" -gt "${first_bgn}" ] 2>/dev/null; then
-		sed -n "/${begn_node}/,\$p" "${file_path}" > "${TMP2}/re-arrange-1.txt"
-		sed -n "1,/^${begn_node}\$/p" "${file_path}" | sed '$d' > "${TMP2}/re-arrange-2.txt"
+		match_line=$(awk -v target="${begn_node}" '$0 == target {print NR; exit}' "${file_path}")
+		[ -n "${match_line}" ] || return 0
+		sed -n "${match_line},\$p" "${file_path}" > "${TMP2}/re-arrange-1.txt"
+		sed -n "1,${match_line}p" "${file_path}" | sed '$d' > "${TMP2}/re-arrange-2.txt"
 		cat "${TMP2}/re-arrange-1.txt" "${TMP2}/re-arrange-2.txt" > "${file_path}"
 		rm -f "${TMP2}/re-arrange-1.txt" "${TMP2}/re-arrange-2.txt"
 	fi

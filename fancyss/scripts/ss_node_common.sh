@@ -170,6 +170,23 @@ fss_clear_webtest_cache_node() {
 		"${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" >/dev/null 2>&1
 }
 
+fss_clear_node_json_cache_node() {
+	local node_id="$1"
+
+	[ -n "${node_id}" ] || return 0
+	rm -f "${FSS_NODE_JSON_CACHE_DIR}/${node_id}.json" \
+		"${FSS_NODE_JSON_INDEX_FILE}" \
+		"${FSS_NODE_JSON_CACHE_META_FILE}" >/dev/null 2>&1
+}
+
+fss_clear_node_cache_node() {
+	local node_id="$1"
+
+	[ -n "${node_id}" ] || return 0
+	fss_clear_node_json_cache_node "${node_id}" >/dev/null 2>&1 || true
+	fss_clear_webtest_cache_node "${node_id}" >/dev/null 2>&1 || true
+}
+
 fss_clear_webtest_cache_all() {
 	rm -rf "${FSS_WEBTEST_CACHE_DIR}" >/dev/null 2>&1
 }
