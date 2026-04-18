@@ -606,9 +606,11 @@ var batch_ws_fallback_started = false;
 var batch_ws_completed = false;
 var batch_ws_last_message_at = 0;
 var batch_ws_watchdog_timer = null;
+var batchLatencyPollSeq = 0;
 var webtestSnapshotActive = false;
 var webtestSnapshotBuffer = "";
 var singleLatencySocket = null;
+var singleLatencyPollSeq = 0;
 var fss_nodes_raw = {};
 var node_auto_migrate_attempted = false;
 var node_auto_migrate_layer = null;
@@ -651,6 +653,7 @@ var shuntStatsWsOpenTimer = null;
 var shuntStatsWsInitTimer = null;
 var shuntStatsWsClosing = false;
 var shuntStatsWsReceived = false;
+var pageLiveRuntimeBound = false;
 var shuntUptimeTicker = null;
 var shuntUptimeBaseSeconds = -1;
 var shuntUptimeBaseClientMs = 0;
@@ -2979,7 +2982,7 @@ function apply_shunt_stats_payload(payload) {
 	start_shunt_uptime_tick();
 }
 function fallback_shunt_stats_ws() {
-	if (!is_shunt_tab_active()) {
+	if (!should_run_shunt_stats_live()) {
 		return;
 	}
 	close_shunt_stats_ws(true);
@@ -3000,7 +3003,7 @@ function handle_shunt_stats_ws_payload(raw) {
 	return handled;
 }
 function start_shunt_stats_ws() {
-	if (!is_shunt_tab_active() || ws_flag != 1) {
+	if (!should_run_shunt_stats_live() || ws_flag != 1) {
 		return false;
 	}
 	if (shuntStatsWs) {
@@ -3044,7 +3047,7 @@ function start_shunt_stats_ws() {
 		shuntStatsWs = null;
 		shuntStatsWsClosing = false;
 		clear_shunt_stats_ws_timers();
-		if (shouldFallback && is_shunt_tab_active()) {
+		if (shouldFallback && should_run_shunt_stats_live()) {
 			stop_shunt_stats_refresh();
 			shuntStatsTimer = setTimeout(fetch_shunt_stats_http, 0);
 		}
@@ -3053,7 +3056,8 @@ function start_shunt_stats_ws() {
 }
 function schedule_shunt_stats_refresh(immediate) {
 	stop_shunt_stats_refresh();
-	if (!is_shunt_tab_active()) {
+	if (!should_run_shunt_stats_live()) {
+		stop_shunt_stats_runtime();
 		return;
 	}
 	if (ws_probe_pending && ws_enable == 1) {
@@ -3072,7 +3076,7 @@ function schedule_shunt_stats_refresh(immediate) {
 function fetch_shunt_stats_http() {
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_conf.sh", "params": ["shunt_stats"], "fields": {}};
-	if (!is_shunt_tab_active()) {
+	if (!should_run_shunt_stats_live()) {
 		stop_shunt_stats_runtime();
 		return;
 	}
@@ -5199,6 +5203,9 @@ function auto_migrate_node_storage(cb) {
 	});
 }
 function wait_ws_probe_then_start_status(retry){
+	if (!is_page_live_updates_allowed()) {
+		return false;
+	}
 	if (db_ss['ss_basic_enable'] != "1") {
 		return false;
 	}
@@ -5210,6 +5217,163 @@ function wait_ws_probe_then_start_status(retry){
 	}
 	get_ss_status(ws_flag == 1);
 	return true;
+}
+function is_page_live_updates_allowed() {
+	if (typeof document.hidden !== "undefined" && document.hidden) {
+		return false;
+	}
+	if (typeof document.visibilityState !== "undefined" && document.visibilityState == "hidden") {
+		return false;
+	}
+	return true;
+}
+function is_node_tab_active() {
+	return $("#tablet_1").is(":visible");
+}
+function should_run_front_status_live() {
+	return is_page_live_updates_allowed();
+}
+function should_run_node_latency_live() {
+	return is_page_live_updates_allowed() && is_node_tab_active();
+}
+function should_run_shunt_stats_live() {
+	return is_page_live_updates_allowed() && is_shunt_tab_active();
+}
+function close_optional_socket(refName) {
+	var socket = window[refName];
+	if (!socket) {
+		return;
+	}
+	try {
+		socket.onopen = null;
+		socket.onmessage = null;
+		socket.onerror = null;
+		socket.onclose = null;
+		socket.close();
+	} catch (e) {}
+	window[refName] = null;
+}
+function close_front_status_socket() {
+	if (wss) {
+		try {
+			wss.onopen = null;
+			wss.onmessage = null;
+			wss.onerror = null;
+			wss.onclose = null;
+			wss.close();
+		} catch (e) {}
+		wss = null;
+	}
+	wss_open = 0;
+	if (statusFrontSocket && statusFrontSocket !== wss) {
+		try {
+			statusFrontSocket.close();
+		} catch (e) {}
+		statusFrontSocket = null;
+	}
+}
+function stop_front_status_runtime() {
+	clear_front_status_poll_timer();
+	clear_front_status_ws_watchdog();
+	clear_front_status_http_watchdog();
+	clear_front_status_http_abort();
+	statusFrontPending = false;
+	close_front_status_socket();
+}
+function stop_node_latency_live_runtime() {
+	batchLatencyPollSeq += 1;
+	singleLatencyPollSeq += 1;
+	batch_ws_fallback_started = false;
+	singleLatencyWsFallbackStarted = false;
+	singleLatencyPollingNode = null;
+	close_latency_ws(false);
+	close_single_latency_ws();
+}
+function close_proc_status_socket() {
+	if (window.procStatusWs) {
+		try {
+			window.procStatusWs.onopen = null;
+			window.procStatusWs.onmessage = null;
+			window.procStatusWs.onerror = null;
+			window.procStatusWs.onclose = null;
+			window.procStatusWs.close();
+		} catch (e) {}
+		window.procStatusWs = null;
+	}
+}
+function stop_page_live_runtime() {
+	stop_front_status_runtime();
+	stop_shunt_stats_runtime();
+	stop_node_latency_live_runtime();
+	close_status_history_ws();
+	close_optional_socket("wsl");
+	close_optional_socket("ws");
+	close_proc_status_socket();
+}
+function resume_node_latency_live_runtime() {
+	if (!should_run_node_latency_live()) {
+		return false;
+	}
+	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
+		update_latency_action_links();
+		return false;
+	}
+	if (batch_test_running) {
+		if (ws_flag == 1) {
+			return start_latency_ws(2);
+		}
+		batchLatencyPollSeq += 1;
+		get_latency_data(2, batchLatencyPollSeq);
+		return true;
+	}
+	if (single_test_running && single_test_node) {
+		if (ws_flag == 1) {
+			return start_single_latency_ws(single_test_node);
+		}
+		singleLatencyPollingNode = single_test_node;
+		singleLatencyPollSeq += 1;
+		get_latency_data_single(single_test_node, 0, singleLatencyPollSeq);
+		return true;
+	}
+	load_latency_cache();
+	return true;
+}
+function resume_page_live_runtime() {
+	if (!is_page_live_updates_allowed()) {
+		return false;
+	}
+	if (db_ss && db_ss["ss_basic_enable"] == "1") {
+		if (ws_probe_pending) {
+			wait_ws_probe_then_start_status(0);
+		} else {
+			get_ss_status(ws_flag == 1);
+		}
+	}
+	if (should_run_shunt_stats_live()) {
+		schedule_shunt_stats_refresh(true);
+	}
+	if (should_run_node_latency_live()) {
+		resume_node_latency_live_runtime();
+	}
+	return true;
+}
+function handle_page_live_runtime_state() {
+	if (is_page_live_updates_allowed()) {
+		setTimeout(function() {
+			resume_page_live_runtime();
+		}, 120);
+	} else {
+		stop_page_live_runtime();
+	}
+}
+function bind_page_live_runtime() {
+	if (pageLiveRuntimeBound) {
+		return;
+	}
+	pageLiveRuntimeBound = true;
+	document.addEventListener("visibilitychange", handle_page_live_runtime_state);
+	window.addEventListener("pagehide", stop_page_live_runtime);
+	window.addEventListener("beforeunload", stop_page_live_runtime);
 }
 function clear_front_status_poll_timer() {
 	if (statusFrontPollTimer) {
@@ -5243,9 +5407,17 @@ function get_status_refresh_delay_ms() {
 	return Math.floor(Math.random() * time_base) + time_plus;
 }
 function schedule_next_front_status_poll(delayMs) {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	clear_front_status_poll_timer();
 	statusFrontPollTimer = setTimeout(function() {
 		statusFrontPollTimer = null;
+		if (!should_run_front_status_live()) {
+			stop_front_status_runtime();
+			return;
+		}
 		if (db_ss && db_ss["ss_failover_enable"] == "1") {
 			get_ss_status_front_httpd();
 		} else if (ws_flag == 1) {
@@ -5256,6 +5428,10 @@ function schedule_next_front_status_poll(delayMs) {
 	}, delayMs);
 }
 function finish_front_status_poll() {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	statusFrontPending = false;
 	clear_front_status_ws_watchdog();
 	clear_front_status_http_watchdog();
@@ -9864,9 +10040,13 @@ function fallback_single_latency_ws(node) {
 	if (singleLatencyWsFallbackStarted) {
 		return;
 	}
+	if (!should_run_node_latency_live()) {
+		return;
+	}
 	singleLatencyWsFallbackStarted = true;
 	close_single_latency_ws();
-	get_latency_data_single(node, 0);
+	singleLatencyPollSeq += 1;
+	get_latency_data_single(node, 0, singleLatencyPollSeq);
 }
 function latency_table_is_fresh() {
 	var latencyCells = document.querySelectorAll('[id^="ss_node_lt_"] .latency_val').length;
@@ -9945,11 +10125,15 @@ function ensure_single_latency_poll(node, delayMs) {
 		if (!single_test_running || String(single_test_node || "") != node) {
 			return;
 		}
+		if (!should_run_node_latency_live()) {
+			return;
+		}
 		if (String(singleLatencyPollingNode || "") == node) {
 			return;
 		}
 		singleLatencyPollingNode = node;
-		get_latency_data_single(node, 0);
+		singleLatencyPollSeq += 1;
+		get_latency_data_single(node, 0, singleLatencyPollSeq);
 	}, delayMs);
 }
 function update_latency_finish_time() {
@@ -10082,12 +10266,16 @@ function fallback_latency_ws(action) {
 	if(batch_ws_fallback_started || batch_ws_completed){
 		return;
 	}
+	if (!should_run_node_latency_live()) {
+		return;
+	}
 	batch_ws_fallback_started = true;
 	close_latency_ws(false);
-	get_latency_data(action);
+	batchLatencyPollSeq += 1;
+	get_latency_data(action, batchLatencyPollSeq);
 }
 function start_latency_ws(action) {
-	if (ws_flag != 1){
+	if (ws_flag != 1 || !should_run_node_latency_live()){
 		return false;
 	}
 	close_latency_ws();
@@ -10134,7 +10322,7 @@ function start_latency_ws(action) {
 	return true;
 }
 function start_single_latency_ws(node) {
-	if (ws_flag != 1){
+	if (ws_flag != 1 || !should_run_node_latency_live()){
 		return false;
 	}
 	close_single_latency_ws();
@@ -10307,12 +10495,13 @@ function test_latency_now(test_flag) {
 					close_latency_flag = 0;
 					batch_test_running = true;
 					batch_stop_pending = false;
-					refresh_table(function() {
+				refresh_table(function() {
 						$(".latency .latency_val").html("waiting");
 						$("#ss_wts_show").html("<em>【测速中...】</em>");
 						$("#dropdown").width(240);
 						update_latency_action_links();
-						get_latency_data(2);
+						batchLatencyPollSeq += 1;
+						get_latency_data(2, batchLatencyPollSeq);
 					});
 				}
 			}
@@ -10483,7 +10672,8 @@ function test_latency_single(node){
 				return;
 			}
 			if (response.result == id){
-				setTimeout(function() { get_latency_data_single(node, 0); }, 300);
+				singleLatencyPollSeq += 1;
+				setTimeout(function() { get_latency_data_single(node, 0, singleLatencyPollSeq); }, 300);
 			}else{
 				single_test_running = false;
 				single_test_node = null;
@@ -10563,7 +10753,8 @@ function latency_test(action) {
 					if(start_latency_ws(action)){
 						return;
 					}
-					get_latency_data(action);
+					batchLatencyPollSeq += 1;
+					get_latency_data(action, batchLatencyPollSeq);
 					return;
 				}
 				batch_test_running = false;
@@ -10573,7 +10764,8 @@ function latency_test(action) {
 				load_latency_cache();
 				return;
 			}
-			get_latency_data(action);
+			batchLatencyPollSeq += 1;
+			get_latency_data(action, batchLatencyPollSeq);
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
 			$(".latency .latency_val").html("失败!");
@@ -10585,7 +10777,12 @@ function latency_test(action) {
 		timeout: 60000
 	});
 }
-function get_latency_data_single(node, retry){
+function get_latency_data_single(node, retry, pollSeq){
+	pollSeq = parseInt(pollSeq || singleLatencyPollSeq, 10) || 0;
+	if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live()) {
+		singleLatencyPollingNode = null;
+		return false;
+	}
 	if(retry > 40){
 		singleLatencyPollingNode = null;
 		write_webtest([[String(node), "timeout"]]);
@@ -10602,6 +10799,10 @@ function get_latency_data_single(node, retry){
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
+			if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live()) {
+				singleLatencyPollingNode = null;
+				return;
+			}
 			const lines = res.split('\n');
 			var value = null;
 			var stopAfterNode = false;
@@ -10617,16 +10818,16 @@ function get_latency_data_single(node, retry){
 				}
 			}
 			if(!value){
-				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 200);
+				setTimeout(function() { get_latency_data_single(node, retry + 1, pollSeq); }, 200);
 				return;
 			}
 			write_webtest([[String(node), value]]);
 			if(is_latency_transient_state(value)){
 				single_test_wait[node] = false;
-				setTimeout(function() { get_latency_data_single(node, retry + 1); }, 200);
+				setTimeout(function() { get_latency_data_single(node, retry + 1, pollSeq); }, 200);
 			}else{
 				if(!stopAfterNode){
-					setTimeout(function() { get_latency_data_single(node, retry + 1); }, 200);
+					setTimeout(function() { get_latency_data_single(node, retry + 1, pollSeq); }, 200);
 					return;
 				}
 				single_test_wait[node] = false;
@@ -10637,10 +10838,14 @@ function get_latency_data_single(node, retry){
 			}
 		},
 		error: function(){
+			if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live()) {
+				singleLatencyPollingNode = null;
+				return;
+			}
 			if (!single_test_running || String(single_test_node || "") != String(node)) {
 				singleLatencyPollingNode = null;
 			}
-			setTimeout(function() { get_latency_data_single(node, retry + 1); }, 250);
+			setTimeout(function() { get_latency_data_single(node, retry + 1, pollSeq); }, 250);
 		},
 	});
 }
@@ -10666,7 +10871,11 @@ function enable_latency_buttons(){
 		$(this).css({"opacity":"1","cursor":"pointer"});
 	});
 }
-function get_latency_data(action){
+function get_latency_data(action, pollSeq){
+	pollSeq = parseInt(pollSeq || batchLatencyPollSeq, 10) || 0;
+	if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live()) {
+		return false;
+	}
 	if(close_latency_flag == 1) return false;
 	var URL = '/_temp/webtest.txt'
 	$.ajax({
@@ -10675,6 +10884,9 @@ function get_latency_data(action){
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
+			if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live()) {
+				return;
+			}
 			const array = parse_webtest_lines(res);
 			write_webtest(array);
 			const hasStop = array.some(function(item) {
@@ -10684,15 +10896,21 @@ function get_latency_data(action){
 				finish_latency_batch();
 			}else{
 				//console.log("getting webtest result...");
-					setTimeout(function() { get_latency_data(action); }, 1000);
+					setTimeout(function() { get_latency_data(action, pollSeq); }, 1000);
 			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
-				setTimeout(function() { get_latency_data(action); }, 1000);
+			if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live()) {
+				return;
+			}
+			setTimeout(function() { get_latency_data(action, pollSeq); }, 1000);
 		},
 	});
 }
 function load_latency_cache(){
+	if (!is_node_tab_active()) {
+		return false;
+	}
 	var URL = '/_temp/webtest.txt';
 	$.ajax({
 		url: URL,
@@ -11219,6 +11437,7 @@ var tab_actions = {
 			}
 			schedule_node_card_view_height_adjust(8);
 		}
+		resume_node_latency_live_runtime();
 	},
 	2: function() {
 		$('#apply_button').show();
@@ -11305,6 +11524,9 @@ function handle_tab_click() {
 	if (idx !== 5) {
 		stop_shunt_stats_runtime();
 	}
+	if (idx !== 1) {
+		stop_node_latency_live_runtime();
+	}
 	tabSelect(idx);
 	if (tab_actions[idx]) {
 		tab_actions[idx]();
@@ -11335,6 +11557,7 @@ function toggle_func() {
 	});
 	bind_tab_handlers();
 	bind_shunt_mode_sync();
+	bind_page_live_runtime();
 	$("#log_content2").click(
 		function() {
 			x = -1;
@@ -11694,6 +11917,10 @@ function get_ss_status(use_ws) {
 	if (typeof use_ws == "undefined"){
 		use_ws = (ws_flag == 1);
 	}
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	set_ss_status_waiting("Waiting..");
 	if (db_ss['ss_basic_enable'] != "1") {
 		return false;
@@ -11723,6 +11950,10 @@ function get_ss_status_front() {
 }
 
 function get_ss_status_front_httpd() {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	if (submit_flag == "1") {
 		schedule_next_front_status_poll(5000);
 		return false;
@@ -11756,6 +11987,10 @@ function get_ss_status_front_httpd() {
 	schedule_next_front_status_poll(get_status_refresh_delay_ms());
 }
 function get_ss_status_front_websocket() {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	if (submit_flag == "1") {
 		schedule_next_front_status_poll(5000);
 		return false;
@@ -11775,6 +12010,10 @@ function get_ss_status_front_websocket() {
 	});
 }
 function get_ss_status_back() {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	if (E("ss_basic_interval").value == "1"){
 		var time_wait = 3000;
 	}else if(E("ss_basic_interval").value == "2"){
@@ -11791,6 +12030,10 @@ function get_ss_status_back() {
 	setup_status_ws(get_ss_status_back_httpd, true, get_ss_status_back_websocket);
 }
 function get_ss_status_back_websocket() {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	try {
 		if (!wss || wss.readyState !== 1) {
 			wss_open = 0;
@@ -11805,6 +12048,10 @@ function get_ss_status_back_websocket() {
 	}
 }
 function get_ss_status_back_httpd() {
+	if (!should_run_front_status_live()) {
+		stop_front_status_runtime();
+		return false;
+	}
 	if (db_ss['ss_basic_enable'] != "1") {
 		set_ss_status_waiting("Waiting.....");
 		return false;
