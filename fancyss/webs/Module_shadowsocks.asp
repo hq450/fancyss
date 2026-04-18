@@ -7399,6 +7399,64 @@ function update_node_delete_buttons_state() {
 			});
 		}
 	});
+	$(".latency_btn").each(function() {
+		var $btn = $(this);
+		if (disabled) {
+			if ($btn.data("orig-title") === undefined) {
+				$btn.data("orig-title", $btn.attr("title") || "");
+			}
+			if ($btn.data("orig-onclick") === undefined) {
+				$btn.data("orig-onclick", $btn.attr("onclick") || "");
+			}
+			if ($btn.data("orig-onmouseover") === undefined) {
+				$btn.data("orig-onmouseover", $btn.attr("onmouseover") || "");
+			}
+			if ($btn.data("orig-onmouseout") === undefined) {
+				$btn.data("orig-onmouseout", $btn.attr("onmouseout") || "");
+			}
+			if (title) {
+				$btn.attr("title", title);
+			}
+			$btn.attr("onclick", "return false;");
+			$btn.removeAttr("onmouseover");
+			$btn.removeAttr("onmouseout");
+			$btn.css({
+				"pointer-events": "none",
+				"opacity": "0.35",
+				"cursor": "not-allowed"
+			});
+		} else {
+			if ($btn.data("orig-title") !== undefined) {
+				$btn.attr("title", $btn.data("orig-title"));
+			}
+			if ($btn.data("orig-onclick") !== undefined) {
+				if ($btn.data("orig-onclick")) {
+					$btn.attr("onclick", $btn.data("orig-onclick"));
+				} else {
+					$btn.removeAttr("onclick");
+				}
+			}
+			if ($btn.data("orig-onmouseover") !== undefined) {
+				if ($btn.data("orig-onmouseover")) {
+					$btn.attr("onmouseover", $btn.data("orig-onmouseover"));
+				} else {
+					$btn.removeAttr("onmouseover");
+				}
+			}
+			if ($btn.data("orig-onmouseout") !== undefined) {
+				if ($btn.data("orig-onmouseout")) {
+					$btn.attr("onmouseout", $btn.data("orig-onmouseout"));
+				} else {
+					$btn.removeAttr("onmouseout");
+				}
+			}
+			$btn.css({
+				"pointer-events": "",
+				"opacity": "",
+				"cursor": ""
+			});
+		}
+	});
 }
 function schedule_schema2_node_delete_refresh(scrollTop) {
 	if (typeof scrollTop != "undefined" && scrollTop !== null) {
@@ -7936,6 +7994,31 @@ function refresh_node_panel(cb) {
 			if (typeof cb === "function") {
 				cb();
 			}
+		}
+	});
+	$(".latency_btn").each(function() {
+		var $btn = $(this);
+		if (disabled) {
+			if ($btn.data("orig-title") === undefined) {
+				$btn.data("orig-title", $btn.attr("title") || "");
+			}
+			if (title) {
+				$btn.attr("title", title);
+			}
+			$btn.css({
+				"pointer-events": "none",
+				"opacity": "0.35",
+				"cursor": "not-allowed"
+			});
+		} else {
+			if ($btn.data("orig-title") !== undefined) {
+				$btn.attr("title", $btn.data("orig-title"));
+			}
+			$btn.css({
+				"pointer-events": "",
+				"opacity": "",
+				"cursor": ""
+			});
 		}
 	});
 }
@@ -10173,23 +10256,11 @@ function normalize_latency_val(){
 function test_latency_single(node){
 	if(!node) return;
 	cancel_schema2_postchange_jobs();
-	if(batch_test_running){
-		check_batch_status(function(done){
-			if(done){
-				test_latency_single(node);
-			}else{
-				layer.msg("后台正在进行批量测速（新增或变更节点后会自动触发），请稍后再试");
-			}
-		});
+	if(batch_test_running || batch_stop_pending || schema2NodeDeleteInFlight || schema2NodeDeleteQueue.length > 0){
 		return;
 	}
 	if(single_test_running){
-		if(String(single_test_node) != String(node)){
-			layer.msg("请等待当前测试完成");
-			return;
-		}else{
-			return;
-		}
+		return;
 	}
 	var cell = $("#ss_node_lt_" + node + " .latency_val");
 	single_test_wait[node] = true;
