@@ -503,6 +503,7 @@ fss_identity_secondary_payload_json() {
 			._created_at,
 			._migrated_from,
 			._b64_mode,
+			._profile_id,
 			._airport_identity,
 			._source_scope,
 			._source_url_hash,
