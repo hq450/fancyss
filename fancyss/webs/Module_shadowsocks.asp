@@ -276,6 +276,7 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-delete{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:12px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.86);box-shadow:0 8px 16px rgba(159,38,38,0.28);transition:all .18s ease;z-index:3;}
 .node-card:hover .node-card-delete,.node-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
 .node-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.4);}
+.node-card:hover .node-card-delete[data-disable-hidden="1"],.node-card-delete[data-disable-hidden="1"]:focus{opacity:1;transform:translate(0,0) scale(1);background:#6b7280;color:#eef2f7;box-shadow:none;cursor:not-allowed;}
 .node-card-empty{padding:26px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
 .submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:5px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
 .submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
@@ -643,6 +644,7 @@ var schema2NodeDeletePendingMap = {};
 var schema2NodeDeleteInFlight = false;
 var schema2NodeDeleteRefreshTimer = null;
 var schema2NodeDeleteRestoreScrollTop = null;
+var suppressLatencyCacheReloadOnce = false;
 var nodeTableRefreshSeq = 0;
 var nodeTableRefreshXhr = null;
 var shuntStatsWsOpenTimer = null;
@@ -7380,17 +7382,36 @@ function update_node_delete_buttons_state() {
 			if ($btn.data("orig-title") === undefined) {
 				$btn.data("orig-title", $btn.attr("title") || "");
 			}
+			if ($btn.hasClass("node-card-delete")) {
+				$btn.data("disable-hidden", 1);
+				if ($btn.data("orig-onclick") === undefined) {
+					$btn.data("orig-onclick", $btn.attr("onclick") || "");
+				}
+			}
 			if (title) {
 				$btn.attr("title", title);
 			}
+			if ($btn.hasClass("node-card-delete") && webtesting) {
+				$btn.attr("onclick", "event.stopPropagation();alert('请等待测速结束后操作');return false;");
+			}
 			$btn.css({
-				"pointer-events": "none",
-				"opacity": "0.35",
+				"pointer-events": ($btn.hasClass("node-card-delete") && webtesting) ? "auto" : "none",
+				"opacity": $btn.hasClass("node-card-delete") ? "" : "0.35",
 				"cursor": "not-allowed"
 			});
 		} else {
 			if ($btn.data("orig-title") !== undefined) {
 				$btn.attr("title", $btn.data("orig-title"));
+			}
+			if ($btn.hasClass("node-card-delete")) {
+				$btn.removeData("disable-hidden");
+				if ($btn.data("orig-onclick") !== undefined) {
+					if ($btn.data("orig-onclick")) {
+						$btn.attr("onclick", $btn.data("orig-onclick"));
+					} else {
+						$btn.removeAttr("onclick");
+					}
+				}
 			}
 			$btn.css({
 				"pointer-events": "",
@@ -7420,11 +7441,19 @@ function update_node_delete_buttons_state() {
 			$btn.attr("onclick", "return false;");
 			$btn.removeAttr("onmouseover");
 			$btn.removeAttr("onmouseout");
-			$btn.css({
-				"pointer-events": "none",
-				"opacity": "0.35",
-				"cursor": "not-allowed"
-			});
+			if ($btn.hasClass("node-card-latency")) {
+				$btn.css({
+					"pointer-events": "auto",
+					"opacity": "",
+					"cursor": "default"
+				});
+			} else {
+				$btn.css({
+					"pointer-events": "none",
+					"opacity": "0.35",
+					"cursor": "not-allowed"
+				});
+			}
 		} else {
 			if ($btn.data("orig-title") !== undefined) {
 				$btn.attr("title", $btn.data("orig-title"));
@@ -7476,8 +7505,49 @@ function schedule_schema2_node_delete_refresh(scrollTop) {
 		});
 	}, 160);
 }
+function normalize_latency_snapshot_value(text) {
+	text = $.trim(String(text || ""));
+	if (!text || text == "-") {
+		return "";
+	}
+	if (/^[0-9]+\s*ms$/i.test(text)) {
+		return text.replace(/\s*ms$/i, "");
+	}
+	if (/^failed!?$/i.test(text)) {
+		return "failed";
+	}
+	if (/^timeout!?$/i.test(text)) {
+		return "timeout";
+	}
+	if (/^不支持!?$/i.test(text)) {
+		return "ns";
+	}
+	if (/^(waiting|loading|booting|queued|testing|warming|stopped|canceled)$/i.test(text)) {
+		return text.toLowerCase();
+	}
+	return text;
+}
+function capture_latency_snapshot() {
+	var snapshot = [];
+	$("[id^='ss_node_lt_']").each(function() {
+		var id = String(this.id || "").replace("ss_node_lt_", "");
+		var $val = $(this).find(".latency_val");
+		var text = normalize_latency_snapshot_value($val.length ? $val.text() : $(this).text());
+		if (id && text) {
+			snapshot.push([id, text]);
+		}
+	});
+	return snapshot;
+}
+function apply_latency_snapshot(snapshot) {
+	if (!snapshot || !snapshot.length) {
+		return;
+	}
+	write_webtest(snapshot);
+}
 function apply_schema2_node_delete_local(nodeId) {
 	var nextCurrentId = "";
+	var latencySnapshot = capture_latency_snapshot();
 	nodeId = nodeId ? String(nodeId) : "";
 	if (!nodeId || $.inArray(nodeId, ss_nodes) === -1) {
 		return;
@@ -7500,9 +7570,11 @@ function apply_schema2_node_delete_local(nodeId) {
 	}
 	fss_nodes_raw = {};
 	confs = {};
+	suppressLatencyCacheReloadOnce = true;
 	generate_node_info();
 	refresh_options();
 	refresh_html();
+	apply_latency_snapshot(latencySnapshot);
 }
 function process_schema2_node_delete_queue() {
 	if (schema2NodeDeleteInFlight) {
@@ -7544,6 +7616,7 @@ function process_schema2_node_delete_queue() {
 		if (!Object.keys(post_data_v2).length) {
 			set_schema2_node_delete_pending(id, false);
 			schema2NodeDeleteInFlight = false;
+			update_node_delete_buttons_state();
 			process_schema2_node_delete_queue();
 			continue;
 		}
@@ -7558,9 +7631,7 @@ function process_schema2_node_delete_queue() {
 			complete: function() {
 				set_schema2_node_delete_pending(id, false);
 				schema2NodeDeleteInFlight = false;
-				if (!schema2NodeDeleteQueue.length) {
-					schedule_schema2_node_delete_refresh(nodeTableScrollTop);
-				}
+				update_node_delete_buttons_state();
 				process_schema2_node_delete_queue();
 			},
 			success: function() {
@@ -8404,6 +8475,119 @@ function get_node_card_sections() {
 	}
 	return sections;
 }
+function get_node_card_grid_columns($grid) {
+	var template = "";
+	var count = 0;
+	if ($grid && $grid.length && window.getComputedStyle) {
+		template = window.getComputedStyle($grid[0]).gridTemplateColumns || "";
+		if (template && template != "none") {
+			count = template.split(" ").filter(function(item) {
+				return item && item !== "/";
+			}).length;
+		}
+	}
+	return count > 0 ? count : ($(window).width() <= 640 ? 2 : 3);
+}
+var nodeCardHeightAdjustTimer = null;
+function schedule_node_card_view_height_adjust(maxVisibleRows) {
+	if (nodeCardHeightAdjustTimer) {
+		clearTimeout(nodeCardHeightAdjustTimer);
+		nodeCardHeightAdjustTimer = null;
+	}
+	nodeCardHeightAdjustTimer = setTimeout(function() {
+		nodeCardHeightAdjustTimer = null;
+		if (!$("#tablet_1").is(":visible") || !get_node_view_prefers_cards()) {
+			return;
+		}
+		adjust_node_card_view_height(maxVisibleRows);
+	}, 0);
+}
+function adjust_node_card_view_height(maxVisibleRows) {
+	var $shell = $(".node-card-shell").first();
+	var $container = $("#ss_node_list_table_main");
+	var $sections = $container.find(".node-card-section");
+	var $empty = $container.find(".node-card-empty").first();
+	var containerStyle = null;
+	var paddingBottom = 0;
+	var containerRect = null;
+	var containerScrollTop = 0;
+	var totalContentHeight = 0;
+	var visibleCardRows = 0;
+	var visibleContentHeight = 0;
+	maxVisibleRows = parseInt(maxVisibleRows || 8, 10) || 8;
+	if (!$shell.length || !$container.length) {
+		return;
+	}
+	if (!$container.is(":visible") || !$container[0].getClientRects().length) {
+		return;
+	}
+	containerStyle = window.getComputedStyle ? window.getComputedStyle($container[0]) : null;
+	paddingBottom = containerStyle ? parseFloat(containerStyle.paddingBottom || 0) : 0;
+	containerRect = $container[0].getBoundingClientRect();
+	containerScrollTop = $container[0].scrollTop || 0;
+	if ($empty.length) {
+		visibleContentHeight = Math.ceil($empty[0].getBoundingClientRect().bottom - containerRect.top + containerScrollTop);
+		totalContentHeight = Math.max(visibleContentHeight + paddingBottom, $container[0].scrollHeight || 0);
+	} else {
+		$sections.each(function() {
+		var $section = $(this);
+		var $head = $section.find(".node-card-section-head").first();
+		var headBottom = $head.length ? Math.ceil($head[0].getBoundingClientRect().bottom - containerRect.top + containerScrollTop) : 0;
+		var collapsed = $section.hasClass("is-collapsed");
+		var rowMap = {};
+		var rows = [];
+		if (headBottom > 0) {
+			totalContentHeight = Math.max(totalContentHeight, headBottom);
+			if (visibleCardRows < maxVisibleRows || visibleContentHeight === 0) {
+				visibleContentHeight = Math.max(visibleContentHeight, headBottom);
+			}
+		}
+		if (collapsed) {
+			return;
+		}
+		$section.find(".node-card").each(function() {
+			var rect = this.getBoundingClientRect();
+			var rowTop = Math.round(rect.top - containerRect.top + containerScrollTop);
+			var rowBottom = Math.ceil(rect.bottom - containerRect.top + containerScrollTop);
+			if (!rowMap[rowTop]) {
+				rowMap[rowTop] = {
+					top: rowTop,
+					bottom: rowBottom
+				};
+			} else if (rowBottom > rowMap[rowTop].bottom) {
+				rowMap[rowTop].bottom = rowBottom;
+			}
+		});
+		for (var key in rowMap) {
+			if (rowMap.hasOwnProperty(key)) {
+				rows.push(rowMap[key]);
+			}
+		}
+		rows.sort(function(a, b) {
+			return a.top - b.top;
+		});
+		if (rows.length) {
+			totalContentHeight = Math.max(totalContentHeight, rows[rows.length - 1].bottom);
+		}
+		for (var i = 0; i < rows.length && visibleCardRows < maxVisibleRows; i++) {
+			visibleContentHeight = Math.max(visibleContentHeight, rows[i].bottom);
+			visibleCardRows += 1;
+		}
+		});
+		totalContentHeight = Math.max(totalContentHeight + paddingBottom, $container[0].scrollHeight || 0);
+	}
+	nodeH = Math.max(120, Math.ceil(visibleContentHeight + paddingBottom));
+	$container.css({
+		height: nodeH + "px",
+		overflowY: totalContentHeight > nodeH ? "auto" : "hidden"
+	});
+	$shell.css("height", nodeH + "px");
+	if (totalContentHeight > nodeH) {
+		$("#ss_list_table").attr("style", "height:" + (nodeH + 56) + "px");
+	} else {
+		$("#ss_list_table").removeAttr("style");
+	}
+}
 function toggle_node_card_section(sectionKey) {
 	sectionKey = String(sectionKey || "");
 	if (!sectionKey) {
@@ -8540,34 +8724,19 @@ function refresh_html() {
 	var cardMode = get_node_view_prefers_cards();
 	var hasLatency = node_nu && db_ss["ss_basic_latency_val"] != "0";
 	if (cardMode) {
-		var cardsPerRow = $(window).width() <= 640 ? 2 : ($(window).width() <= 900 ? 3 : 4);
-		var sections = get_node_card_sections();
-		var headerHeight = 36;
-		var sectionGap = 10;
-		var expandedCards = 0;
-		for (var si = 0; si < sections.length; si++) {
-			if (nodeCardCollapseState[sections[si].key] == 1) {
-				continue;
-			}
-			expandedCards += sections[si].nodes.length;
-		}
-		var visibleCards = Math.max(1, Math.min(expandedCards || node_nu || 1, nodeN));
-		var visibleRows = Math.max(1, Math.ceil(visibleCards / cardsPerRow));
-		var cardHeight = 82;
-		var cardGap = 8;
-		nodeH = (sections.length * headerHeight) + (Math.max(0, sections.length - 1) * sectionGap) + (visibleRows * cardHeight) + (Math.max(0, visibleRows - 1) * cardGap) + 12;
-		if (node_nu > visibleCards) {
-			$("#ss_list_table").attr("style", "height:" + (nodeH + 56) + "px");
-		} else {
-			$("#ss_list_table").removeAttr("style");
-		}
-			$('.nodeTable').remove();
-			$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
-			update_latency_action_links();
-			if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+		nodeH = Math.max(240, Math.min(pageH - nodeT - 40, 720));
+		$('.nodeTable').remove();
+		$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
+		schedule_node_card_view_height_adjust(8);
+		update_latency_action_links();
+		if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+			if(suppressLatencyCacheReloadOnce){
+				suppressLatencyCacheReloadOnce = false;
+			}else{
 				load_latency_cache();
 			}
-			select_default_node(2);
+		}
+		select_default_node(2);
 		if(node_nu){
 			const dropdownBtn = E("dropdownbtn");
 			const dropdownMenu = E("dropdown");
@@ -8766,7 +8935,11 @@ function refresh_html() {
 	}
 	// ask or not ask for webtest
 	if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
-		load_latency_cache();
+		if(suppressLatencyCacheReloadOnce){
+			suppressLatencyCacheReloadOnce = false;
+		}else{
+			load_latency_cache();
+		}
 	}
 	// select default node
 	select_default_node(2);
@@ -11039,6 +11212,13 @@ var tab_actions = {
 		$('#apply_button').hide();
 		$(".nodeTable").show();
 		select_default_node(3);
+		if (get_node_view_prefers_cards()) {
+			var $nodeCardContainer = $("#ss_node_list_table_main");
+			if ($nodeCardContainer.length) {
+				$nodeCardContainer.scrollTop(0);
+			}
+			schedule_node_card_view_height_adjust(8);
+		}
 	},
 	2: function() {
 		$('#apply_button').show();
