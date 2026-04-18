@@ -5,6 +5,7 @@
 [ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
 
 SUB_PROFILE_RUNTIME_JSON="/tmp/upload/ss_subscribe_profiles.json"
+SUB_PROFILE_RUNTIME_DBUS_KEY="ss_subprof_runtime_b64"
 SUB_PROFILE_TMP_PAYLOAD_KEY="ss_subscribe_profile_payload"
 SUB_PROFILE_TMP_ID_KEY="ss_subscribe_profile_id"
 SUB_PROFILE_TMP_SYNC_ID_KEY="ss_subscribe_profile_selected"
@@ -23,6 +24,25 @@ subprof_jq_bin() {
 
 subprof_runtime_json_file() {
 	printf '%s\n' "${SUB_PROFILE_RUNTIME_JSON}"
+}
+
+subprof_runtime_snapshot_set_json() {
+	local json_text="$1"
+	local encoded=""
+	[ -n "${json_text}" ] || {
+		dbus remove "${SUB_PROFILE_RUNTIME_DBUS_KEY}" >/dev/null 2>&1 || true
+		return 1
+	}
+	encoded="$(subprof_b64_encode_compact "${json_text}")" || return 1
+	[ -n "${encoded}" ] || return 1
+	dbus set "${SUB_PROFILE_RUNTIME_DBUS_KEY}=${encoded}" >/dev/null 2>&1 || return 1
+}
+
+subprof_runtime_snapshot_get_json() {
+	local raw_value=""
+	raw_value="$(dbus get "${SUB_PROFILE_RUNTIME_DBUS_KEY}" 2>/dev/null)" || raw_value=""
+	[ -n "${raw_value}" ] || return 1
+	subprof_b64_decode_loose "${raw_value}" 2>/dev/null
 }
 
 subprof_profile_key() {
@@ -466,6 +486,8 @@ subprof_count_profile_nodes_fast() {
 	local node_tool=""
 	local jq_bin=""
 	local count=""
+	local airport_identity=""
+	local list_count=""
 
 	[ -n "${profile_id}" ] || return 1
 	node_tool="$(fss_pick_node_tool 2>/dev/null)" || return 1
@@ -480,7 +502,17 @@ subprof_count_profile_nodes_fast() {
 		printf '%s\n' "${count}"
 		return 0
 	fi
-	return 1
+	airport_identity="${source_scope%%_*}"
+	[ -n "${airport_identity}" ] || return 1
+	list_count="$(
+		"${node_tool}" list --source subscribe --airport-identity "${airport_identity}" --format jsonl 2>/dev/null \
+			| grep -F "\"source_scope\":\"${source_scope}\"" \
+			| wc -l \
+			| tr -d ' '
+	)"
+	printf '%s' "${list_count}" | grep -Eq '^[0-9]+$' || return 1
+	printf '%s\n' "${list_count}"
+	return 0
 }
 
 subprof_count_profile_nodes_fallback() {
@@ -534,7 +566,6 @@ subprof_merge_profile_and_state() {
 		[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
 	fi
 	node_count="$(subprof_count_profile_nodes_fast "${profile_id}" "${source_scope}" 2>/dev/null)" || node_count=""
-	[ -n "${node_count}" ] || node_count="$(subprof_count_profile_nodes_fallback "${profile_id}" "${source_scope}" 2>/dev/null)"
 	[ -n "${node_count}" ] || node_count="0"
 	printf '%s\n%s\n' "${profile_json}" "${state_json}" | "$(subprof_jq_bin)" -s \
 		--argjson node_count "${node_count}" '
@@ -577,10 +608,11 @@ subprof_merge_profile_and_state() {
 }
 
 subprof_write_profiles_runtime_json() {
-	local runtime_json
+	local runtime_json=""
 	local tmp_file=""
 	local profile_id=""
 	local first=1
+	local final_json=""
 
 	runtime_json="$(subprof_runtime_json_file)"
 	tmp_file="${runtime_json}.tmp.$$"
@@ -605,6 +637,8 @@ subprof_write_profiles_runtime_json() {
 		return 1
 	}
 	mv -f "${tmp_file}" "${runtime_json}"
+	final_json="$(cat "${runtime_json}" 2>/dev/null)" || final_json=""
+	[ -n "${final_json}" ] && subprof_runtime_snapshot_set_json "${final_json}" >/dev/null 2>&1 || true
 }
 
 subprof_collect_enabled_profiles_tsv() {
@@ -751,6 +785,7 @@ subprof_mark_state_success() {
 		}
 	')" || return 1
 	subprof_dbus_set_json_by_key "${state_key}" "${new_state}"
+	subprof_write_profiles_runtime_json >/dev/null 2>&1 || true
 }
 
 subprof_mark_state_failure() {
@@ -795,6 +830,7 @@ subprof_mark_state_failure() {
 		}
 	')" || return 1
 	subprof_dbus_set_json_by_key "${state_key}" "${new_state}"
+	subprof_write_profiles_runtime_json >/dev/null 2>&1 || true
 }
 
 subprof_migrate_legacy_profiles_if_needed() {

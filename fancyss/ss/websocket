@@ -34,7 +34,6 @@ clean_log() {
 
 while read MSG;
 do
-	MSG="$(printf '%s' "${MSG}" | tr -d '\r')"
 	IP_CIDR=$(ip addr show br0 2>/dev/null | grep -E "inet " | awk '{print $2}')
 	IP_ADDR=${IP_CIDR%/*}
 	IP_ADDR=${IP_ADDR%.*}
@@ -61,9 +60,7 @@ do
 		echo "检测到你要执行路由器重启命令！拒绝！"
 		exit
 	elif [ "${MSG}" == "get_ssf_log" ]; then
-		awk 'BEGIN{ORS="@@"}{print}' /tmp/upload/ssf_status.txt 2>/dev/null
-	elif [ "${MSG}" == "get_ssc_log" ]; then
-		awk 'BEGIN{ORS="@@"}{print}' /tmp/upload/ssc_status.txt 2>/dev/null
+		cat /tmp/upload/ssf_status.txt | /usr/bin/tr '\n' '@@'
 	elif [ "${MSG}" == "get_real_log" ]; then
 		_log=$(cat /tmp/upload/ss_log.txt)
 		if [ -z "${_log}" ];then
@@ -76,176 +73,16 @@ do
 		WEBTEST_STREAM=/tmp/upload/webtest.stream
 		[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
 		[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
-		LAST_STREAM_INODE=""
-		LAST_STREAM_LINES=0
-		IDLE_LOOPS=0
-		if [ -f "${WEBTEST_FILE}" ]; then
-			cat "${WEBTEST_FILE}" || exit 0
-		fi
+		STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
+		[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
+		cat "${WEBTEST_FILE}"
 		if grep -q '^stop>stop$' "${WEBTEST_FILE}" 2>/dev/null; then
 			exit 0
 		fi
-		while true
-		do
-			[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
-			[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
-			STREAM_INODE=$(ls -i "${WEBTEST_STREAM}" 2>/dev/null | awk '{print $1}')
-			if [ -z "${STREAM_INODE}" ]; then
-				sleep 1
-				continue
-			fi
-			if [ "${STREAM_INODE}" != "${LAST_STREAM_INODE}" ]; then
-				LAST_STREAM_INODE="${STREAM_INODE}"
-				LAST_STREAM_LINES=0
-			fi
-			STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
-			[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
-			if [ "${STREAM_LINES}" -gt "${LAST_STREAM_LINES}" ]; then
-				sed -n "$((LAST_STREAM_LINES + 1)),${STREAM_LINES}p" "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
-					do
-						[ -n "${line}" ] || continue
-						if [ "${line}" = "refresh>snapshot" ]; then
-							awk '
-								BEGIN {
-									print "__FSS_WEBTEST_SNAPSHOT_BEGIN__"
-									chunk = ""
-									count = 0
-								}
-								{
-									gsub(/\r/, "")
-									chunk = chunk $0 "__FSS_NL__"
-									count++
-									if (count >= 64) {
-										print "__FSS_WEBTEST_SNAPSHOT_CHUNK__" chunk
-										chunk = ""
-										count = 0
-									}
-								}
-								END {
-									if (count > 0) {
-										print "__FSS_WEBTEST_SNAPSHOT_CHUNK__" chunk
-									}
-									print "__FSS_WEBTEST_SNAPSHOT_END__"
-								}
-							' "${WEBTEST_FILE}" 2>/dev/null
-							continue
-						fi
-						echo "${line}" || exit 0
-						[ "${line}" = "stop>stop" ] && exit 0
-					done
-				LAST_STREAM_LINES="${STREAM_LINES}"
-				IDLE_LOOPS=0
-			elif [ -f "/tmp/webtest.lock" ]; then
-				IDLE_LOOPS=0
-			else
-				IDLE_LOOPS=$((IDLE_LOOPS + 1))
-			fi
-			if grep -q '^stop>stop$' "${WEBTEST_FILE}" 2>/dev/null; then
-				exit 0
-			fi
-			if [ "${IDLE_LOOPS}" -ge 8 ]; then
-				exit 0
-			fi
-			sleep 1
-		done
-		exit 0
-	elif echo "${MSG}" | grep -q '^follow_webtest_single '; then
-		WEBTEST_NODE="${MSG#follow_webtest_single }"
-		WEBTEST_FILE=/tmp/upload/webtest.txt
-		WEBTEST_STREAM=/tmp/upload/webtest.stream
-		[ -f "${WEBTEST_FILE}" ] || : >"${WEBTEST_FILE}"
-		[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
-		[ -n "${WEBTEST_NODE}" ] || exit 0
-		CURRENT_LINE=$(awk -F '>' -v node="${WEBTEST_NODE}" '$1 == node {last=$0} END {if (last != "") print last}' "${WEBTEST_FILE}" 2>/dev/null)
-		[ -n "${CURRENT_LINE}" ] && echo "${CURRENT_LINE}"
-		LAST_STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
-		[ -n "${LAST_STREAM_LINES}" ] || LAST_STREAM_LINES=0
-		IDLE_LOOPS=0
-		while true
-		do
-			[ -f "${WEBTEST_STREAM}" ] || : >"${WEBTEST_STREAM}"
-			STREAM_LINES=$(wc -l < "${WEBTEST_STREAM}" 2>/dev/null)
-			[ -n "${STREAM_LINES}" ] || STREAM_LINES=0
-			if [ "${STREAM_LINES}" -gt "${LAST_STREAM_LINES}" ]; then
-				sed -n "$((LAST_STREAM_LINES + 1)),${STREAM_LINES}p" "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
-				do
-					[ -n "${line}" ] || continue
-					case "${line}" in
-						"${WEBTEST_NODE}>"*)
-							echo "${line}" || exit 0
-							state="${line#*>}"
-							case "${state}" in
-								waiting...|loading...|booting...|queued...|warming...|testing...)
-									;;
-								*)
-									exit 0
-									;;
-							esac
-							;;
-						"stop>stop")
-							echo "${line}" || exit 0
-							exit 0
-							;;
-					esac
-				done
-				LAST_STREAM_LINES="${STREAM_LINES}"
-				IDLE_LOOPS=0
-			elif [ -f "/tmp/webtest.lock" ]; then
-				IDLE_LOOPS=0
-			else
-				IDLE_LOOPS=$((IDLE_LOOPS + 1))
-			fi
-			if [ "${IDLE_LOOPS}" -ge 8 ]; then
-				exit 0
-			fi
-			sleep 1
-		done
-		exit 0
-	elif [ "${MSG}" == "follow_shunt_stats" ]; then
-		while true
-		do
-			sh /koolshare/scripts/ss_shunt_stats.sh ws
-			sleep 6
-		done
-		exit 0
-	elif [ "${MSG}" == "follow_ssf_status" -o "${MSG}" == "follow_ssc_status" ]; then
-		if [ "${MSG}" = "follow_ssf_status" ]; then
-			STATUS_FILE=/tmp/upload/ssf_status.txt
-			STATUS_STREAM=/tmp/upload/ssf_status.stream
-		else
-			STATUS_FILE=/tmp/upload/ssc_status.txt
-			STATUS_STREAM=/tmp/upload/ssc_status.stream
-		fi
-		[ -f "${STATUS_FILE}" ] || : > "${STATUS_FILE}"
-		[ -f "${STATUS_STREAM}" ] || : > "${STATUS_STREAM}"
-		awk '
-			BEGIN {
-				print "__FSS_SNAPSHOT_BEGIN__"
-				chunk = ""
-				count = 0
-			}
-			{
-				gsub(/\r/, "")
-				chunk = chunk $0 "__FSS_NL__"
-				count++
-				if (count >= 64) {
-					print "__FSS_SNAPSHOT_CHUNK__" chunk
-					chunk = ""
-					count = 0
-				}
-			}
-			END {
-				if (count > 0) {
-					print "__FSS_SNAPSHOT_CHUNK__" chunk
-				}
-				print "__FSS_SNAPSHOT_END__"
-			}
-		' "${STATUS_FILE}" 2>/dev/null
-		STATUS_LINES=$(wc -l < "${STATUS_STREAM}" 2>/dev/null)
-		[ -n "${STATUS_LINES}" ] || STATUS_LINES=0
-		tail -n +"$((STATUS_LINES + 1))" -f "${STATUS_STREAM}" 2>/dev/null | while IFS= read -r line
+		tail -n +"$((STREAM_LINES + 1))" -f "${WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
 		do
 			echo "${line}"
+			[ "${line}" = "stop>stop" ] && break
 		done
 		exit 0
 	elif [ -n "${RET_3}" -o -n "${RET_4}" ]; then

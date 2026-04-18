@@ -785,11 +785,9 @@ function get_fss_node_data(cb) {
 function refresh_fss_bundle(cb) {
 	get_fss_data(function() {
 		get_fss_node_data(function() {
-			fetch_subscription_profiles_file(function() {
-				if (typeof cb === "function") {
-					cb(db_fss);
-				}
-			});
+			if (typeof cb === "function") {
+				cb(db_fss);
+			}
 		});
 	});
 }
@@ -3020,7 +3018,7 @@ function start_shunt_stats_ws() {
 	shuntStatsWs.onopen = function() {
 		clear_shunt_stats_ws_timers();
 		try {
-			shuntStatsWs.send("follow_shunt_stats");
+			shuntStatsWs.send("sh /koolshare/scripts/ss_shunt_stats.sh follow_ws");
 		} catch (e) {
 			fallback_shunt_stats_ws();
 			return;
@@ -4466,6 +4464,16 @@ function set_subscription_profiles_state(payload) {
 function subscription_profile_is_enabled(item) {
 	return !item || item.enabled !== false;
 }
+function parse_subscription_profiles_payload_text(text) {
+	text = $.trim(String(text || ""));
+	if (!text) {
+		return {version: 1, items: []};
+	}
+	try {
+		return normalize_subscription_profiles_payload(JSON.parse(text));
+	} catch (e) {}
+	return null;
+}
 function fetch_subscription_profiles_file(cb) {
 	$.ajax({
 		type: "GET",
@@ -4485,6 +4493,132 @@ function fetch_subscription_profiles_file(cb) {
 			}
 		}
 	});
+}
+function fetch_subscription_profiles_dbus(cb) {
+	$.ajax({
+		type: "GET",
+		url: "/_api/ss_subprof_runtime_b64",
+		dataType: "json",
+		cache: false,
+		success: function(data) {
+			var result = (data && data.result && data.result[0]) ? data.result[0] : {};
+			var raw = $.trim(String((result || {}).ss_subprof_runtime_b64 || ""));
+			var payload = null;
+			if (!raw) {
+				if (typeof cb === "function") {
+					cb(false, subscribeProfilesState);
+				}
+				return;
+			}
+			try {
+				payload = parse_subscription_profiles_payload_text(base64_decode_utf8(raw));
+			} catch (e) {
+				payload = null;
+			}
+			if (!payload) {
+				if (typeof cb === "function") {
+					cb(false, subscribeProfilesState);
+				}
+				return;
+			}
+			set_subscription_profiles_state(payload);
+			if (typeof cb === "function") {
+				cb(true, subscribeProfilesState);
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb(false, subscribeProfilesState);
+			}
+		}
+	});
+}
+function fetch_subscription_profiles_ws(migrateLegacy, cb) {
+	var socket = null;
+	var timer = null;
+	var finished = false;
+	var buffer = "";
+	var command = migrateLegacy
+		? "sh /koolshare/scripts/ss_subscribe_profile.sh migrate_legacy_ws"
+		: "sh /koolshare/scripts/ss_subscribe_profile.sh list_ws";
+	if (ws_flag != 1 || window.location.protocol != "http:") {
+		if (typeof cb === "function") {
+			cb(false, subscribeProfilesState);
+		}
+		return false;
+	}
+	socket = new WebSocket("ws://" + hostname + ":803/");
+	timer = setTimeout(function() {
+		if (finished) {
+			return;
+		}
+		finished = true;
+		try {
+			socket.close();
+		} catch (e) {}
+		if (typeof cb === "function") {
+			cb(false, subscribeProfilesState);
+		}
+	}, 6000);
+	socket.onopen = function() {
+		try {
+			socket.send(command);
+		} catch (e) {
+			clearTimeout(timer);
+			if (!finished) {
+				finished = true;
+				if (typeof cb === "function") {
+					cb(false, subscribeProfilesState);
+				}
+			}
+		}
+	};
+	socket.onerror = function() {
+		clearTimeout(timer);
+		if (!finished) {
+			finished = true;
+			if (typeof cb === "function") {
+				cb(false, subscribeProfilesState);
+			}
+		}
+	};
+	socket.onmessage = function(event) {
+		var marker = "__FSS_SUBPROF_END__";
+		var payload = null;
+		buffer += String(event.data || "");
+		if (buffer.indexOf(marker) == -1) {
+			return;
+		}
+		clearTimeout(timer);
+		if (finished) {
+			return;
+		}
+		finished = true;
+		try {
+			socket.close();
+		} catch (e) {}
+		payload = parse_subscription_profiles_payload_text(buffer.split(marker)[0] || "");
+		if (!payload) {
+			if (typeof cb === "function") {
+				cb(false, subscribeProfilesState);
+			}
+			return;
+		}
+		set_subscription_profiles_state(payload);
+		if (typeof cb === "function") {
+			cb(true, subscribeProfilesState);
+		}
+	};
+	socket.onclose = function() {
+		clearTimeout(timer);
+		if (!finished) {
+			finished = true;
+			if (typeof cb === "function") {
+				cb(false, subscribeProfilesState);
+			}
+		}
+	};
+	return true;
 }
 function call_subscription_profile_api(action, fields, cb) {
 	var id = parseInt(Math.random() * 100000000);
@@ -4510,33 +4644,106 @@ function call_subscription_profile_api(action, fields, cb) {
 		}
 	});
 }
+function load_subscription_profiles_http(cb, allowMigrate) {
+	fetch_subscription_profiles_dbus(function(snapshotOk) {
+		if (snapshotOk && (allowMigrate === false || subscribeProfilesState.length || !E("ss_online_links") || !$.trim(E("ss_online_links").value || "").length)) {
+			subscribeProfilesLoading = false;
+			if (typeof cb === "function") {
+				cb(true, subscribeProfilesState);
+			}
+			return;
+		}
+		call_subscription_profile_api("list", {}, function(ok) {
+			fetch_subscription_profiles_dbus(function(fetchOk) {
+				if (!fetchOk) {
+					fetch_subscription_profiles_file(function(fileOk) {
+						if (allowMigrate !== false && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
+							call_subscription_profile_api("migrate_legacy", {}, function() {
+								fetch_subscription_profiles_dbus(function(migrateDbusOk) {
+									if (!migrateDbusOk) {
+										fetch_subscription_profiles_file(function() {
+											subscribeProfilesLoading = false;
+											if (typeof cb === "function") {
+												cb(true, subscribeProfilesState);
+											}
+										});
+										return;
+									}
+									subscribeProfilesLoading = false;
+									if (typeof cb === "function") {
+										cb(true, subscribeProfilesState);
+									}
+								});
+							});
+							return;
+						}
+						subscribeProfilesLoading = false;
+						if (!ok && !fileOk && typeof layer != "undefined" && layer.msg) {
+							layer.msg("读取订阅配置失败");
+						}
+						if (typeof cb === "function") {
+							cb(ok && fileOk, subscribeProfilesState);
+						}
+					});
+					return;
+				}
+				if (allowMigrate !== false && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
+					call_subscription_profile_api("migrate_legacy", {}, function() {
+						fetch_subscription_profiles_dbus(function() {
+							subscribeProfilesLoading = false;
+							if (typeof cb === "function") {
+								cb(true, subscribeProfilesState);
+							}
+						});
+					});
+					return;
+				}
+				subscribeProfilesLoading = false;
+				if (!ok && !fetchOk && typeof layer != "undefined" && layer.msg) {
+					layer.msg("读取订阅配置失败");
+				}
+				if (typeof cb === "function") {
+					cb(ok && fetchOk, subscribeProfilesState);
+				}
+			});
+		});
+	});
+}
 function load_subscription_profiles(cb) {
 	if (subscribeProfilesLoading) {
 		return;
 	}
 	subscribeProfilesLoading = true;
-	call_subscription_profile_api("list", {}, function(ok) {
-		fetch_subscription_profiles_file(function(fetchOk) {
-			if ((!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
-				call_subscription_profile_api("migrate_legacy", {}, function() {
-					fetch_subscription_profiles_file(function() {
-						subscribeProfilesLoading = false;
-						if (typeof cb === "function") {
-							cb(true, subscribeProfilesState);
-						}
-					});
+	if (ws_flag == 1 && window.location.protocol == "http:") {
+		fetch_subscription_profiles_ws(false, function(ok) {
+			if (ok && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
+				fetch_subscription_profiles_ws(true, function(migrateOk) {
+					if (!migrateOk) {
+						load_subscription_profiles_http(cb, true);
+						return;
+					}
+					subscribeProfilesLoading = false;
+					if ((!ok && !migrateOk) && typeof layer != "undefined" && layer.msg) {
+						layer.msg("读取订阅配置失败");
+					}
+					if (typeof cb === "function") {
+						cb(migrateOk, subscribeProfilesState);
+					}
 				});
 				return;
 			}
-			subscribeProfilesLoading = false;
-			if (!ok && !fetchOk && typeof layer != "undefined" && layer.msg) {
-				layer.msg("读取订阅配置失败");
+			if (ok) {
+				subscribeProfilesLoading = false;
+				if (typeof cb === "function") {
+					cb(true, subscribeProfilesState);
+				}
+				return;
 			}
-			if (typeof cb === "function") {
-				cb(ok && fetchOk, subscribeProfilesState);
-			}
+			load_subscription_profiles_http(cb, true);
 		});
-	});
+		return;
+	}
+	load_subscription_profiles_http(cb, true);
 }
 function format_subscription_timestamp(ts) {
 	var num = parseInt(ts, 10);
@@ -4812,6 +5019,51 @@ function render_subscription_manager() {
 }
 function wait_subscription_profiles_until(checkFn, cb, attempt) {
 	attempt = attempt || 0;
+	if (ws_flag == 1 && window.location.protocol == "http:") {
+		fetch_subscription_profiles_ws(false, function(fetchOk, items) {
+			if (!fetchOk) {
+				fetch_subscription_profiles_dbus(function(fileOk, fileItems) {
+					var fallbackMatched = typeof checkFn === "function" ? !!checkFn(fileItems || []) : !!fileOk;
+					if (!fileOk) {
+						fetch_subscription_profiles_file(function(fileFileOk, fileFileItems) {
+							var fileMatched = typeof checkFn === "function" ? !!checkFn(fileFileItems || []) : !!fileFileOk;
+							if (fileMatched || attempt >= 30) {
+								if (typeof cb === "function") {
+									cb(fileMatched, fileFileItems || []);
+								}
+								return;
+							}
+							setTimeout(function() {
+								wait_subscription_profiles_until(checkFn, cb, attempt + 1);
+							}, 400);
+						});
+						return;
+					}
+					if (fallbackMatched || attempt >= 30) {
+						if (typeof cb === "function") {
+							cb(fallbackMatched, fileItems || []);
+						}
+						return;
+					}
+					setTimeout(function() {
+						wait_subscription_profiles_until(checkFn, cb, attempt + 1);
+					}, 400);
+				});
+				return;
+			}
+			var matched = typeof checkFn === "function" ? !!checkFn(items || []) : !!fetchOk;
+			if (matched || attempt >= 30) {
+				if (typeof cb === "function") {
+					cb(matched, items || []);
+				}
+				return;
+			}
+			setTimeout(function() {
+				wait_subscription_profiles_until(checkFn, cb, attempt + 1);
+			}, 400);
+		});
+		return;
+	}
 	fetch_subscription_profiles_file(function(fetchOk, items) {
 		var matched = typeof checkFn === "function" ? !!checkFn(items || []) : !!fetchOk;
 		if (matched || attempt >= 30) {
@@ -10299,7 +10551,7 @@ function start_latency_ws(action) {
 		batch_ws_last_message_at = Date.now();
 		clearTimeout(ws_open_timer);
 		try {
-			wswt.send("follow_webtest");
+			wswt.send("sh /koolshare/scripts/ss_webtest.sh follow_webtest_ws");
 		} catch (ex) {
 			fallback_latency_ws(action);
 		}
@@ -10360,7 +10612,7 @@ function start_single_latency_ws(node) {
 			singleLatencyWsOpenTimer = null;
 		}
 		try {
-			singleLatencySocket.send("follow_webtest_single " + String(node));
+			singleLatencySocket.send("sh /koolshare/scripts/ss_webtest.sh follow_webtest_single_ws " + String(node));
 		} catch (ex) {
 			fallback_single_latency_ws(node);
 		}
@@ -12293,7 +12545,9 @@ function get_status_log_ws(s) {
 	retArea.value = "";
 	statusHistorySocket = new WebSocket("ws://" + hostname + ":803/");
 	statusHistorySocket.onopen = function() {
-		statusHistorySocket.send(s == 1 ? "follow_ssf_status" : "follow_ssc_status");
+		statusHistorySocket.send(s == 1
+			? "sh /koolshare/scripts/ss_status_ws.sh follow_ssf_status"
+			: "sh /koolshare/scripts/ss_status_ws.sh follow_ssc_status");
 	};
 	statusHistorySocket.onmessage = function(event) {
 		if (STATUS_FLAG != 1 || statusHistoryType != s) {

@@ -26,6 +26,39 @@ profile_write_list() {
 	fi
 }
 
+profile_emit_runtime_json_stdout() {
+	local runtime_json=""
+	local runtime_file=""
+	runtime_json="$(subprof_runtime_snapshot_get_json 2>/dev/null)" || runtime_json=""
+	if [ -n "${runtime_json}" ]; then
+		printf '%s' "${runtime_json}"
+	else
+		runtime_file="$(subprof_runtime_json_file 2>/dev/null)" || runtime_file=""
+		if [ -n "${runtime_file}" ] && [ -s "${runtime_file}" ]; then
+			cat "${runtime_file}" 2>/dev/null
+		else
+			echo '{"version":1,"items":[]}'
+		fi
+	fi
+	echo "__FSS_SUBPROF_END__"
+}
+
+profile_runtime_snapshot_ready() {
+	local runtime_json=""
+	local runtime_file=""
+	runtime_json="$(subprof_runtime_snapshot_get_json 2>/dev/null)" || runtime_json=""
+	[ -n "${runtime_json}" ] && return 0
+	runtime_file="$(subprof_runtime_json_file 2>/dev/null)" || runtime_file=""
+	[ -n "${runtime_file}" ] && [ -s "${runtime_file}" ]
+}
+
+profile_ensure_runtime_snapshot() {
+	if profile_runtime_snapshot_ready; then
+		return 0
+	fi
+	profile_write_list >/dev/null 2>&1
+}
+
 profile_lookup_airport_label_by_domain() {
 	local domain_name="$1"
 	[ -n "${domain_name}" ] || return 1
@@ -201,6 +234,18 @@ profile_migrate_legacy() {
 	return 0
 }
 
+profile_ws_list() {
+	profile_ensure_runtime_snapshot || true
+	profile_emit_runtime_json_stdout
+	return 0
+}
+
+profile_ws_migrate_legacy() {
+	profile_migrate_legacy >/dev/null 2>&1 || true
+	profile_emit_runtime_json_stdout
+	return 0
+}
+
 ACTION="$1"
 WEB_ACTION=0
 if [ -z "$2" -a -n "$1" ]; then
@@ -239,6 +284,14 @@ migrate_legacy)
 	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 	profile_migrate_legacy >> "${LOG_FILE}" 2>&1
 	echo XU6J03M6 >> "${LOG_FILE}"
+	profile_cleanup_tmp_keys
+	;;
+list_ws)
+	profile_ws_list
+	profile_cleanup_tmp_keys
+	;;
+migrate_legacy_ws)
+	profile_ws_migrate_legacy
 	profile_cleanup_tmp_keys
 	;;
 *)

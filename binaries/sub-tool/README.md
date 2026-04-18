@@ -4,7 +4,7 @@ Source project:
 - `tool/sub-tool`
 
 Current bundled version:
-- `v0.1.8`
+- `v0.1.10`
 
 Purpose:
 - lightweight subscription parsing / filtering / diff tool for fancyss

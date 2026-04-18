@@ -6921,11 +6921,60 @@ pick_start_stop_daemon(){
 	return 1
 }
 
+force_kill_pid(){
+	local pid="$1"
+	[ -n "${pid}" ] || return 0
+	kill "${pid}" >/dev/null 2>&1
+	sleep 1
+	kill -9 "${pid}" >/dev/null 2>&1
+}
+
+get_ws_master_pid(){
+	local pid=""
+	if [ -f "${WS_PIDFILE}" ];then
+		pid=$(cat "${WS_PIDFILE}" 2>/dev/null)
+		if [ -n "${pid}" ] && kill -0 "${pid}" >/dev/null 2>&1; then
+			echo "${pid}"
+			return 0
+		fi
+	fi
+	pid=$(ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk 'NR==1{print $1}')
+	[ -n "${pid}" ] && echo "${pid}"
+}
+
+cleanup_ws_shells_once(){
+	local active_ws_pid="$1"
+	local pid=""
+	local ppid=""
+	[ -n "${active_ws_pid}" ] || active_ws_pid="$(get_ws_master_pid)"
+	ps w | grep -E '(/bin/sh|[[:space:]]sh)[[:space:]]+/koolshare/ss/websocket([[:space:]]|$)' | grep -v grep | awk '{print $1}' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		ppid="$(sed -n 's/^PPid:[[:space:]]*//p' "/proc/${pid}/status" 2>/dev/null | sed -n '1p')"
+		if [ -n "${active_ws_pid}" ] && [ "${ppid}" = "${active_ws_pid}" ]; then
+			continue
+		fi
+		force_kill_pid "${pid}"
+	done
+}
+
+sync_ws_pidfile(){
+	local active_ws_pid="$1"
+	[ -n "${active_ws_pid}" ] || active_ws_pid="$(get_ws_master_pid)"
+	if [ -n "${active_ws_pid}" ]; then
+		echo "${active_ws_pid}" > "${WS_PIDFILE}" 2>/dev/null || true
+	else
+		rm -f "${WS_PIDFILE}" >/dev/null 2>&1 || true
+	fi
+}
+
 start_ws(){
 	local ssd=""
-	stop_ws
-	if [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket" ];then
+	local active_ws_pid=""
+	active_ws_pid="$(get_ws_master_pid)"
+	if [ -z "${active_ws_pid}" ] && [ -x "/koolshare/bin/websocketd" -a -f "/koolshare/ss/websocket" ];then
 		ssd="$(pick_start_stop_daemon 2>/dev/null)"
+		rm -f "${WS_PIDFILE}" >/dev/null 2>&1 || true
 		if [ -n "${ssd}" ]; then
 			"${ssd}" -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket
 		else
@@ -6933,34 +6982,16 @@ start_ws(){
 			echo $! > "${WS_PIDFILE}"
 		fi
 	fi
+	active_ws_pid="$(get_ws_master_pid)"
+	sync_ws_pidfile "${active_ws_pid}"
+	cleanup_ws_shells_once "${active_ws_pid}"
 }
 
 stop_ws(){
-	local ssd=""
-	local pid=""
-	ssd="$(pick_start_stop_daemon 2>/dev/null)"
-	if [ -f "${WS_PIDFILE}" ];then
-		pid=$(cat "${WS_PIDFILE}" 2>/dev/null)
-		if [ -n "${ssd}" ]; then
-			"${ssd}" -K -q -p "${WS_PIDFILE}" >/dev/null 2>&1
-		fi
-		if [ -n "${pid}" ]; then
-			kill "${pid}" >/dev/null 2>&1
-			sleep 1
-			kill -9 "${pid}" >/dev/null 2>&1
-		fi
-	fi
-	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
-		kill "${pid}" >/dev/null 2>&1
-		sleep 1
-		kill -9 "${pid}" >/dev/null 2>&1
-	done
-	ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid; do
-		kill "${pid}" >/dev/null 2>&1
-		sleep 1
-		kill -9 "${pid}" >/dev/null 2>&1
-	done
-	rm -f "${WS_PIDFILE}" >/dev/null 2>&1
+	local active_ws_pid=""
+	active_ws_pid="$(get_ws_master_pid)"
+	sync_ws_pidfile "${active_ws_pid}"
+	cleanup_ws_shells_once "${active_ws_pid}"
 }
 
 # =========================================================================
@@ -6971,9 +7002,9 @@ start)
 	set_lock
 	if [ "$ss_basic_enable" == "1" ]; then
 		logger "[软件中心]: wan-start启动科学上网插件！"
+		start_ws
 		apply_ss 2>&1 | tee -a "$LOG_FILE" | tee -a "/tmp/upload/ss_wan_log.txt"
 		echo XU6J03M6 | tee -a "$LOG_FILE"
-		start_ws
 	else
 		logger "[软件中心]: 科学上网插件未开启，不启动！"
 	fi
@@ -6992,8 +7023,8 @@ stop)
 restart)
 	# start/restart by web or user
 	set_lock
-	apply_ss
 	start_ws
+	apply_ss
 	echo_date
 	echo_date "Across the Great Wall we can reach every corner in the world!"
 	echo_date

@@ -10,6 +10,14 @@ XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 XRAY_API_SERVER="127.0.0.1:10085"
 OUTPUT_MODE="${1:-api}"
 
+follow_ws_stream() {
+	while true
+	do
+		sh /koolshare/scripts/ss_shunt_stats.sh ws
+		sleep 6
+	done
+}
+
 run() {
 	env -i PATH=${PATH} "$@"
 }
@@ -330,5 +338,10 @@ main() {
 	fi
 	emit_response "ok"
 }
+
+if [ "$1" = "follow_ws" ]; then
+	follow_ws_stream
+	exit 0
+fi
 
 main "$@"

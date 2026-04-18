@@ -3908,6 +3908,141 @@ clean_webtest(){
 	rm -rf ${TMP2}/*
 }
 
+wt_follow_webtest_ws() {
+	local stream_inode=""
+	local last_stream_inode=""
+	local stream_lines=0
+	local last_stream_lines=0
+	local idle_loops=0
+
+	[ -f "${WT_WEBTEST_FILE}" ] || : > "${WT_WEBTEST_FILE}"
+	[ -f "${WT_WEBTEST_STREAM}" ] || : > "${WT_WEBTEST_STREAM}"
+	if [ -f "${WT_WEBTEST_FILE}" ]; then
+		cat "${WT_WEBTEST_FILE}" || exit 0
+	fi
+	if grep -q '^stop>stop$' "${WT_WEBTEST_FILE}" 2>/dev/null; then
+		exit 0
+	fi
+	while true
+	do
+		[ -f "${WT_WEBTEST_FILE}" ] || : > "${WT_WEBTEST_FILE}"
+		[ -f "${WT_WEBTEST_STREAM}" ] || : > "${WT_WEBTEST_STREAM}"
+		stream_inode="$(ls -i "${WT_WEBTEST_STREAM}" 2>/dev/null | awk '{print $1}')"
+		if [ -z "${stream_inode}" ]; then
+			sleep 1
+			continue
+		fi
+		if [ "${stream_inode}" != "${last_stream_inode}" ]; then
+			last_stream_inode="${stream_inode}"
+			last_stream_lines=0
+		fi
+		stream_lines="$(wc -l < "${WT_WEBTEST_STREAM}" 2>/dev/null)"
+		[ -n "${stream_lines}" ] || stream_lines=0
+		if [ "${stream_lines}" -gt "${last_stream_lines}" ]; then
+			sed -n "$((last_stream_lines + 1)),${stream_lines}p" "${WT_WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
+			do
+				[ -n "${line}" ] || continue
+				if [ "${line}" = "refresh>snapshot" ]; then
+					awk '
+						BEGIN {
+							print "__FSS_WEBTEST_SNAPSHOT_BEGIN__"
+							chunk = ""
+							count = 0
+						}
+						{
+							gsub(/\r/, "")
+							chunk = chunk $0 "__FSS_NL__"
+							count++
+							if (count >= 64) {
+								print "__FSS_WEBTEST_SNAPSHOT_CHUNK__" chunk
+								chunk = ""
+								count = 0
+							}
+						}
+						END {
+							if (count > 0) {
+								print "__FSS_WEBTEST_SNAPSHOT_CHUNK__" chunk
+							}
+							print "__FSS_WEBTEST_SNAPSHOT_END__"
+						}
+					' "${WT_WEBTEST_FILE}" 2>/dev/null
+					continue
+				fi
+				echo "${line}" || exit 0
+				[ "${line}" = "stop>stop" ] && exit 0
+			done
+			last_stream_lines="${stream_lines}"
+			idle_loops=0
+		elif [ -f "/tmp/webtest.lock" ]; then
+			idle_loops=0
+		else
+			idle_loops=$((idle_loops + 1))
+		fi
+		if grep -q '^stop>stop$' "${WT_WEBTEST_FILE}" 2>/dev/null; then
+			exit 0
+		fi
+		if [ "${idle_loops}" -ge 8 ]; then
+			exit 0
+		fi
+		sleep 1
+	done
+}
+
+wt_follow_webtest_single_ws() {
+	local node_id="$1"
+	local current_line=""
+	local stream_lines=0
+	local last_stream_lines=0
+	local idle_loops=0
+
+	[ -n "${node_id}" ] || exit 0
+	[ -f "${WT_WEBTEST_FILE}" ] || : > "${WT_WEBTEST_FILE}"
+	[ -f "${WT_WEBTEST_STREAM}" ] || : > "${WT_WEBTEST_STREAM}"
+	current_line="$(awk -F '>' -v node="${node_id}" '$1 == node {last=$0} END {if (last != "") print last}' "${WT_WEBTEST_FILE}" 2>/dev/null)"
+	[ -n "${current_line}" ] && echo "${current_line}"
+	last_stream_lines="$(wc -l < "${WT_WEBTEST_STREAM}" 2>/dev/null)"
+	[ -n "${last_stream_lines}" ] || last_stream_lines=0
+	while true
+	do
+		[ -f "${WT_WEBTEST_STREAM}" ] || : > "${WT_WEBTEST_STREAM}"
+		stream_lines="$(wc -l < "${WT_WEBTEST_STREAM}" 2>/dev/null)"
+		[ -n "${stream_lines}" ] || stream_lines=0
+		if [ "${stream_lines}" -gt "${last_stream_lines}" ]; then
+			sed -n "$((last_stream_lines + 1)),${stream_lines}p" "${WT_WEBTEST_STREAM}" 2>/dev/null | while IFS= read -r line
+			do
+				[ -n "${line}" ] || continue
+				case "${line}" in
+					"${node_id}>"*)
+						echo "${line}" || exit 0
+						state="${line#*>}"
+						case "${state}" in
+							waiting...|loading...|booting...|queued...|warming...|testing...)
+								;;
+							*)
+								exit 0
+								;;
+						esac
+						;;
+					"stop>stop")
+						echo "${line}" || exit 0
+						exit 0
+						;;
+				esac
+			done
+			last_stream_lines="${stream_lines}"
+			idle_loops=0
+		elif [ -f "/tmp/webtest.lock" ]; then
+			idle_loops=0
+		else
+			idle_loops=$((idle_loops + 1))
+		fi
+		if [ "${idle_loops}" -ge 8 ]; then
+			exit 0
+		fi
+		sleep 1
+	done
+}
+
 set_latency_job() {
 	ensure_latency_batch
 	if [ "${ss_basic_lt_cru_opts}" == "0" ]; then
@@ -3922,7 +4057,7 @@ set_latency_job() {
 
 wt_is_named_action() {
 	case "$1" in
-	schedule_warm|schedule_node_direct_refresh|warm_cache|ensure_cache_ids_file|node_direct_refresh|web_webtest|clear_webtest|cleanup_helpers|single_test|manual_webtest|close_latency_test|stop_webtest|ws_start_batch|ws_stop_batch|ws_clear_cache|ws_close_latency|ws_single_test)
+	schedule_warm|schedule_node_direct_refresh|warm_cache|ensure_cache_ids_file|node_direct_refresh|web_webtest|clear_webtest|cleanup_helpers|single_test|manual_webtest|close_latency_test|stop_webtest|ws_start_batch|ws_stop_batch|ws_clear_cache|ws_close_latency|ws_single_test|follow_webtest_ws|follow_webtest_single_ws)
 		return 0
 		;;
 	esac
@@ -4126,6 +4261,12 @@ ws_single_test)
 			echo busy
 		fi
 	fi
+	;;
+follow_webtest_ws)
+	wt_follow_webtest_ws
+	;;
+follow_webtest_single_ws)
+	wt_follow_webtest_single_ws "${WEBTEST_ACTION_ARG}"
 	;;
 0)
 	wt_http_response $1
