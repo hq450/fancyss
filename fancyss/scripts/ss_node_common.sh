@@ -351,18 +351,6 @@ fss_node_json_cache_is_fresh() {
 	[ "${cached_ts}" = "${config_ts}" ]
 }
 
-fss_get_node_env_cache_meta_value() {
-	return 1
-}
-
-fss_write_node_env_cache_meta() {
-	return 1
-}
-
-fss_node_env_cache_is_fresh() {
-	return 1
-}
-
 fss_clear_node_env_cache_artifacts() {
 	rm -rf "${FSS_NODE_ENV_CACHE_DIR}" \
 		"${FSS_NODE_ENV_CACHE_DIR}.tmp."* \
@@ -2658,6 +2646,32 @@ fss_node_direct_cache_differs_from_runtime() {
 	[ "$?" != "0" ]
 }
 
+fss_export_current_node_env_with_node_tool() {
+	local node_id="$1"
+	shift
+	local node_tool=""
+	local fields_csv="$*"
+	local tmp_file=""
+
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || return 1
+	[ -n "${fields_csv}" ] || return 1
+	tmp_file="/tmp/fss_node_env.${node_id}.$$.$RANDOM"
+	"${node_tool}" current-env --ids "${node_id}" --fields "${fields_csv}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	[ -s "${tmp_file}" ] || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	. "${tmp_file}" || {
+		rm -f "${tmp_file}"
+		return 1
+	}
+	rm -f "${tmp_file}"
+	return 0
+}
+
 fss_export_current_node_env() {
 	local node_id="$1"
 	shift
@@ -2671,6 +2685,7 @@ fss_export_current_node_env() {
 
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
+		fss_export_current_node_env_with_node_tool "${node_id}" "$@" && return 0
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}") || return 1
 		meta_file="/tmp/fss_export_env.${node_id}.$$.$RANDOM"
 		: > "${meta_file}" || return 1

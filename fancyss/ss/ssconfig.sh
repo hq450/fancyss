@@ -535,30 +535,37 @@ sync_dns_ipv6_policy() {
 }
 
 check_chn_public_ip(){
+	echo_date "检测[公网出口IPV4地址]和[路由器WAN口IPV4地址]..."
+
 	# 5.1 检测路由器公网出口IPV4地址
+	if [ -z "${REMOTE_IP_OUT}" -o "${REMOTE_IP_OUT}" == "null" ];then
+		REMOTE_IP_OUT="$(nvram get wan0_realip_ip)"
+		REMOTE_IP_OUT="$(__valid_ip "${REMOTE_IP_OUT}")"
+		REMOTE_IP_OUT_SRC="nvram: wan0_realip_ip"
+	fi
+
 	if [ -z "${REMOTE_IP_OUT}" ];then
+		echo_date "↪ 本地未获取到公网出口IPV4，尝试在线检测：ip.ddnsto.com"
 		REMOTE_IP_OUT_SRC="http://ip.ddnsto.com"
 		REMOTE_IP_OUT=$(detect_ip ${REMOTE_IP_OUT_SRC} 5 0)
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
+		echo_date "↪ 切换在线检测源：ip.clang.cn"
 		REMOTE_IP_OUT_SRC="https://ip.clang.cn"
 		REMOTE_IP_OUT=$(detect_ip ${REMOTE_IP_OUT_SRC} 5 0)
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
+		echo_date "↪ 切换在线检测源：whatismyip.akamai.com"
 		REMOTE_IP_OUT_SRC="whatismyip.akamai.com"
 		REMOTE_IP_OUT=$(detect_ip ${REMOTE_IP_OUT_SRC} 5 0)
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
+		echo_date "↪ 切换在线检测源：api.myip.com"
 		REMOTE_IP_OUT=$(run curl-fancyss -4sk --connect-timeout 2 http://api.myip.com 2>&1 | grep -v "Terminated" | run jq -r '.ip' | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 		REMOTE_IP_OUT_SRC="api.myip.com"
-	fi
-
-	if [ -z "${REMOTE_IP_OUT}" -o "${REMOTE_IP_OUT}" == "null" ];then
-		REMOTE_IP_OUT=$(nvram get wan0_realip_ip)
-		REMOTE_IP_OUT_SRC="nvram: wan0_realip_ip"
 	fi
 
 	if [ -z "${REMOTE_IP_OUT}" ];then
@@ -571,7 +578,6 @@ check_chn_public_ip(){
 	fi
 
 	# 5.2 检测路由器WAN口IPV4地址
-	echo_date "检测[公网出口IPV4地址]和[路由器WAN口IPV4地址]..."
 	if [ -z "${ROUTER_IP_WAN}" ];then
 		local ROUTER_IP_WAN=$(nvram get wan0_ipaddr)
 		local ROUTER_IP_WAN_SRC="nvram get wan0_ipaddr"
@@ -647,9 +653,9 @@ check_chn_public_ip(){
 prepare_system() {
 	# prepare system
 	echo_date "🛠️ 一些准备工作，请稍后..."
+	echo_date "准备工作：加载当前节点和运行环境..."
 	fss_base_load_current_node_env
 	refresh_runtime_context
-	refresh_schema2_secret_fields
 	normalize_ss2022_password
 	# Default enabled in UI: block QUIC to avoid HTTP/3 direct-connect bypassing TCP-only proxy.
 	set_default "ss_basic_block_quic" "1"
@@ -698,10 +704,13 @@ prepare_system() {
 	
 	# 检查端口占用情况
 	# 3333 3334 23456 7913 1051 1052 1055-1070 2055 2056 1091 1092 1093
+	echo_date "准备工作：检查冲突端口占用..."
 	kill_used_port
 
 	# 3. internet detect
+	echo_date "准备工作：检测基础网络连通性..."
 	check_internet
+	echo_date "准备工作：同步DNS与IPv6策略..."
 	check_ipv6_proxy_prerequisites
 	sync_dns_ipv6_policy
 
@@ -728,6 +737,7 @@ prepare_system() {
 	
 	# 检测路由器公网出口IPV4地址
 	if [ "${ss_basic_nochnipcheck}" != "1" ];then
+		echo_date "准备工作：检查公网出口与WAN口地址..."
 		check_chn_public_ip
 	fi
 	
