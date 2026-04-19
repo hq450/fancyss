@@ -4678,104 +4678,64 @@ nodes2files(){
 	[ -f "${LOCAL_NODES_SPL}" ] || return 0
 	local split_total
 	: > "${LOCAL_SPLIT_META}"
-	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		jq -r '
-			def raw_group: (.group // "null");
-			def trimmed_group:
-				(raw_group | sub("^\\s+"; "") | sub("\\s+$"; ""));
-			def group_label:
-				if (trimmed_group == "" or trimmed_group == "null" or trimmed_group == "_") then
-					""
-				else
-					(trimmed_group | sub("_[^_]+$"; ""))
-				end;
-			def group_hash:
-				raw_group as $raw
-				| if (group_label == "") then
-					"user"
-				elif ($raw | contains("_")) then
-					($raw | sub("^.*_"; ""))
-				else
-					$raw
-				end;
-			"\(group_hash)\u001f\(group_label)\u001f\(.)"
-		' "${LOCAL_NODES_SPL}" 2>/dev/null | awk -F '\037' -v dir="${DIR}" -v meta="${LOCAL_SPLIT_META}" '
-			BEGIN {
-				next_idx = 0
-			}
-			{
-				hash = $1
-				label = $2
-				json = $3
-				if (hash == "" || hash == "null") {
-					hash = "user"
-				}
-				if (!(hash in file_path)) {
-					if (hash == "user") {
-						file_path[hash] = dir "/local_0_user.txt"
-						order[++order_count] = hash
-						group_value[hash] = "user"
-						group_label[hash] = ""
-					} else {
-						next_idx++
-						file_path[hash] = dir "/local_" next_idx "_" hash ".txt"
-						order[++order_count] = hash
-						group_value[hash] = hash
-						group_label[hash] = label
-					}
-				}
-				print json >> file_path[hash]
-				count[hash]++
-			}
-			END {
-				for (i = 1; i <= order_count; i++) {
-					hash = order[i]
-					printf "%s\t%s\t%s\t%s\n", file_path[hash], count[hash] + 0, group_value[hash], group_label[hash] >> meta
-				}
-			}
-		' || {
-			echo_date "⚠节点文件处理失败！请重启路由器后重试！"
-			exit 1
-		}
-	else
-		local map_file="${DIR}/local_split_map.tsv"
-		local next_idx=0
-		local raw_group group_hash group_label file_path key map_line
-		: > "${map_file}"
-		while IFS= read -r node_json
-		do
-			[ -n "${node_json}" ] || continue
-			raw_group=$(printf '%s\n' "${node_json}" | jq -r '.group // "null"' 2>/dev/null)
-			group_hash=$(get_group_hash_value "${raw_group}" 2>/dev/null)
-			group_label=$(normalize_group_name "${raw_group}" 2>/dev/null)
-			if [ -z "${group_hash}" ] || [ "${group_hash}" = "null" ];then
-				key="user"
-				file_path="${DIR}/local_0_user.txt"
-				map_line=$(grep -F "user	" "${map_file}" 2>/dev/null | sed -n '1p')
-				if [ -z "${map_line}" ];then
-					printf '%s\t%s\t%s\n' "user" "${file_path}" "" >> "${map_file}"
-				fi
+	jq -r '
+		def raw_group: (.group // "null");
+		def trimmed_group:
+			(raw_group | sub("^\\s+"; "") | sub("\\s+$"; ""));
+		def group_label:
+			if (trimmed_group == "" or trimmed_group == "null" or trimmed_group == "_") then
+				""
 			else
-				key="${group_hash}"
-				map_line=$(grep -F "${key}	" "${map_file}" 2>/dev/null | sed -n '1p')
-				if [ -n "${map_line}" ];then
-					file_path=$(printf '%s' "${map_line}" | awk -F '\t' '{print $2}')
-				else
-					next_idx=$((next_idx + 1))
-					file_path="${DIR}/local_${next_idx}_${group_hash}.txt"
-					printf '%s\t%s\t%s\n' "${group_hash}" "${file_path}" "${group_label}" >> "${map_file}"
-				fi
-			fi
-			printf '%s\n' "${node_json}" >> "${file_path}"
-		done < "${LOCAL_NODES_SPL}"
-
-		while IFS='	' read -r group_hash file_path group_label
-		do
-			[ -n "${file_path}" ] || continue
-			printf '%s\t%s\t%s\t%s\n' "${file_path}" "$(wc -l < "${file_path}")" "${group_hash}" "${group_label}" >> "${LOCAL_SPLIT_META}"
-		done < "${map_file}"
-		rm -f "${map_file}"
-	fi
+				(trimmed_group | sub("_[^_]+$"; ""))
+			end;
+		def group_hash:
+			raw_group as $raw
+			| if (group_label == "") then
+				"user"
+			elif ($raw | contains("_")) then
+				($raw | sub("^.*_"; ""))
+			else
+				$raw
+			end;
+		"\(group_hash)\u001f\(group_label)\u001f\(.)"
+	' "${LOCAL_NODES_SPL}" 2>/dev/null | awk -F '\037' -v dir="${DIR}" -v meta="${LOCAL_SPLIT_META}" '
+		BEGIN {
+			next_idx = 0
+		}
+		{
+			hash = $1
+			label = $2
+			json = $3
+			if (hash == "" || hash == "null") {
+				hash = "user"
+			}
+			if (!(hash in file_path)) {
+				if (hash == "user") {
+					file_path[hash] = dir "/local_0_user.txt"
+					order[++order_count] = hash
+					group_value[hash] = "user"
+					group_label[hash] = ""
+				} else {
+					next_idx++
+					file_path[hash] = dir "/local_" next_idx "_" hash ".txt"
+					order[++order_count] = hash
+					group_value[hash] = hash
+					group_label[hash] = label
+				}
+			}
+			print json >> file_path[hash]
+			count[hash]++
+		}
+		END {
+			for (i = 1; i <= order_count; i++) {
+				hash = order[i]
+				printf "%s\t%s\t%s\t%s\n", file_path[hash], count[hash] + 0, group_value[hash], group_label[hash] >> meta
+			}
+		}
+	' || {
+		echo_date "⚠节点文件处理失败！请重启路由器后重试！"
+		exit 1
+	}
 
 	split_total=$(awk -F '\t' '{total += $2} END {print total + 0}' "${LOCAL_SPLIT_META}" 2>/dev/null)
 	if [ "${split_total}" != "$(wc -l < "${LOCAL_NODES_SPL}")" ];then
