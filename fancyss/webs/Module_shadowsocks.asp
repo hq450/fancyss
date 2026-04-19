@@ -5486,7 +5486,7 @@ function should_run_front_status_live() {
 	return is_page_live_updates_allowed();
 }
 function should_run_node_latency_live() {
-	return is_page_live_updates_allowed() && is_node_tab_active();
+	return is_page_live_updates_allowed() && (is_node_tab_active() || is_shunt_tab_active());
 }
 function should_run_shunt_stats_live() {
 	return is_page_live_updates_allowed() && is_shunt_tab_active();
@@ -11162,7 +11162,7 @@ function get_latency_data(action, pollSeq){
 	});
 }
 function load_latency_cache(){
-	if (!is_node_tab_active()) {
+	if (!should_run_node_latency_live()) {
 		return false;
 	}
 	var URL = '/_temp/webtest.txt';
@@ -11745,6 +11745,7 @@ var tab_actions = {
 		$('#apply_button').show();
 		$('#ss_failover_save').hide();
 		refresh_shunt_ui();
+		resume_node_latency_live_runtime();
 	},
 	7: function() {
 		$('#apply_button').hide();
@@ -11778,7 +11779,7 @@ function handle_tab_click() {
 	if (idx !== 5) {
 		stop_shunt_stats_runtime();
 	}
-	if (idx !== 1) {
+	if (idx !== 1 && idx !== 5) {
 		stop_node_latency_live_runtime();
 	}
 	tabSelect(idx);

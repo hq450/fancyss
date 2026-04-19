@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1120" viewBox="0 0 1700 1120" fill="none">
+  <defs>
+    <style>
+      .title { font: 700 28px 'DejaVu Sans', sans-serif; fill: #122033; }
+      .subtitle { font: 400 14px 'DejaVu Sans', sans-serif; fill: #50627a; }
+      .section-title { font: 700 20px 'DejaVu Sans', sans-serif; fill: #122033; }
+      .box-title { font: 700 16px 'DejaVu Sans', sans-serif; fill: #122033; }
+      .text { font: 400 14px 'DejaVu Sans', sans-serif; fill: #213247; }
+      .small { font: 400 12px 'DejaVu Sans', sans-serif; fill: #44566d; }
+      .mono { font: 600 13px 'DejaVu Sans', sans-serif; fill: #0f4f8a; }
+      .panel { fill: #f7fafc; stroke: #d2dde8; stroke-width: 2; rx: 22; }
+      .box { fill: #ffffff; stroke: #b8c7d9; stroke-width: 2; rx: 16; }
+      .blue { fill: #edf6ff; stroke: #8bb8e8; }
+      .green { fill: #eefaf1; stroke: #88c6a0; }
+      .amber { fill: #fff8ea; stroke: #ddb56f; }
+      .rose { fill: #fff2f1; stroke: #d69692; }
+      .gray { fill: #f4f6f8; stroke: #bfc9d4; }
+      .callout { fill: #f4f8ff; stroke: #7aa2dd; stroke-width: 2; rx: 16; }
+      .legend { fill: #ffffff; stroke: #d6dfeb; stroke-width: 1.5; rx: 12; }
+      .arrow { stroke: #3f5e85; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+      .arrow-soft { stroke: #6783a8; stroke-width: 2.5; fill: none; marker-end: url(#arrowheadSoft); }
+      .arrow-dash { stroke: #567198; stroke-width: 2.5; stroke-dasharray: 8 7; fill: none; marker-end: url(#arrowheadSoft); }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1L11 6L1 11V1Z" fill="#3f5e85"/>
+    </marker>
+    <marker id="arrowheadSoft" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1L11 6L1 11V1Z" fill="#6783a8"/>
+    </marker>
+  </defs>
+
+  <rect width="1700" height="1120" fill="#fbfcfe"/>
+
+  <text x="54" y="56" class="title">fancyss Shunt Flow</text>
+  <text x="54" y="84" class="subtitle">Outer ingress + DNS black/white sets + xray inner shunt</text>
+
+  <rect x="450" y="120" width="365" height="430" class="panel"/>
+  <text x="474" y="154" class="section-title">DNS Layer</text>
+
+  <rect x="875" y="120" width="365" height="430" class="panel"/>
+  <text x="899" y="154" class="section-title">Outer Ingress Layer</text>
+
+  <rect x="1300" y="120" width="340" height="430" class="panel"/>
+  <text x="1324" y="154" class="section-title">Xray Inner Shunt</text>
+
+  <rect x="56" y="214" width="170" height="84" class="box gray"/>
+  <text x="78" y="246" class="box-title">Client Traffic</text>
+  <text x="78" y="270" class="text">Domain access</text>
+  <text x="78" y="290" class="text">or direct IP access</text>
+
+  <rect x="258" y="204" width="150" height="104" class="box gray"/>
+  <text x="284" y="244" class="box-title">Request Type</text>
+  <text x="292" y="272" class="text">Domain?</text>
+  <text x="285" y="294" class="text">or direct IP?</text>
+
+  <rect x="474" y="188" width="315" height="74" class="box blue"/>
+  <text x="498" y="218" class="box-title">dnsmasq</text>
+  <text x="498" y="242" class="text">Receives domain query and dispatches</text>
+
+  <rect x="474" y="282" width="315" height="78" class="box blue"/>
+  <text x="498" y="312" class="box-title">smartdns / chinadns-ng</text>
+  <text x="498" y="336" class="text">Resolve via direct DNS / trusted DNS</text>
+
+  <rect x="474" y="382" width="145" height="132" class="box green"/>
+  <text x="492" y="410" class="box-title">Direct domain sets</text>
+  <text x="492" y="434" class="mono">ignlist</text>
+  <text x="492" y="454" class="mono">white_list</text>
+  <text x="492" y="474" class="mono">chnlist</text>
+  <text x="492" y="494" class="mono">node_direct</text>
+
+  <rect x="644" y="382" width="145" height="132" class="box rose"/>
+  <text x="662" y="410" class="box-title">Proxy domain sets</text>
+  <text x="662" y="434" class="mono">gfwlist</text>
+  <text x="662" y="454" class="mono">black_list</text>
+  <text x="662" y="474" class="mono">shunt_proxy</text>
+  <text x="662" y="494" class="mono">rotlist</text>
+
+  <rect x="474" y="525" width="315" height="60" class="box gray"/>
+  <text x="495" y="551" class="box-title">DNS result → ipset</text>
+  <text x="495" y="573" class="text">Resolved IPs are written into ipset families</text>
+
+  <rect x="899" y="188" width="315" height="90" class="box amber"/>
+  <text x="922" y="218" class="box-title">iptables / ipset match</text>
+  <text x="922" y="242" class="text">Evaluates direct/proxy sets and mode fallback</text>
+  <text x="922" y="264" class="small">Example: Mainland whitelist ingress</text>
+
+  <rect x="899" y="302" width="145" height="138" class="box green"/>
+  <text x="917" y="330" class="box-title">Direct path</text>
+  <text x="917" y="354" class="text">ignlist</text>
+  <text x="917" y="374" class="text">white_list</text>
+  <text x="917" y="394" class="text">chnroute / chnlist</text>
+  <text x="917" y="414" class="text">node_direct</text>
+
+  <rect x="1069" y="302" width="145" height="138" class="box rose"/>
+  <text x="1088" y="330" class="box-title">Proxy path</text>
+  <text x="1088" y="354" class="text">black_list</text>
+  <text x="1088" y="374" class="text">gfwlist</text>
+  <text x="1088" y="394" class="text">shunt_proxy</text>
+  <text x="1088" y="414" class="text">rotlist</text>
+
+  <rect x="899" y="458" width="315" height="80" class="box gray"/>
+  <text x="922" y="488" class="box-title">Mode fallback</text>
+  <text x="922" y="512" class="text">If no set matches, current ingress mode decides</text>
+  <text x="922" y="532" class="small">Example: CN direct / overseas → xray</text>
+
+  <rect x="1324" y="188" width="292" height="88" class="box blue"/>
+  <text x="1346" y="220" class="box-title">Inbound reaches xray</text>
+  <text x="1346" y="244" class="text">Only traffic forwarded by outer ingress</text>
+  <text x="1346" y="264" class="text">can be seen by inner rules</text>
+
+  <rect x="1324" y="300" width="292" height="178" class="box blue"/>
+  <text x="1346" y="330" class="box-title">Inner rule match</text>
+  <text x="1346" y="356" class="text">AI set → AI node</text>
+  <text x="1346" y="382" class="text">Media set → Media node</text>
+  <text x="1346" y="408" class="text">Other sets → their target nodes</text>
+  <text x="1346" y="434" class="text">No match → fallback node / direct / reject</text>
+  <text x="1346" y="460" class="small">This is where actual shunt rules take effect</text>
+
+  <rect x="1324" y="500" width="292" height="60" class="box gray"/>
+  <text x="1346" y="526" class="box-title">Final outbound</text>
+  <text x="1346" y="548" class="text">Traffic exits through selected outbound</text>
+
+  <rect x="74" y="636" width="1548" height="128" class="callout"/>
+  <text x="100" y="674" class="section-title">Why strict Mainland-whitelist ingress needs an outer proxy-domain set</text>
+  <text x="100" y="706" class="text">If a flow never reaches xray, the inner shunt rule cannot match it. So enabled rules that target proxy nodes may push their domains into</text>
+  <text x="100" y="730" class="text"><tspan class="mono">shunt_proxy</tspan>, which is then merged into the outer DNS / blacklist path to guarantee those flows enter xray first.</text>
+
+  <rect x="120" y="816" width="250" height="114" class="legend"/>
+  <text x="142" y="846" class="box-title">Enabled shunt rules</text>
+  <text x="142" y="872" class="text">AI set → proxy node A</text>
+  <text x="142" y="894" class="text">Media set → proxy node B</text>
+  <text x="142" y="916" class="text">Custom set → proxy node C</text>
+
+  <rect x="432" y="816" width="230" height="114" class="legend"/>
+  <text x="454" y="846" class="box-title">Proxy-domain extract</text>
+  <text x="454" y="872" class="mono">/tmp/ss_shunt_proxy.txt</text>
+  <text x="454" y="896" class="small">Only domains from rules targeting</text>
+  <text x="454" y="916" class="small">proxy nodes are kept here</text>
+
+  <rect x="725" y="816" width="270" height="114" class="legend"/>
+  <text x="747" y="846" class="box-title">Outer DNS / blacklist merge</text>
+  <text x="747" y="872" class="text">Merged into</text>
+  <text x="815" y="872" class="mono">black_list</text>
+  <text x="895" y="872" class="text">or</text>
+  <text x="918" y="872" class="mono">shunt_proxy</text>
+  <text x="747" y="898" class="small">Used only to guarantee entry into xray</text>
+
+  <rect x="1060" y="816" width="252" height="114" class="legend"/>
+  <text x="1082" y="846" class="box-title">Outer ingress result</text>
+  <text x="1082" y="872" class="text">These flows are forced into xray</text>
+  <text x="1082" y="896" class="text">instead of being left to default CN-direct</text>
+
+  <rect x="1362" y="816" width="220" height="114" class="legend"/>
+  <text x="1384" y="846" class="box-title">Inner shunt takes over</text>
+  <text x="1384" y="872" class="text">AI / Media / Custom rules</text>
+  <text x="1384" y="896" class="text">finally select the real outbound</text>
+
+  <path d="M226 256H258" class="arrow"/>
+  <path d="M408 230H474" class="arrow"/>
+  <path d="M408 292C470 292 420 348 474 348" class="arrow-soft"/>
+  <path d="M789 555H899" class="arrow"/>
+  <path d="M1214 371H1324" class="arrow"/>
+  <path d="M1044 370H1214" class="arrow-soft"/>
+  <path d="M971 585C971 660 1324 660 1324 530" class="arrow-soft"/>
+  <path d="M1044 370C1240 370 1240 370 1324 370" class="arrow"/>
+  <path d="M370 872H432" class="arrow"/>
+  <path d="M662 872H725" class="arrow"/>
+  <path d="M995 872H1060" class="arrow"/>
+  <path d="M1312 872H1362" class="arrow"/>
+  <path d="M550 816C550 730 705 730 705 514" class="arrow-dash"/>
+  <path d="M860 816C860 700 718 700 718 448" class="arrow-dash"/>
+  <path d="M1186 440C1260 440 1268 440 1324 440" class="arrow-soft"/>
+
+  <rect x="56" y="980" width="1588" height="88" class="legend"/>
+  <text x="82" y="1012" class="box-title">Reading guide</text>
+  <text x="82" y="1038" class="text">1. DNS classifies domain requests into direct/proxy/default sets.</text>
+  <text x="82" y="1060" class="text">2. Outer ingress decides whether traffic reaches xray at all.</text>
+  <text x="650" y="1038" class="text">3. Inner shunt only works for traffic that already entered xray.</text>
+  <text x="650" y="1060" class="text">4. In strict Mainland-whitelist ingress, proxy-domain extraction exists only to guarantee that entry.</text>
+</svg>
