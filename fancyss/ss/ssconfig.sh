@@ -938,9 +938,12 @@ server_resolv_mode_is_dynamic() {
 }
 
 clear_current_node_server_ip() {
+	unset CURRENT_NODE_SERVER_RESOLVED_IP
+	unset CURRENT_NODE_SERVER_RESOLVED_HOST
 	unset ss_basic_server_ip
+	unset ss_basic_server_ip_host
 	dbus remove ss_basic_server_ip
-	fss_set_current_node_field_plain server_ip ""
+	dbus remove ss_basic_server_ip_host
 }
 
 record_current_node_server_ip() {
@@ -949,9 +952,10 @@ record_current_node_server_ip() {
 		clear_current_node_server_ip
 		return 1
 	}
-	ss_basic_server_ip="${server_ip}"
-	dbus set ss_basic_server_ip="${server_ip}"
-	fss_set_current_node_field_plain server_ip "${server_ip}"
+	CURRENT_NODE_SERVER_RESOLVED_IP="${server_ip}"
+	if [ -n "${ss_basic_server_orig}" ];then
+		CURRENT_NODE_SERVER_RESOLVED_HOST="${ss_basic_server_orig}"
+	fi
 	return 0
 }
 
@@ -1105,19 +1109,20 @@ refresh_node_direct_dns() {
 
 refresh_current_node_server_ip_runtime() {
 	local resolved_ip=""
-	local attempt=1
 	[ -n "${ss_basic_server_orig}" ] || return 1
 	[ -n "$(is_domain "${ss_basic_server_orig}")" ] || return 1
-	while [ "${attempt}" -le 3 ]; do
-		resolved_ip=$(run dnsclient -46 -p 53 -t 2 -i 1 @127.0.0.1 "${ss_basic_server_orig}" 2>/dev/null | head -n1)
-		__valid_ip46 "${resolved_ip}" >/dev/null 2>&1
-		if [ "$?" = "0" -o "$?" = "1" ]; then
-			break
+
+	if [ "${CURRENT_NODE_SERVER_RESOLVED_HOST}" = "${ss_basic_server_orig}" ] && [ -n "${CURRENT_NODE_SERVER_RESOLVED_IP}" ];then
+		__valid_ip46 "${CURRENT_NODE_SERVER_RESOLVED_IP}" >/dev/null 2>&1
+		if [ "$?" = "0" -o "$?" = "1" ];then
+			echo_date "节点服务器域名运行时解析复用缓存：${ss_basic_server_orig} -> ${CURRENT_NODE_SERVER_RESOLVED_IP}"
+			return 0
 		fi
-		resolved_ip=""
-		[ "${attempt}" -lt 3 ] && sleep 1
-		attempt=$((attempt + 1))
-	done
+	fi
+
+	resolved_ip=$(run dnsclient -46 -p 53 -t 1 -i 1 @127.0.0.1 "${ss_basic_server_orig}" 2>/dev/null | head -n1)
+	__valid_ip46 "${resolved_ip}" >/dev/null 2>&1
+	[ "$?" = "0" -o "$?" = "1" ] || resolved_ip=""
 	[ -n "${resolved_ip}" ] || return 1
 	record_current_node_server_ip "${resolved_ip}" || return 1
 	echo_date "节点服务器域名运行时解析成功：${ss_basic_server_orig} -> ${resolved_ip}"
@@ -1347,7 +1352,8 @@ init_current_node_server_state() {
 
 	case "${CURRENT_NODE_SERVER_IS_IP}" in
 	0|1)
-		record_current_node_server_ip "${CURRENT_NODE_SERVER_HOST}"
+		CURRENT_NODE_SERVER_RESOLVED_IP="${CURRENT_NODE_SERVER_HOST}"
+		CURRENT_NODE_SERVER_RESOLVED_HOST="${CURRENT_NODE_SERVER_HOST}"
 		;;
 	esac
 
@@ -1409,31 +1415,31 @@ get_proxy_server_ip(){
 		return
 	fi
 
-	if [ -n "${ss_basic_server_ip}" ]; then
-		__valid_ip46 "${ss_basic_server_ip}"
+	if [ -n "${CURRENT_NODE_SERVER_RESOLVED_IP}" ]; then
+		__valid_ip46 "${CURRENT_NODE_SERVER_RESOLVED_IP}"
 		if [ "$?" == "0" ]; then
 			# ipv4
-			ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
+			ipset test chnroute ${CURRENT_NODE_SERVER_RESOLVED_IP} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# ss服务器是国外IP
-				ss_real_server_ip="${ss_basic_server_ip}"
-				echo_date "检测到节点服务器的ip地址为：${ss_basic_server_ip}，是国外IP"
+				ss_real_server_ip="${CURRENT_NODE_SERVER_RESOLVED_IP}"
+				echo_date "检测到节点服务器的ip地址为：${CURRENT_NODE_SERVER_RESOLVED_IP}，是国外IP"
 			else
 				# ss服务器是国内ip （可能用了国内中转）
 				ss_real_server_ip=""
-				echo_date "检测到代理服务器的ip地址为：${ss_basic_server_ip}，是国内IP，可能是国内中转节点！"
+				echo_date "检测到代理服务器的ip地址为：${CURRENT_NODE_SERVER_RESOLVED_IP}，是国内IP，可能是国内中转节点！"
 			fi
 		elif [ "$?" == "1" ]; then
 			# ipv6
-			ipset test chnroute6 ${ss_basic_server_ip} >/dev/null 2>&1
+			ipset test chnroute6 ${CURRENT_NODE_SERVER_RESOLVED_IP} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# ss服务器是国外IP
-				ss_real_server_ip="${ss_basic_server_ip}"
-				echo_date "检测到节点服务器的ip地址为：${ss_basic_server_ip}，是国外IP"
+				ss_real_server_ip="${CURRENT_NODE_SERVER_RESOLVED_IP}"
+				echo_date "检测到节点服务器的ip地址为：${CURRENT_NODE_SERVER_RESOLVED_IP}，是国外IP"
 			else
 				# ss服务器是国内ip （可能用了国内中转）
 				ss_real_server_ip=""
-				echo_date "检测到代理服务器的ip地址为：${ss_basic_server_ip}，是国内IP，可能是国内中转节点！"
+				echo_date "检测到代理服务器的ip地址为：${CURRENT_NODE_SERVER_RESOLVED_IP}，是国内IP，可能是国内中转节点！"
 			fi
 		else
 			# 不是ip
@@ -3173,7 +3179,6 @@ add_white_black() {
 	' > /tmp/black_list.txt
 
 	# {white_list}, white ip
-	[ -n "${ss_basic_server_ip}" ] && SBSI="${ss_basic_server_ip}" || SBSI=""
 	[ -n "${ISP_DNS1}" ] && ISP_DNS_a="${ISP_DNS1}" || ISP_DNS_a=""
 	[ -n "${IFIP_DNS2}" ] && ISP_DNS_b="${ISP_DNS2}" || ISP_DNS_b=""
 	local ALL_NODE_DOMAINS=$(dbus list ssconf|grep _server_|awk -F"=" '{print $NF}'|sort -u|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
@@ -6694,34 +6699,34 @@ check_frn_public_ip(){
 
 
 	# 检测节点解析结果
-	if [ -z "${ss_basic_server_ip}" ] && [ -n "${ss_basic_server_orig}" ] && [ -n "$(is_domain "${ss_basic_server_orig}")" ]; then
+	if [ -z "${CURRENT_NODE_SERVER_RESOLVED_IP}" ] && [ -n "${ss_basic_server_orig}" ] && [ -n "$(is_domain "${ss_basic_server_orig}")" ]; then
 		refresh_current_node_server_ip_runtime >/dev/null 2>&1 || true
 	fi
-	if [ -n "${ss_basic_server_ip}" ]; then
-		__valid_ip46 "${ss_basic_server_ip}"
+	if [ -n "${CURRENT_NODE_SERVER_RESOLVED_IP}" ]; then
+		__valid_ip46 "${CURRENT_NODE_SERVER_RESOLVED_IP}"
 		if [ "$?" == "0" ]; then
 			# ipv4
-			ipset test chnroute ${ss_basic_server_ip} >/dev/null 2>&1
+			ipset test chnroute ${CURRENT_NODE_SERVER_RESOLVED_IP} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 国外ip
-				ss_real_server_ip="${ss_basic_server_ip}"
-				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：海外，来源：${ss_basic_server_orig}"
+				ss_real_server_ip="${CURRENT_NODE_SERVER_RESOLVED_IP}"
+				echo_date "节点服务器解析地址：${CURRENT_NODE_SERVER_RESOLVED_IP}，属地：海外，来源：${ss_basic_server_orig}"
 			else
 				# 国内ip
 				ss_real_server_ip=""
-				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：大陆，来源：${ss_basic_server_orig}"
+				echo_date "节点服务器解析地址：${CURRENT_NODE_SERVER_RESOLVED_IP}，属地：大陆，来源：${ss_basic_server_orig}"
 			fi
 		elif [ "$?" == "1" ]; then
 			# ipv6
-			ipset test chnroute6 ${ss_basic_server_ip} >/dev/null 2>&1
+			ipset test chnroute6 ${CURRENT_NODE_SERVER_RESOLVED_IP} >/dev/null 2>&1
 			if [ "$?" != "0" ]; then
 				# 国外ip
-				ss_real_server_ip="${ss_basic_server_ip}"
-				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：海外，来源：${ss_basic_server_orig}"
+				ss_real_server_ip="${CURRENT_NODE_SERVER_RESOLVED_IP}"
+				echo_date "节点服务器解析地址：${CURRENT_NODE_SERVER_RESOLVED_IP}，属地：海外，来源：${ss_basic_server_orig}"
 			else
 				# 国内ip
 				ss_real_server_ip=""
-				echo_date "节点服务器解析地址：${ss_basic_server_ip}，属地：大陆，来源：${ss_basic_server_orig}"
+				echo_date "节点服务器解析地址：${CURRENT_NODE_SERVER_RESOLVED_IP}，属地：大陆，来源：${ss_basic_server_orig}"
 			fi
 		fi
 	fi

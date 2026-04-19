@@ -133,7 +133,6 @@ node_data_write_summary() {
 						type_label: ($item.protocol_label // ""),
 						server: ($item.server // ""),
 						port: ($item.port // ""),
-						server_ip: ($item.server_ip // ""),
 						latency: ($item.latency // ""),
 						ping: ($item.ping // ""),
 						group: ($item.group // ""),

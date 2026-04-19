@@ -31,7 +31,6 @@ tuic_json
 "
 
 FSS_NODE_RUNTIME_FIELDS="
-server_ip
 latency
 ping
 "
