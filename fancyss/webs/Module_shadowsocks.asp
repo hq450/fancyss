@@ -6651,6 +6651,8 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 					//console.log('ws：成功建立websocket链接，开始获取启动日志...');
 					if (resolvedWsCmd) {
 						ws.send(resolvedWsCmd);
+					} else if (script == "ss_config.sh") {
+						ws.send(script + " " + arg);
 					} else {
 						ws.send(". " + script + " " + arg);
 					}

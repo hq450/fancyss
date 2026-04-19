@@ -27,7 +27,6 @@ pre_stop(){
 	local ss_config_pids=$(ps|grep -E "ss_config\.sh"|awk '{print $1}'|grep -v ${current_pid})
 	if [ -n "${ss_config_pids}" ];then
 		for ss_config_pid in ${ss_config_pids}; do
-			echo kill ${ss_config_pid}
 			kill -9 ${ss_config_pid} >/dev/null 2>&1
 		done
 	fi

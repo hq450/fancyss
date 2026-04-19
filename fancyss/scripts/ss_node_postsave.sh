@@ -20,13 +20,15 @@ fss_postsave_rebuild_identity_by_id() {
 	[ -n "${node_id}" ] || return 1
 	node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || return 1
 	[ -n "${node_json}" ] || return 1
-	old_identity="$(printf '%s' "${node_json}" | jq -r '._identity // empty' 2>/dev/null)"
-	source="$(printf '%s' "${node_json}" | jq -r '._source // empty' 2>/dev/null)"
-	airport_identity="$(printf '%s' "${node_json}" | jq -r '._airport_identity // empty' 2>/dev/null)"
-	source_scope="$(printf '%s' "${node_json}" | jq -r '._source_scope // empty' 2>/dev/null)"
-	source_url_hash="$(printf '%s' "${node_json}" | jq -r '._source_url_hash // empty' 2>/dev/null)"
+	fss_unpack_node_meta "${node_json}" || return 1
+	old_identity="${FSS_NODE_META_IDENTITY}"
+	source="${FSS_NODE_META_SOURCE}"
+	airport_identity="${FSS_NODE_META_AIRPORT_IDENTITY}"
+	source_scope="${FSS_NODE_META_SOURCE_SCOPE}"
+	source_url_hash="${FSS_NODE_META_SOURCE_URL_HASH}"
 	updated_json="$(fss_enrich_node_identity_json "${node_json}" "${airport_identity}" "${source_scope}" "${source_url_hash}" "${source}")" || return 1
-	new_identity="$(printf '%s' "${updated_json}" | jq -r '._identity // empty' 2>/dev/null)"
+	fss_unpack_node_meta "${updated_json}" || return 1
+	new_identity="${FSS_NODE_META_IDENTITY}"
 	[ -n "${new_identity}" ] || return 1
 	if [ "${updated_json}" != "${node_json}" ];then
 		dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"

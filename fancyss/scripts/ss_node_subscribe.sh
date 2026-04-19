@@ -2219,22 +2219,10 @@ sub_resolve_field_name(){
 sub_get_node_field_plain(){
 	local node_id="$1"
 	local field="$2"
-	local store_field value=""
 
 	[ -z "${node_id}" ] && return 1
 	[ -z "${field}" ] && return 1
-	store_field=$(sub_resolve_field_name "${field}")
-
-	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		value=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null | jq -r --arg k "${store_field}" '.[$k] // empty')
-	else
-		value=$(dbus get ssconf_basic_${store_field}_${node_id})
-		if [ -n "${value}" ] && fss_is_b64_field "${store_field}"; then
-			value=$(fss_b64_decode "${value}")
-		fi
-	fi
-
-	printf '%s' "${value}"
+	fss_get_node_field_plain "${node_id}" "${field}"
 }
 
 sub_get_node_server_plain(){
@@ -2259,14 +2247,16 @@ sub_get_node_identity_plain(){
 	local node_json=""
 	[ -z "${node_id}" ] && return 1
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-		value=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null | jq -r '._identity // empty')
+		value=$(fss_get_node_identity_by_id "${node_id}" 2>/dev/null)
 		[ -n "${value}" ] && {
 			printf '%s' "${value}"
 			return 0
 		}
 	fi
 	node_json=$(sub_export_local_node_json "${node_id}" 2>/dev/null) || return 1
-	value=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null | jq -r '._identity // empty') || return 1
+	node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
+	fss_unpack_node_meta "${node_json}" || return 1
+	value="${FSS_NODE_META_IDENTITY}"
 	printf '%s' "${value}"
 }
 
@@ -2277,23 +2267,12 @@ sub_get_node_snapshot_plain(){
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
 		[ -n "${node_json}" ] || return 1
-		printf '%s' "${node_json}" | jq -r '
-			[
-				(.name // ""),
-				(.type // ""),
-				(.server // .hy2_server // ""),
-				((.port // .hy2_port // "") | tostring),
-				(._identity // "")
-			] | @tsv
-		' 2>/dev/null
+		fss_node_json_snapshot_tsv "${node_json}"
 		return 0
 	fi
-	printf '%s\t%s\t%s\t%s\t%s\n' \
-		"$(sub_get_node_field_plain "${node_id}" name)" \
-		"$(sub_get_node_field_plain "${node_id}" type)" \
-		"$(sub_get_node_server_plain "${node_id}")" \
-		"$(sub_get_node_port_plain "${node_id}")" \
-		"$(sub_get_node_identity_plain "${node_id}")"
+	node_json=$(sub_export_local_node_json "${node_id}" 2>/dev/null) || return 1
+	[ -n "${node_json}" ] || return 1
+	fss_node_json_snapshot_tsv "${node_json}"
 }
 
 sub_node_exists_in_order(){
@@ -2305,20 +2284,17 @@ sub_node_exists_in_order(){
 sub_capture_active_nodes(){
 	local current_snapshot=""
 	local failover_snapshot=""
+	local sep="$(printf '\037')"
 	sub_refresh_node_state
 	current_snapshot=$(sub_get_node_snapshot_plain "${CURR_NODE}" 2>/dev/null)
-	CURR_NODE_NAME=$(printf '%s' "${current_snapshot}" | awk -F '\t' '{print $1}')
-	CURR_NODE_TYPE=$(printf '%s' "${current_snapshot}" | awk -F '\t' '{print $2}')
-	CURR_NODE_SERVER=$(printf '%s' "${current_snapshot}" | awk -F '\t' '{print $3}')
-	CURR_NODE_PORT=$(printf '%s' "${current_snapshot}" | awk -F '\t' '{print $4}')
-	CURR_NODE_IDENTITY=$(printf '%s' "${current_snapshot}" | awk -F '\t' '{print $5}')
+	IFS="${sep}" read -r CURR_NODE_NAME CURR_NODE_TYPE CURR_NODE_SERVER CURR_NODE_PORT CURR_NODE_IDENTITY <<-EOF
+	${current_snapshot}
+	EOF
 	[ -n "${CURR_NODE_IDENTITY}" ] || CURR_NODE_IDENTITY=$(sub_get_node_identity_plain "${CURR_NODE}")
 	failover_snapshot=$(sub_get_node_snapshot_plain "${FAILOVER_NODE}" 2>/dev/null)
-	FAILOVER_NODE_NAME=$(printf '%s' "${failover_snapshot}" | awk -F '\t' '{print $1}')
-	FAILOVER_NODE_TYPE=$(printf '%s' "${failover_snapshot}" | awk -F '\t' '{print $2}')
-	FAILOVER_NODE_SERVER=$(printf '%s' "${failover_snapshot}" | awk -F '\t' '{print $3}')
-	FAILOVER_NODE_PORT=$(printf '%s' "${failover_snapshot}" | awk -F '\t' '{print $4}')
-	FAILOVER_NODE_IDENTITY=$(printf '%s' "${failover_snapshot}" | awk -F '\t' '{print $5}')
+	IFS="${sep}" read -r FAILOVER_NODE_NAME FAILOVER_NODE_TYPE FAILOVER_NODE_SERVER FAILOVER_NODE_PORT FAILOVER_NODE_IDENTITY <<-EOF
+	${failover_snapshot}
+	EOF
 	[ -n "${FAILOVER_NODE_IDENTITY}" ] || FAILOVER_NODE_IDENTITY=$(sub_get_node_identity_plain "${FAILOVER_NODE}")
 }
 
@@ -3120,6 +3096,28 @@ sub_reference_notice_add(){
 	printf '%s\n' "${payload}" >> "${SCHEMA2_REFERENCE_NOTICE_FILE}"
 }
 
+sub_parse_shunt_rule_fields(){
+	local rule_json="$1"
+	[ -n "${rule_json}" ] || return 0
+	printf '%s' "${rule_json}" | jq -r '
+		def text($v):
+			if $v == null then
+				""
+			elif ($v | type) == "string" then
+				$v
+			else
+				($v | tostring)
+			end;
+		[
+			(text(.target_node_id) | @base64),
+			(text(.target_node_identity) | @base64),
+			(text(.id) | @base64),
+			(text(.remark) | @base64),
+			(text(.preset) | @base64)
+		] | join("\u001f")
+	' 2>/dev/null
+}
+
 sub_reference_notice_commit(){
 	local payload=""
 	[ -s "${SCHEMA2_REFERENCE_NOTICE_FILE}" ] || {
@@ -3387,6 +3385,16 @@ sub_apply_shunt_reference_rewrite(){
 	local rules_file="${DIR}/shunt_apply_rules.$$"
 	local updated_rules_file="${DIR}/shunt_apply_rules_new.$$"
 	local new_json=""
+	local rule_fields=""
+	local target_id_b64=""
+	local target_identity_b64=""
+	local rule_id_b64=""
+	local remark_b64=""
+	local preset_b64=""
+	local desired_target=""
+	local desired_identity=""
+	local target_changed="0"
+	local identity_changed="0"
 
 	default_target="$(dbus get ss_basic_shunt_default_node)"
 	default_identity="$(dbus get ss_basic_shunt_default_node_identity)"
@@ -3441,19 +3449,32 @@ sub_apply_shunt_reference_rewrite(){
 	do
 		[ -n "${line}" ] || continue
 		new_line="${line}"
-		target_id="$(printf '%s' "${line}" | jq -r '.target_node_id // empty' 2>/dev/null)"
-		target_identity="$(printf '%s' "${line}" | jq -r '.target_node_identity // empty' 2>/dev/null)"
-		rule_id="$(printf '%s' "${line}" | jq -r '.id // empty' 2>/dev/null)"
-		remark="$(printf '%s' "${line}" | jq -r '.remark // empty' 2>/dev/null)"
-		preset="$(printf '%s' "${line}" | jq -r '.preset // empty' 2>/dev/null)"
+		rule_fields="$(sub_parse_shunt_rule_fields "${line}")" || rule_fields=""
+		IFS="${sep}" read -r target_id_b64 target_identity_b64 rule_id_b64 remark_b64 preset_b64 <<-EOF
+		${rule_fields}
+		EOF
+		target_id=""
+		target_identity=""
+		rule_id=""
+		remark=""
+		preset=""
+		[ -n "${target_id_b64}" ] && target_id="$(fss_b64_decode "${target_id_b64}")"
+		[ -n "${target_identity_b64}" ] && target_identity="$(fss_b64_decode "${target_identity_b64}")"
+		[ -n "${rule_id_b64}" ] && rule_id="$(fss_b64_decode "${rule_id_b64}")"
+		[ -n "${remark_b64}" ] && remark="$(fss_b64_decode "${remark_b64}")"
+		[ -n "${preset_b64}" ] && preset="$(fss_b64_decode "${preset_b64}")"
 		label="${remark}"
 		[ -n "${label}" ] || label="${preset}"
 		[ -n "${label}" ] || label="${rule_id}"
+		desired_target="${target_id}"
+		desired_identity="${target_identity}"
+		target_changed="0"
+		identity_changed="0"
 		case "${target_id}" in
 		DIRECT|REJECT)
 			if [ -n "${target_identity}" ];then
-				new_line="$(printf '%s' "${new_line}" | jq -c '.target_node_identity = ""' 2>/dev/null)"
-				synced_identities=$((synced_identities + 1))
+				desired_identity=""
+				identity_changed="1"
 			fi
 			;;
 		*)
@@ -3462,12 +3483,12 @@ sub_apply_shunt_reference_rewrite(){
 				mapped_identity="${SUB_REFERENCE_RESOLVED_IDENTITY}"
 				[ -n "${mapped_identity}" ] || mapped_identity="$(fss_get_node_identity_by_id "${mapped_target}" 2>/dev/null)"
 				if [ "${mapped_target}" != "${target_id}" ];then
-					new_line="$(printf '%s' "${new_line}" | jq -c --arg target "${mapped_target}" '.target_node_id = $target' 2>/dev/null)"
-					changed_rules=$((changed_rules + 1))
+					desired_target="${mapped_target}"
+					target_changed="1"
 				fi
 				if [ -n "${mapped_identity}" ] && [ "${mapped_identity}" != "${target_identity}" ];then
-					new_line="$(printf '%s' "${new_line}" | jq -c --arg identity "${mapped_identity}" '.target_node_identity = $identity' 2>/dev/null)"
-					synced_identities=$((synced_identities + 1))
+					desired_identity="${mapped_identity}"
+					identity_changed="1"
 				fi
 			elif [ -n "${target_id}${target_identity}" ];then
 				echo_date "🧭分流规则保持原值：【${label}】未能解析新目标节点。"
@@ -3482,6 +3503,11 @@ sub_apply_shunt_reference_rewrite(){
 			fi
 			;;
 		esac
+		if [ "${target_changed}" = "1" -o "${identity_changed}" = "1" ];then
+			new_line="$(printf '%s' "${new_line}" | jq -c --arg target "${desired_target}" --arg identity "${desired_identity}" '.target_node_id = $target | .target_node_identity = $identity' 2>/dev/null)"
+			[ "${target_changed}" = "1" ] && changed_rules=$((changed_rules + 1))
+			[ "${identity_changed}" = "1" ] && synced_identities=$((synced_identities + 1))
+		fi
 		printf '%s\n' "${new_line}" >> "${updated_rules_file}"
 	done < "${rules_file}"
 	new_json="$(jq -s -c '.' "${updated_rules_file}" 2>/dev/null)"
@@ -4991,9 +5017,20 @@ remove_sub_node(){
 		sub_capture_active_nodes
 		for remove_nu in $(sub_list_node_ids)
 		do
-			local group_value=$(sub_get_node_field_plain "${remove_nu}" group)
+			local group_value=""
+			local node_name=""
+			local node_json=""
+			node_json="$(fss_v2_get_node_json_by_id "${remove_nu}" 2>/dev/null)" || node_json=""
+			if [ -n "${node_json}" ];then
+				fss_unpack_node_meta "${node_json}" || return 1
+				group_value="${FSS_NODE_META_GROUP}"
+				node_name="${FSS_NODE_META_NAME}"
+			else
+				group_value="$(sub_get_node_field_plain "${remove_nu}" group)"
+				node_name="$(sub_get_node_field_plain "${remove_nu}" name)"
+			fi
 			if [ -n "$(normalize_group_name "${group_value}")" ];then
-				echo_date "移除第$remove_nu节点：【$(sub_get_node_field_plain "${remove_nu}" name)】"
+				echo_date "移除第$remove_nu节点：【${node_name}】"
 				fss_clear_webtest_cache_node "${remove_nu}"
 				dbus remove fss_node_${remove_nu}
 				remove_flag=1
