@@ -24,6 +24,7 @@ FSS_SHUNT_RUNTIME_RULE_DIR="${FSS_SHUNT_RUNTIME_DIR}/rules"
 FSS_SHUNT_RUNTIME_ACTIVE_FILE="${FSS_SHUNT_RUNTIME_DIR}/active_rules.tsv"
 FSS_SHUNT_RUNTIME_TARGET_FILE="${FSS_SHUNT_RUNTIME_DIR}/target_nodes.txt"
 FSS_SHUNT_RUNTIME_META_FILE="${FSS_SHUNT_RUNTIME_DIR}/runtime.meta"
+FSS_SHUNT_PROXY_META_FILE="${FSS_SHUNT_RUNTIME_DIR}/proxy.meta"
 FSS_SHUNT_RUNTIME_OUTBOUND_DIR="${FSS_SHUNT_RUNTIME_DIR}/outbounds"
 FSS_SHUNT_RUNTIME_ARTIFACT_DIR="${FSS_SHUNT_RUNTIME_DIR}/runtime_artifacts"
 FSS_SHUNT_RUNTIME_ARTIFACT_LOCK="/tmp/fss_runtime_artifact_shunt.lock"
@@ -942,6 +943,14 @@ fss_shunt_runtime_meta_get() {
 	sed -n "s/^${key}=//p" "${FSS_SHUNT_RUNTIME_META_FILE}" | sed -n '1p'
 }
 
+fss_shunt_proxy_meta_get() {
+	local key="$1"
+
+	[ -n "${key}" ] || return 1
+	[ -f "${FSS_SHUNT_PROXY_META_FILE}" ] || return 1
+	sed -n "s/^${key}=//p" "${FSS_SHUNT_PROXY_META_FILE}" | sed -n '1p'
+}
+
 fss_shunt_enabled_rule_count() {
 	local json=""
 	local jq_bin=""
@@ -983,6 +992,20 @@ fss_shunt_write_runtime_meta() {
 		built_at=$(date +%s)
 	EOF
 	mv -f "${tmp_file}" "${FSS_SHUNT_RUNTIME_META_FILE}"
+}
+
+fss_shunt_write_proxy_meta() {
+	local runtime_key="$1"
+	local has_proxy="$2"
+	local tmp_file="${FSS_SHUNT_PROXY_META_FILE}.tmp.$$"
+
+	mkdir -p "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1 || return 1
+	cat > "${tmp_file}" <<-EOF
+		runtime_key=${runtime_key}
+		has_proxy=${has_proxy}
+		updated_at=$(date +%s)
+	EOF
+	mv -f "${tmp_file}" "${FSS_SHUNT_PROXY_META_FILE}"
 }
 
 fss_shunt_materialize_rule_domains() {
@@ -1148,11 +1171,36 @@ fss_shunt_get_proxy_domain_file() {
 }
 
 fss_shunt_resolve_proxy_domain_file() {
+	local runtime_key=""
+	local cached_key=""
+	local cached_has_proxy=""
+
 	FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT=""
 	fss_shunt_mode_selected || return 1
 	fss_shunt_rules_enabled || return 1
+	runtime_key="$(fss_shunt_runtime_key)"
+	if [ "${FSS_SHUNT_RUNTIME_READY}" = "1" ] && [ "${FSS_SHUNT_RUNTIME_READY_KEY}" = "${runtime_key}" ] && [ -s "${FSS_SHUNT_RUNTIME_PROXY_FILE}" ]; then
+		FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT="${FSS_SHUNT_RUNTIME_PROXY_FILE}"
+		return 0
+	fi
+	cached_key="$(fss_shunt_proxy_meta_get runtime_key 2>/dev/null)"
+	cached_has_proxy="$(fss_shunt_proxy_meta_get has_proxy 2>/dev/null)"
+	if [ -n "${cached_key}" ] && [ "${cached_key}" = "${runtime_key}" ]; then
+		if [ "${cached_has_proxy}" = "1" ] && [ -s "${FSS_SHUNT_RUNTIME_PROXY_FILE}" ]; then
+			FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT="${FSS_SHUNT_RUNTIME_PROXY_FILE}"
+			return 0
+		fi
+		if [ "${cached_has_proxy}" = "0" ]; then
+			return 1
+		fi
+	fi
 	fss_shunt_prepare_runtime || return 1
-	[ -s "${FSS_SHUNT_RUNTIME_PROXY_FILE}" ] || return 1
+	if [ -s "${FSS_SHUNT_RUNTIME_PROXY_FILE}" ]; then
+		fss_shunt_write_proxy_meta "${runtime_key}" "1" >/dev/null 2>&1 || true
+	else
+		fss_shunt_write_proxy_meta "${runtime_key}" "0" >/dev/null 2>&1 || true
+		return 1
+	fi
 	FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT="${FSS_SHUNT_RUNTIME_PROXY_FILE}"
 	return 0
 }
