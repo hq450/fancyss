@@ -1935,10 +1935,32 @@ fss_sync_reference_identity_shadows() {
 
 fss_find_node_id_by_identity() {
 	local identity="$1"
+	local schema=""
 	local node_id=""
 	local current_identity=""
 
 	[ -n "${identity}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ]; then
+		node_id=$(
+			dbus list fss_node_ 2>/dev/null | while IFS= read -r line
+			do
+				[ -n "${line}" ] || continue
+				key=${line%%=*}
+				value=${line#*=}
+				case "${key}" in
+				fss_node_[0-9]*)
+					fss_b64_decode "${value}" 2>/dev/null || true
+					printf '\n'
+					;;
+				esac
+			done | jq -r --arg identity "${identity}" 'select((._identity // "") == $identity) | ._id // empty' 2>/dev/null | sed -n '1p'
+		)
+		if [ -n "${node_id}" ];then
+			printf '%s' "${node_id}"
+			return 0
+		fi
+	fi
 	while IFS= read -r node_id
 	do
 		[ -n "${node_id}" ] || continue
@@ -2099,11 +2121,113 @@ fss_is_domain_name() {
 	printf '%s\n' "$1" | awk 'BEGIN {regex = "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"} $0 ~ regex { print }'
 }
 
+fss_node_json_server_host_port() {
+	local node_json="$1"
+	[ -n "${node_json}" ] || return 1
+	printf '%s' "${node_json}" | jq -r '
+		def text($v):
+			if $v == null then
+				""
+			elif ($v | type) == "string" then
+				$v
+			else
+				($v | tostring)
+			end;
+		def parse_embedded_json($raw):
+			if (($raw | type) != "string") or $raw == "" then
+				{}
+			else
+				(try ($raw | fromjson) catch {})
+			end;
+		def xray_like_host_port($cfg):
+			($cfg.outbound // ($cfg.outbounds[0] // {})) as $ob
+			| ($ob.protocol // "") as $protocol
+			| if ($protocol == "vmess" or $protocol == "vless") then
+				[
+					text($ob.settings.vnext[0].address),
+					text($ob.settings.vnext[0].port)
+				]
+			elif ($protocol == "socks" or $protocol == "shadowsocks" or $protocol == "trojan") then
+				[
+					text($ob.settings.servers[0].address),
+					text($ob.settings.servers[0].port)
+				]
+			else
+				["", ""]
+			end;
+		def split_tuic_server($raw):
+			if $raw == "" then
+				["", ""]
+			elif ($raw | startswith("[")) then
+				[
+					(try ($raw | capture("^\\[(?<host>[^\\]]+)\\](?::.*)?$").host) catch ""),
+					(try ($raw | capture("^\\[[^\\]]+\\]:(?<port>.*)$").port) catch "")
+				]
+			elif ($raw | contains(":")) then
+				[
+					($raw | sub(":.*$"; "")),
+					($raw | capture(":(?<port>[^:]*)$").port)
+				]
+			else
+				[$raw, ""]
+			end;
+		(.type // "") as $type
+		| if ($type == "0" or $type == "1" or $type == "5") then
+			[
+				text(.server),
+				text(.port)
+			]
+		elif $type == "3" then
+			if text(.v2ray_use_json) == "1" then
+				xray_like_host_port(parse_embedded_json(.v2ray_json))
+			else
+				[
+					text(.server),
+					text(.port)
+				]
+			end
+		elif $type == "4" then
+			if text(.xray_use_json) == "1" then
+				xray_like_host_port(parse_embedded_json(.xray_json))
+			else
+				[
+					text(.server),
+					text(.port)
+				]
+			end
+		elif $type == "6" then
+			[
+				text(.naive_server),
+				text(.naive_port)
+			]
+		elif $type == "7" then
+			split_tuic_server(text((parse_embedded_json(.tuic_json).relay.server)))
+		elif $type == "8" then
+			[
+				text(.hy2_server),
+				text(.hy2_port)
+			]
+		else
+			[
+				text(.server),
+				text(.port)
+			]
+		end
+		| .[]
+	' 2>/dev/null
+}
+
 fss_get_node_server_host_port() {
 	local node_id="$1"
-	local node_type="" host="" port="" json_text="" relay_server=""
+	local node_type="" host="" port="" json_text="" relay_server="" node_json="" schema=""
 
 	[ -n "${node_id}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || return 1
+		fss_node_json_server_host_port "${node_json}"
+		return 0
+	fi
 	node_type="$(fss_get_node_field_plain "${node_id}" "type")"
 
 	case "${node_type}" in
