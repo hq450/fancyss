@@ -6489,14 +6489,40 @@ load_module() {
 }
 
 # write number into nvram with no commit
+read_rules_runtime_numbers_tsv() {
+	[ -f "/koolshare/ss/rules/rules.json.js" ] || return 1
+	run /koolshare/bin/jq -r '
+		def text($v):
+			if $v == null then
+				""
+			elif ($v | type) == "string" then
+				$v
+			else
+				($v | tostring)
+			end;
+		[
+			text(.gfwlist.date),
+			text(.chnlist.date),
+			text(.chnroute.date),
+			text(.gfwlist.count),
+			text(.chnroute.count),
+			text(.chnroute.count_ip),
+			text(.chnlist.count)
+		] | join("\u001f")
+	' /koolshare/ss/rules/rules.json.js 2>/dev/null
+}
+
 write_numbers() {
-	nvram set update_gfwlist="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.date')"
-	nvram set update_chnlist="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnlist.date')"
-	nvram set update_chnroute="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.date')"
-	nvram set gfwlist_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.gfwlist.count')"
-	nvram set chnroute_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count')"
-	nvram set chnroute_ips="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnroute.count_ip')"
-	nvram set chnlist_numbers="$(cat /koolshare/ss/rules/rules.json.js | run /koolshare/bin/jq -r '.chnlist.count')"
+	IFS="$(printf '\037')" read -r rule_gfw_date rule_chnlist_date rule_chnroute_date rule_gfw_count rule_chnroute_count rule_chnroute_ip_count rule_chnlist_count <<-EOF
+	$(read_rules_runtime_numbers_tsv)
+	EOF
+	nvram set update_gfwlist="${rule_gfw_date}"
+	nvram set update_chnlist="${rule_chnlist_date}"
+	nvram set update_chnroute="${rule_chnroute_date}"
+	nvram set gfwlist_numbers="${rule_gfw_count}"
+	nvram set chnroute_numbers="${rule_chnroute_count}"
+	nvram set chnroute_ips="${rule_chnroute_ip_count}"
+	nvram set chnlist_numbers="${rule_chnlist_count}"
 }
 
 remove_ss_reboot_job() {

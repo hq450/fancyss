@@ -12,6 +12,54 @@ run(){
 	env -i PATH=${PATH} "$@"
 }
 
+rules_meta_by_key(){
+	local json_file="$1"
+	local key="$2"
+	[ -f "${json_file}" ] || return 1
+	[ -n "${key}" ] || return 1
+	run jq -r --arg key "${key}" '
+		def text($v):
+			if $v == null then
+				""
+			elif ($v | type) == "string" then
+				$v
+			else
+				($v | tostring)
+			end;
+		.[$key] as $item
+		| [
+			(text($item.name) | @base64),
+			(text($item.md5) | @base64),
+			(text($item.date) | @base64),
+			(if $item == null then "" else (($item | tojson) | @base64) end)
+		] | join("\u001f")
+	' "${json_file}" 2>/dev/null
+}
+
+rules_runtime_numbers_tsv(){
+	local json_file="$1"
+	[ -f "${json_file}" ] || return 1
+	run jq -r '
+		def text($v):
+			if $v == null then
+				""
+			elif ($v | type) == "string" then
+				$v
+			else
+				($v | tostring)
+			end;
+		[
+			text(.gfwlist.date),
+			text(.chnroute.date),
+			text(.chnlist.date),
+			text(.gfwlist.count),
+			text(.chnroute.count),
+			text(.chnroute.count_ip),
+			text(.chnlist.count)
+		] | join("\u001f")
+	' "${json_file}" 2>/dev/null
+}
+
 start_update(){
 	# 1. 检测规则版本号文件
 	if [ ! -f "${RULE_FILE}" ];then
@@ -61,18 +109,34 @@ start_update(){
 		local key="$1"
 		local enabled="$2"
 
+		local online_meta=""
+		local local_meta=""
+		local online_name_b64=""
+		local online_md5_b64=""
+		local online_date_b64=""
+		local online_obj_b64=""
+		local local_name_b64=""
+		local local_md5_b64=""
+		local local_date_b64=""
+		local local_obj_b64=""
 		local online_name online_md5 online_date_cmp online_obj
 		local local_date_cmp local_md5
 		local tmp_file dst_file tmp_md5
+		local sep="$(printf '\037')"
 
 		if [ "${enabled}" != "1" ]; then
 			echo_date "你并没有勾选${key}更新！"
 			return 0
 		fi
 
-		online_name="$(cat /tmp/rules.json.js | run jq -r ".${key}.name")"
-		online_md5="$(cat /tmp/rules.json.js | run jq -r ".${key}.md5")"
-		online_date_cmp="$(cat /tmp/rules.json.js | run jq -r ".${key}.date" | sed 's/[[:space:]]/_/g')"
+		online_meta="$(rules_meta_by_key /tmp/rules.json.js "${key}")" || online_meta=""
+		IFS="${sep}" read -r online_name_b64 online_md5_b64 online_date_b64 online_obj_b64 <<-EOF
+		${online_meta}
+		EOF
+		[ -n "${online_name_b64}" ] && online_name="$(printf '%s' "${online_name_b64}" | base64_decode 2>/dev/null)"
+		[ -n "${online_md5_b64}" ] && online_md5="$(printf '%s' "${online_md5_b64}" | base64_decode 2>/dev/null)"
+		[ -n "${online_date_b64}" ] && online_date_cmp="$(printf '%s' "${online_date_b64}" | base64_decode 2>/dev/null | sed 's/[[:space:]]/_/g')"
+		[ -n "${online_obj_b64}" ] && online_obj="$(printf '%s' "${online_obj_b64}" | base64_decode 2>/dev/null)"
 
 		if [ -z "${online_name}" ] || [ "${online_name}" = "null" ]; then
 			echo_date "在线版本文件缺少字段：.${key}.name，跳过！"
@@ -87,8 +151,12 @@ start_update(){
 			return 1
 		fi
 
-		local_date_cmp="$(cat ${RULE_FILE} | run jq -r ".${key}.date" | sed 's/[[:space:]]/_/g')"
-		local_md5="$(cat ${RULE_FILE} | run jq -r ".${key}.md5")"
+		local_meta="$(rules_meta_by_key "${RULE_FILE}" "${key}")" || local_meta=""
+		IFS="${sep}" read -r local_name_b64 local_md5_b64 local_date_b64 local_obj_b64 <<-EOF
+		${local_meta}
+		EOF
+		[ -n "${local_md5_b64}" ] && local_md5="$(printf '%s' "${local_md5_b64}" | base64_decode 2>/dev/null)"
+		[ -n "${local_date_b64}" ] && local_date_cmp="$(printf '%s' "${local_date_b64}" | base64_decode 2>/dev/null | sed 's/[[:space:]]/_/g')"
 		if [ -z "${local_date_cmp}" ] || [ "${local_date_cmp}" = "null" ]; then
 			local_date_cmp="0"
 		fi
@@ -126,7 +194,6 @@ start_update(){
 		echo_date "下载完成，校验通过，覆盖到：${dst_file}"
 		mv "${tmp_file}" "${dst_file}"
 
-		online_obj="$(cat /tmp/rules.json.js | run jq -c ".${key}")"
 		if [ -n "${online_obj}" ] && [ "${online_obj}" != "null" ]; then
 			local tmp_rule_json="${rule_down_dir}/rules.${key}.json.js"
 			rm -rf "${tmp_rule_json}"
@@ -165,14 +232,17 @@ start_update(){
 	
 	echo_date "规则更新进程运行完毕！"
 	# write number
-	nvram set update_gfwlist="$(cat ${RULE_FILE} | run jq -r '.gfwlist.date')"
-	nvram set update_chnroute="$(cat ${RULE_FILE} | run jq -r '.chnroute.date')"
-	nvram set update_chnlist="$(cat ${RULE_FILE} | run jq -r '.chnlist.date')"
+	IFS="$(printf '\037')" read -r rule_gfw_date rule_chnroute_date rule_chnlist_date rule_gfw_count rule_chnroute_count rule_chnroute_ip_count rule_chnlist_count <<-EOF
+	$(rules_runtime_numbers_tsv "${RULE_FILE}")
+	EOF
+	nvram set update_gfwlist="${rule_gfw_date}"
+	nvram set update_chnroute="${rule_chnroute_date}"
+	nvram set update_chnlist="${rule_chnlist_date}"
 	
-	nvram set gfwlist_numbers="$(cat ${RULE_FILE} | run jq -r '.gfwlist.count')"
-	nvram set chnroute_numbers="$(cat ${RULE_FILE} | run jq -r '.chnroute.count')"
-	nvram set chnroute_ips="$(cat ${RULE_FILE} | run jq -r '.chnroute.count_ip')"
-	nvram set chnlist_numbers="$(cat ${RULE_FILE} | run jq -r '.chnlist.count')"
+	nvram set gfwlist_numbers="${rule_gfw_count}"
+	nvram set chnroute_numbers="${rule_chnroute_count}"
+	nvram set chnroute_ips="${rule_chnroute_ip_count}"
+	nvram set chnlist_numbers="${rule_chnlist_count}"
 	#======================================================================
 	# reboot fancyss
 	if [ "${reboot}" == "1" ];then

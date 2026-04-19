@@ -605,7 +605,7 @@ smartdns_group_json() {
 	local value
 	eval "value=\${${key}}"
 	if smartdns_validate_group_value "${group}" "${value}"; then
-		smartdns_decode_json_value "${value}" | run jq -c '.'
+		smartdns_decode_json_value "${value}"
 	else
 		smartdns_default_group_json "${group}" "$(smartdns_should_seed_isp_defaults)"
 	fi
@@ -646,10 +646,76 @@ EOF
 
 smartdns_group_items_tsv() {
 	local group="$1"
-	smartdns_iter_group_items "${group}" | while read -r item_b64
+	local sep="$(printf '\037')"
+	local line=""
+	local id proto provider description kind slot addr port host host_ip isp net
+	local key="ss_basic_smrt_${group}_dns"
+	local value=""
+	local cache_key=""
+	local cache_file=""
+	local tmp_file=""
+
+	eval "value=\${${key}}"
+	cache_key="$(printf '%s' "v1|${group}|${value}|$(smartdns_should_seed_isp_defaults)|$(smartdns_get_isp_dns_slot 1)|$(smartdns_get_isp_dns_slot 2)" | md5sum | awk '{print $1}')"
+	cache_file="/tmp/fss_smartdns_items_${cache_key}.tsv"
+	if [ -s "${cache_file}" ];then
+		cat "${cache_file}"
+		return 0
+	fi
+	tmp_file="${cache_file}.$$"
+	rm -f "${tmp_file}"
+	smartdns_group_json "${group}" | run jq -r --arg sep "${sep}" '
+		def text($v):
+			if $v == null then
+				""
+			elif ($v | type) == "string" then
+				$v
+			else
+				($v | tostring)
+			end;
+		.items[]?
+		| [
+			text(.id),
+			text(.proto),
+			text(.provider),
+			text(.description),
+			text(.kind // "preset"),
+			text(.slot),
+			text(.addr),
+			text(.port),
+			text(.host),
+			text(.host_ip),
+			text(.isp // 0),
+			text(.net)
+		] | join($sep)
+	' 2>/dev/null | while IFS= read -r line || [ -n "${line}" ]
 	do
-		smartdns_resolve_item_tsv "${item_b64}"
-	done
+		[ -n "${line}" ] || continue
+		IFS="${sep}" read -r id proto provider description kind slot addr port host host_ip isp net <<-EOF
+		${line}
+		EOF
+		if [ "${kind}" = "isp" ];then
+			addr="$(smartdns_get_isp_dns_slot "${slot}")"
+			[ -n "${addr}" ] || continue
+			port="53"
+			net="$(echo "${addr}" | grep -q ':' && echo ipv6 || echo ipv4)"
+		fi
+		if [ "${proto}" = "dot" ];then
+			[ -n "${host}" ] || continue
+			[ -n "${host_ip}" ] || continue
+			[ -n "${port}" ] || port="853"
+		else
+			[ -n "${addr}" ] || continue
+			[ -n "${port}" ] || port="53"
+		fi
+		printf '%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\n' "${id}" "${proto}" "${provider}" "${description}" "${kind}" "${slot}" "${addr}" "${port}" "${host}" "${host_ip}" "${isp}" "${net}"
+	done > "${tmp_file}"
+	if [ -s "${tmp_file}" ];then
+		mv -f "${tmp_file}" "${cache_file}"
+		cat "${cache_file}"
+	else
+		rm -f "${tmp_file}"
+	fi
 }
 
 smartdns_iter_gfw_udp_relays() {

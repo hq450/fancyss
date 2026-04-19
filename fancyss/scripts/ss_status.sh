@@ -82,9 +82,21 @@ json_probe_line(){
 	local probe_name="$2"
 	local label="$3"
 	local now="$4"
-	local ok ms
-	ok=$(printf '%s' "${json_text}" | jq -r --arg name "${probe_name}" '(.results // []) | map(select(.name == $name)) | if length == 0 then "false" else (.[0].ok // false) end' 2>/dev/null)
-	ms=$(printf '%s' "${json_text}" | jq -r --arg name "${probe_name}" '(.results // []) | map(select(.name == $name)) | if length == 0 then "0" else (.[0].elapsed_ms // 0) end' 2>/dev/null)
+	local ok="" ms=""
+	IFS="$(printf '\037')" read -r ok ms <<-EOF
+	$(printf '%s' "${json_text}" | jq -r --arg name "${probe_name}" '
+		(.results // []) | map(select(.name == $name)) as $items
+		| if ($items | length) == 0 then
+			["false", "0"]
+		  else
+			[
+				(($items[0].ok // false) | tostring),
+				(($items[0].elapsed_ms // 0) | tostring)
+			]
+		  end
+		| join("\u001f")
+	' 2>/dev/null)
+	EOF
 	if [ "${ok}" = "true" ];then
 		if [ "${ms}" != "0" ];then
 			printf '%s' "${label} 【${now}】 ✓&nbsp;&nbsp;${ms} ms"

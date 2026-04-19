@@ -639,12 +639,23 @@ fss_shunt_node_supported() {
 	local node_id="$1"
 	local node_type=""
 	local ss_obfs=""
+	local node_json=""
+	local schema=""
 
 	[ -n "${node_id}" ] || return 1
-	node_type="$(fss_get_node_field_plain "${node_id}" type)"
+	schema="$(fss_detect_storage_schema 2>/dev/null)"
+	if [ "${schema}" = "2" ]; then
+		node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || return 1
+		node_type="$(printf '%s' "${node_json}" | sed -n 's/.*"type"[[:space:]]*:[[:space:]]*"\{0,1\}\([0-9][0-9]*\)"\{0,1\}.*/\1/p' | sed -n '1p')"
+		ss_obfs="$(printf '%s' "${node_json}" | sed -n 's/.*"ss_obfs"[[:space:]]*:[[:space:]]*"\{0,1\}\([^",}]*\)"\{0,1\}.*/\1/p' | sed -n '1p')"
+	else
+		node_type="$(fss_get_node_field_plain "${node_id}" type)"
+	fi
 	case "${node_type}" in
 	0)
-		ss_obfs="$(fss_get_node_field_plain "${node_id}" ss_obfs)"
+		if [ "${schema}" != "2" ]; then
+			ss_obfs="$(fss_get_node_field_plain "${node_id}" ss_obfs)"
+		fi
 		[ -z "${ss_obfs}" ] || [ "${ss_obfs}" = "0" ]
 		;;
 	3|4|5|8)

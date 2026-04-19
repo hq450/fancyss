@@ -1643,12 +1643,71 @@ fss_clear_global_and_acl_storage() {
 	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
 }
 
+fss_node_json_has_identity_meta() {
+	local node_json="$1"
+	[ -n "${node_json}" ] || return 1
+	case "${node_json}" in
+	*'"_identity"'*)
+		;;
+	*)
+		return 1
+		;;
+	esac
+	case "${node_json}" in
+	*'"_source"'*)
+		;;
+	*)
+		return 1
+		;;
+	esac
+	case "${node_json}" in
+	*'"_airport_identity"'*)
+		;;
+	*)
+		return 1
+		;;
+	esac
+	case "${node_json}" in
+	*'"_source_scope"'*)
+		;;
+	*)
+		return 1
+		;;
+	esac
+	return 0
+}
+
+fss_node_json_simple_value() {
+	local node_json="$1"
+	local field="$2"
+	local value=""
+	[ -n "${node_json}" ] || return 1
+	[ -n "${field}" ] || return 1
+	value="$(printf '%s' "${node_json}" | sed -n 's/.*"'"${field}"'"[[:space:]]*:[[:space:]]*"\([^"\\]*\)".*/\1/p' | sed -n '1p')"
+	if [ -z "${value}" ];then
+		value="$(printf '%s' "${node_json}" | sed -n 's/.*"'"${field}"'"[[:space:]]*:[[:space:]]*\([^,}][^,}]*\).*/\1/p' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed -n '1p')"
+	fi
+	printf '%s' "${value}"
+}
+
 fss_v2_get_node_json_by_id() {
 	local node_id="$1"
-	local blob
+	local blob=""
+	local node_json=""
+	local enriched_json=""
 	blob=$(dbus get fss_node_${node_id})
 	[ -z "${blob}" ] && return 1
-	fss_enrich_node_identity_json "$(fss_b64_decode "${blob}")" "" "" "" ""
+	node_json="$(fss_b64_decode "${blob}")" || return 1
+	[ -n "${node_json}" ] || return 1
+	if fss_node_json_has_identity_meta "${node_json}"; then
+		printf '%s' "${node_json}"
+		return 0
+	fi
+	enriched_json="$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null)" || return 1
+	if [ -n "${enriched_json}" ] && [ "${enriched_json}" != "${node_json}" ]; then
+		dbus set fss_node_${node_id}="$(fss_b64_encode "${enriched_json}")" >/dev/null 2>&1 || true
+	fi
+	printf '%s' "${enriched_json:-${node_json}}"
 }
 
 fss_dump_v2_node_json_dir() {
@@ -1839,12 +1898,10 @@ fss_get_node_identity_by_id() {
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
-		fss_unpack_node_meta "${node_json}" || return 1
-		node_identity="${FSS_NODE_META_IDENTITY}"
+		node_identity="$(fss_node_json_simple_value "${node_json}" "_identity" 2>/dev/null)"
 		if [ -z "${node_identity}" ]; then
 			node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
-			fss_unpack_node_meta "${node_json}" || return 1
-			node_identity="${FSS_NODE_META_IDENTITY}"
+			node_identity="$(fss_node_json_simple_value "${node_json}" "_identity" 2>/dev/null)"
 			[ -n "${node_identity}" ] && dbus set fss_node_${node_id}="$(fss_b64_encode "${node_json}")"
 		fi
 	else
@@ -1864,8 +1921,7 @@ fss_get_node_source_scope_by_id() {
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
-		fss_unpack_node_meta "${node_json}" || return 1
-		node_scope="${FSS_NODE_META_SOURCE_SCOPE}"
+		node_scope="$(fss_node_json_simple_value "${node_json}" "_source_scope" 2>/dev/null)"
 	else
 		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
 		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
@@ -1883,8 +1939,7 @@ fss_get_node_profile_id_by_id() {
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
-		fss_unpack_node_meta "${node_json}" || return 1
-		profile_id="${FSS_NODE_META_PROFILE_ID}"
+		profile_id="$(fss_node_json_simple_value "${node_json}" "_profile_id" 2>/dev/null)"
 	else
 		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
 		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
@@ -1902,8 +1957,7 @@ fss_get_node_airport_identity_by_id() {
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
-		fss_unpack_node_meta "${node_json}" || return 1
-		airport="${FSS_NODE_META_AIRPORT_IDENTITY}"
+		airport="$(fss_node_json_simple_value "${node_json}" "_airport_identity" 2>/dev/null)"
 	else
 		node_json=$(fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-runtime" "" 2>/dev/null) || return 1
 		node_json=$(fss_enrich_node_identity_json "${node_json}" "" "" "" "" 2>/dev/null) || return 1
@@ -2011,6 +2065,10 @@ fss_get_node_field_plain() {
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		node_json=$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null) || return 1
+		if ! fss_is_b64_field "${store_field}"; then
+			fss_node_json_simple_value "${node_json}" "${store_field}"
+			return 0
+		fi
 		fss_unpack_node_field_meta "${node_json}" "${store_field}" || return 1
 		value="${FSS_NODE_FIELD_VALUE}"
 		[ -n "${value}" ] && value=$(fss_v2_field_plain_value "${node_json}" "${store_field}" "${value}" "${FSS_NODE_FIELD_B64_MODE}" "${FSS_NODE_FIELD_SOURCE}")
