@@ -6601,17 +6601,68 @@ ss_pre_stop() {
 	done
 }
 
+stop_status_kill_pid_list() {
+	local label="$1"
+	local pids_raw="$2"
+	local signal="${3:--9}"
+	local pids=""
+	pids="$(printf '%s\n' "${pids_raw}" | tr ' ' '\n' | sed '/^$/d' | awk '!seen[$0]++')" || pids=""
+	[ -n "${pids}" ] || return 1
+	echo_date "关闭${label}..."
+	printf '%s\n' "${pids}" | while IFS= read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill "${signal}" "${pid}" >/dev/null 2>&1
+	done
+	return 0
+}
+
+stop_status_kill_pidfile() {
+	local label="$1"
+	local pidfile="$2"
+	[ -f "${pidfile}" ] || return 1
+	local pid=""
+	pid="$(cat "${pidfile}" 2>/dev/null)"
+	[ -n "${pid}" ] || return 1
+	kill -0 "${pid}" >/dev/null 2>&1 || return 1
+	echo_date "关闭${label}..."
+	start-stop-daemon -K -q -p "${pidfile}" >/dev/null 2>&1
+	return 0
+}
+
 stop_status() {
-	kill -9 $(pidof ss_status_main.sh) >/dev/null 2>&1
-	kill -9 $(pidof ss_status.sh) >/dev/null 2>&1
-	ps w | grep -F "sh /koolshare/scripts/ss_status_main.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
-		kill -9 "${pid}" >/dev/null 2>&1
-	done
-	ps w | grep -F "sh /koolshare/scripts/ss_status.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
-		kill -9 "${pid}" >/dev/null 2>&1
-	done
-	killall curl-status >/dev/null 2>&1
-	sh /koolshare/scripts/ss_status_daemon.sh stop >/dev/null 2>&1
+	local status_tool_bin="/koolshare/bin/status-tool"
+	local status_daemon_pidfile="/var/run/status-tool.pid"
+	local status_serve_pidfile="/var/run/status-tool-serve.pid"
+	local status_daemon_state="/tmp/upload/ss_status_daemon.json"
+	local status_daemon_legacy="/tmp/upload/ss_status_front.txt"
+	local status_serve_socket="/tmp/status-tool.sock"
+	local pids=""
+
+	pids="$(pidof ss_status_main.sh 2>/dev/null)"
+	stop_status_kill_pid_list "状态检测主脚本" "${pids}" "-9" || {
+		pids="$(ps w | grep -F "sh /koolshare/scripts/ss_status_main.sh" | grep -v grep | awk '{print $1}')"
+		stop_status_kill_pid_list "状态检测主脚本" "${pids}" "-9" || true
+	}
+
+	pids="$(pidof ss_status.sh 2>/dev/null)"
+	stop_status_kill_pid_list "状态检测前端脚本" "${pids}" "-9" || {
+		pids="$(ps w | grep -F "sh /koolshare/scripts/ss_status.sh" | grep -v grep | awk '{print $1}')"
+		stop_status_kill_pid_list "状态检测前端脚本" "${pids}" "-9" || true
+	}
+
+	if pidof curl-status >/dev/null 2>&1; then
+		echo_date "关闭curl-status进程..."
+		killall curl-status >/dev/null 2>&1
+	fi
+
+	stop_status_kill_pidfile "status-tool daemon进程" "${status_daemon_pidfile}" || true
+	stop_status_kill_pidfile "status-tool serve进程" "${status_serve_pidfile}" || true
+
+	pids="$(ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve)( |$)' | grep -v grep | awk '{print $1}')"
+	stop_status_kill_pid_list "status-tool残留进程" "${pids}" "-15" || true
+
+	rm -f "${status_daemon_pidfile}" "${status_serve_pidfile}" "${status_daemon_state}" "${status_daemon_legacy}" "${status_serve_socket}" >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
 }
 
