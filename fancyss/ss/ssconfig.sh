@@ -1864,10 +1864,13 @@ $(fss_airport_special_iter_active_tsv 2>/dev/null)
 	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-set -name block_list -file /tmp/block_list.txt" >> "${outfile}"
 
 	local shunt_proxy_file=""
-	if [ "$(get_runtime_proxy_mode)" = "7" ] && type fss_shunt_get_proxy_domain_file >/dev/null 2>&1; then
+	if [ "$(get_runtime_proxy_mode)" = "7" ] && type fss_shunt_resolve_proxy_domain_file >/dev/null 2>&1; then
+		fss_shunt_resolve_proxy_domain_file >/dev/null 2>&1 || true
+		shunt_proxy_file="${FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT}"
+	elif [ "$(get_runtime_proxy_mode)" = "7" ] && type fss_shunt_get_proxy_domain_file >/dev/null 2>&1; then
 		shunt_proxy_file="$(fss_shunt_get_proxy_domain_file 2>/dev/null)"
-		[ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ] && echo "domain-set -name shunt_proxy -file ${shunt_proxy_file}" >> "${outfile}"
 	fi
+	[ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ] && echo "domain-set -name shunt_proxy -file ${shunt_proxy_file}" >> "${outfile}"
 
 	[ "${mode}" = "3" ] && echo "conf-file /tmp/whitelist_ip.txt" >> "${outfile}"
 	cat >> "${outfile}" <<-'EOF'
@@ -3165,28 +3168,41 @@ add_white_black() {
 
 	# {black_list}, black domain
 	local shunt_proxy_file=""
+	local shunt_proxy_count="0"
 	echo_date "生成域名黑名单！"
-	if [ "${ss_basic_mode}" = "7" ]; then
+	if [ "${ss_basic_mode}" = "7" ] && type fss_shunt_resolve_proxy_domain_file >/dev/null 2>&1; then
+		fss_shunt_resolve_proxy_domain_file >/dev/null 2>&1 || true
+		shunt_proxy_file="${FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT}"
+	elif [ "${ss_basic_mode}" = "7" ]; then
 		shunt_proxy_file="$(fss_shunt_get_proxy_domain_file 2>/dev/null)"
 	fi
 	{
 		printf '%s\n' ip.sb api.skk.moe ip.skk.moe ipinfo.io ip-api.com us.ip111.cn
-		[ -n "${ss_wan_black_domain}" ] && fss_b64_decode "${ss_wan_black_domain}"
 		[ "${ss_basic_proxy_newb}" = "1" ] && printf '%s\n' "bing.com"
-		[ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ] && cat "${shunt_proxy_file}"
-	} | awk '
-		{
-			gsub(/\r/, "")
-			sub(/#.*/, "")
-			for (i = 1; i <= NF; i++) {
-				domain = tolower($i)
-				gsub(/^[*.]+/, "", domain)
-				if (domain ~ /^[a-z0-9._-]+(\.[a-z0-9._-]+)+$/ && !seen[domain]++) {
-					print domain
+	} > /tmp/black_list.txt
+	if [ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ]; then
+		shunt_proxy_count="$(wc -l < "${shunt_proxy_file}" | tr -d ' ')"
+		[ -n "${shunt_proxy_count}" ] || shunt_proxy_count="0"
+		echo_date "ℹ️分流运行时代理域名 ${shunt_proxy_count} 条，并入域名黑名单。"
+		cat "${shunt_proxy_file}" >> /tmp/black_list.txt
+	elif [ "${ss_basic_mode}" = "7" ]; then
+		echo_date "ℹ️当前没有额外分流代理域名并入域名黑名单。"
+	fi
+	if [ -n "${ss_wan_black_domain}" ]; then
+		fss_b64_decode "${ss_wan_black_domain}" | awk '
+			{
+				gsub(/\r/, "")
+				sub(/#.*/, "")
+				for (i = 1; i <= NF; i++) {
+					domain = tolower($i)
+					gsub(/^[*.]+/, "", domain)
+					if (domain ~ /^[a-z0-9._-]+(\.[a-z0-9._-]+)+$/ && !seen[domain]++) {
+						print domain
+					}
 				}
 			}
-		}
-	' > /tmp/black_list.txt
+		' >> /tmp/black_list.txt
+	fi
 
 	# {white_list}, white ip
 	[ -n "${ISP_DNS1}" ] && ISP_DNS_a="${ISP_DNS1}" || ISP_DNS_a=""

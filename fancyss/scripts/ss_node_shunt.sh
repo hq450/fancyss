@@ -1143,11 +1143,18 @@ fss_shunt_rebuild_proxy_domains() {
 }
 
 fss_shunt_get_proxy_domain_file() {
+	fss_shunt_resolve_proxy_domain_file || return 1
+	printf '%s\n' "${FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT}"
+}
+
+fss_shunt_resolve_proxy_domain_file() {
+	FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT=""
 	fss_shunt_mode_selected || return 1
 	fss_shunt_rules_enabled || return 1
 	fss_shunt_prepare_runtime || return 1
 	[ -s "${FSS_SHUNT_RUNTIME_PROXY_FILE}" ] || return 1
-	printf '%s\n' "${FSS_SHUNT_RUNTIME_PROXY_FILE}"
+	FSS_SHUNT_PROXY_DOMAIN_FILE_RESULT="${FSS_SHUNT_RUNTIME_PROXY_FILE}"
+	return 0
 }
 
 fss_shunt_prepare_runtime() {
