@@ -137,8 +137,14 @@ fss_base_load_current_node_env() {
 	if [ "${ss_basic_mode}" = "7" ]; then
 		fss_require_shunt_lib >/dev/null 2>&1 || true
 	fi
-	if [ "${ss_basic_mode}" = "7" ] && type fss_shunt_get_default_node_id >/dev/null 2>&1; then
+	if [ "${ss_basic_mode}" = "7" ] && type fss_shunt_resolve_default_node_id >/dev/null 2>&1; then
+		fss_shunt_resolve_default_node_id >/dev/null 2>&1 || true
+		cur_node="${FSS_SHUNT_DEFAULT_NODE_ID_PICK}"
+	elif [ "${ss_basic_mode}" = "7" ] && type fss_shunt_get_default_node_id >/dev/null 2>&1; then
 		cur_node=$(fss_shunt_get_default_node_id)
+	elif type fss_resolve_current_node_id >/dev/null 2>&1; then
+		fss_resolve_current_node_id >/dev/null 2>&1 || true
+		cur_node="${FSS_CURRENT_NODE_ID_RESULT}"
 	else
 		cur_node=$(fss_get_current_node_id)
 	fi

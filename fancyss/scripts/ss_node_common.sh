@@ -72,18 +72,29 @@ FSS_AIRPORT_PROFILE_FILE="/koolshare/ss/rules/airport-profile.json"
 FSS_AIRPORT_SPECIAL_INDEX_FILE="/koolshare/configs/fancyss/airport_special.list"
 
 fss_pick_node_tool() {
+	if [ -n "${FSS_NODE_TOOL_PICKED:-}" ]; then
+		[ "${FSS_NODE_TOOL_PICKED}" = "none" ] && return 1
+		printf '%s\n' "${FSS_NODE_TOOL_PICKED}"
+		return 0
+	fi
 	if command -v node-tool >/dev/null 2>&1; then
 		if "$(command -v node-tool)" version >/dev/null 2>&1; then
+			FSS_NODE_TOOL_PICKED="$(command -v node-tool)"
+			export FSS_NODE_TOOL_PICKED
 			command -v node-tool
 			return 0
 		fi
 	fi
 	if [ -x "/koolshare/bin/node-tool" ];then
 		if /koolshare/bin/node-tool version >/dev/null 2>&1; then
+			FSS_NODE_TOOL_PICKED="/koolshare/bin/node-tool"
+			export FSS_NODE_TOOL_PICKED
 			echo "/koolshare/bin/node-tool"
 			return 0
 		fi
 	fi
+	FSS_NODE_TOOL_PICKED="none"
+	export FSS_NODE_TOOL_PICKED
 	return 1
 }
 
@@ -898,12 +909,18 @@ fss_get_plugin_version() {
 
 fss_detect_storage_schema() {
 	local schema
+	if [ -n "${FSS_STORAGE_SCHEMA_CACHE:-}" ]; then
+		printf '%s\n' "${FSS_STORAGE_SCHEMA_CACHE}"
+		return 0
+	fi
 	schema=$(dbus get fss_data_schema)
 	if [ "${schema}" = "2" ];then
-		echo "2"
+		FSS_STORAGE_SCHEMA_CACHE="2"
 	else
-		echo "1"
+		FSS_STORAGE_SCHEMA_CACHE="1"
 	fi
+	export FSS_STORAGE_SCHEMA_CACHE
+	printf '%s\n' "${FSS_STORAGE_SCHEMA_CACHE}"
 }
 
 fss_legacy_node_count() {
@@ -1735,12 +1752,32 @@ fss_get_node_count() {
 }
 
 fss_get_first_node_id() {
+	local schema=""
+	local order=""
+
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		order="$(dbus get fss_node_order)"
+		[ -n "${order}" ] || return 1
+		printf '%s\n' "${order%%,*}"
+		return 0
+	fi
 	fss_list_node_ids | sed -n '1p'
 }
 
 fss_node_id_exists() {
 	local node_id="$1"
+	local schema=""
+	local blob=""
+
 	[ -n "${node_id}" ] || return 1
+	schema=$(fss_detect_storage_schema)
+	if [ "${schema}" = "2" ];then
+		printf '%s' "${node_id}" | grep -Eq '^[0-9]+$' || return 1
+		blob="$(dbus get fss_node_${node_id})"
+		[ -n "${blob}" ]
+		return $?
+	fi
 	fss_list_node_ids | grep -Fxq "${node_id}"
 }
 
@@ -1829,19 +1866,21 @@ fss_set_schema2_reference_node_id() {
 	fi
 }
 
-fss_get_current_node_id() {
-	local schema current_id current_identity resolved_id resolved_identity
+fss_resolve_current_node_id() {
+	local schema current_id current_identity resolved_id
+	FSS_CURRENT_NODE_ID_RESULT=""
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		current_id=$(dbus get fss_node_current)
+		if [ -n "${current_id}" ] && fss_node_id_exists "${current_id}"; then
+			FSS_CURRENT_NODE_ID_RESULT="${current_id}"
+			return 0
+		fi
 		current_identity=$(dbus get "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}")
 		[ -n "${current_identity}" ] || current_identity=$(dbus get "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY_LEGACY}")
 		resolved_id=$(fss_resolve_reference_node_id "${current_id}" "${current_identity}" "0" 2>/dev/null)
 		[ -n "${resolved_id}" ] || resolved_id=$(fss_get_first_node_id)
-		if [ -n "${resolved_id}" ]; then
-			resolved_identity=$(fss_get_node_identity_by_id "${resolved_id}" 2>/dev/null)
-		fi
-		if [ -n "${resolved_id}" ] && { [ "${resolved_id}" != "${current_id}" ] || [ "${current_identity}" != "${resolved_identity}" ]; }; then
+		if [ -n "${resolved_id}" ] && [ "${resolved_id}" != "${current_id}" ]; then
 			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" "${resolved_id}" >/dev/null 2>&1
 		elif [ -z "${resolved_id}" ] && [ -n "${current_id}${current_identity}" ]; then
 			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" "" >/dev/null 2>&1
@@ -1851,30 +1890,47 @@ fss_get_current_node_id() {
 		current_id=$(dbus get ssconf_basic_node)
 		[ -z "${current_id}" ] && current_id=$(fss_get_first_node_id)
 	fi
-	echo "${current_id}"
+	FSS_CURRENT_NODE_ID_RESULT="${current_id}"
+	[ -n "${FSS_CURRENT_NODE_ID_RESULT}" ]
 }
 
-fss_get_failover_node_id() {
-	local schema failover_id failover_identity resolved_id resolved_identity
+fss_get_current_node_id() {
+	fss_resolve_current_node_id || return 1
+	printf '%s\n' "${FSS_CURRENT_NODE_ID_RESULT}"
+}
+
+fss_resolve_failover_node_id() {
+	local schema failover_id failover_identity resolved_id
+	FSS_FAILOVER_NODE_ID_RESULT=""
 	schema=$(fss_detect_storage_schema)
 	if [ "${schema}" = "2" ];then
 		failover_id=$(dbus get fss_node_failover_backup)
+		if [ -n "${failover_id}" ] && fss_node_id_exists "${failover_id}"; then
+			FSS_FAILOVER_NODE_ID_RESULT="${failover_id}"
+			return 0
+		fi
 		failover_identity=$(dbus get "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}")
 		[ -n "${failover_identity}" ] || failover_identity=$(dbus get "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY_LEGACY}")
 		resolved_id=$(fss_resolve_reference_node_id "${failover_id}" "${failover_identity}" "1" 2>/dev/null)
 		if [ -n "${resolved_id}" ]; then
-			resolved_identity=$(fss_get_node_identity_by_id "${resolved_id}" 2>/dev/null)
-			if [ "${resolved_id}" != "${failover_id}" -o "${failover_identity}" != "${resolved_identity}" ]; then
+			if [ "${resolved_id}" != "${failover_id}" ]; then
 				fss_set_schema2_reference_node_id "fss_node_failover_backup" "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}" "${resolved_id}" >/dev/null 2>&1
 			fi
-			printf '%s' "${resolved_id}"
+			FSS_FAILOVER_NODE_ID_RESULT="${resolved_id}"
+			return 0
 		else
 			[ -n "${failover_id}${failover_identity}" ] && fss_set_schema2_reference_node_id "fss_node_failover_backup" "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}" "" >/dev/null 2>&1
 			return 1
 		fi
 	else
-		dbus get ss_failover_s4_3
+		FSS_FAILOVER_NODE_ID_RESULT="$(dbus get ss_failover_s4_3)"
+		[ -n "${FSS_FAILOVER_NODE_ID_RESULT}" ]
 	fi
+}
+
+fss_get_failover_node_id() {
+	fss_resolve_failover_node_id || return 1
+	printf '%s\n' "${FSS_FAILOVER_NODE_ID_RESULT}"
 }
 
 fss_get_node_identity_by_id() {
