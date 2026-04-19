@@ -9,12 +9,75 @@ OUTPUT_FILE="/tmp/upload/ss_shunt_stats.json"
 XRAY_CONFIG_FILE="/koolshare/ss/xray.json"
 XRAY_API_SERVER="127.0.0.1:10085"
 OUTPUT_MODE="${1:-api}"
+FOLLOW_WS_STATE_FILE="/var/run/fancyss-shunt-stats-follow.state"
+
+follow_ws_cleanup_state() {
+	local state_pid=""
+	local state_token=""
+
+	[ -f "${FOLLOW_WS_STATE_FILE}" ] || return 0
+	read -r state_pid state_token < "${FOLLOW_WS_STATE_FILE}" 2>/dev/null || return 0
+	[ "${state_pid}" = "$$" ] || return 0
+	[ -n "${FSS_SHUNT_FOLLOW_TOKEN:-}" ] || return 0
+	[ "${state_token}" = "${FSS_SHUNT_FOLLOW_TOKEN}" ] || return 0
+	rm -f "${FOLLOW_WS_STATE_FILE}" >/dev/null 2>&1
+}
+
+follow_ws_is_current_owner() {
+	local state_pid=""
+	local state_token=""
+
+	[ -f "${FOLLOW_WS_STATE_FILE}" ] || return 1
+	read -r state_pid state_token < "${FOLLOW_WS_STATE_FILE}" 2>/dev/null || return 1
+	[ "${state_pid}" = "$$" ] || return 1
+	[ -n "${FSS_SHUNT_FOLLOW_TOKEN:-}" ] || return 1
+	[ "${state_token}" = "${FSS_SHUNT_FOLLOW_TOKEN}" ]
+}
+
+follow_ws_sleep_guarded() {
+	local remain="${1:-6}"
+
+	while [ "${remain}" -gt 0 ]
+	do
+		follow_ws_is_current_owner || return 1
+		[ "${PPID}" != "1" ] || return 1
+		sleep 1
+		remain=$((remain - 1))
+	done
+	return 0
+}
+
+follow_ws_prepare_owner() {
+	local old_pid=""
+	local old_token=""
+	local stale_pid=""
+
+	FSS_SHUNT_FOLLOW_TOKEN="$(date +%s).$$.${RANDOM:-0}"
+	export FSS_SHUNT_FOLLOW_TOKEN
+	mkdir -p "${FOLLOW_WS_STATE_FILE%/*}" >/dev/null 2>&1 || true
+	ps w 2>/dev/null | grep -F "sh /koolshare/scripts/ss_shunt_stats.sh follow_ws" | grep -v grep | awk -v self="$$" '{if ($1 != self) print $1}' | while IFS= read -r stale_pid
+	do
+		[ -n "${stale_pid}" ] || continue
+		kill "${stale_pid}" >/dev/null 2>&1 || true
+	done
+	if [ -f "${FOLLOW_WS_STATE_FILE}" ]; then
+		read -r old_pid old_token < "${FOLLOW_WS_STATE_FILE}" 2>/dev/null || true
+	fi
+	printf '%s %s\n' "$$" "${FSS_SHUNT_FOLLOW_TOKEN}" > "${FOLLOW_WS_STATE_FILE}"
+	if [ -n "${old_pid}" ] && [ "${old_pid}" != "$$" ]; then
+		kill "${old_pid}" >/dev/null 2>&1 || true
+	fi
+}
 
 follow_ws_stream() {
+	follow_ws_prepare_owner
+	trap 'follow_ws_cleanup_state' EXIT INT TERM PIPE
 	while true
 	do
-		sh /koolshare/scripts/ss_shunt_stats.sh ws
-		sleep 6
+		follow_ws_is_current_owner || break
+		[ "${PPID}" != "1" ] || break
+		sh /koolshare/scripts/ss_shunt_stats.sh ws || break
+		follow_ws_sleep_guarded 6 || break
 	done
 }
 
