@@ -4978,27 +4978,56 @@ load_tproxy() {
 
 flush_ipset() {
 	# flush ipset
-	echo_date "清除ipset规则集..."
-	ipset -F ignlist >/dev/null 2>&1 && ipset -X ignlist >/dev/null 2>&1
-	ipset -F ignlist6 >/dev/null 2>&1 && ipset -X ignlist6 >/dev/null 2>&1
-	
-	ipset -F white_list >/dev/null 2>&1 && ipset -X white_list >/dev/null 2>&1
-	ipset -F white_list6 >/dev/null 2>&1 && ipset -X white_list6 >/dev/null 2>&1
-	
-	ipset -F black_list >/dev/null 2>&1 && ipset -X black_list >/dev/null 2>&1
-	ipset -F black_list6 >/dev/null 2>&1 && ipset -X black_list6 >/dev/null 2>&1
+	local existing_sets=""
+	local set_name=""
+	local restore_file="/tmp/fss_ipset_flush.$$"
+	local restore_ok="0"
 
-	ipset -F chnlist >/dev/null 2>&1 && ipset -X chnlist >/dev/null 2>&1
-	ipset -F chnlist6 >/dev/null 2>&1 && ipset -X chnlist6 >/dev/null 2>&1
-	
-	ipset -F gfwlist >/dev/null 2>&1 && ipset -X gfwlist >/dev/null 2>&1
-	ipset -F gfwlist6 >/dev/null 2>&1 && ipset -X gfwlist6 >/dev/null 2>&1
-	
-	ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
-	ipset -F router6 >/dev/null 2>&1 && ipset -X router6 >/dev/null 2>&1
+	existing_sets="$(ipset list -name 2>/dev/null)"
+	if [ -n "${existing_sets}" ]; then
+		: > "${restore_file}" || true
+		while IFS= read -r set_name
+		do
+			case "${set_name}" in
+			ignlist|ignlist6|white_list|white_list6|black_list|black_list6|chnlist|chnlist6|gfwlist|gfwlist6|router|router6|chnroute|chnroute6)
+				printf 'flush %s\ndestroy %s\n' "${set_name}" "${set_name}" >> "${restore_file}"
+				;;
+			esac
+		done <<EOF
+${existing_sets}
+EOF
+		if [ -s "${restore_file}" ]; then
+			echo_date "清除ipset规则集..."
+			if ipset -R < "${restore_file}" >/dev/null 2>&1; then
+				restore_ok="1"
+			fi
+		fi
+		rm -f "${restore_file}" >/dev/null 2>&1
+	fi
 
-	ipset -F chnroute >/dev/null 2>&1 && ipset -X chnroute >/dev/null 2>&1
-	ipset -F chnroute6 >/dev/null 2>&1 && ipset -X chnroute6 >/dev/null 2>&1
+	if [ "${restore_ok}" != "1" ]; then
+		echo_date "清除ipset规则集..."
+		ipset -F ignlist >/dev/null 2>&1 && ipset -X ignlist >/dev/null 2>&1
+		ipset -F ignlist6 >/dev/null 2>&1 && ipset -X ignlist6 >/dev/null 2>&1
+		
+		ipset -F white_list >/dev/null 2>&1 && ipset -X white_list >/dev/null 2>&1
+		ipset -F white_list6 >/dev/null 2>&1 && ipset -X white_list6 >/dev/null 2>&1
+		
+		ipset -F black_list >/dev/null 2>&1 && ipset -X black_list >/dev/null 2>&1
+		ipset -F black_list6 >/dev/null 2>&1 && ipset -X black_list6 >/dev/null 2>&1
+
+		ipset -F chnlist >/dev/null 2>&1 && ipset -X chnlist >/dev/null 2>&1
+		ipset -F chnlist6 >/dev/null 2>&1 && ipset -X chnlist6 >/dev/null 2>&1
+		
+		ipset -F gfwlist >/dev/null 2>&1 && ipset -X gfwlist >/dev/null 2>&1
+		ipset -F gfwlist6 >/dev/null 2>&1 && ipset -X gfwlist6 >/dev/null 2>&1
+		
+		ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
+		ipset -F router6 >/dev/null 2>&1 && ipset -X router6 >/dev/null 2>&1
+
+		ipset -F chnroute >/dev/null 2>&1 && ipset -X chnroute >/dev/null 2>&1
+		ipset -F chnroute6 >/dev/null 2>&1 && ipset -X chnroute6 >/dev/null 2>&1
+	fi
 	#remove_redundant_rule
 	local ip_rule_exist=$(ip rule show | grep "lookup 310" | grep -c 310)
 	if [ -n "${ip_rule_exist}" ]; then
@@ -5012,6 +5041,80 @@ flush_ipset() {
 	#remove_route_table
 	#echo_date 删除ip route规则.
 	ip route del local 0.0.0.0/0 dev lo table 310 >/dev/null 2>&1
+}
+
+flush_iptables_restore_append() {
+	local ipt="$1"
+	local table="$2"
+	local match="$3"
+	local label="$4"
+	local restore_file="$5"
+	local rules=""
+	local line=""
+	local chain=""
+
+	[ -n "${ipt}" ] || return 1
+	[ -n "${restore_file}" ] || return 1
+	rules="$("${ipt}" -t "${table}" -S 2>/dev/null | grep -E "${match}")"
+	[ -n "${rules}" ] || return 1
+	echo_date "${label}"
+	{
+		printf '*%s\n' "${table}"
+		while IFS= read -r line
+		do
+			case "${line}" in
+			-A\ *)
+				printf -- '-D %s\n' "${line#-A }"
+				;;
+			esac
+		done <<EOF
+${rules}
+EOF
+		while IFS= read -r line
+		do
+			case "${line}" in
+			-N\ *)
+				chain="${line#-N }"
+				printf -- '-F %s\n-X %s\n' "${chain}" "${chain}"
+				;;
+			esac
+		done <<EOF
+${rules}
+EOF
+		echo COMMIT
+	} >> "${restore_file}"
+	return 0
+}
+
+flush_iptables_legacy_table() {
+	local ipt="$1"
+	local table="$2"
+	local match="$3"
+	local label="$4"
+	local rules=""
+	local line=""
+	local chain=""
+
+	rules="$("${ipt}" -t "${table}" -S 2>/dev/null | grep -E "${match}" | sort)"
+	[ -n "${rules}" ] || return 0
+	echo_date "${label}"
+	while IFS= read -r line
+	do
+		case "${line}" in
+		-A\ *)
+			set -- ${line}
+			shift
+			run_bg "${ipt}" -t "${table}" -D "$@"
+			;;
+		-N\ *)
+			chain="${line#-N }"
+			run_bg "${ipt}" -t "${table}" -F "${chain}"
+			run_bg "${ipt}" -t "${table}" -X "${chain}"
+			;;
+		esac
+	done <<EOF
+${rules}
+EOF
 }
 
 # creat ipset rules
@@ -5587,124 +5690,40 @@ dns_hijack_control() {
 
 flush_iptables() {
 	# use different xtables libdir
+	local restore_v4="/tmp/fss_iptables_flush.$$"
+	local restore_v6="/tmp/fss_ip6tables_flush.$$"
+	local need_v4="0"
+	local need_v6="0"
+	local restore_v4_ok="0"
+	local restore_v6_ok="0"
 	if [ -d "/tmp/.xt" ];then
 		export XTABLES_LIBDIR=/tmp/.xt
 	fi
-	
-	# flush NAT
-	local NAT_RULES=$(iptables -t nat -S | grep -E "SHADOWSOCKS|3333" | sort)
-	if [ -n "${NAT_RULES}" ];then
-		echo_date "清除iptables nat规则..."
-		echo "${NAT_RULES}" | while read line
-		do
-			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-			#echo "$TYPE" "$line"
-			if [ "${TYPE}" == "A" ];then
-				local CMD1=$(echo "$line" | sed 's/^-A/iptables -t nat -D/g')
-				run_bg $CMD1
-			elif [ "${TYPE}" == "N" ];then
-				local CMD2=$(echo "$line" | sed 's/^-N/iptables -t nat -F/g')
-				run_bg $CMD2
-				local CMD3=$(echo "$line" | sed 's/^-N/iptables -t nat -X/g')
-				run_bg $CMD3
-			fi
-		done
-	fi
 
-	# flush MANGLE
-	local MANGLE_RULES=$(iptables -t mangle -S | grep -E "SHADOWSOCKS|3333|0x7" | sort)
-	if [ -n "${MANGLE_RULES}" ];then
-		echo_date "清除iptables mangle规则..."
-		echo "${MANGLE_RULES}" | while read line
-		do
-			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-			#echo "$TYPE" "$line"
-			if [ "${TYPE}" == "A" ];then
-				local CMD1=$(echo "$line" | sed 's/^-A/iptables -t mangle -D/g')
-				run_bg $CMD1
-			elif [ "${TYPE}" == "N" ];then
-				local CMD2=$(echo "$line" | sed 's/^-N/iptables -t mangle -F/g')
-				run_bg $CMD2
-				local CMD3=$(echo "$line" | sed 's/^-N/iptables -t mangle -X/g')
-				run_bg $CMD3
-			fi
-		done
+	: > "${restore_v4}" || true
+	: > "${restore_v6}" || true
+	flush_iptables_restore_append iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则..." "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则..." "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append iptables filter "SHADOWSOCKS" "清除iptables filter规则..." "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则..." "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则..." "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则..." "${restore_v6}" && need_v6="1"
+	if [ "${need_v4}" = "1" ] && iptables-restore -n < "${restore_v4}" >/dev/null 2>&1; then
+		restore_v4_ok="1"
 	fi
-
-	# flush MANGLE
-	local FILTER_RULES=$(iptables -t filter -S | grep -E "SHADOWSOCKS" | sort)
-	if [ -n "${FILTER_RULES}" ];then
-		echo_date "清除iptables filter规则..."
-		echo "${FILTER_RULES}" | while read line
-		do
-			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-			if [ "${TYPE}" == "A" ];then
-				local CMD1=$(echo "$line" | sed 's/^-A/iptables -t filter -D/g')
-				run_bg $CMD1
-			elif [ "${TYPE}" == "N" ];then
-				local CMD2=$(echo "$line" | sed 's/^-N/iptables -t filter -F/g')
-				run_bg $CMD2
-				local CMD3=$(echo "$line" | sed 's/^-N/iptables -t filter -X/g')
-				run_bg $CMD3
-			fi
-		done
+	if [ "${need_v6}" = "1" ] && ip6tables-restore -n < "${restore_v6}" >/dev/null 2>&1; then
+		restore_v6_ok="1"
 	fi
-
-	# flush IPv6 NAT
-	local NAT6_RULES=$(ip6tables -t nat -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334" | sort)
-	if [ -n "${NAT6_RULES}" ];then
-		echo_date "清除ip6tables nat规则..."
-		echo "${NAT6_RULES}" | while read line
-		do
-			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-			if [ "${TYPE}" == "A" ];then
-				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t nat -D/g')
-				run_bg $CMD1
-			elif [ "${TYPE}" == "N" ];then
-				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t nat -F/g')
-				run_bg $CMD2
-				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t nat -X/g')
-				run_bg $CMD3
-			fi
-		done
+	rm -f "${restore_v4}" "${restore_v6}" >/dev/null 2>&1
+	if [ "${need_v4}" = "1" ] && [ "${restore_v4_ok}" != "1" ]; then
+		flush_iptables_legacy_table iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则..."
+		flush_iptables_legacy_table iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则..."
+		flush_iptables_legacy_table iptables filter "SHADOWSOCKS" "清除iptables filter规则..."
 	fi
-
-	# flush IPv6 MANGLE
-	local MANGLE6_RULES=$(ip6tables -t mangle -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334|0x7" | sort)
-	if [ -n "${MANGLE6_RULES}" ];then
-		echo_date "清除ip6tables mangle规则..."
-		echo "${MANGLE6_RULES}" | while read line
-		do
-			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-			if [ "${TYPE}" == "A" ];then
-				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t mangle -D/g')
-				run_bg $CMD1
-			elif [ "${TYPE}" == "N" ];then
-				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t mangle -F/g')
-				run_bg $CMD2
-				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t mangle -X/g')
-				run_bg $CMD3
-			fi
-		done
-	fi
-
-	# flush IPv6 FILTER
-	local FILTER6_RULES=$(ip6tables -t filter -S 2>/dev/null | grep -E "SHADOWSOCKS6" | sort)
-	if [ -n "${FILTER6_RULES}" ];then
-		echo_date "清除ip6tables filter规则..."
-		echo "${FILTER6_RULES}" | while read line
-		do
-			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
-			if [ "${TYPE}" == "A" ];then
-				local CMD1=$(echo "$line" | sed 's/^-A/ip6tables -t filter -D/g')
-				run_bg $CMD1
-			elif [ "${TYPE}" == "N" ];then
-				local CMD2=$(echo "$line" | sed 's/^-N/ip6tables -t filter -F/g')
-				run_bg $CMD2
-				local CMD3=$(echo "$line" | sed 's/^-N/ip6tables -t filter -X/g')
-				run_bg $CMD3
-			fi
-		done
+	if [ "${need_v6}" = "1" ] && [ "${restore_v6_ok}" != "1" ]; then
+		flush_iptables_legacy_table ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则..."
+		flush_iptables_legacy_table ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则..."
+		flush_iptables_legacy_table ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则..."
 	fi
 
 	local ip6_rule_exist=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | grep -c 310)
