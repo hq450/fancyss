@@ -1344,29 +1344,52 @@ sub_validate_downloaded_payload(){
 sub_filter_fancyss_jsonl_file(){
 	local src_file="$1"
 	local out_file="$2"
-	local line=""
-	local meta=""
+	local row=""
+	local row_kind=""
+	local type_b64=""
+	local xray_b64=""
+	local remarks_b64=""
+	local server_b64=""
+	local line_b64=""
 	local type_id=""
 	local xray_prot=""
 	local remarks=""
 	local server=""
 	local type_name=""
+	local line=""
+	local sep="$(printf '\037')"
+	local rows_file="${out_file}.rows.$$"
 
 	[ -f "${src_file}" ] || return 1
 	[ -n "${out_file}" ] || return 1
 	: > "${out_file}"
+	: > "${rows_file}"
 
-	while IFS= read -r line || [ -n "${line}" ]
+	cat "${src_file}" | jq -Rr 'def text($v): if $v == null then "" elif ($v | type) == "string" then $v else ($v | tostring) end; . as $raw | select($raw != "") | (try ($raw | fromjson) catch null) as $obj | if ($obj | type) != "object" then ["raw", "", "", "", "", ($raw | @base64)] else ["json", (text($obj.type) | @base64), (text($obj.xray_prot) | @base64), (text($obj.name) | @base64), (text(($obj.server // $obj.hy2_server // $obj.naive_server)) | @base64), ($raw | @base64)] end | join("\u001f")' 2>/dev/null > "${rows_file}" || {
+		rm -f "${rows_file}"
+		return 1
+	}
+	while IFS= read -r row || [ -n "${row}" ]
 	do
+		[ -n "${row}" ] || continue
+		IFS="${sep}" read -r row_kind type_b64 xray_b64 remarks_b64 server_b64 line_b64 <<-EOF
+		${row}
+		EOF
+		line=""
+		[ -n "${line_b64}" ] && line="$(fss_b64_decode "${line_b64}")"
 		[ -n "${line}" ] || continue
-		meta=$(printf '%s' "${line}" | run jq -r '[.type // "", .xray_prot // "", .name // "", (.server // .hy2_server // .naive_server // "")] | @tsv' 2>/dev/null) || {
+		if [ "${row_kind}" != "json" ];then
 			printf '%s\n' "${line}" >> "${out_file}"
 			continue
-		}
-		type_id=$(printf '%s' "${meta}" | awk -F'\t' '{print $1}')
-		xray_prot=$(printf '%s' "${meta}" | awk -F'\t' '{print $2}')
-		remarks=$(printf '%s' "${meta}" | awk -F'\t' '{print $3}')
-		server=$(printf '%s' "${meta}" | awk -F'\t' '{print $4}')
+		fi
+		type_id=""
+		xray_prot=""
+		remarks=""
+		server=""
+		[ -n "${type_b64}" ] && type_id="$(fss_b64_decode "${type_b64}")"
+		[ -n "${xray_b64}" ] && xray_prot="$(fss_b64_decode "${xray_b64}")"
+		[ -n "${remarks_b64}" ] && remarks="$(fss_b64_decode "${remarks_b64}")"
+		[ -n "${server_b64}" ] && server="$(fss_b64_decode "${server_b64}")"
 		case "${type_id}" in
 		0)
 			type_name="SS"
@@ -1398,7 +1421,8 @@ sub_filter_fancyss_jsonl_file(){
 		esac
 		filter_nodes "${type_name}" "${remarks}" "${server}" || continue
 		printf '%s\n' "${line}" >> "${out_file}"
-	done < "${src_file}"
+	done < "${rows_file}"
+	rm -f "${rows_file}"
 }
 
 sub_keyword_patterns_can_use_tool(){
@@ -2195,6 +2219,20 @@ sub_extract_groups_from_file(){
 	jq -r '.group // "null"' "${file_path}" 2>/dev/null
 }
 
+sub_first_line_meta_tsv(){
+	local file_path="$1"
+	local first_line=""
+	[ -f "${file_path}" ] || return 0
+	first_line="$(sed -n '1p' "${file_path}" 2>/dev/null)"
+	[ -n "${first_line}" ] || return 0
+	printf '%s' "${first_line}" | jq -r '[
+		(._airport_identity // ""),
+		(._source_scope // ""),
+		(._source_url_hash // ""),
+		(.group // "")
+	] | join("\u001f")' 2>/dev/null
+}
+
 sub_refresh_node_state(){
 	NODES_SEQ=$(sub_list_node_ids | tr '\n' ' ' | sed 's/[[:space:]]$//')
 	NODE_INDEX=$(sub_list_node_ids | sed -n '$p')
@@ -2669,11 +2707,15 @@ sub_file_identity_scope_matches(){
 	local first_airport=""
 	local first_scope=""
 	local first_hash=""
+	local first_group=""
+	local first_meta=""
+	local sep="$(printf '\037')"
 
 	[ -s "${file}" ] || return 1
-	first_airport=$(jq -r '."_airport_identity" // empty' "${file}" 2>/dev/null | sed -n '1p')
-	first_scope=$(jq -r '."_source_scope" // empty' "${file}" 2>/dev/null | sed -n '1p')
-	first_hash=$(jq -r '."_source_url_hash" // empty' "${file}" 2>/dev/null | sed -n '1p')
+	first_meta="$(sub_first_line_meta_tsv "${file}")" || first_meta=""
+	IFS="${sep}" read -r first_airport first_scope first_hash first_group <<-EOF
+	${first_meta}
+	EOF
 	[ "${first_airport}" = "${airport_identity}" ] || return 1
 	[ "${first_scope}" = "${source_scope}" ] || return 1
 	[ "${first_hash}" = "${source_url_hash}" ]
@@ -3019,10 +3061,9 @@ sub_log_nodes_diff_tsv_file(){
 		esac
 	done < "${diff_file}"
 	if [ -f "${summary_file}" ];then
-		param_changed=$(jq -r '.param // 0' "${summary_file}" 2>/dev/null)
-		renamed=$(jq -r '.rename // 0' "${summary_file}" 2>/dev/null)
-		added=$(jq -r '.new // 0' "${summary_file}" 2>/dev/null)
-		deleted=$(jq -r '.deleted // 0' "${summary_file}" 2>/dev/null)
+		IFS="$(printf '\037')" read -r param_changed renamed added deleted <<-EOF
+		$(jq -r '[.param // 0, .rename // 0, .new // 0, .deleted // 0] | join("\u001f")' "${summary_file}" 2>/dev/null)
+		EOF
 	fi
 	if [ "$((param_changed + renamed + deleted + added))" -gt "0" ];then
 		echo_date "ℹ️节点变更分类：参数改变${param_changed}个，名称改变${renamed}个，新增${added}个，删除${deleted}个。"
@@ -4517,8 +4558,13 @@ get_group_label_from_file(){
 	local fallback_name="$2"
 	local first_group=""
 	local real_group=""
+	local first_meta=""
+	local sep="$(printf '\037')"
 	[ -z "${file_path}" -o ! -f "${file_path}" ] && echo -n "${fallback_name}" && return 0
-	first_group=$(sed -n '1p' "${file_path}" 2>/dev/null | jq -r '.group // empty' 2>/dev/null | sed -n '1p')
+	first_meta="$(sub_first_line_meta_tsv "${file_path}")" || first_meta=""
+	IFS="${sep}" read -r _first_airport _first_scope _first_hash first_group <<-EOF
+	${first_meta}
+	EOF
 	real_group=$(normalize_group_name "${first_group}")
 	if [ -n "${real_group}" ];then
 		echo -n "${real_group}"
