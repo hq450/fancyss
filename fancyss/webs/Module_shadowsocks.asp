@@ -8879,10 +8879,19 @@ function get_node_display_source_label(c) {
 function get_node_card_section_key(label) {
 	return encodeURIComponent(String(label || ""));
 }
+function get_node_card_section_display_label(label) {
+	var text = String(label || "");
+	var match = text.match(/^(.*)_([0-9a-fA-F]{4})$/);
+	if (match && match[1]) {
+		return match[1];
+	}
+	return text;
+}
 function get_node_card_sections() {
 	var sections = [];
 	var sectionMap = {};
 	var label = "";
+	var displayLabel = "";
 	for (var i = 0; i < ss_nodes.length; i++) {
 		var nodeId = ss_nodes[i];
 		var conf = confs[nodeId];
@@ -8890,9 +8899,10 @@ function get_node_card_sections() {
 			continue;
 		}
 		label = get_node_display_source_label(conf);
+		displayLabel = get_node_card_section_display_label(label);
 		if (!sectionMap[label]) {
 			sectionMap[label] = {
-				label: label,
+				label: displayLabel,
 				key: get_node_card_section_key(label),
 				nodes: []
 			};
