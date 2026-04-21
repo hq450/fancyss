@@ -155,10 +155,20 @@
 .shunt-editor{padding:18px 22px 4px;color:#fff;}
 .shunt-editor-shell{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start;}
 .shunt-editor-main,.shunt-editor-side{min-width:0;max-width:none;}
-.shunt-editor-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.shunt-editor-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:7px;}
+.shunt-editor-row.checkbox-row{align-items:center;}
 .shunt-editor-label{width:76px;line-height:36px;color:#e1e7ee;flex:0 0 76px;font-size:13px;font-weight:500;text-align:left;}
 .shunt-editor-control{flex:1 1 auto;max-width:none;}
-.shunt-editor-control textarea,.shunt-editor-control input[type='text'],.shunt-editor-control select{box-sizing:border-box;width:100%;max-width:100%;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;height:36px;transition:all .18s ease;font-size:13px;}
+.shunt-editor-control label{display:inline-flex;align-items:center;min-height:36px;line-height:1.4;}
+.shunt-editor-row.checkbox-row .shunt-editor-control{display:flex;align-items:center;min-height:36px;}
+.submgr-hy2-inline{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
+.submgr-hy2-inline > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.submgr-hy2-inline input[type='text']{width:50px !important;height:34px;}
+.submgr-hy2-inline select{width:110px !important;height:34px;}
+.submgr-schedule-inline{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
+.submgr-schedule-inline > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.submgr-schedule-inline select{width:110px !important;height:34px;}
+.shunt-editor-control textarea,.shunt-editor-control input[type='text'],.shunt-editor-control select{box-sizing:border-box;width:100%;max-width:100%;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:5px 8px;height:36px;transition:all .18s ease;font-size:13px;}
 .shunt-editor-control textarea:focus,.shunt-editor-control input[type='text']:focus,.shunt-editor-control select:focus{outline:none;border-color:#3b82f6;background:rgba(0,0,0,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 .shunt-editor-control textarea.is-overlimit,.shunt-editor-control input[type='text'].is-overlimit{border-color:#ef4444;background:rgba(84,19,19,0.38);box-shadow:0 0 0 3px rgba(239,68,68,0.14);}
 .shunt-action-group{display:flex;gap:8px;flex-wrap:wrap;padding-top:2px;}
@@ -196,7 +206,7 @@
 .shunt-editor-preview-label{font-size:10px;color:#94a3b8;letter-spacing:0.7px;text-transform:uppercase;}
 .shunt-editor-preview-value{padding-top:4px;font-size:14px;line-height:1.45;color:#e2e8f0;word-break:break-word;font-weight:600;}
 .shunt-editor-actions-tip{padding-top:10px;font-size:11px;color:#94a3b8;line-height:1.7;border-top:1px solid rgba(255,255,255,0.06);margin-top:16px;padding-left:90px;}
-body .shunt-editor-layer{background:#0f172a !important;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5) !important;border:1px solid rgba(255,255,255,0.1) !important;}
+body .shunt-editor-layer{background:#090909 !important;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5) !important;border:1px solid rgba(255,255,255,0.1) !important;}
 body .shunt-editor-layer .layui-layer-title{background:rgba(255,255,255,0.02) !important;color:#f8fafc !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;font-size:16px !important;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;font-weight:600 !important;letter-spacing:0.5px;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.1) !important;color:#e2e8f0 !important;}
@@ -345,11 +355,24 @@ body[skin="ROG"] .submgr-tab.active {
 	border-color: rgba(255,70,70,0.48);
 }
 body[skin="ROG"] .submgr-card {
-	border-color: rgba(120,60,60,0.28);
-	background: linear-gradient(180deg,rgba(32,24,24,0.97),rgba(22,16,16,0.95));
+	border-color: rgb(140 46 46);
+	background: linear-gradient(180deg, rgb(70 16 16 / 69%), rgba(28, 16, 16, 0.95));
+	border-radius: 10px;
 }
 body[skin="ROG"] .submgr-card:hover {
 	border-color: rgba(255,70,70,0.42);
+}
+body[skin="ROG"] .shunt-editor-control textarea,
+body[skin="ROG"] .shunt-editor-control input[type='text'],
+body[skin="ROG"] .shunt-editor-control select{
+	border:1px solid rgb(117 35 35);
+}
+body[skin="ROG"] .shunt-editor-control textarea:focus,
+body[skin="ROG"] .shunt-editor-control input[type='text']:focus,
+body[skin="ROG"] .shunt-editor-control select:focus{
+	outline:1px solid rgb(204 23 23);
+	background:rgba(0,0,0,0.5);
+	box-shadow:none;
 }
 
 /* ASUSWRT 皮肤 (蓝灰色主题) */
@@ -378,12 +401,24 @@ body[skin="ASUSWRT"] .submgr-tab.active {
 	border-color: rgba(59,130,246,0.48);
 }
 body[skin="ASUSWRT"] .submgr-card {
-	border-color: rgba(100,116,139,0.28);
-	background: linear-gradient(180deg,rgba(30,41,59,0.97),rgba(15,23,42,0.95));
+	border-color: rgb(44 95 168);
+	background: linear-gradient(180deg, rgb(14 44 86 / 69%), rgba(15,23,42,0.95));
 	border-radius: 10px;
 }
 body[skin="ASUSWRT"] .submgr-card:hover {
 	border-color: rgba(59,130,246,0.42);
+}
+body[skin="ASUSWRT"] .shunt-editor-control textarea,
+body[skin="ASUSWRT"] .shunt-editor-control input[type='text'],
+body[skin="ASUSWRT"] .shunt-editor-control select{
+	border:1px solid rgb(38 88 160);
+}
+body[skin="ASUSWRT"] .shunt-editor-control textarea:focus,
+body[skin="ASUSWRT"] .shunt-editor-control input[type='text']:focus,
+body[skin="ASUSWRT"] .shunt-editor-control select:focus{
+	outline:1px solid rgb(42 111 239);
+	background:rgba(0,0,0,0.5);
+	box-shadow:none;
 }
 body[skin="ASUSWRT"] .shunt-summary-card {
 	border-color: rgba(100,116,139,0.28);
@@ -417,12 +452,24 @@ body[skin="TUF"] .submgr-tab.active {
 	border-color: rgba(251,146,60,0.48);
 }
 body[skin="TUF"] .submgr-card {
-	border-color: rgba(120,80,40,0.28);
-	background: linear-gradient(180deg,rgba(36,28,20,0.97),rgba(24,18,12,0.95));
+	border-color: rgb(146 101 15);
+	background: linear-gradient(180deg, rgb(62 34 6 / 69%), rgba(24,18,12,0.95));
 	border-radius: 10px;
 }
 body[skin="TUF"] .submgr-card:hover {
 	border-color: rgba(251,146,60,0.42);
+}
+body[skin="TUF"] .shunt-editor-control textarea,
+body[skin="TUF"] .shunt-editor-control input[type='text'],
+body[skin="TUF"] .shunt-editor-control select{
+	border:1px solid rgb(101 70 10);
+}
+body[skin="TUF"] .shunt-editor-control textarea:focus,
+body[skin="TUF"] .shunt-editor-control input[type='text']:focus,
+body[skin="TUF"] .shunt-editor-control select:focus{
+	outline:1px solid rgb(201 116 21);
+	background:rgba(0,0,0,0.5);
+	box-shadow:none;
 }
 body[skin="TUF"] .shunt-summary-card {
 	border-color: rgba(120,80,40,0.28);
@@ -456,9 +503,21 @@ body[skin="TS"] .submgr-tab.active {
 	border-color: rgba(34,211,238,0.48);
 }
 body[skin="TS"] .submgr-card {
-	border-color: rgba(70,120,120,0.28);
-	background: linear-gradient(180deg,rgba(22,34,38,0.97),rgba(16,24,28,0.95));
+	border-color: rgb(27 129 141);
+	background: linear-gradient(180deg, rgb(8 61 68 / 69%), rgba(16,24,28,0.95));
 	border-radius: 10px;
+}
+body[skin="TS"] .shunt-editor-control textarea,
+body[skin="TS"] .shunt-editor-control input[type='text'],
+body[skin="TS"] .shunt-editor-control select{
+	border:1px solid rgb(22 112 123);
+}
+body[skin="TS"] .shunt-editor-control textarea:focus,
+body[skin="TS"] .shunt-editor-control input[type='text']:focus,
+body[skin="TS"] .shunt-editor-control select:focus{
+	outline:1px solid rgb(25 196 220);
+	background:rgba(0,0,0,0.5);
+	box-shadow:none;
 }
 body[skin="TS"] .submgr-card:hover {
 	border-color: rgba(34,211,238,0.42);
@@ -5014,17 +5073,42 @@ function render_subscription_manager_body() {
 	if (subscribeManagerActiveTab == "uri") {
 		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">用于快速解析单条或多条分享链接，沿用现有 URI 导入逻辑，不进入订阅 profile。</div></div>';
 		html += '<div class="submgr-uri-box"><textarea id="submgr_uri_input" placeholder="填入 ss://、ssr://、vmess://、vless://、trojan://、hy2://、hysteria2://、tuic://、naive+https://、naive+quic:// 等链接，支持多行。"></textarea></div>';
-		html += '<div class="shunt-action-group" style="padding-top:14px;"><a type="button" class="ss_btn" style="cursor:pointer" onclick="submit_subscription_uri_from_manager()">解析并保存为节点</a></div>';
 	} else {
 		html += render_subscription_profiles_cards();
 	}
 	html += '</div>';
 	return html;
 }
+function update_subscription_manager_buttons() {
+	if (subscribeManagerLayerIndex === null || typeof layer == "undefined") {
+		return;
+	}
+	var layero = $("#layui-layer" + subscribeManagerLayerIndex);
+	if (!layero.length) {
+		return;
+	}
+	var btnBox = layero.children(".layui-layer-btn");
+	if (!btnBox.length) {
+		return;
+	}
+	var btn0 = btnBox.find(".layui-layer-btn0");
+	var btn1 = btnBox.find(".layui-layer-btn1");
+	var btn2 = btnBox.find(".layui-layer-btn2");
+	if (subscribeManagerActiveTab == "uri") {
+		btn0.text("解析并保存为节点").show();
+		btn1.hide();
+		btn2.text("关闭窗口").show();
+	} else {
+		btn0.text("新增订阅").show();
+		btn1.text("全部同步").show();
+		btn2.text("关闭窗口").show();
+	}
+}
 function render_subscription_manager() {
 	var root = $("#subscription_manager_root");
 	if (root.length) {
 		root.html(render_subscription_manager_body());
+		update_subscription_manager_buttons();
 		adjust_subscription_manager_layer_height();
 	}
 }
@@ -5104,21 +5188,30 @@ function open_subscription_manager() {
 		skin: "shunt-editor-layer submgr-layer",
 		area: [$(window).width() < 760 ? '92%' : '920px', $(window).width() < 760 ? '88%' : 'auto'],
 		maxHeight: 560,
+		shade: 0.8,
 		shadeClose: false,
 		content: '<div id="subscription_manager_root"><div class="submgr-shell"><div class="submgr-empty">正在加载订阅配置...</div></div></div>',
 		btn: ["新增订阅", "全部同步", "关闭窗口"],
 		btnAlign: "c",
 		success: function(layero, index) {
 			subscribeManagerLayerIndex = index;
+			update_subscription_manager_buttons();
 			load_subscription_profiles(function() {
 				render_subscription_manager();
 			});
 		},
 		yes: function(index) {
-			open_subscription_profile_editor('');
+			if (subscribeManagerActiveTab == "uri") {
+				submit_subscription_uri_from_manager();
+			} else {
+				open_subscription_profile_editor('');
+			}
 			return false;
 		},
 		btn2: function(index) {
+			if (subscribeManagerActiveTab == "uri") {
+				return false;
+			}
 			sync_subscription_profiles('');
 			return false;
 		},
@@ -5145,8 +5238,6 @@ function build_subscription_profile_editor_defaults(profile) {
 		exclude: profile.exclude || "",
 		include: profile.include || "",
 		allow_insecure: profile.allow_insecure === true,
-		node_log: profile.node_log === true,
-		keep_info_node: profile.keep_info_node === true,
 		hy2_up: profile.hy2_up || "",
 		hy2_dl: profile.hy2_dl || "",
 		hy2_tfo_switch: String(profile.hy2_tfo_switch || "2"),
@@ -5166,8 +5257,8 @@ function render_subscription_select_options(options, selected) {
 }
 function toggle_subscription_profile_ua_fields() {
 	var mode = $("#submgr_profile_ua_mode").val() || "fixed";
+	$("#submgr_profile_ua_preset_row").toggle(mode == "fixed");
 	$("#submgr_profile_ua_custom_row").toggle(mode == "custom");
-	$("#submgr_profile_ua_hint").text(mode == "auto" ? "自动探测模式的 Zig 下载器尚在后续施工，本阶段先保留配置结构。" : (mode == "custom" ? "将直接使用你填写的 User-Agent 字符串。" : "固定预设模式会直接套用所选 UA。"));
 }
 function toggle_subscription_schedule_fields() {
 	var enabled = !!$("#submgr_profile_schedule_enabled").prop("checked");
@@ -5193,19 +5284,16 @@ function open_subscription_profile_editor(profileId) {
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">启用</div><div class="shunt-editor-control"><label><input type="checkbox" id="submgr_profile_enabled"' + (state.enabled ? ' checked' : '') + '> 启用该订阅配置</label></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">节点模式</div><div class="shunt-editor-control"><select id="submgr_profile_subscribe_mode">' + render_subscription_select_options(option_modes || [["2", "大陆白名单模式"]], state.subscribe_mode) + '</select></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">下载策略</div><div class="shunt-editor-control"><select id="submgr_profile_download_policy">' + render_subscription_select_options([["auto", "自动判断"], ["proxy", "走代理"], ["direct", "不走代理"]], state.download_policy) + '</select></div></div>';
-	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 模式</div><div class="shunt-editor-control"><select id="submgr_profile_ua_mode" onchange="toggle_subscription_profile_ua_fields()">' + render_subscription_select_options([["fixed", "固定预设"], ["custom", "自定义字符串"], ["auto", "自动探测（后续施工）"]], state.ua_mode) + '</select><div class="shunt-editor-hint" id="submgr_profile_ua_hint"></div></div></div>';
-	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 预设</div><div class="shunt-editor-control"><select id="submgr_profile_ua_preset">' + render_subscription_select_options([["default", "fancyss 默认"], ["curl", "curl/wget"], ["v2rayn", "V2rayN"], ["v2rayng", "V2rayNG"], ["shadowrocket", "Shadowrocket"]], state.ua_preset) + '</select></div></div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 模式</div><div class="shunt-editor-control"><select id="submgr_profile_ua_mode" onchange="toggle_subscription_profile_ua_fields()">' + render_subscription_select_options([["fixed", "固定预设"], ["custom", "自定义字符串"], ["auto", "自动探测（后续施工）"]], state.ua_mode) + '</select></div></div>';
+	html += '<div class="shunt-editor-row" id="submgr_profile_ua_preset_row"><div class="shunt-editor-label">UA 预设</div><div class="shunt-editor-control"><select id="submgr_profile_ua_preset">' + render_subscription_select_options([["default", "fancyss 默认"], ["curl", "curl/wget"], ["v2rayn", "V2rayN"], ["v2rayng", "V2rayNG"], ["shadowrocket", "Shadowrocket"]], state.ua_preset) + '</select></div></div>';
 	html += '<div class="shunt-editor-row" id="submgr_profile_ua_custom_row"><div class="shunt-editor-label">UA 自定义</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_ua_custom" value="' + htmlEscape(state.ua_custom) + '" placeholder="自定义 User-Agent 字符串"></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">排除关键词</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_exclude" value="' + htmlEscape(state.exclude) + '" placeholder="多个关键词用英文逗号分隔"></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">包含关键词</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_include" value="' + htmlEscape(state.include) + '" placeholder="多个关键词用英文逗号分隔"></div></div>';
-	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">附加选项</div><div class="shunt-editor-control">';
-	html += '<label style="display:inline-block;margin-right:14px;"><input type="checkbox" id="submgr_profile_allow_insecure"' + (state.allow_insecure ? ' checked' : '') + '> 允许不安全</label>';
-	html += '<label style="display:inline-block;margin-right:14px;"><input type="checkbox" id="submgr_profile_node_log"' + (state.node_log ? ' checked' : '') + '> 逐节点日志</label>';
-	html += '<label style="display:inline-block;"><input type="checkbox" id="submgr_profile_keep_info_node"' + (state.keep_info_node ? ' checked' : '') + '> 保留信息节点</label>';
+	html += '<div class="shunt-editor-row checkbox-row"><div class="shunt-editor-label">附加选项</div><div class="shunt-editor-control">';
+	html += '<label style="margin-right:14px;"><input type="checkbox" id="submgr_profile_allow_insecure"' + (state.allow_insecure ? ' checked' : '') + '> 允许不安全</label>';
 	html += '</div></div>';
-	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">Hy2 默认</div><div class="shunt-editor-control"><div class="shunt-action-group" style="gap:10px;"><span>上行 <input type="text" id="submgr_profile_hy2_up" value="' + htmlEscape(state.hy2_up) + '" style="width:72px;height:34px;"> mbps</span><span>下行 <input type="text" id="submgr_profile_hy2_dl" value="' + htmlEscape(state.hy2_dl) + '" style="width:72px;height:34px;"> mbps</span></div><div class="shunt-action-group" style="gap:10px;padding-top:8px;"><span>TFO <select id="submgr_profile_hy2_tfo_switch" style="width:140px;">' + render_subscription_select_options([["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]], state.hy2_tfo_switch) + '</select></span><span>拥塞 <select id="submgr_profile_hy2_cg_opt" style="width:140px;">' + render_subscription_select_options(option_hy2_cg && option_hy2_cg.length ? option_hy2_cg : ["bbr", "brutal"], state.hy2_cg_opt) + '</select></span></div></div></div>';
-	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">定时更新</div><div class="shunt-editor-control"><label><input type="checkbox" id="submgr_profile_schedule_enabled" onchange="toggle_subscription_schedule_fields()"' + (state.schedule_enabled ? ' checked' : '') + '> 启用该订阅的独立计划任务</label><div id="submgr_profile_schedule_fields" style="padding-top:10px;"><span style="display:inline-block;margin-right:10px;">周期 <select id="submgr_profile_schedule_day" style="width:120px;">' + render_subscription_select_options([["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["0", "周日"]], state.schedule_day) + '</select></span><span style="display:inline-block;">时间 <select id="submgr_profile_schedule_hour" style="width:120px;">' + render_subscription_select_options(option_nodeh || [["3", "3点"]], state.schedule_hour) + '</select></span></div></div></div>';
-	html += '<div class="shunt-editor-hint">当前先落地 profile 存储和前后端管理骨架；UA 自动探测将等 Zig 下载器接入后再真正启用。</div>';
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">Hy2 默认</div><div class="shunt-editor-control"><div class="submgr-hy2-inline"><span>上行 <input type="text" id="submgr_profile_hy2_up" value="' + htmlEscape(state.hy2_up) + '"> mbps</span><span>下行 <input type="text" id="submgr_profile_hy2_dl" value="' + htmlEscape(state.hy2_dl) + '"> mbps</span><span>TFO <select id="submgr_profile_hy2_tfo_switch">' + render_subscription_select_options([["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]], state.hy2_tfo_switch) + '</select></span><span>拥塞 <select id="submgr_profile_hy2_cg_opt">' + render_subscription_select_options(option_hy2_cg && option_hy2_cg.length ? option_hy2_cg : ["bbr", "brutal"], state.hy2_cg_opt) + '</select></span></div></div></div>';
+	html += '<div class="shunt-editor-row checkbox-row"><div class="shunt-editor-label">定时更新</div><div class="shunt-editor-control submgr-schedule-inline"><label style="margin-right:6px;"><input type="checkbox" id="submgr_profile_schedule_enabled" onchange="toggle_subscription_schedule_fields()"' + (state.schedule_enabled ? ' checked' : '') + '> 启用订阅计划任务</label><div id="submgr_profile_schedule_fields"><span>周期 <select id="submgr_profile_schedule_day">' + render_subscription_select_options([["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["0", "周日"]], state.schedule_day) + '</select></span><span>时间 <select id="submgr_profile_schedule_hour">' + render_subscription_select_options(option_nodeh || [["3", "3点"]], state.schedule_hour) + '</select></span></div></div></div>';
 	html += '</div>';
 	if (subscribeProfileEditorLayerIndex !== null && typeof layer != "undefined" && layer.close) {
 		layer.close(subscribeProfileEditorLayerIndex);
@@ -5223,6 +5311,7 @@ function open_subscription_profile_editor(profileId) {
 		success: function(layero, index) {
 			subscribeProfileEditorLayerIndex = index;
 			layero.attr("data-profile-id", state.id || "");
+			layero.children(".layui-layer-content").css({height: "auto", overflowY: "visible"});
 			toggle_subscription_profile_ua_fields();
 			toggle_subscription_schedule_fields();
 		},
@@ -5266,8 +5355,6 @@ function get_subscription_profile_editor_payload() {
 		exclude: $.trim($("#submgr_profile_exclude").val() || ""),
 		include: $.trim($("#submgr_profile_include").val() || ""),
 		allow_insecure: !!$("#submgr_profile_allow_insecure").prop("checked"),
-		node_log: !!$("#submgr_profile_node_log").prop("checked"),
-		keep_info_node: !!$("#submgr_profile_keep_info_node").prop("checked"),
 		hy2_up: $.trim($("#submgr_profile_hy2_up").val() || ""),
 		hy2_dl: $.trim($("#submgr_profile_hy2_dl").val() || ""),
 		hy2_tfo_switch: String($("#submgr_profile_hy2_tfo_switch").val() || "2"),

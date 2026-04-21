@@ -261,8 +261,6 @@ subprof_build_legacy_payload_json() {
 		--arg exclude "$(dbus get ss_basic_exclude)" \
 		--arg include "$(dbus get ss_basic_include)" \
 		--argjson allow_insecure "$(subprof_boolean_string "$(dbus get ss_basic_sub_ai)")" \
-		--argjson node_log "$(subprof_boolean_string "$(dbus get ss_basic_sub_node_log)")" \
-		--argjson keep_info_node "$(subprof_boolean_string "$(dbus get ss_basic_sub_keep_info_node)")" \
 		--arg hy2_up "$(dbus get ss_basic_hy2_up_speed)" \
 		--arg hy2_dl "$(dbus get ss_basic_hy2_dl_speed)" \
 		--arg hy2_tfo_switch "$(dbus get ss_basic_hy2_tfo_switch)" \
@@ -288,11 +286,11 @@ subprof_build_legacy_payload_json() {
 			filter: {
 				exclude: ($exclude // ""),
 				include: ($include // ""),
-				keep_info_node: $keep_info_node
+				keep_info_node: true
 			},
 			flags: {
 				allow_insecure: $allow_insecure,
-				node_log: $node_log
+				node_log: true
 			},
 			hy2: {
 				up: ($hy2_up // ""),
@@ -359,11 +357,11 @@ subprof_normalize_payload() {
 			filter: {
 				exclude: ((.filter.exclude // .exclude // "") | tostring),
 				include: ((.filter.include // .include // "") | tostring),
-				keep_info_node: (pick3(.filter.keep_info_node; .keep_info_node; false) | to_bool)
+				keep_info_node: true
 			},
 			flags: {
 				allow_insecure: (pick3(.flags.allow_insecure; .allow_insecure; false) | to_bool),
-				node_log: (pick3(.flags.node_log; .node_log; false) | to_bool)
+				node_log: true
 			},
 			hy2: {
 				up: ((.hy2.up // .hy2_up // "") | tostring),
@@ -583,9 +581,9 @@ subprof_merge_profile_and_state() {
 			ua_custom: ($p.ua.custom // ""),
 			exclude: ($p.filter.exclude // ""),
 			include: ($p.filter.include // ""),
-			keep_info_node: (if $p.filter.keep_info_node == null then false else $p.filter.keep_info_node end),
+			keep_info_node: true,
 			allow_insecure: (if $p.flags.allow_insecure == null then false else $p.flags.allow_insecure end),
-			node_log: (if $p.flags.node_log == null then false else $p.flags.node_log end),
+			node_log: true,
 			hy2_up: ($p.hy2.up // ""),
 			hy2_dl: ($p.hy2.dl // ""),
 			hy2_tfo_switch: ($p.hy2.tfo_switch // "2"),
