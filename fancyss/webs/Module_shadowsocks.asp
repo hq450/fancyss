@@ -2471,7 +2471,7 @@ function update_shunt_default_target(nodeId) {
 	if (is_shunt_direct_target(nodeId)) {
 		shuntFallbackNodeId = SHUNT_DIRECT_TARGET;
 	} else {
-		shuntFallbackNodeId = resolve_node_id(nodeId || "", true);
+		shuntFallbackNodeId = sync_shunt_current_node_selection(nodeId || "");
 	}
 	refresh_shunt_ui();
 }
@@ -3642,6 +3642,17 @@ function get_current_node_id() {
 		return resolve_node_id(E("ssconf_basic_node").value);
 	}
 	return get_saved_current_node_id();
+}
+function sync_shunt_current_node_selection(nodeId) {
+	var resolved = resolve_node_id(nodeId || "", true);
+	if (!resolved) {
+		return "";
+	}
+	if (E("ssconf_basic_node")) {
+		E("ssconf_basic_node").value = resolved;
+	}
+	shuntFallbackNodeId = resolved;
+	return resolved;
 }
 function get_failover_node_id() {
 	if (get_node_storage_schema() == 2) {
@@ -6102,6 +6113,7 @@ function save() {
 	var node_type = get_node_type(node_sel);
 	submit_flag="1";
 	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
+		node_sel = sync_shunt_current_node_selection(node_sel) || node_sel;
 		shuntDefaultNodeId = get_shunt_default_node_id();
 		shuntRuntimeNodeId = get_shunt_runtime_node_id();
 		if (is_shunt_direct_target(shuntDefaultNodeId) && !shuntRulesState.length) {
@@ -6306,7 +6318,7 @@ function save() {
 	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
 		if (is_shunt_direct_target(shuntDefaultNodeId)) {
 			dbus["ss_basic_shunt_default_node"] = SHUNT_DIRECT_TARGET;
-		} else if (shuntDefaultNodeId && (String(shuntDefaultNodeId) != String(node_sel) || !is_shunt_supported_node(node_sel))) {
+		} else if (shuntDefaultNodeId) {
 			dbus["ss_basic_shunt_default_node"] = shuntDefaultNodeId;
 			dbus["ss_basic_shunt_default_node_identity"] = get_node_identity(shuntDefaultNodeId);
 		}
@@ -9702,6 +9714,9 @@ function apply_this_ss_node(rowdata) {
 	}else {
 		$activateItem.addClass("activate_icon");
 		$activateItem.removeClass("deactivate_icon");
+		if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
+			enable_id = sync_shunt_current_node_selection(enable_id) || enable_id;
+		}
 		if (get_node_storage_schema() == 2) {
 			dbus["fss_node_current"] = enable_id;
 			dbus["fss_node_current_identity"] = get_node_identity(enable_id) || "";
@@ -10508,6 +10523,7 @@ function consume_webtest_snapshot_payload(payload) {
 	return false;
 }
 function handle_latency_ws_payload(payload) {
+	batch_ws_last_message_at = Date.now();
 	if (consume_webtest_snapshot_payload(payload)) {
 		return;
 	}
@@ -10550,6 +10566,12 @@ function start_latency_ws(action) {
 	batch_ws_watchdog_timer = setInterval(function() {
 		if (!batch_test_running || batch_ws_completed) {
 			return;
+		}
+		if (batch_ws_fallback_started) {
+			return;
+		}
+		if ((Date.now() - batch_ws_last_message_at) >= 3000) {
+			fallback_latency_ws(action);
 		}
 	}, 1500);
 	var ws_opened = false;
