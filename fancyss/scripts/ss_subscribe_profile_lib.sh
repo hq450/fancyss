@@ -4,8 +4,6 @@
 [ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
 [ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
 
-SUB_PROFILE_RUNTIME_JSON="/tmp/upload/ss_subscribe_profiles.json"
-SUB_PROFILE_RUNTIME_DBUS_KEY="ss_subprof_runtime_b64"
 SUB_PROFILE_TMP_PAYLOAD_KEY="ss_subscribe_profile_payload"
 SUB_PROFILE_TMP_ID_KEY="ss_subscribe_profile_id"
 SUB_PROFILE_TMP_SYNC_ID_KEY="ss_subscribe_profile_selected"
@@ -20,29 +18,6 @@ subprof_jq_bin() {
 		return 0
 	fi
 	type jq 2>/dev/null | awk '{print $NF}' | sed -n '1p'
-}
-
-subprof_runtime_json_file() {
-	printf '%s\n' "${SUB_PROFILE_RUNTIME_JSON}"
-}
-
-subprof_runtime_snapshot_set_json() {
-	local json_text="$1"
-	local encoded=""
-	[ -n "${json_text}" ] || {
-		dbus remove "${SUB_PROFILE_RUNTIME_DBUS_KEY}" >/dev/null 2>&1 || true
-		return 1
-	}
-	encoded="$(subprof_b64_encode_compact "${json_text}")" || return 1
-	[ -n "${encoded}" ] || return 1
-	dbus set "${SUB_PROFILE_RUNTIME_DBUS_KEY}=${encoded}" >/dev/null 2>&1 || return 1
-}
-
-subprof_runtime_snapshot_get_json() {
-	local raw_value=""
-	raw_value="$(dbus get "${SUB_PROFILE_RUNTIME_DBUS_KEY}" 2>/dev/null)" || raw_value=""
-	[ -n "${raw_value}" ] || return 1
-	subprof_b64_decode_loose "${raw_value}" 2>/dev/null
 }
 
 subprof_profile_key() {
@@ -119,10 +94,12 @@ subprof_valid_profile_id() {
 subprof_profile_id_exists() {
 	local profile_id="$1"
 	local profile_key=""
+	local raw_value=""
 
 	[ -n "${profile_id}" ] || return 1
 	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
-	dbus get "${profile_key}" >/dev/null 2>&1
+	raw_value="$(dbus get "${profile_key}" 2>/dev/null)" || raw_value=""
+	[ -n "${raw_value}" ]
 }
 
 subprof_random_hex_id() {
@@ -605,40 +582,6 @@ subprof_merge_profile_and_state() {
 	' 2>/dev/null
 }
 
-subprof_write_profiles_runtime_json() {
-	local runtime_json=""
-	local tmp_file=""
-	local profile_id=""
-	local first=1
-	local final_json=""
-
-	runtime_json="$(subprof_runtime_json_file)"
-	tmp_file="${runtime_json}.tmp.$$"
-	{
-		printf '{"version":1,"items":['
-		for profile_id in $(subprof_list_profile_ids)
-		do
-			[ -n "${profile_id}" ] || continue
-			local row=""
-			row="$(subprof_merge_profile_and_state "${profile_id}")" || row=""
-			[ -n "${row}" ] || continue
-			if [ "${first}" = "1" ]; then
-				first=0
-			else
-				printf ','
-			fi
-			printf '%s' "${row}"
-		done
-		printf ']}'
-	} > "${tmp_file}" || {
-		rm -f "${tmp_file}"
-		return 1
-	}
-	mv -f "${tmp_file}" "${runtime_json}"
-	final_json="$(cat "${runtime_json}" 2>/dev/null)" || final_json=""
-	[ -n "${final_json}" ] && subprof_runtime_snapshot_set_json "${final_json}" >/dev/null 2>&1 || true
-}
-
 subprof_collect_enabled_profiles_tsv() {
 	local output_file="$1"
 	local profile_id=""
@@ -783,7 +726,6 @@ subprof_mark_state_success() {
 		}
 	')" || return 1
 	subprof_dbus_set_json_by_key "${state_key}" "${new_state}"
-	subprof_write_profiles_runtime_json >/dev/null 2>&1 || true
 }
 
 subprof_mark_state_failure() {
@@ -828,7 +770,6 @@ subprof_mark_state_failure() {
 		}
 	')" || return 1
 	subprof_dbus_set_json_by_key "${state_key}" "${new_state}"
-	subprof_write_profiles_runtime_json >/dev/null 2>&1 || true
 }
 
 subprof_migrate_legacy_profiles_if_needed() {

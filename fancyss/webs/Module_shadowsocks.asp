@@ -844,9 +844,11 @@ function get_fss_node_data(cb) {
 function refresh_fss_bundle(cb) {
 	get_fss_data(function() {
 		get_fss_node_data(function() {
-			if (typeof cb === "function") {
-				cb(db_fss);
-			}
+			fetch_subscription_profiles_dbus(function() {
+				if (typeof cb === "function") {
+					cb(db_fss);
+				}
+			}, {silent: true});
 		});
 	});
 }
@@ -4531,66 +4533,146 @@ function set_subscription_profiles_state(payload) {
 		}
 	}
 }
+function upsert_subscription_profile_state(item) {
+	var items = subscribeProfilesState.slice();
+	var replaced = false;
+	var i = 0;
+	item = item || {};
+	for (i = 0; i < items.length; i++) {
+		if (String((items[i] || {}).id || "") == String(item.id || "")) {
+			items[i] = item;
+			replaced = true;
+			break;
+		}
+	}
+	if (!replaced) {
+		items.push(item);
+	}
+	set_subscription_profiles_state({version: 1, items: items});
+}
 function subscription_profile_is_enabled(item) {
 	return !item || item.enabled !== false;
 }
-function parse_subscription_profiles_payload_text(text) {
-	text = $.trim(String(text || ""));
-	if (!text) {
-		return {version: 1, items: []};
+function parse_subscription_profile_record(raw) {
+	raw = $.trim(String(raw || ""));
+	if (!raw) {
+		return null;
 	}
 	try {
-		return normalize_subscription_profiles_payload(JSON.parse(text));
+		return JSON.parse(base64_decode_utf8(raw));
 	} catch (e) {}
 	return null;
 }
-function fetch_subscription_profiles_file(cb) {
-	$.ajax({
-		type: "GET",
-		url: "/_temp/ss_subscribe_profiles.json?_=" + new Date().getTime(),
-		dataType: "json",
-		cache: false,
-		success: function(data) {
-			set_subscription_profiles_state(data || {version: 1, items: []});
-			if (typeof cb === "function") {
-				cb(true, subscribeProfilesState);
-			}
-		},
-		error: function() {
-			set_subscription_profiles_state({version: 1, items: []});
-			if (typeof cb === "function") {
-				cb(false, subscribeProfilesState);
-			}
+function count_subscription_profile_nodes(item) {
+	var ids = get_fss_node_ids();
+	var count = 0;
+	var profileId = String((item || {}).id || "");
+	var scope = build_subscription_profile_scope(item);
+	for (var i = 0; i < ids.length; i++) {
+		var raw = get_fss_raw_node(ids[i]);
+		if (!raw || String(raw["_source"] || "") != "subscribe") {
+			continue;
 		}
-	});
+		if (profileId && String(raw["_profile_id"] || "") == profileId) {
+			count++;
+			continue;
+		}
+		if (scope && String(raw["_source_scope"] || "") == scope) {
+			count++;
+		}
+	}
+	return count;
 }
-function fetch_subscription_profiles_dbus(cb) {
+function build_subscription_profile_item(profileId, profileJson, stateJson) {
+	var profile = profileJson || {};
+	var state = stateJson || {};
+	var item = {
+		id: String(profile.id || profileId || ""),
+		name: String(profile.name || ""),
+		url: String(profile.url || ""),
+		enabled: profile.enabled !== false,
+		subscribe_mode: String(profile.subscribe_mode || "2"),
+		download_policy: String(((profile.download || {}).policy) || profile.download_policy || "auto"),
+		ua_mode: String(((profile.ua || {}).mode) || profile.ua_mode || "fixed"),
+		ua_preset: String(((profile.ua || {}).preset) || profile.ua_preset || "default"),
+		ua_custom: String(((profile.ua || {}).custom) || profile.ua_custom || ""),
+		exclude: String(((profile.filter || {}).exclude) || profile.exclude || ""),
+		include: String(((profile.filter || {}).include) || profile.include || ""),
+		keep_info_node: true,
+		allow_insecure: (((profile.flags || {}).allow_insecure) === true) || profile.allow_insecure === true,
+		node_log: true,
+		hy2_up: String(((profile.hy2 || {}).up) || profile.hy2_up || ""),
+		hy2_dl: String(((profile.hy2 || {}).dl) || profile.hy2_dl || ""),
+		hy2_tfo_switch: String(((profile.hy2 || {}).tfo_switch) || profile.hy2_tfo_switch || "2"),
+		hy2_cg_opt: String(((profile.hy2 || {}).cg_opt) || profile.hy2_cg_opt || "bbr"),
+		schedule_enabled: (((profile.schedule || {}).enabled) === true) || profile.schedule_enabled === true,
+		schedule_day: String(((profile.schedule || {}).day) || profile.schedule_day || "7"),
+		schedule_hour: String(((profile.schedule || {}).hour) || profile.schedule_hour || "3"),
+		last_ok_ts: parseInt(state.last_ok_ts || 0, 10) || 0,
+		last_error_ts: parseInt(state.last_error_ts || 0, 10) || 0,
+		last_error: String(state.last_error || ""),
+		last_url_hash: String(state.last_url_hash || ""),
+		last_group: String(state.last_group || ""),
+		last_download_tool: String(state.last_download_tool || ""),
+		last_download_path: String(state.last_download_path || ""),
+		last_ua_mode: String(state.last_ua_mode || ""),
+		last_ua_preset: String(state.last_ua_preset || "")
+	};
+	item.node_count = count_subscription_profile_nodes(item);
+	return item;
+}
+function build_subscription_profiles_payload_from_dbus(result) {
+	var payload = {version: 1, items: []};
+	var ids = [];
+	var seen = {};
+	var key = "";
+	var prefix = "ss_subprof_";
+	var rawIds = $.trim(String((result || {}).ss_subprof_ids || ""));
+	if (rawIds) {
+		ids = rawIds.split(",").map(function(item) {
+			return $.trim(String(item || ""));
+		}).filter(function(item) {
+			return item !== "";
+		});
+	}
+	for (var i = 0; i < ids.length; i++) {
+		seen[ids[i]] = true;
+	}
+	for (key in (result || {})) {
+		if (!result.hasOwnProperty(key)) {
+			continue;
+		}
+		if (key == "ss_subprof_ids" || key.indexOf(prefix) !== 0 || /_state$/.test(key)) {
+			continue;
+		}
+		var profileId = key.substring(prefix.length);
+		if (!profileId || seen[profileId]) {
+			continue;
+		}
+		ids.push(profileId);
+		seen[profileId] = true;
+	}
+	for (var j = 0; j < ids.length; j++) {
+		var currentId = ids[j];
+		var profileJson = parse_subscription_profile_record((result || {})[prefix + currentId]);
+		var stateJson = parse_subscription_profile_record((result || {})[prefix + currentId + "_state"]) || {};
+		if (!profileJson) {
+			continue;
+		}
+		payload.items.push(build_subscription_profile_item(currentId, profileJson, stateJson));
+	}
+	return normalize_subscription_profiles_payload(payload);
+}
+function fetch_subscription_profiles_dbus(cb, options) {
+	options = options || {};
 	$.ajax({
 		type: "GET",
-		url: "/_api/ss_subprof_runtime_b64",
+		url: "/_api/ss_subprof_",
 		dataType: "json",
 		cache: false,
 		success: function(data) {
 			var result = (data && data.result && data.result[0]) ? data.result[0] : {};
-			var raw = $.trim(String((result || {}).ss_subprof_runtime_b64 || ""));
-			var payload = null;
-			if (!raw) {
-				if (typeof cb === "function") {
-					cb(false, subscribeProfilesState);
-				}
-				return;
-			}
-			try {
-				payload = parse_subscription_profiles_payload_text(base64_decode_utf8(raw));
-			} catch (e) {
-				payload = null;
-			}
-			if (!payload) {
-				if (typeof cb === "function") {
-					cb(false, subscribeProfilesState);
-				}
-				return;
-			}
+			var payload = build_subscription_profiles_payload_from_dbus(result);
 			set_subscription_profiles_state(payload);
 			if (typeof cb === "function") {
 				cb(true, subscribeProfilesState);
@@ -4603,93 +4685,6 @@ function fetch_subscription_profiles_dbus(cb) {
 		}
 	});
 }
-function fetch_subscription_profiles_ws(migrateLegacy, cb) {
-	var socket = null;
-	var timer = null;
-	var finished = false;
-	var buffer = "";
-	var command = migrateLegacy
-		? "sh /koolshare/scripts/ss_subscribe_profile.sh migrate_legacy_ws"
-		: "sh /koolshare/scripts/ss_subscribe_profile.sh list_ws";
-	if (ws_flag != 1 || window.location.protocol != "http:") {
-		if (typeof cb === "function") {
-			cb(false, subscribeProfilesState);
-		}
-		return false;
-	}
-	socket = new WebSocket("ws://" + hostname + ":803/");
-	timer = setTimeout(function() {
-		if (finished) {
-			return;
-		}
-		finished = true;
-		try {
-			socket.close();
-		} catch (e) {}
-		if (typeof cb === "function") {
-			cb(false, subscribeProfilesState);
-		}
-	}, 6000);
-	socket.onopen = function() {
-		try {
-			socket.send(command);
-		} catch (e) {
-			clearTimeout(timer);
-			if (!finished) {
-				finished = true;
-				if (typeof cb === "function") {
-					cb(false, subscribeProfilesState);
-				}
-			}
-		}
-	};
-	socket.onerror = function() {
-		clearTimeout(timer);
-		if (!finished) {
-			finished = true;
-			if (typeof cb === "function") {
-				cb(false, subscribeProfilesState);
-			}
-		}
-	};
-	socket.onmessage = function(event) {
-		var marker = "__FSS_SUBPROF_END__";
-		var payload = null;
-		buffer += String(event.data || "");
-		if (buffer.indexOf(marker) == -1) {
-			return;
-		}
-		clearTimeout(timer);
-		if (finished) {
-			return;
-		}
-		finished = true;
-		try {
-			socket.close();
-		} catch (e) {}
-		payload = parse_subscription_profiles_payload_text(buffer.split(marker)[0] || "");
-		if (!payload) {
-			if (typeof cb === "function") {
-				cb(false, subscribeProfilesState);
-			}
-			return;
-		}
-		set_subscription_profiles_state(payload);
-		if (typeof cb === "function") {
-			cb(true, subscribeProfilesState);
-		}
-	};
-	socket.onclose = function() {
-		clearTimeout(timer);
-		if (!finished) {
-			finished = true;
-			if (typeof cb === "function") {
-				cb(false, subscribeProfilesState);
-			}
-		}
-	};
-	return true;
-}
 function call_subscription_profile_api(action, fields, cb) {
 	var id = parseInt(Math.random() * 100000000);
 	$.ajax({
@@ -4701,82 +4696,46 @@ function call_subscription_profile_api(action, fields, cb) {
 		success: function(response) {
 			if (response && String(response.result) == String(id)) {
 				if (typeof cb === "function") {
-					cb(true);
+					cb(true, response.payload || null, null);
 				}
 			} else if (typeof cb === "function") {
-				cb(false);
+				cb(false, null, response && response.error ? response.error : null);
 			}
 		},
 		error: function() {
 			if (typeof cb === "function") {
-				cb(false);
+				cb(false, null, null);
 			}
 		}
 	});
 }
 function load_subscription_profiles_http(cb, allowMigrate) {
-	fetch_subscription_profiles_dbus(function(snapshotOk) {
-		if (snapshotOk && (allowMigrate === false || subscribeProfilesState.length || !E("ss_online_links") || !$.trim(E("ss_online_links").value || "").length)) {
+	fetch_subscription_profiles_dbus(function(ok) {
+		if (ok) {
+			if (allowMigrate !== false && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
+				call_subscription_profile_api("migrate_legacy", {}, function(migrateOk) {
+					fetch_subscription_profiles_dbus(function(refetchOk) {
+						subscribeProfilesLoading = false;
+						if (typeof cb === "function") {
+							cb(!!(migrateOk && refetchOk), subscribeProfilesState);
+						}
+					}, {silent: true});
+				});
+				return;
+			}
 			subscribeProfilesLoading = false;
 			if (typeof cb === "function") {
 				cb(true, subscribeProfilesState);
 			}
 			return;
 		}
-		call_subscription_profile_api("list", {}, function(ok) {
-			fetch_subscription_profiles_dbus(function(fetchOk) {
-				if (!fetchOk) {
-					fetch_subscription_profiles_file(function(fileOk) {
-						if (allowMigrate !== false && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
-							call_subscription_profile_api("migrate_legacy", {}, function() {
-								fetch_subscription_profiles_dbus(function(migrateDbusOk) {
-									if (!migrateDbusOk) {
-										fetch_subscription_profiles_file(function() {
-											subscribeProfilesLoading = false;
-											if (typeof cb === "function") {
-												cb(true, subscribeProfilesState);
-											}
-										});
-										return;
-									}
-									subscribeProfilesLoading = false;
-									if (typeof cb === "function") {
-										cb(true, subscribeProfilesState);
-									}
-								});
-							});
-							return;
-						}
-						subscribeProfilesLoading = false;
-						if (!ok && !fileOk && typeof layer != "undefined" && layer.msg) {
-							layer.msg("读取订阅配置失败");
-						}
-						if (typeof cb === "function") {
-							cb(ok && fileOk, subscribeProfilesState);
-						}
-					});
-					return;
-				}
-				if (allowMigrate !== false && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
-					call_subscription_profile_api("migrate_legacy", {}, function() {
-						fetch_subscription_profiles_dbus(function() {
-							subscribeProfilesLoading = false;
-							if (typeof cb === "function") {
-								cb(true, subscribeProfilesState);
-							}
-						});
-					});
-					return;
-				}
-				subscribeProfilesLoading = false;
-				if (!ok && !fetchOk && typeof layer != "undefined" && layer.msg) {
-					layer.msg("读取订阅配置失败");
-				}
-				if (typeof cb === "function") {
-					cb(ok && fetchOk, subscribeProfilesState);
-				}
-			});
-		});
+		subscribeProfilesLoading = false;
+		if (typeof layer != "undefined" && layer.msg) {
+			layer.msg("读取订阅配置失败");
+		}
+		if (typeof cb === "function") {
+			cb(false, subscribeProfilesState);
+		}
 	});
 }
 function load_subscription_profiles(cb) {
@@ -4784,35 +4743,6 @@ function load_subscription_profiles(cb) {
 		return;
 	}
 	subscribeProfilesLoading = true;
-	if (ws_flag == 1 && window.location.protocol == "http:") {
-		fetch_subscription_profiles_ws(false, function(ok) {
-			if (ok && (!subscribeProfilesState || !subscribeProfilesState.length) && E("ss_online_links") && $.trim(E("ss_online_links").value || "").length > 0) {
-				fetch_subscription_profiles_ws(true, function(migrateOk) {
-					if (!migrateOk) {
-						load_subscription_profiles_http(cb, true);
-						return;
-					}
-					subscribeProfilesLoading = false;
-					if ((!ok && !migrateOk) && typeof layer != "undefined" && layer.msg) {
-						layer.msg("读取订阅配置失败");
-					}
-					if (typeof cb === "function") {
-						cb(migrateOk, subscribeProfilesState);
-					}
-				});
-				return;
-			}
-			if (ok) {
-				subscribeProfilesLoading = false;
-				if (typeof cb === "function") {
-					cb(true, subscribeProfilesState);
-				}
-				return;
-			}
-			load_subscription_profiles_http(cb, true);
-		});
-		return;
-	}
 	load_subscription_profiles_http(cb, true);
 }
 function format_subscription_timestamp(ts) {
@@ -5114,52 +5044,8 @@ function render_subscription_manager() {
 }
 function wait_subscription_profiles_until(checkFn, cb, attempt) {
 	attempt = attempt || 0;
-	if (ws_flag == 1 && window.location.protocol == "http:") {
-		fetch_subscription_profiles_ws(false, function(fetchOk, items) {
-			if (!fetchOk) {
-				fetch_subscription_profiles_dbus(function(fileOk, fileItems) {
-					var fallbackMatched = typeof checkFn === "function" ? !!checkFn(fileItems || []) : !!fileOk;
-					if (!fileOk) {
-						fetch_subscription_profiles_file(function(fileFileOk, fileFileItems) {
-							var fileMatched = typeof checkFn === "function" ? !!checkFn(fileFileItems || []) : !!fileFileOk;
-							if (fileMatched || attempt >= 30) {
-								if (typeof cb === "function") {
-									cb(fileMatched, fileFileItems || []);
-								}
-								return;
-							}
-							setTimeout(function() {
-								wait_subscription_profiles_until(checkFn, cb, attempt + 1);
-							}, 400);
-						});
-						return;
-					}
-					if (fallbackMatched || attempt >= 30) {
-						if (typeof cb === "function") {
-							cb(fallbackMatched, fileItems || []);
-						}
-						return;
-					}
-					setTimeout(function() {
-						wait_subscription_profiles_until(checkFn, cb, attempt + 1);
-					}, 400);
-				});
-				return;
-			}
-			var matched = typeof checkFn === "function" ? !!checkFn(items || []) : !!fetchOk;
-			if (matched || attempt >= 30) {
-				if (typeof cb === "function") {
-					cb(matched, items || []);
-				}
-				return;
-			}
-			setTimeout(function() {
-				wait_subscription_profiles_until(checkFn, cb, attempt + 1);
-			}, 400);
-		});
-		return;
-	}
-	fetch_subscription_profiles_file(function(fetchOk, items) {
+	fetch_subscription_profiles_dbus(function(fetchOk) {
+		var items = subscribeProfilesState;
 		var matched = typeof checkFn === "function" ? !!checkFn(items || []) : !!fetchOk;
 		if (matched || attempt >= 30) {
 			if (typeof cb === "function") {
@@ -5367,6 +5253,59 @@ function get_subscription_profile_editor_payload() {
 function save_subscription_profile_from_editor(syncAfter) {
 	var payload = get_subscription_profile_editor_payload();
 	var duplicated = null;
+	var originalProfile = payload.id ? (subscribeProfileMap[payload.id] || null) : null;
+	var shouldRefreshNodePanel = false;
+	var optimisticProfile = null;
+	var finalize_profile_save = function() {
+		if (payload.id) {
+			optimisticProfile = $.extend({}, originalProfile || {}, payload, {
+				id: payload.id,
+				node_count: parseInt((originalProfile || {}).node_count || 0, 10) || 0,
+				last_ok_ts: (originalProfile || {}).last_ok_ts || 0,
+				last_error_ts: (originalProfile || {}).last_error_ts || 0,
+				last_error: (originalProfile || {}).last_error || "",
+				last_url_hash: (originalProfile || {}).last_url_hash || "",
+				last_group: (originalProfile || {}).last_group || "",
+				last_download_tool: (originalProfile || {}).last_download_tool || "",
+				last_download_path: (originalProfile || {}).last_download_path || "",
+				last_ua_mode: (originalProfile || {}).last_ua_mode || "",
+				last_ua_preset: (originalProfile || {}).last_ua_preset || ""
+			});
+			upsert_subscription_profile_state(optimisticProfile);
+		}
+		if (shouldRefreshNodePanel) {
+			refresh_node_panel();
+		}
+		render_subscription_manager();
+		if (subscribeProfileEditorLayerIndex !== null) {
+			layer.close(subscribeProfileEditorLayerIndex);
+			subscribeProfileEditorLayerIndex = null;
+		}
+		if (typeof layer != "undefined" && layer.msg) {
+			layer.msg("订阅配置已保存");
+		}
+	};
+	var profile_matches_editor_payload = function(item) {
+		item = item || {};
+		return normalize_subscription_profile_url(item.url || "") == normalize_subscription_profile_url(payload.url || "")
+			&& String(item.name || "") == String(payload.name || "")
+			&& subscription_profile_is_enabled(item) === !!payload.enabled
+			&& String(item.subscribe_mode || "") == String(payload.subscribe_mode || "")
+			&& String(item.download_policy || "") == String(payload.download_policy || "")
+			&& String(item.ua_mode || "") == String(payload.ua_mode || "")
+			&& String(item.ua_preset || "") == String(payload.ua_preset || "")
+			&& String(item.ua_custom || "") == String(payload.ua_custom || "")
+			&& String(item.exclude || "") == String(payload.exclude || "")
+			&& String(item.include || "") == String(payload.include || "")
+			&& !!(item.allow_insecure === true) === !!payload.allow_insecure
+			&& String(item.hy2_up || "") == String(payload.hy2_up || "")
+			&& String(item.hy2_dl || "") == String(payload.hy2_dl || "")
+			&& String(item.hy2_tfo_switch || "") == String(payload.hy2_tfo_switch || "")
+			&& String(item.hy2_cg_opt || "") == String(payload.hy2_cg_opt || "")
+			&& !!(item.schedule_enabled === true) === !!payload.schedule_enabled
+			&& String(item.schedule_day || "") == String(payload.schedule_day || "")
+			&& String(item.schedule_hour || "") == String(payload.schedule_hour || "");
+	};
 	if (!payload.name) {
 		alert("请填写订阅别名。");
 		return false;
@@ -5380,10 +5319,15 @@ function save_subscription_profile_from_editor(syncAfter) {
 		alert("检测到相同订阅链接已添加：" + (duplicated.name || duplicated.id || "该订阅"));
 		return false;
 	}
+	shouldRefreshNodePanel = !!originalProfile && subscription_profile_is_enabled(originalProfile) !== !!payload.enabled;
 	call_subscription_profile_api("save", {"ss_subscribe_profile_payload": base64_encode_utf8(JSON.stringify(payload))}, function(ok) {
 		var savedProfile = null;
 		if (!ok) {
 			layer.msg("保存订阅配置失败");
+			return;
+		}
+		if (payload.id) {
+			finalize_profile_save();
 			return;
 		}
 		wait_subscription_profiles_until(function(items) {
@@ -5392,32 +5336,18 @@ function save_subscription_profile_from_editor(syncAfter) {
 				for (i = 0; i < items.length; i++) {
 					if (String((items[i] || {}).id || "") == String(payload.id || "")) {
 						savedProfile = items[i];
-						return normalize_subscription_profile_url(savedProfile.url || "") == normalize_subscription_profile_url(payload.url || "")
-							&& String((savedProfile.name || "")) == String(payload.name || "")
-							&& subscription_profile_is_enabled(savedProfile) === !!payload.enabled
-							&& String(savedProfile.subscribe_mode || "") == String(payload.subscribe_mode || "");
+						return profile_matches_editor_payload(savedProfile);
 					}
 				}
 			}
 			savedProfile = find_subscription_profile_by_url(payload.url, "");
-			return !!savedProfile
-				&& String((savedProfile.name || "")) == String(payload.name || "")
-				&& subscription_profile_is_enabled(savedProfile) === !!payload.enabled
-				&& String(savedProfile.subscribe_mode || "") == String(payload.subscribe_mode || "");
+			return !!savedProfile && profile_matches_editor_payload(savedProfile);
 		}, function(found) {
 			if (!found) {
 				layer.msg("保存订阅配置失败，请刷新页面后重试");
 				return;
 			}
-			refresh_table();
-			render_subscription_manager();
-			if (subscribeProfileEditorLayerIndex !== null) {
-				layer.close(subscribeProfileEditorLayerIndex);
-				subscribeProfileEditorLayerIndex = null;
-			}
-			if (typeof layer != "undefined" && layer.msg) {
-				layer.msg("订阅配置已保存");
-			}
+			finalize_profile_save();
 		});
 	});
 	return false;

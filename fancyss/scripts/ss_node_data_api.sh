@@ -32,6 +32,34 @@ node_data_pick_jq() {
 	command -v jq 2>/dev/null
 }
 
+node_data_write_profiles_json() {
+	local jq_bin="$1"
+	local output_file="$2"
+	local profile_id=""
+	local row=""
+	local first=1
+
+	[ -n "${jq_bin}" ] || return 1
+	[ -n "${output_file}" ] || return 1
+	{
+		printf '{"version":1,"items":['
+		for profile_id in $(subprof_list_profile_ids)
+		do
+			[ -n "${profile_id}" ] || continue
+			row="$(subprof_merge_profile_and_state "${profile_id}" 2>/dev/null)" || row=""
+			[ -n "${row}" ] || continue
+			if [ "${first}" = "1" ]; then
+				first=0
+			else
+				printf ','
+			fi
+			printf '%s' "${row}"
+		done
+		printf ']}'
+	} > "${output_file}" || return 1
+	"${jq_bin}" -c '.' "${output_file}" >/dev/null 2>&1 || return 1
+}
+
 node_data_write_summary() {
 	local node_tool=""
 	local jq_bin=""
@@ -42,6 +70,7 @@ node_data_write_summary() {
 	local airport_identity=""
 	local list_file="${NODE_SUMMARY_FILE}.list.$$"
 	local stat_file="${NODE_SUMMARY_FILE}.stat.$$"
+	local profiles_file="${NODE_SUMMARY_FILE}.profiles.$$"
 	local output_tmp="${NODE_SUMMARY_FILE}.tmp.$$"
 	local generated_at=""
 
@@ -80,13 +109,19 @@ node_data_write_summary() {
 	[ -n "${source_tag}" ] && set -- "$@" --source-tag "${source_tag}"
 	[ -n "${airport_identity}" ] && set -- "$@" --airport-identity "${airport_identity}"
 	"${node_tool}" "$@" > "${stat_file}" 2>/dev/null || {
-		rm -f "${list_file}" "${stat_file}" "${output_tmp}"
+		rm -f "${list_file}" "${stat_file}" "${profiles_file}" "${output_tmp}"
 		node_data_log "node-tool stat 生成节点摘要失败。"
 		return 1
 	}
 
+	node_data_write_profiles_json "${jq_bin}" "${profiles_file}" || {
+		rm -f "${list_file}" "${stat_file}" "${profiles_file}" "${output_tmp}"
+		node_data_log "订阅配置快照生成失败。"
+		return 1
+	}
+
 	"${jq_bin}" -cn \
-		--slurpfile profiles "$(subprof_runtime_json_file 2>/dev/null || echo /tmp/upload/ss_subscribe_profiles.json)" \
+		--slurpfile profiles "${profiles_file}" \
 		--argjson generated_at "${generated_at}" \
 		--argjson items "$("${jq_bin}" -c '.' "${list_file}")" \
 		--argjson stat "$("${jq_bin}" -c '.' "${stat_file}")" \
@@ -153,13 +188,13 @@ node_data_write_summary() {
 			stat: $stat
 		}
 		' > "${output_tmp}" 2>/dev/null || {
-		rm -f "${list_file}" "${stat_file}" "${output_tmp}"
+		rm -f "${list_file}" "${stat_file}" "${profiles_file}" "${output_tmp}"
 		node_data_log "节点摘要 JSON 封装失败。"
 		return 1
 	}
 
 	mv -f "${output_tmp}" "${NODE_SUMMARY_FILE}"
-	rm -f "${list_file}" "${stat_file}"
+	rm -f "${list_file}" "${stat_file}" "${profiles_file}"
 	node_data_log "节点摘要已刷新：${NODE_SUMMARY_FILE}"
 	return 0
 }

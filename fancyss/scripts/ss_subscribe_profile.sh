@@ -17,48 +17,6 @@ profile_cleanup_tmp_keys() {
 	dbus remove "${SUB_PROFILE_TMP_SYNC_ID_KEY}" >/dev/null 2>&1 || true
 }
 
-profile_write_list() {
-	if subprof_write_profiles_runtime_json; then
-		profile_log "订阅配置清单已刷新。"
-	else
-		profile_log "生成订阅配置清单失败。"
-		return 1
-	fi
-}
-
-profile_emit_runtime_json_stdout() {
-	local runtime_json=""
-	local runtime_file=""
-	runtime_json="$(subprof_runtime_snapshot_get_json 2>/dev/null)" || runtime_json=""
-	if [ -n "${runtime_json}" ]; then
-		printf '%s' "${runtime_json}"
-	else
-		runtime_file="$(subprof_runtime_json_file 2>/dev/null)" || runtime_file=""
-		if [ -n "${runtime_file}" ] && [ -s "${runtime_file}" ]; then
-			cat "${runtime_file}" 2>/dev/null
-		else
-			echo '{"version":1,"items":[]}'
-		fi
-	fi
-	echo "__FSS_SUBPROF_END__"
-}
-
-profile_runtime_snapshot_ready() {
-	local runtime_json=""
-	local runtime_file=""
-	runtime_json="$(subprof_runtime_snapshot_get_json 2>/dev/null)" || runtime_json=""
-	[ -n "${runtime_json}" ] && return 0
-	runtime_file="$(subprof_runtime_json_file 2>/dev/null)" || runtime_file=""
-	[ -n "${runtime_file}" ] && [ -s "${runtime_file}" ]
-}
-
-profile_ensure_runtime_snapshot() {
-	if profile_runtime_snapshot_ready; then
-		return 0
-	fi
-	profile_write_list >/dev/null 2>&1
-}
-
 profile_lookup_airport_label_by_domain() {
 	local domain_name="$1"
 	[ -n "${domain_name}" ] || return 1
@@ -199,7 +157,6 @@ profile_save() {
 	fi
 	subprof_rebuild_cron_jobs >/dev/null 2>&1 || true
 	profile_log "订阅配置已保存：${profile_id}"
-	profile_write_list || return 1
 	return 0
 }
 
@@ -217,7 +174,6 @@ profile_delete() {
 	fi
 	subprof_rebuild_cron_jobs >/dev/null 2>&1 || true
 	profile_log "已删除订阅配置：${profile_id}"
-	profile_write_list || return 1
 	return 0
 }
 
@@ -230,19 +186,6 @@ profile_migrate_legacy() {
 	else
 		profile_log "未检测到需要迁移的旧版订阅地址。"
 	fi
-	profile_write_list || return 1
-	return 0
-}
-
-profile_ws_list() {
-	profile_ensure_runtime_snapshot || true
-	profile_emit_runtime_json_stdout
-	return 0
-}
-
-profile_ws_migrate_legacy() {
-	profile_migrate_legacy >/dev/null 2>&1 || true
-	profile_emit_runtime_json_stdout
 	return 0
 }
 
@@ -255,43 +198,42 @@ elif [ -n "$2" -a -n "$1" ]; then
 	ACTION="$2"
 	WEB_ACTION=1
 fi
-[ -z "${ACTION}" ] && ACTION="list"
 
 case "${ACTION}" in
-list)
-	true > "${LOG_FILE}"
-	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
-	profile_write_list >> "${LOG_FILE}" 2>&1
-	echo XU6J03M6 >> "${LOG_FILE}"
-	profile_cleanup_tmp_keys
-	;;
 save)
 	true > "${LOG_FILE}"
 	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
-	profile_save >> "${LOG_FILE}" 2>&1
-	echo XU6J03M6 >> "${LOG_FILE}"
+	if profile_save >> "${LOG_FILE}" 2>&1; then
+		echo XU6J03M6 >> "${LOG_FILE}"
+	else
+		echo XU6J03M6 >> "${LOG_FILE}"
+		profile_cleanup_tmp_keys
+		exit 1
+	fi
 	profile_cleanup_tmp_keys
 	;;
 delete)
 	true > "${LOG_FILE}"
 	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
-	profile_delete >> "${LOG_FILE}" 2>&1
-	echo XU6J03M6 >> "${LOG_FILE}"
+	if profile_delete >> "${LOG_FILE}" 2>&1; then
+		echo XU6J03M6 >> "${LOG_FILE}"
+	else
+		echo XU6J03M6 >> "${LOG_FILE}"
+		profile_cleanup_tmp_keys
+		exit 1
+	fi
 	profile_cleanup_tmp_keys
 	;;
 migrate_legacy)
 	true > "${LOG_FILE}"
 	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
-	profile_migrate_legacy >> "${LOG_FILE}" 2>&1
-	echo XU6J03M6 >> "${LOG_FILE}"
-	profile_cleanup_tmp_keys
-	;;
-list_ws)
-	profile_ws_list
-	profile_cleanup_tmp_keys
-	;;
-migrate_legacy_ws)
-	profile_ws_migrate_legacy
+	if profile_migrate_legacy >> "${LOG_FILE}" 2>&1; then
+		echo XU6J03M6 >> "${LOG_FILE}"
+	else
+		echo XU6J03M6 >> "${LOG_FILE}"
+		profile_cleanup_tmp_keys
+		exit 1
+	fi
 	profile_cleanup_tmp_keys
 	;;
 *)
