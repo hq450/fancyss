@@ -9,7 +9,8 @@ export PATH=${NEW_PATH}
 LC_ALL=C
 LANG=C
 LOCK_FILE=/var/lock/node_subscribe.lock
-LOG_FILE=/tmp/upload/ss_log.txt
+LOG_FILE=/tmp/upload/ss_subscribe_log.txt
+mkdir -p /tmp/upload >/dev/null 2>&1
 DIR="/tmp/fancyss_subs"
 LOCAL_NODES_SPL="$DIR/ss_nodes_spl.txt"
 LOCAL_NODES_BAK="$DIR/ss_nodes_bak.txt"
@@ -251,7 +252,7 @@ sub_collect_active_link_hashes_from_profiles_file() {
 
 sub_prepare_enabled_profiles_file() {
 	local output_file="$1"
-	local selected_id="$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})"
+	local selected_id="${SUB_SELECTED_PROFILE_ID:-$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})}"
 	local tmp_file=""
 
 	[ -n "${output_file}" ] || return 1
@@ -4197,6 +4198,14 @@ sub_refresh_node_state
 
 set_lock(){
 	exec 233>"${LOCK_FILE}"
+	if [ "${FSS_SUBSCRIBE_LOCK_WAIT}" = "1" ]; then
+		if ! flock -n 233; then
+			echo_date "检测到订阅脚本已经在运行，等待当前任务完成..."
+			flock 233
+			echo_date "订阅锁已释放，继续执行当前订阅任务。"
+		fi
+		return 0
+	fi
 	flock -n 233 || {
 		local PID1=$$
 		local PID2=$(ps|grep -w "ss_node_subscribe.sh"|grep -vw "grep"|grep -vw ${PID1})
@@ -7299,7 +7308,7 @@ start_node_subscribe(){
 	# 0. var define
 	sub_refresh_node_state
 	sub_reset_active_profile_context
-	selected_profile_id="$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})"
+	selected_profile_id="${SUB_SELECTED_PROFILE_ID:-$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})}"
 	SUB_SINGLE_PROFILE_SYNC=0
 	profiles_file="${DIR}/active_profiles.tsv"
 	enabled_profile_count="$(subprof_enabled_profile_count 2>/dev/null)"
@@ -7608,11 +7617,17 @@ start_offline_update() {
 	echo_date "==================================================================="
 }
 
-if [ -z "$2" -a -n "$1" ];then
+SUB_SELECTED_PROFILE_ID=""
+if [ "$1" = "3" ] && [ -n "$2" ]; then
+	SUB_SELECTED_PROFILE_ID="$2"
+	SH_ARG="$1"
+	WEB_ACTION=0
+elif [ -z "$2" -a -n "$1" ];then
 	SH_ARG=$1
 	WEB_ACTION=0
 elif [ -n "$2" -a -n "$1" ];then
 	SH_ARG=$2
+	[ "$2" = "3" ] && [ -n "$3" ] && SUB_SELECTED_PROFILE_ID="$3"
 	WEB_ACTION=1
 fi
 
@@ -7667,7 +7682,7 @@ case $SH_ARG in
 	true > $LOG_FILE
 	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	start_node_subscribe | tee -a $LOG_FILE
-	dbus remove ${SUB_PROFILE_TMP_SYNC_ID_KEY} >/dev/null 2>&1 || true
+	[ -z "${SUB_SELECTED_PROFILE_ID}" ] && dbus remove ${SUB_PROFILE_TMP_SYNC_ID_KEY} >/dev/null 2>&1 || true
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
 	;;

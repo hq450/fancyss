@@ -202,8 +202,8 @@ fi
 case "${ACTION}" in
 save)
 	true > "${LOG_FILE}"
-	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 	if profile_save >> "${LOG_FILE}" 2>&1; then
+		[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 		echo XU6J03M6 >> "${LOG_FILE}"
 	else
 		echo XU6J03M6 >> "${LOG_FILE}"
@@ -214,8 +214,8 @@ save)
 	;;
 delete)
 	true > "${LOG_FILE}"
-	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 	if profile_delete >> "${LOG_FILE}" 2>&1; then
+		[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 		echo XU6J03M6 >> "${LOG_FILE}"
 	else
 		echo XU6J03M6 >> "${LOG_FILE}"
@@ -226,8 +226,8 @@ delete)
 	;;
 migrate_legacy)
 	true > "${LOG_FILE}"
-	[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 	if profile_migrate_legacy >> "${LOG_FILE}" 2>&1; then
+		[ "${WEB_ACTION}" = "1" ] && http_response "$1"
 		echo XU6J03M6 >> "${LOG_FILE}"
 	else
 		echo XU6J03M6 >> "${LOG_FILE}"

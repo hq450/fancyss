@@ -99,6 +99,10 @@
 	90%{opacity:1;}
 	100%{left:calc(100% - 24px);opacity:0;}
 }
+@keyframes submgr_saving_spin{
+	0%{transform:rotate(0deg);}
+	100%{transform:rotate(360deg);}
+}
 .shunt-flow-panel{position:relative;min-width:0;border:1px solid rgba(255,255,255,0.08);border-radius:8px;background:rgba(10,16,24,0.45);padding:6px 7px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02);transition:all .2s ease;display:flex;flex-direction:column;justify-content:center;z-index:2;}
 .shunt-flow-panel--source{border-color:rgba(110,168,254,0.22);flex:0 1 42%;max-width:380px;}
 .shunt-flow-panel--target{border-color:rgba(242,153,74,0.22);flex:0 1 42%;max-width:380px;}
@@ -153,6 +157,9 @@
 .shunt-fallback-target select,.shunt-fallback-target .input_option{width:100%;max-width:100%;height:34px;border-radius:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);padding-left:10px;color:#fff;}
 .shunt-layer-tip{max-width:320px;line-height:1.8;color:#f2f6fb;font-size:12px;}
 .shunt-editor{padding:18px 22px 4px;color:#fff;}
+.submgr-editor-saving-mask{position:absolute;inset:43px 0 0;display:flex;align-items:center;justify-content:center;background:rgba(9,9,9,0.72);backdrop-filter:blur(2px);z-index:20;border-radius:0 0 10px 10px;}
+.submgr-editor-saving-box{display:flex;align-items:center;gap:12px;padding:13px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:linear-gradient(180deg,rgba(24,32,44,0.96),rgba(12,16,22,0.96));box-shadow:0 18px 38px rgba(0,0,0,0.36);color:#edf4fb;font-size:13px;font-weight:600;letter-spacing:0.2px;}
+.submgr-editor-saving-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.18);border-top-color:#37b4ff;animation:submgr_saving_spin .8s linear infinite;}
 .shunt-editor-shell{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start;}
 .shunt-editor-main,.shunt-editor-side{min-width:0;max-width:none;}
 .shunt-editor-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:7px;}
@@ -165,9 +172,11 @@
 .submgr-hy2-inline > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
 .submgr-hy2-inline input[type='text']{width:50px !important;height:34px;}
 .submgr-hy2-inline select{width:110px !important;height:34px;}
-.submgr-schedule-inline{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
-.submgr-schedule-inline > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
-.submgr-schedule-inline select{width:110px !important;height:34px;}
+.submgr-schedule-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.submgr-schedule-inline > span,.submgr-schedule-inline > label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.submgr-schedule-inline select{width:86px !important;height:34px;}
+.submgr-schedule-inline input[type='text']{width:86px !important;height:34px;}
+.submgr-schedule-fields{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .shunt-editor-control textarea,.shunt-editor-control input[type='text'],.shunt-editor-control select{box-sizing:border-box;width:100%;max-width:100%;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:5px 8px;height:36px;transition:all .18s ease;font-size:13px;}
 .shunt-editor-control textarea:focus,.shunt-editor-control input[type='text']:focus,.shunt-editor-control select:focus{outline:none;border-color:#3b82f6;background:rgba(0,0,0,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 .shunt-editor-control textarea.is-overlimit,.shunt-editor-control input[type='text'].is-overlimit{border-color:#ef4444;background:rgba(84,19,19,0.38);box-shadow:0 0 0 3px rgba(239,68,68,0.14);}
@@ -211,10 +220,20 @@ body .shunt-editor-layer .layui-layer-title{background:rgba(255,255,255,0.02) !i
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn0{background:#2563eb !important;border-color:#2563eb !important;font-weight:600 !important;letter-spacing:0.5px;}
 body .shunt-editor-layer .layui-layer-btn .layui-layer-btn1{background:rgba(255,255,255,0.05) !important;border-color:rgba(255,255,255,0.1) !important;color:#e2e8f0 !important;}
 body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
+.submgr-log-shell{padding:14px 16px 12px;color:#fff;background:#090909;}
+.submgr-log-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;color:#9fb6d1;font-size:12px;line-height:1.5;}
+.submgr-log-title{font-weight:700;color:#f3f7fb;}
+.submgr-log-status{color:#8fa4ba;}
+.submgr-log-textarea{box-sizing:border-box;width:100%;height:460px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.38);color:#e5edf7;padding:12px 14px;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;font-size:11px;line-height:1.55;outline:none;resize:none;white-space:pre-wrap;}
+.submgr-log-textarea::-webkit-scrollbar{width:8px;height:8px;}
+.submgr-log-textarea::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
+.submgr-log-textarea::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
+.submgr-log-textarea{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
+.submgr-log-layer .layui-layer-content{background:#090909 !important;height:515px !important;}
 .submgr-entry{padding:6px 0;color:#dbe7f3;}
 .submgr-entry-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.submgr-shell{padding:18px 20px 10px;color:#fff;min-height:360px;max-height:560px;overflow:visible;}
-.submgr-tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.submgr-shell{padding:14px 20px 6px;color:#fff;min-height:0;max-height:560px;overflow:visible;}
+.submgr-tabs{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
 .submgr-tab{display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:34px;padding:0 16px;border-radius:5px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#cfe0f1;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;}
 .submgr-tab.active{background:linear-gradient(135deg,#2563eb,#37b4ff);border-color:rgba(70,160,255,0.48);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,0.24);}
 .submgr-toolbar{display:flex;justify-content:flex-start;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
@@ -227,8 +246,13 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .submgr-card-list{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
 .submgr-card{position:relative;padding:14px 14px 12px;border:1px solid rgba(69,93,120,0.28);border-radius:12px;background:linear-gradient(180deg,rgba(24,32,44,0.97),rgba(16,22,30,0.95));box-shadow:0 12px 24px rgba(0,0,0,0.16),inset 0 1px 0 rgba(255,255,255,0.03);cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
 .submgr-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 16px 28px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
-.submgr-card.is-disabled{border-color:rgba(242,153,74,0.3);background:linear-gradient(180deg,rgba(44,32,22,0.97),rgba(28,22,16,0.95));}
-.submgr-card.is-disabled:hover{border-color:rgba(242,153,74,0.42);}
+.submgr-card.is-disabled{border-color:rgba(138,148,163,0.28);background:linear-gradient(180deg,rgba(38,42,48,0.97),rgba(24,28,34,0.95));box-shadow:0 12px 24px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.02);}
+.submgr-card.is-disabled:hover{border-color:rgba(160,170,184,0.36);box-shadow:0 14px 26px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.03);}
+.submgr-card.is-disabled .submgr-card-title{color:#d7dde6;}
+.submgr-card.is-disabled .submgr-card-subtitle{color:#98a3b3;}
+.submgr-card.is-disabled .submgr-chip{background:rgba(148,163,184,0.08);color:#d7dde6;border-color:rgba(148,163,184,0.12);}
+.submgr-card.is-disabled .submgr-chip-label{color:#a6b0bf;}
+.submgr-card.is-disabled .submgr-chip.warn,.submgr-card.is-disabled .submgr-chip.ok{background:rgba(148,163,184,0.08);color:#d7dde6;border-color:rgba(148,163,184,0.12);}
 .submgr-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-right:28px;}
 .submgr-card-delete{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:14px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.84);box-shadow:0 8px 16px rgba(159,38,38,0.3);transition:all .2s cubic-bezier(0.34,1.56,0.64,1);z-index:3;}
 .submgr-card:hover .submgr-card-delete,.submgr-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
@@ -362,6 +386,13 @@ body[skin="ROG"] .submgr-card {
 body[skin="ROG"] .submgr-card:hover {
 	border-color: rgba(255,70,70,0.42);
 }
+body[skin="ROG"] .submgr-card.is-disabled {
+	border-color: rgba(138,148,163,0.3);
+	background: linear-gradient(180deg,rgba(44,46,52,0.96),rgba(26,28,32,0.95));
+}
+body[skin="ROG"] .submgr-card.is-disabled:hover {
+	border-color: rgba(170,180,194,0.38);
+}
 body[skin="ROG"] .shunt-editor-control textarea,
 body[skin="ROG"] .shunt-editor-control input[type='text'],
 body[skin="ROG"] .shunt-editor-control select{
@@ -407,6 +438,13 @@ body[skin="ASUSWRT"] .submgr-card {
 }
 body[skin="ASUSWRT"] .submgr-card:hover {
 	border-color: rgba(59,130,246,0.42);
+}
+body[skin="ASUSWRT"] .submgr-card.is-disabled {
+	border-color: rgba(138,148,163,0.3);
+	background: linear-gradient(180deg,rgba(44,48,56,0.96),rgba(26,30,36,0.95));
+}
+body[skin="ASUSWRT"] .submgr-card.is-disabled:hover {
+	border-color: rgba(170,180,194,0.38);
 }
 body[skin="ASUSWRT"] .shunt-editor-control textarea,
 body[skin="ASUSWRT"] .shunt-editor-control input[type='text'],
@@ -458,6 +496,13 @@ body[skin="TUF"] .submgr-card {
 }
 body[skin="TUF"] .submgr-card:hover {
 	border-color: rgba(251,146,60,0.42);
+}
+body[skin="TUF"] .submgr-card.is-disabled {
+	border-color: rgba(138,148,163,0.3);
+	background: linear-gradient(180deg,rgba(48,44,40,0.96),rgba(30,28,24,0.95));
+}
+body[skin="TUF"] .submgr-card.is-disabled:hover {
+	border-color: rgba(170,180,194,0.38);
 }
 body[skin="TUF"] .shunt-editor-control textarea,
 body[skin="TUF"] .shunt-editor-control input[type='text'],
@@ -521,6 +566,13 @@ body[skin="TS"] .shunt-editor-control select:focus{
 }
 body[skin="TS"] .submgr-card:hover {
 	border-color: rgba(34,211,238,0.42);
+}
+body[skin="TS"] .submgr-card.is-disabled {
+	border-color: rgba(138,148,163,0.3);
+	background: linear-gradient(180deg,rgba(42,48,50,0.96),rgba(26,30,32,0.95));
+}
+body[skin="TS"] .submgr-card.is-disabled:hover {
+	border-color: rgba(170,180,194,0.38);
 }
 body[skin="TS"] .shunt-summary-card {
 	border-color: rgba(70,120,120,0.28);
@@ -723,6 +775,10 @@ var subscribeManagerLayerIndex = null;
 var subscribeProfileEditorLayerIndex = null;
 var subscribeManagerActiveTab = "profiles";
 var subscribeProfilesLoading = false;
+var subscribeLogLayerIndex = null;
+var subscribeLogWs = null;
+var subscribeLogWsFallbackTimer = null;
+var subscribeLogRefreshNodesAfterDone = false;
 var SHUNT_STATS_REFRESH_INTERVAL = 6000;
 var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
@@ -4518,7 +4574,7 @@ function set_subscription_profiles_state(payload) {
 		if (typeof item.enabled == "undefined" || item.enabled === null) {
 			item.enabled = true;
 		}
-		item.schedule_enabled = item.schedule_enabled === true;
+		item.schedule_enabled = item.schedule_enabled !== false;
 		item.node_count = parseInt(item.node_count, 10);
 		if (isNaN(item.node_count) || item.node_count < 0) {
 			item.node_count = 0;
@@ -4605,9 +4661,15 @@ function build_subscription_profile_item(profileId, profileJson, stateJson) {
 		hy2_dl: String(((profile.hy2 || {}).dl) || profile.hy2_dl || ""),
 		hy2_tfo_switch: String(((profile.hy2 || {}).tfo_switch) || profile.hy2_tfo_switch || "2"),
 		hy2_cg_opt: String(((profile.hy2 || {}).cg_opt) || profile.hy2_cg_opt || "bbr"),
-		schedule_enabled: (((profile.schedule || {}).enabled) === true) || profile.schedule_enabled === true,
+		schedule_enabled: (((profile.schedule || {}).enabled) !== false) && profile.schedule_enabled !== false,
+		schedule_type: String(((profile.schedule || {}).type) || profile.schedule_type || "1"),
+		schedule_week: String(((profile.schedule || {}).week) || profile.schedule_week || "1"),
 		schedule_day: String(((profile.schedule || {}).day) || profile.schedule_day || "7"),
 		schedule_hour: String(((profile.schedule || {}).hour) || profile.schedule_hour || "3"),
+		schedule_minute: String(((profile.schedule || {}).minute) || profile.schedule_minute || "5"),
+		schedule_interval_value: String(((profile.schedule || {}).interval_value) || profile.schedule_interval_value || "1"),
+		schedule_interval_unit: String(((profile.schedule || {}).interval_unit) || profile.schedule_interval_unit || "2"),
+		schedule_custom_hours: String(((profile.schedule || {}).custom_hours) || profile.schedule_custom_hours || ""),
 		last_ok_ts: parseInt(state.last_ok_ts || 0, 10) || 0,
 		last_error_ts: parseInt(state.last_error_ts || 0, 10) || 0,
 		last_error: String(state.last_error || ""),
@@ -4837,10 +4899,34 @@ function normalize_subscription_select_pairs(options) {
 	}
 	return out;
 }
-function get_subscription_schedule_label(day, hour) {
-	var dayTextMap = {"7": "每天", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六", "0": "周日"};
-	var dayText = dayTextMap[String(day || "7")] || ("周" + String(day || ""));
-	return dayText + " " + String(hour || "3") + "点";
+function get_subscription_schedule_label(itemOrDay, hour) {
+	var item = (itemOrDay && typeof itemOrDay == "object") ? itemOrDay : {schedule_day: itemOrDay, schedule_hour: hour};
+	var type = String(item.schedule_type || "1");
+	var minute = String(item.schedule_minute || "5");
+	var hourText = String(item.schedule_hour || "3");
+	var weekTextMap = {"1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六", "7": "周日", "0": "周日"};
+	if (type == "2") {
+		return (weekTextMap[String(item.schedule_week || "1")] || "周一") + " " + hourText + ":" + minute.padStart(2, "0");
+	}
+	if (type == "3") {
+		return "每月" + String(item.schedule_day || "1") + "日 " + hourText + ":" + minute.padStart(2, "0");
+	}
+	if (type == "4") {
+		var unitMap = {"1": "分钟", "2": "小时", "3": "天"};
+		var unit = String(item.schedule_interval_unit || "2");
+		var base = "每隔" + String(item.schedule_interval_value || "1") + (unitMap[unit] || "小时");
+		if (unit == "2") {
+			return base + " " + minute.padStart(2, "0") + "分";
+		}
+		if (unit == "3") {
+			return base + " " + hourText + ":" + minute.padStart(2, "0");
+		}
+		return base;
+	}
+	if (type == "5") {
+		return "每天 " + String(item.schedule_custom_hours || hourText) + "点" + minute.padStart(2, "0") + "分";
+	}
+	return "每天 " + hourText + ":" + minute.padStart(2, "0");
 }
 function render_subscription_profiles_cards() {
 	if (!subscribeProfilesState.length) {
@@ -4853,7 +4939,7 @@ function render_subscription_profiles_cards() {
 		var host = get_subscription_profile_host(item.url || "");
 		var lastStatus = format_subscription_last_result(item);
 		var lastClass = item.last_error ? "warn" : (Number(item.last_ok_ts || 0) > 0 ? "ok" : "");
-		var scheduleText = item.schedule_enabled ? get_subscription_schedule_label(item.schedule_day, item.schedule_hour) : "未启用";
+		var scheduleText = item.schedule_enabled ? get_subscription_schedule_label(item) : "未启用";
 		var nodeCountText = String(item.node_count || "0");
 		html += '<div class="submgr-card' + (enabled ? '' : ' is-disabled') + '" onclick="open_subscription_profile_editor(\'' + htmlEscape(String(item.id || "")) + '\')" title="点击编辑订阅">';
 		html += '<a href="javascript:void(0);" class="submgr-card-delete" onclick="event.stopPropagation();delete_subscription_profile(\'' + htmlEscape(String(item.id || "")) + '\');return false;" title="删除订阅">&times;</a>';
@@ -4894,6 +4980,18 @@ function adjust_subscription_manager_layer_height() {
 	var layerContent = layero.children(".layui-layer-content").first();
 	var layerTitle = layero.children(".layui-layer-title").first();
 	var layerBtn = layero.children(".layui-layer-btn").first();
+	var center_layer = function(totalHeight) {
+		var viewportH = $(window).height();
+		var viewportW = $(window).width();
+		var layerW = layero.outerWidth() || parseInt(layero.css("width"), 10) || 920;
+		var top = Math.max(20, Math.round((viewportH - totalHeight) / 2));
+		var left = Math.max(0, Math.round((viewportW - layerW) / 2));
+		layer.style(subscribeManagerLayerIndex, {
+			height: Math.ceil(totalHeight) + "px",
+			top: top + "px",
+			left: left + "px"
+		});
+	};
 	if (!shell.length) {
 		return;
 	}
@@ -4905,14 +5003,12 @@ function adjust_subscription_manager_layer_height() {
 				overflowY: "hidden"
 			});
 		}
-		layer.style(subscribeManagerLayerIndex, {
-			height: Math.ceil(
-				(root.outerHeight() || shell.outerHeight())
-				+ (layerTitle.outerHeight() || 0)
-				+ (layerBtn.outerHeight() || 0)
-				+ 4
-			) + "px"
-		});
+		center_layer(
+			(root.outerHeight() || shell.outerHeight())
+			+ (layerTitle.outerHeight() || 0)
+			+ (layerBtn.outerHeight() || 0)
+			+ 4
+		);
 		return;
 	}
 	var cardList = shell.find(".submgr-card-list").first();
@@ -4926,14 +5022,12 @@ function adjust_subscription_manager_layer_height() {
 				overflowY: "hidden"
 			});
 		}
-		layer.style(subscribeManagerLayerIndex, {
-			height: Math.ceil(
-				(root.outerHeight() || shell.outerHeight())
-				+ (layerTitle.outerHeight() || 0)
-				+ (layerBtn.outerHeight() || 0)
-				+ 4
-			) + "px"
-		});
+		center_layer(
+			(root.outerHeight() || shell.outerHeight())
+			+ (layerTitle.outerHeight() || 0)
+			+ (layerBtn.outerHeight() || 0)
+			+ 4
+		);
 		return;
 	}
 	var maxCards = Math.min(4, cards.length);
@@ -4966,9 +5060,10 @@ function adjust_subscription_manager_layer_height() {
 		cardsHeight += rowGap * (Math.min(rowHeights.length, visibleRows) - 1);
 	}
 	var hasScroll = cards.length > 4;
+	var listExtra = hasScroll ? 12 : 3;
 	cardList.css({
-		height: Math.ceil(cardsHeight + (hasScroll ? 12 : 6)) + "px",
-		maxHeight: Math.ceil(cardsHeight + (hasScroll ? 12 : 6)) + "px",
+		height: Math.ceil(cardsHeight + listExtra) + "px",
+		maxHeight: Math.ceil(cardsHeight + listExtra) + "px",
 		overflowX: "hidden",
 		overflowY: hasScroll ? "auto" : "hidden",
 		paddingRight: hasScroll ? "4px" : "0"
@@ -4985,14 +5080,12 @@ function adjust_subscription_manager_layer_height() {
 			overflowY: "hidden"
 		});
 	}
-	layer.style(subscribeManagerLayerIndex, {
-		height: Math.ceil(
-			(root.outerHeight() || shell.outerHeight())
-			+ (layerTitle.outerHeight() || 0)
-			+ (layerBtn.outerHeight() || 0)
-			+ 4
-		) + "px"
-	});
+	center_layer(
+		(root.outerHeight() || shell.outerHeight())
+		+ (layerTitle.outerHeight() || 0)
+		+ (layerBtn.outerHeight() || 0)
+		+ 4
+	);
 }
 function render_subscription_manager_body() {
 	var html = '<div class="submgr-shell">';
@@ -5128,9 +5221,15 @@ function build_subscription_profile_editor_defaults(profile) {
 		hy2_dl: profile.hy2_dl || "",
 		hy2_tfo_switch: String(profile.hy2_tfo_switch || "2"),
 		hy2_cg_opt: String(profile.hy2_cg_opt || "bbr"),
-		schedule_enabled: profile.schedule_enabled === true,
+		schedule_enabled: profile.schedule_enabled !== false,
+		schedule_type: String(profile.schedule_type || "1"),
+		schedule_week: String(profile.schedule_week || "1"),
 		schedule_day: String(profile.schedule_day || "7"),
-		schedule_hour: String(profile.schedule_hour || "3")
+		schedule_hour: String(profile.schedule_hour || "3"),
+		schedule_minute: String(profile.schedule_minute || "5"),
+		schedule_interval_value: String(profile.schedule_interval_value || "1"),
+		schedule_interval_unit: String(profile.schedule_interval_unit || "2"),
+		schedule_custom_hours: profile.schedule_custom_hours || ""
 	};
 }
 function render_subscription_select_options(options, selected) {
@@ -5141,6 +5240,13 @@ function render_subscription_select_options(options, selected) {
 	}
 	return html;
 }
+function build_subscription_number_options(start, end, suffix) {
+	var out = [];
+	for (var i = start; i <= end; i++) {
+		out.push([String(i), String(i) + String(suffix || "")]);
+	}
+	return out;
+}
 function toggle_subscription_profile_ua_fields() {
 	var mode = $("#submgr_profile_ua_mode").val() || "fixed";
 	$("#submgr_profile_ua_preset_row").toggle(mode == "fixed");
@@ -5149,6 +5255,16 @@ function toggle_subscription_profile_ua_fields() {
 function toggle_subscription_schedule_fields() {
 	var enabled = !!$("#submgr_profile_schedule_enabled").prop("checked");
 	$("#submgr_profile_schedule_fields").toggle(enabled);
+	var type = String($("#submgr_profile_schedule_type").val() || "1");
+	var intervalUnit = String($("#submgr_profile_schedule_interval_unit").val() || "2");
+	$(".submgr-schedule-week").toggle(enabled && type == "2");
+	$(".submgr-schedule-day").toggle(enabled && type == "3");
+	$(".submgr-schedule-interval").toggle(enabled && type == "4");
+	$(".submgr-schedule-custom").toggle(enabled && type == "5");
+	$(".submgr-schedule-time").toggle(enabled && type != "5" && (type != "4" || intervalUnit == "3"));
+	$(".submgr-schedule-time-prefix").toggle(!(type == "4" && intervalUnit == "3"));
+	$(".submgr-schedule-minute").toggle(enabled && (type != "4" || intervalUnit != "1"));
+	$(".submgr-schedule-minute-tail").toggle(enabled && !(type == "4" && intervalUnit == "1"));
 }
 function open_subscription_profile_editor(profileId) {
 	var profile = null;
@@ -5170,7 +5286,8 @@ function open_subscription_profile_editor(profileId) {
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">启用</div><div class="shunt-editor-control"><label><input type="checkbox" id="submgr_profile_enabled"' + (state.enabled ? ' checked' : '') + '> 启用该订阅配置</label></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">节点模式</div><div class="shunt-editor-control"><select id="submgr_profile_subscribe_mode">' + render_subscription_select_options(option_modes || [["2", "大陆白名单模式"]], state.subscribe_mode) + '</select></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">下载策略</div><div class="shunt-editor-control"><select id="submgr_profile_download_policy">' + render_subscription_select_options([["auto", "自动判断"], ["proxy", "走代理"], ["direct", "不走代理"]], state.download_policy) + '</select></div></div>';
-	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 模式</div><div class="shunt-editor-control"><select id="submgr_profile_ua_mode" onchange="toggle_subscription_profile_ua_fields()">' + render_subscription_select_options([["fixed", "固定预设"], ["custom", "自定义字符串"], ["auto", "自动探测（后续施工）"]], state.ua_mode) + '</select></div></div>';
+	// UA 自动探测后续接入下载器后再开放。
+	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">UA 模式</div><div class="shunt-editor-control"><select id="submgr_profile_ua_mode" onchange="toggle_subscription_profile_ua_fields()">' + render_subscription_select_options([["fixed", "固定预设"], ["custom", "自定义字符串"]], state.ua_mode) + '</select></div></div>';
 	html += '<div class="shunt-editor-row" id="submgr_profile_ua_preset_row"><div class="shunt-editor-label">UA 预设</div><div class="shunt-editor-control"><select id="submgr_profile_ua_preset">' + render_subscription_select_options([["default", "fancyss 默认"], ["curl", "curl/wget"], ["v2rayn", "V2rayN"], ["v2rayng", "V2rayNG"], ["shadowrocket", "Shadowrocket"]], state.ua_preset) + '</select></div></div>';
 	html += '<div class="shunt-editor-row" id="submgr_profile_ua_custom_row"><div class="shunt-editor-label">UA 自定义</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_ua_custom" value="' + htmlEscape(state.ua_custom) + '" placeholder="自定义 User-Agent 字符串"></div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">排除关键词</div><div class="shunt-editor-control"><input type="text" id="submgr_profile_exclude" value="' + htmlEscape(state.exclude) + '" placeholder="多个关键词用英文逗号分隔"></div></div>';
@@ -5179,7 +5296,7 @@ function open_subscription_profile_editor(profileId) {
 	html += '<label style="margin-right:14px;"><input type="checkbox" id="submgr_profile_allow_insecure"' + (state.allow_insecure ? ' checked' : '') + '> 允许不安全</label>';
 	html += '</div></div>';
 	html += '<div class="shunt-editor-row"><div class="shunt-editor-label">Hy2 默认</div><div class="shunt-editor-control"><div class="submgr-hy2-inline"><span>上行 <input type="text" id="submgr_profile_hy2_up" value="' + htmlEscape(state.hy2_up) + '"> mbps</span><span>下行 <input type="text" id="submgr_profile_hy2_dl" value="' + htmlEscape(state.hy2_dl) + '"> mbps</span><span>TFO <select id="submgr_profile_hy2_tfo_switch">' + render_subscription_select_options([["0", "强制关闭"], ["1", "强制开启"], ["2", "根据订阅"]], state.hy2_tfo_switch) + '</select></span><span>拥塞 <select id="submgr_profile_hy2_cg_opt">' + render_subscription_select_options(option_hy2_cg && option_hy2_cg.length ? option_hy2_cg : ["bbr", "brutal"], state.hy2_cg_opt) + '</select></span></div></div></div>';
-	html += '<div class="shunt-editor-row checkbox-row"><div class="shunt-editor-label">定时更新</div><div class="shunt-editor-control submgr-schedule-inline"><label style="margin-right:6px;"><input type="checkbox" id="submgr_profile_schedule_enabled" onchange="toggle_subscription_schedule_fields()"' + (state.schedule_enabled ? ' checked' : '') + '> 启用订阅计划任务</label><div id="submgr_profile_schedule_fields"><span>周期 <select id="submgr_profile_schedule_day">' + render_subscription_select_options([["7", "每天"], ["1", "周一"], ["2", "周二"], ["3", "周三"], ["4", "周四"], ["5", "周五"], ["6", "周六"], ["0", "周日"]], state.schedule_day) + '</select></span><span>时间 <select id="submgr_profile_schedule_hour">' + render_subscription_select_options(option_nodeh || [["3", "3点"]], state.schedule_hour) + '</select></span></div></div></div>';
+	html += '<div class="shunt-editor-row checkbox-row"><div class="shunt-editor-label">定时更新</div><div class="shunt-editor-control submgr-schedule-inline"><label><input type="checkbox" id="submgr_profile_schedule_enabled" onchange="toggle_subscription_schedule_fields()"' + (state.schedule_enabled ? ' checked' : '') + '></label><div id="submgr_profile_schedule_fields" class="submgr-schedule-fields"><span>按 <select id="submgr_profile_schedule_type" onchange="toggle_subscription_schedule_fields()">' + render_subscription_select_options([["1", "每天"], ["2", "每周"], ["3", "每月"], ["4", "每隔"], ["5", "自定义"]], state.schedule_type == "0" ? "1" : state.schedule_type) + '</select></span><span class="submgr-schedule-week"><select id="submgr_profile_schedule_week">' + render_subscription_select_options(option_rebw || [["1", "一"], ["2", "二"], ["3", "三"], ["4", "四"], ["5", "五"], ["6", "六"], ["7", "日"]], state.schedule_week) + '</select></span><span class="submgr-schedule-day"><select id="submgr_profile_schedule_day">' + render_subscription_select_options(build_subscription_number_options(1, 31, ""), state.schedule_day) + '</select> 日,</span><span class="submgr-schedule-interval"><select id="submgr_profile_schedule_interval_value">' + render_subscription_select_options(build_subscription_number_options(1, 30, ""), state.schedule_interval_value) + '</select> <select id="submgr_profile_schedule_interval_unit" onchange="toggle_subscription_schedule_fields()">' + render_subscription_select_options(option_rebip || [["1", "分钟"], ["2", "小时"], ["3", "天"]], state.schedule_interval_unit) + '</select></span><span class="submgr-schedule-custom">每天 <input type="text" id="submgr_profile_schedule_custom_hours" value="' + htmlEscape(state.schedule_custom_hours) + '" placeholder="3,8,12" title="填写说明：此处填写0-23之间任意小时；多个小时用英文逗号分隔，如：当天的3点、8点、12点则填入：3,8,12"> 时</span><span class="submgr-schedule-time"><span class="submgr-schedule-time-prefix">在 </span><select id="submgr_profile_schedule_hour">' + render_subscription_select_options(build_subscription_number_options(0, 23, ""), state.schedule_hour) + '</select> 时</span><span class="submgr-schedule-minute"><select id="submgr_profile_schedule_minute">' + render_subscription_select_options(build_subscription_number_options(0, 59, ""), state.schedule_minute) + '</select><span class="submgr-schedule-minute-tail"> 分更新</span></span></div></div></div>';
 	html += '</div>';
 	if (subscribeProfileEditorLayerIndex !== null && typeof layer != "undefined" && layer.close) {
 		layer.close(subscribeProfileEditorLayerIndex);
@@ -5246,9 +5363,80 @@ function get_subscription_profile_editor_payload() {
 		hy2_tfo_switch: String($("#submgr_profile_hy2_tfo_switch").val() || "2"),
 		hy2_cg_opt: String($("#submgr_profile_hy2_cg_opt").val() || "bbr"),
 		schedule_enabled: !!$("#submgr_profile_schedule_enabled").prop("checked"),
+		schedule_type: String($("#submgr_profile_schedule_type").val() || "1"),
+		schedule_week: String($("#submgr_profile_schedule_week").val() || "1"),
 		schedule_day: String($("#submgr_profile_schedule_day").val() || "7"),
-		schedule_hour: String($("#submgr_profile_schedule_hour").val() || "3")
+		schedule_hour: String($("#submgr_profile_schedule_hour").val() || "3"),
+		schedule_minute: String($("#submgr_profile_schedule_minute").val() || "5"),
+		schedule_interval_value: String($("#submgr_profile_schedule_interval_value").val() || "1"),
+		schedule_interval_unit: String($("#submgr_profile_schedule_interval_unit").val() || "2"),
+		schedule_custom_hours: $.trim($("#submgr_profile_schedule_custom_hours").val() || "")
 	};
+}
+function generate_subscription_profile_id() {
+	var alphabet = "0123456789abcdef";
+	var id = "";
+	var exists = true;
+	var attempt = 0;
+	while (exists && attempt < 32) {
+		id = "";
+		if (window.crypto && window.crypto.getRandomValues) {
+			var bytes = new Uint8Array(6);
+			window.crypto.getRandomValues(bytes);
+			for (var i = 0; i < bytes.length; i++) {
+				id += alphabet[(bytes[i] >> 4) & 15] + alphabet[bytes[i] & 15];
+			}
+		} else {
+			id = String(Date.now().toString(16) + Math.floor(Math.random() * 0x1000000).toString(16));
+			id = id.replace(/[^a-f0-9]/g, "").slice(-12);
+		}
+		exists = !!subscribeProfileMap[id];
+		attempt++;
+	}
+	return id || String(Date.now()).slice(-12);
+}
+function set_subscription_profile_editor_saving(isSaving, text) {
+	var layero = subscribeProfileEditorLayerIndex !== null ? $("#layui-layer" + subscribeProfileEditorLayerIndex) : $(".layui-layer:has(#submgr_profile_name)").last();
+	if (!layero || !layero.length) {
+		return;
+	}
+	layero.find(".submgr-editor-saving-mask").remove();
+	layero.find(".layui-layer-btn a").toggleClass("layui-btn-disabled", !!isSaving).css("pointer-events", isSaving ? "none" : "");
+	if (!isSaving) {
+		return;
+	}
+	layero.append('<div class="submgr-editor-saving-mask"><div class="submgr-editor-saving-box"><span class="submgr-editor-saving-spinner"></span><span>' + htmlEscape(text || "数据保存中，请稍后...") + '</span></div></div>');
+}
+function validate_subscription_custom_hours() {
+	var enabled = !!$("#submgr_profile_schedule_enabled").prop("checked");
+	var type = String($("#submgr_profile_schedule_type").val() || "1");
+	var input = $("#submgr_profile_schedule_custom_hours");
+	var raw = $.trim(input.val() || "");
+	var parts = [];
+	var value = 0;
+	if (!enabled || type != "5") {
+		return true;
+	}
+	if (!raw || !/^[0-9,]+$/.test(raw) || raw.indexOf(",,") !== -1 || raw.charAt(0) == "," || raw.charAt(raw.length - 1) == ",") {
+		input.val("").focus();
+		layer.msg("自定义更新时间不合法：只能填写 0-23 的数字，并用英文逗号分隔。");
+		return false;
+	}
+	parts = raw.split(",");
+	for (var i = 0; i < parts.length; i++) {
+		if (!/^[0-9]+$/.test(parts[i])) {
+			input.val("").focus();
+			layer.msg("自定义更新时间不合法：只能填写 0-23 的数字，并用英文逗号分隔。");
+			return false;
+		}
+		value = parseInt(parts[i], 10);
+		if (isNaN(value) || value < 0 || value >= 24) {
+			input.val("").focus();
+			layer.msg("自定义更新时间不合法：小时必须小于 24。");
+			return false;
+		}
+	}
+	return true;
 }
 function save_subscription_profile_from_editor(syncAfter) {
 	var payload = get_subscription_profile_editor_payload();
@@ -5257,24 +5445,22 @@ function save_subscription_profile_from_editor(syncAfter) {
 	var shouldRefreshNodePanel = false;
 	var optimisticProfile = null;
 	var finalize_profile_save = function() {
-		if (payload.id) {
-			optimisticProfile = $.extend({}, originalProfile || {}, payload, {
-				id: payload.id,
-				node_count: parseInt((originalProfile || {}).node_count || 0, 10) || 0,
-				last_ok_ts: (originalProfile || {}).last_ok_ts || 0,
-				last_error_ts: (originalProfile || {}).last_error_ts || 0,
-				last_error: (originalProfile || {}).last_error || "",
-				last_url_hash: (originalProfile || {}).last_url_hash || "",
-				last_group: (originalProfile || {}).last_group || "",
-				last_download_tool: (originalProfile || {}).last_download_tool || "",
-				last_download_path: (originalProfile || {}).last_download_path || "",
-				last_ua_mode: (originalProfile || {}).last_ua_mode || "",
-				last_ua_preset: (originalProfile || {}).last_ua_preset || ""
-			});
-			upsert_subscription_profile_state(optimisticProfile);
-		}
+		optimisticProfile = $.extend({}, originalProfile || {}, payload, {
+			id: payload.id,
+			node_count: parseInt((originalProfile || {}).node_count || 0, 10) || 0,
+			last_ok_ts: (originalProfile || {}).last_ok_ts || 0,
+			last_error_ts: (originalProfile || {}).last_error_ts || 0,
+			last_error: (originalProfile || {}).last_error || "",
+			last_url_hash: (originalProfile || {}).last_url_hash || "",
+			last_group: (originalProfile || {}).last_group || "",
+			last_download_tool: (originalProfile || {}).last_download_tool || "",
+			last_download_path: (originalProfile || {}).last_download_path || "",
+			last_ua_mode: (originalProfile || {}).last_ua_mode || "",
+			last_ua_preset: (originalProfile || {}).last_ua_preset || ""
+		});
+		upsert_subscription_profile_state(optimisticProfile);
 		if (shouldRefreshNodePanel) {
-			refresh_node_panel();
+			refresh_table();
 		}
 		render_subscription_manager();
 		if (subscribeProfileEditorLayerIndex !== null) {
@@ -5285,27 +5471,6 @@ function save_subscription_profile_from_editor(syncAfter) {
 			layer.msg("订阅配置已保存");
 		}
 	};
-	var profile_matches_editor_payload = function(item) {
-		item = item || {};
-		return normalize_subscription_profile_url(item.url || "") == normalize_subscription_profile_url(payload.url || "")
-			&& String(item.name || "") == String(payload.name || "")
-			&& subscription_profile_is_enabled(item) === !!payload.enabled
-			&& String(item.subscribe_mode || "") == String(payload.subscribe_mode || "")
-			&& String(item.download_policy || "") == String(payload.download_policy || "")
-			&& String(item.ua_mode || "") == String(payload.ua_mode || "")
-			&& String(item.ua_preset || "") == String(payload.ua_preset || "")
-			&& String(item.ua_custom || "") == String(payload.ua_custom || "")
-			&& String(item.exclude || "") == String(payload.exclude || "")
-			&& String(item.include || "") == String(payload.include || "")
-			&& !!(item.allow_insecure === true) === !!payload.allow_insecure
-			&& String(item.hy2_up || "") == String(payload.hy2_up || "")
-			&& String(item.hy2_dl || "") == String(payload.hy2_dl || "")
-			&& String(item.hy2_tfo_switch || "") == String(payload.hy2_tfo_switch || "")
-			&& String(item.hy2_cg_opt || "") == String(payload.hy2_cg_opt || "")
-			&& !!(item.schedule_enabled === true) === !!payload.schedule_enabled
-			&& String(item.schedule_day || "") == String(payload.schedule_day || "")
-			&& String(item.schedule_hour || "") == String(payload.schedule_hour || "");
-	};
 	if (!payload.name) {
 		alert("请填写订阅别名。");
 		return false;
@@ -5314,41 +5479,27 @@ function save_subscription_profile_from_editor(syncAfter) {
 		alert("请填写正确的 http(s) 订阅链接。");
 		return false;
 	}
+	if (!validate_subscription_custom_hours()) {
+		return false;
+	}
 	duplicated = find_subscription_profile_by_url(payload.url, payload.id);
 	if (duplicated) {
 		alert("检测到相同订阅链接已添加：" + (duplicated.name || duplicated.id || "该订阅"));
 		return false;
 	}
+	if (!payload.id) {
+		payload.id = generate_subscription_profile_id();
+		originalProfile = null;
+	}
 	shouldRefreshNodePanel = !!originalProfile && subscription_profile_is_enabled(originalProfile) !== !!payload.enabled;
+	set_subscription_profile_editor_saving(true);
 	call_subscription_profile_api("save", {"ss_subscribe_profile_payload": base64_encode_utf8(JSON.stringify(payload))}, function(ok) {
-		var savedProfile = null;
 		if (!ok) {
+			set_subscription_profile_editor_saving(false);
 			layer.msg("保存订阅配置失败");
 			return;
 		}
-		if (payload.id) {
-			finalize_profile_save();
-			return;
-		}
-		wait_subscription_profiles_until(function(items) {
-			var i = 0;
-			if (payload.id) {
-				for (i = 0; i < items.length; i++) {
-					if (String((items[i] || {}).id || "") == String(payload.id || "")) {
-						savedProfile = items[i];
-						return profile_matches_editor_payload(savedProfile);
-					}
-				}
-			}
-			savedProfile = find_subscription_profile_by_url(payload.url, "");
-			return !!savedProfile && profile_matches_editor_payload(savedProfile);
-		}, function(found) {
-			if (!found) {
-				layer.msg("保存订阅配置失败，请刷新页面后重试");
-				return;
-			}
-			finalize_profile_save();
-		});
+		finalize_profile_save();
 	});
 	return false;
 }
@@ -5356,7 +5507,7 @@ function delete_subscription_profile(profileId) {
 	if (!profileId) {
 		return false;
 	}
-	layer.confirm("确定删除这个订阅配置吗？", {
+	layer.confirm("确定删除这个订阅配置吗？<br><br>删除此订阅会同时删除对应节点！", {
 		shade: 0.8
 	}, function(index) {
 		layer.close(index);
@@ -5386,11 +5537,7 @@ function sync_subscription_profiles(profileId) {
 	if (profileId) {
 		dbus_post["ss_subscribe_profile_selected"] = profileId;
 	}
-	if (ws_flag == 1) {
-		push_data_ws("ss_node_subscribe.sh", "3", dbus_post);
-	} else {
-		push_data("ss_node_subscribe.sh", "3", dbus_post);
-	}
+	push_subscription_data("3", dbus_post, profileId ? "同步订阅配置" : "同步全部订阅配置", profileId || "", true);
 	return false;
 }
 function submit_subscription_uri_from_manager() {
@@ -5403,11 +5550,7 @@ function submit_subscription_uri_from_manager() {
 	var dbus_post = {
 		"ss_base64_links": Base64.encode(encodeURIComponent(value))
 	};
-	if (ws_flag == 1) {
-		push_data_ws("ss_node_subscribe.sh", "4", dbus_post);
-	} else {
-		push_data("ss_node_subscribe.sh", "4", dbus_post);
-	}
+	push_subscription_data("4", dbus_post, "分享链接导入日志", "", true);
 	return false;
 }
 function get_legacy_node_ids() {
@@ -6890,6 +7033,222 @@ function push_data(script, arg, obj, flag){
 						get_realtime_log();
 					}
 				}
+			}
+		}
+	});
+}
+function open_subscription_log_layer(title) {
+	var width = $(window).width() < 760 ? '92%' : '820px';
+	var height = $(window).height() < 720 ? '82%' : '620px';
+	if (subscribeLogLayerIndex !== null && typeof layer != "undefined" && layer.close) {
+		layer.close(subscribeLogLayerIndex);
+		subscribeLogLayerIndex = null;
+	}
+	subscribeLogLayerIndex = layer.open({
+		type: 1,
+		title: title || "订阅更新日志",
+		skin: "shunt-editor-layer submgr-log-layer",
+		area: [width, height],
+		shade: 0,
+		shadeClose: false,
+		zIndex: 19891060,
+		content: '<div class="submgr-log-shell"><div class="submgr-log-toolbar"><span class="submgr-log-title">订阅任务输出</span><span id="submgr_log_status" class="submgr-log-status">等待日志输出...</span></div><textarea id="submgr_log_textarea" class="submgr-log-textarea" readonly autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea></div>',
+		btn: ["关闭"],
+		btnAlign: "c",
+		success: function(layero, index) {
+			subscribeLogLayerIndex = index;
+			layero.css("z-index", 19891060);
+			layer.setTop(layero);
+			if (E("submgr_log_textarea")) {
+				E("submgr_log_textarea").value = "";
+			}
+		},
+		end: function() {
+			clear_text_file_poll_state("subscribe_log");
+			close_subscription_log_ws();
+			finish_subscription_log_with_refresh();
+			subscribeLogLayerIndex = null;
+		}
+	});
+}
+function close_subscription_log_ws() {
+	if (subscribeLogWsFallbackTimer) {
+		clearTimeout(subscribeLogWsFallbackTimer);
+		subscribeLogWsFallbackTimer = null;
+	}
+	if (subscribeLogWs) {
+		try {
+			subscribeLogWs.close();
+		} catch (e) {}
+		subscribeLogWs = null;
+	}
+}
+function finish_subscription_log_with_refresh() {
+	if (subscribeLogRefreshNodesAfterDone) {
+		subscribeLogRefreshNodesAfterDone = false;
+		fetch_subscription_profiles_dbus(function() {
+			render_subscription_manager();
+			refresh_table();
+		}, {silent: true});
+	}
+}
+function poll_subscription_log(reset) {
+	poll_text_file({
+		key: "subscribe_log",
+		reset: reset === true,
+		url: '/_temp/ss_subscribe_log.txt',
+		dataType: 'text',
+		onSuccess: function(response, state) {
+			var retArea = E("submgr_log_textarea");
+			var statusEl = E("submgr_log_status");
+			if (!retArea) {
+				return {done: true};
+			}
+			if (response.search("XU6J03M6") != -1) {
+				retArea.value = response.myReplace("XU6J03M6", " ");
+				retArea.scrollTop = retArea.scrollHeight;
+				if (statusEl) {
+					statusEl.innerHTML = "订阅任务已完成";
+				}
+				finish_subscription_log_with_refresh();
+				return {done: true};
+			}
+			note_text_file_poll_progress(state, response);
+			retArea.value = response || "";
+			retArea.scrollTop = retArea.scrollHeight;
+			if (statusEl) {
+				statusEl.innerHTML = state.attempt > 1 ? "订阅任务运行中..." : "正在获取日志...";
+			}
+			if (state.noChange > 1000) {
+				if (statusEl) {
+					statusEl.innerHTML = "日志长时间无更新";
+				}
+				return {done: true};
+			}
+			return {done: false, delay: 180};
+		},
+		onError: function(xhr, state) {
+			var retArea = E("submgr_log_textarea");
+			var statusEl = E("submgr_log_status");
+			if (retArea && state.attempt > 8) {
+				retArea.value = "暂无订阅日志输出，请稍后重试。";
+			}
+			if (statusEl) {
+				statusEl.innerHTML = "等待日志文件生成...";
+			}
+			return {done: false, delay: 300};
+		}
+	});
+}
+function start_subscription_log_http() {
+	close_subscription_log_ws();
+	poll_subscription_log(true);
+}
+function start_subscription_log_stream(action, profileId) {
+	var retArea = E("submgr_log_textarea");
+	var statusEl = E("submgr_log_status");
+	if (ws_flag != 1 || window.location.protocol != "http:" || !ws_host_allowed(hostname)) {
+		start_subscription_log_http();
+		return;
+	}
+	close_subscription_log_ws();
+	if (statusEl) {
+		statusEl.innerHTML = "正在建立 WebSocket 日志通道...";
+	}
+	subscribeLogWs = new WebSocket("ws://" + hostname + ":803/");
+	subscribeLogWsFallbackTimer = setTimeout(function() {
+		if (subscribeLogWs) {
+			start_subscription_log_http();
+		}
+	}, 2500);
+	subscribeLogWs.onopen = function() {
+		if (subscribeLogWsFallbackTimer) {
+			clearTimeout(subscribeLogWsFallbackTimer);
+			subscribeLogWsFallbackTimer = null;
+		}
+		if (statusEl) {
+			statusEl.innerHTML = "订阅任务运行中...";
+		}
+		try {
+			subscribeLogWs.send("env LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 sh /koolshare/scripts/ss_node_subscribe.sh " + String(action || "3") + (profileId ? (" " + String(profileId)) : ""));
+		} catch (e) {
+			start_subscription_log_http();
+		}
+	};
+	subscribeLogWs.onerror = function() {
+		start_subscription_log_http();
+	};
+	subscribeLogWs.onmessage = function(event) {
+		var msg = String(event.data || "");
+		if (!retArea) {
+			close_subscription_log_ws();
+			return;
+		}
+		if (msg.indexOf("XU6J03M6") != -1) {
+			var cleanMsg = msg.myReplace("XU6J03M6", " ");
+			if (cleanMsg) {
+				retArea.value += cleanMsg + '\n';
+			}
+			retArea.scrollTop = retArea.scrollHeight;
+			if (statusEl) {
+				statusEl.innerHTML = "订阅任务已完成";
+			}
+			finish_subscription_log_with_refresh();
+			close_subscription_log_ws();
+			return;
+		}
+		retArea.value += msg + '\n';
+		retArea.scrollTop = retArea.scrollHeight;
+	};
+	subscribeLogWs.onclose = function() {
+		if (subscribeLogWsFallbackTimer) {
+			clearTimeout(subscribeLogWsFallbackTimer);
+			subscribeLogWsFallbackTimer = null;
+		}
+		subscribeLogWs = null;
+	};
+}
+function push_subscription_data(action, obj, title, profileId, affectsNodeList) {
+	var id = parseInt(Math.random() * 100000000);
+	var useWsLog = ws_flag == 1 && window.location.protocol == "http:" && ws_host_allowed(hostname);
+	var postData = {"id": id, "method": "ss_node_subscribe.sh", "params": [action], "fields": obj || {}};
+	clear_text_file_poll_state("subscribe_log");
+	subscribeLogRefreshNodesAfterDone = !!affectsNodeList;
+	if (useWsLog) {
+		open_subscription_log_layer(title || "订阅更新日志");
+			start_subscription_log_stream(action, profileId || "");
+		return;
+	}
+	$.ajax({
+		type: "POST",
+		cache: false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		beforeSend: function() {
+			open_subscription_log_layer(title || "订阅更新日志");
+		},
+		success: function(response) {
+			var statusEl = E("submgr_log_status");
+				if (response && String(response.result) == String(id)) {
+					if (statusEl) {
+						statusEl.innerHTML = "订阅任务已开始，正在获取日志...";
+					}
+					start_subscription_log_http();
+					return;
+				}
+			if (statusEl) {
+				statusEl.innerHTML = "订阅任务提交异常";
+			}
+		},
+		error: function() {
+			var retArea = E("submgr_log_textarea");
+			var statusEl = E("submgr_log_status");
+			if (retArea) {
+				retArea.value += (retArea.value ? "\n" : "") + "订阅任务提交失败，请检查软件中心接口。";
+			}
+			if (statusEl) {
+				statusEl.innerHTML = "订阅任务提交失败";
 			}
 		}
 	});
@@ -13973,11 +14332,7 @@ function save_online_nodes(action) {
 		dbus_post["ss_basic_hy2_cg_opt"] = E("ss_basic_hy2_cg_opt").value;
 	}
 
-	if(ws_flag == 1){
-		push_data_ws("ss_node_subscribe.sh", action,  dbus_post);
-	}else{
-		push_data("ss_node_subscribe.sh", action,  dbus_post);
-	}
+	push_subscription_data(action, dbus_post, action == "4" ? "分享链接导入日志" : "订阅更新日志", "", true);
 }
 function xray_binary_update(){
 	var dbus_post = {};

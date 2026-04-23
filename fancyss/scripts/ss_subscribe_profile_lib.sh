@@ -242,9 +242,7 @@ subprof_build_legacy_payload_json() {
 		--arg hy2_dl "$(dbus get ss_basic_hy2_dl_speed)" \
 		--arg hy2_tfo_switch "$(dbus get ss_basic_hy2_tfo_switch)" \
 		--arg hy2_cg_opt "$(dbus get ss_basic_hy2_cg_opt)" \
-		--argjson schedule_enabled "$(subprof_boolean_string "$(dbus get ss_basic_node_update)")" \
-		--arg schedule_day "$(dbus get ss_basic_node_update_day)" \
-		--arg schedule_hour "$(dbus get ss_basic_node_update_hr)" '
+		--argjson schedule_enabled "true" '
 		{
 			version: 1,
 			id: $id,
@@ -277,8 +275,14 @@ subprof_build_legacy_payload_json() {
 			},
 			schedule: {
 				enabled: $schedule_enabled,
-				day: (if ($schedule_day // "") == "" then "7" else $schedule_day end),
-				hour: (if ($schedule_hour // "") == "" then "3" else $schedule_hour end)
+				type: "1",
+				week: "1",
+				day: "7",
+				hour: "3",
+				minute: "5",
+				interval_value: "1",
+				interval_unit: "2",
+				custom_hours: ""
 			}
 		}
 	'
@@ -347,9 +351,15 @@ subprof_normalize_payload() {
 				cg_opt: ((.hy2.cg_opt // .hy2_cg_opt // "bbr") | tostring | if . == "" then "bbr" else . end)
 			},
 			schedule: {
-				enabled: (pick3(.schedule.enabled; .schedule_enabled; false) | to_bool),
+				enabled: (pick3(.schedule.enabled; .schedule_enabled; true) | to_bool),
+				type: ((.schedule.type // .schedule_type // "1") | tostring | if . == "" then "1" else . end),
+				week: ((.schedule.week // .schedule_week // "1") | tostring | if . == "" then "1" else . end),
 				day: ((.schedule.day // .schedule_day // "7") | tostring | if . == "" then "7" else . end),
-				hour: ((.schedule.hour // .schedule_hour // "3") | tostring | if . == "" then "3" else . end)
+				hour: ((.schedule.hour // .schedule_hour // "3") | tostring | if . == "" then "3" else . end),
+				minute: ((.schedule.minute // .schedule_minute // "5") | tostring | if . == "" then "5" else . end),
+				interval_value: ((.schedule.interval_value // .schedule_interval_value // "1") | tostring | if . == "" then "1" else . end),
+				interval_unit: ((.schedule.interval_unit // .schedule_interval_unit // "2") | tostring | if . == "" then "2" else . end),
+				custom_hours: ((.schedule.custom_hours // .schedule_custom_hours // "") | tostring)
 			}
 		}
 	'
@@ -565,9 +575,15 @@ subprof_merge_profile_and_state() {
 			hy2_dl: ($p.hy2.dl // ""),
 			hy2_tfo_switch: ($p.hy2.tfo_switch // "2"),
 			hy2_cg_opt: ($p.hy2.cg_opt // "bbr"),
-			schedule_enabled: (if $p.schedule.enabled == null then false else $p.schedule.enabled end),
+			schedule_enabled: (if $p.schedule.enabled == null then true else $p.schedule.enabled end),
+			schedule_type: ($p.schedule.type // "1"),
+			schedule_week: ($p.schedule.week // "1"),
 			schedule_day: ($p.schedule.day // "7"),
 			schedule_hour: ($p.schedule.hour // "3"),
+			schedule_minute: ($p.schedule.minute // "5"),
+			schedule_interval_value: ($p.schedule.interval_value // "1"),
+			schedule_interval_unit: ($p.schedule.interval_unit // "2"),
+			schedule_custom_hours: ($p.schedule.custom_hours // ""),
 			last_ok_ts: ($s.last_ok_ts // 0),
 			last_error_ts: ($s.last_error_ts // 0),
 			last_error: ($s.last_error // ""),
@@ -616,8 +632,14 @@ subprof_collect_enabled_profiles_tsv() {
 			.hy2_tfo_switch,
 			.hy2_cg_opt,
 			.schedule_enabled,
+			.schedule_type,
+			.schedule_week,
 			.schedule_day,
-			.schedule_hour
+			.schedule_hour,
+			.schedule_minute,
+			.schedule_interval_value,
+			.schedule_interval_unit,
+			.schedule_custom_hours
 		] | @tsv' 2>/dev/null >> "${output_file}" || return 1
 	done
 }
@@ -626,6 +648,85 @@ subprof_cron_job_name() {
 	local profile_id="$1"
 	[ -n "${profile_id}" ] || return 1
 	printf 'ssnodeprof_%s\n' "${profile_id}" | cut -c1-31
+}
+
+subprof_cron_value_csv() {
+	local raw="$1"
+	local min="$2"
+	local max="$3"
+	local fallback="$4"
+	local item=""
+	local out=""
+
+	out="$(
+		printf '%s\n' "${raw}" | tr ',' '\n' | while IFS= read -r item
+		do
+			item="$(printf '%s' "${item}" | sed 's/[^0-9]//g')"
+			[ -n "${item}" ] || continue
+			if [ "${item}" -ge "${min}" ] 2>/dev/null && [ "${item}" -le "${max}" ] 2>/dev/null; then
+				printf '%s\n' "${item}"
+			fi
+		done | awk '!seen[$0]++' | tr '\n' ',' | sed 's/,$//'
+	)"
+	[ -n "${out}" ] && printf '%s\n' "${out}" || printf '%s\n' "${fallback}"
+}
+
+subprof_cron_week_csv() {
+	local raw="$1"
+	local parsed=""
+	parsed="$(subprof_cron_value_csv "${raw}" 0 7 "1")"
+	printf '%s\n' "${parsed}" | tr ',' '\n' | while IFS= read -r item
+	do
+		[ -n "${item}" ] || continue
+		[ "${item}" = "7" ] && item="0"
+		printf '%s\n' "${item}"
+	done | awk '!seen[$0]++' | tr '\n' ',' | sed 's/,$//'
+}
+
+subprof_cron_minute() {
+	local minute="$1"
+	minute="$(printf '%s' "${minute}" | sed 's/[^0-9]//g')"
+	if [ -n "${minute}" ] && [ "${minute}" -ge 0 ] 2>/dev/null && [ "${minute}" -le 59 ] 2>/dev/null; then
+		printf '%s\n' "${minute}"
+		return 0
+	fi
+	printf '%s\n' "5"
+}
+
+subprof_cron_hour() {
+	local hour="$1"
+	local parsed=""
+	parsed="$(subprof_cron_value_csv "${hour}" 0 23 "")"
+	[ -n "${parsed}" ] && printf '%s\n' "${parsed}" || printf '%s\n' "3"
+}
+
+subprof_cron_delay_for_index() {
+	local idx="$1"
+	[ -n "${idx}" ] || idx=0
+	printf '%s\n' "$((idx * 10))"
+}
+
+subprof_profile_schedule_tsv() {
+	local profile_id="$1"
+	local profile_key=""
+	local profile_json=""
+
+	[ -n "${profile_id}" ] || return 1
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	profile_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || return 1
+	[ -n "${profile_json}" ] || return 1
+	printf '%s' "${profile_json}" | "$(subprof_jq_bin)" -r '[
+		(if .enabled == null then true else .enabled end),
+		(if .schedule.enabled == null then true else .schedule.enabled end),
+		(.schedule.type // "1"),
+		(.schedule.week // "1"),
+		(.schedule.day // "7"),
+		(.schedule.hour // "3"),
+		(.schedule.minute // "5"),
+		(.schedule.interval_value // "1"),
+		(.schedule.interval_unit // "2"),
+		(.schedule.custom_hours // "")
+	] | @tsv' 2>/dev/null
 }
 
 subprof_clear_cron_jobs() {
@@ -643,33 +744,85 @@ subprof_clear_cron_jobs() {
 subprof_rebuild_cron_jobs() {
 	local profile_id=""
 	local row=""
+	local old_ifs=""
+	local profile_enabled=""
 	local schedule_enabled=""
+	local schedule_type=""
+	local schedule_week=""
 	local schedule_day=""
 	local schedule_hour=""
+	local schedule_minute=""
+	local schedule_interval_value=""
+	local schedule_interval_unit=""
+	local schedule_custom_hours=""
 	local job_name=""
 	local cron_expr=""
 	local command_text=""
+	local delay_seconds=""
+	local job_index=0
 
 	subprof_clear_cron_jobs
 	[ -x "/usr/sbin/cru" ] || return 0
 	for profile_id in $(subprof_list_profile_ids)
 	do
 		[ -n "${profile_id}" ] || continue
-		row="$(subprof_merge_profile_and_state "${profile_id}")" || row=""
+		row="$(subprof_profile_schedule_tsv "${profile_id}")" || row=""
 		[ -n "${row}" ] || continue
-		schedule_enabled="$(printf '%s' "${row}" | "$(subprof_jq_bin)" -r '.schedule_enabled // false' 2>/dev/null)"
+		old_ifs="${IFS}"
+		IFS="$(printf '\t')"
+		read -r profile_enabled schedule_enabled schedule_type schedule_week schedule_day schedule_hour schedule_minute schedule_interval_value schedule_interval_unit schedule_custom_hours <<EOF
+${row}
+EOF
+		IFS="${old_ifs}"
+		[ "${profile_enabled}" = "true" ] || continue
 		[ "${schedule_enabled}" = "true" ] || continue
-		schedule_day="$(printf '%s' "${row}" | "$(subprof_jq_bin)" -r '.schedule_day // "7"' 2>/dev/null)"
-		schedule_hour="$(printf '%s' "${row}" | "$(subprof_jq_bin)" -r '.schedule_hour // "3"' 2>/dev/null)"
-		[ -n "${schedule_hour}" ] || schedule_hour="3"
-		if [ "${schedule_day}" = "7" ]; then
-			cron_expr="0 ${schedule_hour} * * *"
-		else
-			cron_expr="0 ${schedule_hour} * * ${schedule_day}"
-		fi
+		schedule_minute="$(subprof_cron_minute "${schedule_minute}")"
+		schedule_hour="$(subprof_cron_hour "${schedule_hour}")"
+		case "${schedule_type}" in
+		2)
+			schedule_week="$(subprof_cron_week_csv "${schedule_week}")"
+			[ -n "${schedule_week}" ] || schedule_week="1"
+			cron_expr="${schedule_minute} ${schedule_hour} * * ${schedule_week}"
+			;;
+		3)
+			schedule_day="$(subprof_cron_value_csv "${schedule_day}" 1 31 "1")"
+			[ -n "${schedule_day}" ] || schedule_day="1"
+			cron_expr="${schedule_minute} ${schedule_hour} ${schedule_day} * *"
+			;;
+		4)
+			schedule_interval_value="$(printf '%s' "${schedule_interval_value}" | sed 's/[^0-9]//g')"
+			[ -n "${schedule_interval_value}" ] || schedule_interval_value="1"
+			case "${schedule_interval_unit}" in
+			1)
+				[ "${schedule_interval_value}" -lt 1 ] 2>/dev/null && schedule_interval_value=1
+				[ "${schedule_interval_value}" -gt 59 ] 2>/dev/null && schedule_interval_value=59
+				cron_expr="*/${schedule_interval_value} * * * *"
+				;;
+			3)
+				[ "${schedule_interval_value}" -lt 1 ] 2>/dev/null && schedule_interval_value=1
+				[ "${schedule_interval_value}" -gt 30 ] 2>/dev/null && schedule_interval_value=30
+				cron_expr="${schedule_minute} ${schedule_hour} */${schedule_interval_value} * *"
+				;;
+			*)
+				[ "${schedule_interval_value}" -lt 1 ] 2>/dev/null && schedule_interval_value=1
+				[ "${schedule_interval_value}" -gt 23 ] 2>/dev/null && schedule_interval_value=23
+				cron_expr="${schedule_minute} */${schedule_interval_value} * * *"
+				;;
+			esac
+			;;
+		5)
+			schedule_hour="$(subprof_cron_hour "${schedule_custom_hours}")"
+			cron_expr="${schedule_minute} ${schedule_hour} * * *"
+			;;
+		*)
+			cron_expr="${schedule_minute} ${schedule_hour} * * *"
+			;;
+		esac
 		job_name="$(subprof_cron_job_name "${profile_id}")" || continue
-		command_text="dbus set ${SUB_PROFILE_TMP_SYNC_ID_KEY}=${profile_id}; /koolshare/scripts/ss_node_subscribe.sh fancyss 3"
+		delay_seconds="$(subprof_cron_delay_for_index "${job_index}")"
+		command_text="sleep ${delay_seconds}; FSS_SUBSCRIBE_LOCK_WAIT=1 /koolshare/scripts/ss_node_subscribe.sh 3 ${profile_id}"
 		cru a "${job_name}" "${cron_expr} ${command_text}" >/dev/null 2>&1 || true
+		job_index=$((job_index + 1))
 	done
 }
 
