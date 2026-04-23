@@ -291,22 +291,33 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
 .node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
-.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:60px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);background:linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));box-shadow:0 8px 18px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
+.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:60px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
 .node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 14px 24px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
-.node-card.is-current{border-color:rgba(41,179,111,0.5);background:linear-gradient(180deg,rgba(14,39,27,0.98),rgba(10,22,17,0.96));box-shadow:0 14px 24px rgba(0,0,0,0.22),0 0 0 1px rgba(41,179,111,0.06),inset 0 1px 0 rgba(255,255,255,0.04);}
 .node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;padding-right:6px;}
 .node-card-status{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
 .node-card-dot{width:6px;height:6px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 6px;box-shadow:0 0 6px rgba(110,168,254,0.45);}
-.node-card.is-current .node-card-dot{background:#32c975;box-shadow:0 0 10px rgba(50,201,117,0.55);}
+.node-card.is-current .node-card-dot{background:#ff8a8a;box-shadow:0 0 10px rgba(255,138,138,0.62);}
+.node-card.is-selected .node-card-dot{background:#ffd1d1;box-shadow:0 0 12px rgba(255,209,209,0.7);}
 .node-card-name{font-size:13px;line-height:1.2;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-height:auto;max-width:100%;}
 .node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:auto;}
-.node-card-type{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:11px;line-height:1;font-weight:700;white-space:nowrap;}
-.node-card-type.current{background:rgba(41,179,111,0.18);border-color:rgba(41,179,111,0.24);color:#d7ffe8;}
-.node-card-latency{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:42px;max-width:58px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
+.node-card-type{display:inline-flex;align-items:center;justify-content:center;min-width:44px;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,0.16);border:1px solid rgba(59,130,246,0.2);color:#bfdbfe;font-size:11px;line-height:1;font-weight:700;white-space:nowrap;box-sizing:border-box;}
+.node-card-type.current{background:rgba(255,122,122,0.2);border-color:rgba(255,122,122,0.3);color:#ffe2e2;}
+.node-card-type.proto-ss{background:rgba(37,99,235,0.16);border-color:rgba(59,130,246,0.2);color:#bfdbfe;}
+.node-card-type.proto-ssr{background:rgba(16,185,129,0.16);border-color:rgba(16,185,129,0.22);color:#c8f7e8;}
+.node-card-type.proto-vmess{background:rgba(139,92,246,0.18);border-color:rgba(139,92,246,0.24);color:#e9ddff;}
+.node-card-type.proto-vless{background:rgba(244,114,182,0.18);border-color:rgba(244,114,182,0.24);color:#ffd8ec;}
+.node-card-type.proto-trojan{background:rgba(245,158,11,0.18);border-color:rgba(245,158,11,0.24);color:#ffe6b8;}
+.node-card-type.proto-naive{background:rgba(20,184,166,0.18);border-color:rgba(20,184,166,0.24);color:#ccfbf1;}
+.node-card-type.proto-tuic{background:rgba(234,88,12,0.18);border-color:rgba(234,88,12,0.24);color:#ffdfcf;}
+.node-card-type.proto-hy2{background:rgba(168,85,247,0.18);border-color:rgba(168,85,247,0.24);color:#f1dcff;}
+.node-card-latency{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:42px;max-width:58px;margin-left:0px;padding:3.5px 5px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);font-size:11px;line-height:1;}
 .node-card-latency.latency_btn{cursor:pointer;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;}
 .node-card-latency.latency_btn:hover{border-color:rgba(70,160,255,0.32);background:rgba(70,160,255,0.09);box-shadow:0 0 0 1px rgba(70,160,255,0.08);}
-.node-card-latency-icon{width:10px;height:10px;flex:0 0 10px;opacity:.88;pointer-events:none;}
-.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:18px;}
+.node-card-latency-icon{width:11px;height:11px;flex:0 0 11px;opacity:.88;pointer-events:none;}
+.node-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:40px;}
+.node-card-tool{position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all .16s ease;color:#e6eef8;font-size:0;line-height:1;overflow:hidden;}
+.node-card-tool:hover{background:rgba(70,160,255,0.12);border-color:rgba(70,160,255,0.24);transform:translateY(-1px);}
+.node-card-tool img{width:11px;height:11px;display:block;opacity:.92;pointer-events:none;}
 .node-card-delete{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#e54d4d;color:#fff;font-size:12px;line-height:1;text-decoration:none;opacity:0;transform:translate(4px,-4px) scale(.86);box-shadow:0 8px 16px rgba(159,38,38,0.28);transition:all .18s ease;z-index:3;}
 .node-card:hover .node-card-delete,.node-card-delete:focus{opacity:1;transform:translate(0,0) scale(1);}
 .node-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.4);}
@@ -357,7 +368,7 @@ body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-edito
 /* ROG 皮肤 (红黑色主题) - 保持当前样式 */
 body[skin="ROG"] .node-card-section-head {
 	border-color: rgba(74,108,138,0.24);
-	background: linear-gradient(180deg,rgba(24,34,48,0.96),rgba(16,24,34,0.94));
+	background: linear-gradient(180deg, rgb(24 34 48 / 50%), rgb(16 24 34 / 50%));
 }
 body[skin="ROG"] .node-card-section-head:hover {
 	border-color: rgba(255,70,70,0.36);
@@ -365,10 +376,18 @@ body[skin="ROG"] .node-card-section-head:hover {
 }
 body[skin="ROG"] .node-card {
 	border-color: rgba(74,108,138,0.22);
-	background: linear-gradient(180deg,rgba(18,25,36,0.98),rgba(12,18,27,0.96));
+	background: linear-gradient(180deg, rgb(18 25 36 / 50%), rgb(12 18 27 / 50%));
 }
 body[skin="ROG"] .node-card:hover {
 	border-color: rgba(255,70,70,0.42);
+}
+body[skin="ROG"] .node-card.is-current {
+	border-color: rgb(11 11 11 / 56%);
+	background: linear-gradient(180deg, rgb(178 23 23 / 50%), rgb(117 16 16 / 50%));
+}
+body[skin="ROG"] .node-card.is-selected {
+	border-color: rgb(11 11 11 / 56%);
+	background: linear-gradient(180deg, rgb(178 23 23 / 70%), rgb(117 16 16 / 70%));
 }
 body[skin="ROG"] .node-card-section-count {
 	background: rgba(255,70,70,0.12);
@@ -409,19 +428,27 @@ body[skin="ROG"] .shunt-editor-control select:focus{
 /* ASUSWRT 皮肤 (蓝灰色主题) */
 body[skin="ASUSWRT"] .node-card-section-head {
 	border-color: rgba(100,116,139,0.28);
-	background: linear-gradient(180deg,rgba(30,41,59,0.96),rgba(15,23,42,0.94));
+	background: linear-gradient(180deg, rgb(30 41 59 / 50%), rgb(15 23 42 / 50%));
 }
 body[skin="ASUSWRT"] .node-card-section-head:hover {
 	border-color: rgba(59,130,246,0.36);
 	background: linear-gradient(180deg,rgba(37,47,63,0.98),rgba(23,32,48,0.96));
 }
 body[skin="ASUSWRT"] .node-card {
-	border-color: rgba(100,116,139,0.24);
-	background: linear-gradient(180deg,rgba(30,41,59,0.98),rgba(15,23,42,0.96));
+	border-color: rgba(74,108,138,0.22);
+	background: linear-gradient(180deg, rgb(18 25 36 / 50%), rgb(12 18 27 / 50%));
 	border-radius: 8px;
 }
 body[skin="ASUSWRT"] .node-card:hover {
 	border-color: rgba(59,130,246,0.42);
+}
+body[skin="ASUSWRT"] .node-card.is-current {
+	border-color: rgba(37,99,235,0.44);
+	background: linear-gradient(180deg, rgba(37,99,235,0.36), rgba(21,58,128,0.36));
+}
+body[skin="ASUSWRT"] .node-card.is-selected {
+	border-color: rgba(37,99,235,0.56);
+	background: linear-gradient(180deg, rgba(37,99,235,0.56), rgba(21,58,128,0.56));
 }
 body[skin="ASUSWRT"] .node-card-section-count {
 	background: rgba(59,130,246,0.14);
@@ -467,19 +494,27 @@ body[skin="ASUSWRT"] .shunt-summary-card {
 /* TUF 皮肤 (橙黑色主题) */
 body[skin="TUF"] .node-card-section-head {
 	border-color: rgba(120,80,40,0.28);
-	background: linear-gradient(180deg,rgba(40,30,20,0.96),rgba(28,20,14,0.94));
+	background: linear-gradient(180deg, rgb(40 30 20 / 50%), rgb(28 20 14 / 50%));
 }
 body[skin="TUF"] .node-card-section-head:hover {
 	border-color: rgba(251,146,60,0.36);
 	background: linear-gradient(180deg,rgba(48,36,24,0.98),rgba(32,24,16,0.96));
 }
 body[skin="TUF"] .node-card {
-	border-color: rgba(120,80,40,0.24);
-	background: linear-gradient(180deg,rgba(32,24,18,0.98),rgba(22,16,12,0.96));
+	border-color: rgba(74,108,138,0.22);
+	background: linear-gradient(180deg, rgb(18 25 36 / 50%), rgb(12 18 27 / 50%));
 	border-radius: 8px;
 }
 body[skin="TUF"] .node-card:hover {
 	border-color: rgba(251,146,60,0.42);
+}
+body[skin="TUF"] .node-card.is-current {
+	border-color: rgba(251,146,60,0.44);
+	background: linear-gradient(180deg, rgba(251,146,60,0.36), rgba(194,65,12,0.36));
+}
+body[skin="TUF"] .node-card.is-selected {
+	border-color: rgba(251,146,60,0.56);
+	background: linear-gradient(180deg, rgba(251,146,60,0.56), rgba(194,65,12,0.56));
 }
 body[skin="TUF"] .node-card-section-count {
 	background: rgba(251,146,60,0.14);
@@ -525,19 +560,27 @@ body[skin="TUF"] .shunt-summary-card {
 /* TS 皮肤 (青色主题) */
 body[skin="TS"] .node-card-section-head {
 	border-color: rgba(70,120,120,0.28);
-	background: linear-gradient(180deg,rgba(20,35,40,0.96),rgba(14,25,30,0.94));
+	background: linear-gradient(180deg, rgb(20 35 40 / 50%), rgb(14 25 30 / 50%));
 }
 body[skin="TS"] .node-card-section-head:hover {
 	border-color: rgba(34,211,238,0.36);
 	background: linear-gradient(180deg,rgba(24,42,48,0.98),rgba(16,30,36,0.96));
 }
 body[skin="TS"] .node-card {
-	border-color: rgba(70,120,120,0.24);
-	background: linear-gradient(180deg,rgba(20,32,36,0.98),rgba(14,22,26,0.96));
+	border-color: rgba(74,108,138,0.22);
+	background: linear-gradient(180deg, rgb(18 25 36 / 50%), rgb(12 18 27 / 50%));
 	border-radius: 8px;
 }
 body[skin="TS"] .node-card:hover {
 	border-color: rgba(34,211,238,0.42);
+}
+body[skin="TS"] .node-card.is-current {
+	border-color: rgba(34,211,238,0.44);
+	background: linear-gradient(180deg, rgba(34,211,238,0.34), rgba(8,145,178,0.34));
+}
+body[skin="TS"] .node-card.is-selected {
+	border-color: rgba(34,211,238,0.56);
+	background: linear-gradient(180deg, rgba(34,211,238,0.54), rgba(8,145,178,0.54));
 }
 body[skin="TS"] .node-card-section-count {
 	background: rgba(34,211,238,0.14);
@@ -720,6 +763,8 @@ var batch_ws_watchdog_timer = null;
 var batchLatencyPollSeq = 0;
 var webtestSnapshotActive = false;
 var webtestSnapshotBuffer = "";
+var webtestFileWsCache = {};
+var webtestFileWsPending = {};
 var singleLatencySocket = null;
 var singleLatencyPollSeq = 0;
 var fss_nodes_raw = {};
@@ -7829,10 +7874,17 @@ function Add_profile() { //点击节点页面内添加节点动作
 	tabclickhandler(0); //默认显示添加ss节点
 	show_add_node_panel();
 }
+function show_node_editor_overlay() {
+	$("#node_editor_overlay").show();
+}
+function hide_node_editor_overlay() {
+	$("#node_editor_overlay").hide();
+}
 function show_add_node_panel(){
 	// show add node pannel
 	document.scrollingElement.scrollTop = 0;
 	//$('html, body').css({overflow: 'hidden', height: '100%'});
+	show_node_editor_overlay();
 	$("#add_fancyss_node").show();
 	$(".contentM_qis").css("top", "0px");
 	$("#cancel_Btn").css("margin-left", "160px");
@@ -7840,6 +7892,7 @@ function show_add_node_panel(){
 }
 function cancel_add_node() {
 	//点击添加节点面板上的返回
+	hide_node_editor_overlay();
 	$("#add_fancyss_node").hide();
 	//$('html, body').css({overflow: 'auto', height: 'auto'});
 	$("body").find(".fullScreen").show(function() { tableApi.removeElement("fullScreen"); });
@@ -9426,20 +9479,64 @@ function toggle_node_card_section(sectionKey) {
 	return false;
 }
 function sync_node_card_current_state(nodeId) {
-	var currentId = String(nodeId || "");
+	var currentId = E("ss_basic_enable") && E("ss_basic_enable").checked ? String(get_saved_current_node_id() || "") : "";
+	var selectedId = String(resolve_node_id(E("ssconf_basic_node").value, true) || "");
 	if (!get_node_view_prefers_cards()) {
 		return;
 	}
-	$(".node-card").removeClass("is-current");
+	$(".node-card").removeClass("is-current is-selected");
 	$(".node-card-type").removeClass("current");
-	if (!currentId) {
-		return;
+	if (currentId) {
+		var $currentCard = $("#node_" + currentId);
+		if ($currentCard.length) {
+			$currentCard.addClass("is-current");
+			$currentCard.find(".node-card-type").addClass("current");
+		}
 	}
-	var $card = $("#node_" + currentId);
-	if ($card.length) {
-		$card.addClass("is-current");
-		$card.find(".node-card-type").addClass("current");
+	if (selectedId && selectedId != currentId) {
+		var $selectedCard = $("#node_" + selectedId);
+		if ($selectedCard.length) {
+			$selectedCard.addClass("is-selected");
+		}
 	}
+}
+function get_node_card_protocol_class(c) {
+	var label = String(get_node_display_type_label(c) || "").toLowerCase();
+	if (label.indexOf("ss[obfs]") === 0 || label == "ss") return "proto-ss";
+	if (label == "ssr") return "proto-ssr";
+	if (label == "vmess") return "proto-vmess";
+	if (label == "vless") return "proto-vless";
+	if (label == "trojan") return "proto-trojan";
+	if (label == "naïve" || label == "naive") return "proto-naive";
+	if (label == "tuic") return "proto-tuic";
+	if (label == "hy2" || label == "hysteria2") return "proto-hy2";
+	return "";
+}
+function select_node_card(nodeId) {
+	nodeId = resolve_node_id(nodeId, true);
+	if (!nodeId) {
+		return false;
+	}
+	E("ssconf_basic_node").value = nodeId;
+	ss_node_sel();
+	select_default_node(2);
+	return false;
+}
+function open_node_card_qrcode(nodeId) {
+	nodeId = resolve_node_id(nodeId, true);
+	if (!nodeId) {
+		return false;
+	}
+	makeQRcode({id: "server_" + nodeId});
+	return false;
+}
+function open_node_card_editor(nodeId) {
+	nodeId = resolve_node_id(nodeId, true);
+	if (!nodeId) {
+		return false;
+	}
+	edit_conf_table(nodeId);
+	return false;
 }
 function render_node_list_footer_html() {
 	var html = '';
@@ -9493,7 +9590,9 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 					var entry = section.nodes[n];
 					var c = entry.conf;
 					var isCurrent = currentEnabled && String(currentNodeId) == String(c["node"]);
-					html += '<div class="node-card' + (isCurrent ? ' is-current' : '') + '" id="node_' + c["node"] + '" onclick="edit_conf_table(\'' + c["node"] + '\')">';
+					var typeLabel = get_node_display_type_label(c);
+					var typeClass = get_node_card_protocol_class(c);
+					html += '<div class="node-card' + (isCurrent ? ' is-current' : '') + '" id="node_' + c["node"] + '" onclick="select_node_card(\'' + c["node"] + '\')">';
 					html += '<a href="javascript:void(0);" class="node-card-delete" id="td_node_' + c["node"] + '" onclick="event.stopPropagation();remove_conf_table(this);return false;" title="删除节点">&times;</a>';
 					html += '<div class="node-card-head">';
 					html += '<div class="node-card-status">';
@@ -9502,7 +9601,7 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 					html += '</div>';
 					html += '</div>';
 						html += '<div class="node-card-subrow">';
-						html += '<span class="node-card-type' + (isCurrent ? ' current' : '') + '">' + htmlEscape(get_node_display_type_label(c)) + '</span>';
+						html += '<span class="node-card-type ' + typeClass + (isCurrent ? ' current' : '') + '">' + htmlEscape(typeLabel) + '</span>';
 						if (hasLatency) {
 							html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency latency_btn" data-node="' + c["node"] + '" title="点击测试此节点延迟" onclick="event.stopPropagation();test_latency_single(' + c["node"] + ');return false;">';
 							html += '<img class="node-card-latency-icon" src="/res/speed.png" alt="" />';
@@ -9511,7 +9610,9 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 							html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
 						}
 					html += '<div class="node-card-actions">';
-					html += '<div class="deactivate_icon" style="display:inline-block;vertical-align:middle;width:18px;height:18px;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
+						html += '<a href="javascript:void(0);" class="node-card-tool node-card-qrcode" title="二维码" onclick="event.stopPropagation();open_node_card_qrcode(\'' + c["node"] + '\');return false;"><img src="/res/qrcode.png" alt="" /></a>';
+						html += '<a href="javascript:void(0);" class="node-card-tool node-card-edit" title="编辑节点" onclick="event.stopPropagation();open_node_card_editor(\'' + c["node"] + '\');return false;"><img src="/res/edit.png" alt="" /></a>';
+					html += '<div class="deactivate_icon" style="display:none;" id="apply_ss_node_' + c["node"] + '" onclick="event.stopPropagation();apply_this_ss_node(this);"></div>';
 					html += '</div>';
 					html += '</div>';
 					html += '</div>';
@@ -10033,11 +10134,12 @@ function select_default_node(o){
 	if(node_max == 0){
 		E("reset_select").style.display = "none";
 	}
-	if(o == 1){
-		//定义取消按钮点击行为
-		if(db_ss["ss_basic_enable"] == "1"){
-			//开启开关，节点选择为db_ss["ssconf_basic_node"]
-			E("ss_basic_enable").checked = true;
+		if(o == 1){
+			//定义取消按钮点击行为
+			if(db_ss["ss_basic_enable"] == "1"){
+				//开启开关，节点选择为db_ss["ssconf_basic_node"]
+				E("ssconf_basic_node").value = get_saved_current_node_id();
+				E("ss_basic_enable").checked = true;
 			$("#apply_ss_node_" + get_saved_current_node_id()).addClass("activate_icon");
 			$("#apply_ss_node_" + get_saved_current_node_id()).removeClass("deactivate_icon");
 			if(!scroll_current_node_into_view(get_saved_current_node_id()) && node_idx && node_nu > nodeN){
@@ -10765,6 +10867,109 @@ function send_webtest_ws_command(command, onDone, onBusy, onError) {
 				finished = true;
 				try { ctl.close(); } catch (e) {}
 				if (typeof onDone === "function") onDone();
+			}
+		}
+	};
+	return true;
+}
+function read_webtest_file_ws(path, onSuccess, onError) {
+	var now = Date.now();
+	var cached = webtestFileWsCache[path];
+	if (cached && (now - cached.ts) < 2000) {
+		if (typeof onSuccess === "function") onSuccess(cached.data);
+		return true;
+	}
+	if (webtestFileWsPending[path]) {
+		webtestFileWsPending[path].push({success: onSuccess, error: onError});
+		return true;
+	}
+	if (ws_flag != 1 || window.location.protocol != "http:" || !ws_host_allowed(hostname)) {
+		if (typeof onError === "function") onError();
+		return false;
+	}
+	webtestFileWsPending[path] = [{success: onSuccess, error: onError}];
+	var flush_pending = function(ok, data) {
+		var pending = webtestFileWsPending[path] || [];
+		delete webtestFileWsPending[path];
+		if (ok) {
+			webtestFileWsCache[path] = {ts: Date.now(), data: data};
+		}
+		for (var i = 0; i < pending.length; i++) {
+			var cb = ok ? pending[i].success : pending[i].error;
+			if (typeof cb === "function") cb(data);
+		}
+	};
+	var ctl = new WebSocket("ws://" + hostname + ":803/");
+	var finished = false;
+	var buffer = "";
+	var quietTimer = null;
+	var timer = setTimeout(function() {
+		if (!finished) {
+			finished = true;
+			if (quietTimer) {
+				clearTimeout(quietTimer);
+			}
+			try { ctl.close(); } catch (e) {}
+			flush_pending(false);
+		}
+	}, 1800);
+	var finish_ok = function() {
+		clearTimeout(timer);
+		if (!finished) {
+			finished = true;
+			if (quietTimer) {
+				clearTimeout(quietTimer);
+			}
+			try { ctl.close(); } catch (e) {}
+			flush_pending(true, buffer);
+		}
+	};
+	ctl.onopen = function() {
+		try {
+			ctl.send("cat " + path);
+		} catch (e) {
+			clearTimeout(timer);
+			if (!finished) {
+				finished = true;
+				if (quietTimer) {
+					clearTimeout(quietTimer);
+				}
+				flush_pending(false);
+			}
+		}
+	};
+	ctl.onerror = function() {
+		clearTimeout(timer);
+		if (!finished) {
+			finished = true;
+			if (quietTimer) {
+				clearTimeout(quietTimer);
+			}
+			flush_pending(false);
+		}
+	};
+	ctl.onmessage = function(event) {
+		var msg = String(event.data || "");
+		buffer += msg;
+		if (msg && msg.charAt(msg.length - 1) != "\n") {
+			buffer += "\n";
+		}
+		if (quietTimer) {
+			clearTimeout(quietTimer);
+		}
+		quietTimer = setTimeout(finish_ok, 120);
+	};
+	ctl.onclose = function() {
+		clearTimeout(timer);
+		if (!finished) {
+			finished = true;
+			if (quietTimer) {
+				clearTimeout(quietTimer);
+			}
+			if (buffer.length > 0) {
+				flush_pending(true, buffer);
+			} else {
+				flush_pending(false);
 			}
 		}
 	};
@@ -11573,49 +11778,61 @@ function load_latency_cache(){
 	if (!should_run_node_latency_live()) {
 		return false;
 	}
-	var URL = '/_temp/webtest.txt';
-	$.ajax({
-		url: URL,
-		type: 'GET',
-		cache:false,
-		dataType: 'text',
-		success: function(res) {
-			const data = parse_webtest_complete(res);
-			const usable = count_usable_webtest(data.list);
-			const threshold = Math.max(1, Math.floor(node_nu * 0.5));
-			if(usable > 0){
-				write_webtest(data.list);
-			}
-			if(data.complete && usable >= threshold){
-				batch_test_running = false;
-				batch_stop_pending = false;
-				update_latency_action_links();
-				return;
-			}
-			load_latency_backup(usable);
-		},
-		error: function() {
-			load_latency_backup(0);
+	var handle_cache = function(res) {
+		const data = parse_webtest_complete(res || "");
+		const usable = count_usable_webtest(data.list);
+		const threshold = Math.max(1, Math.floor(node_nu * 0.5));
+		if(usable > 0){
+			write_webtest(data.list);
 		}
-	});
+		if(data.complete && usable >= threshold){
+			batch_test_running = false;
+			batch_stop_pending = false;
+			update_latency_action_links();
+			return;
+		}
+		load_latency_backup(usable);
+	};
+	var fallback_http = function() {
+		$.ajax({
+			url: '/_temp/webtest.txt',
+			type: 'GET',
+			cache:false,
+			dataType: 'text',
+			success: handle_cache,
+			error: function() {
+				load_latency_backup(0);
+			}
+		});
+	};
+	read_webtest_file_ws('/tmp/upload/webtest.txt', handle_cache, fallback_http);
 }
 function load_latency_backup(minCount){
-	var URL = '/_temp/webtest_bakcup.txt';
-	$.ajax({
-		url: URL,
-		type: 'GET',
-		cache:false,
-		dataType: 'text',
-		success: function(res) {
-			const data = parse_webtest_complete(res);
-			const usable = count_usable_webtest(data.list);
-			if(usable >= Math.max(1, minCount || 0)){
-				write_webtest(data.list);
-			}else if(usable > 0){
-				write_webtest(data.list);
-			}
+	var handle_backup = function(res) {
+		const data = parse_webtest_complete(res || "");
+		const usable = count_usable_webtest(data.list);
+		if(usable >= Math.max(1, minCount || 0)){
+			write_webtest(data.list);
+		}else if(usable > 0){
+			write_webtest(data.list);
 		}
-	});
+	};
+	var fallback_http = function() {
+		$.ajax({
+			url: '/_temp/webtest_bakcup.txt',
+			type: 'GET',
+			cache:false,
+			dataType: 'text',
+			success: handle_backup
+		});
+	};
+	read_webtest_file_ws('/tmp/upload/webtest_bakcup.txt', function(res) {
+		if (String(res || "").indexOf("cat:") === 0) {
+			fallback_http();
+			return;
+		}
+		handle_backup(res);
+	}, fallback_http);
 }
 function parse_webtest_complete(res){
 	const lines = res.split('\n');
@@ -14424,6 +14641,7 @@ function toggleKeyMask(o, show){
 		</tr>
 	</table>
 	</div>
+	<div id="node_editor_overlay" class="popup_bar_bg_ks" style="display:none;z-index:199;"></div>
 	<!--============================this is the popup area for latency settings========================================-->
 	<div id="latency_test_settings" class="fancyss_qis pop_div_bg">
 		<table class="QISform_wireless" border="0" align="center" cellpadding="5" cellspacing="0">
