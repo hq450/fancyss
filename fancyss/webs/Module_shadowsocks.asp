@@ -296,7 +296,7 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;padding-right:6px;}
 .node-card-status{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
 .node-card-dot{width:6px;height:6px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 6px;box-shadow:0 0 6px rgba(110,168,254,0.45);}
-.node-card.is-current .node-card-dot{background:#ff8a8a;box-shadow:0 0 10px rgba(255,138,138,0.62);}
+.node-card.is-current .node-card-dot{background:#2bff79;box-shadow:0 0 10px rgb(32 255 93 / 62%);}
 .node-card.is-selected .node-card-dot{background:#ffd1d1;box-shadow:0 0 12px rgba(255,209,209,0.7);}
 .node-card-name{font-size:13px;line-height:1.2;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-height:auto;max-width:100%;}
 .node-card-subrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:auto;}
@@ -323,6 +323,10 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-delete:hover{background:#ff5f5f;color:#fff;box-shadow:0 10px 20px rgba(188,49,49,0.4);}
 .node-card:hover .node-card-delete[data-disable-hidden="1"],.node-card-delete[data-disable-hidden="1"]:focus{opacity:1;transform:translate(0,0) scale(1);background:#6b7280;color:#eef2f7;box-shadow:none;cursor:not-allowed;}
 .node-card-empty{padding:26px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:12px;background:rgba(18,24,34,0.44);color:#9fb6d1;line-height:1.9;text-align:center;}
+.log-switch-bar{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0 0 0;}
+.log-switch-btn{display:inline-flex;align-items:center;justify-content:center;min-width:88px;height:30px;padding:0 14px;border-radius:5px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:#dce7f3;font-size:12px;line-height:1;cursor:pointer;transition:all .16s ease;}
+.log-switch-btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.22);}
+.log-switch-btn.active{background:linear-gradient(135deg,#2563eb,#37b4ff);border-color:rgba(70,160,255,0.48);color:#fff;box-shadow:0 8px 18px rgba(37,99,235,0.22);}
 .submgr-uri-box textarea{width:100%;min-height:260px;box-sizing:border-box;border-radius:5px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;line-height:1.7;resize:vertical;font-family:Menlo, Monaco, Consolas, "Courier New", monospace;}
 .submgr-uri-box textarea:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.18);}
 body .submgr-layer .layui-layer-btn{text-align:center !important;padding:0 16px 14px !important;}
@@ -765,6 +769,7 @@ var webtestSnapshotActive = false;
 var webtestSnapshotBuffer = "";
 var webtestFileWsCache = {};
 var webtestFileWsPending = {};
+var current_log_view = "plugin";
 var singleLatencySocket = null;
 var singleLatencyPollSeq = 0;
 var fss_nodes_raw = {};
@@ -1918,6 +1923,85 @@ function is_shunt_supported_node(nodeId) {
 	default:
 		return false;
 	}
+}
+function get_shunt_node_block_message(nodeId) {
+	var c = confs[nodeId] || {};
+	var typeLabel = get_node_display_type_label(c) || "该";
+	switch (String(typeLabel || "").toLowerCase()) {
+	case "tuic":
+		typeLabel = "Tuic";
+		break;
+	case "naïve":
+	case "naive":
+		typeLabel = "Naïve";
+		break;
+	case "ss[obfs]":
+		typeLabel = "SS[obfs]";
+		break;
+	case "ss":
+		typeLabel = "SS";
+		break;
+	case "ssr":
+		typeLabel = "SSR";
+		break;
+	case "vmess":
+		typeLabel = "Vmess";
+		break;
+	case "vless":
+		typeLabel = "Vless";
+		break;
+	case "trojan":
+		typeLabel = "Trojan";
+		break;
+	case "hy2":
+	case "hysteria2":
+		typeLabel = "Hysteria2";
+		break;
+	}
+	return typeLabel + "协议节点暂不支持xray分流，请选择其它节点或者使用其它分流模式！";
+}
+function show_shunt_node_block_layer(nodeId) {
+	var msg = get_shunt_node_block_message(nodeId);
+	if (typeof layer != "undefined" && layer.alert) {
+		layer.alert(msg, {
+			title: "节点选择提醒",
+			shade: 0.8
+		});
+		return;
+	}
+	alert(msg);
+}
+function rollback_shunt_mode_selection(prevMode) {
+	if (E("ss_basic_mode")) {
+		E("ss_basic_mode").value = String(prevMode || "2");
+	}
+	refresh_shunt_ui();
+}
+function rollback_shunt_node_selection(prevNodeId) {
+	var rollbackId = resolve_node_id(prevNodeId, true) || get_saved_current_node_id() || get_first_node_id();
+	if (!rollbackId) {
+		return;
+	}
+	E("ssconf_basic_node").value = rollbackId;
+	var obj = ssconf_node2obj(rollbackId);
+	conf2obj(obj, 1);
+	verifyFields();
+	refresh_basic_method_width();
+	refresh_basic_input_width();
+	refresh_shunt_ui();
+}
+function guard_shunt_main_node_selection(nodeId, silent) {
+	nodeId = resolve_node_id(nodeId, true);
+	if (!current_mode_is_shunt() || !nodeId) {
+		return nodeId;
+	}
+	if (is_shunt_supported_node(nodeId)) {
+		return nodeId;
+	}
+	if (!silent) {
+		show_shunt_node_block_layer(nodeId);
+	}
+	return "";
 }
 function decode_shunt_custom_text(customB64) {
 	try {
@@ -6210,6 +6294,7 @@ function ssconf_node2obj(node_sel) {
 }
 function ss_node_sel() {
 	var node_sel = resolve_node_id(E("ssconf_basic_node").value);
+	var prevNodeId = get_saved_current_node_id();
 	if (!node_sel) {
 		return;
 	}
@@ -6220,6 +6305,10 @@ function ss_node_sel() {
 	refresh_basic_method_width();
 	refresh_basic_input_width();
 	refresh_shunt_ui();
+	if (current_mode_is_shunt() && !is_shunt_supported_node(node_sel)) {
+		show_shunt_node_block_layer(node_sel);
+		rollback_shunt_node_selection(prevNodeId);
+	}
 }
 function refresh_options() {
 	if (node_max == 0) return false;
@@ -6318,6 +6407,10 @@ function save() {
 	var node_type = get_node_type(node_sel);
 	submit_flag="1";
 	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
+		if (node_sel && !is_shunt_supported_node(node_sel)) {
+			show_shunt_node_block_layer(node_sel);
+			return false;
+		}
 		node_sel = sync_shunt_current_node_selection(node_sel) || node_sel;
 		shuntDefaultNodeId = get_shunt_default_node_id();
 		shuntRuntimeNodeId = get_shunt_runtime_node_id();
@@ -7875,10 +7968,10 @@ function Add_profile() { //点击节点页面内添加节点动作
 	show_add_node_panel();
 }
 function show_node_editor_overlay() {
-	$("#node_editor_overlay").show();
+	$("#node_editor_overlay").css("visibility", "visible").show();
 }
 function hide_node_editor_overlay() {
-	$("#node_editor_overlay").hide();
+	$("#node_editor_overlay").css("visibility", "hidden").hide();
 }
 function show_add_node_panel(){
 	// show add node pannel
@@ -12292,6 +12385,7 @@ function tabSelect(w) {
 		$('.show-btn' + i).removeClass('active');
 		$('#tablet_' + i).hide();
 	}
+	hide_log_switch_panel();
 	$('.show-btn' + w).addClass('active');
 	$('#tablet_' + w).show();	
 }
@@ -12393,6 +12487,7 @@ var tab_actions = {
 	10: function() {
 		$('#apply_button').hide();
 		$('#ss_failover_save').hide();
+		show_log_switch_panel();
 		get_log();
 	}
 };
@@ -13271,6 +13366,36 @@ function get_status_log_httpd(s) {
 		}
 	});
 }
+function get_current_log_ws_file() {
+	return current_log_view == "subscribe" ? "/tmp/upload/ss_subscribe_log.txt" : "/tmp/upload/ss_log.txt";
+}
+function get_current_log_http_path() {
+	return current_log_view == "subscribe" ? "/_temp/ss_subscribe_log.txt" : "/_temp/ss_log.txt";
+}
+function get_current_log_empty_text() {
+	return current_log_view == "subscribe" ? "暂无任何订阅日志，获取日志失败！" : "获取日志失败！";
+}
+function update_log_switch_buttons() {
+	var isSubscribe = current_log_view == "subscribe";
+	$("#log_switch_plugin").toggleClass("active", !isSubscribe);
+	$("#log_switch_subscribe").toggleClass("active", isSubscribe);
+}
+function show_log_switch_panel() {
+	$("#log_switch_panel").show();
+	update_log_switch_buttons();
+}
+function hide_log_switch_panel() {
+	$("#log_switch_panel").hide();
+}
+function switch_log_view(type) {
+	current_log_view = type == "subscribe" ? "subscribe" : "plugin";
+	update_log_switch_buttons();
+	if (E("log_content1")) {
+		E("log_content1").value = "";
+	}
+	get_log();
+	return false;
+}
 function get_log() {
 	if (ws_flag != 1){
 		get_log_httpd();
@@ -13280,7 +13405,7 @@ function get_log() {
 	wsl.onopen = function() {
 		//console.log('wsl：成功建立websocket链接，开始获取日志...');
 		E('log_content1').value = "";
-		wsl.send("cat /tmp/upload/ss_log.txt");
+		wsl.send("cat " + get_current_log_ws_file());
 	};
 	//wsl.onclose = function() {
 	//	console.log('wsl： DISCONNECT');
@@ -13302,7 +13427,7 @@ function get_log_httpd() {
 	poll_text_file({
 		key: "main_log",
 		reset: true,
-		url: '/_temp/ss_log.txt',
+		url: get_current_log_http_path(),
 		dataType: 'html',
 		onSuccess: function(response, state) {
 			var retArea = E("log_content1");
@@ -13324,7 +13449,7 @@ function get_log_httpd() {
 			return {done: false, delay: 100};
 		},
 		onError: function(xhr) {
-			E("log_content1").value = "获取日志失败！";
+			E("log_content1").value = get_current_log_empty_text();
 			return {done: true};
 		}
 	});
@@ -14173,9 +14298,19 @@ function bind_acl_mode_sync() {
 	});
 }
 function bind_shunt_mode_sync() {
+	$("#ss_basic_mode").data("prev-mode", $("#ss_basic_mode").val() || get_selected_main_mode());
 	$("#ss_basic_mode").off("change.shunt_sync").on("change.shunt_sync", function() {
+		var nextMode = String($(this).val() || "");
+		var prevMode = String($(this).data("prev-mode") || get_selected_main_mode());
+		var nodeId = resolve_node_id(E("ssconf_basic_node").value, true);
+		if (nextMode == "7" && nodeId && !is_shunt_supported_node(nodeId)) {
+			show_shunt_node_block_layer(nodeId);
+			rollback_shunt_mode_selection(prevMode);
+			return false;
+		}
+		$(this).data("prev-mode", nextMode);
 		refresh_shunt_ui();
-		if (String($(this).val() || "") == "7") {
+		if (nextMode == "7") {
 			$(".show-btn5").trigger("click");
 		}
 	});
@@ -15854,6 +15989,12 @@ function toggleKeyMask(o, show){
 											<div id="tablet_10" style="display: none;">
 												<div id="log_content" style="overflow:hidden;">
 													<textarea cols="63" rows="36" wrap="on" readonly="readonly" id="log_content1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+												</div>
+											</div>
+											<div class="apply_gen" id="log_switch_panel" style="display:none;padding-top:10px;">
+												<div class="log-switch-bar">
+													<a href="javascript:void(0);" id="log_switch_plugin" class="log-switch-btn active" onclick="return switch_log_view('plugin');">插件日志</a>
+													<a href="javascript:void(0);" id="log_switch_subscribe" class="log-switch-btn" onclick="return switch_log_view('subscribe');">订阅日志</a>
 												</div>
 											</div>
 											<div class="apply_gen" id="loading_icon">
