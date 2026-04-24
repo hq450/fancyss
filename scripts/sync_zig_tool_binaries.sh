@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD=1
+BUILD=0
 BUILD_UPX_ARG=()
 REQUESTED_TOOLS=()
 
@@ -15,7 +15,8 @@ Tools:
   geotool node-tool sub-tool xapi-tool ws-tool status-tool webtest-tool
 
 Options:
-  --no-build    Only sync existing tool/*/dist artifacts into binaries/
+  --build       Build tools before syncing into binaries/
+  --no-build    Only sync existing tool/*/dist artifacts into binaries/ (default)
   --no-upx      Pass --no-upx to each tool build-release script
   --upx         Pass --upx to each tool build-release script
   -h, --help    Show this help
@@ -28,6 +29,10 @@ EOF
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--build)
+			BUILD=1
+			shift
+			;;
 		--no-build)
 			BUILD=0
 			shift
@@ -172,6 +177,12 @@ copy_artifacts() {
 	local checksum="SHA256SUMS-v${version}"
 	local prefix=""
 	local found=0
+	local known_artifacts=()
+	local existing_artifacts=()
+	local artifact=""
+	local filename=""
+	local checksum_tmp=""
+	local seen=0
 
 	mkdir -p "$binaries_dir"
 	for prefix in $prefixes; do
@@ -186,11 +197,40 @@ copy_artifacts() {
 		echo "error: no artifacts found in $dist_dir for v${version}" >&2
 		return 1
 	}
-	[[ -f "${dist_dir}/${checksum}" ]] || {
-		echo "error: checksum file not found: ${dist_dir}/${checksum}" >&2
+	if [[ -f "$binaries_dir/$checksum" ]]; then
+		while read -r _ filename; do
+			[[ -n "${filename:-}" && -f "$binaries_dir/$filename" ]] && existing_artifacts+=("$filename")
+		done < "$binaries_dir/$checksum"
+	fi
+	for prefix in $prefixes; do
+		while IFS= read -r artifact; do
+			known_artifacts+=("$artifact")
+		done < <(find "$binaries_dir" -maxdepth 1 -type f -name "${prefix}-v${version}-linux-*" -printf '%f\n' | sort)
+	done
+	[[ ${#known_artifacts[@]} -gt 0 ]] || {
+		echo "error: no binaries found in $binaries_dir for v${version}" >&2
 		return 1
 	}
-	cp -f "${dist_dir}/${checksum}" "${binaries_dir}/${checksum}"
+	checksum_tmp="$(mktemp "$binaries_dir/.${checksum}.tmp.XXXXXX")"
+	(
+		cd "$binaries_dir"
+		for artifact in "${existing_artifacts[@]}"; do
+			sha256sum "$artifact"
+		done
+		for artifact in "${known_artifacts[@]}"; do
+			seen=0
+			for filename in "${existing_artifacts[@]}"; do
+				if [[ "$artifact" == "$filename" ]]; then
+					seen=1
+					break
+				fi
+			done
+			if [[ "$seen" == "0" ]]; then
+				sha256sum "$artifact"
+			fi
+		done
+	) > "$checksum_tmp"
+	mv -f "$checksum_tmp" "$binaries_dir/$checksum"
 }
 
 verify_checksums() {

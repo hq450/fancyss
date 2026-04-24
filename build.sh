@@ -42,11 +42,6 @@ prepare_geodata_assets(){
 	${CURR_PATH}/scripts/build_geodata_fancyss.sh
 }
 
-sync_zig_tool_binaries(){
-	echo ">>> build and sync Zig tool binaries"
-	${CURR_PATH}/scripts/sync_zig_tool_binaries.sh ${FANCYSS_ZIG_TOOL_SYNC_ARGS:-}
-}
-
 zig_tool_version(){
 	local tool_dir="$1"
 	tr -d '\r\n' < "${CURR_PATH}/tool/${tool_dir}/VERSION"
@@ -541,9 +536,8 @@ papare(){
 	cp_rules
 	prepare_geodata_assets
 	cp_rules_ng2
-	sync_zig_tool_binaries
 	sync_binary
-	verify_zig_tool_binaries
+	verify_zig_tool_binaries || exit 1
 	cat >${CURR_PATH}/packages/version_tmp.json.js <<-EOF
 	{
 	"name":"fancyss"
