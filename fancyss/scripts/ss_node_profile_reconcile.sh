@@ -25,10 +25,10 @@ reconcile_profile_scope_row() {
 
 	[ -n "${profile_id}" ] || return 1
 	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
-	profile_json="$(dbus get "${profile_key}" 2>/dev/null)" || return 1
+	profile_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || return 1
 	[ -n "${profile_json}" ] || return 1
 	state_key="$(subprof_state_key "${profile_id}")" || return 1
-	state_json="$(dbus get "${state_key}" 2>/dev/null)"
+	state_json="$(subprof_dbus_get_json_by_key "${state_key}" 2>/dev/null)" || state_json=""
 	jq_bin="$(subprof_jq_bin)" || return 1
 
 	profile_name="$(printf '%s' "${profile_json}" | "${jq_bin}" -r '.name // empty' 2>/dev/null | sed -n '1p')"

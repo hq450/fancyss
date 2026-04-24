@@ -971,6 +971,7 @@ function base64_decode_utf8(value) {
 	if (!value) {
 		return "";
 	}
+	value = String(value).replace(/\s+/g, "");
 	try {
 		if (fssUtf8Decoder && window.atob) {
 			var binary = window.atob(value);
@@ -4742,6 +4743,11 @@ function parse_subscription_profile_record(raw) {
 	raw = $.trim(String(raw || ""));
 	if (!raw) {
 		return null;
+	}
+	if (raw.charAt(0) == "{") {
+		try {
+			return JSON.parse(raw);
+		} catch (e0) {}
 	}
 	try {
 		return JSON.parse(base64_decode_utf8(raw));

@@ -42,9 +42,14 @@ subprof_b64_encode_compact() {
 
 subprof_b64_decode_loose() {
 	local compact=""
+	local decoded=""
 	compact="$(subprof_b64_compact "$1")"
 	[ -n "${compact}" ] || return 1
-	printf '%s' "${compact}" | base64 -d 2>/dev/null || printf '%s' "${compact}" | base64 --decode 2>/dev/null
+	decoded="$(printf '%s' "${compact}" | base64 -d 2>/dev/null)" && {
+		printf '%s' "${decoded}"
+		return 0
+	}
+	printf '%s' "${compact}" | base64 --decode 2>/dev/null
 }
 
 subprof_json_is_valid() {
@@ -471,7 +476,6 @@ subprof_count_profile_nodes_fast() {
 	local node_tool=""
 	local jq_bin=""
 	local count=""
-	local airport_identity=""
 	local list_count=""
 
 	[ -n "${profile_id}" ] || return 1
@@ -487,14 +491,7 @@ subprof_count_profile_nodes_fast() {
 		printf '%s\n' "${count}"
 		return 0
 	fi
-	airport_identity="${source_scope%%_*}"
-	[ -n "${airport_identity}" ] || return 1
-	list_count="$(
-		"${node_tool}" list --source subscribe --airport-identity "${airport_identity}" --format jsonl 2>/dev/null \
-			| grep -F "\"source_scope\":\"${source_scope}\"" \
-			| wc -l \
-			| tr -d ' '
-	)"
+	list_count="$(subprof_count_profile_nodes_fallback "${profile_id}" "${source_scope}" 2>/dev/null)" || return 1
 	printf '%s' "${list_count}" | grep -Eq '^[0-9]+$' || return 1
 	printf '%s\n' "${list_count}"
 	return 0

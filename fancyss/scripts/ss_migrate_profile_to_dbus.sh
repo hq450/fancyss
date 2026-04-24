@@ -11,7 +11,7 @@ OLD_PROFILE_DIR="/koolshare/configs/fancyss/subscriptions/profiles"
 OLD_STATE_DIR="/koolshare/configs/fancyss/subscriptions/states"
 
 migrate_log() {
-	echo "【$(date +'%Y-%m-%d %H:%M:%S')】 $*"
+	echo "【$(date +'%Y%m%d %H:%M:%S')】: $*"
 }
 
 migrate_profile_files() {
@@ -24,6 +24,8 @@ migrate_profile_files() {
 	local state_key=""
 	local migrated_count=0
 	local failed_count=0
+	local current_ids=""
+	local new_ids=""
 
 	migrate_log "开始迁移 Profile 文件到 dbus..."
 

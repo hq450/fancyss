@@ -923,6 +923,18 @@ fss_detect_storage_schema() {
 	printf '%s\n' "${FSS_STORAGE_SCHEMA_CACHE}"
 }
 
+fss_set_storage_schema_cache() {
+	case "$1" in
+	2)
+		FSS_STORAGE_SCHEMA_CACHE="2"
+		;;
+	*)
+		FSS_STORAGE_SCHEMA_CACHE="1"
+		;;
+	esac
+	export FSS_STORAGE_SCHEMA_CACHE
+}
+
 fss_legacy_node_count() {
 	fss_list_legacy_node_indices | sed '/^$/d' | wc -l
 }
@@ -1023,6 +1035,7 @@ fss_clear_v2_nodes() {
 	fss_clear_reference_notice
 	dbus remove fss_node_next_id
 	dbus remove fss_data_schema
+	fss_set_storage_schema_cache 1
 	dbus remove fss_data_migrated
 	dbus remove fss_data_migration_notice
 	dbus remove fss_data_migration_time
@@ -1287,6 +1300,7 @@ fss_migrate_legacy_nodes() {
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
 	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2
 	dbus set fss_data_migrated=1
 	dbus set fss_data_migration_notice=1
 	dbus set fss_data_migration_time="${ts}"
@@ -3324,6 +3338,7 @@ fss_restore_legacy_backup_sh_fast() {
 
 	if [ ! -s "${order_file}" ];then
 		dbus set fss_data_schema=2
+		fss_set_storage_schema_cache 2
 		dbus set fss_node_next_id=1
 		dbus set fss_data_migrated=1
 		dbus remove fss_data_migration_notice
@@ -3374,6 +3389,7 @@ fss_restore_legacy_backup_sh_fast() {
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
 	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2
 	dbus set fss_data_migrated=1
 	dbus remove fss_data_migration_notice
 	dbus remove fss_data_migration_time
@@ -3553,6 +3569,7 @@ fss_restore_native_backup_v2() {
 	[ "${node_count}" -gt 0 ] || next_id=1
 
 	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2
 	if [ "${node_count}" -gt 0 ];then
 		dbus set fss_node_order="$(tr '\n' ',' < "${node_order_file}" | sed 's/,$//')"
 		if [ -n "${current_id}" ];then

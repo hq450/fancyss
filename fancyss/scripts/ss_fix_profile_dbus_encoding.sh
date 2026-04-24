@@ -5,23 +5,64 @@
 
 [ -z "${KSROOT}" ] && export KSROOT=/koolshare
 [ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
+[ -f "${KSROOT}/scripts/ss_subscribe_profile_lib.sh" ] && source ${KSROOT}/scripts/ss_subscribe_profile_lib.sh
 
 DBUS_PREFIX="ss_subprof_"
 DBUS_IDS_KEY="ss_subprof_ids"
 
 fix_log() {
-	echo "【$(date +'%Y-%m-%d %H:%M:%S')】 $*"
+	echo "【$(date +'%Y%m%d %H:%M:%S')】: $*"
+}
+
+fix_profile_key_encoding() {
+	local dbus_key="$1"
+	local label="$2"
+	local raw_value=""
+	local compact_value=""
+	local json_text=""
+	local encoded_value=""
+
+	[ -n "${dbus_key}" ] || return 1
+	raw_value="$(dbus get "${dbus_key}" 2>/dev/null)" || raw_value=""
+	if [ -z "${raw_value}" ]; then
+		fix_log "  ✗ ${label} 不存在: ${dbus_key}"
+		return 1
+	fi
+
+	if printf '%s' "${raw_value}" | grep -q '^[[:space:]]*{'; then
+		json_text="${raw_value}"
+	else
+		json_text="$(subprof_dbus_get_json_by_key "${dbus_key}" 2>/dev/null)" || json_text=""
+	fi
+	if [ -z "${json_text}" ] || ! subprof_json_is_valid "${json_text}"; then
+		fix_log "  ✗ ${label} JSON 解码或校验失败: ${dbus_key}"
+		return 1
+	fi
+
+	encoded_value="$(subprof_b64_encode_compact "${json_text}")" || return 1
+	compact_value="$(subprof_b64_compact "${raw_value}")"
+	if [ "${raw_value}" = "${encoded_value}" ]; then
+		fix_log "  ○ ${label} 已是紧凑 base64 编码，跳过"
+		return 0
+	fi
+	if [ "${compact_value}" = "${encoded_value}" ]; then
+		dbus set "${dbus_key}=${encoded_value}" >/dev/null 2>&1 || return 1
+		fix_log "  ✓ ${label} 已清理 base64 空白字符: ${dbus_key}"
+		return 2
+	fi
+	dbus set "${dbus_key}=${encoded_value}" >/dev/null 2>&1 || return 1
+	fix_log "  ✓ ${label} 已重新编码: ${dbus_key}"
+	return 2
 }
 
 fix_profile_encoding() {
 	local profile_id=""
 	local profile_key=""
 	local state_key=""
-	local profile_json=""
-	local state_json=""
 	local fixed_count=0
 	local failed_count=0
 	local ids=""
+	local ret=0
 
 	fix_log "开始修复 Profile dbus 编码..."
 
@@ -40,41 +81,24 @@ fix_profile_encoding() {
 
 		# 修复 Profile
 		profile_key="${DBUS_PREFIX}${profile_id}"
-		profile_json="$(dbus get "${profile_key}" 2>/dev/null)"
-		if [ -n "${profile_json}" ]; then
-			# 检查是否是明文 JSON（以 { 开头）
-			if printf '%s' "${profile_json}" | grep -q '^{'; then
-				# 明文 JSON，需要编码
-				if dbus set "${profile_key}=$(printf '%s' "${profile_json}" | base64)"; then
-					fix_log "  ✓ Profile 已重新编码: ${profile_key}"
-					fixed_count=$((fixed_count + 1))
-				else
-					fix_log "  ✗ Profile 编码失败: ${profile_key}"
-					failed_count=$((failed_count + 1))
-				fi
-			else
-				fix_log "  ○ Profile 已是 base64 编码，跳过"
-			fi
-		else
-			fix_log "  ✗ Profile 不存在: ${profile_key}"
+		fix_profile_key_encoding "${profile_key}" "Profile"
+		ret=$?
+		case "${ret}" in
+		2)
+			fixed_count=$((fixed_count + 1))
+			;;
+		1)
 			failed_count=$((failed_count + 1))
-		fi
+			;;
+		esac
 
 		# 修复 State
 		state_key="${DBUS_PREFIX}${profile_id}_state"
-		state_json="$(dbus get "${state_key}" 2>/dev/null)"
-		if [ -n "${state_json}" ]; then
-			# 检查是否是明文 JSON（以 { 开头）
-			if printf '%s' "${state_json}" | grep -q '^{'; then
-				# 明文 JSON，需要编码
-				if dbus set "${state_key}=$(printf '%s' "${state_json}" | base64)"; then
-					fix_log "  ✓ State 已重新编码: ${state_key}"
-				else
-					fix_log "  ✗ State 编码失败: ${state_key}"
-				fi
-			else
-				fix_log "  ○ State 已是 base64 编码，跳过"
-			fi
+		if [ -n "$(dbus get "${state_key}" 2>/dev/null)" ]; then
+			fix_profile_key_encoding "${state_key}" "State"
+			ret=$?
+			[ "${ret}" = "2" ] && fixed_count=$((fixed_count + 1))
+			[ "${ret}" = "1" ] && failed_count=$((failed_count + 1))
 		fi
 	done
 
@@ -85,8 +109,9 @@ fix_profile_encoding() {
 verify_encoding() {
 	local profile_id=""
 	local profile_key=""
-	local profile_json=""
+	local raw_value=""
 	local decoded_json=""
+	local compact_value=""
 	local ids=""
 
 	fix_log "验证编码结果..."
@@ -101,16 +126,17 @@ verify_encoding() {
 	do
 		[ -n "${profile_id}" ] || continue
 		profile_key="${DBUS_PREFIX}${profile_id}"
-		profile_json="$(dbus get "${profile_key}" 2>/dev/null)"
-		if [ -n "${profile_json}" ]; then
-			decoded_json="$(printf '%s' "${profile_json}" | base64 -d 2>/dev/null)"
-			if [ -n "${decoded_json}" ]; then
+		raw_value="$(dbus get "${profile_key}" 2>/dev/null)" || raw_value=""
+		compact_value="$(subprof_b64_compact "${raw_value}")"
+		decoded_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || decoded_json=""
+		if [ -n "${decoded_json}" ] && subprof_json_is_valid "${decoded_json}"; then
+			if [ "${raw_value}" = "${compact_value}" ]; then
 				fix_log "  ✓ ${profile_id}: base64 编码正确"
 			else
-				fix_log "  ✗ ${profile_id}: base64 解码失败"
+				fix_log "  ⚠ ${profile_id}: base64 可解码但存在空白字符，建议执行 fix"
 			fi
 		else
-			fix_log "  ✗ ${profile_id}: 未找到"
+			fix_log "  ✗ ${profile_id}: base64 解码或 JSON 校验失败"
 		fi
 	done
 

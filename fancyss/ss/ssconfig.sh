@@ -5025,19 +5025,19 @@ EOF
 		echo_date "清除ipset规则集..."
 		ipset -F ignlist >/dev/null 2>&1 && ipset -X ignlist >/dev/null 2>&1
 		ipset -F ignlist6 >/dev/null 2>&1 && ipset -X ignlist6 >/dev/null 2>&1
-		
+
 		ipset -F white_list >/dev/null 2>&1 && ipset -X white_list >/dev/null 2>&1
 		ipset -F white_list6 >/dev/null 2>&1 && ipset -X white_list6 >/dev/null 2>&1
-		
+
 		ipset -F black_list >/dev/null 2>&1 && ipset -X black_list >/dev/null 2>&1
 		ipset -F black_list6 >/dev/null 2>&1 && ipset -X black_list6 >/dev/null 2>&1
 
 		ipset -F chnlist >/dev/null 2>&1 && ipset -X chnlist >/dev/null 2>&1
 		ipset -F chnlist6 >/dev/null 2>&1 && ipset -X chnlist6 >/dev/null 2>&1
-		
+
 		ipset -F gfwlist >/dev/null 2>&1 && ipset -X gfwlist >/dev/null 2>&1
 		ipset -F gfwlist6 >/dev/null 2>&1 && ipset -X gfwlist6 >/dev/null 2>&1
-		
+
 		ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
 		ipset -F router6 >/dev/null 2>&1 && ipset -X router6 >/dev/null 2>&1
 

@@ -3827,6 +3827,7 @@ sub_write_nodes_schema2(){
 	fi
 	dbus set fss_node_order="${imported_order}"
 	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 	dbus set fss_node_next_id="$((max_id + 1))"
 	[ "${touched_any}" = "1" ] && fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
@@ -4068,6 +4069,7 @@ sub_append_nodes_schema2(){
 
 	[ -n "${imported_order}" ] && dbus set fss_node_order="${imported_order}" || dbus remove fss_node_order
 	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 	dbus set fss_node_next_id="$((max_id + 1))"
 	[ "${touched_any}" = "1" ] && fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
@@ -4966,6 +4968,7 @@ remove_all_node(){
 		else
 			fss_clear_v2_nodes
 			dbus set fss_data_schema=2
+			fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 			dbus set fss_node_next_id=1
 		fi
 	else
@@ -5073,6 +5076,7 @@ remove_sub_node(){
 		fss_set_current_node_id "${restore_current}"
 		fss_set_failover_node_id "${restore_failover}"
 		dbus set fss_data_schema=2
+		fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 		dbus set fss_node_next_id="$((max_keep + 1))"
 		fss_clear_webtest_runtime_results
 		fss_touch_node_catalog_ts >/dev/null 2>&1

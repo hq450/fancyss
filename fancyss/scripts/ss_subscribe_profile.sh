@@ -59,7 +59,9 @@ profile_remove_bound_nodes() {
 	local resolved_current=""
 	local resolved_failover=""
 	local node_tool=""
+	local node_tool_output=""
 	local node_tool_removed="0"
+	local node_tool_removed_count="0"
 	local reason_label="${2:-删除}"
 
 	[ -n "${profile_id}" ] || return 0
@@ -88,14 +90,18 @@ profile_remove_bound_nodes() {
 	node_tool="$(fss_pick_node_tool 2>/dev/null)" || node_tool=""
 
 	if [ -n "${node_tool}" ]; then
-		"${node_tool}" delete-nodes --profile-id "${profile_id}" >/dev/null 2>&1 && node_tool_removed="1"
+		node_tool_output="$("${node_tool}" delete-nodes --profile-id "${profile_id}" 2>/dev/null)" && {
+			node_tool_removed_count="$(printf '%s\n' "${node_tool_output}" | awk -F': ' '$1 == "removed" {print $2; exit}' | sed -n '1p')"
+			printf '%s' "${node_tool_removed_count}" | grep -Eq '^[0-9]+$' || node_tool_removed_count="0"
+			[ "${node_tool_removed_count}" -gt "0" ] 2>/dev/null && node_tool_removed="1"
+		}
 	fi
 
 	if [ "${node_tool_removed}" = "1" ]; then
 		fss_clear_webtest_runtime_results
 		fss_touch_node_catalog_ts >/dev/null 2>&1
 		fss_touch_node_config_ts >/dev/null 2>&1
-		profile_log "订阅配置${reason_label}，并按 _profile_id 清理对应节点：${profile_id}"
+		profile_log "订阅配置${reason_label}，并按 _profile_id 清理对应节点：${profile_id} (${node_tool_removed_count} 个)"
 		return 0
 	fi
 
@@ -119,6 +125,7 @@ profile_remove_bound_nodes() {
 	[ "${removed_count}" -gt "0" ] 2>/dev/null || return 0
 	[ -n "${keep_order}" ] && dbus set fss_node_order="${keep_order}" || dbus remove fss_node_order
 	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 	dbus set fss_node_next_id="$((max_keep + 1))"
 
 	fallback_current="$(fss_get_first_node_id 2>/dev/null)" || fallback_current=""
