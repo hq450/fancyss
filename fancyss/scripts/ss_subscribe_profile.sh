@@ -145,6 +145,7 @@ profile_remove_bound_nodes() {
 	fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
+	fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 	profile_log "订阅配置${reason_label}，并回退按 _source_scope 清理对应节点：${profile_id} (${removed_count} 个)"
 	return 0
 }

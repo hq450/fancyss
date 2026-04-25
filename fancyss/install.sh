@@ -1440,6 +1440,7 @@ install_now(){
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
 	[ -z "${ss_basic_noruncheck}" ] && dbus set ss_basic_noruncheck=1
 	[ -z "${ss_basic_qrcode}" ] && dbus set ss_basic_qrcode=1
+	[ -z "${ss_basic_node_cards}" ] && dbus set ss_basic_node_cards=1
 
 	[ -z "${ss_basic_chng_xact}" ] && dbus set ss_basic_chng_xact=0
 	[ -z "${ss_basic_chng_xgt}" ] && dbus set ss_basic_chng_xgt=1
@@ -1456,22 +1457,9 @@ install_now(){
 	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
-		# 延迟测试列默认开启
-		if [ -z "${ss_basic_latency_val}" ]; then
-			case "${PKG_ARCH}" in
-			arm|hnd|ipq32)
-			dbus set ss_basic_latency_val="0"
-			;;
-		*)
-			dbus set ss_basic_latency_val="2"
-			;;
-		esac
-	fi
-
-		# 批量测速默认开启
-		if [ -z "${ss_basic_latency_batch}" ]; then
-			dbus set ss_basic_latency_batch="1"
-		fi
+	# 延迟测试默认开启，所有平台默认显示 web 落地延迟列
+	dbus set ss_basic_latency_val="2"
+	dbus set ss_basic_latency_batch="1"
 
 	# 因版本变化导致一些值没有了，更改一下
 	if [ "${ss_basic_chng_china_2_tcp}" == "5" ];then
@@ -1498,7 +1486,9 @@ install_now(){
 		fi
 		;;
 	2)
-		:
+		if [ "$(fss_detect_storage_schema 2>/dev/null)" != "2" ];then
+			fss_mark_native_schema2_storage >/dev/null 2>&1 || true
+		fi
 		;;
 	*)
 		echo_date "节点数据升级到 schema 2 失败，保留旧版节点结构。"

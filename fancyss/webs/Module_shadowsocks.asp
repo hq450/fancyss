@@ -959,8 +959,7 @@ function refresh_fss_bundle(cb) {
 	});
 }
 function get_node_storage_schema() {
-	var hasNodes = !!db_fss["fss_node_order"] || Object.keys(fss_nodes_raw).length > 0;
-	return (db_fss["fss_data_schema"] == "2" && hasNodes) ? 2 : 1;
+	return db_fss["fss_data_schema"] == "2" ? 2 : 1;
 }
 function get_compare_store() {
 	return $.extend({}, db_ss, db_fss);
@@ -5698,7 +5697,7 @@ function get_legacy_node_ids() {
 	return ids.sort(compare);
 }
 function need_auto_migrate_nodes() {
-	return !node_auto_migrate_attempted && get_node_storage_schema() != 2 && get_legacy_node_ids().length > 0;
+	return !node_auto_migrate_attempted && db_fss["fss_data_schema"] != "2" && get_legacy_node_ids().length > 0;
 }
 function close_auto_migrate_layer() {
 	if (node_auto_migrate_layer !== null) {
@@ -5868,6 +5867,24 @@ function stop_page_live_runtime() {
 	close_optional_socket("ws");
 	close_proc_status_socket();
 }
+function maybe_start_node_latency_auto_refresh() {
+	if (!should_run_node_latency_live()) {
+		return false;
+	}
+	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
+		update_latency_action_links();
+		return false;
+	}
+	if (db_ss["ss_basic_lt_cru_opts"] == "1" || db_ss["ss_basic_lt_web_time"] == "0") {
+		load_latency_cache();
+		return true;
+	}
+	if (batch_test_running || single_test_running || batch_stop_pending) {
+		return true;
+	}
+	latency_test(db_ss["ss_basic_latency_val"]);
+	return true;
+}
 function resume_node_latency_live_runtime() {
 	if (!should_run_node_latency_live()) {
 		return false;
@@ -5893,8 +5910,7 @@ function resume_node_latency_live_runtime() {
 		get_latency_data_single(single_test_node, 0, singleLatencyPollSeq);
 		return true;
 	}
-	load_latency_cache();
-	return true;
+	return maybe_start_node_latency_auto_refresh();
 }
 function resume_page_live_runtime() {
 	if (!is_page_live_updates_allowed()) {
@@ -7232,7 +7248,9 @@ function finish_subscription_log_with_refresh() {
 		subscribeLogRefreshNodesAfterDone = false;
 		fetch_subscription_profiles_dbus(function() {
 			render_subscription_manager();
-			refresh_table();
+			refresh_table(function() {
+				maybe_start_node_latency_auto_refresh();
+			});
 		}, {silent: true});
 	}
 }
@@ -9373,7 +9391,7 @@ function get_node_view_prefers_cards() {
 	if (E("ss_basic_node_cards")) {
 		return E("ss_basic_node_cards").checked;
 	}
-	return db_ss["ss_basic_node_cards"] == "1";
+	return db_ss["ss_basic_node_cards"] != "0";
 }
 function get_node_display_type_label(c) {
 	switch(String(c["type"] || "")) {
@@ -9645,11 +9663,6 @@ function render_node_list_footer_html() {
 		html += '<div class="dropdown" id="dropdown">';
 		html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>';
 		html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>';
-		if(db_ss["ss_basic_latency_val"] == "0"){
-			html += '<a onclick="enable_latency_feature()" href="javascript:void(0);"></lable>开启延迟测试功能</a>';
-		}else{
-			html += '<a onclick="test_latency_now(0)" href="javascript:void(0);"></lable>关闭延迟测试功能</a>';
-		}
 		html += '<a onclick="clear_latency_cache()" href="javascript:void(0);"></lable>清空延迟测试结果</a>';
 		html += '<a onclick="open_latency_sett()" href="javascript:void(0);"></lable>设置</a>';
 		html += '</div>';
@@ -11574,8 +11587,11 @@ function enable_latency_feature() {
 	});
 }
 function normalize_latency_val(){
-	if(db_ss["ss_basic_latency_val"] === undefined || db_ss["ss_basic_latency_val"] === null || db_ss["ss_basic_latency_val"] === ""){
-		db_ss["ss_basic_latency_val"] = "0";
+	if(db_ss["ss_basic_latency_val"] === undefined || db_ss["ss_basic_latency_val"] === null || db_ss["ss_basic_latency_val"] === "" || db_ss["ss_basic_latency_val"] == "0"){
+		db_ss["ss_basic_latency_val"] = "2";
+	}
+	if(db_ss["ss_basic_latency_batch"] === undefined || db_ss["ss_basic_latency_batch"] === null || db_ss["ss_basic_latency_batch"] === ""){
+		db_ss["ss_basic_latency_batch"] = "1";
 	}
 	if(db_ss["ss_basic_lt_web_time"] === undefined || db_ss["ss_basic_lt_web_time"] === null || db_ss["ss_basic_lt_web_time"] === ""){
 		db_ss["ss_basic_lt_web_time"] = "30";
@@ -12252,11 +12268,7 @@ function restore_ss_conf() {
 }
 function remove_SS_node() {
 	db_ss["ss_basic_action"] = "10";
-	if(ws_flag == 1){
-		push_data_ws("ss_conf.sh", "3", {});
-	}else{
-		push_data("ss_conf.sh", "3",  "");
-	}
+	push_data("ss_conf.sh", "3",  "");
 }
 function restart_dnsmaq() {
 	db_ss["ss_basic_action"] = "21";
@@ -15973,7 +15985,7 @@ function toggleKeyMask(o, show){
 															{ title: '节点列表最大显示行数', id:'ss_basic_row', type:'select', func:'onchange="save_row();"', style:'width:auto', options:[]},
 															{ title: '开启生成二维码功能', id:'ss_basic_qrcode', func:'v', type:'checkbox', value:true},
 															{ title: '开启节点排序功能', id:'ss_basic_dragable', func:'v', type:'checkbox', value:true},
-															{ title: '节点管理使用卡片视图', id:'ss_basic_node_cards', func:'v', type:'checkbox', value:false},
+															{ title: '节点管理使用卡片视图', id:'ss_basic_node_cards', func:'v', type:'checkbox', value:true},
 															{ title: '节点管理页面设为默认标签页', id:'ss_basic_tablet', func:'v', type:'checkbox', value:false},
 															{ title: '节点管理页面隐藏服务器地址', id:'ss_basic_noserver', func:'v', type:'checkbox', value:false},
 															{ td: '<tr><td class="smth" style="font-weight: bold;" colspan="2">代理行为</td></tr>'},

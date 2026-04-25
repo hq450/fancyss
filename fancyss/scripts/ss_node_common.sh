@@ -935,6 +935,30 @@ fss_set_storage_schema_cache() {
 	export FSS_STORAGE_SCHEMA_CACHE
 }
 
+fss_clear_schema2_migration_notice() {
+	dbus remove fss_data_migration_notice
+	dbus remove fss_data_migration_time
+	dbus remove fss_data_legacy_snapshot
+	dbus remove fss_data_migrating
+}
+
+fss_mark_native_schema2_storage() {
+	local next_id=""
+	local max_id=""
+
+	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
+	next_id=$(dbus get fss_node_next_id)
+	if [ -z "${next_id}" ];then
+		max_id=$(dbus get fss_node_order | tr ',' '\n' | sed '/^$/d' | sort -n | tail -n1)
+		[ -n "${max_id}" ] || max_id=0
+		dbus set fss_node_next_id="$((max_id + 1))"
+	fi
+	dbus set fss_data_migrated=1
+	fss_clear_schema2_migration_notice
+	fss_clear_legacy_nodes >/dev/null 2>&1 || true
+}
+
 fss_legacy_node_count() {
 	fss_list_legacy_node_indices | sed '/^$/d' | wc -l
 }
@@ -1006,7 +1030,12 @@ fss_mktemp_dir() {
 }
 
 fss_list_legacy_node_indices() {
-	dbus list ssconf_basic_name_ | sed -n 's/^.*_\([0-9]\+\)=.*/\1/p' | sort -n
+	dbus list ssconf_basic_name_ | while IFS= read -r line
+	do
+		[ -z "${line}" ] && continue
+		line=${line%%=*}
+		echo "${line}" | sed -n 's/^.*_\([0-9]\+\)$/\1/p'
+	done | sort -n
 }
 
 fss_clear_v2_nodes() {
@@ -1046,10 +1075,12 @@ fss_clear_v2_nodes() {
 }
 
 fss_clear_legacy_nodes() {
-	dbus list ssconf_basic_ | grep -E '_[0-9]+=' | while IFS= read -r line
+	dbus list ssconf_basic_ | while IFS= read -r line
 	do
 		[ -z "${line}" ] && continue
-		dbus remove "${line%%=*}"
+		line=${line%%=*}
+		echo "${line}" | grep -Eq '_[0-9]+$' || continue
+		dbus remove "${line}"
 	done
 	dbus remove ssconf_basic_node
 }

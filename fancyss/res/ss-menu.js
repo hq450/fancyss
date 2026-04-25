@@ -216,6 +216,19 @@ function pop_help() {
 			我们的征途是星辰大海 ^_^</div>'
 	});
 }
+function open_subscription_manager_from_node_tip(index) {
+	if (typeof layer != "undefined" && layer.close && index) {
+		layer.close(index);
+	}
+	setTimeout(function() {
+		if (typeof open_subscription_manager == "function") {
+			open_subscription_manager();
+		} else {
+			$("#show_btn7").trigger("click");
+		}
+	}, 0);
+	return false;
+}
 function pop_node_add() {
 	note = "<li>检测到你尚未添加任何代理节点！你至少需要一个节点，才能让插件正常工作！</li><br /> ";
 	note += "<li>如果你已经有节点，请从【手动添加】【节点订阅】【恢复配置】中选择一种添加。</li><br />";
@@ -234,8 +247,8 @@ function pop_node_add() {
 			$("#add_ss_node").trigger("click");
 			layer.closeAll();
 		},
-		btn2: function() {
-			$("#show_btn7").trigger("click");
+		btn2: function(index) {
+			return open_subscription_manager_from_node_tip(index);
 		},
 		btn3: function() {
 			$("#show_btn9").trigger("click");
@@ -276,8 +289,8 @@ function pop_node_add_ads() {
 			$("#add_ss_node").trigger("click");
 			layer.closeAll();
 		},
-		btn2: function() {
-			$("#show_btn7").trigger("click");
+		btn2: function(index) {
+			return open_subscription_manager_from_node_tip(index);
 		},
 		btn3: function() {
 			$("#show_btn9").trigger("click");

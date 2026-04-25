@@ -4,7 +4,10 @@
 
 source /koolshare/scripts/ss_base.sh
 source /koolshare/scripts/ss_node_common.sh
-#alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y年%m月%d日\ %X)】:'
+unalias echo_date >/dev/null 2>&1
+echo_date(){
+	echo "【$(TZ=UTC-8 date -R "+%Y%m%d %X")】: $*"
+}
 LOG_FILE=/tmp/upload/ss_log.txt
 
 prepare_download_dir(){
@@ -214,9 +217,10 @@ clear_ss_config_storage(){
 
 remove_now(){
 	# 1. 关闭插件
-	echo_date "尝试关闭科学上网..."
+	echo_date "开始清空科学上网配置..."
+	echo_date "清空配置前先关闭科学上网..."
 	dbus set ss_basic_enable="0"
-	sh /koolshare/ss/ssconfig.sh stop
+	sh /koolshare/ss/ssconfig.sh stop 2>&1 | grep -v "Terminated"
 
 	# 2. 清空配置
 	clear_ss_config_storage
@@ -238,6 +242,7 @@ remove_now(){
 	[ -z "${ss_basic_nocdnscheck}" ] && dbus set ss_basic_nocdnscheck=1
 	[ -z "${ss_basic_nofdnscheck}" ] && dbus set ss_basic_nofdnscheck=1
 	[ -z "${ss_basic_qrcode}" ] && dbus set ss_basic_qrcode=1
+	dbus set ss_basic_node_cards=1
 
 	# others
 	fss_cleanup_acl_default_port_keys >/dev/null 2>&1
@@ -250,13 +255,9 @@ remove_now(){
 	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 
-	# fancyss_arm 默认关闭延迟测试
-	PKG_ARCH=$(get_pkg_arch)
-	if [ "${PKG_ARCH}" == "arm" ];then
-		[ -z "${ss_basic_latency_opt}" ] && dbus set ss_basic_latency_opt="0"
-	else
-		[ -z "${ss_basic_latency_opt}" ] && dbus set ss_basic_latency_opt="2"
-	fi
+	# 延迟测试默认开启，所有平台默认显示 web 落地延迟列
+	dbus set ss_basic_latency_val=2
+	dbus set ss_basic_latency_batch=1
 	
 	# lite
 	if [ ! -x "/koolshare/bin/v2ray" ];then

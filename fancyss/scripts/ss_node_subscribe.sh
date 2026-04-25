@@ -26,8 +26,8 @@ SUB_PARSED_CACHE_DIR="/koolshare/configs/fancyss/subscribe_cache/parsed"
 # 订阅缓存的 raw / parsed / meta 都放在持久化目录。
 # 每次调整 meta 结构或缓存判定语义时，递增 schema 即可触发重建。
 SUB_PARSED_CACHE_META_SCHEMA="2"
-SUB_STORAGE_SCHEMA=$(dbus get fss_data_schema)
-[ "${SUB_STORAGE_SCHEMA}" = "2" ] || SUB_STORAGE_SCHEMA="1"
+SUB_STORAGE_SCHEMA=""
+SUB_SCHEMA2_NATIVE_INITIALIZED=0
 NODES_SEQ=""
 NODE_INDEX=""
 SEQ_NU="0"
@@ -97,6 +97,67 @@ SUB_LAST_DOWNLOAD_MODE=""
 SUB_LAST_DOWNLOAD_UA=""
 SUB_LAST_DOWNLOAD_ERROR=""
 SUB_SINGLE_PROFILE_SYNC=0
+
+sub_init_storage_schema(){
+	local schema=""
+	local legacy_count="0"
+
+	schema=$(dbus get fss_data_schema)
+	if [ "${schema}" = "2" ];then
+		fss_clear_legacy_nodes >/dev/null 2>&1 || true
+		SUB_STORAGE_SCHEMA="2"
+		return 0
+	fi
+
+	legacy_count=$(fss_legacy_node_count 2>/dev/null | sed -n '1p')
+	[ -n "${legacy_count}" ] || legacy_count=0
+	if [ "${legacy_count}" = "0" ];then
+		fss_mark_native_schema2_storage >/dev/null 2>&1 || {
+			dbus set fss_data_schema=2
+			fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
+			[ -n "$(dbus get fss_node_next_id)" ] || dbus set fss_node_next_id=1
+			dbus remove fss_data_migration_notice
+			dbus remove fss_data_migration_time
+			dbus remove fss_data_legacy_snapshot
+			dbus remove fss_data_migrating
+		}
+		SUB_STORAGE_SCHEMA="2"
+		SUB_SCHEMA2_NATIVE_INITIALIZED=1
+		return 0
+	fi
+
+	SUB_STORAGE_SCHEMA="1"
+}
+
+sub_now_epoch(){
+	date +%s 2>/dev/null || echo 0
+}
+
+sub_elapsed_text(){
+	local start="$1"
+	local end=""
+	end=$(sub_now_epoch)
+	if [ -n "${start}" ] && [ -n "${end}" ] && [ "${start}" -gt "0" ] 2>/dev/null && [ "${end}" -ge "${start}" ] 2>/dev/null;then
+		echo "$((end - start))s"
+	else
+		echo "未知"
+	fi
+}
+
+sub_schedule_background_sync(){
+	echo_date "💾节点数据已提交，后台同步磁盘缓存，不阻塞订阅窗口..."
+	( sync >/dev/null 2>&1 ) &
+}
+
+sub_refresh_runtime_caches_async(){
+	echo_date "⚙️节点运行缓存已失效，后台刷新直连域名/测速缓存；慢速设备可能需要几十秒，但不影响本次订阅完成。"
+	(
+		fss_refresh_node_direct_cache >/dev/null 2>&1
+		fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
+	) &
+}
+
+sub_init_storage_schema
 
 # 20230701: unset inherited hotplug/environment variables that may interfere with execution.
 unset usb2jffs_time_hour
@@ -3353,6 +3414,42 @@ sub_should_refresh_runtime_caches(){
 	sub_node_tool_plan_needs_runtime_cache_refresh
 }
 
+sub_run_reference_postwrite_steps(){
+	local input_file="$1"
+	local step_start=""
+
+	if [ "${SUB_FAST_APPEND_USED}" = "1" ];then
+		echo_date "🧭本次为快速追加写入，跳过运行节点/分流引用改写。"
+		return 0
+	fi
+	if ! sub_should_run_reference_postwrite;then
+		echo_date "🧭运行节点和分流引用未受影响，跳过引用改写。"
+		return 0
+	fi
+
+	echo_date "🧭开始同步运行节点/分流引用；分流规则较多时此步骤可能需要数秒..."
+	step_start=$(sub_now_epoch)
+	sub_reference_notice_reset
+	sub_apply_shunt_reference_rewrite
+	sub_collect_runtime_reference_notice_after_rewrite "${input_file}"
+	sub_reference_notice_commit
+	echo_date "🧭运行节点/分流引用同步完成，用时 $(sub_elapsed_text "${step_start}")。"
+}
+
+sub_run_cache_postwrite_steps(){
+	if sub_should_refresh_runtime_caches;then
+		sub_refresh_runtime_caches_async
+	else
+		echo_date "⚙️本次变更不影响运行缓存，跳过缓存刷新。"
+	fi
+}
+
+sub_after_nodes_written(){
+	local input_file="$1"
+	sub_run_reference_postwrite_steps "${input_file}"
+	sub_run_cache_postwrite_steps
+}
+
 sub_resolve_reference_from_plan(){
 	local current_id="$1"
 	local current_identity="$2"
@@ -3682,6 +3779,7 @@ sub_write_nodes_schema2(){
 				rm -f "${normalized_tmp}" >/dev/null 2>&1
 			fi
 			[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+			fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 			fss_clear_webtest_runtime_results
 			return 0
 		fi
@@ -3829,6 +3927,7 @@ sub_write_nodes_schema2(){
 	dbus set fss_data_schema=2
 	fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 	dbus set fss_node_next_id="$((max_id + 1))"
+	fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 	[ "${touched_any}" = "1" ] && fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
@@ -3889,6 +3988,7 @@ sub_append_nodes_schema2(){
 					rm -f "${normalized_tmp}" >/dev/null 2>&1
 				fi
 				[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+				fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 				fss_clear_webtest_runtime_results
 				return 0
 			fi
@@ -3900,6 +4000,7 @@ sub_append_nodes_schema2(){
 					rm -f "${normalized_tmp}" >/dev/null 2>&1
 				fi
 				[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+				fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 				fss_clear_webtest_runtime_results
 				return 0
 			fi
@@ -4071,6 +4172,7 @@ sub_append_nodes_schema2(){
 	dbus set fss_data_schema=2
 	fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 	dbus set fss_node_next_id="$((max_id + 1))"
+	fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 	[ "${touched_any}" = "1" ] && fss_clear_webtest_runtime_results
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
@@ -4100,6 +4202,7 @@ sub_sync_single_source_schema2(){
 			rm -f "${normalized_tmp}" >/dev/null 2>&1
 		fi
 		[ -f "${plan_tmp}" ] && SUB_NODE_TOOL_PLAN_FILE_CURRENT="${plan_tmp}"
+		fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 		sub_refresh_node_state
 		return 0
 	fi
@@ -4133,17 +4236,8 @@ sub_try_sync_single_source_fast_path(){
 		return 1
 	fi
 	echo_date "😀节点信息写入成功！"
-	sync
-	if [ "${SUB_FAST_APPEND_USED}" != "1" ] && sub_should_run_reference_postwrite;then
-		sub_reference_notice_reset
-		sub_apply_shunt_reference_rewrite
-		sub_collect_runtime_reference_notice_after_rewrite "${input_file}"
-		sub_reference_notice_commit
-	fi
-	if sub_should_refresh_runtime_caches;then
-		fss_refresh_node_direct_cache >/dev/null 2>&1
-		fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
-	fi
+	sub_schedule_background_sync
+	sub_after_nodes_written "${input_file}"
 	find $DIR -name "local_*.txt" | sort -n | xargs cat >$DIR/ss_nodes_new.txt
 	cp -f "$DIR/ss_nodes_new.txt" "${LOCAL_NODES_BAK}"
 	echo_date "🧹一点点清理工作..."
@@ -4427,7 +4521,7 @@ decode_urllink(){
 json2skipd(){
 	local file_name=$1
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
-	if [ "${SUB_FAST_APPEND}" = "1" ];then
+		if [ "${SUB_FAST_APPEND}" = "1" ];then
 			sub_append_nodes_schema2 "${DIR}/${file_name}.txt" "${SUB_FAST_APPEND_REUSE}" || {
 				SUB_FAST_APPEND=0
 				SUB_FAST_APPEND_REUSE=1
@@ -4441,7 +4535,7 @@ json2skipd(){
 				[ -n "${first_id}" ] && fss_set_current_node_id "${first_id}"
 			fi
 			echo_date "😀节点信息写入成功！"
-			sync
+			sub_schedule_background_sync
 			sub_refresh_node_state
 			return 0
 		fi
@@ -4455,7 +4549,7 @@ json2skipd(){
 		fi
 		fss_clear_webtest_runtime_results
 		echo_date "😀节点信息写入成功！"
-		sync
+		sub_schedule_background_sync
 		sub_refresh_node_state
 		return 0
 	fi
@@ -4475,7 +4569,7 @@ json2skipd(){
 	chmod +x $DIR/${file_name}.sh
 	sh $DIR/${file_name}.sh
 	echo_date "😀节点信息写入成功！"
-	sync
+	sub_schedule_background_sync
 }
 
 normalize_group_name(){
@@ -4967,10 +5061,9 @@ remove_all_node(){
 			"${node_tool}" delete-nodes --all >/dev/null 2>&1 || return 1
 		else
 			fss_clear_v2_nodes
-			dbus set fss_data_schema=2
-			fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 			dbus set fss_node_next_id=1
 		fi
+		fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 	else
 	confs=$(dbus list ssconf_basic_ | cut -d "=" -f1 | awk '{print $NF}')
 	for conf in ${confs}
@@ -5075,9 +5168,8 @@ remove_sub_node(){
 		fi
 		fss_set_current_node_id "${restore_current}"
 		fss_set_failover_node_id "${restore_failover}"
-		dbus set fss_data_schema=2
-		fss_set_storage_schema_cache 2 >/dev/null 2>&1 || true
 		dbus set fss_node_next_id="$((max_keep + 1))"
+		fss_mark_native_schema2_storage >/dev/null 2>&1 || true
 		fss_clear_webtest_runtime_results
 		fss_touch_node_catalog_ts >/dev/null 2>&1
 		fss_touch_node_config_ts >/dev/null 2>&1
@@ -7305,6 +7397,9 @@ start_node_subscribe(){
 	echo_date "==================================================================="
 	echo_date "                服务器订阅程序(Shell by stones & sadog)"
 	echo_date "==================================================================="
+	if [ "${SUB_SCHEMA2_NATIVE_INITIALIZED}" = "1" ];then
+		echo_date "ℹ️未检测到旧版节点数据，已启用 schema 2 原生节点存储。"
+	fi
 
 	# run some test before anything start
 	# echo_date "⚙️test: 脚本环境变量：$(env | wc -l)个"
@@ -7513,16 +7608,7 @@ start_node_subscribe(){
 				echo_date "❌节点信息写入失败！"
 				exit_sub
 			fi
-			if [ "${SUB_FAST_APPEND_USED}" != "1" ] && sub_should_run_reference_postwrite;then
-				sub_reference_notice_reset
-				sub_apply_shunt_reference_rewrite
-				sub_collect_runtime_reference_notice_after_rewrite "$DIR/ss_nodes_new.txt"
-				sub_reference_notice_commit
-			fi
-			if sub_should_refresh_runtime_caches;then
-				fss_refresh_node_direct_cache >/dev/null 2>&1
-				fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
-			fi
+			sub_after_nodes_written "$DIR/ss_nodes_new.txt"
 		else
 			echo_date "ℹ️本次订阅没有任何节点发生变化，不进行写入，继续！"
 		fi
@@ -7610,8 +7696,7 @@ start_offline_update() {
 		SUB_FAST_APPEND=1
 		SUB_FAST_APPEND_REUSE=0
 		if [ -f "${DIR}/offline_node_new.txt" ] && json2skipd "offline_node_new"; then
-			fss_refresh_node_direct_cache >/dev/null 2>&1
-			fss_schedule_webtest_cache_warm "" "${SUB_WEBTEST_WARM_LOG}" >/dev/null 2>&1
+			sub_after_nodes_written "${DIR}/offline_node_new.txt"
 		fi
 	else
 		echo_date "ℹ️离线节点解析失败！跳过！"
