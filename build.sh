@@ -347,7 +347,7 @@ gen_folder(){
 		mv ./shadowsocks/bin-mtk ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		rm -rf ./shadowsocks/bin/README.md
-		echo ipq64 > ./shadowsocks/.valid
+		echo mtk > ./shadowsocks/.valid
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"mtk\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "ipq32" ];then
@@ -380,7 +380,7 @@ gen_folder(){
 		# tuf-be6500 already include jq and curl with proxy support
 		rm -rf ./shadowsocks/bin/jq
 		rm -rf ./shadowsocks/bin/curl-fancyss
-		echo mtk > ./shadowsocks/.valid
+		echo ipq64 > ./shadowsocks/.valid
 		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"ipq64\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	

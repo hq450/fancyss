@@ -335,7 +335,10 @@ body .submgr-layer .layui-layer-btn .layui-layer-btn1{background:#159957 !import
 body .submgr-layer .layui-layer-btn .layui-layer-btn2{background:rgba(255,255,255,0.08) !important;border-color:rgba(255,255,255,0.18) !important;color:#f3f7fb !important;}
 body .submgr-layer .layui-layer-btn a{border-radius:5px !important;}
 body .submgr-editor-layer .layui-layer-btn a{border-radius:5px !important;}
+body .submgr-editor-layer .layui-layer-btn .layui-layer-btn1{background:linear-gradient(135deg,#159957,#38d27a) !important;border-color:#159957 !important;color:#fff !important;box-shadow:0 10px 20px rgba(0,0,0,0.18) !important;font-weight:700 !important;}
 body .submgr-layer .ss_btn{border-radius:5px !important;}
+body .submgr-log-layer .layui-layer-btn a.submgr-log-close-disabled{background:#6b7280 !important;border-color:#6b7280 !important;color:#eef2f7 !important;cursor:not-allowed !important;pointer-events:none !important;opacity:.72 !important;}
+body .submgr-log-layer .layui-layer-close.submgr-log-close-disabled{cursor:not-allowed !important;pointer-events:none !important;opacity:.28 !important;}
 body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-editor-layer textarea{border-radius:5px !important;}
 @media (max-width: 900px){
 	.submgr-card-list{grid-template-columns:1fr;}
@@ -829,6 +832,10 @@ var subscribeLogLayerIndex = null;
 var subscribeLogWs = null;
 var subscribeLogWsFallbackTimer = null;
 var subscribeLogRefreshNodesAfterDone = false;
+var subscribeLogTaskDone = false;
+var subscribeLogCloseCountdown = -1;
+var subscribeLogCloseTimer = null;
+var subscribeLogUserInteracted = false;
 var SHUNT_STATS_REFRESH_INTERVAL = 6000;
 var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
@@ -5439,12 +5446,13 @@ function open_subscription_profile_editor(profileId) {
 	layer.open({
 		type: 1,
 		title: profile ? "编辑订阅配置" : "新增订阅配置",
-		skin: "shunt-editor-layer",
+		skin: "shunt-editor-layer submgr-editor-layer",
 		area: [$(window).width() < 760 ? '92%' : '760px', $(window).width() < 760 ? '88%' : 'auto'],
 		maxHeight: 720,
 		shadeClose: false,
 		content: html,
-		btn: ["保存", "取消"],
+		btn: ["仅保存配置", "保存并同步", "取消"],
+		btnAlign: "c",
 		success: function(layero, index) {
 			subscribeProfileEditorLayerIndex = index;
 			layero.attr("data-profile-id", state.id || "");
@@ -5457,6 +5465,12 @@ function open_subscription_profile_editor(profileId) {
 		},
 		yes: function(index) {
 			return save_subscription_profile_from_editor(false);
+		},
+		btn2: function(index) {
+			return save_subscription_profile_from_editor(true);
+		},
+		btn3: function(index) {
+			layer.close(index);
 		}
 	});
 }
@@ -5603,6 +5617,9 @@ function save_subscription_profile_from_editor(syncAfter) {
 		}
 		if (typeof layer != "undefined" && layer.msg) {
 			layer.msg("订阅配置已保存");
+		}
+		if (syncAfter && subscription_profile_is_enabled(optimisticProfile)) {
+			sync_subscription_profiles(optimisticProfile.id);
 		}
 	};
 	if (!payload.name) {
@@ -7197,6 +7214,79 @@ function push_data(script, arg, obj, flag){
 		}
 	});
 }
+function get_subscription_log_layero() {
+	if (subscribeLogLayerIndex === null || typeof layer == "undefined") {
+		return $();
+	}
+	return $("#layui-layer" + subscribeLogLayerIndex);
+}
+function clear_subscription_log_close_countdown() {
+	if (subscribeLogCloseTimer) {
+		clearTimeout(subscribeLogCloseTimer);
+		subscribeLogCloseTimer = null;
+	}
+	subscribeLogCloseCountdown = -1;
+}
+function set_subscription_log_close_disabled(disabled) {
+	var layero = get_subscription_log_layero();
+	if (!layero.length) {
+		return;
+	}
+	layero.find(".layui-layer-close").toggleClass("submgr-log-close-disabled", !!disabled);
+	layero.find(".layui-layer-btn0").toggleClass("submgr-log-close-disabled", !!disabled);
+}
+function update_subscription_log_close_button(text) {
+	var layero = get_subscription_log_layero();
+	if (!layero.length) {
+		return;
+	}
+	layero.find(".layui-layer-btn0").text(text || "关闭");
+}
+function set_subscription_log_running_state() {
+	subscribeLogTaskDone = false;
+	subscribeLogUserInteracted = false;
+	clear_subscription_log_close_countdown();
+	set_subscription_log_close_disabled(true);
+	update_subscription_log_close_button("订阅运行中...");
+}
+function stop_subscription_log_auto_close() {
+	subscribeLogUserInteracted = true;
+	clear_subscription_log_close_countdown();
+	set_subscription_log_close_disabled(false);
+	update_subscription_log_close_button("关闭");
+}
+function count_down_close_subscription_log() {
+	if (subscribeLogUserInteracted || subscribeLogLayerIndex === null) {
+		clear_subscription_log_close_countdown();
+		return false;
+	}
+	if (subscribeLogCloseCountdown <= 0) {
+		clear_subscription_log_close_countdown();
+		if (typeof layer != "undefined" && subscribeLogLayerIndex !== null) {
+			layer.close(subscribeLogLayerIndex);
+		}
+		return true;
+	}
+	update_subscription_log_close_button("自动关闭（" + subscribeLogCloseCountdown + "）");
+	subscribeLogCloseCountdown--;
+	subscribeLogCloseTimer = setTimeout(count_down_close_subscription_log, 1000);
+	return true;
+}
+function finish_subscription_log_task() {
+	if (subscribeLogTaskDone) {
+		return;
+	}
+	subscribeLogTaskDone = true;
+	set_subscription_log_close_disabled(false);
+	subscribeLogCloseCountdown = 6;
+	count_down_close_subscription_log();
+}
+function unlock_subscription_log_close_button() {
+	subscribeLogTaskDone = true;
+	clear_subscription_log_close_countdown();
+	set_subscription_log_close_disabled(false);
+	update_subscription_log_close_button("关闭");
+}
 function open_subscription_log_layer(title) {
 	var width = $(window).width() < 760 ? '92%' : '820px';
 	var height = $(window).height() < 720 ? '82%' : '620px';
@@ -7219,15 +7309,41 @@ function open_subscription_log_layer(title) {
 			subscribeLogLayerIndex = index;
 			layero.css("z-index", 19891060);
 			layer.setTop(layero);
+			set_subscription_log_running_state();
+			layero.on("mousedown.subscriptionLog touchstart.subscriptionLog keydown.subscriptionLog", function(e) {
+				if (!subscribeLogTaskDone || subscribeLogUserInteracted) {
+					return;
+				}
+				if ($(e.target).closest(".layui-layer-close,.layui-layer-btn0").length) {
+					return;
+				}
+				stop_subscription_log_auto_close();
+			});
 			if (E("submgr_log_textarea")) {
 				E("submgr_log_textarea").value = "";
 			}
 		},
+		yes: function(index) {
+			if (!subscribeLogTaskDone) {
+				return false;
+			}
+			stop_subscription_log_auto_close();
+			layer.close(index);
+		},
+		cancel: function(index) {
+			if (!subscribeLogTaskDone) {
+				return false;
+			}
+			stop_subscription_log_auto_close();
+		},
 		end: function() {
+			clear_subscription_log_close_countdown();
 			clear_text_file_poll_state("subscribe_log");
 			close_subscription_log_ws();
 			finish_subscription_log_with_refresh();
 			subscribeLogLayerIndex = null;
+			subscribeLogTaskDone = false;
+			subscribeLogUserInteracted = false;
 		}
 	});
 }
@@ -7273,6 +7389,7 @@ function poll_subscription_log(reset) {
 					statusEl.innerHTML = "订阅任务已完成";
 				}
 				finish_subscription_log_with_refresh();
+				finish_subscription_log_task();
 				return {done: true};
 			}
 			note_text_file_poll_progress(state, response);
@@ -7285,6 +7402,7 @@ function poll_subscription_log(reset) {
 				if (statusEl) {
 					statusEl.innerHTML = "日志长时间无更新";
 				}
+				unlock_subscription_log_close_button();
 				return {done: true};
 			}
 			return {done: false, delay: 180};
@@ -7356,6 +7474,7 @@ function start_subscription_log_stream(action, profileId) {
 				statusEl.innerHTML = "订阅任务已完成";
 			}
 			finish_subscription_log_with_refresh();
+			finish_subscription_log_task();
 			close_subscription_log_ws();
 			return;
 		}
@@ -7402,6 +7521,7 @@ function push_subscription_data(action, obj, title, profileId, affectsNodeList) 
 			if (statusEl) {
 				statusEl.innerHTML = "订阅任务提交异常";
 			}
+			unlock_subscription_log_close_button();
 		},
 		error: function() {
 			var retArea = E("submgr_log_textarea");
@@ -7412,6 +7532,7 @@ function push_subscription_data(action, obj, title, profileId, affectsNodeList) 
 			if (statusEl) {
 				statusEl.innerHTML = "订阅任务提交失败";
 			}
+			unlock_subscription_log_close_button();
 		}
 	});
 }
