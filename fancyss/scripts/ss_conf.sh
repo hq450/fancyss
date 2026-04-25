@@ -4,6 +4,7 @@
 
 source /koolshare/scripts/ss_base.sh
 source /koolshare/scripts/ss_node_common.sh
+[ -f /koolshare/scripts/ss_subscribe_profile_lib.sh ] && source /koolshare/scripts/ss_subscribe_profile_lib.sh
 unalias echo_date >/dev/null 2>&1
 echo_date(){
 	echo "【$(TZ=UTC-8 date -R "+%Y%m%d %X")】: $*"
@@ -363,11 +364,22 @@ report_migration_progress(){
 }
 
 migrate_schema2_now(){
+	local migrated_profiles=""
+	local repaired_sub_nodes=""
 	echo_date "检测到旧版节点数据，开始升级到 schema 2 存储..."
+	if subprof_migrate_legacy_profiles_if_needed >/tmp/sub_profile_migrate.count 2>/dev/null; then
+		migrated_profiles="$(cat /tmp/sub_profile_migrate.count 2>/dev/null)"
+		rm -f /tmp/sub_profile_migrate.count >/dev/null 2>&1
+	fi
 	fss_auto_migrate_if_needed 1 report_migration_progress
 	local rc=$?
 	case "${rc}" in
 	0)
+		[ -n "${migrated_profiles}" ] && echo_date "旧版订阅地址已迁移为 ${migrated_profiles} 个独立订阅配置。"
+		repaired_sub_nodes="$(fss_repair_legacy_subscribe_source_meta 2>/dev/null)"
+		if [ "${repaired_sub_nodes:-0}" -gt 0 ] 2>/dev/null;then
+			echo_date "已修复 ${repaired_sub_nodes} 个旧版订阅节点的来源归属。"
+		fi
 		echo_date "节点数据迁移完成！"
 		return 0
 		;;

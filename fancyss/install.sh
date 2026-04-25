@@ -1475,6 +1475,13 @@ install_now(){
 		ss_basic_score=0
 	fi
 
+	local MIGRATED_SUB_PROFILES=""
+	if subprof_migrate_legacy_profiles_if_needed >/tmp/sub_profile_migrate.count 2>/dev/null; then
+		MIGRATED_SUB_PROFILES="$(cat /tmp/sub_profile_migrate.count 2>/dev/null)"
+		subprof_rebuild_cron_jobs >/dev/null 2>&1 || true
+		rm -f /tmp/sub_profile_migrate.count >/dev/null 2>&1
+	fi
+
 	# 节点存储自动迁移：升级到支持 schema 2 的版本后，直接切换到新结构。
 	export PATH=/koolshare/bin:${PATH}
 	local STORAGE_SCHEMA_BEFORE="$(fss_detect_storage_schema 2>/dev/null)"
@@ -1503,11 +1510,15 @@ install_now(){
 		fi
 	fi
 
-	if subprof_migrate_legacy_profiles_if_needed >/tmp/sub_profile_migrate.count 2>/dev/null; then
-		local migrated_profiles="$(cat /tmp/sub_profile_migrate.count 2>/dev/null)"
-		[ -n "${migrated_profiles}" ] && echo_date "旧版订阅地址已迁移为 ${migrated_profiles} 个独立订阅配置。"
-		subprof_rebuild_cron_jobs >/dev/null 2>&1 || true
-		rm -f /tmp/sub_profile_migrate.count >/dev/null 2>&1
+	if [ -n "${MIGRATED_SUB_PROFILES}" ]; then
+		echo_date "旧版订阅地址已迁移为 ${MIGRATED_SUB_PROFILES} 个独立订阅配置。"
+	fi
+
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
+		local repaired_sub_nodes="$(fss_repair_legacy_subscribe_source_meta 2>/dev/null)"
+		if [ "${repaired_sub_nodes:-0}" -gt 0 ] 2>/dev/null;then
+			echo_date "已修复 ${repaired_sub_nodes} 个旧版订阅节点的来源归属。"
+		fi
 	fi
 
 	if [ "${FORCE_LEGACY_CACHE_RESET}" = "1" ];then

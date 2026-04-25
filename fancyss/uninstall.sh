@@ -2,6 +2,40 @@
 
 # fancyss script for asuswrt/merlin based router with software center
 
+remove_dbus_prefix(){
+	local prefix="$1"
+	local line key
+	dbus list "${prefix}" | while IFS= read -r line
+	do
+		[ -n "${line}" ] || continue
+		key=${line%%=*}
+		[ -n "${key}" ] || continue
+		case "${key}" in
+			ssid_*|ssserver_*)
+				continue
+				;;
+		esac
+		dbus remove "${key}" >/dev/null 2>&1
+	done
+}
+
+purge_fancyss_dbus(){
+	remove_dbus_prefix ss
+	remove_dbus_prefix ssconf
+	remove_dbus_prefix fss
+	remove_dbus_prefix softcenter_module_shadowsocks
+}
+
+remove_fancyss_cron(){
+	cru d ssupdate >/dev/null 2>&1
+	cru d ss_reboot >/dev/null 2>&1
+	cru d ssnode >/dev/null 2>&1
+	cru d sswebtest >/dev/null 2>&1
+	cru d fancyss_webtest >/dev/null 2>&1
+	cru d fancyss_subscribe >/dev/null 2>&1
+	sed -i '/ssconfig\.sh/d;/ss_rule_update\.sh/d;/ss_node_subscribe\.sh/d;/ss_webtest\.sh/d;/fancyss/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
+}
+
 # stop process
 sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 
@@ -10,6 +44,8 @@ killall websocketd >/dev/null 2>&1
 
 # remove configure
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
+purge_fancyss_dbus
+remove_fancyss_cron
 
 # remove websockted
 rm -rf /koolshare/bin/websocketd >/dev/null 2>&1
@@ -38,6 +74,11 @@ rm -rf /koolshare/bin/ipt2socks
 rm -rf /koolshare/bin/dnsclient
 rm -rf /koolshare/bin/sslocal
 rm -rf /koolshare/bin/node-tool
+rm -rf /koolshare/bin/xapi-tool
+rm -rf /koolshare/bin/sub-tool
+rm -rf /koolshare/bin/geotool
+rm -rf /koolshare/bin/webtest-tool
+rm -rf /koolshare/bin/webtestctl
 rm -rf /koolshare/bin/status-tool
 rm -rf /koolshare/bin/statusctl
 
@@ -67,6 +108,8 @@ rm -rf /data/ss-tunnel >/dev/null 2>&1
 
 # folder renmove
 rm -rf /koolshare/ss
+rm -rf /koolshare/configs/fancyss
+rm -rf /koolshare/.valid
 
 rm -rf /koolshare/res/shadowsocks.css
 rm -rf /koolshare/res/fancyss.css
@@ -111,12 +154,16 @@ rm -rf /koolshare/res/game.png
 # maybe used by other plugin, do not remove
 # rm -rf /koolshare/bin/sponge >/dev/null 2>&1
 # rm -rf /koolshare/bin/isutf8 >/dev/null 2>&1
-dbus remove softcenter_module_shadowsocks_home_url
-dbus remove softcenter_module_shadowsocks_install
-dbus remove softcenter_module_shadowsocks_md5
-dbus remove softcenter_module_shadowsocks_version
+purge_fancyss_dbus
 
-dbus remove ss_basic_enable
-dbus remove ss_basic_version_local
-dbus remove ss_basic_version_web
-dbus remove ss_basic_v2ray_version
+rm -rf /tmp/fancyss_* >/dev/null 2>&1
+rm -rf /tmp/ss_conf_* >/dev/null 2>&1
+rm -rf /tmp/ss_backup >/dev/null 2>&1
+rm -f /tmp/upload/ss_log.txt \
+	/tmp/upload/ss_status.txt \
+	/tmp/upload/ssc_status.txt \
+	/tmp/upload/ssf_status.txt \
+	/tmp/upload/webtest.txt \
+	/tmp/upload/webtest_bakcup.txt \
+	/tmp/upload/webtest_backup.txt \
+	/tmp/upload/websocketd.log >/dev/null 2>&1

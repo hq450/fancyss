@@ -9566,32 +9566,53 @@ function get_node_card_section_display_label(label) {
 	}
 	return text;
 }
+function get_node_card_section_meta(c) {
+	var nodeId = c && c["node"] ? String(c["node"]) : "";
+	var raw = nodeId ? get_fss_raw_node(nodeId) : null;
+	var isSubscribe = raw && String(raw["_source"] || "") == "subscribe";
+	var label = get_node_display_source_label(c);
+	var identity = (isSubscribe ? "subscribe:" : "local:") + label;
+	return {
+		label: label,
+		displayLabel: get_node_card_section_display_label(label),
+		identity: identity,
+		key: get_node_card_section_key(identity),
+		priority: isSubscribe ? 1 : 0
+	};
+}
 function get_node_card_sections() {
 	var sections = [];
 	var sectionMap = {};
-	var label = "";
-	var displayLabel = "";
+	var meta = null;
+	var section = null;
 	for (var i = 0; i < ss_nodes.length; i++) {
 		var nodeId = ss_nodes[i];
 		var conf = confs[nodeId];
 		if (!conf) {
 			continue;
 		}
-		label = get_node_display_source_label(conf);
-		displayLabel = get_node_card_section_display_label(label);
-		if (!sectionMap[label]) {
-			sectionMap[label] = {
-				label: displayLabel,
-				key: get_node_card_section_key(label),
+		meta = get_node_card_section_meta(conf);
+		if (!sectionMap[meta.identity]) {
+			sectionMap[meta.identity] = {
+				label: meta.displayLabel,
+				key: meta.key,
+				priority: meta.priority,
+				firstOrder: i,
 				nodes: []
 			};
-			sections.push(sectionMap[label]);
+			sections.push(sectionMap[meta.identity]);
 		}
-		sectionMap[label].nodes.push({
+		sectionMap[meta.identity].nodes.push({
 			conf: conf,
 			order: i + 1
 		});
 	}
+	sections.sort(function(a, b) {
+		if (a.priority != b.priority) {
+			return a.priority - b.priority;
+		}
+		return a.firstOrder - b.firstOrder;
+	});
 	return sections;
 }
 function get_node_card_grid_columns($grid) {
