@@ -75,7 +75,11 @@ generate_legacy_backup_file(){
 generate_native_backup_file(){
 	local output_file="$1"
 	echo_date "开始生成新版本JSON配置..." >&2
-	fss_export_native_backup "${output_file}"
+	echo_date "新版本JSON配置会完整导出普通配置、ACL配置和全部节点；节点较多时可能耗时较长，请耐心等待。" >&2
+	if ! fss_export_native_backup "${output_file}" report_export_progress;then
+		echo_date "新版本JSON配置生成失败，请检查配置数据后重试。" >&2
+		return 1
+	fi
 	echo_date "新版本JSON配置生成完成，准备下载..." >&2
 }
 

@@ -3484,18 +3484,33 @@ fss_set_current_node_field_plain() {
 
 fss_export_native_backup() {
 	local output_file="$1"
+	local progress_cb="$2"
 	local schema=$(fss_detect_storage_schema)
 	local tmp_dir
 	local global_json acl_json order_json
 	local node_current="" node_failover="" node_next_id=""
 	local plugin_version created_at
 	local dump_file="" node_cache_dir=""
+	local progress_enabled=0
+	local node_total=0 idx=0
 
 	[ -z "${output_file}" ] && return 1
+	if [ -n "${progress_cb}" ] && type "${progress_cb}" >/dev/null 2>&1; then
+		progress_enabled=1
+	fi
 	tmp_dir=$(fss_mktemp_dir fss_backup)
+	if [ "${progress_enabled}" = "1" ];then
+		"${progress_cb}" "阶段1/5：准备导出环境..."
+	fi
 	created_at=$(date '+%Y-%m-%dT%H:%M:%S%z')
 	plugin_version=$(fss_get_plugin_version)
+	if [ "${progress_enabled}" = "1" ];then
+		"${progress_cb}" "阶段2/5：导出普通配置..."
+	fi
 	global_json=$(fss_export_global_json)
+	if [ "${progress_enabled}" = "1" ];then
+		"${progress_cb}" "阶段3/5：导出访问控制配置..."
+	fi
 	acl_json=$(fss_export_acl_json)
 	printf '%s' "${global_json}" > "${tmp_dir}/global.json"
 	printf '%s' "${acl_json}" > "${tmp_dir}/acl.json"
@@ -3509,19 +3524,34 @@ fss_export_native_backup() {
 		node_failover=$(fss_get_failover_node_id)
 		node_next_id=$(dbus get fss_node_next_id)
 		node_cache_dir="${tmp_dir}/nodes_v2"
+		node_total=$(printf '%s' "${node_order_csv}" | tr ',' '\n' | sed '/^$/d' | awk 'END{print NR + 0}')
+		if [ "${progress_enabled}" = "1" ];then
+			"${progress_cb}" "阶段4/5：批量读取 schema 2 节点数据，共 ${node_total} 个节点..."
+			[ "${node_total}" -gt 80 ] && "${progress_cb}" "节点数量较多，本阶段需要读取并规整每个节点，可能需要几十秒，请不要关闭窗口。"
+		fi
 		fss_dump_v2_node_json_dir "${node_cache_dir}" || {
 			rm -rf "${tmp_dir}"
 			return 1
 		}
 		printf '%s' "${order_json}" > "${tmp_dir}/order.json"
 		: > "${tmp_dir}/nodes.jsonl"
+		if [ "${progress_enabled}" = "1" ];then
+			"${progress_cb}" "阶段5/5：规整节点并组装JSON备份..."
+		fi
+		idx=0
 		for node_id in $(printf '%s' "${node_order_csv}" | tr ',' ' ')
 		do
+			idx=$((idx + 1))
 			fss_prepare_backup_node_json "$(cat "${node_cache_dir}/${node_id}.json")" >> "${tmp_dir}/nodes.jsonl" || {
 				rm -rf "${tmp_dir}"
 				return 1
 			}
 			printf '\n' >> "${tmp_dir}/nodes.jsonl"
+			if [ "${progress_enabled}" = "1" ];then
+				if [ "${idx}" = "1" ] || [ $((idx % 25)) -eq 0 ] || [ "${idx}" = "${node_total}" ];then
+					"${progress_cb}" "节点JSON导出进度：${idx}/${node_total}"
+				fi
+			fi
 		done
 	else
 		local node_ids
@@ -3534,18 +3564,34 @@ fss_export_native_backup() {
 		order_json=$(printf '%s\n' ${node_ids} | sed '/^$/d' | jq -Rsc 'split("\n")[:-1]')
 		printf '%s' "${order_json}" > "${tmp_dir}/order.json"
 		: > "${tmp_dir}/nodes.jsonl"
+		node_total=$(printf '%s\n' ${node_ids} | sed '/^$/d' | awk 'END{print NR + 0}')
+		if [ "${progress_enabled}" = "1" ];then
+			"${progress_cb}" "阶段4/5：读取旧版节点数据，共 ${node_total} 个节点..."
+			[ "${node_total}" -gt 80 ] && "${progress_cb}" "旧版节点导出需要逐个转换为新JSON结构，节点较多时耗时较长，请不要关闭窗口。"
+			"${progress_cb}" "阶段5/5：转换节点并组装JSON备份..."
+		fi
+		idx=0
 		for node_id in ${node_ids}
 		do
+			idx=$((idx + 1))
 			[ "${node_id}" -gt "${max_node}" ] && max_node="${node_id}"
 			fss_node_legacy_to_v2_json "${node_id}" "${node_id}" "legacy-export" "${dump_file}" | fss_prepare_backup_node_json >> "${tmp_dir}/nodes.jsonl" || {
 				rm -rf "${tmp_dir}"
 				return 1
 			}
 			printf '\n' >> "${tmp_dir}/nodes.jsonl"
+			if [ "${progress_enabled}" = "1" ];then
+				if [ "${idx}" = "1" ] || [ $((idx % 25)) -eq 0 ] || [ "${idx}" = "${node_total}" ];then
+					"${progress_cb}" "节点JSON导出进度：${idx}/${node_total}"
+				fi
+			fi
 		done
 		node_next_id=$((max_node + 1))
 	fi
 
+	if [ "${progress_enabled}" = "1" ];then
+		"${progress_cb}" "正在生成最终JSON文件..."
+	fi
 	jq -s '.' "${tmp_dir}/nodes.jsonl" > "${tmp_dir}/nodes.json"
 	jq -n \
 		--arg created_at "${created_at}" \
@@ -3574,6 +3620,11 @@ fss_export_native_backup() {
 			acl: $acl[0]
 		}
 		' > "${output_file}"
+	if [ "${progress_enabled}" = "1" ];then
+		local output_size
+		output_size=$(du -h "${output_file}" 2>/dev/null | awk '{print $1}')
+		"${progress_cb}" "最终JSON文件生成完成${output_size:+，大小 ${output_size}}。"
+	fi
 
 	rm -rf "${tmp_dir}"
 }
