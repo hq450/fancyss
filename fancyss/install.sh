@@ -5,7 +5,10 @@
 source /koolshare/scripts/base.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
-alias echo_date='echo 【$(TZ=UTC-8 date -R +%Y%m%d\ %X)】:'
+unalias echo_date >/dev/null 2>&1
+echo_date(){
+	echo "【$(TZ=UTC-8 date -R "+%Y%m%d %X")】: $*"
+}
 MODEL=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
@@ -189,6 +192,7 @@ schema2_secret_decode_candidate() {
 
 normalize_schema2_secret_fields_after_install() {
 	local reason="$1"
+	local force_scan="$2"
 	local node_id=""
 	local field=""
 	local raw_value=""
@@ -204,6 +208,9 @@ normalize_schema2_secret_fields_after_install() {
 	local fields="password naive_pass"
 
 	[ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] || return 0
+	if [ "${force_scan}" != "1" ] && [ "$(dbus get fss_data_secret_mode 2>/dev/null)" = "raw" ];then
+		return 0
+	fi
 	total_nodes="$(fss_list_node_ids | awk 'NF{c++} END{print c+0}')"
 	[ -n "${total_nodes}" ] || total_nodes=0
 	echo_date "开始校正 schema2 密码字段（${reason}），共 ${total_nodes} 个节点..."
@@ -1506,7 +1513,7 @@ install_now(){
 		if [ "${STORAGE_SCHEMA_BEFORE}" != "2" ];then
 			normalize_schema2_secret_fields_after_install "schema1 -> schema2 升级"
 		elif [ "${FORCE_SCHEMA2_SECRET_NORMALIZE}" = "1" ]; then
-			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏"
+			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏" "1"
 		fi
 	fi
 

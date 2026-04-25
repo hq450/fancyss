@@ -55,8 +55,15 @@ get_status_payload(){
 }
 
 read_front_cache(){
+	local payload=""
 	[ -s "${STATUS_FRONT_CACHE}" ] || return 1
-	cat "${STATUS_FRONT_CACHE}" 2>/dev/null
+	payload="$(cat "${STATUS_FRONT_CACHE}" 2>/dev/null)" || return 1
+	case "${payload}" in
+	*等待*|*Waiting*)
+		return 1
+		;;
+	esac
+	printf '%s' "${payload}"
 }
 
 read_ws_cache(){

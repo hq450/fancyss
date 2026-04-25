@@ -13138,7 +13138,7 @@ function get_ss_status_front_websocket() {
 	}, Math.max(15000, get_status_refresh_delay_ms() + 5000));
 	setup_status_ws(get_ss_status_front_httpd, false, function() {
 		try {
-			wss.send("/koolshare/bin/statusctl --socket-path /tmp/status-tool.sock probe-once");
+			wss.send("/koolshare/scripts/ss_status.sh ws");
 		} catch (ex) {
 			throw ex;
 		}

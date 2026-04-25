@@ -812,6 +812,64 @@ fss_collect_legacy_subscribe_source_meta_from_profiles() {
 	done
 }
 
+fss_collect_schema2_subscribe_group_meta_from_profiles() {
+	local profile_id profile_key state_key profile_json state_json profile_url profile_name
+	local last_group last_url_hash raw_tag canonical_tag legacy_tag group_label airport_identity source_scope group_value suffix
+	type subprof_list_profile_ids >/dev/null 2>&1 || return 1
+	type subprof_profile_key >/dev/null 2>&1 || return 1
+	type subprof_state_key >/dev/null 2>&1 || return 1
+	type subprof_dbus_get_json_by_key >/dev/null 2>&1 || return 1
+	for profile_id in $(subprof_list_profile_ids)
+	do
+		[ -n "${profile_id}" ] || continue
+		profile_key="$(subprof_profile_key "${profile_id}" 2>/dev/null)" || continue
+		profile_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || continue
+		[ -n "${profile_json}" ] || continue
+		state_key="$(subprof_state_key "${profile_id}" 2>/dev/null)" || continue
+		state_json="$(subprof_dbus_get_json_by_key "${state_key}" 2>/dev/null)" || state_json=""
+		profile_url="$(printf '%s' "${profile_json}" | jq -r '.url // empty' 2>/dev/null | sed -n '1p')"
+		profile_name="$(printf '%s' "${profile_json}" | jq -r '.name // empty' 2>/dev/null | sed -n '1p')"
+		[ -n "${profile_url}" ] || continue
+		last_group="$(printf '%s' "${state_json}" | jq -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
+		last_url_hash="$(printf '%s' "${state_json}" | jq -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
+		raw_tag="$(fss_legacy_subscribe_domain_tag_from_url "${profile_url}" 2>/dev/null)" || raw_tag=""
+		canonical_tag=""
+		[ -n "${raw_tag}" ] && canonical_tag="$(dbus get ss_online_hash_${raw_tag} 2>/dev/null)"
+		[ -n "${canonical_tag}" ] || canonical_tag="${raw_tag}"
+		legacy_tag="$(fss_legacy_subscribe_url_hash "${profile_url}" 2>/dev/null)" || legacy_tag=""
+		[ -n "${last_url_hash}" ] || last_url_hash="${legacy_tag}"
+		group_label="${last_group}"
+		[ -n "${group_label}" ] || group_label="${profile_name}"
+		[ -n "${group_label}" ] || group_label="$(fss_legacy_subscribe_host_from_url "${profile_url}" 2>/dev/null)"
+		[ -n "${group_label}" ] || continue
+		airport_identity="$(fss_identity_slugify "${group_label}" "${canonical_tag:-${raw_tag:-sub}}")"
+		source_scope="${airport_identity}"
+		[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
+		fss_legacy_subscribe_emit_meta_row "${group_label}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
+		{
+			dbus list ssconf_basic_group_ 2>/dev/null | cut -d "=" -f 2-
+			if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
+				dbus list fss_node_ 2>/dev/null | while IFS='=' read -r key value
+				do
+					case "${key}" in
+					fss_node_[0-9]*)
+						fss_b64_decode "${value}" 2>/dev/null | jq -r '.group // empty' 2>/dev/null
+						;;
+					esac
+				done
+			fi
+		} | sed '/^$/d' | sort -u | while IFS= read -r group_value
+		do
+			case "${group_value}" in
+			"${group_label}"_*)
+				suffix="${group_value##*_}"
+				fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
+				;;
+			esac
+		done
+	done
+}
+
 fss_collect_legacy_subscribe_source_meta_from_links() {
 	local raw_links="" link raw_tag canonical_tag legacy_tag profile_id group_label airport_identity source_scope host
 	raw_links="$(dbus get ss_online_links | base64 -d 2>/dev/null)" || raw_links=""
@@ -851,6 +909,7 @@ fss_collect_legacy_subscribe_source_meta() {
 	: > "${tmp_file}"
 	fss_collect_legacy_subscribe_source_meta_from_links >> "${tmp_file}" 2>/dev/null || true
 	fss_collect_legacy_subscribe_source_meta_from_profiles >> "${tmp_file}" 2>/dev/null || true
+	fss_collect_schema2_subscribe_group_meta_from_profiles >> "${tmp_file}" 2>/dev/null || true
 	if [ -s "${tmp_file}" ];then
 		awk -F '\t' '
 			NF >= 6 && $1 != "" {
@@ -913,12 +972,32 @@ fss_repair_legacy_subscribe_source_meta() {
 				})
 			| map({key: .tag, value: .})
 			| from_entries;
+		def source_meta_by_group($group_label):
+			[
+				$source_meta
+				| split("\n")
+				| map(select(length > 0))
+				| map(split("\t"))
+				| map(select(length >= 6 and .[5] == $group_label)
+					| {
+						tag: .[0],
+						profile_id: .[1],
+						airport_identity: .[2],
+						source_scope: .[3],
+						url_hash: .[4],
+						group_label: .[5]
+					})
+				| unique_by((.profile_id // "") + "\t" + (.source_scope // ""))
+				| .[]
+			] as $matches
+			| if ($matches | length) == 1 then $matches[0] else null end;
 		def subscription_meta($group):
 			($group // "" | tostring) as $raw_group
 			| if ($raw_group | test("_[A-Za-z0-9]+$")) then
 				($raw_group | capture("^(?<base>.*)_(?<tag>[A-Za-z0-9]+)$")) as $parts
-				| (source_meta_by_tag[$parts.tag] // null) as $meta
-				| if $meta == null or (($meta.group_label // "") != "" and $parts.base != ($meta.group_label // "")) then
+				| (source_meta_by_tag[$parts.tag] // null) as $tag_meta
+				| (($tag_meta // null) // source_meta_by_group($parts.base)) as $meta
+				| if $meta == null or ($tag_meta == null and (($meta.group_label // "") != "" and $parts.base != ($meta.group_label // ""))) then
 					null
 				else
 					($meta.group_label // $parts.base) as $group_label_jq
@@ -938,7 +1017,7 @@ fss_repair_legacy_subscribe_source_meta() {
 			end;
 		(subscription_meta(.group) // {}) as $sub_meta
 		| if (($sub_meta._source // "") == "subscribe")
-			and ((._migrated_from // "") != "" or ((._source // "") | IN("migration"; "install"; "legacy"; "legacy-runtime"; "restore-sh"; "legacy-export")))
+			and ((._migrated_from // "") != "" or ((["migration", "install", "legacy", "legacy-runtime", "restore-sh", "legacy-export"] | index(._source // "")) != null))
 			and ((._source // "") != "subscribe" or (._source_scope // "") != ($sub_meta._source_scope // "") or ((._profile_id // "") == "" and ($sub_meta._profile_id // "") != "")) then
 			. + $sub_meta
 		else
@@ -1592,6 +1671,7 @@ fss_migrate_legacy_nodes() {
 	local node_id node_b64 current_id failover_id max_id=0 order_csv=""
 	local order_file="" node_dump_file="" nodes_tsv="" source_meta_file="" node_ts=""
 	local old_current old_failover
+	local node_tool="" node_tool_output="" migrated_count=""
 	local key value field
 
 	[ "$(fss_detect_storage_schema)" = "2" ] && return 0
@@ -1618,6 +1698,40 @@ fss_migrate_legacy_nodes() {
 		dbus remove fss_data_migrating
 		flock -u 234
 		return 1
+	fi
+
+	fss_report_progress "${progress_cb}" "阶段2/4：批量读取旧版节点数据..."
+	fss_collect_legacy_subscribe_source_meta "${source_meta_file}" >/dev/null 2>&1 || : > "${source_meta_file}"
+	node_tool="$(fss_pick_node_tool 2>/dev/null)" || node_tool=""
+	if [ -n "${node_tool}" ] && fss_node_tool_supports_command "${node_tool}" "migrate-legacy";then
+		fss_report_progress "${progress_cb}" "阶段2/4：使用 node-tool 快速迁移旧版节点数据..."
+		fss_clear_v2_nodes >/dev/null 2>&1 || true
+		dbus set fss_data_migrating=1
+		node_tool_output="$("${node_tool}" migrate-legacy --meta "${source_meta_file}" 2>&1)"
+		if [ "$?" = "0" ];then
+			migrated_count="$(printf '%s\n' "${node_tool_output}" | awk -F': ' '$1 == "migrated" {print $2}' | sed -n '1p')"
+			if [ "${migrated_count}" = "${expected_count}" ];then
+				fss_set_storage_schema_cache 2
+				dbus set fss_data_migrated=1
+				dbus set fss_data_secret_mode=raw
+				dbus set fss_data_migration_notice=1
+				dbus set fss_data_migration_time="${ts}"
+				dbus set fss_data_legacy_snapshot="${snapshot_path}"
+				fss_touch_node_catalog_ts >/dev/null 2>&1
+				fss_touch_node_config_ts >/dev/null 2>&1
+				fss_report_progress "${progress_cb}" "node-tool 快速迁移完成：${migrated_count}/${expected_count} 个节点。"
+				if [ "${remove_legacy}" = "1" ];then
+					fss_clear_legacy_nodes
+				fi
+				dbus remove fss_data_migrating
+				rm -rf "${tmp_dir}"
+				flock -u 234
+				return 0
+			fi
+			fss_report_progress "${progress_cb}" "node-tool 迁移结果数量异常，回退 shell 迁移流程..."
+		else
+			fss_report_progress "${progress_cb}" "node-tool 快速迁移失败，回退 shell 迁移流程..."
+		fi
 	fi
 
 	fss_report_progress "${progress_cb}" "阶段2/4：批量读取旧版节点数据..."
@@ -1659,7 +1773,6 @@ fss_migrate_legacy_nodes() {
 	[ -n "${current_id}" ] && grep -Fxq "${current_id}" "${order_file}" || current_id="$(sed -n '1p' "${order_file}")"
 	[ -n "${failover_id}" ] && grep -Fxq "${failover_id}" "${order_file}" || failover_id=""
 
-	fss_collect_legacy_subscribe_source_meta "${source_meta_file}" >/dev/null 2>&1 || : > "${source_meta_file}"
 	fss_report_progress "${progress_cb}" "阶段3/4：转换节点到新存储结构，共 ${expected_count} 个节点..."
 	node_ts="$(fss_now_ts_ms)"
 	fss_legacy_node_dump_to_v2_tsv "${node_dump_file}" "${order_file}" "migration" "${node_ts}" "${source_meta_file}" > "${nodes_tsv}" || {
@@ -1708,6 +1821,7 @@ fss_migrate_legacy_nodes() {
 	dbus set fss_data_schema=2
 	fss_set_storage_schema_cache 2
 	dbus set fss_data_migrated=1
+	dbus set fss_data_secret_mode=raw
 	dbus set fss_data_migration_notice=1
 	dbus set fss_data_migration_time="${ts}"
 	dbus set fss_data_legacy_snapshot="${snapshot_path}"
@@ -1841,12 +1955,17 @@ fss_legacy_node_dump_to_v2_tsv() {
 				});
 		def source_meta_by_tag:
 			source_meta_rows | map({key: .tag, value: .}) | from_entries;
+		def source_meta_by_group($group_label):
+			[source_meta_rows[] | select(.group_label == $group_label)]
+			| unique_by((.profile_id // "") + "\t" + (.source_scope // "")) as $matches
+			| if ($matches | length) == 1 then $matches[0] else null end;
 		def subscription_meta($group):
 			($group // "" | tostring) as $raw_group
 			| if ($raw_group | test("_[A-Za-z0-9]+$")) then
 				($raw_group | capture("^(?<base>.*)_(?<tag>[A-Za-z0-9]+)$")) as $parts
-				| (source_meta_by_tag[$parts.tag] // null) as $meta
-				| if $meta == null or (($meta.group_label // "") != "" and $parts.base != ($meta.group_label // "")) then
+				| (source_meta_by_tag[$parts.tag] // null) as $tag_meta
+				| (($tag_meta // null) // source_meta_by_group($parts.base)) as $meta
+				| if $meta == null or ($tag_meta == null and (($meta.group_label // "") != "" and $parts.base != ($meta.group_label // ""))) then
 					null
 				else
 					($meta.group_label // $parts.base) as $group_label_jq
@@ -2056,12 +2175,32 @@ fss_node_legacy_to_v2_json() {
 				})
 			| map({key: .tag, value: .})
 			| from_entries;
+		def source_meta_by_group($group_label):
+			[
+				$source_meta
+				| split("\n")
+				| map(select(length > 0))
+				| map(split("\t"))
+				| map(select(length >= 6 and .[5] == $group_label)
+					| {
+						tag: .[0],
+						profile_id: .[1],
+						airport_identity: .[2],
+						source_scope: .[3],
+						url_hash: .[4],
+						group_label: .[5]
+					})
+				| unique_by((.profile_id // "") + "\t" + (.source_scope // ""))
+				| .[]
+			] as $matches
+			| if ($matches | length) == 1 then $matches[0] else null end;
 		def subscription_meta($group):
 			($group // "" | tostring) as $raw_group
 			| if ($raw_group | test("_[A-Za-z0-9]+$")) then
 				($raw_group | capture("^(?<base>.*)_(?<tag>[A-Za-z0-9]+)$")) as $parts
-				| (source_meta_by_tag[$parts.tag] // null) as $meta
-				| if $meta == null or (($meta.group_label // "") != "" and $parts.base != ($meta.group_label // "")) then
+				| (source_meta_by_tag[$parts.tag] // null) as $tag_meta
+				| (($tag_meta // null) // source_meta_by_group($parts.base)) as $meta
+				| if $meta == null or ($tag_meta == null and (($meta.group_label // "") != "" and $parts.base != ($meta.group_label // ""))) then
 					null
 				else
 					($meta.group_label // $parts.base) as $group_label_jq
