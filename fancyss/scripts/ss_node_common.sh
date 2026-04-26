@@ -1417,7 +1417,6 @@ fss_prepare_backup_node_json() {
 			.ping,
 			._schema,
 			._rev,
-			._source,
 			._updated_at,
 			._migrated_from,
 			._created_at
@@ -4429,6 +4428,20 @@ fss_restore_native_backup_v2() {
 				else
 					false
 				end;
+			def restore_source:
+				if ((._source // "") != "") then
+					.
+				elif ((._profile_id // "") != "") then
+					._source = "subscribe"
+				elif ((._source_scope // "") != "" and (._source_scope // "") != "local") then
+					._source = "subscribe"
+				elif ((._airport_identity // "") != "" and (._airport_identity // "") != "local") then
+					._source = "subscribe"
+				elif ((._source_url_hash // "") != "") then
+					._source = "subscribe"
+				else
+					._source = "restore"
+				end;
 			def prune:
 				. as $root
 				| (($root.type // "") | tostring) as $type
@@ -4448,7 +4461,7 @@ fss_restore_native_backup_v2() {
 				| ._b64_mode = ((._b64_mode // "") | if . == "" then "raw" else . end)
 				| ._updated_at = $ts
 				| ._created_at = (((._created_at // $ts) | tonumber? // $ts) | if . < 1000000000000 then (. * 1000) else . end)
-				| if ((._source // "") == "") then ._source = "restore" else . end
+				| restore_source
 				| prune
 				| [$id, (tojson | @base64)] | @tsv
 			' "${json_file}" > "${nodes_tsv}" || {
