@@ -432,14 +432,20 @@ gen_folder(){
 		sed -i '/fancyss_naive_1/,/fancyss_naive_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/fancyss_tuic_1/,/fancyss_tuic_2/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		# remove strings from page
-		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"naive_prot\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"naive_server\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"naive_port\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"naive_user\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"naive_pass\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"naive_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/\,\s\"tuic_json\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_prot"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_server"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_port"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_user"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_pass"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_json"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"tuic_json"[[:space:]]*:[[:space:]]*"[^"]*"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_prot"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_server"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_port"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_user"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_pass"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"naive_json"//g' ./shadowsocks/webs/Module_shadowsocks.asp
+		sed -i 's/,[[:space:]]*"tuic_json"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i 's/\,\s\"ss_basic_vcore\"//g' ./shadowsocks/webs/Module_shadowsocks.asp
 		# modify words
 		# trojan 用xray运行，所以trojan多核心功能删除
