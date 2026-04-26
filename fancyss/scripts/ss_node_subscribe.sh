@@ -2673,6 +2673,104 @@ sub_prepare_current_nodes_identity_export(){
 	rm -f "${tmp_export}"
 }
 
+keyword_filter_alias_tokens(){
+	case "$1" in
+	*香港*|*[Hh][Oo][Nn][Gg]*|HK|hk|Hk|hK)
+		printf '%s\n' '香港|[Hh][Oo][Nn][Gg][[:space:]]*[Kk][Oo][Nn][Gg]|[Hh][Oo][Nn][Gg]|(^|[^[:alnum:]])[Hh][Kk]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*新加坡*|*[Ss][Ii][Nn][Gg]*|SG|sg|Sg|sG)
+		printf '%s\n' '新加坡|[Ss][Ii][Nn][Gg][Aa][Pp][Oo][Rr][Ee]|[Ss][Ii][Nn][Gg]|(^|[^[:alnum:]])[Ss][Gg]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*美国*|*美國*|*[Uu][Nn][Ii][Tt][Ee][Dd]*[Ss][Tt][Aa][Tt][Ee][Ss]*|*[Aa][Mm][Ee][Rr][Ii][Cc][Aa]*|USA|usa|US|us)
+		printf '%s\n' '美国|美國|[Uu][Nn][Ii][Tt][Ee][Dd][[:space:]]*[Ss][Tt][Aa][Tt][Ee][Ss]|USA|usa|(^|[^[:alnum:]])[Uu][Ss]([0-9]|[^[:alpha:]]|$)|[Aa][Mm][Ee][Rr][Ii][Cc][Aa]'
+		;;
+	*日本*|*[Jj][Aa][Pp][Aa][Nn]*|JP|jp)
+		printf '%s\n' '日本|[Jj][Aa][Pp][Aa][Nn]|(^|[^[:alnum:]])[Jj][Pp]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*台湾*|*台灣*|*[Tt][Aa][Ii][Ww][Aa][Nn]*|TW|tw)
+		printf '%s\n' '台湾|台灣|[Tt][Aa][Ii][Ww][Aa][Nn]|(^|[^[:alnum:]])[Tt][Ww]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*韩国*|*韓國*|*[Kk][Oo][Rr][Ee][Aa]*|KR|kr)
+		printf '%s\n' '韩国|韓國|[Kk][Oo][Rr][Ee][Aa]|(^|[^[:alnum:]])[Kk][Rr]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*英国*|*英國*|*[Uu][Nn][Ii][Tt][Ee][Dd]*[Kk][Ii][Nn][Gg][Dd][Oo][Mm]*|*[Bb][Rr][Ii][Tt][Aa][Ii][Nn]*|UK|uk|GB|gb)
+		printf '%s\n' '英国|英國|[Uu][Nn][Ii][Tt][Ee][Dd][[:space:]]*[Kk][Ii][Nn][Gg][Dd][Oo][Mm]|[Bb][Rr][Ii][Tt][Aa][Ii][Nn]|(^|[^[:alnum:]])([Uu][Kk]|[Gg][Bb])([0-9]|[^[:alpha:]]|$)'
+		;;
+	*德国*|*德國*|*[Gg][Ee][Rr][Mm][Aa][Nn][Yy]*|DE|de)
+		printf '%s\n' '德国|德國|[Gg][Ee][Rr][Mm][Aa][Nn][Yy]|(^|[^[:alnum:]])[Dd][Ee]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*法国*|*法國*|*[Ff][Rr][Aa][Nn][Cc][Ee]*|FR|fr)
+		printf '%s\n' '法国|法國|[Ff][Rr][Aa][Nn][Cc][Ee]|(^|[^[:alnum:]])[Ff][Rr]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*荷兰*|*荷蘭*|*[Nn][Ee][Tt][Hh][Ee][Rr][Ll][Aa][Nn][Dd][Ss]*|*[Hh][Oo][Ll][Ll][Aa][Nn][Dd]*|NL|nl)
+		printf '%s\n' '荷兰|荷蘭|[Nn][Ee][Tt][Hh][Ee][Rr][Ll][Aa][Nn][Dd][Ss]|[Hh][Oo][Ll][Ll][Aa][Nn][Dd]|(^|[^[:alnum:]])[Nn][Ll]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*加拿大*|*[Cc][Aa][Nn][Aa][Dd][Aa]*|CA|ca)
+		printf '%s\n' '加拿大|[Cc][Aa][Nn][Aa][Dd][Aa]|(^|[^[:alnum:]])[Cc][Aa]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*澳大利亚*|*澳大利亞*|*澳洲*|*[Aa][Uu][Ss][Tt][Rr][Aa][Ll][Ii][Aa]*|AU|au)
+		printf '%s\n' '澳大利亚|澳大利亞|澳洲|[Aa][Uu][Ss][Tt][Rr][Aa][Ll][Ii][Aa]|(^|[^[:alnum:]])[Aa][Uu]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*俄罗斯*|*俄羅斯*|*[Rr][Uu][Ss][Ss][Ii][Aa]*|RU|ru)
+		printf '%s\n' '俄罗斯|俄羅斯|[Rr][Uu][Ss][Ss][Ii][Aa]|(^|[^[:alnum:]])[Rr][Uu]([0-9]|[^[:alpha:]]|$)'
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+keyword_filter_short_ascii_code(){
+	case "$1" in
+	[A-Za-z][A-Za-z])
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+keyword_filter_match_token_text(){
+	local text="$1"
+	local token="$2"
+	local alias_pattern=""
+	[ -n "${token}" ] || return 1
+	if keyword_filter_short_ascii_code "${token}";then
+		if printf '%s' "${text}" | grep -Eiq "(^|[^[:alnum:]])${token}([0-9]|[^[:alpha:]]|$)" 2>/dev/null;then
+			printf '%s' "${text}" | grep -Eio "(^|[^[:alnum:]])${token}([0-9]|[^[:alpha:]]|$)" 2>/dev/null | sed -n '1p'
+			return 0
+		fi
+	else
+		if printf '%s' "${text}" | grep -Eiq "${token}" 2>/dev/null; then
+			printf '%s' "${text}" | grep -Eio "${token}" 2>/dev/null | sed -n '1p'
+			return 0
+		fi
+	fi
+	alias_pattern="$(keyword_filter_alias_tokens "${token}" 2>/dev/null)" || alias_pattern=""
+	[ -n "${alias_pattern}" ] || return 1
+	if printf '%s' "${text}" | grep -Eiq "${alias_pattern}" 2>/dev/null; then
+		printf '%s' "${text}" | grep -Eio "${alias_pattern}" 2>/dev/null | sed -n '1p'
+		return 0
+	fi
+	return 1
+}
+
+keyword_filter_match_text(){
+	local text="$1"
+	local pattern="$2"
+	local token=""
+	[ -n "${pattern}" ] || return 1
+	while IFS= read -r token
+	do
+		[ -n "${token}" ] || continue
+		keyword_filter_match_token_text "${text}" "${token}" && return 0
+	done <<EOF
+$(printf '%s' "${pattern}" | tr '|' '\n')
+EOF
+	return 1
+}
+
 sub_filter_offline_duplicate_nodes(){
 	local input_file="$1"
 	local current_file="${input_file}.current.$$"
@@ -5299,6 +5397,9 @@ filter_nodes(){
 	local _type=$1
 	local remarks=$2
 	local server=$3
+	local keyword_text="${remarks} ${server}"
+	local KEY_MATCH_1=""
+	local KEY_MATCH_2=""
 	if [ "${SUB_KEEP_INFO_NODE}" != "1" ] && printf '%s' "${remarks}" | grep -Eiq '^(Expire|Traffic|Sync)[:：]|^(剩余流量|套餐到期|订阅到期|到期时间|流量重置|更新于|更新时间)[:：]'; then
 		echo_date "⚪${_type}节点：【${remarks}】，不添加，因为是订阅信息节点"
 		let exclude+=1
@@ -5307,8 +5408,8 @@ filter_nodes(){
 	if [ -z "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ];then
 		return 0
 	fi
-	[ -n "${KEY_WORDS_1}" ] && local KEY_MATCH_1=$(echo ${remarks} ${server} | grep -Eo "${KEY_WORDS_1}")
-	[ -n "${KEY_WORDS_2}" ] && local KEY_MATCH_2=$(echo ${remarks} ${server} | grep -Eo "${KEY_WORDS_2}")
+	[ -n "${KEY_WORDS_1}" ] && KEY_MATCH_1=$(keyword_filter_match_text "${keyword_text}" "${KEY_WORDS_1}")
+	[ -n "${KEY_WORDS_2}" ] && KEY_MATCH_2=$(keyword_filter_match_text "${keyword_text}" "${KEY_WORDS_2}")
 	if [ -n "${KEY_WORDS_1}" -a -z "${KEY_WORDS_2}" ]; then
 		# 排除节点：yes，包括节点：no
 		if [ -n "${KEY_MATCH_1}" ]; then
