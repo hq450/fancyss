@@ -7483,11 +7483,25 @@ function start_subscription_log_http() {
 	close_subscription_log_ws();
 	poll_subscription_log(true);
 }
-function start_subscription_log_stream(action, profileId) {
+function start_subscription_log_stream(action, profileId, fallbackRunner) {
 	var retArea = E("submgr_log_textarea");
 	var statusEl = E("submgr_log_status");
-	if (ws_flag != 1 || window.location.protocol != "http:" || !ws_host_allowed(hostname)) {
+	var commandSent = false;
+	var fallbackStarted = false;
+	function fallback_to_http() {
+		if (fallbackStarted) {
+			return;
+		}
+		fallbackStarted = true;
+		if (!commandSent && typeof fallbackRunner == "function") {
+			close_subscription_log_ws();
+			fallbackRunner();
+			return;
+		}
 		start_subscription_log_http();
+	}
+	if (ws_flag != 1 || window.location.protocol != "http:" || !ws_host_allowed(hostname)) {
+		fallback_to_http();
 		return;
 	}
 	close_subscription_log_ws();
@@ -7497,7 +7511,7 @@ function start_subscription_log_stream(action, profileId) {
 	subscribeLogWs = new WebSocket("ws://" + hostname + ":803/");
 	subscribeLogWsFallbackTimer = setTimeout(function() {
 		if (subscribeLogWs) {
-			start_subscription_log_http();
+			fallback_to_http();
 		}
 	}, 2500);
 	subscribeLogWs.onopen = function() {
@@ -7509,13 +7523,15 @@ function start_subscription_log_stream(action, profileId) {
 			statusEl.innerHTML = "订阅任务运行中...";
 		}
 		try {
+			commandSent = true;
 			subscribeLogWs.send("env LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 sh /koolshare/scripts/ss_node_subscribe.sh " + String(action || "3") + (profileId ? (" " + String(profileId)) : ""));
 		} catch (e) {
-			start_subscription_log_http();
+			commandSent = false;
+			fallback_to_http();
 		}
 	};
 	subscribeLogWs.onerror = function() {
-		start_subscription_log_http();
+		fallback_to_http();
 	};
 	subscribeLogWs.onmessage = function(event) {
 		var msg = String(event.data || "");
@@ -7552,21 +7568,20 @@ function push_subscription_data(action, obj, title, profileId, affectsNodeList) 
 	var id = parseInt(Math.random() * 100000000);
 	var useWsLog = ws_flag == 1 && window.location.protocol == "http:" && ws_host_allowed(hostname);
 	var postData = {"id": id, "method": "ss_node_subscribe.sh", "params": [action], "fields": obj || {}};
+	var fields = obj || {};
 	clear_text_file_poll_state("subscribe_log");
 	subscribeLogRefreshNodesAfterDone = !!affectsNodeList;
-	if (useWsLog) {
-		open_subscription_log_layer(title || "订阅更新日志");
-			start_subscription_log_stream(action, profileId || "");
-		return;
-	}
-	$.ajax({
+	function begin_http_subscription(skipOpen) {
+		$.ajax({
 		type: "POST",
 		cache: false,
 		url: "/_api/",
 		data: JSON.stringify(postData),
 		dataType: "json",
 		beforeSend: function() {
-			open_subscription_log_layer(title || "订阅更新日志");
+			if (!skipOpen) {
+				open_subscription_log_layer(title || "订阅更新日志");
+			}
 		},
 		success: function(response) {
 			var statusEl = E("submgr_log_status");
@@ -7593,7 +7608,67 @@ function push_subscription_data(action, obj, title, profileId, affectsNodeList) 
 			}
 			unlock_subscription_log_close_button();
 		}
-	});
+		});
+	}
+	function has_fields(fields) {
+		for (var key in fields) {
+			if (fields.hasOwnProperty(key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	function prepare_ws_fields(next) {
+		if (!has_fields(fields)) {
+			next();
+			return;
+		}
+		var writeId = parseInt(Math.random() * 100000000);
+		var statusEl = E("submgr_log_status");
+		var retArea = E("submgr_log_textarea");
+		if (statusEl) {
+			statusEl.innerHTML = "正在提交订阅参数...";
+		}
+		$.ajax({
+			type: "POST",
+			cache: false,
+			url: "/_api/",
+			data: JSON.stringify({"id": writeId, "method": "dummy_script.sh", "params": [], "fields": fields}),
+			dataType: "json",
+			success: function(response) {
+				if (response && String(response.result) == String(writeId)) {
+					next();
+					return;
+				}
+				if (retArea) {
+					retArea.value += (retArea.value ? "\n" : "") + "订阅参数提交异常，已停止任务。";
+				}
+				if (statusEl) {
+					statusEl.innerHTML = "订阅参数提交异常";
+				}
+				unlock_subscription_log_close_button();
+			},
+			error: function() {
+				if (retArea) {
+					retArea.value += (retArea.value ? "\n" : "") + "订阅参数提交失败，请检查软件中心接口。";
+				}
+				if (statusEl) {
+					statusEl.innerHTML = "订阅参数提交失败";
+				}
+				unlock_subscription_log_close_button();
+			}
+		});
+	}
+	if (useWsLog) {
+		open_subscription_log_layer(title || "订阅更新日志");
+		prepare_ws_fields(function() {
+			start_subscription_log_stream(action, profileId || "", function() {
+				begin_http_subscription(true);
+			});
+		});
+		return;
+	}
+	begin_http_subscription(false);
 }
 function persist_shunt_local_fields(fields, successText) {
 	var id = parseInt(Math.random() * 100000000);
