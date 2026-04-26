@@ -1444,6 +1444,25 @@ function normalize_node_empty_default(type, field, value) {
 	}
 	return value;
 }
+function set_node_table_field_value(node, field) {
+	var el = E("ss_node_table_" + field);
+	var value = "";
+	var defaultValue = null;
+	if (!el) {
+		return;
+	}
+	if (node && typeof node[field] != "undefined" && node[field] !== null) {
+		value = String(node[field]);
+	}
+	value = normalize_node_empty_default(node ? node["type"] : "", field, value);
+	el.value = value;
+	if (el.tagName && el.tagName.toLowerCase() == "select" && el.value !== value) {
+		defaultValue = get_node_empty_default(node ? node["type"] : "", field);
+		if (defaultValue !== null) {
+			el.value = defaultValue;
+		}
+	}
+}
 function get_schema2_allowed_field_map(type) {
 	var map = {};
 	var nodeType = String(type || "");
@@ -4153,14 +4172,18 @@ function get_schema2_touch_timestamp() {
 	return String(Date.now());
 }
 function get_schema2_compare_field_value(raw, field) {
+	var type = "";
 	var value = "";
 	if (raw && typeof raw[field] != "undefined" && raw[field] !== null) {
 		value = String(raw[field]);
 	}
+	if (raw && typeof raw["type"] != "undefined" && raw["type"] !== null) {
+		type = String(raw["type"]);
+	}
 	if (is_node_bool_field(field)) {
 		return value == "1" ? "1" : "0";
 	}
-	return value;
+	return normalize_node_empty_default(type, field, value);
 }
 function decode_schema2_node_payload_value(value) {
 	if (!value) {
@@ -8864,9 +8887,7 @@ function edit_conf_table(o) {
 		}
 	}
 	for (var i = 0; i < params1_input.length; i++) {
-		if(c[params1_input[i]]){
-			E("ss_node_table_" + params1_input[i]).value = c[params1_input[i]];
-		}
+		set_node_table_field_value(c, params1_input[i]);
 	}
 	E("cancel_Btn").style.display = "";
 	E("add_node").style.display = "none";

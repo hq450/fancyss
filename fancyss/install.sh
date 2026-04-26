@@ -21,6 +21,25 @@ run_bg(){
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
+version_ge() {
+	local current="$1"
+	local required="$2"
+	local current_major current_minor current_patch required_major required_minor required_patch
+	current="$(printf '%s' "${current}" | sed 's/^v//' | sed 's/[^0-9.].*$//')"
+	required="$(printf '%s' "${required}" | sed 's/^v//' | sed 's/[^0-9.].*$//')"
+	current_major="$(printf '%s' "${current}" | awk -F. '{print $1 + 0}')"
+	current_minor="$(printf '%s' "${current}" | awk -F. '{print $2 + 0}')"
+	current_patch="$(printf '%s' "${current}" | awk -F. '{print $3 + 0}')"
+	required_major="$(printf '%s' "${required}" | awk -F. '{print $1 + 0}')"
+	required_minor="$(printf '%s' "${required}" | awk -F. '{print $2 + 0}')"
+	required_patch="$(printf '%s' "${required}" | awk -F. '{print $3 + 0}')"
+	[ "${current_major}" -gt "${required_major}" ] && return 0
+	[ "${current_major}" -lt "${required_major}" ] && return 1
+	[ "${current_minor}" -gt "${required_minor}" ] && return 0
+	[ "${current_minor}" -lt "${required_minor}" ] && return 1
+	[ "${current_patch}" -ge "${required_patch}" ]
+}
+
 invalidate_runtime_caches_after_install() {
 	rm -rf /koolshare/configs/fancyss/node_json_cache >/dev/null 2>&1
 	rm -f /koolshare/configs/fancyss/node_json_cache.meta >/dev/null 2>&1
@@ -1578,6 +1597,7 @@ install_now(){
 	if [ -n "${FSS_NODE_TOOL_PICKED:-}" ];then
 		echo_date "节点数据升级将优先使用 node-tool：${FSS_NODE_TOOL_PICKED}"
 		local NODE_TOOL_VERSION_OUTPUT=""
+		local NODE_TOOL_MIN_VERSION="0.1.8"
 		NODE_TOOL_VERSION_OUTPUT="$("${FSS_NODE_TOOL_PICKED}" version 2>&1)"
 		local NODE_TOOL_VERSION_RC="$?"
 		if [ "${NODE_TOOL_VERSION_RC}" != "0" ];then
@@ -1598,6 +1618,12 @@ install_now(){
 			fi
 		else
 			echo_date "node-tool 版本：${NODE_TOOL_VERSION_OUTPUT}"
+		fi
+		if [ -n "${FSS_NODE_TOOL_PICKED:-}" ] && ! version_ge "${NODE_TOOL_VERSION_OUTPUT}" "${NODE_TOOL_MIN_VERSION}";then
+			echo_date "node-tool 版本低于 ${NODE_TOOL_MIN_VERSION}，旧版 schema1 迁移可能丢失默认字段，回退 shell 迁移流程。"
+			unset FSS_NODE_TOOL_PICKED
+			unset FSS_NODE_TOOL_TRUST_PICKED
+			unset FSS_NODE_TOOL_CLEAN_ENV
 		fi
 	fi
 	local STORAGE_SCHEMA_BEFORE="$(fss_detect_storage_schema 2>/dev/null)"
