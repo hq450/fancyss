@@ -9,6 +9,7 @@ TMP2=/tmp/fancyss_webtest
 WT_WEBTEST_FILE=/tmp/upload/webtest.txt
 WT_WEBTEST_STREAM=/tmp/upload/webtest.stream
 WT_WEBTEST_BACKUP=/tmp/upload/webtest_bakcup.txt
+WT_WEBTEST_HISTORY=/tmp/upload/webtest_history.txt
 WT_WEBTEST_STOP_FLAG=/tmp/webtest.stop
 WT_WEBTEST_PID_FILE=/tmp/webtest.pid
 WT_WEBTEST_STATE_LOCK=/tmp/webtest.state.lock
@@ -257,6 +258,46 @@ wt_pick_jq() {
 	return 1
 }
 
+wt_get_previous_webtest_latency() {
+	local node_id="$1"
+	local file_path=""
+	local value=""
+
+	[ -n "${node_id}" ] || return 1
+	for file_path in "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_FILE}" "${WT_WEBTEST_HISTORY}"
+	do
+		[ -f "${file_path}" ] || continue
+		value=$(awk -F '>' -v id="${node_id}" '
+			$1 == id && $2 ~ /^[0-9]+$/ {
+				v = $2
+			}
+			END {
+				if (v != "") print v
+			}
+		' "${file_path}" 2>/dev/null)
+		if [ -n "${value}" ]; then
+			echo "${value}"
+			return 0
+		fi
+	done
+	return 1
+}
+
+wt_save_webtest_history() {
+	local file_path=""
+
+	mkdir -p /tmp/upload >/dev/null 2>&1 || return 0
+	for file_path in "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_FILE}"
+	do
+		[ -f "${file_path}" ] || continue
+		if [ "$(get_webtest_usable_count "${file_path}")" -gt "0" ]; then
+			cp -f "${file_path}" "${WT_WEBTEST_HISTORY}" >/dev/null 2>&1
+			return 0
+		fi
+	done
+	return 0
+}
+
 wt_webtest_tool_build_job() {
 	local pairs_file="$1"
 	local job_file="$2"
@@ -278,6 +319,7 @@ wt_webtest_tool_build_job() {
 	local wait_port=""
 	local has_start=""
 	local wait_timeout_ms="5000"
+	local previous_latency=""
 
 	jq_bin="$(wt_pick_jq 2>/dev/null)" || return 1
 	[ -f "${pairs_file}" ] || return 1
@@ -315,6 +357,10 @@ wt_webtest_tool_build_job() {
 			fi
 			if [ -n "${wait_port}" ]; then
 				printf ',"wait_port":%s,"wait_timeout_ms":%s' "${wait_port}" "${wait_timeout_ms}"
+			fi
+			previous_latency="$(wt_get_previous_webtest_latency "${node_id}" 2>/dev/null || true)"
+			if [ -n "${previous_latency}" ]; then
+				printf ',"previous_latency_ms":%s' "${previous_latency}"
 			fi
 			printf '}'
 		done < "${pairs_file}"
@@ -560,6 +606,7 @@ wt_webtest_tool_build_targets_job() {
 	local stop_script=""
 	local wait_port=""
 	local wait_timeout_ms=""
+	local previous_latency=""
 
 	jq_bin="$(wt_pick_jq 2>/dev/null)" || return 1
 	[ -f "${targets_file}" ] || return 1
@@ -581,6 +628,10 @@ wt_webtest_tool_build_targets_job() {
 			if [ -n "${wait_port}" ]; then
 				[ -n "${wait_timeout_ms}" ] || wait_timeout_ms="5000"
 				printf ',"wait_port":%s,"wait_timeout_ms":%s' "${wait_port}" "${wait_timeout_ms}"
+			fi
+			previous_latency="$(wt_get_previous_webtest_latency "${node_id}" 2>/dev/null || true)"
+			if [ -n "${previous_latency}" ]; then
+				printf ',"previous_latency_ms":%s' "${previous_latency}"
 			fi
 			printf '}'
 		done < "${targets_file}"
@@ -3587,6 +3638,7 @@ wt_prepare_single_test_state() {
 	WT_WEBTEST_STATE_FILE="${TMP2}/webtest.single.state"
 	mkdir -p "${TMP2}" >/dev/null 2>&1 || return 1
 	: > "${WT_WEBTEST_STATE_FILE}"
+	wt_save_webtest_history
 	wt_prune_webtest_entries "${test_node}"
 	wt_set_batch_state "${test_node}" "waiting..."
 	return 0
@@ -4183,7 +4235,7 @@ clear_webtest)
 	wt_http_response $1
 	clean_webtest
 	dbus remove ss_basic_webtest_ts
-	rm -f "${WT_WEBTEST_BACKUP}"
+	rm -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_HISTORY}"
 	;;
 cleanup_helpers)
 	wt_runtime_cleanup
@@ -4203,6 +4255,7 @@ single_test)
 	;;
 manual_webtest)
 	ensure_latency_batch
+	wt_save_webtest_history
 	clean_webtest
 	rm -f "${WT_WEBTEST_BACKUP}"
 	dbus remove ss_basic_webtest_ts
@@ -4221,6 +4274,7 @@ stop_webtest)
 ws_start_batch)
 	ensure_latency_batch
 	dbus set ss_basic_latency_val=2 >/dev/null 2>&1
+	wt_save_webtest_history
 	clean_webtest
 	rm -f "${WT_WEBTEST_BACKUP}"
 	sh /koolshare/scripts/ss_webtest.sh web_webtest >/dev/null 2>&1 &
@@ -4236,7 +4290,7 @@ ws_clear_cache)
 	else
 		clean_webtest
 		dbus remove ss_basic_webtest_ts
-		rm -f "${WT_WEBTEST_BACKUP}"
+		rm -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_HISTORY}"
 		echo XU6J03M6
 	fi
 	;;

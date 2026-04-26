@@ -30,6 +30,32 @@ const ProxyEndpoint = struct {
     port: u16,
 };
 
+const OpenedStream = struct {
+    stream: std.net.Stream,
+    remote_addr: []const u8,
+};
+
+const ProbeSeries = struct {
+    allocator: std.mem.Allocator,
+    parsed: ParsedUrl,
+    proxy_text: []const u8,
+    timeout_ms: u32,
+    opened: ?OpenedStream = null,
+
+    fn close(self: *ProbeSeries) void {
+        if (self.opened) |opened| {
+            opened.stream.close();
+            self.allocator.free(opened.remote_addr);
+            self.opened = null;
+        }
+    }
+
+    fn reopen(self: *ProbeSeries) !void {
+        self.close();
+        self.opened = try openSocks5Stream(self.allocator, self.parsed, self.proxy_text, self.timeout_ms);
+    }
+};
+
 const ProbeResult = struct {
     ok: bool,
     status_code: u16,
@@ -47,6 +73,7 @@ const TargetConfig = struct {
     stop_script: ?[]u8 = null,
     wait_port: ?u16 = null,
     wait_timeout_ms: ?u32 = null,
+    previous_latency_ms: ?u32 = null,
 };
 
 const TargetResult = struct {
@@ -245,10 +272,7 @@ fn openProxyStream(proxy: ProxyEndpoint) !std.net.Stream {
     return std.net.tcpConnectToAddress(addr);
 }
 
-fn openSocks5Stream(allocator: std.mem.Allocator, parsed: ParsedUrl, proxy_text: []const u8, timeout_ms: u32) !struct {
-    stream: std.net.Stream,
-    remote_addr: []const u8,
-} {
+fn openSocks5Stream(allocator: std.mem.Allocator, parsed: ParsedUrl, proxy_text: []const u8, timeout_ms: u32) !OpenedStream {
     const proxy = try parseProxyEndpoint(proxy_text);
     var stream = try openProxyStream(proxy);
     errdefer stream.close();
@@ -323,73 +347,115 @@ fn parseStatusCode(head: []const u8) !u16 {
     return try std.fmt.parseInt(u16, code_text, 10);
 }
 
-fn probePort(allocator: std.mem.Allocator, url: []const u8, test_port: u16, timeout_ms: u32, warmup: u8, attempts: u8) !ProbeResult {
+fn makeProbeFailure(allocator: std.mem.Allocator, test_port: u16, err_text: []const u8) !ProbeResult {
+    return .{
+        .ok = false,
+        .status_code = 0,
+        .elapsed_ms = 0,
+        .remote_addr = try std.fmt.allocPrint(allocator, "127.0.0.1:{d}", .{test_port}),
+        .err_text = try allocator.dupe(u8, err_text),
+    };
+}
+
+fn probeNeedsRetry(current_ms: u32, previous_ms: ?u32) bool {
+    const prev = previous_ms orelse return false;
+    const limit_a = prev +| 100;
+    const limit_b = prev +| (prev / 2);
+    const limit = @max(limit_a, limit_b);
+    return current_ms > limit;
+}
+
+fn doSingleAttemptOnStream(allocator: std.mem.Allocator, arena: std.mem.Allocator, parsed: ParsedUrl, opened: *OpenedStream, timeout_ms: u32, close_after: bool) !ProbeResult {
+    var timer = try std.time.Timer.start();
+    const req = try std.fmt.allocPrint(
+        arena,
+        "HEAD {s} HTTP/1.1\r\nHost: {s}\r\nUser-Agent: webtest-tool/{s}\r\nConnection: {s}\r\nAccept: */*\r\n\r\n",
+        .{ parsed.target, parsed.host, version, if (close_after) "close" else "keep-alive" },
+    );
+    try writeAll(opened.stream, req);
+    const head = try readHttpResponseHead(arena, opened.stream, timeout_ms);
+    const elapsed_ms: u32 = @intCast(@min(timer.read() / std.time.ns_per_ms, std.math.maxInt(u32)));
+    const code = try parseStatusCode(head);
+
+    return .{
+        .ok = code >= 200 and code < 400,
+        .status_code = code,
+        .elapsed_ms = elapsed_ms,
+        .remote_addr = try allocator.dupe(u8, opened.remote_addr),
+        .err_text = try allocator.dupe(u8, if (code >= 200 and code < 400) "ok" else "bad-status"),
+    };
+}
+
+fn doSingleSeriesAttempt(allocator: std.mem.Allocator, series: *ProbeSeries, close_after: bool) !ProbeResult {
+    if (series.opened == null) {
+        try series.reopen();
+    }
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    return doSingleAttemptOnStream(allocator, arena, series.parsed, &series.opened.?, series.timeout_ms, close_after) catch |err| {
+        series.reopen() catch return err;
+        return doSingleAttemptOnStream(allocator, arena, series.parsed, &series.opened.?, series.timeout_ms, close_after);
+    };
+}
+
+fn probePort(allocator: std.mem.Allocator, url: []const u8, test_port: u16, timeout_ms: u32, warmup: u8, attempts: u8, previous_latency_ms: ?u32) !ProbeResult {
     var arena_state = std.heap.ArenaAllocator.init(allocator);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
     const parsed = try parseHttpUrl(arena, url);
     const effective_attempts: u8 = if (attempts == 0) 1 else attempts;
-    const total_rounds: usize = @as(usize, warmup) + @as(usize, effective_attempts);
-    var best_ms: ?u32 = null;
-    var best_code: u16 = 0;
+    const base_attempts: u8 = if (previous_latency_ms != null and effective_attempts > 1) 1 else effective_attempts;
+    const total_rounds: usize = @as(usize, warmup) + @as(usize, base_attempts);
+    var best: ?ProbeResult = null;
     var last_err: ?[]const u8 = null;
+    const proxy_text = try std.fmt.allocPrint(arena, "socks5://127.0.0.1:{d}", .{test_port});
+
+    var series = ProbeSeries{
+        .allocator = allocator,
+        .parsed = parsed,
+        .proxy_text = proxy_text,
+        .timeout_ms = timeout_ms,
+    };
+    defer series.close();
 
     var round: usize = 0;
     while (round < total_rounds) : (round += 1) {
-        var timer = try std.time.Timer.start();
-        const opened = openSocks5Stream(allocator, parsed, try std.fmt.allocPrint(arena, "socks5://127.0.0.1:{d}", .{test_port}), timeout_ms) catch |err| {
+        const close_after = round + 1 >= total_rounds and previous_latency_ms == null;
+        const res = doSingleSeriesAttempt(allocator, &series, close_after) catch |err| {
             last_err = @errorName(err);
             continue;
         };
-        defer opened.stream.close();
-
-        const req = try std.fmt.allocPrint(arena,
-            "HEAD {s} HTTP/1.1\r\nHost: {s}\r\nUser-Agent: webtest-tool/{s}\r\nConnection: close\r\nAccept: */*\r\n\r\n",
-            .{ parsed.target, parsed.host, version },
-        );
-        writeAll(opened.stream, req) catch |err| {
-            last_err = @errorName(err);
-            continue;
-        };
-        const head = readHttpResponseHead(arena, opened.stream, timeout_ms) catch |err| {
-            last_err = @errorName(err);
-            continue;
-        };
-        const code = parseStatusCode(head) catch |err| {
-            last_err = @errorName(err);
-            continue;
-        };
-        const elapsed_ms: u32 = @intCast(@min(timer.read() / std.time.ns_per_ms, std.math.maxInt(u32)));
 
         if (round < warmup) continue;
-        if (code >= 200 and code < 400) {
-            if (best_ms == null or elapsed_ms < best_ms.?) {
-                best_ms = elapsed_ms;
-                best_code = code;
+        if (res.ok) {
+            if (best == null or res.elapsed_ms < best.?.elapsed_ms) {
+                best = res;
             }
         } else {
-            last_err = "bad-status";
+            last_err = res.err_text;
         }
     }
 
-    if (best_ms) |ms| {
-        return .{
-            .ok = true,
-            .status_code = best_code,
-            .elapsed_ms = ms,
-            .remote_addr = try std.fmt.allocPrint(allocator, "127.0.0.1:{d}", .{test_port}),
-            .err_text = try allocator.dupe(u8, "ok"),
-        };
+    if (previous_latency_ms != null and effective_attempts > base_attempts) {
+        if (best == null or probeNeedsRetry(best.?.elapsed_ms, previous_latency_ms)) {
+            const res = doSingleSeriesAttempt(allocator, &series, true) catch |err| {
+                last_err = @errorName(err);
+                return makeProbeFailure(allocator, test_port, last_err.?);
+            };
+            if (res.ok) {
+                if (best == null or res.elapsed_ms < best.?.elapsed_ms) {
+                    best = res;
+                }
+            } else {
+                last_err = res.err_text;
+            }
+        }
     }
 
-    return .{
-        .ok = false,
-        .status_code = 0,
-        .elapsed_ms = 0,
-        .remote_addr = try std.fmt.allocPrint(allocator, "127.0.0.1:{d}", .{test_port}),
-        .err_text = try allocator.dupe(u8, last_err orelse "failed"),
-    };
+    if (best) |res| return res;
+    return makeProbeFailure(allocator, test_port, last_err orelse "failed");
 }
 
 fn parseU32(text: []const u8) !u32 {
@@ -640,6 +706,7 @@ fn parseTargetConfig(allocator: std.mem.Allocator, item: std.json.Value, group_n
         .stop_script = try parseOptionalString(allocator, tobj, "stop_script"),
         .wait_port = try parseOptionalU16(tobj, "wait_port"),
         .wait_timeout_ms = try parseOptionalU32(tobj, "wait_timeout_ms"),
+        .previous_latency_ms = try parseOptionalU32(tobj, "previous_latency_ms"),
     };
 }
 
@@ -898,7 +965,7 @@ fn processTarget(state: *State, idx: usize) void {
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
-    const probe = probePort(arena, cfg.url, cfg.targets[idx].test_port, cfg.timeout_ms, cfg.warmup, cfg.attempts) catch |err| blk: {
+    const probe = probePort(arena, cfg.url, cfg.targets[idx].test_port, cfg.timeout_ms, cfg.warmup, cfg.attempts, cfg.targets[idx].previous_latency_ms) catch |err| blk: {
         state.mutex.lock();
         result = &state.results[idx];
         result.state = if (err == ProbeError.Timeout) "timeout" else "failed";
@@ -1063,7 +1130,8 @@ fn handleCommand(allocator: std.mem.Allocator, state: *State, command: []const u
         state.mutex.lock();
         defer state.mutex.unlock();
         const cfg = state.config;
-        return try std.fmt.allocPrint(allocator,
+        return try std.fmt.allocPrint(
+            allocator,
             "{{\"phase\":\"{s}\",\"active\":{s},\"stop_requested\":{s},\"batch_id\":\"{s}\",\"targets\":{d}}}\n",
             .{
                 @tagName(state.phase),
