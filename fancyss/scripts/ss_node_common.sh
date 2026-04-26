@@ -184,6 +184,24 @@ fss_remove_airport_special_conf() {
 	fss_airport_special_conf_unregister "${airport_identity}" >/dev/null 2>&1 || true
 }
 
+fss_airport_special_conf_signature() {
+	local airport_identity="$1"
+	local conf_path=""
+	[ -n "${airport_identity}" ] || {
+		echo "missing"
+		return 0
+	}
+	conf_path="$(fss_airport_special_conf_path "${airport_identity}" 2>/dev/null)" || {
+		echo "missing"
+		return 0
+	}
+	if [ -f "${conf_path}" ];then
+		md5sum "${conf_path}" 2>/dev/null | awk '{print $1}'
+	else
+		echo "missing"
+	fi
+}
+
 fss_clear_airport_special_confs() {
 	local index_file="${FSS_AIRPORT_SPECIAL_INDEX_FILE}"
 	local airport_identity=""
