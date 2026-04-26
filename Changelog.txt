@@ -4,6 +4,8 @@ fancyss Changelog
    - note	本次更新针对机场专属节点 DNS 特调失效问题做补丁收口，重点修复 Nexitally 这类 Clash 订阅在缓存快路径下无法恢复专属解析配置的问题。
    - fix	修复订阅原始内容未变化、直接复用 parsed cache 时，机场特调配置不会重新生成的问题；现在会根据缓存节点元数据恢复 `airport_special.list` 和对应机场配置文件，并从 Clash YAML 中重新提取 `dns.nameserver`。
    - fix	修复机场专属节点 DNS 配置发生变化但节点列表本身无变化时，订阅流程提前结束导致 smartdns/chinadns 运行态不刷新的问题；现在即使节点未写入，也会刷新节点域名解析运行态，确保 `airport_nexitally` 等专属 upstream 生效。
+   - fix	修复订阅/分享链接导入在 WebSocket 日志通道可用时可能未先写入 `ss_base64_links` 等提交字段，导致后端解析不到用户输入 URI 的问题；现在订阅任务会先通过 `_api` 提交参数，再启动 WebSocket 日志执行，并保留 HTTP 回退。
+   - fix	修复 lite 版本打包时前端字段剥离规则误删对象属性名，导致 `Module_shadowsocks.asp` 生成非法 JavaScript、页面无法加载的问题；lite 打包会先移除 Naïve/TUIC 对象键值对，再清理字段数组。
 
 3.5.18（20260426）
    - note	本次更新针对 3.5.17 后继续暴露出的配置备份恢复和订阅关键词过滤问题做补丁收口，并刷新 `sub-tool` 订阅解析器分发产物。
