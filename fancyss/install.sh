@@ -107,13 +107,13 @@ restart_status_runtime_async() {
 			ipv6="$(dbus get ss_basic_proxy_ipv6)"
 			[ -n "${chn}" ] || chn="http://connectivitycheck.platform.hicloud.com/generate_204"
 			[ -n "${frn}" ] || frn="http://www.google.com/generate_204"
-			ps w | grep -F "/koolshare/bin/status-tool serve" | grep -v grep | while read -r pid rest
+			ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep | while read -r pid rest
 			do
 				[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1 || true
 			done
 			rm -f /tmp/status-tool.sock /var/run/status-tool-serve.pid >/dev/null 2>&1
 			log_status_runtime "starting status-tool serve"
-			/koolshare/bin/status-tool serve \
+			env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" /koolshare/bin/status-tool serve \
 				--socket-path /tmp/status-tool.sock \
 				--china-url "${chn}" \
 				--foreign-url "${frn}" \
@@ -123,21 +123,38 @@ restart_status_runtime_async() {
 				--legacy-file /tmp/upload/ss_status_front.txt >/tmp/upload/status-tool-serve.log 2>&1 &
 			echo "$!" >/var/run/status-tool-serve.pid
 			sleep 1
-			if [ -S /tmp/status-tool.sock ] && ps w | grep -F "/koolshare/bin/status-tool serve" | grep -v grep >/dev/null 2>&1; then
+			if [ -S /tmp/status-tool.sock ] && ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep >/dev/null 2>&1; then
 				log_status_runtime "status-tool serve started"
 			else
 				log_status_runtime "status-tool serve did not stay alive"
 			fi
 		}
 		status_serve_alive() {
-			[ -S /tmp/status-tool.sock ] && ps w | grep -F "/koolshare/bin/status-tool serve" | grep -v grep >/dev/null 2>&1
+			[ -S /tmp/status-tool.sock ] && ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep >/dev/null 2>&1
+		}
+		wait_status_preready() {
+			local waited=0
+			while ps w | grep -F "/koolshare/ss/ssconfig.sh" | grep -v grep >/dev/null 2>&1
+			do
+				[ "${waited}" -ge 20 ] && break
+				sleep 1
+				waited=$((waited + 1))
+			done
+			waited=0
+			while ! netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eq "xray|v2ray|naive|tuic|rss-local"
+			do
+				[ "${waited}" -ge 15 ] && break
+				sleep 1
+				waited=$((waited + 1))
+			done
 		}
 		sleep 2
 		log_status_runtime "checking status runtime"
-		[ "$(dbus get ss_basic_enable)" = "1" ] && start_status_serve_direct
+		[ "$(dbus get ss_basic_enable)" = "1" ] && wait_status_preready && start_status_serve_direct
 		sleep 3
 		if [ "$(dbus get ss_basic_enable)" = "1" ] && ! status_serve_alive; then
 			log_status_runtime "status runtime missing, retry"
+			wait_status_preready
 			start_status_serve_direct
 		fi
 		rm -f "$0" >/dev/null 2>&1
@@ -1617,11 +1634,13 @@ install_now(){
 		echo_date "旧版订阅地址已迁移为 ${MIGRATED_SUB_PROFILES} 个独立订阅配置。"
 	fi
 
-	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] && [ "$(dbus get fss_data_source_meta_repaired 2>/dev/null)" != "1" ];then
+		echo_date "检查旧版订阅节点来源归属..."
 		local repaired_sub_nodes="$(fss_repair_legacy_subscribe_source_meta 2>/dev/null)"
 		if [ "${repaired_sub_nodes:-0}" -gt 0 ] 2>/dev/null;then
 			echo_date "已修复 ${repaired_sub_nodes} 个旧版订阅节点的来源归属。"
 		fi
+		dbus set fss_data_source_meta_repaired=1
 	fi
 
 	if [ "${FORCE_LEGACY_CACHE_RESET}" = "1" ];then

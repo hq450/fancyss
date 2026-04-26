@@ -8,6 +8,7 @@ STATUS_WS_CACHE_FILE=/tmp/upload/ss_status_ws.txt
 STATUS_WS_LOCK_DIR=/tmp/fancyss_status_ws.lock
 STATUS_SERVE_SOCKET=/tmp/status-tool.sock
 STATUS_CTL_BIN=/koolshare/bin/statusctl
+STATUS_DAEMON_SCRIPT=/koolshare/scripts/ss_status_daemon.sh
 
 LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 HEART_STATUS=$(dbus get ss_heart_beat)
@@ -133,6 +134,19 @@ refresh_payload_via_ctl(){
 	printf '%s' "${payload}" | sed 's/[[:space:]]*$//'
 }
 
+ensure_status_serve_runtime(){
+	[ "${ss_failover_enable}" != "1" ] || return 1
+	[ -x "${STATUS_CTL_BIN}" ] || return 1
+	if [ -S "${STATUS_SERVE_SOCKET}" ];then
+		"${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" ping >/dev/null 2>&1 && return 0
+	fi
+	[ -x "${STATUS_DAEMON_SCRIPT}" ] || return 1
+	sh "${STATUS_DAEMON_SCRIPT}" start >/dev/null 2>&1 || return 1
+	sleep 1
+	[ -S "${STATUS_SERVE_SOCKET}" ] || return 1
+	"${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" ping >/dev/null 2>&1
+}
+
 prepare(){
 	local fancyss_enable="$(dbus get ss_basic_enable)"
 	if [ "${fancyss_enable}" != "1" ];then
@@ -173,6 +187,7 @@ resolve_payload(){
 
 resolve_payload_once_only(){
 	local payload=""
+	ensure_status_serve_runtime >/dev/null 2>&1 || true
 	if [ -x "${STATUS_CTL_BIN}" ] && [ -S "${STATUS_SERVE_SOCKET}" ];then
 		if payload="$(refresh_payload_via_ctl)"; then
 			printf '%s' "${payload}"

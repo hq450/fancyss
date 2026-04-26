@@ -78,8 +78,11 @@ start_status_serve() {
 	$(pick_status_urls)
 	EOF
 	proxy_ipv6="$(dbus get ss_basic_proxy_ipv6)"
+	ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
+		[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
+	done
 	rm -f "${STATUS_SERVE_SOCKET}" "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
-	"${STATUS_TOOL_BIN}" serve \
+	env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" "${STATUS_TOOL_BIN}" serve \
 		--socket-path "${STATUS_SERVE_SOCKET}" \
 		--china-url "${chn_url}" \
 		--foreign-url "${frn_url}" \

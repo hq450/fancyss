@@ -84,15 +84,19 @@ start_status_runtime() {
 			--state-file "${STATUS_DAEMON_STATE}" \
 			--legacy-file "${STATUS_DAEMON_LEGACY}"
 	else
-		rm -f "${STATUS_SERVE_SOCKET}" >/dev/null 2>&1
-		start-stop-daemon -S -q -b -m -p "${STATUS_SERVE_PIDFILE}" -x "${STATUS_TOOL_BIN}" -- serve \
+		ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
+			[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
+		done
+		rm -f "${STATUS_SERVE_SOCKET}" "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
+		env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" "${STATUS_TOOL_BIN}" serve \
 			--socket-path "${STATUS_SERVE_SOCKET}" \
 			--china-url "${chn_url}" \
 			--foreign-url "${frn_url}" \
 			--proxy-ipv6 "${proxy_ipv6:-0}" \
 			--foreign-proxy "socks5://127.0.0.1:23456" \
 			--state-file "${STATUS_DAEMON_STATE}" \
-			--legacy-file "${STATUS_DAEMON_LEGACY}"
+			--legacy-file "${STATUS_DAEMON_LEGACY}" >/tmp/upload/status-tool-serve.log 2>&1 &
+		echo "$!" > "${STATUS_SERVE_PIDFILE}"
 	fi
 }
 

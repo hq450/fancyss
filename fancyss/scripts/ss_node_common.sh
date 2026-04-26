@@ -1754,7 +1754,7 @@ fss_migrate_legacy_nodes() {
 	local node_id node_b64 current_id failover_id max_id=0 order_csv=""
 	local order_file="" node_dump_file="" nodes_tsv="" source_meta_file="" node_ts=""
 	local old_current old_failover
-	local node_tool="" node_tool_output="" node_tool_output_file="" node_tool_rc="" migrated_count=""
+	local node_tool="" node_tool_output="" node_tool_output_file="" node_tool_rc="" migrated_count="" subscribe_nodes="" legacy_keys_removed=""
 	local node_tool_attempt=0
 	local key value field
 
@@ -1811,10 +1811,17 @@ fss_migrate_legacy_nodes() {
 		if [ "${node_tool_rc}" = "0" ];then
 			migrated_count="$(printf '%s\n' "${node_tool_output}" | awk -F': ' '$1 == "migrated" {print $2}' | sed -n '1p')"
 			if [ "${migrated_count}" = "${expected_count}" ];then
+				subscribe_nodes="$(printf '%s\n' "${node_tool_output}" | awk -F': ' '$1 == "subscribe_nodes" {print $2}' | sed -n '1p')"
+				legacy_keys_removed="$(printf '%s\n' "${node_tool_output}" | awk -F': ' '$1 == "legacy_keys_removed" {print $2}' | sed -n '1p')"
 				fss_set_storage_schema_cache 2
 				dbus set fss_data_migrated=1
 				dbus set fss_data_secret_mode=raw
 				dbus set fss_data_migration_tool=node-tool
+				if [ "${subscribe_nodes:-0}" -gt 0 ] 2>/dev/null || [ ! -s "${source_meta_file}" ];then
+					dbus set fss_data_source_meta_repaired=1
+				else
+					dbus remove fss_data_source_meta_repaired
+				fi
 				dbus set fss_data_migration_notice=1
 				dbus set fss_data_migration_time="${ts}"
 				dbus set fss_data_legacy_snapshot="${snapshot_path}"
@@ -1823,7 +1830,9 @@ fss_migrate_legacy_nodes() {
 				[ -n "$(dbus get fss_node_current)" ] && dbus set ssconf_basic_node="$(dbus get fss_node_current)" || dbus remove ssconf_basic_node
 				[ -n "$(dbus get fss_node_failover_backup)" ] && dbus set ss_failover_s4_3="$(dbus get fss_node_failover_backup)" || dbus remove ss_failover_s4_3
 				fss_report_progress "${progress_cb}" "node-tool 快速迁移完成：${migrated_count}/${expected_count} 个节点。"
-				if [ "${remove_legacy}" = "1" ];then
+				[ -n "${subscribe_nodes}" ] && fss_report_progress "${progress_cb}" "node-tool 已写入 ${subscribe_nodes} 个订阅节点来源归属。"
+				[ -n "${legacy_keys_removed}" ] && fss_report_progress "${progress_cb}" "node-tool 已清理 ${legacy_keys_removed} 个旧版节点键。"
+				if [ "${remove_legacy}" = "1" ] && [ "${legacy_keys_removed:-0}" = "0" ];then
 					fss_clear_legacy_nodes
 				fi
 				dbus remove fss_data_migrating
