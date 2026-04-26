@@ -852,6 +852,16 @@ var smartdnsIpv6ServiceEnabled = ('<% nvram_get("ipv6_service"); %>' != "disable
 var NODE_BOOL_FIELDS = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "trojan_ai", "trojan_tfo", "hy2_ai", "hy2_tfo"];
 var NODE_B64_FIELDS = ["password", "naive_pass", "v2ray_json", "xray_json", "tuic_json"];
 var NODE_RUNTIME_FIELDS = ["latency", "ping"];
+var NODE_EMPTY_DEFAULT_FIELDS_BY_TYPE = {
+	"0": {"mode": "2", "ss_obfs": "0"},
+	"1": {"mode": "2", "rss_protocol": "origin", "rss_obfs": "plain"},
+	"3": {"mode": "2", "v2ray_alterid": "0", "v2ray_security": "auto", "v2ray_network": "tcp", "v2ray_headtype_tcp": "none", "v2ray_headtype_kcp": "none", "v2ray_headtype_quic": "none", "v2ray_grpc_mode": "multi", "v2ray_network_security": "none"},
+	"4": {"mode": "2", "xray_alterid": "0", "xray_encryption": "none", "xray_network": "tcp", "xray_headtype_tcp": "none", "xray_headtype_kcp": "none", "xray_headtype_quic": "none", "xray_grpc_mode": "gun", "xray_xhttp_mode": "auto", "xray_network_security": "none"},
+	"5": {"mode": "2"},
+	"6": {"mode": "2", "naive_prot": "https"},
+	"7": {"mode": "2"},
+	"8": {"mode": "2", "hy2_obfs": "0"}
+};
 var NODE_STORAGE_COMMON_FIELDS = ["group", "name", "mode", "type"];
 var NODE_STORAGE_FIELDS_BY_TYPE = {
 	"0": ["server", "port", "method", "password", "ss_obfs", "ss_obfs_host"],
@@ -1420,6 +1430,20 @@ function is_node_b64_field(field) {
 function is_node_runtime_field(field) {
 	return $.inArray(field, NODE_RUNTIME_FIELDS) !== -1;
 }
+function get_node_empty_default_map(type) {
+	return NODE_EMPTY_DEFAULT_FIELDS_BY_TYPE[String(type || "")] || {};
+}
+function get_node_empty_default(type, field) {
+	var defaults = get_node_empty_default_map(type);
+	return Object.prototype.hasOwnProperty.call(defaults, field) ? defaults[field] : null;
+}
+function normalize_node_empty_default(type, field, value) {
+	var defaultValue = get_node_empty_default(type, field);
+	if ((value === "" || typeof value == "undefined" || value === null) && defaultValue !== null) {
+		return defaultValue;
+	}
+	return value;
+}
 function get_schema2_allowed_field_map(type) {
 	var map = {};
 	var nodeType = String(type || "");
@@ -1442,6 +1466,13 @@ function prune_schema2_node_payload(payload) {
 	}
 	if (pruned["type"] == "4" && !pruned["xray_prot"]) {
 		pruned["xray_prot"] = "vless";
+	}
+	for (var defaultField in get_node_empty_default_map(pruned["type"])) {
+		if (allowed[defaultField]) {
+			pruned[defaultField] = normalize_node_empty_default(pruned["type"], defaultField, pruned[defaultField]);
+		} else {
+			delete pruned[defaultField];
+		}
 	}
 	for (var i = 0; i < NODE_BOOL_FIELDS.length; i++) {
 		var boolField = NODE_BOOL_FIELDS[i];
@@ -1715,12 +1746,15 @@ function normalize_fss_node_for_ui(nodeId, raw) {
 		} else if (is_node_bool_field(field)) {
 			obj[field] = value == "1" ? "1" : "0";
 		} else {
-			obj[field] = value;
+			obj[field] = normalize_node_empty_default(obj["type"], field, value);
 		}
 	}
 	for (var i = 0; i < NODE_BOOL_FIELDS.length; i++) {
 		var boolField = NODE_BOOL_FIELDS[i];
 		obj[boolField] = obj[boolField] == "1" ? "1" : "0";
+	}
+	for (var defaultField in get_node_empty_default_map(obj["type"])) {
+		obj[defaultField] = normalize_node_empty_default(obj["type"], defaultField, obj[defaultField]);
 	}
 	obj["server"] = typeof raw["server"] == "undefined" ? "" : String(raw["server"]);
 	if (!obj["xray_prot"] && obj["type"] == "4") {
@@ -4063,6 +4097,8 @@ function build_schema2_node_payload(fieldBag, nodeId, source, preserveExisting, 
 		if (rawValue === "" || typeof rawValue == "undefined" || rawValue === null) {
 			if (is_node_bool_field(field)) {
 				payload[field] = "0";
+			} else if (get_node_empty_default(payload["type"], field) !== null) {
+				payload[field] = get_node_empty_default(payload["type"], field);
 			} else {
 				delete payload[field];
 			}
@@ -9285,6 +9321,9 @@ function generate_node_info() {
 				obj[params_sp[i]] = db_ss[p + "_" + params_sp[i] + "_" + idx];
 			}
 		}
+		for (var defaultField in get_node_empty_default_map(obj["type"])) {
+			obj[defaultField] = normalize_node_empty_default(obj["type"], defaultField, obj[defaultField]);
+		}
 
 		if (typeof db_ss[p + "_server_" + idx] != "undefined") {
 			obj["server"] = db_ss[p + "_server_" + idx];
@@ -13121,6 +13160,26 @@ function get_ss_status_front_httpd() {
 	});
 	schedule_next_front_status_poll(get_status_refresh_delay_ms());
 }
+function get_ss_status_front_cache_once() {
+	if (!should_run_front_status_live()) {
+		return false;
+	}
+	$.ajax({
+		url: "/_temp/ss_status_front.txt?_=" + new Date().getTime(),
+		type: "GET",
+		dataType: "text",
+		async: true,
+		cache: false,
+		timeout: 2500,
+		success: function(response) {
+			var text = String(response || "");
+			if (!status_payload_is_waiting(text)) {
+				apply_ss_status(text, false);
+			}
+		}
+	});
+	return true;
+}
 function get_ss_status_front_websocket() {
 	if (!should_run_front_status_live()) {
 		stop_front_status_runtime();
@@ -13131,11 +13190,12 @@ function get_ss_status_front_websocket() {
 		return false;
 	}
 	statusFrontPending = true;
+	get_ss_status_front_cache_once();
 	clear_front_status_ws_watchdog();
 	statusFrontWsWatchdog = setTimeout(function() {
 		statusFrontPending = false;
 		get_ss_status_front_httpd();
-	}, Math.max(15000, get_status_refresh_delay_ms() + 5000));
+	}, 3000);
 	setup_status_ws(get_ss_status_front_httpd, false, function() {
 		try {
 			wss.send("/koolshare/scripts/ss_status.sh ws");

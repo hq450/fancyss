@@ -2160,6 +2160,40 @@ fss_legacy_node_dump_to_v2_tsv() {
 			end;
 		def bool_value($value):
 			if $value == "1" then "1" else "0" end;
+		def default_empty_fields:
+			(.type // "" | tostring) as $type
+			| .mode = (if ((.mode // "") == "") then "2" else .mode end)
+			| if $type == "0" then
+				.ss_obfs = (if ((.ss_obfs // "") == "") then "0" else .ss_obfs end)
+			elif $type == "1" then
+				.rss_protocol = (if ((.rss_protocol // "") == "") then "origin" else .rss_protocol end)
+				| .rss_obfs = (if ((.rss_obfs // "") == "") then "plain" else .rss_obfs end)
+			elif $type == "3" then
+				.v2ray_alterid = (if ((.v2ray_alterid // "") == "") then "0" else .v2ray_alterid end)
+				| .v2ray_security = (if ((.v2ray_security // "") == "") then "auto" else .v2ray_security end)
+				| .v2ray_network = (if ((.v2ray_network // "") == "") then "tcp" else .v2ray_network end)
+				| .v2ray_headtype_tcp = (if ((.v2ray_headtype_tcp // "") == "") then "none" else .v2ray_headtype_tcp end)
+				| .v2ray_headtype_kcp = (if ((.v2ray_headtype_kcp // "") == "") then "none" else .v2ray_headtype_kcp end)
+				| .v2ray_headtype_quic = (if ((.v2ray_headtype_quic // "") == "") then "none" else .v2ray_headtype_quic end)
+				| .v2ray_grpc_mode = (if ((.v2ray_grpc_mode // "") == "") then "multi" else .v2ray_grpc_mode end)
+				| .v2ray_network_security = (if ((.v2ray_network_security // "") == "") then "none" else .v2ray_network_security end)
+			elif $type == "4" then
+				.xray_alterid = (if ((.xray_alterid // "") == "") then "0" else .xray_alterid end)
+				| .xray_encryption = (if ((.xray_encryption // "") == "") then "none" else .xray_encryption end)
+				| .xray_network = (if ((.xray_network // "") == "") then "tcp" else .xray_network end)
+				| .xray_headtype_tcp = (if ((.xray_headtype_tcp // "") == "") then "none" else .xray_headtype_tcp end)
+				| .xray_headtype_kcp = (if ((.xray_headtype_kcp // "") == "") then "none" else .xray_headtype_kcp end)
+				| .xray_headtype_quic = (if ((.xray_headtype_quic // "") == "") then "none" else .xray_headtype_quic end)
+				| .xray_grpc_mode = (if ((.xray_grpc_mode // "") == "") then "gun" else .xray_grpc_mode end)
+				| .xray_xhttp_mode = (if ((.xray_xhttp_mode // "") == "") then "auto" else .xray_xhttp_mode end)
+				| .xray_network_security = (if ((.xray_network_security // "") == "") then "none" else .xray_network_security end)
+			elif $type == "6" then
+				.naive_prot = (if ((.naive_prot // "") == "") then "https" else .naive_prot end)
+			elif $type == "8" then
+				.hy2_obfs = (if ((.hy2_obfs // "") == "") then "0" else .hy2_obfs end)
+			else
+				.
+			end;
 		($dump | split("\u0000")) as $items
 		| (valid_ids) as $valid
 		| reduce range(0; ($items | length) - 2; 3) as $i ({};
@@ -2192,6 +2226,7 @@ fss_legacy_node_dump_to_v2_tsv() {
 			| .hy2_tfo = bool_value(.hy2_tfo // "")
 			| with_entries(select(.value != "" and .value != null))
 			| del(.server_ip, .latency, .ping)
+			| default_empty_fields
 			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
 			| (subscription_meta(.group) // {}) as $sub_meta
 			| . + {
@@ -2290,6 +2325,40 @@ fss_node_legacy_to_v2_json() {
 		--arg migrated_from "${node_index}" \
 		--argjson updated_at "${node_ts}" \
 		'
+		def default_empty_fields:
+			(.type // "" | tostring) as $type
+			| .mode = (if ((.mode // "") == "") then "2" else .mode end)
+			| if $type == "0" then
+				.ss_obfs = (if ((.ss_obfs // "") == "") then "0" else .ss_obfs end)
+			elif $type == "1" then
+				.rss_protocol = (if ((.rss_protocol // "") == "") then "origin" else .rss_protocol end)
+				| .rss_obfs = (if ((.rss_obfs // "") == "") then "plain" else .rss_obfs end)
+			elif $type == "3" then
+				.v2ray_alterid = (if ((.v2ray_alterid // "") == "") then "0" else .v2ray_alterid end)
+				| .v2ray_security = (if ((.v2ray_security // "") == "") then "auto" else .v2ray_security end)
+				| .v2ray_network = (if ((.v2ray_network // "") == "") then "tcp" else .v2ray_network end)
+				| .v2ray_headtype_tcp = (if ((.v2ray_headtype_tcp // "") == "") then "none" else .v2ray_headtype_tcp end)
+				| .v2ray_headtype_kcp = (if ((.v2ray_headtype_kcp // "") == "") then "none" else .v2ray_headtype_kcp end)
+				| .v2ray_headtype_quic = (if ((.v2ray_headtype_quic // "") == "") then "none" else .v2ray_headtype_quic end)
+				| .v2ray_grpc_mode = (if ((.v2ray_grpc_mode // "") == "") then "multi" else .v2ray_grpc_mode end)
+				| .v2ray_network_security = (if ((.v2ray_network_security // "") == "") then "none" else .v2ray_network_security end)
+			elif $type == "4" then
+				.xray_alterid = (if ((.xray_alterid // "") == "") then "0" else .xray_alterid end)
+				| .xray_encryption = (if ((.xray_encryption // "") == "") then "none" else .xray_encryption end)
+				| .xray_network = (if ((.xray_network // "") == "") then "tcp" else .xray_network end)
+				| .xray_headtype_tcp = (if ((.xray_headtype_tcp // "") == "") then "none" else .xray_headtype_tcp end)
+				| .xray_headtype_kcp = (if ((.xray_headtype_kcp // "") == "") then "none" else .xray_headtype_kcp end)
+				| .xray_headtype_quic = (if ((.xray_headtype_quic // "") == "") then "none" else .xray_headtype_quic end)
+				| .xray_grpc_mode = (if ((.xray_grpc_mode // "") == "") then "gun" else .xray_grpc_mode end)
+				| .xray_xhttp_mode = (if ((.xray_xhttp_mode // "") == "") then "auto" else .xray_xhttp_mode end)
+				| .xray_network_security = (if ((.xray_network_security // "") == "") then "none" else .xray_network_security end)
+			elif $type == "6" then
+				.naive_prot = (if ((.naive_prot // "") == "") then "https" else .naive_prot end)
+			elif $type == "8" then
+				.hy2_obfs = (if ((.hy2_obfs // "") == "") then "0" else .hy2_obfs end)
+			else
+				.
+			end;
 		def slugify($raw; $fallback):
 			($raw | tostring | ascii_downcase | gsub("[^a-z0-9]+"; "_") | gsub("^_+|_+$"; "")) as $slug
 			| if $slug == "" then $fallback else $slug end;
@@ -2367,6 +2436,7 @@ fss_node_legacy_to_v2_json() {
 			end;
 		with_entries(select(.value != "" and .value != null))
 		| del(.server_ip, .latency, .ping)
+		| default_empty_fields
 		| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end
 		'"${jq_bool_fix}"'
 		| (subscription_meta(.group) // {}) as $sub_meta
