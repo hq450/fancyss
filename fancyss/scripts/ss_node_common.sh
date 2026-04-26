@@ -73,8 +73,26 @@ FSS_AIRPORT_SPECIAL_INDEX_FILE="/koolshare/configs/fancyss/airport_special.list"
 
 fss_pick_node_tool() {
 	if [ -n "${FSS_NODE_TOOL_PICKED:-}" ]; then
-		[ "${FSS_NODE_TOOL_PICKED}" = "none" ] && return 1
-		printf '%s\n' "${FSS_NODE_TOOL_PICKED}"
+		if [ "${FSS_NODE_TOOL_PICKED}" != "none" ] && [ -x "${FSS_NODE_TOOL_PICKED}" ]; then
+			if [ "${FSS_NODE_TOOL_TRUST_PICKED:-}" = "1" ];then
+				printf '%s\n' "${FSS_NODE_TOOL_PICKED}"
+				return 0
+			fi
+			if ! "${FSS_NODE_TOOL_PICKED}" version >/dev/null 2>&1; then
+				unset FSS_NODE_TOOL_PICKED
+				unset FSS_NODE_TOOL_TRUST_PICKED
+			else
+				printf '%s\n' "${FSS_NODE_TOOL_PICKED}"
+				return 0
+			fi
+		fi
+		unset FSS_NODE_TOOL_PICKED
+		unset FSS_NODE_TOOL_TRUST_PICKED
+	fi
+	if [ -x "/koolshare/bin/node-tool" ];then
+		FSS_NODE_TOOL_PICKED="/koolshare/bin/node-tool"
+		export FSS_NODE_TOOL_PICKED
+		echo "/koolshare/bin/node-tool"
 		return 0
 	fi
 	if command -v node-tool >/dev/null 2>&1; then
@@ -85,16 +103,6 @@ fss_pick_node_tool() {
 			return 0
 		fi
 	fi
-	if [ -x "/koolshare/bin/node-tool" ];then
-		if /koolshare/bin/node-tool version >/dev/null 2>&1; then
-			FSS_NODE_TOOL_PICKED="/koolshare/bin/node-tool"
-			export FSS_NODE_TOOL_PICKED
-			echo "/koolshare/bin/node-tool"
-			return 0
-		fi
-	fi
-	FSS_NODE_TOOL_PICKED="none"
-	export FSS_NODE_TOOL_PICKED
 	return 1
 }
 
@@ -103,7 +111,31 @@ fss_node_tool_supports_command() {
 	local command_name="$2"
 	[ -n "${node_tool}" ] || return 1
 	[ -n "${command_name}" ] || return 1
+	"${node_tool}" "${command_name}" --help >/dev/null 2>&1 && return 0
 	"${node_tool}" --help 2>&1 | grep -Eq "^[[:space:]]*node-tool[[:space:]]+${command_name}([[:space:]]|$)"
+}
+
+fss_run_node_tool() {
+	local node_tool="$1"
+	shift
+	if [ "${FSS_NODE_TOOL_CLEAN_ENV:-}" = "1" ];then
+		env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" "${node_tool}" "$@"
+		return "$?"
+	fi
+	"${node_tool}" "$@"
+}
+
+fss_run_node_tool_with_clean_retry() {
+	local node_tool="$1"
+	local output_file="$2"
+	shift 2
+	fss_run_node_tool "${node_tool}" "$@" > "${output_file}" 2>&1
+	local node_tool_rc="$?"
+	if [ "${node_tool_rc}" = "127" ];then
+		env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" "${node_tool}" "$@" > "${output_file}" 2>&1
+		node_tool_rc="$?"
+	fi
+	return "${node_tool_rc}"
 }
 
 fss_airport_special_conf_path() {
@@ -775,11 +807,13 @@ fss_legacy_subscribe_emit_meta_row() {
 
 fss_collect_legacy_subscribe_source_meta_from_profiles() {
 	local profile_id profile_key state_key profile_json state_json profile_url profile_name
-	local last_group last_url_hash raw_tag canonical_tag legacy_tag group_label airport_identity source_scope
+	local last_group last_url_hash raw_tag canonical_tag legacy_tag group_label airport_identity source_scope group_value suffix
+	local profile_host group_base profile_count match_group
 	type subprof_list_profile_ids >/dev/null 2>&1 || return 1
 	type subprof_profile_key >/dev/null 2>&1 || return 1
 	type subprof_state_key >/dev/null 2>&1 || return 1
 	type subprof_dbus_get_json_by_key >/dev/null 2>&1 || return 1
+	profile_count="$(subprof_list_profile_ids 2>/dev/null | sed '/^$/d' | wc -l | tr -d ' ')"
 	for profile_id in $(subprof_list_profile_ids)
 	do
 		[ -n "${profile_id}" ] || continue
@@ -791,6 +825,7 @@ fss_collect_legacy_subscribe_source_meta_from_profiles() {
 		profile_url="$(printf '%s' "${profile_json}" | jq -r '.url // empty' 2>/dev/null | sed -n '1p')"
 		profile_name="$(printf '%s' "${profile_json}" | jq -r '.name // empty' 2>/dev/null | sed -n '1p')"
 		[ -n "${profile_url}" ] || continue
+		profile_host="$(fss_legacy_subscribe_host_from_url "${profile_url}" 2>/dev/null)" || profile_host=""
 		last_group="$(printf '%s' "${state_json}" | jq -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
 		last_url_hash="$(printf '%s' "${state_json}" | jq -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
 		raw_tag="$(fss_legacy_subscribe_domain_tag_from_url "${profile_url}" 2>/dev/null)" || raw_tag=""
@@ -809,6 +844,22 @@ fss_collect_legacy_subscribe_source_meta_from_profiles() {
 		fss_legacy_subscribe_emit_meta_row "${canonical_tag}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
 		[ "${raw_tag}" != "${canonical_tag}" ] && fss_legacy_subscribe_emit_meta_row "${raw_tag}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
 		[ "${legacy_tag}" != "${canonical_tag}" ] && [ "${legacy_tag}" != "${raw_tag}" ] && fss_legacy_subscribe_emit_meta_row "${legacy_tag}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
+		dbus list ssconf_basic_group_ 2>/dev/null | cut -d "=" -f 2- | sed '/^$/d' | sort -u | while IFS= read -r group_value
+		do
+			suffix="${group_value##*_}"
+			[ "${suffix}" != "${group_value}" ] || continue
+			printf '%s' "${suffix}" | grep -Eq '^[A-Za-z0-9]{4}$' || continue
+			group_base="${group_value%_*}"
+			match_group=0
+			case "${group_base}" in
+			"${group_label}"|"${profile_name}"|"${profile_host}")
+				match_group=1
+				;;
+			esac
+			[ "${profile_count}" = "1" ] && match_group=1
+			[ "${match_group}" = "1" ] || continue
+			fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_base}" "${suffix}" "${airport_identity}" "${airport_identity}_${suffix}"
+		done
 	done
 }
 
@@ -872,6 +923,7 @@ fss_collect_schema2_subscribe_group_meta_from_profiles() {
 
 fss_collect_legacy_subscribe_source_meta_from_links() {
 	local raw_links="" link raw_tag canonical_tag legacy_tag profile_id group_label airport_identity source_scope host
+	local group_value group_base suffix
 	raw_links="$(dbus get ss_online_links | base64 -d 2>/dev/null)" || raw_links=""
 	[ -n "${raw_links}" ] || return 1
 	printf '%s\n' "${raw_links}" \
@@ -898,6 +950,18 @@ fss_collect_legacy_subscribe_source_meta_from_links() {
 		fss_legacy_subscribe_emit_meta_row "${canonical_tag}" "${profile_id}" "${group_label}" "${legacy_tag}" "${airport_identity}" "${source_scope}"
 		[ "${raw_tag}" != "${canonical_tag}" ] && fss_legacy_subscribe_emit_meta_row "${raw_tag}" "${profile_id}" "${group_label}" "${legacy_tag}" "${airport_identity}" "${source_scope}"
 		[ "${legacy_tag}" != "${canonical_tag}" ] && [ "${legacy_tag}" != "${raw_tag}" ] && fss_legacy_subscribe_emit_meta_row "${legacy_tag}" "${profile_id}" "${group_label}" "${legacy_tag}" "${airport_identity}" "${source_scope}"
+		dbus list ssconf_basic_group_ 2>/dev/null | cut -d "=" -f 2- | sed '/^$/d' | sort -u | while IFS= read -r group_value
+		do
+			suffix="${group_value##*_}"
+			[ "${suffix}" != "${group_value}" ] || continue
+			printf '%s' "${suffix}" | grep -Eq '^[A-Za-z0-9]{4}$' || continue
+			group_base="${group_value%_*}"
+			case "${group_base}" in
+			"${group_label}"|"${host}")
+				fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_base}" "${suffix}" "${airport_identity}" "${airport_identity}_${suffix}"
+				;;
+			esac
+		done
 	done
 }
 
@@ -993,7 +1057,20 @@ fss_repair_legacy_subscribe_source_meta() {
 			| if ($matches | length) == 1 then $matches[0] else null end;
 		def subscription_meta($group):
 			($group // "" | tostring) as $raw_group
-			| if ($raw_group | test("_[A-Za-z0-9]+$")) then
+			| (source_meta_by_group($raw_group)) as $direct_meta
+			| if $direct_meta != null then
+				($direct_meta.group_label // $raw_group) as $group_label_jq
+				| ($direct_meta.url_hash // "") as $url_hash
+				| ($direct_meta.airport_identity // slugify($group_label_jq; ($direct_meta.tag // "sub"))) as $airport_identity
+				| ($direct_meta.source_scope // ($airport_identity + (if $url_hash == "" then "" else "_" + $url_hash end))) as $source_scope
+				| {
+					"_source": "subscribe",
+					"_profile_id": ($direct_meta.profile_id // ""),
+					"_airport_identity": $airport_identity,
+					"_source_scope": $source_scope,
+					"_source_url_hash": $url_hash
+				}
+			elif ($raw_group | test("_[A-Za-z0-9]+$")) then
 				($raw_group | capture("^(?<base>.*)_(?<tag>[A-Za-z0-9]+)$")) as $parts
 				| (source_meta_by_tag[$parts.tag] // null) as $tag_meta
 				| (($tag_meta // null) // source_meta_by_group($parts.base)) as $meta
@@ -1534,7 +1611,13 @@ fss_clear_legacy_nodes() {
 		echo "${line}" | grep -Eq '_[0-9]+$' || continue
 		dbus remove "${line}"
 	done
-	dbus remove ssconf_basic_node
+	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
+		local current_id=""
+		current_id=$(dbus get fss_node_current)
+		[ -n "${current_id}" ] && dbus set ssconf_basic_node="${current_id}" || dbus remove ssconf_basic_node
+	else
+		dbus remove ssconf_basic_node
+	fi
 }
 
 fss_clear_all_node_storage() {
@@ -1671,7 +1754,8 @@ fss_migrate_legacy_nodes() {
 	local node_id node_b64 current_id failover_id max_id=0 order_csv=""
 	local order_file="" node_dump_file="" nodes_tsv="" source_meta_file="" node_ts=""
 	local old_current old_failover
-	local node_tool="" node_tool_output="" migrated_count=""
+	local node_tool="" node_tool_output="" node_tool_output_file="" node_tool_rc="" migrated_count=""
+	local node_tool_attempt=0
 	local key value field
 
 	[ "$(fss_detect_storage_schema)" = "2" ] && return 0
@@ -1700,25 +1784,44 @@ fss_migrate_legacy_nodes() {
 		return 1
 	fi
 
-	fss_report_progress "${progress_cb}" "阶段2/4：批量读取旧版节点数据..."
 	fss_collect_legacy_subscribe_source_meta "${source_meta_file}" >/dev/null 2>&1 || : > "${source_meta_file}"
 	node_tool="$(fss_pick_node_tool 2>/dev/null)" || node_tool=""
-	if [ -n "${node_tool}" ] && fss_node_tool_supports_command "${node_tool}" "migrate-legacy";then
+	if [ -n "${node_tool}" ];then
+		fss_report_progress "${progress_cb}" "阶段2/4：检测到 node-tool：${node_tool}"
+	else
+		fss_report_progress "${progress_cb}" "阶段2/4：未检测到可用 node-tool，回退 shell 迁移流程..."
+	fi
+	if [ -n "${node_tool}" ];then
 		fss_report_progress "${progress_cb}" "阶段2/4：使用 node-tool 快速迁移旧版节点数据..."
 		fss_clear_v2_nodes >/dev/null 2>&1 || true
 		dbus set fss_data_migrating=1
-		node_tool_output="$("${node_tool}" migrate-legacy --meta "${source_meta_file}" 2>&1)"
-		if [ "$?" = "0" ];then
+		node_tool_output_file="${tmp_dir}/node_tool_migrate.out"
+		while [ "${node_tool_attempt}" -lt 2 ]
+		do
+			: > "${node_tool_output_file}"
+			fss_run_node_tool_with_clean_retry "${node_tool}" "${node_tool_output_file}" migrate-legacy --meta "${source_meta_file}"
+			node_tool_rc="$?"
+			[ "${node_tool_rc}" != "127" ] && break
+			node_tool_attempt=$((node_tool_attempt + 1))
+			[ "${node_tool_attempt}" -lt 2 ] || break
+			fss_report_progress "${progress_cb}" "node-tool 首次执行返回 127，等待 1 秒后重试..."
+			sleep 1
+		done
+		node_tool_output="$(cat "${node_tool_output_file}" 2>/dev/null)"
+		if [ "${node_tool_rc}" = "0" ];then
 			migrated_count="$(printf '%s\n' "${node_tool_output}" | awk -F': ' '$1 == "migrated" {print $2}' | sed -n '1p')"
 			if [ "${migrated_count}" = "${expected_count}" ];then
 				fss_set_storage_schema_cache 2
 				dbus set fss_data_migrated=1
 				dbus set fss_data_secret_mode=raw
+				dbus set fss_data_migration_tool=node-tool
 				dbus set fss_data_migration_notice=1
 				dbus set fss_data_migration_time="${ts}"
 				dbus set fss_data_legacy_snapshot="${snapshot_path}"
 				fss_touch_node_catalog_ts >/dev/null 2>&1
 				fss_touch_node_config_ts >/dev/null 2>&1
+				[ -n "$(dbus get fss_node_current)" ] && dbus set ssconf_basic_node="$(dbus get fss_node_current)" || dbus remove ssconf_basic_node
+				[ -n "$(dbus get fss_node_failover_backup)" ] && dbus set ss_failover_s4_3="$(dbus get fss_node_failover_backup)" || dbus remove ss_failover_s4_3
 				fss_report_progress "${progress_cb}" "node-tool 快速迁移完成：${migrated_count}/${expected_count} 个节点。"
 				if [ "${remove_legacy}" = "1" ];then
 					fss_clear_legacy_nodes
@@ -1729,8 +1832,16 @@ fss_migrate_legacy_nodes() {
 				return 0
 			fi
 			fss_report_progress "${progress_cb}" "node-tool 迁移结果数量异常，回退 shell 迁移流程..."
+			printf '%s\n' "${node_tool_output}" | sed -n '1,20p' | while IFS= read -r line
+			do
+				[ -n "${line}" ] && fss_report_progress "${progress_cb}" "node-tool 输出：${line}"
+			done
 		else
-			fss_report_progress "${progress_cb}" "node-tool 快速迁移失败，回退 shell 迁移流程..."
+			fss_report_progress "${progress_cb}" "node-tool 快速迁移失败（退出码 ${node_tool_rc}），回退 shell 迁移流程..."
+			printf '%s\n' "${node_tool_output}" | sed -n '1,20p' | while IFS= read -r line
+			do
+				[ -n "${line}" ] && fss_report_progress "${progress_cb}" "node-tool 输出：${line}"
+			done
 		fi
 	fi
 
@@ -1813,15 +1924,16 @@ fss_migrate_legacy_nodes() {
 
 	order_csv=$(tr '\n' ',' < "${order_file}" | sed 's/,$//')
 	dbus set fss_node_order="${order_csv}"
+	dbus set fss_data_schema=2
+	fss_set_storage_schema_cache 2
 	fss_set_current_node_id "${current_id}"
 	fss_set_failover_node_id "${failover_id}"
 	dbus set fss_node_next_id="$((max_id + 1))"
 	fss_touch_node_catalog_ts >/dev/null 2>&1
 	fss_touch_node_config_ts >/dev/null 2>&1
-	dbus set fss_data_schema=2
-	fss_set_storage_schema_cache 2
 	dbus set fss_data_migrated=1
 	dbus set fss_data_secret_mode=raw
+	dbus set fss_data_migration_tool=shell
 	dbus set fss_data_migration_notice=1
 	dbus set fss_data_migration_time="${ts}"
 	dbus set fss_data_legacy_snapshot="${snapshot_path}"
@@ -1961,7 +2073,20 @@ fss_legacy_node_dump_to_v2_tsv() {
 			| if ($matches | length) == 1 then $matches[0] else null end;
 		def subscription_meta($group):
 			($group // "" | tostring) as $raw_group
-			| if ($raw_group | test("_[A-Za-z0-9]+$")) then
+			| (source_meta_by_group($raw_group)) as $direct_meta
+			| if $direct_meta != null then
+				($direct_meta.group_label // $raw_group) as $group_label_jq
+				| ($direct_meta.url_hash // "") as $url_hash
+				| ($direct_meta.airport_identity // slugify($group_label_jq; ($direct_meta.tag // "sub"))) as $airport_identity
+				| ($direct_meta.source_scope // ($airport_identity + (if $url_hash == "" then "" else "_" + $url_hash end))) as $source_scope
+				| {
+					"_source": "subscribe",
+					"_profile_id": ($direct_meta.profile_id // ""),
+					"_airport_identity": $airport_identity,
+					"_source_scope": $source_scope,
+					"_source_url_hash": $url_hash
+				}
+			elif ($raw_group | test("_[A-Za-z0-9]+$")) then
 				($raw_group | capture("^(?<base>.*)_(?<tag>[A-Za-z0-9]+)$")) as $parts
 				| (source_meta_by_tag[$parts.tag] // null) as $tag_meta
 				| (($tag_meta // null) // source_meta_by_group($parts.base)) as $meta
@@ -2196,7 +2321,20 @@ fss_node_legacy_to_v2_json() {
 			| if ($matches | length) == 1 then $matches[0] else null end;
 		def subscription_meta($group):
 			($group // "" | tostring) as $raw_group
-			| if ($raw_group | test("_[A-Za-z0-9]+$")) then
+			| (source_meta_by_group($raw_group)) as $direct_meta
+			| if $direct_meta != null then
+				($direct_meta.group_label // $raw_group) as $group_label_jq
+				| ($direct_meta.url_hash // "") as $url_hash
+				| ($direct_meta.airport_identity // slugify($group_label_jq; ($direct_meta.tag // "sub"))) as $airport_identity
+				| ($direct_meta.source_scope // ($airport_identity + (if $url_hash == "" then "" else "_" + $url_hash end))) as $source_scope
+				| {
+					"_source": "subscribe",
+					"_profile_id": ($direct_meta.profile_id // ""),
+					"_airport_identity": $airport_identity,
+					"_source_scope": $source_scope,
+					"_source_url_hash": $url_hash
+				}
+			elif ($raw_group | test("_[A-Za-z0-9]+$")) then
 				($raw_group | capture("^(?<base>.*)_(?<tag>[A-Za-z0-9]+)$")) as $parts
 				| (source_meta_by_tag[$parts.tag] // null) as $tag_meta
 				| (($tag_meta // null) // source_meta_by_group($parts.base)) as $meta
@@ -3493,8 +3631,10 @@ fss_set_current_node_id() {
 	if [ "$(fss_detect_storage_schema)" = "2" ];then
 		if [ -n "${node_id}" ]; then
 			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" "${node_id}"
+			dbus set ssconf_basic_node="${node_id}"
 		else
 			fss_set_schema2_reference_node_id "fss_node_current" "${FSS_CURRENT_NODE_IDENTITY_DBUS_KEY}" ""
+			dbus remove ssconf_basic_node
 		fi
 	else
 		[ -n "${node_id}" ] && dbus set ssconf_basic_node="${node_id}" || dbus remove ssconf_basic_node
@@ -3505,6 +3645,7 @@ fss_set_failover_node_id() {
 	local node_id="$1"
 	if [ "$(fss_detect_storage_schema)" = "2" ];then
 		fss_set_schema2_reference_node_id "fss_node_failover_backup" "${FSS_FAILOVER_NODE_IDENTITY_DBUS_KEY}" "${node_id}"
+		[ -n "${node_id}" ] && dbus set ss_failover_s4_3="${node_id}" || dbus remove ss_failover_s4_3
 	else
 		[ -n "${node_id}" ] && dbus set ss_failover_s4_3="${node_id}" || dbus remove ss_failover_s4_3
 	fi

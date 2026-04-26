@@ -2,7 +2,9 @@
 
 [ -z "${KSROOT}" ] && export KSROOT=/koolshare
 [ -f "${KSROOT}/scripts/base.sh" ] && source ${KSROOT}/scripts/base.sh
-[ -f "${KSROOT}/scripts/ss_node_common.sh" ] && source ${KSROOT}/scripts/ss_node_common.sh
+if ! type fss_detect_storage_schema >/dev/null 2>&1 && [ -f "${KSROOT}/scripts/ss_node_common.sh" ]; then
+	source ${KSROOT}/scripts/ss_node_common.sh
+fi
 
 SUB_PROFILE_TMP_PAYLOAD_KEY="ss_subscribe_profile_payload"
 SUB_PROFILE_TMP_ID_KEY="ss_subscribe_profile_id"
@@ -518,6 +520,80 @@ subprof_count_profile_nodes_fallback() {
 	done | wc -l | tr -d ' '
 }
 
+subprof_repair_state_from_bound_nodes() {
+	local profile_id="$1"
+	local state_key=""
+	local state_json=""
+	local last_group=""
+	local last_url_hash=""
+	local node_id=""
+	local node_json=""
+	local node_profile_id=""
+	local group_value=""
+	local url_hash=""
+	local group_suffix=""
+	local state_input=""
+	local repaired_json=""
+
+	[ -n "${profile_id}" ] || return 1
+	type fss_list_node_ids >/dev/null 2>&1 || return 1
+	type fss_v2_get_node_json_by_id >/dev/null 2>&1 || return 1
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	state_json="$(subprof_dbus_get_json_by_key "${state_key}" 2>/dev/null)" || state_json=""
+	if [ -n "${state_json}" ]; then
+		last_group="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
+		last_url_hash="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
+		[ -n "${last_group}" ] && [ -n "${last_url_hash}" ] && {
+			printf '%s' "${state_json}"
+			return 0
+		}
+	fi
+
+	for node_id in $(fss_list_node_ids 2>/dev/null)
+	do
+		[ -n "${node_id}" ] || continue
+		node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || continue
+		[ -n "${node_json}" ] || continue
+		node_profile_id="$(printf '%s' "${node_json}" | "$(subprof_jq_bin)" -r '._profile_id // empty' 2>/dev/null | sed -n '1p')"
+		[ "${node_profile_id}" = "${profile_id}" ] || continue
+		group_value="$(printf '%s' "${node_json}" | "$(subprof_jq_bin)" -r '.group // empty' 2>/dev/null | sed -n '1p')"
+		url_hash="$(printf '%s' "${node_json}" | "$(subprof_jq_bin)" -r '._source_url_hash // empty' 2>/dev/null | sed -n '1p')"
+		[ -n "${group_value}" ] || continue
+		group_suffix="${group_value##*_}"
+		if [ "${group_suffix}" != "${group_value}" ] && printf '%s' "${group_suffix}" | grep -Eq '^[A-Za-z0-9]{4}$'; then
+			group_value="${group_value%_*}"
+		fi
+		if [ -n "${state_json}" ]; then
+			state_input="${state_json}"
+		else
+			state_input="{}"
+		fi
+		repaired_json="$(printf '%s' "${state_input}" | "$(subprof_jq_bin)" -c \
+			--arg id "${profile_id}" \
+			--arg group_name "${group_value}" \
+			--arg url_hash "${url_hash}" '
+			(. // {}) + {
+				version: 1,
+				id: $id,
+				last_ok_ts: (.last_ok_ts // 0),
+				last_error_ts: (.last_error_ts // 0),
+				last_error: (.last_error // ""),
+				last_url_hash: (if (.last_url_hash // "") == "" then $url_hash else .last_url_hash end),
+				last_group: (if (.last_group // "") == "" then $group_name else .last_group end)
+			}
+		')" || return 1
+		subprof_dbus_set_json_by_key "${state_key}" "${repaired_json}" >/dev/null 2>&1 || true
+		printf '%s' "${repaired_json}"
+		return 0
+	done
+
+	[ -n "${state_json}" ] && {
+		printf '%s' "${state_json}"
+		return 0
+	}
+	return 1
+}
+
 subprof_merge_profile_and_state() {
 	local profile_id="$1"
 	local profile_key=""
@@ -540,6 +616,7 @@ subprof_merge_profile_and_state() {
 		state_json="$("$(subprof_jq_bin)" -cn --arg id "${profile_id}" '{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}')"
 		subprof_dbus_set_json_by_key "${state_key}" "${state_json}" >/dev/null 2>&1 || true
 	fi
+	state_json="$(subprof_repair_state_from_bound_nodes "${profile_id}" 2>/dev/null)" || state_json="${state_json}"
 	last_group="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_group // empty' 2>/dev/null | sed -n '1p')"
 	last_url_hash="$(printf '%s' "${state_json}" | "$(subprof_jq_bin)" -r '.last_url_hash // empty' 2>/dev/null | sed -n '1p')"
 	if [ -n "${last_group}" ]; then
@@ -934,6 +1011,12 @@ subprof_migrate_legacy_profiles_if_needed() {
 	local name_count=0
 	local migrated=0
 	local payload_json=""
+	local raw_tag=""
+	local canonical_tag=""
+	local legacy_tag=""
+	local group_label=""
+	local state_key=""
+	local state_json=""
 
 	subprof_has_profiles && return 0
 	raw_links="$(dbus get ss_online_links | base64 -d 2>/dev/null)" || raw_links=""
@@ -971,6 +1054,24 @@ subprof_migrate_legacy_profiles_if_needed() {
 		printf '%s\n' "${unique_name}" >> "${seen_names}"
 		payload_json="$(subprof_build_legacy_payload_json "${profile_id}" "${unique_name}" "${link}")" || continue
 		subprof_write_profile_json "${payload_json}" >/dev/null 2>&1 || continue
+		raw_tag="$(fss_legacy_subscribe_domain_tag_from_url "${link}" 2>/dev/null)" || raw_tag=""
+		canonical_tag=""
+		[ -n "${raw_tag}" ] && canonical_tag="$(dbus get ss_online_hash_${raw_tag} 2>/dev/null)"
+		[ -n "${canonical_tag}" ] || canonical_tag="${raw_tag}"
+		legacy_tag="$(fss_legacy_subscribe_url_hash "${link}" 2>/dev/null)" || legacy_tag=""
+		group_label="$(fss_legacy_subscribe_group_from_tags "${canonical_tag}" "${raw_tag}" "${legacy_tag}" 2>/dev/null)" || group_label=""
+		[ -n "${group_label}" ] || group_label="${profile_name}"
+		if [ -n "${group_label}" ] || [ -n "${legacy_tag}" ];then
+			state_key="$(subprof_state_key "${profile_id}" 2>/dev/null)" || state_key=""
+			if [ -n "${state_key}" ];then
+				state_json="$("$(subprof_jq_bin)" -cn \
+					--arg id "${profile_id}" \
+					--arg url_hash "${legacy_tag}" \
+					--arg group_name "${group_label}" \
+					'{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:$url_hash,last_group:$group_name}')"
+				[ -n "${state_json}" ] && subprof_dbus_set_json_by_key "${state_key}" "${state_json}" >/dev/null 2>&1 || true
+			fi
+		fi
 		migrated=$((migrated + 1))
 	done < "${tmp_links}"
 	rm -f "${tmp_links}" "${seen_names}"

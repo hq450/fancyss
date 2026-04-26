@@ -5,15 +5,15 @@
 source /koolshare/scripts/base.sh
 NEW_PATH=$(echo $PATH|tr ':' '\n'|sed '/opt/d;/mmc/d'|awk '!a[$0]++'|tr '\n' ':'|sed '$ s/:$//')
 export PATH=${NEW_PATH}
-unalias echo_date >/dev/null 2>&1
-echo_date(){
-	echo "【$(TZ=UTC-8 date -R "+%Y%m%d %X")】: $*"
-}
 MODEL=
 FW_TYPE_NAME=
 DIR=$(cd $(dirname $0); pwd)
 [ -f "${DIR}/scripts/ss_node_common.sh" ] && source "${DIR}/scripts/ss_node_common.sh"
 [ -f "${DIR}/scripts/ss_subscribe_profile_lib.sh" ] && source "${DIR}/scripts/ss_subscribe_profile_lib.sh"
+unalias echo_date >/dev/null 2>&1
+echo_date(){
+	echo "【$(TZ=UTC-8 date -R "+%Y%m%d %X")】: $*"
+}
 module=${DIR##*/}
 LINUX_VER=$(uname -r|awk -F"." '{print $1$2}')
 
@@ -84,6 +84,61 @@ restart_websocketd_async() {
 				/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
 				echo $! > "${WS_PIDFILE}"
 			fi
+		fi
+		rm -f "$0" >/dev/null 2>&1
+	EOF
+	chmod +x "${helper}" >/dev/null 2>&1
+	sh "${helper}" >/dev/null 2>&1 &
+}
+
+restart_status_runtime_async() {
+	local helper="/tmp/fancyss_restart_status_runtime.sh"
+	cat > "${helper}" <<-'EOF'
+		#!/bin/sh
+		LOG_FILE="/tmp/upload/status-runtime-helper.log"
+		log_status_runtime() {
+			mkdir -p /tmp/upload
+			printf '【%s】: %s\n' "$(TZ=UTC-8 date -R "+%Y%m%d %X")" "$*" >> "${LOG_FILE}" 2>/dev/null
+		}
+		start_status_serve_direct() {
+			[ -x "/koolshare/bin/status-tool" ] || return 1
+			chn="$(dbus get ss_basic_curl)"
+			frn="$(dbus get ss_basic_furl)"
+			ipv6="$(dbus get ss_basic_proxy_ipv6)"
+			[ -n "${chn}" ] || chn="http://connectivitycheck.platform.hicloud.com/generate_204"
+			[ -n "${frn}" ] || frn="http://www.google.com/generate_204"
+			ps w | grep -F "/koolshare/bin/status-tool serve" | grep -v grep | while read -r pid rest
+			do
+				[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1 || true
+			done
+			rm -f /tmp/status-tool.sock /var/run/status-tool-serve.pid >/dev/null 2>&1
+			log_status_runtime "starting status-tool serve"
+			/koolshare/bin/status-tool serve \
+				--socket-path /tmp/status-tool.sock \
+				--china-url "${chn}" \
+				--foreign-url "${frn}" \
+				--proxy-ipv6 "${ipv6:-0}" \
+				--foreign-proxy "socks5://127.0.0.1:23456" \
+				--state-file /tmp/upload/ss_status_daemon.json \
+				--legacy-file /tmp/upload/ss_status_front.txt >/tmp/upload/status-tool-serve.log 2>&1 &
+			echo "$!" >/var/run/status-tool-serve.pid
+			sleep 1
+			if [ -S /tmp/status-tool.sock ] && ps w | grep -F "/koolshare/bin/status-tool serve" | grep -v grep >/dev/null 2>&1; then
+				log_status_runtime "status-tool serve started"
+			else
+				log_status_runtime "status-tool serve did not stay alive"
+			fi
+		}
+		status_serve_alive() {
+			[ -S /tmp/status-tool.sock ] && ps w | grep -F "/koolshare/bin/status-tool serve" | grep -v grep >/dev/null 2>&1
+		}
+		sleep 2
+		log_status_runtime "checking status runtime"
+		[ "$(dbus get ss_basic_enable)" = "1" ] && start_status_serve_direct
+		sleep 3
+		if [ "$(dbus get ss_basic_enable)" = "1" ] && ! status_serve_alive; then
+			log_status_runtime "status runtime missing, retry"
+			start_status_serve_direct
 		fi
 		rm -f "$0" >/dev/null 2>&1
 	EOF
@@ -1491,6 +1546,43 @@ install_now(){
 
 	# 节点存储自动迁移：升级到支持 schema 2 的版本后，直接切换到新结构。
 	export PATH=/koolshare/bin:${PATH}
+	if [ -x "/koolshare/bin/node-tool" ];then
+		FSS_NODE_TOOL_PICKED="/koolshare/bin/node-tool"
+		FSS_NODE_TOOL_TRUST_PICKED=1
+		export FSS_NODE_TOOL_PICKED FSS_NODE_TOOL_TRUST_PICKED
+	elif [ -x "${DIR}/bin/node-tool" ];then
+		FSS_NODE_TOOL_PICKED="${DIR}/bin/node-tool"
+		FSS_NODE_TOOL_TRUST_PICKED=1
+		export FSS_NODE_TOOL_PICKED FSS_NODE_TOOL_TRUST_PICKED
+	else
+		unset FSS_NODE_TOOL_PICKED
+		unset FSS_NODE_TOOL_TRUST_PICKED
+	fi
+	if [ -n "${FSS_NODE_TOOL_PICKED:-}" ];then
+		echo_date "节点数据升级将优先使用 node-tool：${FSS_NODE_TOOL_PICKED}"
+		local NODE_TOOL_VERSION_OUTPUT=""
+		NODE_TOOL_VERSION_OUTPUT="$("${FSS_NODE_TOOL_PICKED}" version 2>&1)"
+		local NODE_TOOL_VERSION_RC="$?"
+		if [ "${NODE_TOOL_VERSION_RC}" != "0" ];then
+			NODE_TOOL_VERSION_OUTPUT="$(env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" "${FSS_NODE_TOOL_PICKED}" version 2>&1)"
+			NODE_TOOL_VERSION_RC="$?"
+			if [ "${NODE_TOOL_VERSION_RC}" = "0" ];then
+				FSS_NODE_TOOL_CLEAN_ENV=1
+				export FSS_NODE_TOOL_CLEAN_ENV
+				echo_date "node-tool 版本：${NODE_TOOL_VERSION_OUTPUT}（安装环境较大，迁移时使用干净环境执行）"
+			else
+				echo_date "node-tool 版本探测失败（退出码 ${NODE_TOOL_VERSION_RC}），后续将自动回退 shell 迁移流程。"
+				if [ -n "${NODE_TOOL_VERSION_OUTPUT}" ];then
+					echo_date "node-tool 版本探测输出：${NODE_TOOL_VERSION_OUTPUT}"
+				fi
+				unset FSS_NODE_TOOL_PICKED
+				unset FSS_NODE_TOOL_TRUST_PICKED
+				unset FSS_NODE_TOOL_CLEAN_ENV
+			fi
+		else
+			echo_date "node-tool 版本：${NODE_TOOL_VERSION_OUTPUT}"
+		fi
+	fi
 	local STORAGE_SCHEMA_BEFORE="$(fss_detect_storage_schema 2>/dev/null)"
 	fss_auto_migrate_if_needed 1 report_install_migration_progress
 	case "$?" in
@@ -1511,7 +1603,11 @@ install_now(){
 
 	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
 		if [ "${STORAGE_SCHEMA_BEFORE}" != "2" ];then
-			normalize_schema2_secret_fields_after_install "schema1 -> schema2 升级"
+			if [ "$(dbus get fss_data_secret_mode 2>/dev/null)" = "raw" ];then
+				echo_date "schema1 -> schema2 升级已使用 raw 密码字段，跳过密码字段二次校正。"
+			else
+				normalize_schema2_secret_fields_after_install "schema1 -> schema2 升级"
+			fi
 		elif [ "${FORCE_SCHEMA2_SECRET_NORMALIZE}" = "1" ]; then
 			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏" "1"
 		fi
@@ -1555,6 +1651,7 @@ install_now(){
 	if [ "${ENABLE}" == "1" -a -f "/koolshare/ss/ssconfig.sh" ];then
 		echo_date 重启科学上网插件！
 		sh /koolshare/ss/ssconfig.sh restart
+		restart_status_runtime_async
 	else
 		restart_websocketd_async
 	fi

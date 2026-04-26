@@ -69,6 +69,7 @@ start_status_serve() {
 	local chn_url
 	local frn_url
 	local proxy_ipv6
+	local cmd_pid
 	write_waiting_cache
 	{
 		read -r chn_url
@@ -77,15 +78,22 @@ start_status_serve() {
 	$(pick_status_urls)
 	EOF
 	proxy_ipv6="$(dbus get ss_basic_proxy_ipv6)"
-	rm -f "${STATUS_SERVE_SOCKET}" >/dev/null 2>&1
-	start-stop-daemon -S -q -b -m -p "${STATUS_SERVE_PIDFILE}" -x "${STATUS_TOOL_BIN}" -- serve \
+	rm -f "${STATUS_SERVE_SOCKET}" "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
+	"${STATUS_TOOL_BIN}" serve \
 		--socket-path "${STATUS_SERVE_SOCKET}" \
 		--china-url "${chn_url}" \
 		--foreign-url "${frn_url}" \
 		--proxy-ipv6 "${proxy_ipv6:-0}" \
 		--foreign-proxy "socks5://127.0.0.1:23456" \
 		--state-file "${STATUS_DAEMON_STATE}" \
-		--legacy-file "${STATUS_DAEMON_LEGACY}"
+		--legacy-file "${STATUS_DAEMON_LEGACY}" >/tmp/upload/status-tool-serve.log 2>&1 &
+	cmd_pid="$!"
+	echo "${cmd_pid}" > "${STATUS_SERVE_PIDFILE}"
+	sleep 1
+	if kill -0 "${cmd_pid}" >/dev/null 2>&1 && [ -S "${STATUS_SERVE_SOCKET}" ];then
+		return 0
+	fi
+	return 1
 }
 
 stop_status_daemon() {
