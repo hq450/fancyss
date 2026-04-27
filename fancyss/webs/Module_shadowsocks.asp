@@ -3962,6 +3962,17 @@ function sync_shunt_current_node_selection(nodeId) {
 	}
 	return resolved;
 }
+function sync_shunt_fallback_with_current_node(nodeId) {
+	var resolved = resolve_node_id(nodeId || "", true);
+	if (!resolved || !current_mode_is_shunt() || !is_shunt_supported_node(resolved)) {
+		return false;
+	}
+	if (is_shunt_direct_target(shuntFallbackNodeId)) {
+		return false;
+	}
+	shuntFallbackNodeId = resolved;
+	return true;
+}
 function should_save_main_panel_node(nodeId) {
 	nodeId = resolve_node_id(nodeId || "", true);
 	if (!nodeId) {
@@ -6405,6 +6416,7 @@ function ssconf_node2obj(node_sel) {
 function ss_node_sel() {
 	var node_sel = resolve_node_id(E("ssconf_basic_node").value);
 	var prevNodeId = get_saved_current_node_id();
+	var prevMainPanelNodeId = mainPanelNodeId;
 	if (!node_sel) {
 		return;
 	}
@@ -6415,6 +6427,9 @@ function ss_node_sel() {
 	verifyFields();
 	refresh_basic_method_width();
 	refresh_basic_input_width();
+	if (current_mode_is_shunt() && prevMainPanelNodeId && String(prevMainPanelNodeId) != String(node_sel)) {
+		sync_shunt_fallback_with_current_node(node_sel);
+	}
 	refresh_shunt_ui();
 	if (current_mode_is_shunt() && !is_shunt_supported_node(node_sel)) {
 		show_shunt_node_block_layer(node_sel);
@@ -6525,6 +6540,9 @@ function save() {
 			return false;
 		}
 		node_sel = sync_shunt_current_node_selection(node_sel) || node_sel;
+		if (String(node_sel) != String(get_saved_current_node_id() || "")) {
+			sync_shunt_fallback_with_current_node(node_sel);
+		}
 		shuntDefaultNodeId = get_shunt_default_node_id();
 		shuntRuntimeNodeId = get_shunt_runtime_node_id();
 		if (is_shunt_direct_target(shuntDefaultNodeId) && !shuntRulesState.length) {

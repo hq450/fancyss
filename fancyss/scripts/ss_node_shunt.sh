@@ -853,21 +853,32 @@ fss_shunt_get_effective_default_target() {
 	fss_shunt_get_default_node_id
 }
 
-fss_shunt_resolve_default_node_id() {
-	local node_id="$1"
-	FSS_SHUNT_DEFAULT_NODE_ID_PICK=""
+fss_shunt_get_current_node_id() {
+	local node_id=""
 
-	[ -n "${node_id}" ] || node_id="$(fss_shunt_get_configured_default_target 2>/dev/null)"
-	if [ -n "${node_id}" ] && fss_shunt_target_is_proxy_node "${node_id}"; then
-		FSS_SHUNT_DEFAULT_NODE_ID_PICK="${node_id}"
-		return 0
-	fi
 	if type fss_resolve_current_node_id >/dev/null 2>&1; then
 		fss_resolve_current_node_id >/dev/null 2>&1 || true
 		node_id="${FSS_CURRENT_NODE_ID_RESULT}"
 	else
 		node_id="$(fss_get_current_node_id)"
 	fi
+	if [ -n "${node_id}" ] && fss_shunt_target_is_proxy_node "${node_id}"; then
+		echo "${node_id}"
+		return 0
+	fi
+	return 1
+}
+
+fss_shunt_resolve_default_node_id() {
+	local node_id="$1"
+	FSS_SHUNT_DEFAULT_NODE_ID_PICK=""
+
+	[ -n "${node_id}" ] || node_id="$(fss_shunt_get_current_node_id 2>/dev/null)"
+	if [ -n "${node_id}" ] && fss_shunt_target_is_proxy_node "${node_id}"; then
+		FSS_SHUNT_DEFAULT_NODE_ID_PICK="${node_id}"
+		return 0
+	fi
+	node_id="$(fss_shunt_get_configured_default_target 2>/dev/null)"
 	if [ -n "${node_id}" ] && fss_shunt_target_is_proxy_node "${node_id}"; then
 		FSS_SHUNT_DEFAULT_NODE_ID_PICK="${node_id}"
 		return 0
@@ -1347,19 +1358,74 @@ EOF2
 	printf '        {"type":"field","inboundTag":[%s],"outboundTag":"proxy%s"}' "${tags}" "$1"
 }
 
+fss_shunt_host_from_url() {
+	local url="$1"
+	local host=""
+
+	[ -n "${url}" ] || return 1
+	host="${url#*://}"
+	host="${host%%/*}"
+	host="${host%%\?*}"
+	host="${host%%#*}"
+	host="${host##*@}"
+	case "${host}" in
+	\[*\]*)
+		host="${host#\[}"
+		host="${host%%\]*}"
+		;;
+	*:*)
+		host="${host%%:*}"
+		;;
+	esac
+	[ -n "${host}" ] || return 1
+	printf '%s\n' "${host}"
+}
+
+fss_shunt_emit_status_probe_route_rule() {
+	local current_id="$1"
+	local domains_tmp="${TMPDIR:-/tmp}/fss_shunt_status_domains.$$"
+	local host=""
+	local values_json=""
+
+	: > "${domains_tmp}" || return 0
+	for url in "${ss_basic_furl}" "${ss_basic_curl}"
+	do
+		host="$(fss_shunt_host_from_url "${url}" 2>/dev/null)" || host=""
+		[ -n "${host}" ] || continue
+		printf '%s\n' "${host}" >> "${domains_tmp}"
+	done
+	if [ -s "${domains_tmp}" ]; then
+		sort -u "${domains_tmp}" -o "${domains_tmp}" 2>/dev/null || true
+		values_json="$(fss_shunt_json_array_from_file "${domains_tmp}" '')"
+	fi
+	rm -f "${domains_tmp}" >/dev/null 2>&1
+	[ -n "${values_json}" ] && [ "${values_json}" != "[]" ] || return 0
+	printf '        {"type":"field","ruleTag":"fss_status_probe","domain":%s,"outboundTag":"proxy%s"}' "${values_json}" "${current_id}"
+}
+
 fss_shunt_emit_outbounds_json() {
 	local current_id="$1"
 	local node_id=""
+	local default_target=""
 	local runtime_out=""
 
 	runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${current_id}_outbounds.json"
 	[ -s "${runtime_out}" ] || return 1
 	cat "${runtime_out}"
+	default_target="$(fss_shunt_get_effective_default_target 2>/dev/null)"
+	if [ -n "${default_target}" ] && ! fss_shunt_target_is_special "${default_target}" && [ "${default_target}" != "${current_id}" ]; then
+		runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${default_target}_outbounds.json"
+		if [ -s "${runtime_out}" ]; then
+			printf ',\n'
+			cat "${runtime_out}"
+		fi
+	fi
 	if [ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ]; then
 		while IFS= read -r node_id
 		do
 			[ -n "${node_id}" ] || continue
 			[ "${node_id}" = "${current_id}" ] && continue
+			[ "${node_id}" = "${default_target}" ] && continue
 			runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json"
 			[ -s "${runtime_out}" ] || continue
 			printf ',\n'
@@ -1853,9 +1919,14 @@ fss_shunt_prepare_outbound_cache() {
 	local runtime_out="${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${current_id}_outbounds.json"
 	local ids_file="${FSS_SHUNT_RUNTIME_DIR}/cache_ids.txt"
 	local node_id=""
+	local default_target=""
 
 	: > "${ids_file}" || return 1
 	echo "${current_id}" >> "${ids_file}"
+	default_target="$(fss_shunt_get_effective_default_target 2>/dev/null)"
+	if [ -n "${default_target}" ] && ! fss_shunt_target_is_special "${default_target}"; then
+		echo "${default_target}" >> "${ids_file}"
+	fi
 	if [ -f "${FSS_SHUNT_RUNTIME_TARGET_FILE}" ]; then
 		while IFS= read -r node_id
 		do
@@ -1881,6 +1952,7 @@ fss_shunt_build_xray_config() {
 	local default_outbound_tag=""
 	local tmp_file="${config_file}.tmp.$$"
 	local dns_rule=""
+	local status_rule=""
 	local route_rules_file="${tmp_file}.rules"
 	local build_started=0
 	local build_elapsed=0
@@ -1978,6 +2050,10 @@ EOF2
 	dns_rule="$(fss_shunt_emit_dns_relay_route_rule "${current_id}")"
 	if [ -n "${dns_rule}" ]; then
 		printf ',\n%s\n' "${dns_rule}" >> "${tmp_file}"
+	fi
+	status_rule="$(fss_shunt_emit_status_probe_route_rule "${current_id}")"
+	if [ -n "${status_rule}" ]; then
+		printf ',\n%s\n' "${status_rule}" >> "${tmp_file}"
 	fi
 	fss_shunt_emit_routing_rules_json > "${route_rules_file}" 2>/dev/null
 	if [ -s "${route_rules_file}" ]; then
