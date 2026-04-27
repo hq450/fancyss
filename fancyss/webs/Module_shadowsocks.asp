@@ -2852,7 +2852,9 @@ function get_shunt_ingress_mode_text(mode) {
 	return normalize_shunt_ingress_mode(mode) == "5" ? "全量引流" : "大陆白名单引流";
 }
 function update_shunt_ingress_mode(mode) {
-	db_ss["ss_basic_shunt_ingress_mode"] = normalize_shunt_ingress_mode(mode);
+	if (E("ss_basic_shunt_ingress_mode")) {
+		E("ss_basic_shunt_ingress_mode").value = normalize_shunt_ingress_mode(mode);
+	}
 	refresh_shunt_ui();
 }
 function render_shunt_ingress_select(selectedValue, elementId, extraAttr) {
@@ -3957,7 +3959,6 @@ function sync_shunt_current_node_selection(nodeId) {
 	if (E("ssconf_basic_node")) {
 		E("ssconf_basic_node").value = resolved;
 	}
-	shuntFallbackNodeId = resolved;
 	return resolved;
 }
 function get_failover_node_id() {
@@ -7110,6 +7111,8 @@ function should_use_shunt_hot_reload(post_dbus){
 	var allowed = {
 		"ss_basic_shunt_rules": 1,
 		"ss_basic_shunt_default_node": 1,
+		"ss_basic_shunt_default_node_identity": 1,
+		"ss_basic_shunt_ingress_mode": 1,
 		"ss_basic_shunt_custom_presets": 1,
 		"ss_basic_shunt_rule_ts": 1
 	};
