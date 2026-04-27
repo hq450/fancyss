@@ -23,6 +23,39 @@ get_node_name_by_id() {
 	fss_get_node_field_plain "$1" name
 }
 
+pick_fastest_webtest_node() {
+	local current_id="$1"
+	local result_file="${2:-/tmp/upload/webtest_bakcup.txt}"
+	local latency=""
+	local node_id=""
+
+	[ -s "${result_file}" ] || return 1
+	awk -F '>' -v current="${current_id}" '
+		$1 ~ /^[0-9]+$/ && $1 != current {
+			if (!seen[$1]) {
+				order[++count] = $1
+				seen[$1] = 1
+			}
+			latency[$1] = $2
+		}
+		END {
+			for (i = 1; i <= count; i++) {
+				id = order[i]
+				if (latency[id] ~ /^[0-9]+$/) {
+					printf "%d\t%s\n", latency[id], id
+				}
+			}
+		}
+	' "${result_file}" 2>/dev/null | sort -n -k1,1 -k2,2n | while read -r latency node_id
+	do
+		[ -n "${node_id}" ] || continue
+		if fss_node_id_exists "${node_id}";then
+			printf '%s\n' "${node_id}"
+			return 0
+		fi
+	done
+}
+
 append_status_log_line() {
 	local logfile="$1"
 	local streamfile="$2"
@@ -211,13 +244,13 @@ failover_action(){
 		if [ "$ss_failover_s4_2" == "3" ];then
 			if [ ! -f "/tmp/upload/webtest_bakcup.txt" ];then
 				LOGM "$LOGTIME1 fancyss：没有找到web延迟测试结果，采取切换到下个节点的策略..."
-				ss_failover_s4_1="2"
+				ss_failover_s4_2="2"
 			fi
 			local CURR_NODE=${current_id}
-			local FAST_NODE=$(cat /tmp/upload/webtest_bakcup.txt|sed '/failed/d;/stop/d;/ns/d' | sort -t">" -nk2 | sed "/^${CURR_NODE}>/d" | head -n1 | awk -F ">" '{print $1}')
+			local FAST_NODE=$(pick_fastest_webtest_node "${CURR_NODE}" "/tmp/upload/webtest_bakcup.txt")
 			if [ -z "${FAST_NODE}" ];then
 				LOGM "$LOGTIME1 fancyss：没有找到web延迟测试最低的节点，采取切换到下个节点的策略..."
-				ss_failover_s4_1="2"
+				ss_failover_s4_2="2"
 			fi
 		fi
 	
@@ -245,6 +278,7 @@ failover_action(){
 				LOGM "$LOGTIME1 fancyss：检测到你只有一个节点！无法切换到下一个节点！只好关闭插件了！"
 				dbus set ss_basic_enable="0"
 				run start-stop-daemon -S -q -b -x /koolshare/ss/ssconfig.sh -- stop
+				return
 			fi
 			# 切换
 			fss_set_current_node_id "${NEXT_NODE}"
