@@ -707,6 +707,7 @@ var refreshRate;
 var ph_v2ray = "# 填入v2ray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持v2ray运行更多协议，比如ss/vless/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_xray = "# 填入xray json配置，内容可以是标准的也可以是压缩的&#10;# 此处的配置可以支持xray运行更多协议，比如ss/vmess/trojan/socks等xray支持的协议&#10;# 请保证你json内的outbound/outbounds部分配置正确！！！"
 var ph_tuic = "# 填入tuic client json配置，内容可以是标准的也可以是压缩的&#10;# 请保证你json内的relay部分的配置正确！！！" 	//fancyss-full
+var mainPanelNodeId = "";
 var option_proxy_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"]];
 var option_main_modes = [["1", "gfw黑名单模式"], ["2", "大陆白名单模式"], ["3", "游戏模式"], ["5", "全局代理模式"], ["7", "xray分流模式"]];
 var option_modes = option_proxy_modes;
@@ -3961,6 +3962,16 @@ function sync_shunt_current_node_selection(nodeId) {
 	}
 	return resolved;
 }
+function should_save_main_panel_node(nodeId) {
+	nodeId = resolve_node_id(nodeId || "", true);
+	if (!nodeId) {
+		return false;
+	}
+	if (!mainPanelNodeId) {
+		return false;
+	}
+	return String(mainPanelNodeId) == String(nodeId);
+}
 function get_failover_node_id() {
 	if (get_node_storage_schema() == 2) {
 		var resolvedFailover = resolve_node_id_with_identity(db_fss["fss_node_failover_backup"] || "", db_fss["fss_node_failover_identity"] || db_fss["fss_failover_node_identity"] || "", true);
@@ -6400,6 +6411,7 @@ function ss_node_sel() {
 	E("ssconf_basic_node").value = node_sel;
 	var obj = ssconf_node2obj(node_sel);
 	conf2obj(obj, 1);
+	mainPanelNodeId = node_sel;
 	verifyFields();
 	refresh_basic_method_width();
 	refresh_basic_input_width();
@@ -6498,11 +6510,13 @@ function refresh_options() {
 function save() {
 	var dbus = {};
 	var node_sel = resolve_node_id(E("ssconf_basic_node").value);
+	var saveMainPanelNode = false;
 	var shuntDefaultNodeId = "";
 	var shuntRuntimeNodeId = "";
 	if (node_sel) {
 		E("ssconf_basic_node").value = node_sel;
 	}
+	saveMainPanelNode = should_save_main_panel_node(node_sel);
 	var node_type = get_node_type(node_sel);
 	submit_flag="1";
 	if (E("ss_basic_mode") && E("ss_basic_mode").value == "7") {
@@ -6746,6 +6760,7 @@ function save() {
 		}
 	}
 	// node data: write node data under using from the main pannel incase of data change
+	if (saveMainPanelNode) {
 	dbus["ssconf_basic_mode_" + node_sel] = E("ss_basic_mode").value == "7" ? get_node_persistent_mode(node_sel) : E("ss_basic_mode").value;
 	// ss
 	if (node_type == "0" ){
@@ -6986,6 +7001,7 @@ function save() {
 		dbus["ssconf_basic_hy2_ai_" + node_sel] = E("ss_basic_hy2_ai").checked ? '1' : '';
 		dbus["ssconf_basic_hy2_tfo_" + node_sel] = E("ss_basic_hy2_tfo").checked ? '1' : '';
 	}
+	}
 	// show different title when subscribe
 	if(E("ss_basic_enable").checked){
 		var sel_mode = E("ss_basic_mode").value;
@@ -7011,7 +7027,9 @@ function save() {
 		dbus["fss_node_failover_backup"] = failoverNodeId || "";
 		dbus["fss_node_failover_identity"] = get_node_identity(failoverNodeId) || "";
 		delete dbus["ss_failover_s4_3"];
-		dbus = $.extend(dbus, build_schema2_upsert_fields(dbus, node_sel, "manual", true));
+		if (saveMainPanelNode) {
+			dbus = $.extend(dbus, build_schema2_upsert_fields(dbus, node_sel, "manual", true));
+		}
 		strip_legacy_node_fields(dbus, node_sel);
 	}
 	var post_dbus = compfilter(get_compare_store(), dbus);
@@ -7042,10 +7060,15 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 	var id = parseInt(Math.random() * 100000000);
 	var postData;
 	var resolvedWsCmd = ws_cmd || "";
+	var fallbackToHttp = function() {
+		push_data(script, arg, obj, flag);
+	};
 	if (script == "ss_config.sh") {
 		attach_schema2_postsave_marker(obj);
+		postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": obj};
+	} else {
+		postData = build_schema2_postsave_request(id, obj) || {"id": id, "method": "dummy_script.sh", "params":[], "fields": obj};
 	}
-	postData = build_schema2_postsave_request(id, obj) || {"id": id, "method": "dummy_script.sh", "params":[], "fields": obj};
 	$.ajax({
 		type: "POST",
 		cache:false,
@@ -7097,7 +7120,12 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 					}
 					E("log_content3").scrollTop = E("log_content3").scrollHeight;
 				};
+			}else{
+				fallbackToHttp();
 			}
+		},
+		error: function() {
+			fallbackToHttp();
 		}
 	});
 }
