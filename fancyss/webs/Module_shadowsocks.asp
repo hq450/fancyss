@@ -291,8 +291,13 @@ body .shunt-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 .node-card-grid::-webkit-scrollbar-thumb{border-radius:999px;background:linear-gradient(180deg,rgba(48,140,255,0.95),rgba(78,199,255,0.95));}
 .node-card-grid::-webkit-scrollbar-track{border-radius:999px;background:rgba(255,255,255,0.08);}
 .node-card-grid{scrollbar-width:thin;scrollbar-color:rgba(78,199,255,0.92) rgba(255,255,255,0.08);}
-.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:60px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;}
+.node-card{position:relative;display:flex;flex-direction:column;gap:2px;min-height:60px;padding:5px;border-radius:10px;border:1px solid rgba(74,108,138,0.22);transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease;cursor:pointer;overflow:visible;user-select:none;}
 .node-card:hover{border-color:rgba(70,160,255,0.42);box-shadow:0 14px 24px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);transform:translateY(-1px);}
+.node-card.is-card-dragging{position:fixed;z-index:9999;pointer-events:none;cursor:move;transform:none!important;box-shadow:0 22px 42px rgba(0,0,0,0.42),0 0 0 1px rgba(70,160,255,0.32);opacity:.96;}
+.node-card-grid.is-card-dragging{cursor:move;}
+.node-card-drag-placeholder{min-height:60px;border-radius:10px;border:1px dashed rgba(96,165,250,0.68);background:rgba(59,130,246,0.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);box-sizing:border-box;}
+body.node-card-drag-active,body.node-card-drag-active *{cursor:move!important;user-select:none!important;}
+body.node-card-drag-active .node-card:not(.is-card-dragging):hover{transform:none;}
 .node-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;padding-right:6px;}
 .node-card-status{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
 .node-card-dot{width:6px;height:6px;border-radius:999px;background:rgba(110,168,254,0.8);flex:0 0 6px;box-shadow:0 0 6px rgba(110,168,254,0.45);}
@@ -803,6 +808,11 @@ var shuntCustomPresetLayerIndex = null;
 var shuntHintLayerIndex = null;
 var shuntStatsCache = {};
 var shuntStatsSummary = {};
+var nodeCardDragState = null;
+var nodeCardSuppressSelectUntil = 0;
+var NODE_CARD_DRAG_START_DISTANCE = 12;
+var NODE_CARD_REFLOW_ANIMATION_MS = 280;
+var NODE_CARD_REFLOW_MIN_INTERVAL = 90;
 var shuntStatsTimer = null;
 var shuntStatsRequestPending = false;
 var shuntStatsWs = null;
@@ -2872,6 +2882,9 @@ function get_shunt_node_latency(nodeId) {
 	if (!nodeId || is_shunt_direct_target(nodeId) || is_shunt_reject_target(nodeId)) {
 		return "";
 	}
+	if (!is_latency_feature_enabled()) {
+		return "";
+	}
 	var $cell = $("#ss_node_lt_" + nodeId);
 	if (!$cell.length) {
 		return "";
@@ -2958,6 +2971,9 @@ function render_shunt_metric_chip(label, value, extraClass) {
 }
 function render_shunt_latency_chip(nodeId, chipId) {
 	if (!nodeId || is_shunt_direct_target(nodeId) || is_shunt_reject_target(nodeId)) {
+		return "";
+	}
+	if (!is_latency_feature_enabled()) {
 		return "";
 	}
 	var latency = normalize_shunt_latency_text(get_shunt_node_latency(nodeId));
@@ -5892,6 +5908,13 @@ function should_run_front_status_live() {
 function should_run_node_latency_live() {
 	return is_page_live_updates_allowed() && (is_node_tab_active() || is_shunt_tab_active());
 }
+function is_latency_feature_enabled() {
+	var value = db_ss["ss_basic_latency_val"];
+	if (value === undefined || value === null || value === "") {
+		return true;
+	}
+	return String(value) != "0";
+}
 function should_run_shunt_stats_live() {
 	return is_page_live_updates_allowed() && is_shunt_tab_active();
 }
@@ -5970,7 +5993,7 @@ function maybe_start_node_latency_auto_refresh() {
 	if (!should_run_node_latency_live()) {
 		return false;
 	}
-	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
+	if (!node_nu || !is_latency_feature_enabled()) {
 		update_latency_action_links();
 		return false;
 	}
@@ -5988,7 +6011,7 @@ function resume_node_latency_live_runtime() {
 	if (!should_run_node_latency_live()) {
 		return false;
 	}
-	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
+	if (!node_nu || !is_latency_feature_enabled()) {
 		update_latency_action_links();
 		return false;
 	}
@@ -6293,9 +6316,9 @@ function get_dbus_data(cb) {
 					sync_shunt_state_from_dbus();
 					// generate node table
 					refresh_html();
-					if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
-						latency_test(db_ss["ss_basic_latency_val"]);
-					}
+						if(is_latency_feature_enabled() && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+							latency_test(db_ss["ss_basic_latency_val"]);
+						}
 					init_subscription_manager_entry();
 					// fill node value
 					ss_node_sel();
@@ -9764,6 +9787,48 @@ function get_node_card_section_meta(c) {
 		priority: isSubscribe ? 1 : 0
 	};
 }
+function get_node_card_order_ids() {
+	var order = String(db_ss["ss_basic_node_card_order"] || "");
+	var seen = {};
+	var ids = [];
+	order.split(",").forEach(function(item) {
+		item = $.trim(String(item || ""));
+		if (!item || seen[item]) {
+			return;
+		}
+		seen[item] = true;
+		ids.push(item);
+	});
+	return ids;
+}
+function apply_node_card_order_to_section(nodes) {
+	var order = get_node_card_order_ids();
+	var rank = {};
+	var original = {};
+	for (var i = 0; i < order.length; i++) {
+		rank[order[i]] = i;
+	}
+	for (var j = 0; j < nodes.length; j++) {
+		original[String(nodes[j].conf["node"])] = j;
+	}
+	nodes.sort(function(a, b) {
+		var aId = String(a.conf["node"]);
+		var bId = String(b.conf["node"]);
+		var aHas = typeof rank[aId] != "undefined";
+		var bHas = typeof rank[bId] != "undefined";
+		if (aHas && bHas) {
+			return rank[aId] - rank[bId];
+		}
+		if (aHas) {
+			return -1;
+		}
+		if (bHas) {
+			return 1;
+		}
+		return original[aId] - original[bId];
+	});
+	return nodes;
+}
 function get_node_card_sections() {
 	var sections = [];
 	var sectionMap = {};
@@ -9791,6 +9856,11 @@ function get_node_card_sections() {
 			order: i + 1
 		});
 	}
+	for (var identity in sectionMap) {
+		if (sectionMap.hasOwnProperty(identity)) {
+			apply_node_card_order_to_section(sectionMap[identity].nodes);
+		}
+	}
 	sections.sort(function(a, b) {
 		if (a.priority != b.priority) {
 			return a.priority - b.priority;
@@ -9811,6 +9881,293 @@ function get_node_card_grid_columns($grid) {
 		}
 	}
 	return count > 0 ? count : ($(window).width() <= 640 ? 2 : 3);
+}
+function get_node_card_id_from_el(el) {
+	var id = el ? String(el.id || "") : "";
+	return id.indexOf("node_") === 0 ? id.replace("node_", "") : "";
+}
+function collect_node_card_order_from_dom() {
+	var order = [];
+	var seen = {};
+	var existing = {};
+	for (var i = 0; i < ss_nodes.length; i++) {
+		existing[String(ss_nodes[i] || "")] = true;
+	}
+	$(".node-card-section .node-card-grid").each(function() {
+		$(this).children(".node-card").each(function() {
+			var nodeId = get_node_card_id_from_el(this);
+			if (nodeId && existing[nodeId] && !seen[nodeId]) {
+				seen[nodeId] = true;
+				order.push(nodeId);
+			}
+		});
+	});
+	var saved = get_node_card_order_ids();
+	for (var savedIdx = 0; savedIdx < saved.length; savedIdx++) {
+		var savedId = String(saved[savedIdx] || "");
+		if (savedId && existing[savedId] && !seen[savedId]) {
+			seen[savedId] = true;
+			order.push(savedId);
+		}
+	}
+	for (var i = 0; i < ss_nodes.length; i++) {
+		var fallbackId = String(ss_nodes[i] || "");
+		if (fallbackId && !seen[fallbackId]) {
+			seen[fallbackId] = true;
+			order.push(fallbackId);
+		}
+	}
+	return order;
+}
+function save_node_card_order_from_dom() {
+	if (get_node_storage_schema() != 2) {
+		return;
+	}
+	var order = collect_node_card_order_from_dom();
+	var fields = {"ss_basic_node_card_order": order.join(",")};
+	var postData = null;
+	var id = 0;
+	fields = compfilter(db_ss, fields);
+	db_ss["ss_basic_node_card_order"] = order.join(",");
+	if (!Object.keys(fields).length) {
+		return;
+	}
+	id = parseInt(Math.random() * 100000000);
+	postData = {"id": id, "method": "dummy_script.sh", "params": [], "fields": fields};
+	$.ajax({
+		type: "POST",
+		cache: false,
+		url: "/_api/",
+		data: JSON.stringify(postData),
+		dataType: "json",
+		error: function() {
+			if (typeof layer != "undefined" && layer.msg) {
+				layer.msg("卡片顺序保存失败，请刷新后重试");
+			}
+		}
+	});
+}
+function node_card_drag_is_blocked(target) {
+	var $target = $(target);
+	return !!$target.closest(".node-card-delete,.node-card-tool,.node-card-latency,.latency_btn,.deactivate_icon,a,input,button,select,textarea").length;
+}
+function get_node_card_insert_before($grid, pageX, pageY) {
+	var before = null;
+	var pointerX = pageX - window.pageXOffset;
+	var pointerY = pageY - window.pageYOffset;
+	var sameRowTolerance = 8;
+	var candidates = [];
+	$grid.children(".node-card").not(".is-card-dragging").each(function() {
+		var rect = this.getBoundingClientRect();
+		candidates.push({
+			el: this,
+			rect: rect,
+			top: rect.top,
+			bottom: rect.bottom,
+			left: rect.left
+		});
+	});
+	if (!candidates.length) {
+		return null;
+	}
+	candidates.sort(function(a, b) {
+		if (Math.abs(a.top - b.top) > sameRowTolerance) {
+			return a.top - b.top;
+		}
+		return a.left - b.left;
+	});
+	for (var i = 0; i < candidates.length; i++) {
+		var item = candidates[i];
+		var rect = item.rect;
+		var upperThreshold = rect.top + rect.height * 0.28;
+		var lowerThreshold = rect.bottom - rect.height * 0.28;
+		if (pointerY < upperThreshold) {
+			before = item.el;
+			break;
+		}
+		if (pointerY >= upperThreshold && pointerY <= lowerThreshold && pointerX < rect.left + rect.width * 0.28) {
+			before = item.el;
+			break;
+		}
+	}
+	return before;
+}
+function animate_node_card_grid_reflow($grid, mutate) {
+	var before = {};
+	$grid.children(".node-card").not(".is-card-dragging").each(function() {
+		before[this.id] = this.getBoundingClientRect();
+	});
+	mutate();
+	$grid.children(".node-card").not(".is-card-dragging").each(function() {
+		var first = before[this.id];
+		var last = this.getBoundingClientRect();
+		var dx = first ? first.left - last.left : 0;
+		var dy = first ? first.top - last.top : 0;
+		var el = this;
+		if (!first || (Math.abs(dx) < 1 && Math.abs(dy) < 1)) {
+			return;
+		}
+		el.style.transition = "none";
+		el.style.transform = "translate(" + dx + "px," + dy + "px)";
+		el.offsetHeight;
+		(window.requestAnimationFrame || function(cb) { return setTimeout(cb, 0); })(function() {
+			el.style.transition = "transform " + NODE_CARD_REFLOW_ANIMATION_MS + "ms ease";
+			el.style.transform = "";
+			setTimeout(function() {
+				if (el.style.transition.indexOf("transform") !== -1) {
+					el.style.transition = "";
+				}
+			}, NODE_CARD_REFLOW_ANIMATION_MS + 40);
+		});
+	});
+}
+function move_node_card_drag_placeholder(state, pageX, pageY) {
+	var before = get_node_card_insert_before(state.$grid, pageX, pageY);
+	var placeholder = state.$placeholder[0];
+	var beforeId = before ? before.id : "__append__";
+	var now = new Date().getTime();
+	if (before && placeholder.nextSibling === before) {
+		state.lastBeforeId = beforeId;
+		return;
+	}
+	if (!before && placeholder.parentNode === state.$grid[0] && placeholder.nextSibling === null) {
+		state.lastBeforeId = beforeId;
+		return;
+	}
+	if (state.lastBeforeId === beforeId) {
+		return;
+	}
+	if (state.lastReflowAt && now - state.lastReflowAt < NODE_CARD_REFLOW_MIN_INTERVAL) {
+		return;
+	}
+	state.lastBeforeId = beforeId;
+	state.lastReflowAt = now;
+	if (before) {
+		animate_node_card_grid_reflow(state.$grid, function() {
+			state.$placeholder.insertBefore(before);
+		});
+	} else {
+		animate_node_card_grid_reflow(state.$grid, function() {
+			state.$grid.append(state.$placeholder);
+		});
+	}
+}
+function finish_node_card_drag(saveOrder) {
+	var state = nodeCardDragState;
+	if (!state) {
+		return;
+	}
+	$(document).off(".nodeCardDrag");
+	$("body").removeClass("node-card-drag-active");
+	state.$grid.removeClass("is-card-dragging");
+	if (state.moved) {
+		state.$card.removeClass("is-card-dragging").removeAttr("style");
+		state.$placeholder.replaceWith(state.$card);
+	}
+	nodeCardDragState = null;
+	if (state.moved) {
+		schedule_node_card_view_height_adjust(8);
+	}
+	if (saveOrder) {
+		save_node_card_order_from_dom();
+	}
+	if (state.moved) {
+		nodeCardSuppressSelectUntil = new Date().getTime() + 160;
+	}
+	setTimeout(function() {
+		state.$card.data("nodeCardDragSuppressClick", 0);
+	}, 80);
+}
+function init_node_card_drag_sort() {
+	if (!node_nu || get_node_storage_schema() != 2) {
+		return;
+	}
+	$(".node-card-grid").off(".nodeCardSort").on("mousedown.nodeCardSort", ".node-card", function(e) {
+		var $card = $(this);
+		var $grid = $card.closest(".node-card-grid");
+		var rect = null;
+		var startX = e.pageX;
+		var startY = e.pageY;
+		var pending = true;
+		if (e.which !== 1 || !$grid.length || node_card_drag_is_blocked(e.target)) {
+			return;
+		}
+		e.stopPropagation();
+		rect = this.getBoundingClientRect();
+		nodeCardDragState = {
+			$card: $card,
+			$grid: $grid,
+			$placeholder: $('<div class="node-card-drag-placeholder"></div>'),
+			width: rect.width,
+			height: rect.height,
+			offsetX: e.clientX - rect.left,
+			offsetY: e.clientY - rect.top,
+			moved: false,
+			lastBeforeId: "",
+			lastReflowAt: 0
+		};
+		function startDrag() {
+			if (!nodeCardDragState || !pending) {
+				return;
+			}
+			pending = false;
+			nodeCardDragState.moved = true;
+			nodeCardDragState.$placeholder.css({
+				width: rect.width + "px",
+				height: rect.height + "px",
+				minHeight: rect.height + "px"
+			});
+			nodeCardDragState.$placeholder.insertAfter($card);
+			$card.data("nodeCardDragSuppressClick", 1);
+			$card.addClass("is-card-dragging").css({
+				left: rect.left + "px",
+				top: rect.top + "px",
+				width: rect.width + "px",
+				height: rect.height + "px"
+			});
+			$("body").addClass("node-card-drag-active");
+			$grid.addClass("is-card-dragging");
+		}
+		function moveCard(ev) {
+			if (!nodeCardDragState) {
+				return;
+			}
+			if (pending) {
+				var dx = ev.pageX - startX;
+				var dy = ev.pageY - startY;
+				if (Math.sqrt(dx * dx + dy * dy) < NODE_CARD_DRAG_START_DISTANCE) {
+					return;
+				}
+				startDrag();
+			}
+			nodeCardDragState.$card.css({
+				left: (ev.clientX - nodeCardDragState.offsetX) + "px",
+				top: (ev.clientY - nodeCardDragState.offsetY) + "px"
+			});
+			move_node_card_drag_placeholder(nodeCardDragState, ev.pageX, ev.pageY);
+		}
+		$(document).on("mousemove.nodeCardDrag", function(ev) {
+			moveCard(ev);
+			if (!pending) {
+				ev.preventDefault();
+			}
+		}).on("mouseup.nodeCardDrag", function(ev) {
+			var saveOrder = !!(nodeCardDragState && nodeCardDragState.moved);
+			if (saveOrder) {
+				ev.preventDefault();
+				moveCard(ev);
+			}
+			finish_node_card_drag(saveOrder);
+		});
+	});
+	$(".node-card").off("click.nodeCardSort").on("click.nodeCardSort", function(e) {
+		if ($(this).data("nodeCardDragSuppressClick")) {
+			e.preventDefault();
+			e.stopPropagation();
+			$(this).data("nodeCardDragSuppressClick", 0);
+			return false;
+		}
+	});
 }
 var nodeCardHeightAdjustTimer = null;
 function schedule_node_card_view_height_adjust(maxVisibleRows) {
@@ -9956,6 +10313,9 @@ function get_node_card_protocol_class(c) {
 	return "";
 }
 function select_node_card(nodeId) {
+	if (new Date().getTime() < nodeCardSuppressSelectUntil) {
+		return false;
+	}
 	nodeId = resolve_node_id(nodeId, true);
 	if (!nodeId) {
 		return false;
@@ -9981,16 +10341,27 @@ function open_node_card_editor(nodeId) {
 	edit_conf_table(nodeId);
 	return false;
 }
+function render_latency_dropdown_html() {
+	var html = '';
+	if (is_latency_feature_enabled()) {
+		html += '<a id="start_latency_batch" class="latency-menu-action" onclick="test_latency_now(2);return false;" href="javascript:void(0);">开始批量延迟测试<lable id="ss_wts_show"></lable></a>';
+		html += '<a id="stop_latency_batch" class="latency-menu-action" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>';
+		html += '<a class="latency-menu-action" onclick="clear_latency_cache()" href="javascript:void(0);">清空延迟测试结果</a>';
+		html += '<a onclick="open_latency_sett()" href="javascript:void(0);">设置</a>';
+		html += '<a id="toggle_latency_batch" onclick="test_latency_now(0);return false;" href="javascript:void(0);">关闭批量延迟测试</a>';
+	} else {
+		html += '<a onclick="open_latency_sett()" href="javascript:void(0);">设置</a>';
+		html += '<a id="toggle_latency_batch" onclick="enable_latency_feature();return false;" href="javascript:void(0);">打开批量延迟测试</a>';
+	}
+	return html;
+}
 function render_node_list_footer_html() {
 	var html = '';
 	html += '<div align="center" class="nodeTable" id="node_button" style="width: 750px;margin-top:20px">';
 	if(node_nu){
 		html += '<input class="button_gen" id="dropdownbtn" type="button" value="延迟测试">';
 		html += '<div class="dropdown" id="dropdown">';
-		html += '<a id="start_latency_batch" onclick="test_latency_now(2);return false;" href="javascript:void(0);"></lable>开始批量延迟测试<lable id="ss_wts_show"></lable></a>';
-		html += '<a id="stop_latency_batch" onclick="stop_latency_batch();return false;" href="javascript:void(0);">停止批量测速</a>';
-		html += '<a onclick="clear_latency_cache()" href="javascript:void(0);"></lable>清空延迟测试结果</a>';
-		html += '<a onclick="open_latency_sett()" href="javascript:void(0);"></lable>设置</a>';
+		html += render_latency_dropdown_html();
 		html += '</div>';
 	}
 	html += '<input style="margin-left:10px" id="add_ss_node" class="button_gen" onClick="Add_profile()" type="button" value="添加节点"/>';
@@ -10040,13 +10411,11 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 					html += '</div>';
 						html += '<div class="node-card-subrow">';
 						html += '<span class="node-card-type ' + typeClass + (isCurrent ? ' current' : '') + '">' + htmlEscape(typeLabel) + '</span>';
-						if (hasLatency) {
-							html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency latency_btn" data-node="' + c["node"] + '" title="点击测试此节点延迟" onclick="event.stopPropagation();test_latency_single(' + c["node"] + ');return false;">';
-							html += '<img class="node-card-latency-icon" src="/res/speed.png" alt="" />';
-							html += '<span class="latency_val"></span></div>';
-						} else {
-							html += '<div class="node-card-latency"><span class="latency_val">-</span></div>';
-						}
+							if (hasLatency) {
+								html += '<div id="ss_node_lt_' + c["node"] + '" class="latency node-card-latency latency_btn" data-node="' + c["node"] + '" title="点击测试此节点延迟" onclick="event.stopPropagation();test_latency_single(' + c["node"] + ');return false;">';
+								html += '<img class="node-card-latency-icon" src="/res/speed.png" alt="" />';
+								html += '<span class="latency_val"></span></div>';
+							}
 					html += '<div class="node-card-actions">';
 						html += '<a href="javascript:void(0);" class="node-card-tool node-card-qrcode" title="二维码" onclick="event.stopPropagation();open_node_card_qrcode(\'' + c["node"] + '\');return false;"><img src="/res/qrcode.png" alt="" /></a>';
 						html += '<a href="javascript:void(0);" class="node-card-tool node-card-edit" title="编辑节点" onclick="event.stopPropagation();open_node_card_editor(\'' + c["node"] + '\');return false;"><img src="/res/edit.png" alt="" /></a>';
@@ -10089,14 +10458,15 @@ function refresh_html() {
 	// define col width in different situation
 	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
 	var cardMode = get_node_view_prefers_cards();
-	var hasLatency = node_nu && db_ss["ss_basic_latency_val"] != "0";
+	var hasLatency = node_nu && is_latency_feature_enabled();
 	if (cardMode) {
 		nodeH = Math.max(240, Math.min(pageH - nodeT - 40, 720));
 		$('.nodeTable').remove();
 		$('#ss_list_table').before(render_node_cards_html(nodeH, noserver, hasLatency));
 		schedule_node_card_view_height_adjust(8);
 		update_latency_action_links();
-		if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+		init_node_card_drag_sort();
+		if(is_latency_feature_enabled() && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
 			if(suppressLatencyCacheReloadOnce){
 				suppressLatencyCacheReloadOnce = false;
 			}else{
@@ -10126,7 +10496,7 @@ function refresh_html() {
 		}
 		return;
 	}
-	if(node_nu && db_ss["ss_basic_latency_val"] != "0"){
+	if(node_nu && is_latency_feature_enabled()){
 		//开启延迟测试
 		if(noserver == "1"){
 			//关闭server
@@ -10301,7 +10671,7 @@ function refresh_html() {
 		//ss_node_sel();
 	}
 	// ask or not ask for webtest
-	if(db_ss["ss_basic_latency_val"] && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
+	if(is_latency_feature_enabled() && db_ss["ss_basic_lt_cru_opts"] != "1" && db_ss["ss_basic_lt_web_time"] != "0"){
 		if(suppressLatencyCacheReloadOnce){
 			suppressLatencyCacheReloadOnce = false;
 		}else{
@@ -10520,7 +10890,7 @@ function reorder_trs(){
 	}
 	var trs = $("#ss_node_list_table tr");
 	var noserver = parseInt(E("ss_basic_noserver").checked ? "1":"0");
-	var has_latency = node_nu && db_ss["ss_basic_latency_val"] != "0";
+	var has_latency = node_nu && is_latency_feature_enabled();
 	var idx_order = 1;
 	var idx_name = 2;
 	var idx_server = (noserver != "1") ? 3 : 0;
@@ -11245,7 +11615,7 @@ function fallback_single_latency_ws(node) {
 }
 function latency_table_is_fresh() {
 	var latencyCells = document.querySelectorAll('[id^="ss_node_lt_"] .latency_val').length;
-	if (!node_nu || db_ss["ss_basic_latency_val"] == "0") {
+	if (!node_nu || !is_latency_feature_enabled()) {
 		return false;
 	}
 	if (latencyCells < node_nu) {
@@ -11435,6 +11805,9 @@ function ensure_single_latency_poll(node, delayMs) {
 	}, delayMs);
 }
 function update_latency_finish_time() {
+	if (!is_latency_feature_enabled()) {
+		return;
+	}
 	$.ajax({
 		type: "GET",
 		url: "/_api/ss_basic_webtest_ts",
@@ -11463,6 +11836,11 @@ function is_latency_terminal_state(value){
 	return $.isNumeric(value) || value == "failed" || value == "timeout" || value == "ns" || value == "stopped" || value == "canceled";
 }
 function update_latency_action_links() {
+	if (!is_latency_feature_enabled()) {
+		$("#ss_wts_show").html("");
+		update_node_delete_buttons_state();
+		return;
+	}
 	var running = batch_test_running;
 	var startEnabled = !running;
 	var stopEnabled = running && !batch_stop_pending;
@@ -11723,96 +12101,98 @@ function start_single_latency_ws(node) {
 	};
 	return true;
 }
-function test_latency_now(test_flag) {
-	if(test_flag == 2){
-		cancel_schema2_postchange_jobs();
-	}
-	var dbus_post = {};
-	dbus_post["ss_basic_latency_val"] = String(test_flag);
-	if(test_flag == 0){
-		var post_para = "close_latency_test";
-	}else if(test_flag == 2){
-		var post_para = "manual_webtest";
-	}
-	if(ws_flag == 1 && test_flag == 2){
-		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_start_batch", function() {
-			close_latency_ws();
-			close_latency_flag = 0;
-			batch_test_running = true;
-			batch_stop_pending = false;
-			var startFollow = function() {
-				$(".latency .latency_val").html("waiting");
-				$("#ss_wts_show").html("<em>【测速中...】</em>");
-				$("#dropdown").width(240);
-				update_latency_action_links();
-				start_latency_ws(2);
-			};
-			if(latency_table_is_fresh()){
-				startFollow();
-			}else{
-				refresh_table(startFollow);
+	function apply_latency_feature_enabled_ui() {
+		close_latency_ws();
+		close_latency_flag = 0;
+		db_ss["ss_basic_latency_val"] = "2";
+		batch_test_running = true;
+		batch_stop_pending = false;
+		var startFollow = function() {
+			$(".latency .latency_val").html("waiting");
+			$("#ss_wts_show").html("<em>【测速中...】</em>");
+			$("#dropdown").width(240);
+			update_latency_action_links();
+			if(start_latency_ws(2)){
+				return;
 			}
-		}, null, function() {
-			layer.msg("测速启动失败，已回退到HTTP方式");
-		});
-		return;
+			batchLatencyPollSeq += 1;
+			get_latency_data(2, batchLatencyPollSeq);
+		};
+		if(latency_table_is_fresh()){
+			startFollow();
+		}else{
+			refresh_table(startFollow);
+		}
 	}
-	if(ws_flag == 1 && test_flag == 0){
-		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_close_latency", function() {
-			close_latency_ws();
-			refresh_table(function() {
-				close_latency_flag = 1;
-				batch_test_running = false;
-				batch_stop_pending = false;
-				$("#ss_wts_show").html("");
-				$("#dropdown").width(150);
-				update_latency_action_links();
-			});
-		}, null, function() {
-			layer.msg("关闭延迟测试失败，已回退到HTTP方式");
+	function apply_latency_feature_disabled_ui() {
+		close_latency_ws();
+		close_single_latency_ws();
+		db_ss["ss_basic_latency_val"] = "0";
+		close_latency_flag = 1;
+		batch_test_running = false;
+		batch_stop_pending = false;
+		single_test_running = false;
+		single_test_node = null;
+		singleLatencyPollingNode = null;
+		$("#ss_wts_show").html("");
+		$("#dropdown").width(150);
+		refresh_table(function() {
+			update_latency_action_links();
 		});
-		return;
 	}
-	//now post
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_webtest.sh", "params":[post_para], "fields": dbus_post};
-	$.ajax({
-		type: "POST",
-		cache:false,
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		success: function(response) {
-			if (response.result == id){
-				$(".show-btn1").trigger("click");
-				if(test_flag == 0){
-					close_latency_ws();
-					refresh_table(function() {
-						close_latency_flag = 1;
-						batch_test_running = false;
-						batch_stop_pending = false;
-						$("#ss_wts_show").html("");
-						$("#dropdown").width(150);
-						update_latency_action_links();
-					});
-				}else if(test_flag == 2){
-					close_latency_ws();
-					close_latency_flag = 0;
-					batch_test_running = true;
-					batch_stop_pending = false;
-				refresh_table(function() {
-						$(".latency .latency_val").html("waiting");
-						$("#ss_wts_show").html("<em>【测速中...】</em>");
-						$("#dropdown").width(240);
-						update_latency_action_links();
-						batchLatencyPollSeq += 1;
-						get_latency_data(2, batchLatencyPollSeq);
-					});
+	function post_latency_test_http(test_flag) {
+		var dbus_post = {};
+		var post_para = "";
+		var id = parseInt(Math.random() * 100000000);
+		dbus_post["ss_basic_latency_val"] = String(test_flag);
+		if(test_flag == 0){
+			post_para = "close_latency_test";
+		}else if(test_flag == 2){
+			post_para = "manual_webtest";
+		}
+		var postData = {"id": id, "method": "ss_webtest.sh", "params":[post_para], "fields": dbus_post};
+		$.ajax({
+			type: "POST",
+			cache:false,
+			url: "/_api/",
+			data: JSON.stringify(postData),
+			dataType: "json",
+			success: function(response) {
+				if (response.result == id){
+					$(".show-btn1").trigger("click");
+					if(test_flag == 0){
+						apply_latency_feature_disabled_ui();
+					}else if(test_flag == 2){
+						apply_latency_feature_enabled_ui();
+					}
 				}
 			}
+		});
+	}
+	function test_latency_now(test_flag) {
+		if(test_flag == 2){
+			cancel_schema2_postchange_jobs();
 		}
-	});
-}
+		if(ws_flag == 1 && test_flag == 2){
+			send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_start_batch", function() {
+				apply_latency_feature_enabled_ui();
+			}, null, function() {
+				layer.msg("测速启动失败，已回退到HTTP方式");
+				post_latency_test_http(test_flag);
+			});
+			return;
+		}
+		if(ws_flag == 1 && test_flag == 0){
+			send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_close_latency", function() {
+				apply_latency_feature_disabled_ui();
+			}, null, function() {
+				layer.msg("关闭延迟测试失败，已回退到HTTP方式");
+				post_latency_test_http(test_flag);
+			});
+			return;
+		}
+		post_latency_test_http(test_flag);
+	}
 function stop_latency_batch() {
 	if(!batch_test_running || batch_stop_pending){
 		return;
@@ -11891,29 +12271,11 @@ function clear_latency_cache() {
 		}
 	});
 }
-function enable_latency_feature() {
-	var dbus_post = {};
-	dbus_post["ss_basic_latency_val"] = "2";
-	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_webtest.sh", "params":["0"], "fields": dbus_post};
-	$.ajax({
-		type: "POST",
-		cache:false,
-		url: "/_api/",
-		data: JSON.stringify(postData),
-		dataType: "json",
-		success: function(response) {
-			if (response.result == id){
-				close_latency_flag = 0;
-				batch_test_running = false;
-				batch_stop_pending = false;
-				refresh_table();
-			}
-		}
-	});
-}
+	function enable_latency_feature() {
+		test_latency_now(2);
+	}
 function normalize_latency_val(){
-	if(db_ss["ss_basic_latency_val"] === undefined || db_ss["ss_basic_latency_val"] === null || db_ss["ss_basic_latency_val"] === "" || db_ss["ss_basic_latency_val"] == "0"){
+	if(db_ss["ss_basic_latency_val"] === undefined || db_ss["ss_basic_latency_val"] === null || db_ss["ss_basic_latency_val"] === ""){
 		db_ss["ss_basic_latency_val"] = "2";
 	}
 	if(db_ss["ss_basic_latency_batch"] === undefined || db_ss["ss_basic_latency_batch"] === null || db_ss["ss_basic_latency_batch"] === ""){
@@ -11925,6 +12287,7 @@ function normalize_latency_val(){
 }
 function test_latency_single(node){
 	if(!node) return;
+	if(!is_latency_feature_enabled()) return;
 	cancel_schema2_postchange_jobs();
 	if(batch_test_running || batch_stop_pending || schema2NodeDeleteInFlight || schema2NodeDeleteQueue.length > 0){
 		return;
@@ -12021,6 +12384,7 @@ function check_batch_status(cb){
 }
 function latency_test(action) {
 	if(action == "0") return;
+	if(!is_latency_feature_enabled()) return;
 	//console.log("start latency test")
 	
 	if(action == "2"){
@@ -12087,7 +12451,7 @@ function latency_test(action) {
 }
 function get_latency_data_single(node, retry, pollSeq){
 	pollSeq = parseInt(pollSeq || singleLatencyPollSeq, 10) || 0;
-	if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live()) {
+	if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live() || !is_latency_feature_enabled()) {
 		singleLatencyPollingNode = null;
 		return false;
 	}
@@ -12107,10 +12471,10 @@ function get_latency_data_single(node, retry, pollSeq){
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
-			if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live()) {
-				singleLatencyPollingNode = null;
-				return;
-			}
+				if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live() || !is_latency_feature_enabled()) {
+					singleLatencyPollingNode = null;
+					return;
+				}
 			const lines = res.split('\n');
 			var value = null;
 			var stopAfterNode = false;
@@ -12146,10 +12510,10 @@ function get_latency_data_single(node, retry, pollSeq){
 			}
 		},
 		error: function(){
-			if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live()) {
-				singleLatencyPollingNode = null;
-				return;
-			}
+				if (pollSeq !== singleLatencyPollSeq || !should_run_node_latency_live() || !is_latency_feature_enabled()) {
+					singleLatencyPollingNode = null;
+					return;
+				}
 			if (!single_test_running || String(single_test_node || "") != String(node)) {
 				singleLatencyPollingNode = null;
 			}
@@ -12181,7 +12545,7 @@ function enable_latency_buttons(){
 }
 function get_latency_data(action, pollSeq){
 	pollSeq = parseInt(pollSeq || batchLatencyPollSeq, 10) || 0;
-	if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live()) {
+	if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live() || !is_latency_feature_enabled()) {
 		return false;
 	}
 	if(close_latency_flag == 1) return false;
@@ -12192,9 +12556,9 @@ function get_latency_data(action, pollSeq){
 		cache:false,
 		dataType: 'text',
 		success: function(res) {
-			if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live()) {
-				return;
-			}
+				if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live() || !is_latency_feature_enabled()) {
+					return;
+				}
 			const array = parse_webtest_lines(res);
 			write_webtest(array);
 			const hasStop = array.some(function(item) {
@@ -12208,15 +12572,15 @@ function get_latency_data(action, pollSeq){
 			}
 		},
 		error: function(XmlHttpRequest, textStatus, errorThrown){
-			if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live()) {
-				return;
-			}
+				if (pollSeq !== batchLatencyPollSeq || !should_run_node_latency_live() || !is_latency_feature_enabled()) {
+					return;
+				}
 			setTimeout(function() { get_latency_data(action, pollSeq); }, 1000);
 		},
 	});
 }
 function load_latency_cache(){
-	if (!should_run_node_latency_live()) {
+	if (!should_run_node_latency_live() || !is_latency_feature_enabled()) {
 		return false;
 	}
 	var handle_cache = function(res) {
@@ -12317,6 +12681,9 @@ function count_usable_webtest(array){
 	return cnt;
 }
 function write_webtest(ps){
+	if (!is_latency_feature_enabled()) {
+		return;
+	}
 	for(var i = 0; i<ps.length; i++){
 		var nu = ps[i][0];
 		var lag = ps[i][1];

@@ -2921,6 +2921,10 @@ get_webtest_usable_count(){
 
 webtest_web(){
 	ensure_latency_batch
+	if ! latency_feature_enabled; then
+		wt_http_response "ok0, webtest disabled!"
+		return 0
+	fi
 	set_default "ss_basic_lt_web_time" "30"
 	# 1. 如果 lock 存在，说明正在 webtest，那么告诉 web 自己去拿结果吧
 	if [ -f "/tmp/webtest.lock" ];then
@@ -2971,6 +2975,9 @@ webtest_web(){
 }
 
 start_webtest(){
+	if ! latency_feature_enabled; then
+		return 0
+	fi
 	wt_kill_stale_batch_runners "$$"
 	if wt_has_active_test_runner "$$"; then
 		return 0
@@ -3960,6 +3967,31 @@ clean_webtest(){
 	rm -rf ${TMP2}/*
 }
 
+latency_feature_enabled(){
+	local latency_val
+	latency_val="$(dbus get ss_basic_latency_val 2>/dev/null)"
+	[ -n "${latency_val}" ] || latency_val="2"
+	[ "${latency_val}" != "0" ]
+}
+
+clear_webtest_results(){
+	clean_webtest
+	dbus remove ss_basic_webtest_ts
+	rm -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_HISTORY}" >/dev/null 2>&1
+}
+
+clear_webtest_all(){
+	clear_webtest_results
+	rm -rf "${TMP2}" >/dev/null 2>&1
+	rm -rf "${FSS_WEBTEST_CACHE_DIR}" "${WT_WEBTEST_CACHE_LOCK}" "${WT_WEBTEST_CACHE_STATE_DIR}" >/dev/null 2>&1
+}
+
+disable_latency_feature(){
+	dbus set ss_basic_latency_val=0 >/dev/null 2>&1
+	sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
+	clear_webtest_all
+}
+
 wt_follow_webtest_ws() {
 	local stream_inode=""
 	local last_stream_inode=""
@@ -4233,9 +4265,7 @@ clear_webtest)
 		exit 0
 	fi
 	wt_http_response $1
-	clean_webtest
-	dbus remove ss_basic_webtest_ts
-	rm -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_HISTORY}"
+	clear_webtest_results
 	;;
 cleanup_helpers)
 	wt_runtime_cleanup
@@ -4264,8 +4294,7 @@ manual_webtest)
 	;;
 close_latency_test)
 	wt_http_response $1
-	clean_webtest
-	dbus remove ss_basic_webtest_ts
+	disable_latency_feature
 	;;
 stop_webtest)
 	wt_http_response $1
@@ -4288,16 +4317,12 @@ ws_clear_cache)
 	if [ -f "/tmp/webtest.lock" ];then
 		echo busy
 	else
-		clean_webtest
-		dbus remove ss_basic_webtest_ts
-		rm -f "${WT_WEBTEST_BACKUP}" "${WT_WEBTEST_HISTORY}"
+		clear_webtest_results
 		echo XU6J03M6
 	fi
 	;;
 ws_close_latency)
-	dbus set ss_basic_latency_val=0 >/dev/null 2>&1
-	clean_webtest
-	dbus remove ss_basic_webtest_ts
+	disable_latency_feature
 	echo XU6J03M6
 	;;
 ws_single_test)
