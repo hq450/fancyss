@@ -6,9 +6,11 @@ STATUS_FRONT_CACHE=/tmp/upload/ss_status_front.txt
 STATUS_BACK_CACHE=/tmp/upload/ss_status.txt
 STATUS_WS_CACHE_FILE=/tmp/upload/ss_status_ws.txt
 STATUS_WS_LOCK_DIR=/tmp/fancyss_status_ws.lock
+STATUS_WS_LOCK_PID_FILE=${STATUS_WS_LOCK_DIR}/pid
 STATUS_SERVE_SOCKET=/tmp/status-tool.sock
 STATUS_CTL_BIN=/koolshare/bin/statusctl
 STATUS_DAEMON_SCRIPT=/koolshare/scripts/ss_status_daemon.sh
+STATUS_CACHE_MAX_AGE=120
 
 LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 HEART_STATUS=$(dbus get ss_heart_beat)
@@ -55,21 +57,75 @@ get_status_payload(){
 	fi
 }
 
-read_front_cache(){
-	local payload=""
-	[ -s "${STATUS_FRONT_CACHE}" ] || return 1
-	payload="$(cat "${STATUS_FRONT_CACHE}" 2>/dev/null)" || return 1
+status_tool_tz(){
+	local tz=""
+	tz="$(nvram get time_zone 2>/dev/null)"
+	[ -n "${tz}" ] || tz="$(nvram get time_zone_x 2>/dev/null)"
+	[ -n "${tz}" ] || tz="CST-8"
+	printf '%s' "${tz}"
+}
+
+status_payload_epoch(){
+	local payload="$1"
+	local stamp=""
+	stamp="$(printf '%s' "${payload}" | sed -n 's/.*【\([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]\)】.*/\1/p' | sed -n '1p')"
+	[ -n "${stamp}" ] || return 1
+	date -d "${stamp}" +%s 2>/dev/null
+}
+
+status_payload_is_fresh(){
+	local payload="$1"
+	local now epoch age
+	now="$(date +%s 2>/dev/null)" || return 0
+	epoch="$(status_payload_epoch "${payload}")" || return 0
+	[ -n "${epoch}" ] || return 0
+	age=$((now - epoch))
+	[ "${age}" -lt 0 ] && age=$((0 - age))
+	[ "${age}" -le "${STATUS_CACHE_MAX_AGE}" ]
+}
+
+status_payload_matches_mode(){
+	local payload="$1"
+	[ -n "${payload}" ] || return 1
 	case "${payload}" in
 	*等待*|*Waiting*)
 		return 1
 		;;
 	esac
+	status_payload_is_fresh "${payload}" || return 1
+	if [ "${PROXY_IPV6}" = "1" ];then
+		case "${payload}" in
+		*国外IPv4*@@*国外IPv6*@@*国内*)
+			return 0
+			;;
+		esac
+		return 1
+	fi
+	case "${payload}" in
+	*国外IPv4*|*国外IPv6*)
+		return 1
+		;;
+	*@@*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+read_front_cache(){
+	local payload=""
+	[ -s "${STATUS_FRONT_CACHE}" ] || return 1
+	payload="$(cat "${STATUS_FRONT_CACHE}" 2>/dev/null)" || return 1
+	status_payload_matches_mode "${payload}" || return 1
 	printf '%s' "${payload}"
 }
 
 read_ws_cache(){
+	local payload=""
 	[ -s "${STATUS_WS_CACHE_FILE}" ] || return 1
-	cat "${STATUS_WS_CACHE_FILE}" 2>/dev/null
+	payload="$(cat "${STATUS_WS_CACHE_FILE}" 2>/dev/null)" || return 1
+	status_payload_matches_mode "${payload}" || return 1
+	printf '%s' "${payload}"
 }
 
 write_ws_cache(){
@@ -78,10 +134,32 @@ write_ws_cache(){
 }
 
 acquire_status_ws_lock(){
-	mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+	local pid=""
+	if mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1;then
+		echo "$$" > "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null
+		return 0
+	fi
+	if [ -f "${STATUS_WS_LOCK_PID_FILE}" ];then
+		pid="$(cat "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null)"
+		if [ -z "${pid}" ] || ! kill -0 "${pid}" >/dev/null 2>&1;then
+			rm -rf "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+			if mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1;then
+				echo "$$" > "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null
+				return 0
+			fi
+		fi
+	else
+		rm -rf "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+		if mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1;then
+			echo "$$" > "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null
+			return 0
+		fi
+	fi
+	return 1
 }
 
 release_status_ws_lock(){
+	rm -f "${STATUS_WS_LOCK_PID_FILE}" >/dev/null 2>&1
 	rmdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
 }
 
@@ -117,9 +195,9 @@ json_probe_line(){
 refresh_payload_once(){
 	local status_tool="$1"
 	if [ "${PROXY_IPV6}" = "1" ];then
-		"${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 1 2>/dev/null || return 1
+		TZ="$(status_tool_tz)" "${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 1 2>/dev/null || return 1
 	else
-		"${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 0 --foreign-proxy "socks5://127.0.0.1:23456" 2>/dev/null || return 1
+		TZ="$(status_tool_tz)" "${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 0 --foreign-proxy "socks5://127.0.0.1:23456" 2>/dev/null || return 1
 	fi
 }
 
@@ -131,7 +209,9 @@ refresh_payload_via_ctl(){
 		payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" get-cache 2>/dev/null)" || return 1
 		;;
 	esac
-	printf '%s' "${payload}" | sed 's/[[:space:]]*$//'
+	payload="$(printf '%s' "${payload}" | sed 's/[[:space:]]*$//')"
+	status_payload_matches_mode "${payload}" || return 1
+	printf '%s' "${payload}"
 }
 
 ensure_status_serve_runtime(){

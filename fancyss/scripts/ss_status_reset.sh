@@ -18,6 +18,14 @@ STATUS_DAEMON_STATE="/tmp/upload/ss_status_daemon.json"
 STATUS_DAEMON_LEGACY="/tmp/upload/ss_status_front.txt"
 STATUS_SERVE_SOCKET="/tmp/status-tool.sock"
 
+status_tool_tz() {
+	local tz=""
+	tz="$(nvram get time_zone 2>/dev/null)"
+	[ -n "${tz}" ] || tz="$(nvram get time_zone_x 2>/dev/null)"
+	[ -n "${tz}" ] || tz="CST-8"
+	printf '%s' "${tz}"
+}
+
 pick_status_interval_ms() {
 	case "$(dbus get ss_basic_interval)" in
 	1) echo 1000 ;;
@@ -75,7 +83,7 @@ start_status_runtime() {
 	$(pick_status_urls)
 	EOF
 	if [ "$ss_failover_enable" == "1" ];then
-		start-stop-daemon -S -q -b -m -p "${STATUS_DAEMON_PIDFILE}" -x "${STATUS_TOOL_BIN}" -- daemon \
+		env TZ="$(status_tool_tz)" start-stop-daemon -S -q -b -m -p "${STATUS_DAEMON_PIDFILE}" -x "${STATUS_TOOL_BIN}" -- daemon \
 			--china-url "${chn_url}" \
 			--foreign-url "${frn_url}" \
 			--proxy-ipv6 "${proxy_ipv6:-0}" \
@@ -88,7 +96,7 @@ start_status_runtime() {
 			[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
 		done
 		rm -f "${STATUS_SERVE_SOCKET}" "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
-		env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" "${STATUS_TOOL_BIN}" serve \
+		env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" TZ="$(status_tool_tz)" "${STATUS_TOOL_BIN}" serve \
 			--socket-path "${STATUS_SERVE_SOCKET}" \
 			--china-url "${chn_url}" \
 			--foreign-url "${frn_url}" \

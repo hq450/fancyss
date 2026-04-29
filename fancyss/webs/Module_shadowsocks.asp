@@ -13102,6 +13102,18 @@ function status_payload_is_waiting(res) {
 	return res.indexOf("等待") != -1 || res.indexOf("Waiting") != -1;
 }
 
+function status_payload_matches_current_mode(res) {
+	res = String(res || "");
+	if (!res || res.indexOf("@@") == -1 || status_payload_is_waiting(res)) {
+		return false;
+	}
+	var ipv6Mode = status_ipv6_enabled();
+	if (ipv6Mode) {
+		return res.indexOf("国外IPv4") != -1 && res.indexOf("国外IPv6") != -1;
+	}
+	return res.indexOf("国外IPv4") == -1 && res.indexOf("国外IPv6") == -1;
+}
+
 function apply_ss_status(res, with_heartbeat, showRefreshPrompt) {
 	if (typeof res != "string") {
 		if (res === null || typeof res == "undefined") {
@@ -13111,6 +13123,9 @@ function apply_ss_status(res, with_heartbeat, showRefreshPrompt) {
 		}
 	}
 	if (res && res.indexOf("@@") != -1){
+		if (!with_heartbeat && !status_payload_matches_current_mode(res)) {
+			return false;
+		}
 		var arr = res.split("@@");
 		var ipv6Mode = with_heartbeat ? (arr.length >= 4) : (arr.length >= 3);
 		var expect = ipv6Mode ? 3 : 2;
