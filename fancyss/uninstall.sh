@@ -36,18 +36,50 @@ remove_fancyss_cron(){
 	sed -i '/ssconfig\.sh/d;/ss_rule_update\.sh/d;/ss_node_subscribe\.sh/d;/ss_webtest\.sh/d;/fancyss/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 }
 
+stop_fancyss_websocketd(){
+	local pid=""
+	local WS_PIDFILE="/var/run/fancyss-websocketd.pid"
+	rm -f /tmp/fancyss_restart_websocketd.sh /tmp/fancyss_self_update_websocketd_restart.sh >/dev/null 2>&1
+	rm -f /tmp/fancyss_websocketd_changed /tmp/fancyss_pending_websocketd_restart /tmp/fancyss_self_update_installing >/dev/null 2>&1
+	rm -rf /tmp/fancyss_deferred_websocketd >/dev/null 2>&1
+	if [ -f "${WS_PIDFILE}" ]; then
+		pid="$(cat "${WS_PIDFILE}" 2>/dev/null)"
+		if [ -n "${pid}" ]; then
+			kill "${pid}" >/dev/null 2>&1 || true
+			sleep 1
+			kill -9 "${pid}" >/dev/null 2>&1 || true
+		fi
+	fi
+	killall websocketd >/dev/null 2>&1 || true
+	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill "${pid}" >/dev/null 2>&1 || true
+		sleep 1
+		kill -9 "${pid}" >/dev/null 2>&1 || true
+	done
+	ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill "${pid}" >/dev/null 2>&1 || true
+		sleep 1
+		kill -9 "${pid}" >/dev/null 2>&1 || true
+	done
+	rm -f "${WS_PIDFILE}" >/dev/null 2>&1 || true
+}
+
 # stop process
 sh /koolshare/ss/ssconfig.sh stop >/dev/null 2>&1
 
-# stop websockted
-killall websocketd >/dev/null 2>&1
+# stop websocketd
+stop_fancyss_websocketd
 
 # remove configure
 sh /koolshare/scripts/ss_conf.sh koolshare 3 >/dev/null 2>&1
 purge_fancyss_dbus
 remove_fancyss_cron
 
-# remove websockted
+# remove websocketd
 rm -rf /koolshare/bin/websocketd >/dev/null 2>&1
 
 # remove files

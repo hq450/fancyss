@@ -35,8 +35,16 @@ install_fancyss(){
 	tar -zxf shadowsocks.tar.gz
 	chmod a+x /tmp/shadowsocks/install.sh
 	echo_date "开始安装更新文件..."
+	echo "$$" >/tmp/fancyss_self_update_installing
 	sh /tmp/shadowsocks/install.sh
 	rm -rf /tmp/shadowsocks*
+}
+
+restart_websocketd_after_update(){
+	[ -f "/tmp/fancyss_pending_websocketd_restart" ] && return 0
+	rm -f /tmp/fancyss_self_update_installing >/dev/null 2>&1
+	rm -rf /tmp/fancyss_deferred_websocketd >/dev/null 2>&1
+	return 0
 }
 
 update_ss(){
@@ -122,6 +130,7 @@ update)
 	(
 		update_ss >> /tmp/upload/ss_log.txt 2>&1
 		echo XU6J03M6 >> /tmp/upload/ss_log.txt
+		restart_websocketd_after_update
 	) &
 	;;
 esac

@@ -56,6 +56,125 @@ refresh_runtime_caches_after_install() {
 	fss_schedule_webtest_cache_warm >/dev/null 2>&1 || true
 }
 
+get_proc_name(){
+	local pid="$1"
+	[ -n "${pid}" ] || return 1
+	sed -n 's/^Name:[[:space:]]*//p' "/proc/${pid}/status" 2>/dev/null | sed -n '1p'
+}
+
+get_proc_cmdline(){
+	local pid="$1"
+	[ -n "${pid}" ] || return 1
+	tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null
+}
+
+get_proc_ppid(){
+	local pid="$1"
+	[ -n "${pid}" ] || return 1
+	sed -n 's/^PPid:[[:space:]]*//p' "/proc/${pid}/status" 2>/dev/null | sed -n '1p'
+}
+
+install_parent_chain_contains(){
+	local pattern="$1"
+	local pid="$$"
+	local depth=0
+	local name=""
+	local cmdline=""
+	while [ -n "${pid}" ] && [ "${pid}" != "0" ] && [ "${depth}" -lt 12 ]
+	do
+		name="$(get_proc_name "${pid}")"
+		cmdline="$(get_proc_cmdline "${pid}")"
+		if echo "${name} ${cmdline}" | grep -q "${pattern}"; then
+			return 0
+		fi
+		pid="$(get_proc_ppid "${pid}")"
+		depth=$((depth + 1))
+	done
+	return 1
+}
+
+is_softcenter_offline_install(){
+	install_parent_chain_contains "ks_tar_install\\.sh\\|start-stop-daemon"
+}
+
+is_fancyss_self_update_install(){
+	[ -f "/tmp/fancyss_self_update_installing" ] && return 0
+	install_parent_chain_contains "ss_update\\.sh\\|/koolshare/ss/websocket"
+}
+
+md5_file() {
+	local file="$1"
+	[ -f "${file}" ] || return 1
+	md5sum "${file}" 2>/dev/null | awk '{print $1}'
+}
+
+prepare_websocketd_package() {
+	local current="/koolshare/bin/websocketd"
+	local incoming="/tmp/shadowsocks/bin/websocketd"
+	local current_md5=""
+	local incoming_md5=""
+	rm -f /tmp/fancyss_websocketd_changed /tmp/fancyss_pending_websocketd_restart >/dev/null 2>&1 || true
+	rm -rf /tmp/fancyss_deferred_websocketd >/dev/null 2>&1 || true
+	[ -f "${incoming}" ] || {
+		echo_date "本次安装包未包含 websocketd，跳过 websocketd 替换检查。"
+		return 0
+	}
+	if [ -f "${current}" ]; then
+		current_md5="$(md5_file "${current}")"
+		incoming_md5="$(md5_file "${incoming}")"
+		if [ -n "${current_md5}" ] && [ "${current_md5}" = "${incoming_md5}" ]; then
+			rm -f "${incoming}" >/dev/null 2>&1 || true
+			echo_date "websocketd 未变化，跳过二进制替换和进程重启。"
+			return 0
+		fi
+		echo_date "检测到 websocketd 二进制变化，将按安装场景安全切换。"
+	else
+		echo_date "当前未安装 websocketd，将安装并拉起 websocketd。"
+	fi
+	echo 1 >/tmp/fancyss_websocketd_changed
+	if is_fancyss_self_update_install; then
+		defer_websocketd_binary_for_self_update
+	fi
+}
+
+prepare_websocketd_for_copy() {
+	local incoming="/tmp/shadowsocks/bin/websocketd"
+	[ -f "/tmp/fancyss_websocketd_changed" ] || return 0
+	if ! is_fancyss_self_update_install && [ -f "${incoming}" ]; then
+		echo_date "准备切换 websocketd，先停止旧 websocketd 进程..."
+		stop_websocketd_for_install
+	fi
+}
+
+stop_websocketd_for_install() {
+	local pid=""
+	local WS_PIDFILE="/var/run/fancyss-websocketd.pid"
+	if [ -f "${WS_PIDFILE}" ]; then
+		pid="$(cat "${WS_PIDFILE}" 2>/dev/null)"
+		if [ -n "${pid}" ]; then
+			kill "${pid}" >/dev/null 2>&1 || true
+			sleep 1
+			kill -9 "${pid}" >/dev/null 2>&1 || true
+		fi
+	fi
+	killall websocketd >/dev/null 2>&1 || true
+	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill "${pid}" >/dev/null 2>&1 || true
+		sleep 1
+		kill -9 "${pid}" >/dev/null 2>&1 || true
+	done
+	ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+	do
+		[ -n "${pid}" ] || continue
+		kill "${pid}" >/dev/null 2>&1 || true
+		sleep 1
+		kill -9 "${pid}" >/dev/null 2>&1 || true
+	done
+	rm -f "${WS_PIDFILE}" >/dev/null 2>&1 || true
+}
+
 restart_websocketd_async() {
 	local helper="/tmp/fancyss_restart_websocketd.sh"
 	cat > "${helper}" <<-'EOF'
@@ -81,13 +200,6 @@ restart_websocketd_async() {
 			fi
 		fi
 		killall websocketd >/dev/null 2>&1 || true
-		ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
-		do
-			[ -n "${pid}" ] || continue
-			kill "${pid}" >/dev/null 2>&1 || true
-			sleep 1
-			kill -9 "${pid}" >/dev/null 2>&1 || true
-		done
 		ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
 		do
 			[ -n "${pid}" ] || continue
@@ -104,10 +216,105 @@ restart_websocketd_async() {
 				echo $! > "${WS_PIDFILE}"
 			fi
 		fi
+		rm -f /tmp/fancyss_websocketd_changed >/dev/null 2>&1 || true
 		rm -f "$0" >/dev/null 2>&1
 	EOF
 	chmod +x "${helper}" >/dev/null 2>&1
 	sh "${helper}" >/dev/null 2>&1 &
+}
+
+schedule_websocketd_after_self_update() {
+	local helper="/tmp/fancyss_self_update_websocketd_restart.sh"
+	cat > "${helper}" <<-'EOF'
+		#!/bin/sh
+		WS_PIDFILE="/var/run/fancyss-websocketd.pid"
+		SSD=""
+		for candidate in /sbin/start-stop-daemon /usr/sbin/start-stop-daemon /bin/start-stop-daemon /usr/bin/start-stop-daemon
+		do
+			[ -x "${candidate}" ] || continue
+			SSD="${candidate}"
+			break
+		done
+		waited=0
+		while [ "${waited}" -lt 120 ]
+		do
+			grep -q "XU6J03M6" /tmp/upload/ss_log.txt 2>/dev/null && break
+			sleep 1
+			waited=$((waited + 1))
+		done
+		sleep 3
+		if [ -x "/tmp/fancyss_deferred_websocketd/websocketd" ]; then
+			tmp_ws="/koolshare/bin/websocketd.fancyss-new.$$"
+			if cp -f /tmp/fancyss_deferred_websocketd/websocketd "${tmp_ws}" >/dev/null 2>&1; then
+				chmod 755 "${tmp_ws}" >/dev/null 2>&1 || true
+				mv -f "${tmp_ws}" /koolshare/bin/websocketd >/dev/null 2>&1 || rm -f "${tmp_ws}" >/dev/null 2>&1 || true
+			fi
+			rm -rf /tmp/fancyss_deferred_websocketd >/dev/null 2>&1 || true
+		fi
+		if [ -f "${WS_PIDFILE}" ]; then
+			if [ -n "${SSD}" ]; then
+				"${SSD}" -K -q -p "${WS_PIDFILE}" >/dev/null 2>&1 || true
+			fi
+			pid="$(cat "${WS_PIDFILE}" 2>/dev/null)"
+			if [ -n "${pid}" ]; then
+				kill "${pid}" >/dev/null 2>&1 || true
+				sleep 1
+				kill -9 "${pid}" >/dev/null 2>&1 || true
+			fi
+		fi
+		killall websocketd >/dev/null 2>&1 || true
+		ps w | grep -F "/koolshare/ss/websocket" | grep -v grep | awk '{print $1}' | while read -r pid
+		do
+			[ -n "${pid}" ] || continue
+			kill "${pid}" >/dev/null 2>&1 || true
+			sleep 1
+			kill -9 "${pid}" >/dev/null 2>&1 || true
+		done
+		rm -f "${WS_PIDFILE}" /tmp/fancyss_self_update_installing /tmp/fancyss_pending_websocketd_restart >/dev/null 2>&1 || true
+		if [ -x "/koolshare/bin/websocketd" ] && [ -f "/koolshare/ss/websocket" ]; then
+			if [ -n "${SSD}" ]; then
+				"${SSD}" -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1
+			else
+				/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
+				echo $! > "${WS_PIDFILE}"
+			fi
+		fi
+		rm -f /tmp/fancyss_websocketd_changed >/dev/null 2>&1 || true
+		rm -f "$0" >/dev/null 2>&1
+	EOF
+	chmod +x "${helper}" >/dev/null 2>&1
+	date +%s 2>/dev/null > /tmp/fancyss_pending_websocketd_restart
+	sh "${helper}" >/dev/null 2>&1 &
+}
+
+handle_websocketd_after_install() {
+	if [ ! -f "/tmp/fancyss_websocketd_changed" ]; then
+		return 0
+	fi
+	if is_fancyss_self_update_install; then
+		if [ -x "/tmp/fancyss_deferred_websocketd/websocketd" ]; then
+			echo_date "检测到 fancyss 自更新场景，延后静默切换 websocketd，避免中断当前 WebSocket 日志。"
+			schedule_websocketd_after_self_update
+		else
+			echo_date "检测到 fancyss 自更新场景，本次无需切换 websocketd。"
+		fi
+		return 0
+	fi
+	if is_softcenter_offline_install; then
+		echo_date "检测到软件中心离线安装场景，安装完成后拉起新的 websocketd。"
+	else
+		echo_date "websocketd 已变化，安装完成后拉起新的 websocketd。"
+	fi
+	restart_websocketd_async
+}
+
+defer_websocketd_binary_for_self_update() {
+	[ -f "/tmp/shadowsocks/bin/websocketd" ] || return 0
+	mkdir -p /tmp/fancyss_deferred_websocketd >/dev/null 2>&1 || return 0
+	cp -f /tmp/shadowsocks/bin/websocketd /tmp/fancyss_deferred_websocketd/websocketd >/dev/null 2>&1 || return 0
+	chmod 755 /tmp/fancyss_deferred_websocketd/websocketd >/dev/null 2>&1 || true
+	rm -f /tmp/shadowsocks/bin/websocketd >/dev/null 2>&1 || true
+	echo_date "自更新日志通道仍由当前 websocketd 承载，新 websocketd 将在日志结束后静默替换。"
 }
 
 restart_status_runtime_async() {
@@ -851,11 +1058,17 @@ exit_install(){
 	cleanup_install_tmp
 	case $state in
 		1)
+			if is_fancyss_self_update_install; then
+				rm -f /tmp/fancyss_self_update_installing /tmp/fancyss_pending_websocketd_restart >/dev/null 2>&1 || true
+				rm -rf /tmp/fancyss_deferred_websocketd >/dev/null 2>&1 || true
+			fi
+			rm -f /tmp/fancyss_websocketd_changed >/dev/null 2>&1 || true
 			echo_date "fancyss项目地址：https://github.com/hq450/fancyss"
 			echo_date "退出安装！"
 			exit 1
 			;;
 		0|*)
+			rm -f /tmp/fancyss_websocketd_changed >/dev/null 2>&1 || true
 			exit 0
 			;;
 	esac
@@ -1420,7 +1633,9 @@ install_now(){
 	if [ -n "$(which socat)" ];then
 		rm -rf /tmp/shadowsocks/bin/uredir
 	fi
-	
+
+	prepare_websocketd_package
+
 	# 将一些较大的二进制文件安装到/data分区，以节约jffs分区空间
 	# 1. 卸载的时候记得删除/data分区内的二进制
 	# 2. 打包的时候应该用/data分区内的二进制
@@ -1453,20 +1668,37 @@ install_now(){
 	echo_date "检测jffs分区剩余空间..."
 
 	SPACE_AVAL=$(df | grep -w "/jffs" | awk '{print $4}')
+	JFFS_FS_TYPE=$(mount | awk '$3 == "/jffs" {print $5; exit}')
+	SPACE_TREE_NEED=$(du -s /tmp/shadowsocks 2>/dev/null | awk '{print $1}')
 	cd /tmp
 	tar -cz -f /tmp/test_size.tar.gz shadowsocks/
 	if [ -f "/tmp/test_size.tar.gz" ];then
-		SPACE_NEED=$(du -s /tmp/test_size.tar.gz | awk '{print $1}')
+		SPACE_PACK_NEED=$(du -s /tmp/test_size.tar.gz | awk '{print $1}')
 		rm -rf /tmp/test_size.tar.gz
 	else
-		SPACE_NEED=$(du -s /tmp/shadowsocks | awk '{print $1}')
+		SPACE_PACK_NEED=""
 	fi
+	[ -n "${SPACE_TREE_NEED}" ] || SPACE_TREE_NEED=0
+	[ -n "${SPACE_PACK_NEED}" ] || SPACE_PACK_NEED=${SPACE_TREE_NEED}
+	case "${JFFS_FS_TYPE}" in
+		ext2|ext3|ext4)
+			SPACE_NEED=${SPACE_TREE_NEED}
+			SPACE_BASIS="候选文件夹占用"
+			;;
+		*)
+			SPACE_NEED=${SPACE_PACK_NEED}
+			SPACE_BASIS="候选包大小"
+			;;
+	esac
+	SPACE_MARGIN=$((SPACE_NEED / 10))
+	[ "${SPACE_MARGIN}" -lt "2048" ] && SPACE_MARGIN=2048
+	SPACE_NEED=$((SPACE_NEED + SPACE_MARGIN))
+	[ -n "${JFFS_FS_TYPE}" ] || JFFS_FS_TYPE="unknown"
 	if [ "${SPACE_AVAL}" -gt "${SPACE_NEED}" ];then
-		echo_date "当前jffs分区剩余${SPACE_AVAL}KB, 插件安装大概需要${SPACE_NEED}KB，空间满足，继续安装！"
+		echo_date "当前jffs分区(${JFFS_FS_TYPE})剩余${SPACE_AVAL}KB, 插件安装预计需要约${SPACE_NEED}KB（${SPACE_BASIS}+动态余量${SPACE_MARGIN}KB），空间满足，继续安装！"
 	else
-		echo_date "当前jffs分区剩余${SPACE_AVAL}KB, 插件安装大概需要${SPACE_NEED}KB，空间不足！"
-		echo_date "退出安装！"
-		exit 1
+		echo_date "当前jffs分区(${JFFS_FS_TYPE})剩余${SPACE_AVAL}KB, 插件安装预计需要约${SPACE_NEED}KB（${SPACE_BASIS}+动态余量${SPACE_MARGIN}KB），空间不足！"
+		exit_install 1
 	fi
 
 	# isntall file
@@ -1474,6 +1706,7 @@ install_now(){
 	cd /tmp	
 
 	echo_date "复制相关二进制文件！此步时间可能较长！"
+	prepare_websocketd_for_copy
 	cp -rf /tmp/shadowsocks/bin/* /koolshare/bin/
 	
 	echo_date "复制相关的脚本文件！"
@@ -1697,8 +1930,9 @@ install_now(){
 		echo_date 重启科学上网插件！
 		sh /koolshare/ss/ssconfig.sh restart
 		restart_status_runtime_async
+		handle_websocketd_after_install
 	else
-		restart_websocketd_async
+		handle_websocketd_after_install
 	fi
 
 	echo_date "更新完毕，请等待网页自动刷新！"
