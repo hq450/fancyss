@@ -8,6 +8,7 @@ fancyss Changelog
    - fix	关闭状态下后端 `web_webtest` 和批量测速入口会直接返回，不再因为页面刷新、缓存读取或异步轮询重新生成测速结果；前端轮询和 WebSocket 回调也会在开关关闭后拒绝旧结果写回。
    - update	安装阶段针对常驻 `websocketd` 增加安全替换流程：先比较已安装和待安装二进制校验值，未变化时跳过替换和重启；二进制变化时区分软件中心离线安装、普通安装和 fancyss 自更新，避免自更新过程中直接杀掉旧 websocketd 导致 WebSocket 日志中断。
    - update	优化安装前 JFFS 空间预估：先按实际安装流程剔除不会写入 JFFS 的文件，再根据 `/jffs` 文件系统类型选择候选文件夹占用或候选压缩包大小作为估算基准，并增加动态余量，提升 ubifs/jffs2 与 USB bind ext3/ext4 场景下的判断准确性。
+   - update	安装前会清理 JFFS 根目录中可安全移除的临时日志和旧安装包：截断 `syslog.log / driver_log.log / hostapd.log`，删除对应轮转日志与 `uu.tar.gz*`，并在空间统计前输出释放空间估算，降低旧日志占满 JFFS 导致安装失败的概率。
    - fix	修复软件中心卸载插件后 `websocketd` 进程和文件可能残留的问题；卸载时会清理 websocketd pidfile、自更新延迟重启标记和异步 helper，并通过多种进程匹配方式停止 fancyss 专用 websocketd。
 
 3.5.21（20260429）

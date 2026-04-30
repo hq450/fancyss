@@ -1428,6 +1428,52 @@ check_device(){
 	fi
 }
 
+cleanup_jffs_install_tmp(){
+	local before=""
+	local after=""
+	local freed=""
+	local target=""
+	[ -d "/jffs" ] || return 0
+	echo_date "清理JFFS根目录临时日志和旧安装包..."
+	before=$(df | awk '$NF == "/jffs" {print $4; exit}')
+	for target in \
+		/jffs/syslog.log \
+		/jffs/driver_log.log \
+		/jffs/hostapd.log
+	do
+		[ -e "${target}" ] || continue
+		[ -L "${target}" ] && {
+			rm -f "${target}" >/dev/null 2>&1
+			continue
+		}
+		[ -f "${target}" ] || continue
+		: > "${target}" 2>/dev/null || rm -f "${target}" >/dev/null 2>&1
+	done
+	for target in \
+		/jffs/uu.tar.gz \
+		/jffs/uu.tar.gz.* \
+		/jffs/syslog.log-[0-9]* \
+		/jffs/driver_log.log-[0-9]* \
+		/jffs/hostapd.log-[0-9]*
+	do
+		[ -e "${target}" ] || continue
+		[ -f "${target}" ] || [ -L "${target}" ] || continue
+		rm -f "${target}" >/dev/null 2>&1
+	done
+	sync
+	after=$(df | awk '$NF == "/jffs" {print $4; exit}')
+	if [ -n "${before}" ] && [ -n "${after}" ];then
+		freed=$((after - before))
+		if [ "${freed}" -gt "0" ];then
+			echo_date "JFFS根目录临时文件清理完成，释放约${freed}KB空间。"
+		else
+			echo_date "JFFS根目录临时文件清理完成。"
+		fi
+	else
+		echo_date "JFFS根目录临时文件清理完成。"
+	fi
+}
+
 install_now(){
 	# default value
 	local PLVER=$(cat ${DIR}/ss/version)
@@ -1586,10 +1632,10 @@ install_now(){
 	# rm -rf /koolshare/bin/jq
 	# rm -rf /koolshare/bin/isutf8
 	
+	cleanup_jffs_install_tmp
+
 	# small jffs router should remove more existing files
 	if [ "${MODEL}" == "RT-AX56U_V2" -o "${MODEL}" == "RT-AX57" ];then
-		rm -rf /jffs/syslog.log
-		rm -rf /jffs/syslog.log-1
 		rm -rf /jffs/wglist*
 		rm -rf /jffs/.sys/diag_db/*
 		# make a dummy
@@ -1598,15 +1644,11 @@ install_now(){
 	elif [ "${MODEL}" == "ZenWiFi_BD4" ];then
 		rm -rf /jffs/ahs
 		rm -rf /jffs/asd
-		rm -rf /jffs/syslog.log*
 		rm -rf /jffs/curllst*
 		rm -rf /jffs/wglist*
 		rm -rf /jffs/asd.log
-		rm -rf /jffs/hostapd.log
 		rm -rf /jffs/webs_upgrade.log*
 		rm -rf /jffs/.sys/diag_db/*
-		rm -rf /jffs/uu.tar.gz*
-	else
 		rm -rf /jffs/uu.tar.gz*
 	fi
 	echo 1 > /proc/sys/vm/drop_caches
