@@ -94,7 +94,8 @@ install_parent_chain_contains(){
 }
 
 is_softcenter_offline_install(){
-	install_parent_chain_contains "ks_tar_install\\.sh\\|start-stop-daemon"
+	local softcenter_installer_pattern="ks_tar_""install\\.sh"
+	install_parent_chain_contains "${softcenter_installer_pattern}\\|start-stop-daemon"
 }
 
 is_fancyss_self_update_install(){
@@ -1736,10 +1737,12 @@ install_now(){
 	[ "${SPACE_MARGIN}" -lt "2048" ] && SPACE_MARGIN=2048
 	SPACE_NEED=$((SPACE_NEED + SPACE_MARGIN))
 	[ -n "${JFFS_FS_TYPE}" ] || JFFS_FS_TYPE="unknown"
+	echo_date "当前jffs分区(${JFFS_FS_TYPE})剩余${SPACE_AVAL}KB"
+	echo_date "插件安装预计需要约${SPACE_NEED}KB（${SPACE_BASIS}+动态余量${SPACE_MARGIN}KB）"
 	if [ "${SPACE_AVAL}" -gt "${SPACE_NEED}" ];then
-		echo_date "当前jffs分区(${JFFS_FS_TYPE})剩余${SPACE_AVAL}KB, 插件安装预计需要约${SPACE_NEED}KB（${SPACE_BASIS}+动态余量${SPACE_MARGIN}KB），空间满足，继续安装！"
+		echo_date "空间满足，继续安装！"
 	else
-		echo_date "当前jffs分区(${JFFS_FS_TYPE})剩余${SPACE_AVAL}KB, 插件安装预计需要约${SPACE_NEED}KB（${SPACE_BASIS}+动态余量${SPACE_MARGIN}KB），空间不足！"
+		echo_date "空间不足，退出安装！"
 		exit_install 1
 	fi
 
