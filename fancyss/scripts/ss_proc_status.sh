@@ -500,13 +500,10 @@ get_zig_tool_version() {
 	[ -x "${bin}" ] || return 1
 	case "${bin##*/}" in
 	node-tool|sub-tool|xapi-tool)
-		"${bin}" version 2>/dev/null | sed -n '1p' | tr -d '\r'
+		"${bin}" version 2>&1 | sed '/^[[:space:]]*$/d; 1q' | tr -d '\r'
 		;;
-	geotool|statusctl|webtestctl|websocketd)
-		"${bin}" --version 2>/dev/null | sed -n '1p' | tr -d '\r'
-		;;
-	status-tool|webtest-tool)
-		printf '%s' "-"
+	geotool|status-tool|statusctl|webtest-tool|webtestctl|websocketd)
+		"${bin}" --version 2>&1 | sed '/^[[:space:]]*$/d; 1q' | tr -d '\r'
 		;;
 	*)
 		return 1
