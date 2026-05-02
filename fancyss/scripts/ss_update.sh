@@ -86,7 +86,7 @@ update_ss(){
 		fancyss_md5_online=$(cat /tmp/version.json.js | run jq -r .$MD5NAME)
 		echo_date "开启下载进程，从主服务器上下载更新包..."
 		echo_date "下载链接：${main_url}/${PACKAGE}.tar.gz"
-		if [ -z "${SOCKS5_OPEN}" ];then
+		if [ -n "${SOCKS5_OPEN}" ];then
 			run /tmp/curl-update -4k -L --connect-timeout 5 --max-time 120 --retry 3 --retry-delay 1 -x socks5h://127.0.0.1:23456 ${main_url}/${PACKAGE}.tar.gz --output /tmp/${PACKAGE}.tar.gz
 		else
 			run /tmp/curl-update -4k -L --connect-timeout 5 --max-time 120 --retry 3 --retry-delay 1 ${main_url}/${PACKAGE}.tar.gz --output /tmp/${PACKAGE}.tar.gz

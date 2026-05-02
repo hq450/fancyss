@@ -47,6 +47,18 @@ zig_tool_version(){
 	tr -d '\r\n' < "${CURR_PATH}/tool/${tool_dir}/VERSION"
 }
 
+set_pkg_web_meta(){
+	local file_path="$1"
+	local pkg_name="$2"
+	local pkg_arch="$3"
+	local pkg_type="$4"
+	local pkg_exta="$5"
+	sed -i "s/^var PKG_NAME=.*/var PKG_NAME=\"${pkg_name}\"/" "${file_path}"
+	sed -i "s/^var PKG_ARCH=.*/var PKG_ARCH=\"${pkg_arch}\"/" "${file_path}"
+	sed -i "s/^var PKG_TYPE=.*/var PKG_TYPE=\"${pkg_type}\"/" "${file_path}"
+	sed -i "s/^var PKG_EXTA=.*/var PKG_EXTA=\"${pkg_exta}\"/" "${file_path}"
+}
+
 sync_binary(){
 	# BINS_REMOVE="naive"
 	# for BIN_REMOVE in $BINS_REMOVE;
@@ -282,6 +294,7 @@ gen_folder(){
 	local platform=$1
 	local pkgtype=$2
 	local release_type=$3
+	local pkg_exta="_debug"
 	cd ${CURR_PATH}
 	rm -rf shadowsocks
 	cp -rf fancyss shadowsocks
@@ -297,7 +310,6 @@ gen_folder(){
 		mv ./shadowsocks/bin-hnd ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		echo hnd > ./shadowsocks/.valid
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"hnd\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "hnd_v8" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -309,7 +321,6 @@ gen_folder(){
 		mv ./shadowsocks/bin-hnd_v8 ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		echo hnd_v8 > ./shadowsocks/.valid
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"hnd_v8\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "qca" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -321,7 +332,6 @@ gen_folder(){
 		mv ./shadowsocks/bin-qca ./shadowsocks/bin
 		rm -rf ./shadowsocks/bin/uredir
 		echo qca > ./shadowsocks/.valid
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"qca\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "arm" ];then
 		rm -rf ./shadowsocks/bin-hnd
@@ -335,7 +345,6 @@ gen_folder(){
 		sed -i '/fancyss-hnd/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/ss_basic_mcore/d' ./shadowsocks/webs/Module_shadowsocks.asp
 		sed -i '/ss_basic_tfo/d' ./shadowsocks/webs/Module_shadowsocks.asp
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"arm\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "mtk" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -348,7 +357,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/uredir
 		rm -rf ./shadowsocks/bin/README.md
 		echo mtk > ./shadowsocks/.valid
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"mtk\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "ipq32" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -365,7 +373,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/curl-fancyss
 		# bd4 jffs2 space to small, use xray run ss
 		echo ipq32 > ./shadowsocks/.valid
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"ipq32\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	if [ "${platform}" == "ipq64" ];then
 		rm -rf ./shadowsocks/bin-arm
@@ -381,7 +388,6 @@ gen_folder(){
 		rm -rf ./shadowsocks/bin/jq
 		rm -rf ./shadowsocks/bin/curl-fancyss
 		echo ipq64 > ./shadowsocks/.valid
-		sed -i 's/PKG_ARCH=\"unknown\"/PKG_ARCH=\"ipq64\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
 	fi
 	
 	# remove some binary because it's not default provide by install packages
@@ -397,12 +403,9 @@ gen_folder(){
 	
 	# wirte type string
 	if [ "${release_type}" != "debug" ];then
-		sed -i 's/PKG_EXTA=\"_debug\"/PKG_EXTA=\"\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
+		pkg_exta=""
 	fi
-	
-	if [ "${pkgtype}" == "lite" ];then
-		sed -i 's/var PKG_TYPE=\"full\"/var PKG_TYPE=\"lite\"/g' ./shadowsocks/webs/Module_shadowsocks.asp
-	fi
+	set_pkg_web_meta ./shadowsocks/webs/Module_shadowsocks.asp "fancyss" "${platform}" "${pkgtype}" "${pkg_exta}"
 	
 	if [ "${pkgtype}" == "full" ];then
 		# remove marked comment
