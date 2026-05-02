@@ -41,7 +41,7 @@ do
 	RET_1=$(echo "${MSG}" | grep "ws_ok")
 	if [ -z "${RET_0}${RET_1}" ];then
 		# 非lan用户访问，记录下
-		RET_2=$(echo ${MSG} | grep "ss_status")
+		RET_2=$(echo ${MSG} | grep -E "ss_status|statusctl")
 		if [ -z "${RET_2}" ];then
 			echo "[$(date -R +%Y年%m月%d日\ %X)] $REMOTE_ADDR:$REMOTE_PORT → ${MSG}" >>${LOGFILE}
 			clean_log
@@ -85,6 +85,8 @@ do
 			[ "${line}" = "stop>stop" ] && break
 		done
 		exit 0
+	elif echo "${MSG}" | grep -Eq '^/koolshare/bin/statusctl --socket-path /tmp/status-tool\.sock (probe-once|get-cache|ping)$'; then
+		cmd ${MSG}
 	elif [ -n "${RET_3}" -o -n "${RET_4}" ]; then
 		echo "不允许命令：${MSG}"
 		exit

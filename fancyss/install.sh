@@ -359,6 +359,11 @@ restart_status_runtime_async() {
 		status_serve_alive() {
 			[ -S /tmp/status-tool.sock ] && ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep >/dev/null 2>&1
 		}
+		should_start_status_serve() {
+			[ "$(dbus get ss_basic_enable)" = "1" ] || return 1
+			[ "$(dbus get ss_failover_enable)" != "1" ] || return 1
+			[ "$(dbus get ss_basic_status_mode)" = "serve" ]
+		}
 		wait_status_preready() {
 			local waited=0
 			while ps w | grep -F "/koolshare/ss/ssconfig.sh" | grep -v grep >/dev/null 2>&1
@@ -377,9 +382,9 @@ restart_status_runtime_async() {
 		}
 		sleep 2
 		log_status_runtime "checking status runtime"
-		[ "$(dbus get ss_basic_enable)" = "1" ] && wait_status_preready && start_status_serve_direct
+		should_start_status_serve && wait_status_preready && start_status_serve_direct
 		sleep 3
-		if [ "$(dbus get ss_basic_enable)" = "1" ] && ! status_serve_alive; then
+		if should_start_status_serve && ! status_serve_alive; then
 			log_status_runtime "status runtime missing, retry"
 			wait_status_preready
 			start_status_serve_direct
@@ -1830,6 +1835,7 @@ install_now(){
 	[ -z "$(dbus get ss_acl_default_quic)" ] && dbus set ss_acl_default_quic=1
 	[ -z "$(dbus get ss_acl_default_ports)" ] && dbus set ss_acl_default_ports="22,80,443,8080,8443"
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
+	[ -z "$(dbus list ss_basic_status_mode 2>/dev/null | sed -n '1p')" ] && dbus set ss_basic_status_mode=serve
 	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 

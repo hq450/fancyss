@@ -10,6 +10,7 @@ STATUS_WS_LOCK_PID_FILE=${STATUS_WS_LOCK_DIR}/pid
 STATUS_SERVE_SOCKET=/tmp/status-tool.sock
 STATUS_CTL_BIN=/koolshare/bin/statusctl
 STATUS_DAEMON_SCRIPT=/koolshare/scripts/ss_status_daemon.sh
+STATUS_WS_LOCK_MAX_AGE=60
 STATUS_CACHE_MAX_AGE=120
 
 LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
@@ -128,13 +129,34 @@ read_ws_cache(){
 	printf '%s' "${payload}"
 }
 
+wait_ws_cache(){
+	local waited=0
+	local payload=""
+	while [ "${waited}" -lt 30 ]
+	do
+		if payload="$(read_ws_cache)"; then
+			printf '%s' "${payload}"
+			return 0
+		fi
+		usleep 200000 2>/dev/null || sleep 1
+		waited=$((waited + 1))
+	done
+	return 1
+}
+
 write_ws_cache(){
 	[ -n "$1" ] || return 1
-	printf '%s' "$1" > "${STATUS_WS_CACHE_FILE}" 2>/dev/null
+	printf '%s\n' "$1" > "${STATUS_WS_CACHE_FILE}" 2>/dev/null
+}
+
+emit_status_payload(){
+	printf '%s\n' "$1"
 }
 
 acquire_status_ws_lock(){
 	local pid=""
+	local lock_mtime=""
+	local now=""
 	if mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1;then
 		echo "$$" > "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null
 		return 0
@@ -146,6 +168,16 @@ acquire_status_ws_lock(){
 			if mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1;then
 				echo "$$" > "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null
 				return 0
+			fi
+		else
+			lock_mtime="$(date -r "${STATUS_WS_LOCK_PID_FILE}" +%s 2>/dev/null)"
+			now="$(date +%s 2>/dev/null)"
+			if [ -n "${lock_mtime}" ] && [ -n "${now}" ] && [ $((now - lock_mtime)) -gt "${STATUS_WS_LOCK_MAX_AGE}" ];then
+				rm -rf "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+				if mkdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1;then
+					echo "$$" > "${STATUS_WS_LOCK_PID_FILE}" 2>/dev/null
+					return 0
+				fi
 			fi
 		fi
 	else
@@ -201,11 +233,25 @@ refresh_payload_once(){
 	fi
 }
 
+status_probe_mode(){
+	local mode="$(dbus get ss_basic_status_mode 2>/dev/null)"
+	case "${mode}" in
+	serve|once)
+		printf '%s' "${mode}"
+		;;
+	*)
+		printf '%s' "once"
+		;;
+	esac
+}
+
 refresh_payload_via_ctl(){
 	local payload=""
+	[ -x "${STATUS_CTL_BIN}" ] || return 1
+	[ -S "${STATUS_SERVE_SOCKET}" ] || return 1
 	payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" probe-once 2>/dev/null)" || payload=""
 	case "${payload}" in
-	""|cache-miss*)
+	""|cache-miss*|error:*|unknown-command*)
 		payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" get-cache 2>/dev/null)" || return 1
 		;;
 	esac
@@ -267,8 +313,8 @@ resolve_payload(){
 
 resolve_payload_once_only(){
 	local payload=""
-	ensure_status_serve_runtime >/dev/null 2>&1 || true
-	if [ -x "${STATUS_CTL_BIN}" ] && [ -S "${STATUS_SERVE_SOCKET}" ];then
+	if [ "$(status_probe_mode)" = "serve" ];then
+		ensure_status_serve_runtime >/dev/null 2>&1 || true
 		if payload="$(refresh_payload_via_ctl)"; then
 			printf '%s' "${payload}"
 			return 0
@@ -290,11 +336,25 @@ if [ -z "$1" ] && [ -z "$2" ];then
 		get_status_payload
 		exit
 	fi
-	if [ "${ss_failover_enable}" = "1" ];then
-		resolve_payload
-	else
-		resolve_payload_once_only
+	if ! acquire_status_ws_lock; then
+		if payload="$(read_ws_cache)"; then
+			emit_status_payload "${payload}"
+		elif payload="$(wait_ws_cache)"; then
+			emit_status_payload "${payload}"
+		else
+			set_waiting_status
+			emit_status_payload "$(get_status_payload)"
+		fi
+		exit 0
 	fi
+	trap 'release_status_ws_lock' EXIT INT TERM
+	if [ "${ss_failover_enable}" = "1" ];then
+		payload="$(resolve_payload)"
+	else
+		payload="$(resolve_payload_once_only)"
+	fi
+	write_ws_cache "${payload}" >/dev/null 2>&1
+	emit_status_payload "${payload}"
 	exit
 fi
 
@@ -302,18 +362,17 @@ case "$1" in
 ws)
 		if ! prepare >/dev/null 2>&1; then
 			set_waiting_status
-			get_status_payload
+			emit_status_payload "$(get_status_payload)"
 			exit 0
 		fi
 		if ! acquire_status_ws_lock; then
 			if payload="$(read_ws_cache)"; then
-				printf '%s' "${payload}"
+				emit_status_payload "${payload}"
+			elif payload="$(wait_ws_cache)"; then
+				emit_status_payload "${payload}"
 			else
-				if [ "${ss_failover_enable}" = "1" ];then
-					resolve_payload
-				else
-					resolve_payload_once_only
-				fi
+				set_waiting_status
+				emit_status_payload "$(get_status_payload)"
 			fi
 			exit 0
 		fi
@@ -324,18 +383,31 @@ ws)
 			payload="$(resolve_payload_once_only)"
 		fi
 		write_ws_cache "${payload}" >/dev/null 2>&1
-		printf '%s' "${payload}"
+		emit_status_payload "${payload}"
 		;;
 	*)
 		if ! prepare >/dev/null 2>&1; then
 			set_waiting_status
 			payload="$(get_status_payload)"
 		else
+			if ! acquire_status_ws_lock; then
+				if payload="$(read_ws_cache)"; then
+					emit_status_payload "${payload}"
+				elif payload="$(wait_ws_cache)"; then
+					emit_status_payload "${payload}"
+				else
+					set_waiting_status
+					emit_status_payload "$(get_status_payload)"
+				fi
+				exit 0
+			fi
+			trap 'release_status_ws_lock' EXIT INT TERM
 			if [ "${ss_failover_enable}" = "1" ];then
 				payload="$(resolve_payload)"
 			else
 				payload="$(resolve_payload_once_only)"
 			fi
+			write_ws_cache "${payload}" >/dev/null 2>&1
 		fi
 		if [ "${ss_failover_enable}" = "1" ];then
 			printf '%s@@%s\n' "${payload}" "${HEART_STATUS}" > "${STATUS_BACK_CACHE}"

@@ -17,6 +17,7 @@ STATUS_SERVE_PIDFILE="/var/run/status-tool-serve.pid"
 STATUS_DAEMON_STATE="/tmp/upload/ss_status_daemon.json"
 STATUS_DAEMON_LEGACY="/tmp/upload/ss_status_front.txt"
 STATUS_SERVE_SOCKET="/tmp/status-tool.sock"
+STATUS_WS_LOCK_DIR="/tmp/fancyss_status_ws.lock"
 
 status_tool_tz() {
 	local tz=""
@@ -56,6 +57,18 @@ write_waiting_cache() {
 	fi
 }
 
+status_probe_mode() {
+	local mode="$(dbus get ss_basic_status_mode 2>/dev/null)"
+	case "${mode}" in
+	serve|once)
+		printf '%s' "${mode}"
+		;;
+	*)
+		printf '%s' "once"
+		;;
+	esac
+}
+
 stop_status_runtime() {
 	if [ -f "${STATUS_DAEMON_PIDFILE}" ];then
 		start-stop-daemon -K -q -p "${STATUS_DAEMON_PIDFILE}" >/dev/null 2>&1
@@ -63,10 +76,11 @@ stop_status_runtime() {
 	if [ -f "${STATUS_SERVE_PIDFILE}" ];then
 		start-stop-daemon -K -q -p "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
 	fi
-	ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve)( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
+	ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve|fancyss)( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
 		kill "${pid}" >/dev/null 2>&1
 	done
 	rm -f "${STATUS_DAEMON_PIDFILE}" "${STATUS_SERVE_PIDFILE}" "${STATUS_DAEMON_STATE}" "${STATUS_DAEMON_LEGACY}" "${STATUS_SERVE_SOCKET}" >/dev/null 2>&1
+	rm -rf "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
 }
 
 start_status_runtime() {
@@ -91,7 +105,7 @@ start_status_runtime() {
 			--interval-ms "${interval_ms}" \
 			--state-file "${STATUS_DAEMON_STATE}" \
 			--legacy-file "${STATUS_DAEMON_LEGACY}"
-	else
+	elif [ "$(status_probe_mode)" = "serve" ];then
 		ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
 			[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
 		done

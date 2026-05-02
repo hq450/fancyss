@@ -257,6 +257,7 @@ remove_now(){
 	[ -z "$(dbus get ss_acl_default_quic)" ] && dbus set ss_acl_default_quic=1
 	[ -z "$(dbus get ss_acl_default_ports)" ] && dbus set ss_acl_default_ports="22,80,443,8080,8443"
 	[ -z "$(dbus get ss_basic_interval)" ] && dbus set ss_basic_interval=2
+	[ -z "$(dbus list ss_basic_status_mode 2>/dev/null | sed -n '1p')" ] && dbus set ss_basic_status_mode=serve
 	[ -z "$(dbus get ss_basic_furl)" ] && dbus set ss_basic_furl="http://www.google.com/generate_204"
 	[ -z "$(dbus get ss_basic_curl)" ] && dbus set ss_basic_curl="http://connectivitycheck.platform.hicloud.com/generate_204"
 

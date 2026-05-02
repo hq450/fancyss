@@ -1,5 +1,14 @@
 fancyss Changelog
 
+3.5.23（20260502）
+   - note	本次更新针对弱性能机型顶部“插件运行状态”检测带来的周期 CPU 峰值做收口，重点优化未开启故障转移时的前端状态刷新链路。
+   - add	附加功能 - 性能优化新增“运行状态检测模式”选项，支持 `serve` 常驻低开销、`once` 按次启动和兼容模式；新安装或清空配置后默认使用 `serve`，便于弱性能机型减少反复拉起 shell 和探测工具的开销。
+   - update	未开启故障转移且 WebSocket 可用时，顶部运行状态优先直接通过 `statusctl --socket-path /tmp/status-tool.sock probe-once` 触发 `status-tool serve` 按需探测，不再每轮都启动 `ss_status.sh` 与 `status-tool fancyss`。
+   - update	故障转移开启时继续使用稳定的 `status-tool daemon` 周期检测；关闭故障转移且检测模式为 `once` 或兼容模式时，保留原按次探测路径，便于对比和回退。
+   - fix	修复顶部状态 WebSocket 与 HTTP API 可能同时发起请求的问题；现在前端会在 WebSocket 可用时优先使用 WebSocket，失败或返回异常 payload 时才回退 HTTP API。
+   - fix	修复状态检测锁残留时可能导致前端持续 Waiting 或重复排队的问题；状态脚本会等待已有探测缓存、清理 stale lock，插件重启/停止/故障转移重置时也会同步清理状态锁和 socket。
+   - fix	修复插件停止或重启时可能残留 `status-tool fancyss/serve/daemon` 进程的问题，停止链路现在会统一匹配并清理所有状态检测运行模式。
+
 3.5.22（20260429）
    - add	节点管理卡片现在可以拖拽改变顺序。
    - add	节点管理底部“延迟测试”菜单新增“关闭批量延迟测试 / 打开批量延迟测试”开关。

@@ -6682,6 +6682,7 @@ stop_status() {
 	local status_daemon_state="/tmp/upload/ss_status_daemon.json"
 	local status_daemon_legacy="/tmp/upload/ss_status_front.txt"
 	local status_serve_socket="/tmp/status-tool.sock"
+	local status_ws_lock_dir="/tmp/fancyss_status_ws.lock"
 	local pids=""
 
 	pids="$(pidof ss_status_main.sh 2>/dev/null)"
@@ -6704,10 +6705,11 @@ stop_status() {
 	stop_status_kill_pidfile "status-tool daemon进程" "${status_daemon_pidfile}" || true
 	stop_status_kill_pidfile "status-tool serve进程" "${status_serve_pidfile}" || true
 
-	pids="$(ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve)( |$)' | grep -v grep | awk '{print $1}')"
+	pids="$(ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve|fancyss)( |$)' | grep -v grep | awk '{print $1}')"
 	stop_status_kill_pid_list "status-tool残留进程" "${pids}" "-15" || true
 
 	rm -f "${status_daemon_pidfile}" "${status_serve_pidfile}" "${status_daemon_state}" "${status_daemon_legacy}" "${status_serve_socket}" >/dev/null 2>&1
+	rm -rf "${status_ws_lock_dir}" >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
 }
 
