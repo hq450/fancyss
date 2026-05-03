@@ -12,7 +12,7 @@ Usage:
   scripts/sync_zig_tool_binaries.sh [options] [tool...]
 
 Tools:
-  geotool node-tool sub-tool xapi-tool ws-tool status-tool webtest-tool
+  geotool node-tool sub-tool anytls-zig xapi-tool ws-tool status-tool webtest-tool
 
 Options:
   --build       Build tools before syncing into binaries/
@@ -61,6 +61,7 @@ all_tools() {
 		geotool \
 		node-tool \
 		sub-tool \
+		anytls-zig \
 		xapi-tool \
 		ws-tool \
 		status-tool \
@@ -118,6 +119,9 @@ tool_config() {
 			;;
 		sub-tool)
 			printf '%s|%s|%s|%s\n' "tool/sub-tool" "binaries/sub-tool" "sub-tool" "x86_64 aarch64 armv5te armv7a armv7hf"
+			;;
+		anytls-zig)
+			printf '%s|%s|%s|%s\n' "tool/anytls-zig" "binaries/anytls-zig" "anytls-zig" "x86_64 aarch64 armv5te armv7a armv7hf"
 			;;
 		xapi-tool)
 			printf '%s|%s|%s|%s\n' "tool/xapi-tool" "binaries/xapi-tool" "xapi-tool" "x86_64 aarch64 armv7a armv7hf"

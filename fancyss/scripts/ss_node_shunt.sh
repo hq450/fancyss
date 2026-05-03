@@ -163,6 +163,7 @@ fss_shunt_is_active() {
 }
 
 fss_shunt_cleanup_runtime() {
+	fss_shunt_stop_runtime_artifact_helpers >/dev/null 2>&1 || true
 	rm -rf "${FSS_SHUNT_RUNTIME_DIR}" >/dev/null 2>&1
 	rm -f "${FSS_SHUNT_RUNTIME_PROXY_FILE}" >/dev/null 2>&1
 	unset FSS_SHUNT_RUNTIME_READY FSS_SHUNT_RUNTIME_READY_KEY
@@ -1769,6 +1770,7 @@ fss_shunt_link_webtest_cache_outbounds() {
 		[ -s "${cache_out}" ] || return 1
 		ln -sf "${cache_out}" "${FSS_SHUNT_RUNTIME_OUTBOUND_DIR}/${node_id}_outbounds.json" || return 1
 	done < "${ids_file}"
+	fss_shunt_start_runtime_helpers "${ids_file}" "${FSS_WEBTEST_CACHE_META_DIR}" "${FSS_WEBTEST_CACHE_NODE_DIR}" >/dev/null 2>&1 || true
 }
 
 fss_shunt_runtime_artifact_meta_get() {
@@ -1799,6 +1801,49 @@ fss_shunt_log_node_tool_runtime_summary() {
 	[ -n "${other}" ] || other="0"
 	fss_shunt_log "ℹ️node-tool运行产物摘要：native ${native}，shell ${shell}，missing ${missing}，other ${other}。"
 	[ "${shell}" = "0" ] || [ -z "${reasons}" ] || fss_shunt_log "ℹ️shell回退原因：${reasons}"
+}
+
+fss_shunt_stop_runtime_artifact_helpers() {
+	local stop_script=""
+
+	for stop_script in "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}"/nodes/*_stop.sh
+	do
+		[ -x "${stop_script}" ] || continue
+		sh "${stop_script}" >/dev/null 2>&1 || true
+	done
+}
+
+fss_shunt_start_runtime_helpers() {
+	local ids_file="$1"
+	local meta_dir="$2"
+	local node_dir="$3"
+	local node_id=""
+	local meta_file=""
+	local start_script=""
+	local has_start=""
+	local started=0
+
+	[ -f "${ids_file}" ] || return 0
+	[ -n "${meta_dir}" ] || return 0
+	[ -n "${node_dir}" ] || return 0
+	while IFS= read -r node_id
+	do
+		[ -n "${node_id}" ] || continue
+		meta_file="${meta_dir}/${node_id}.meta"
+		start_script="${node_dir}/${node_id}_start.sh"
+		[ -f "${meta_file}" ] || continue
+		has_start="$(sed -n 's/^has_start=//p' "${meta_file}" | sed -n '1p')"
+		[ "${has_start}" = "1" ] || continue
+		[ -x "${start_script}" ] || continue
+		sh "${start_script}" >/dev/null 2>&1 || continue
+		started=$((started + 1))
+	done < "${ids_file}"
+	[ "${started}" -gt 0 ] && fss_shunt_log "ℹ️已启动 ${started} 个分流节点辅助进程。"
+	return 0
+}
+
+fss_shunt_start_runtime_artifact_helpers() {
+	fss_shunt_start_runtime_helpers "$1" "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/meta" "${FSS_SHUNT_RUNTIME_ARTIFACT_DIR}/nodes"
 }
 
 fss_shunt_runtime_artifacts_ready_for_ids() {
@@ -1865,6 +1910,7 @@ fss_shunt_try_prepare_node_tool_runtime_artifacts() {
 			return 1
 		}
 	done < "${ids_file}"
+	fss_shunt_start_runtime_artifact_helpers "${ids_file}" >/dev/null 2>&1 || true
 	fss_shunt_state_ready "runtime_artifact" "${ids_file}" "分流运行产物已就绪。"
 	fss_shunt_runtime_artifact_lock_release
 	fss_shunt_log "ℹ️通过node-tool生成shunt统一运行产物。"

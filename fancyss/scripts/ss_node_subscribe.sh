@@ -1466,7 +1466,7 @@ sub_filter_fancyss_jsonl_file(){
 	: > "${out_file}"
 	: > "${rows_file}"
 
-	cat "${src_file}" | jq -Rr 'def text($v): if $v == null then "" elif ($v | type) == "string" then $v else ($v | tostring) end; . as $raw | select($raw != "") | (try ($raw | fromjson) catch null) as $obj | if ($obj | type) != "object" then ["raw", "", "", "", "", ($raw | @base64)] else ["json", (text($obj.type) | @base64), (text($obj.xray_prot) | @base64), (text($obj.name) | @base64), (text(($obj.server // $obj.hy2_server // $obj.naive_server)) | @base64), ($raw | @base64)] end | join("\u001f")' 2>/dev/null > "${rows_file}" || {
+	cat "${src_file}" | jq -Rr 'def text($v): if $v == null then "" elif ($v | type) == "string" then $v else ($v | tostring) end; . as $raw | select($raw != "") | (try ($raw | fromjson) catch null) as $obj | if ($obj | type) != "object" then ["raw", "", "", "", "", ($raw | @base64)] else ["json", (text($obj.type) | @base64), (text($obj.xray_prot) | @base64), (text($obj.name) | @base64), (text(($obj.server // $obj.hy2_server // $obj.naive_server // $obj.anytls_server)) | @base64), ($raw | @base64)] end | join("\u001f")' 2>/dev/null > "${rows_file}" || {
 		rm -f "${rows_file}"
 		return 1
 	}
@@ -1515,6 +1515,9 @@ sub_filter_fancyss_jsonl_file(){
 			;;
 		8)
 			type_name="hysteria2"
+			;;
+		9)
+			type_name="AnyTLS"
 			;;
 		*)
 			type_name="node"
@@ -1803,6 +1806,9 @@ sub_fancyss_type_name(){
 	8)
 		echo "hysteria2"
 		;;
+	9)
+		echo "AnyTLS"
+		;;
 	*)
 		echo "node"
 		;;
@@ -1847,6 +1853,9 @@ sub_fancyss_type_prefix(){
 	8)
 		echo "🟤hysteria2节点："
 		;;
+	9)
+		echo "🟨AnyTLS节点："
+		;;
 	*)
 		echo "⚪节点："
 		;;
@@ -1872,6 +1881,7 @@ sub_log_fancyss_parse_summary(){
 			if (type_id == "6") return "🟧Naïve节点";
 			if (type_id == "7") return "🟫tuic节点";
 			if (type_id == "8") return "🟤hysteria2节点";
+			if (type_id == "9") return "🟨AnyTLS节点";
 			return "⚪节点";
 		}
 		{
@@ -1955,6 +1965,7 @@ sub_log_fancyss_parse_summary_json(){
 	local naive=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "naive")
 	local tuic=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "tuic")
 	local hy2=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "hysteria2")
+	local anytls=$(sub_get_parse_summary_scheme_count "${file}" "kept_counts" "anytls")
 	[ -n "${ss}" ] || ss=0
 	[ -n "${ssr}" ] || ssr=0
 	[ -n "${vmess}" ] || vmess=0
@@ -1963,6 +1974,7 @@ sub_log_fancyss_parse_summary_json(){
 	[ -n "${naive}" ] || naive=0
 	[ -n "${tuic}" ] || tuic=0
 	[ -n "${hy2}" ] || hy2=0
+	[ -n "${anytls}" ] || anytls=0
 	[ "${ss}" -gt "0" ] && echo_date "🟢SS节点：${ss}个"
 	[ "${ssr}" -gt "0" ] && echo_date "🔵SSR节点：${ssr}个"
 	[ "${vmess}" -gt "0" ] && echo_date "🟠vmess节点：${vmess}个"
@@ -1971,15 +1983,16 @@ sub_log_fancyss_parse_summary_json(){
 	[ "${naive}" -gt "0" ] && echo_date "🟧Naïve节点：${naive}个"
 	[ "${tuic}" -gt "0" ] && echo_date "🟫tuic节点：${tuic}个"
 	[ "${hy2}" -gt "0" ] && echo_date "🟤hysteria2节点：${hy2}个"
+	[ "${anytls}" -gt "0" ] && echo_date "🟨AnyTLS节点：${anytls}个"
 	return 0
 }
 
 sub_collect_protocol_counts_from_decoded_file(){
 	local file="$1"
 	local pkg_type="$2"
-	local raw=0 ss=0 ssr=0 vmess=0 vless=0 trojan=0 hy2=0 tuic=0 naive=0 total=0
+	local raw=0 ss=0 ssr=0 vmess=0 vless=0 trojan=0 hy2=0 tuic=0 naive=0 anytls=0 total=0
 	[ -f "${file}" ] || {
-		echo "0 0 0 0 0 0 0 0 0 0"
+		echo "0 0 0 0 0 0 0 0 0 0 0"
 		return 1
 	}
 	raw=$(grep -c "://" "${file}" 2>/dev/null)
@@ -1991,19 +2004,20 @@ sub_collect_protocol_counts_from_decoded_file(){
 	hy2=$(grep -Ec "^hysteria2://|^hy2://" "${file}" 2>/dev/null)
 	tuic=$(grep -Ec "^tuic://" "${file}" 2>/dev/null)
 	naive=$(grep -Ec "^naive\\+https://|^naive\\+quic://" "${file}" 2>/dev/null)
+	anytls=$(grep -Ec "^anytls://" "${file}" 2>/dev/null)
 	total=$((ss + ssr + vmess + vless + trojan + hy2))
 	if [ "${pkg_type}" = "full" ];then
-		total=$((total + tuic + naive))
+		total=$((total + tuic + naive + anytls))
 	fi
-	echo "${raw} ${ss} ${ssr} ${vmess} ${vless} ${trojan} ${hy2} ${tuic} ${naive} ${total}"
+	echo "${raw} ${ss} ${ssr} ${vmess} ${vless} ${trojan} ${hy2} ${tuic} ${naive} ${anytls} ${total}"
 }
 
 sub_collect_protocol_counts_from_summary(){
 	local file="$1"
 	local pkg_type="$2"
-	local raw=0 ss=0 ssr=0 vmess=0 vless=0 trojan=0 hy2=0 tuic=0 naive=0 total=0
+	local raw=0 ss=0 ssr=0 vmess=0 vless=0 trojan=0 hy2=0 tuic=0 naive=0 anytls=0 total=0
 	[ -f "${file}" ] || {
-		echo "0 0 0 0 0 0 0 0 0 0"
+		echo "0 0 0 0 0 0 0 0 0 0 0"
 		return 1
 	}
 	raw=$(sub_get_parse_summary_value "${file}" "uri_lines")
@@ -2016,6 +2030,7 @@ sub_collect_protocol_counts_from_summary(){
 	hy2=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "hysteria2")
 	tuic=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "tuic")
 	naive=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "naive")
+	anytls=$(sub_get_parse_summary_scheme_count "${file}" "raw_counts" "anytls")
 	[ -n "${raw}" ] || raw=0
 	[ -n "${ss}" ] || ss=0
 	[ -n "${ssr}" ] || ssr=0
@@ -2025,11 +2040,12 @@ sub_collect_protocol_counts_from_summary(){
 	[ -n "${hy2}" ] || hy2=0
 	[ -n "${tuic}" ] || tuic=0
 	[ -n "${naive}" ] || naive=0
+	[ -n "${anytls}" ] || anytls=0
 	total=$((ss + ssr + vmess + vless + trojan + hy2))
 	if [ "${pkg_type}" = "full" ];then
-		total=$((total + tuic + naive))
+		total=$((total + tuic + naive + anytls))
 	fi
-	echo "${raw} ${ss} ${ssr} ${vmess} ${vless} ${trojan} ${hy2} ${tuic} ${naive} ${total}"
+	echo "${raw} ${ss} ${ssr} ${vmess} ${vless} ${trojan} ${hy2} ${tuic} ${naive} ${anytls} ${total}"
 }
 
 sub_log_protocol_counts(){
@@ -2042,13 +2058,14 @@ sub_log_protocol_counts(){
 	local hy2="$7"
 	local tuic="$8"
 	local naive="$9"
-	local total="${10}"
-	local pkg_type="${11}"
+	local anytls="${10}"
+	local total="${11}"
+	local pkg_type="${12}"
 	[ -n "${raw}" ] || raw=0
 	[ -n "${total}" ] || total=0
 	echo_date "😀初步解析成功！共获得${raw}个节点！"
-	if [ "${total}" -eq "0" ] && [ "${pkg_type}" != "full" ] && [ $((tuic + naive)) -gt "0" ];then
-		echo_date "⚠️当前插件为lite版本，订阅中的TUIC/NaïveProxy节点均为full版专属，无法导入！"
+	if [ "${total}" -eq "0" ] && [ "${pkg_type}" != "full" ] && [ $((tuic + naive + anytls)) -gt "0" ];then
+		echo_date "⚠️当前插件为lite版本，订阅中的TUIC/NaïveProxy/AnyTLS节点均为full版专属，无法导入！"
 		return 1
 	fi
 	if [ "${total}" -lt "${raw}" ];then
@@ -2063,8 +2080,9 @@ sub_log_protocol_counts(){
 	[ "${hy2}" -gt "0" ] && echo_date "🟤hysteria2节点：${hy2}个"
 	[ "${tuic}" -gt "0" ] && echo_date "🟫tuic节点：${tuic}个"
 	[ "${naive}" -gt "0" ] && echo_date "🟧Naïve节点：${naive}个"
-	if [ "${pkg_type}" != "full" ] && [ $((tuic + naive)) -gt "0" ];then
-		echo_date "⚠️当前插件为lite版本，TUIC/NaïveProxy节点会被跳过。"
+	[ "${anytls}" -gt "0" ] && echo_date "🟨AnyTLS节点：${anytls}个"
+	if [ "${pkg_type}" != "full" ] && [ $((tuic + naive + anytls)) -gt "0" ];then
+		echo_date "⚠️当前插件为lite版本，TUIC/NaïveProxy/AnyTLS节点会被跳过。"
 	fi
 	return 0
 }
@@ -2098,7 +2116,7 @@ sub_prepare_decoded_file(){
 		cp -f "${encoded_file}" "${decoded_file}"
 		return 0
 	fi
-	head_count=$(grep -Ec "^ss://|^ssr://|^vmess://|^vless://|^trojan://|^hysteria2://|^hy2://|^tuic://|^naive\\+https://|^naive\\+quic://" "${encoded_file}")
+	head_count=$(grep -Ec "^ss://|^ssr://|^vmess://|^vless://|^trojan://|^hysteria2://|^hy2://|^tuic://|^naive\\+https://|^naive\\+quic://|^anytls://" "${encoded_file}")
 	if [ "${head_count}" -gt "0" ];then
 		echo_date "📄检测到明文的订阅格式，无需解码，继续！"
 		cp -f "${encoded_file}" "${decoded_file}"
@@ -2528,6 +2546,7 @@ sub_nodes_file_md5(){
 				end;
 		decode_b64_field("password")
 		| decode_b64_field("naive_pass")
+		| decode_b64_field("anytls_pass")
 		| decode_b64_field("v2ray_json")
 		| decode_b64_field("xray_json")
 		| decode_b64_field("tuic_json")
@@ -2565,6 +2584,7 @@ sub_nodes_file_sorted_md5(){
 				end;
 		decode_b64_field("password")
 		| decode_b64_field("naive_pass")
+		| decode_b64_field("anytls_pass")
 		| decode_b64_field("v2ray_json")
 		| decode_b64_field("xray_json")
 		| decode_b64_field("tuic_json")
@@ -2667,6 +2687,7 @@ sub_prepare_canonical_identity_view_file(){
 		with_entries(select(.value != "" and .value != null))
 		| decode_b64_field("password")
 		| decode_b64_field("naive_pass")
+		| decode_b64_field("anytls_pass")
 		| decode_b64_field("v2ray_json")
 		| decode_b64_field("xray_json")
 		| decode_b64_field("tuic_json")
@@ -3986,6 +4007,7 @@ sub_write_nodes_schema2(){
 				with_entries(select(.value != "" and .value != null))
 				| decode_b64_field("password")
 			| decode_b64_field("naive_pass")
+			| decode_b64_field("anytls_pass")
 			| decode_b64_field("v2ray_json")
 			| decode_b64_field("xray_json")
 			| decode_b64_field("tuic_json")
@@ -4196,6 +4218,7 @@ sub_append_nodes_schema2(){
 			with_entries(select(.value != "" and .value != null))
 			| decode_b64_field("password")
 			| decode_b64_field("naive_pass")
+			| decode_b64_field("anytls_pass")
 			| decode_b64_field("v2ray_json")
 			| decode_b64_field("xray_json")
 			| decode_b64_field("tuic_json")
@@ -4259,6 +4282,7 @@ sub_append_nodes_schema2(){
 			with_entries(select(.value != "" and .value != null))
 			| decode_b64_field("password")
 			| decode_b64_field("naive_pass")
+			| decode_b64_field("anytls_pass")
 			| decode_b64_field("v2ray_json")
 			| decode_b64_field("xray_json")
 			| decode_b64_field("tuic_json")
@@ -5200,6 +5224,9 @@ get_type_name() {
 		8)
 			echo "hysteria2"
 		;;
+		9)
+			echo "AnyTLS"
+		;;
 	esac
 }
 
@@ -6025,6 +6052,7 @@ sub_log_unsupported_scheme_summary(){
 			supported["tuic"] = 1
 			supported["naive+https"] = 1
 			supported["naive+quic"] = 1
+			supported["anytls"] = 1
 		}
 		NF >= 2 {
 			scheme = $1
@@ -6626,6 +6654,95 @@ add_naive_node(){
 	fi
 }
 
+add_anytls_node(){
+	local decode_link="$1"
+	local action="$2"
+	local decode_link=$(printf '%s' "${decode_link}" | urldecode)
+	unset anytls_main anytls_authority anytls_query anytls_auth anytls_hostport anytls_pass anytls_server anytls_port anytls_remarks anytls_group anytls_group_hash anytls_sni anytls_ai
+
+	anytls_main="${decode_link%%#*}"
+	if [ "${anytls_main#*\?}" != "${anytls_main}" ];then
+		anytls_authority="${anytls_main%%\?*}"
+		anytls_query="${anytls_main#*\?}"
+	else
+		anytls_authority="${anytls_main}"
+		anytls_query=""
+	fi
+	anytls_authority="${anytls_authority%/}"
+
+	if [ "${decode_link#*#}" != "${decode_link}" ];then
+		anytls_remarks=$(printf '%s' "${decode_link#*#}" | urldecode)
+	fi
+
+	if [ "${anytls_authority##*@}" != "${anytls_authority}" ];then
+		anytls_auth="${anytls_authority%@*}"
+		anytls_hostport="${anytls_authority##*@}"
+	else
+		anytls_auth=""
+		anytls_hostport="${anytls_authority}"
+	fi
+
+	anytls_pass=$(printf '%s' "${anytls_auth}" | urldecode)
+	[ -z "${anytls_pass}" ] && anytls_pass=$(sub_uri_query_value "${decode_link}" "password" | urldecode)
+	[ -z "${anytls_pass}" ] && anytls_pass=$(sub_uri_query_value "${decode_link}" "passwd" | urldecode)
+	[ -z "${anytls_pass}" ] && anytls_pass=$(sub_uri_query_value "${decode_link}" "token" | urldecode)
+
+	local hostinfo
+	hostinfo=$(sub_uri_split_host_port "${anytls_hostport}")
+	anytls_server=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $1}')
+	anytls_port=$(printf '%s' "${hostinfo}" | awk -F'\t' '{print $2}')
+	[ -z "${anytls_port}" ] && anytls_port="443"
+	[ -z "${anytls_remarks}" ] && anytls_remarks="${anytls_server}"
+
+	anytls_sni=$(sub_uri_query_value "${decode_link}" "sni" | urldecode)
+	anytls_ai=$(sub_uri_query_bool "${decode_link}" "insecure")
+	[ -z "${anytls_ai}" ] && anytls_ai=$(sub_uri_query_bool "${decode_link}" "allowInsecure")
+	[ -z "${anytls_ai}" ] && anytls_ai=$(sub_uri_query_bool "${decode_link}" "allow_insecure")
+	[ -z "${anytls_ai}" ] && anytls_ai=$(sub_uri_query_bool "${decode_link}" "skip_cert_verify")
+	[ "${SUB_AI}" == "1" ] && anytls_ai="1"
+
+	if [ "${action}" == "1" ];then
+		anytls_group=${DOMAIN_NAME}
+		anytls_group_hash="${anytls_group}_${SUB_SOURCE_TAG}"
+	elif [ "${action}" == "2" ]; then
+		anytls_group=""
+		anytls_group_hash=""
+	fi
+
+	if [ -z "${anytls_server}" -o -z "${anytls_port}" -o -z "${anytls_pass}" ];then
+		echo_date "🔴AnyTLS节点：检测到一个错误节点，跳过！"
+		return 1
+	fi
+
+	if [ "${action}" == "1" ]; then
+		filter_nodes "anytls" "${anytls_remarks}" "${anytls_server}"
+		if [ "$?" != "0" ];then
+			return 1
+		fi
+	fi
+
+	sub_log_node_success "🟨AnyTLS节点：${anytls_remarks}"
+
+	anytls_pass=$(printf '%s' "${anytls_pass}" | base64_encode | sed 's/[[:space:]]//g')
+
+	json_init
+	json_add_string group "${anytls_group_hash}"
+	json_add_string mode "${SUB_MODE}"
+	json_add_string name "${anytls_remarks}"
+	json_add_string anytls_server "${anytls_server}"
+	json_add_string anytls_port "${anytls_port}"
+	json_add_string anytls_pass "${anytls_pass}"
+	json_add_string anytls_sni "${anytls_sni}"
+	json_add_string anytls_ai "${anytls_ai}"
+	json_add_string type "9"
+
+	if [ "${action}" == "1" ];then
+		json_write_object ${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt
+	elif [ "${action}" == "2" ]; then
+		json_write_object ${DIR}/offline_node_new.txt
+	fi
+}
+
 add_tuic_node(){
 	local decode_link="$1"
 	local action="$2"
@@ -7100,7 +7217,7 @@ download_by_curl(){
 
 		# 下载失败，使用代理下载
 		echo_date "❌️直连下载订阅失败！尝试使用当前节点代理下载订阅！"
-		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|anytls-zig")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			SUB_LAST_DOWNLOAD_MODE="proxy"
 			echo_date "✈️使用当前$(get_type_name "$(sub_get_node_field_plain "${CURR_NODE}" type)")节点：[$(sub_get_node_field_plain "${CURR_NODE}" name)]提供的网络下载..."
@@ -7113,7 +7230,7 @@ download_by_curl(){
 		fi
 	elif [ "${SUB_BY_PROXY}" == "1" ]; then
 		# 代理下载
-		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
+		SOCKS5_OPEN=$(netstat -nlp 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|anytls-zig")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local EXT_ARG="-x socks5h://127.0.0.1:23456"
 			SUB_LAST_DOWNLOAD_MODE="proxy"
@@ -7361,6 +7478,7 @@ get_online_rule_now(){
 	local NODE_NU_H2="0"
 	local NODE_NU_TC="0"
 	local NODE_NU_NV="0"
+	local NODE_NU_AT="0"
 	local pkg_type=$(dbus get ss_basic_pkg_type)
 	[ -n "${pkg_type}" ] || pkg_type=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_TYPE=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
 	local NODE_NU_TT="0"
@@ -7372,17 +7490,17 @@ get_online_rule_now(){
 		echo_date "🧩检测到sub-tool，尝试使用新解析器..."
 		if sub_try_parse_uri_lines_with_tool "${DIR}/sub_file_encode_${SUB_LINK_HASH:0:4}.txt" "${ONLINE_PARSED_FILE}" "${DOMAIN_MAPPED_GROUP}" "${SUB_SOURCE_TAG}" "${pkg_type}";then
 			PARSED_BY_SUB_TOOL="1"
-			read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_TT <<-EOF
+			read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_AT NODE_NU_TT <<-EOF
 			$(sub_collect_protocol_counts_from_summary "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" "${pkg_type}")
 			EOF
 			if [ "${NODE_NU_TT}" = "0" ] && [ "${NODE_NU_RAW}" = "0" ];then
-				echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
+				echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive/anytls节点，退出！"
 				return 1
 			fi
 			if [ -f "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" ];then
-				sub_log_fancyss_parse_summary_json "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" || sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+				sub_log_fancyss_parse_summary_json "${SUB_TOOL_PARSE_SUMMARY_FILE_CURRENT}" || sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_AT}" "${NODE_NU_TT}" "${pkg_type}" || return 1
 			else
-				sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+				sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_AT}" "${NODE_NU_TT}" "${pkg_type}" || return 1
 			fi
 			sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
 			echo_date "-------------------------------------------------------------------"
@@ -7394,14 +7512,14 @@ get_online_rule_now(){
 		fi
 	fi
 	if [ "${PARSED_BY_SUB_TOOL}" != "1" ];then
-		read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_TT <<-EOF
+		read NODE_NU_RAW NODE_NU_SS NODE_NU_SR NODE_NU_VM NODE_NU_VL NODE_NU_TJ NODE_NU_H2 NODE_NU_TC NODE_NU_NV NODE_NU_AT NODE_NU_TT <<-EOF
 		$(sub_collect_protocol_counts_from_decoded_file "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt" "${pkg_type}")
 		EOF
 		if [ "${NODE_NU_TT}" = "0" ] && [ "${NODE_NU_RAW}" = "0" ];then
-			echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive节点，退出！"
+			echo_date "⚠️订阅中不包含任何ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive/anytls节点，退出！"
 			return 1
 		fi
-		sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_TT}" "${pkg_type}" || return 1
+		sub_log_protocol_counts "${NODE_NU_RAW}" "${NODE_NU_SS}" "${NODE_NU_SR}" "${NODE_NU_VM}" "${NODE_NU_VL}" "${NODE_NU_TJ}" "${NODE_NU_H2}" "${NODE_NU_TC}" "${NODE_NU_NV}" "${NODE_NU_AT}" "${NODE_NU_TT}" "${pkg_type}" || return 1
 		sub_log_unsupported_scheme_summary "${DIR}/sub_file_decode_${SUB_LINK_HASH:0:4}.txt"
 		echo_date "-------------------------------------------------------------------"
 		while IFS= read -r node || [ -n "${node}" ]; do
@@ -7445,6 +7563,13 @@ get_online_rule_now(){
 					add_naive_node "${node_type}" "${node_info}" 1
 				else
 					echo_date "⛔当前为lite版本，跳过Naïve节点！"
+				fi
+				;;
+			anytls)
+				if [ "${pkg_type}" == "full" ];then
+					add_anytls_node "${node_info}" 1
+				else
+					echo_date "⛔当前为lite版本，跳过AnyTLS节点！"
 				fi
 				;;
 			*)
@@ -7515,13 +7640,15 @@ get_online_rule_now(){
 				sub_log_nodes_file_change_detail "${ISLOCALFILE}" "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt"
 			fi
 			echo_date "🆚对比结果：检测到节点发生变更，生成节点更新文件！"
-			# 将订阅后的文件覆盖为本地同 source tag 文件，直接移动可减少一次复制 IO。
-			mv -f "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt" || {
-				echo_date "⚠️更新本地订阅节点文件失败：${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt -> ${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			# 已有来源更新时，必须覆盖原本拆分出的本地来源文件。
+			# 单来源快路径会复用 local_split_meta 中的文件路径；如果写入 local_${sub_count}_*
+			# 这类新路径，快路径会继续读取旧文件，导致新解析节点没有写回 schema2。
+			mv -f "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ISLOCALFILE}" || {
+				echo_date "⚠️更新本地订阅节点文件失败：${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt -> ${ISLOCALFILE}"
 				return 1
 			}
 			sub_update_raw_cache "${SUB_LINK_HASH}" "${decoded_file}"
-			sub_update_parsed_cache "${SUB_LINK_HASH}" "${DIR}/local_${sub_count}_${SUB_SOURCE_TAG}.txt"
+			sub_update_parsed_cache "${SUB_LINK_HASH}" "${ISLOCALFILE}"
 			sub_mark_changed_source_tag "${SUB_SOURCE_TAG}"
 			SUB_LOCAL_CHANGED=1
 		fi
@@ -7785,10 +7912,10 @@ subscribe_failed(){
 	#echo ""
 }
 
-# 添加ss:// ssr:// vmess:// vless:// trojan:// hysteria2:// hy2:// tuic:// naive+https:// naive+quic://离线节点
+# 添加ss:// ssr:// vmess:// vless:// trojan:// hysteria2:// hy2:// tuic:// naive+https:// naive+quic:// anytls://离线节点
 start_offline_update() {
 	echo_date "==================================================================="
-	echo_date "ℹ️通过ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive链接添加节点..."
+	echo_date "ℹ️通过ss/ssr/vmess/vless/trojan/hysteria2/tuic/naive/anytls链接添加节点..."
 	mkdir -p $DIR
 	rm -rf $DIR/*
 	UNSUPPORTED_PROTO_LOG_FILE="${DIR}/unsupported_proto_offline.txt"
@@ -7837,6 +7964,13 @@ start_offline_update() {
 				add_naive_node "${node_type}" "${node_info}" 2
 			else
 				echo_date "⚠️当前为lite版本，跳过Naïve离线节点。"
+			fi
+			;;
+		anytls)
+			if [ "${pkg_type}" == "full" ];then
+				add_anytls_node "${node_info}" 2
+			else
+				echo_date "⚠️当前为lite版本，跳过AnyTLS离线节点。"
 			fi
 			;;
 		*)

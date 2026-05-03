@@ -80,6 +80,12 @@ refresh_schema2_secret_fields() {
 			ss_basic_password="${raw_password}"
 		fi
 		;;
+	9)
+		raw_password="$(fss_get_node_field_plain "${current_node_id}" anytls_pass 2>/dev/null)"
+		if [ -n "${raw_password}" ] && [ "${raw_password}" != "${ss_basic_anytls_pass}" ]; then
+			ss_basic_anytls_pass="${raw_password}"
+		fi
+		;;
 	esac
 }
 
@@ -820,8 +826,8 @@ prepare_system() {
 		HY2_CONFIG_FILE="/koolshare/ss/xray.json"
 	fi
 
-	if [ "${ss_basic_type}" == "6" -a "${ss_basic_mode}" == "3" ];then
-		echo_date "NaïveProxy不支持udp代理，因此不支持游戏模式，自动切换为大陆白名单模式！"
+	if ! proxy_core_supports_udp && [ "${ss_basic_mode}" == "3" ];then
+		echo_date "$(proxy_core_udp_unsupported_name)不支持udp代理，因此不支持游戏模式，自动切换为大陆白名单模式！"
 		ss_basic_mode="2"
 		fss_set_current_node_field_plain mode "2"
 	fi
@@ -924,6 +930,9 @@ __get_type_abbr_name() {
 	8)
 		echo "Hysteria2"
 		;;
+	9)
+		echo "AnyTLS"
+		;;
 	esac
 }
 
@@ -933,6 +942,29 @@ get_tproxy_port4() {
 
 get_tproxy_port6() {
 	echo "3333"
+}
+
+proxy_core_supports_udp() {
+	case "${ss_basic_type}" in
+	6|9)
+		return 1
+		;;
+	esac
+	return 0
+}
+
+proxy_core_udp_unsupported_name() {
+	case "${ss_basic_type}" in
+	6)
+		echo "NaïveProxy"
+		;;
+	9)
+		echo "AnyTLS"
+		;;
+	*)
+		get_type_name "${ss_basic_type}"
+		;;
+	esac
 }
 
 normalize_server_resolv_mode() {
@@ -1066,6 +1098,10 @@ resolve_current_node_server_meta() {
 	8)
 		host="${ss_basic_hy2_server}"
 		port="${ss_basic_hy2_port}"
+		;;
+	9)
+		host="${ss_basic_anytls_server}"
+		port="${ss_basic_anytls_port}"
 		;;
 	*)
 		host="${ss_basic_server}"
@@ -1285,6 +1321,12 @@ kill_process() {
 	if [ -n "${TUIC_PID}" ];then
 		echo_date "关闭tuic-client进程..."
 		killall tuic-client
+	fi
+
+	local ANYTLS_PID=$(ps | grep "anytls-zig" | grep -v grep | awk '{print $1}')
+	if [ -n "${ANYTLS_PID}" ];then
+		echo_date "关闭anytls-zig进程..."
+		killall anytls-zig
 	fi
 
 	local OBFSLOCAL_PID=$(ps | grep "obfs-local" | grep -v grep | awk '{print $1}')
@@ -1514,20 +1556,23 @@ start_dns_x(){
 		fi
 	fi
 	[ -n "${special_dns_hint}" ] && echo_date "${special_dns_hint}"
-	if [ "${ss_basic_type}" = "6" ];then
+	if ! proxy_core_supports_udp;then
 		local trust_udp_fallback=""
 		local n=""
-		for n in 1 2 3
-		do
-			if [ "$(eval echo \$ss_basic_chng_trust_dns_${n}_chk)" = "1" ] && [ "$(get_dns_selected_net trust "${n}")" = "udp" ];then
-				trust_udp_fallback="1"
+		if [ "${dns_plan_runtime}" = "1" ];then
+			for n in 1 2 3
+			do
+				if [ "$(eval echo \$ss_basic_chng_trust_dns_${n}_chk)" = "1" ] && [ "$(get_dns_selected_net trust "${n}")" = "udp" ];then
+					trust_udp_fallback="1"
+				fi
+			done
+			if [ -n "${trust_udp_fallback}" ];then
+				echo_date "⚠️检测到 $(proxy_core_udp_unsupported_name) 不支持 UDP 代理，chinadns-ng 的可信 UDP DNS 将不会写入运行配置。"
 			fi
-		done
-		if [ -n "${trust_udp_fallback}" ];then
-			echo_date "⚠️检测到 NaïveProxy 不支持 UDP 代理，chinadns-ng 的可信 UDP DNS 将在运行时按 TCP 上游处理。"
-		fi
-		if [ -n "$(smartdns_iter_gfw_udp_relays 2>/dev/null | sed -n '1p')" ];then
-			echo_date "⚠️检测到 NaïveProxy 不支持 UDP 代理，smartdns gfw 组中的 UDP DNS 将在运行时按 TCP 上游处理。"
+		elif [ "${dns_plan_runtime}" = "2" ];then
+			if [ -n "$(smartdns_iter_gfw_udp_relays 2>/dev/null | sed -n '1p')" ];then
+				echo_date "⚠️检测到 $(proxy_core_udp_unsupported_name) 不支持 UDP 代理，smartdns gfw 组中的 UDP DNS 将不会写入运行配置。"
+			fi
 		fi
 	fi
 	if [ "${dns_plan_runtime}" == "1" ];then
@@ -1664,14 +1709,17 @@ smartdns_append_group_servers() {
 	local group="$3"
 	local scope="$4"
 	local relay_idx=0
+	local append_count=0
+	local skip_udp_count=0
 	local flags="$(smartdns_server_flags "${mode}" "${scope}")"
 	local use_proxy="0"
 	local sep="$(printf '\037')"
 	[ "${group}" = "gfw" ] && use_proxy="1"
 	while IFS="${sep}" read -r id proto provider description kind slot addr port host host_ip isp net
 	do
-		if [ "${group}" = "gfw" ] && [ "${ss_basic_type}" = "6" ] && [ "${proto}" = "udp" ];then
-			proto="tcp"
+		if [ "${group}" = "gfw" ] && ! proxy_core_supports_udp && [ "${proto}" = "udp" ];then
+			skip_udp_count=$((skip_udp_count + 1))
+			continue
 		fi
 		local target_addr="${addr}"
 		local target_port="${port}"
@@ -1683,9 +1731,19 @@ smartdns_append_group_servers() {
 			target_proxy="0"
 		fi
 		smartdns_append_server_line "${outfile}" "${proto}" "${target_addr}" "${target_port}" "${host}" "${host_ip}" "${flags}" "${target_proxy}"
+		append_count=$((append_count + 1))
 	done <<-EOF
 $(smartdns_group_items_tsv "${group}")
 EOF
+	if [ "${group}" = "gfw" ] && ! proxy_core_supports_udp;then
+		if [ "${skip_udp_count}" -gt 0 ];then
+			echo_date "⚠️smartdns ${scope}：已跳过 ${skip_udp_count} 个 gfw 组 UDP DNS。"
+		fi
+		if [ "${append_count}" -eq 0 ];then
+			smartdns_append_server_line "${outfile}" "tcp" "8.8.8.8" "53" "" "" "${flags}" "${use_proxy}"
+			echo_date "⚠️smartdns ${scope}：gfw 组没有可用 TCP/DoT DNS，已使用 tcp://8.8.8.8 兜底。"
+		fi
+	fi
 }
 
 smartdns_append_node_direct_servers() {
@@ -2350,34 +2408,55 @@ start_chinadns_ng(){
 	fi
 
 	# 5. 生成chinadns-ng的可信DNS
+	local FDNS_SKIPPED_UDP_COUNT=0
 	# 可信DNS-1 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_1_chk}" == "1" ];then
 		local FDNS_1=$(get_dns trust 1)
-		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 1)") → ${FDNS_1%%\?*}"
+		if [ -n "${FDNS_1}" ];then
+			if [ "${ss_basic_dns_serverx}" == "1" ];then
+				echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 1)") → ${FDNS_1%%\?*}"
+			else
+				echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 1)") → ${FDNS_1%%\?*}"
+			fi
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 1)") → ${FDNS_1%%\?*}"
+			FDNS_SKIPPED_UDP_COUNT=$((FDNS_SKIPPED_UDP_COUNT + 1))
 		fi
 	fi
 
 	# 可信DNS-2 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_2_chk}" == "1" ];then
 		local FDNS_2=$(get_dns trust 2)
-		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 2)") → ${FDNS_2%%\?*}"
+		if [ -n "${FDNS_2}" ];then
+			if [ "${ss_basic_dns_serverx}" == "1" ];then
+				echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 2)") → ${FDNS_2%%\?*}"
+			else
+				echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 2)") → ${FDNS_2%%\?*}"
+			fi
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 2)") → ${FDNS_2%%\?*}"
+			FDNS_SKIPPED_UDP_COUNT=$((FDNS_SKIPPED_UDP_COUNT + 1))
 		fi
 	fi
 
 	# 可信DNS-3 (代理) 🚀
 	if [ "${ss_basic_chng_trust_dns_3_chk}" == "1" ];then
 		local FDNS_3=$(get_dns trust 3)
-		if [ "${ss_basic_dns_serverx}" == "1" ];then
-			echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 3)") → ${FDNS_3%%\?*}"
+		if [ -n "${FDNS_3}" ];then
+			if [ "${ss_basic_dns_serverx}" == "1" ];then
+				echo_date "🔍️ → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 3)") → ${FDNS_3%%\?*}"
+			else
+				echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 3)") → ${FDNS_3%%\?*}"
+			fi
 		else
-			echo_date "🔍️ → dnsmasq → chinadns-ng (trust) → $(get_proxy_type "$(get_dns_effective_net trust 3)") → ${FDNS_3%%\?*}"
+			FDNS_SKIPPED_UDP_COUNT=$((FDNS_SKIPPED_UDP_COUNT + 1))
 		fi
+	fi
+
+	if ! proxy_core_supports_udp && [ "${FDNS_SKIPPED_UDP_COUNT}" -gt 0 ];then
+		echo_date "⚠️chinadns-ng：已跳过 ${FDNS_SKIPPED_UDP_COUNT} 个可信 UDP DNS。"
+	fi
+	if ! proxy_core_supports_udp && [ -z "${FDNS_1}${FDNS_2}${FDNS_3}" ];then
+		FDNS_1="tcp://8.8.8.8"
+		echo_date "⚠️chinadns-ng：可信组没有可用 TCP/DoT DNS，已使用 tcp://8.8.8.8 兜底。"
 	fi
 
 	if [ "$FDNS_1" == "$FDNS_2" ] && [ "$FDNS_2" == "$FDNS_3" ]; then
@@ -2782,11 +2861,7 @@ get_dns_effective_net(){
 	local type="$1"
 	local numb="$2"
 	local net="$(get_dns_selected_net "${type}" "${numb}")"
-	if [ "${type}" = "trust" ] && [ "${ss_basic_type}" = "6" ] && [ "${net}" = "udp" ];then
-		echo "tcp"
-	else
-		echo "${net}"
-	fi
+	echo "${net}"
 }
 
 get_dns_para(){
@@ -2832,11 +2907,11 @@ iter_dns_udp_relay_targets(){
 		do
 			local chk="$(eval echo \$ss_basic_chng_trust_dns_${numb}_chk)"
 			local net="$(get_dns_selected_net trust "${numb}")"
-			if [ "${chk}" = "1" ] && [ "${net}" = "udp" ] && [ "${ss_basic_type}" != "6" ];then
+			if [ "${chk}" = "1" ] && [ "${net}" = "udp" ] && proxy_core_supports_udp;then
 				printf '%s\037%s\037%s\037%s\037%s\n' "$((SMARTDNS_RELAY_PORT_BASE + numb - 1))" "$(get_dns_para trust "${numb}" addr)" "$(get_dns_para trust "${numb}" port)" "chinadns-ng trust DNS ${numb}" ""
 			fi
 		done
-	elif [ "${ss_basic_dns_plan}" = "2" ] && [ "${ss_basic_type}" != "6" ];then
+	elif [ "${ss_basic_dns_plan}" = "2" ] && proxy_core_supports_udp;then
 		smartdns_iter_gfw_udp_relays
 	fi
 }
@@ -2978,6 +3053,10 @@ get_dns(){
 	
 	local dns_opt=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_opt)
 	local dns_usr=$(eval echo \$ss_basic_chng_${type}_${net}_${numb}_usr)
+
+	if [ "${type}" = "trust" ] && ! proxy_core_supports_udp && [ "${net}" = "udp" ];then
+		return 0
+	fi
 
 	if [ "${eff_net}" == "dot" ];then
 		eff_net=tls
@@ -4928,6 +5007,88 @@ start_tuic(){
 	detect_running_status tuic-client
 }
 
+anytls_hostport() {
+	local host="$1"
+	local port="$2"
+
+	case "${host}" in
+	*:* )
+		case "${host}" in
+		\[*\])
+			printf '%s:%s' "${host}" "${port}"
+			;;
+		*)
+			printf '[%s]:%s' "${host}" "${port}"
+			;;
+		esac
+		;;
+	*)
+		printf '%s:%s' "${host}" "${port}"
+		;;
+	esac
+}
+
+start_anytls(){
+	local ret=""
+	local server_addr=""
+	local pass_file="/tmp/anytls_pass"
+	local verify_arg=""
+
+	if [ -f "/koolshare/bin/anytls-zig" ];then
+		chmod +x /koolshare/bin/anytls-zig
+		ret=$(run /koolshare/bin/anytls-zig --version 2>&1)
+		if [ -z "${ret}" ];then
+			echo_date "检测到/koolshare/bin/目录下存在anytls-zig文件，但是无法运行！"
+			echo_date "请确保你下载了正确的二进制文件！"
+			close_in_five flag
+		fi
+	else
+		local pkg_arch=$(cat /koolshare/webs/Module_shadowsocks.asp | tr -d '\r' | grep -Eo "PKG_ARCH=.+"|awk -F "=" '{print $2}'|sed 's/"//g')
+		echo_date ""
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date ""
+		echo_date "重要提醒！！"
+		echo_date ""
+		echo_date "检测到你需要使用AnyTLS！但是当前/koolshare/bin目录下缺少anytls-zig二进制文件！"
+		echo_date "请安装fancyss full版本，或确认对应平台的anytls-zig已经正确安装。"
+		echo_date "当前平台：${pkg_arch}"
+		echo_date ""
+		echo_date "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo_date ""
+		close_in_five flag
+	fi
+
+	[ -n "${ss_basic_anytls_server}" ] || {
+		echo_date "检测到AnyTLS节点未配置服务器地址/域名，请修改配置，退出！"
+		close_in_five flag
+	}
+	[ -n "${ss_basic_anytls_port}" ] || ss_basic_anytls_port="443"
+	[ -n "${ss_basic_anytls_pass}" ] || {
+		echo_date "检测到AnyTLS节点未配置密码，请修改配置，退出！"
+		close_in_five flag
+	}
+
+	server_addr="$(anytls_hostport "${ss_basic_anytls_server}" "${ss_basic_anytls_port}")"
+	printf '%s' "${ss_basic_anytls_pass}" > "${pass_file}"
+	if [ "${ss_basic_anytls_ai}" = "1" ]; then
+		verify_arg="--insecure"
+	else
+		verify_arg="--verify"
+	fi
+
+	echo_date "开启ipt2socks进程..."
+	run_bg ipt2socks -p 23456 -l 3333 -b 0.0.0.0 -B :: -n 10000 -R
+	detect_running_status2 ipt2socks 23456
+
+	echo_date "开启AnyTLS客户端进程..."
+	if [ -n "${ss_basic_anytls_sni}" ]; then
+		run_bg /koolshare/bin/anytls-zig -server "${server_addr}" --password-file "${pass_file}" -l 127.0.0.1:23456 -sni "${ss_basic_anytls_sni}" "${verify_arg}"
+	else
+		run_bg /koolshare/bin/anytls-zig -server "${server_addr}" --password-file "${pass_file}" -l 127.0.0.1:23456 "${verify_arg}"
+	fi
+	detect_running_status3 anytls-zig 23456 1 force
+}
+
 write_cron_job() {
 	# 定时规则更新
 	sed -i '/ssupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
@@ -5297,13 +5458,13 @@ get_jump_mode() {
 }
 
 acl_proxy_supports_udp() {
-	[ "${ss_basic_type}" == "6" ] && return 1
+	proxy_core_supports_udp || return 1
 	return 0
 }
 
 note_acl_udp_unsupported_once() {
 	if [ "${ACL_UDP_UNSUPPORTED_NOTICE}" != "1" ]; then
-		echo_date "⚠️因Naïve协议不支持UDP代理，访问控制中的UDP代理开关将被忽略，并默认屏蔽对应规则的QUIC流量。"
+		echo_date "⚠️因当前节点协议不支持UDP代理，访问控制中的UDP代理开关将被忽略，并默认屏蔽对应规则的QUIC流量。"
 		ACL_UDP_UNSUPPORTED_NOTICE="1"
 	fi
 }
@@ -6729,7 +6890,7 @@ detect_ip(){
 		local IP=$(run curl-fancyss ${CURL_IP_FLAG} -s -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "Terminated")
 	elif [ "${METHOD}" == "1" ];then
 		# 检测代理ip
-		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
+		local SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|anytls-zig")
 		if [ -n "${SOCKS5_OPEN}" ];then
 			local IP=$(run curl-fancyss ${CURL_IP_FLAG} -s -x socks5h://127.0.0.1:23456 -m ${TIMEOUT} ${SUBJECT} 2>&1 | grep -v "Terminated")
 		else
@@ -6744,7 +6905,7 @@ detect_ip(){
 check_frn_public_ip(){
 	echo_date "开始代理出口ip检测..."
 
-	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eo "v2ray|xray|naive|tuic" | head -n1)
+	local SOCKS5_OPEN=$(netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eo "v2ray|xray|naive|tuic|anytls-zig" | head -n1)
 	if [ -n "${SOCKS5_OPEN}" ];then
 		echo_date "检测方式1：socks5"
 	else
@@ -6968,6 +7129,7 @@ apply_ss() {
 		[ "${ss_basic_type}" == "6" ] && start_naive
 		[ "${ss_basic_type}" == "7" ] && start_tuic
 		[ "${ss_basic_type}" == "8" ] && start_hy2
+		[ "${ss_basic_type}" == "9" ] && start_anytls
 	fi
 
 	if [ "${bootstrap_dns_first}" != "1" ]; then
@@ -7167,7 +7329,7 @@ flush_nat)
 		;;
 start_nat)
 	# start on nat-start
-	SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic")
+	SOCKS5_OPEN=$(netstat -nlpt 2>/dev/null|grep -w "23456"|grep -Eo "v2ray|xray|naive|tuic|anytls-zig")
 	if [ -z "${SOCKS5_OPEN}" ];then
 		# 代理程序没有运行，可能是刚开机，不继续
 		return 0

@@ -149,7 +149,7 @@ fss_base_load_current_node_env() {
 		cur_node=$(fss_get_current_node_id)
 	fi
 	base_1="name type mode server port method password ss_obfs ss_obfs_host rss_protocol rss_protocol_param rss_obfs rss_obfs_param v2ray_uuid v2ray_alterid v2ray_security v2ray_network v2ray_headtype_tcp v2ray_headtype_kcp v2ray_headtype_quic v2ray_grpc_mode v2ray_grpc_authority v2ray_network_path v2ray_network_host v2ray_kcp_seed v2ray_network_security v2ray_network_security_ai v2ray_network_security_sni v2ray_mux_concurrency v2ray_json xray_uuid xray_encryption xray_flow xray_network xray_headtype_tcp xray_headtype_kcp xray_headtype_quic xray_grpc_mode xray_grpc_authority xray_xhttp_mode xray_network_path xray_network_host xray_kcp_seed xray_network_security xray_network_security_ai xray_network_security_sni xray_pcs xray_vcn xray_svn xray_fingerprint xray_show xray_publickey xray_shortid xray_spiderx xray_prot xray_alterid xray_json tuic_json"
-	base_2="v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_pcs trojan_vcn trojan_tfo trojan_plugin trojan_obfs trojan_obfshost trojan_obfsuri naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_pcs hy2_vcn hy2_svn hy2_ai hy2_tfo hy2_cg"
+	base_2="v2ray_use_json v2ray_mux_enable v2ray_network_security_alpn_h2 v2ray_network_security_alpn_http xray_use_json xray_network_security_alpn_h2 xray_network_security_alpn_http trojan_ai trojan_uuid trojan_sni trojan_pcs trojan_vcn trojan_tfo trojan_plugin trojan_obfs trojan_obfshost trojan_obfsuri naive_prot naive_server naive_port naive_user naive_pass hy2_server hy2_port hy2_pass hy2_up hy2_dl hy2_obfs hy2_obfs_pass hy2_sni hy2_pcs hy2_vcn hy2_svn hy2_ai hy2_tfo hy2_cg anytls_server anytls_port anytls_pass anytls_sni anytls_ai"
 	fss_export_current_node_env "${cur_node}" ${base_1} ${base_2}
 	ssconf_basic_node=${cur_node}
 	export ss_basic_mode="${FSS_GLOBAL_BASIC_MODE}"
@@ -470,8 +470,8 @@ do
 	fi
 done
 
-# naive 节点不支持udp
-if [ "${ss_basic_type}" == "6" ];then
+# naive/AnyTLS 节点不支持udp
+if [ "${ss_basic_type}" == "6" ] || [ "${ss_basic_type}" == "9" ];then
 	mangle=0
 fi
 
@@ -484,6 +484,9 @@ if [ "${ss_basic_type}" == "6" ];then
 	ss_basic_server=${ss_basic_naive_server}
 elif [ "${ss_basic_type}" == "8" ];then
 	ss_basic_server=${ss_basic_hy2_server}
+elif [ "${ss_basic_type}" == "9" ];then
+	ss_basic_password="${ss_basic_anytls_pass}"
+	ss_basic_server=${ss_basic_anytls_server}
 else
 	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
 		:

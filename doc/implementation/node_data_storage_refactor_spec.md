@@ -262,6 +262,7 @@ v2 中以下布尔字段建议统一存成：
 
 - `password`
 - `naive_pass`
+- `anytls_pass`
 - `v2ray_json`
 - `xray_json`
 - `tuic_json`
@@ -350,6 +351,12 @@ hy2_obfs hy2_obfs_pass hy2_sni
 hy2_pcs hy2_vcn hy2_ai hy2_tfo hy2_cg
 ```
 
+### AnyTLS 相关字段
+
+```text
+anytls_server anytls_port anytls_pass anytls_sni anytls_ai
+```
+
 ### 兼容保留字段（仅为导入/导出保留）
 
 ```text
@@ -423,6 +430,7 @@ _schema _id _rev _source _updated_at
 ```text
 password
 naive_pass
+anytls_pass
 v2ray_json
 xray_json
 tuic_json
@@ -435,6 +443,7 @@ tuic_json
 ```text
 password        -> Base64.encode(value)
 naive_pass      -> Base64.encode(value)
+anytls_pass     -> Base64.encode(value)
 v2ray_json      -> Base64.encode(pack_js(value))
 xray_json       -> Base64.encode(pack_js(value))
 tuic_json       -> Base64.encode(pack_js(value))

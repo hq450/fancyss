@@ -373,7 +373,7 @@ restart_status_runtime_async() {
 				waited=$((waited + 1))
 			done
 			waited=0
-			while ! netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eq "xray|v2ray|naive|tuic|rss-local"
+			while ! netstat -nlp 2>/dev/null | grep -w "23456" | grep -Eq "xray|v2ray|naive|tuic|anytls-zig|rss-local"
 			do
 				[ "${waited}" -ge 15 ] && break
 				sleep 1
@@ -509,7 +509,7 @@ normalize_schema2_secret_fields_after_install() {
 	local changed_fields=0
 	local scanned_nodes=0
 	local total_nodes=0
-	local fields="password naive_pass"
+	local fields="password naive_pass anytls_pass"
 
 	[ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] || return 0
 	if [ "${force_scan}" != "1" ] && [ "$(dbus get fss_data_secret_mode 2>/dev/null)" = "raw" ];then
@@ -1102,6 +1102,9 @@ __get_name_by_type() {
 	8)
 		echo "hysteria2"
 		;;
+	9)
+		echo "AnyTLS"
+		;;
 	esac
 }
 
@@ -1174,7 +1177,7 @@ append_backup_nodes_schema2(){
 }
 
 full2lite(){
-	# 当从full版本切换到lite版本的时候，需要将naive、tuic节点进行备份后，从节点列表里删除相应节点
+	# 当从full版本切换到lite版本的时候，需要将full-only节点进行备份后，从节点列表里删除相应节点
 	# 1. 将所有不支持的节点数据储存到备份文件
 	local tmp_kv="/tmp/fancyss_kv.txt"
 	local backup_dir="/koolshare/configs/fanyss"
@@ -1221,7 +1224,7 @@ full2lite(){
 				NAME="$(fss_get_node_field_plain "${NU}" name)"
 			fi
 			case "${TY}" in
-			6|7)
+			6|7|9)
 				echo_date "备份并从节点列表里移除第$NU个$(__get_name_by_type ${TY})节点：【${NAME}】"
 				if [ -f "${json_file}" ]; then
 					jq -c '
@@ -1284,7 +1287,7 @@ full2lite(){
 		return
 	fi
 	dbus list ssconf_basic_ | grep -E "_[0-9]+=" | sed '/^ssconf_basic_.\+_[0-9]\+=$/d' | sed 's/^ssconf_basic_//' >"${tmp_kv}"
-	NODES_INFO=$(sed -n 's/type_\([0-9]\+=[67]\)/\1/p' "${tmp_kv}" | sort -n)
+	NODES_INFO=$(sed -n 's/type_\([0-9]\+=[679]\)/\1/p' "${tmp_kv}" | sort -n)
 	if [ -z "${NODES_INFO}" ];then
 		rm -rf "${tmp_kv}" "${backup_file}"
 		return
@@ -1351,7 +1354,7 @@ lite2full(){
 }
 
 check_empty_node(){
-	# 从full版本切换为lite版本后，部分不支持节点将会被删除，比如naive，tuic，hysteria2节点
+	# 从full版本切换为lite版本后，full-only节点将会被删除，比如naive、tuic、AnyTLS节点
 	# 如果安装lite版本的时候，full版本使用的是以上节点，则这些节点可能是空的，此时应该切换为下一个不为空的节点，或者关闭插件（没有可用节点的情况）
 	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ];then
 		local NODES_SEQ=$(fss_list_node_ids)
@@ -1563,6 +1566,7 @@ install_now(){
 	rm -rf /koolshare/bin/hysteria2
 	rm -rf /koolshare/bin/haveged
 	rm -rf /koolshare/bin/naive
+	rm -rf /koolshare/bin/anytls-zig
 	rm -rf /koolshare/bin/ipt2socks
 	rm -rf /koolshare/bin/dnsclient
 	rm -rf /koolshare/bin/smartdns
@@ -1592,6 +1596,7 @@ install_now(){
 		rm -rf /data/v2ray >/dev/null 2>&1
 		rm -rf /data/hysteria2 >/dev/null 2>&1
 		rm -rf /data/naive >/dev/null 2>&1
+		rm -rf /data/anytls-zig >/dev/null 2>&1
 		rm -rf /data/sslocal >/dev/null 2>&1
 		rm -rf /data/rss-local >/dev/null 2>&1
 		rm -rf /data/rss-redir >/dev/null 2>&1
@@ -1694,7 +1699,7 @@ install_now(){
 		echo_date "检测/data分区剩余空间..."
 		local SPACE_DATA_AVAL1=$(df | grep -w "/data" | awk '{print $4}')
 		echo_date "/data分区剩余空间为：${SPACE_DATA_AVAL1}KB"
-		local _BINS="xray v2ray hysteria2 naive sslocal rss-local rss-tunnel rss-redir"
+		local _BINS="xray v2ray hysteria2 naive anytls-zig sslocal rss-local rss-tunnel rss-redir"
 		for _BIN in ${_BINS}
 		do
 			if [ -f "/tmp/shadowsocks/bin/${_BIN}" ];then

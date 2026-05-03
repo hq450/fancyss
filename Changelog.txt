@@ -1,10 +1,18 @@
 fancyss Changelog
 
-3.5.24（20260502）
-   - note	本次更新针对在线升级链路和多平台打包元数据做补丁收口，重点修复 RT-AX89X/qca 这类直连 GitHub raw 受限环境下无法通过插件内“检查并更新”下载安装包的问题。
+3.5.24（20260503）
+   - note	本次更新新增 AnyTLS 协议支持，并针对在线升级链路、多平台打包元数据和详细状态展示做补丁收口。
+   - add	full 版本新增 AnyTLS 节点支持：订阅解析、手动添加/编辑、账号设置节点选择、schema2 字段映射、节点导入导出、节点卡片/表格展示、分享链接生成和启动配置均已接入；lite 版本打包会按 full-only 协议规则移除 AnyTLS 支持。
+   - add	新增 `anytls-zig` 轻量客户端工具并接入 full 版本分发链路，已编译并 UPX 压缩 `x86_64 / aarch64 / armv5te / armv7a / armv7hf` 全平台产物，打包时按平台复制到对应 `fancyss/bin-*`。
+   - update	AnyTLS 运行链路使用 `anytls-zig` 本地 SOCKS5 入站配合 `ipt2socks` 透明代理；因 AnyTLS 不支持 UDP，启动时会过滤可信/GFW 组 UDP DNS，必要时使用 `tcp://8.8.8.8` 兜底并输出日志提醒。
+   - update	AnyTLS 按非 Xray-like 协议处理，暂不允许作为 Xray 分流节点或兜底出站；web 落地延迟测速按 Naïve/TUIC 类原生单节点进程模型处理并加入线程限制，避免批量测速时过量拉起进程。
+   - update	`sub-tool` 升级到 `0.1.15`，支持 AnyTLS URI 解析、协议统计、full/lite 过滤和认证密码规范化比较；`node-tool` 升级到 `0.1.11`，支持 AnyTLS schema2 字段、legacy/raw 密文字段处理、webtest 原生产物生成和节点分布 summary 输出。
+   - update	“详细状态”中的节点分布改为通过 `node-tool stat --format summary` 统计，减少大量节点场景下 shell+jq 逐项统计带来的等待；主要二进制版本展示补充 `status-tool`、`webtest-tool` 和 `anytls-zig`。
+   - fix	修复 AnyTLS 节点启动后顶部运行状态国外链接可能显示失败的问题；状态检测和 webtest 对一次性 SOCKS 探测场景做了短连接兼容，避免测速行为提前触发 AnyTLS 客户端退出。
+   - fix	修复 full 版本顶部协议说明文本过长导致换行的问题；full 版本移除“九种协议”字样，lite 版本保持原展示。
    - fix	修复 `ss_update.sh` 下载插件离线安装包时 SOCKS5 判断分支写反的问题：现在与在线版本检测保持一致，检测到本地 `23456` SOCKS5 代理时使用 `socks5h://127.0.0.1:23456` 下载安装包，未检测到代理时才直连，避免“能检测版本但下载包超时”的问题。
    - fix	修复打包时 `Module_shadowsocks.asp` 内 `PKG_ARCH / PKG_TYPE / PKG_EXTA` 只按默认值替换的隐患；现在每个平台、full/lite、release/debug 打包都会无条件写入正确包元数据，避免源码或调试同步污染后产出错误包名。
-   - test	已在 RT-AX89X(qca)、TUF-AX3000(hnd)、GS7(mtk)、RT-AX86U-home(hnd_v8) 实机验证在线更新安装包下载会在检测到 SOCKS5 时走代理并成功下载对应平台包。
+   - test	已在 RT-AX89X(qca)、TUF-AX3000(hnd)、GS7(mtk)、RT-AX86U-home(hnd_v8) 实机验证在线更新安装包下载会在检测到 SOCKS5 时走代理并成功下载对应平台包；AnyTLS 接入已在 GS7(mtk) 做启动、页面展示和运行状态 smoke test。
 
 3.5.23（20260502）
    - note	本次更新针对弱性能机型顶部“插件运行状态”检测带来的周期 CPU 峰值做收口，重点优化未开启故障转移时的前端状态刷新链路。

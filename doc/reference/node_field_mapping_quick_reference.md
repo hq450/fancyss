@@ -79,6 +79,7 @@ fss_node_102=<base64(json)>
 | `6` | NaiveProxy |
 | `7` | TUIC |
 | `8` | Hysteria2 |
+| `9` | AnyTLS |
 
 ---
 
@@ -203,6 +204,16 @@ fss_node_102=<base64(json)>
 | `ssconf_basic_hy2_pcs_<seq>` | `hy2_pcs` | pinnedPeerCertSha256 |
 | `ssconf_basic_hy2_vcn_<seq>` | `hy2_vcn` | verifyPeerCertByName |
 | `ssconf_basic_hy2_ai_<seq>` | `hy2_ai` | allowInsecure |
+
+### 4.8 AnyTLS
+
+| 旧键模式 | 新字段 | 作用 |
+| --- | --- | --- |
+| `ssconf_basic_anytls_server_<seq>` | `anytls_server` | 服务器地址 |
+| `ssconf_basic_anytls_port_<seq>` | `anytls_port` | 端口 |
+| `ssconf_basic_anytls_pass_<seq>` | `anytls_pass` | 认证密码 |
+| `ssconf_basic_anytls_sni_<seq>` | `anytls_sni` | TLS SNI |
+| `ssconf_basic_anytls_ai_<seq>` | `anytls_ai` | allowInsecure |
 | `ssconf_basic_hy2_tfo_<seq>` | `hy2_tfo` | TFO 开关 |
 | `ssconf_basic_hy2_cg_<seq>` | `hy2_cg` | 拥塞控制类型 |
 

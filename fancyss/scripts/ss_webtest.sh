@@ -170,6 +170,33 @@ wt_try_node_tool_webtest_groups() {
 	return 0
 }
 
+wt_prune_xray_group_non_xray_like() {
+	local src_file="${TMP2}/wt_xray_group.txt"
+	local tmp_file="${src_file}.tmp.$$"
+
+	[ -f "${src_file}" ] || return 0
+	[ -f "${TMP2}/nodes_index.txt" ] || return 0
+	awk -F '|' '
+		NR == FNR {
+			if ($2 == "00" || $2 == "03" || $2 == "04" || $2 == "05" || $2 == "08") {
+				keep[$1] = 1
+			}
+			next
+		}
+		keep[$1] {
+			print $1
+		}
+	' "${TMP2}/nodes_index.txt" "${src_file}" > "${tmp_file}" 2>/dev/null || {
+		rm -f "${tmp_file}" >/dev/null 2>&1
+		return 0
+	}
+	if [ -s "${tmp_file}" ]; then
+		mv -f "${tmp_file}" "${src_file}"
+	else
+		rm -f "${tmp_file}" "${src_file}" >/dev/null 2>&1
+	fi
+}
+
 wt_get_webtest_cache_xray_count() {
 	[ -f "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" ] || return 1
 	sed -n 's/^xray_count=//p' "${FSS_WEBTEST_CACHE_GLOBAL_META_FILE}" | sed -n '1p'
@@ -582,6 +609,7 @@ wt_webtest_group_label() {
 	xg*) printf '%s\n' "xray-like" ;;
 	nv) printf '%s\n' "naive" ;;
 	tc) printf '%s\n' "tuic" ;;
+	09) printf '%s\n' "anytls" ;;
 	01|single) printf '%s\n' "ssr" ;;
 	*) printf '%s\n' "$1" ;;
 	esac
@@ -1355,6 +1383,16 @@ wt_record_batch_result_file() {
 }
 
 wt_runtime_cleanup() {
+	find "${FSS_WEBTEST_CACHE_NODE_DIR}" "${TMP2}" -name '*_anytls.pid' -type f 2>/dev/null | while read -r pid_file
+	do
+		[ -s "${pid_file}" ] || {
+			rm -f "${pid_file}" >/dev/null 2>&1
+			continue
+		}
+		_pid="$(cat "${pid_file}" 2>/dev/null)"
+		[ -n "${_pid}" ] && kill "${_pid}" >/dev/null 2>&1 || true
+		rm -f "${pid_file}" >/dev/null 2>&1
+	done
 	killall wt-ss >/dev/null 2>&1
 	killall wt-ss-local >/dev/null 2>&1
 	killall wt-obfs >/dev/null 2>&1
@@ -1564,6 +1602,7 @@ wt_apply_perf_profile() {
 	WT_SSR_THREADS=1
 	WT_TUIC_THREADS=1
 	WT_NAIVE_THREADS=1
+	WT_ANYTLS_THREADS=1
 	WT_CACHE_BUILD_THREADS=1
 
 	case "${profile}" in
@@ -1573,6 +1612,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=4
 		WT_TUIC_THREADS=3
 		WT_NAIVE_THREADS=3
+		WT_ANYTLS_THREADS=3
 		WT_CACHE_BUILD_THREADS=4
 		;;
 	aarch64_3plus_1g)
@@ -1581,6 +1621,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=4
 		WT_TUIC_THREADS=2
 		WT_NAIVE_THREADS=2
+		WT_ANYTLS_THREADS=2
 		WT_CACHE_BUILD_THREADS=4
 		;;
 	aarch64_3plus_512m)
@@ -1589,6 +1630,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=2
 		WT_TUIC_THREADS=1
 		WT_NAIVE_THREADS=1
+		WT_ANYTLS_THREADS=1
 		WT_CACHE_BUILD_THREADS=2
 		;;
 	aarch64_dual_core)
@@ -1597,6 +1639,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=2
 		WT_TUIC_THREADS=1
 		WT_NAIVE_THREADS=1
+		WT_ANYTLS_THREADS=1
 		WT_CACHE_BUILD_THREADS=2
 		;;
 	armv7l_rt_ax89x)
@@ -1605,6 +1648,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=2
 		WT_TUIC_THREADS=2
 		WT_NAIVE_THREADS=2
+		WT_ANYTLS_THREADS=2
 		WT_CACHE_BUILD_THREADS=3
 		;;
 	armv7l_quad_core_1g)
@@ -1613,6 +1657,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=2
 		WT_TUIC_THREADS=2
 		WT_NAIVE_THREADS=2
+		WT_ANYTLS_THREADS=2
 		WT_CACHE_BUILD_THREADS=3
 		;;
 	armv7l_quad_core_512m)
@@ -1621,6 +1666,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=1
 		WT_TUIC_THREADS=1
 		WT_NAIVE_THREADS=1
+		WT_ANYTLS_THREADS=1
 		WT_CACHE_BUILD_THREADS=2
 		;;
 	armv7l_tri_core)
@@ -1629,6 +1675,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=1
 		WT_TUIC_THREADS=1
 		WT_NAIVE_THREADS=1
+		WT_ANYTLS_THREADS=1
 		WT_CACHE_BUILD_THREADS=2
 		;;
 	armv7l_low_end|generic_low_end|*)
@@ -1637,6 +1684,7 @@ wt_apply_perf_profile() {
 		WT_SSR_THREADS=1
 		WT_TUIC_THREADS=1
 		WT_NAIVE_THREADS=1
+		WT_ANYTLS_THREADS=1
 		WT_CACHE_BUILD_THREADS=1
 		;;
 	esac
@@ -1738,6 +1786,7 @@ wt_node_get_plain_from_cache() {
 		def is_b64_field($key):
 			$key == "password"
 			or $key == "naive_pass"
+			or $key == "anytls_pass"
 			or $key == "v2ray_json"
 			or $key == "xray_json"
 			or $key == "tuic_json";
@@ -2071,7 +2120,7 @@ wt_group_preview_count() {
 	01)
 		printf '%s\n' "${WT_SSR_THREADS:-1}"
 		;;
-	06|07)
+	06|07|09)
 		printf '%s\n' 9999
 		;;
 	*)
@@ -2324,7 +2373,9 @@ wt_webtest_cache_prune_stale() {
 		rm -f "${FSS_WEBTEST_CACHE_META_DIR}/${node_id}.meta" \
 			"${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_outbounds.json" \
 			"${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_start.sh" \
-			"${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_stop.sh"
+			"${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_stop.sh" \
+			"${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_anytls.pass" \
+			"${FSS_WEBTEST_CACHE_NODE_DIR}/${node_id}_anytls.pid"
 	done
 	rm -f "${active_ids_file}"
 }
@@ -2539,6 +2590,9 @@ wt_webtest_cache_build_node() {
 		;;
 	8)
 		wt_gen_hy2_outbound "${node_id}" "${cache_mark}"
+		;;
+	9)
+		wt_gen_anytls_outbound "${node_id}" "${cache_mark}"
 		;;
 	*)
 		WT_OUTBOUND_OBJECT_ONLY=""
@@ -3031,6 +3085,7 @@ sort_nodes(){
 		rm -f "${TMP2}"/wt_*.txt "${TMP2}/nodes_file_name.txt" >/dev/null 2>&1
 		if wt_try_node_tool_webtest_groups; then
 			wt_build_nodes_index || return 1
+			wt_prune_xray_group_non_xray_like
 			return 0
 		fi
 	fi
@@ -3134,6 +3189,9 @@ test_nodes(){
 			;;
 		07)
 			test_12_tc $file_name $node_type
+			;;
+		09)
+			test_13_at $file_name $node_type
 			;;
 		esac
 	done
@@ -3428,6 +3486,87 @@ test_12_tc(){
 	rm -rf ${TMP2}/wt-tuic "${hooks_dir}"
 }
 
+test_13_at(){
+	local file=$1
+	local mark=$2
+	local file_path=""
+	local max_threads=""
+	local targets_file="${TMP2}/targets_${mark}.table"
+	local hooks_dir="${TMP2}/hooks_${mark}"
+	local valid_nodes_file="${TMP2}/targets_${mark}.nodes"
+	local pid_file=""
+	local start_script=""
+	local stop_script=""
+	local socks5_port=""
+	local server_addr=""
+	local anytls_server=""
+	local anytls_port=""
+	local anytls_pass=""
+	local anytls_sni=""
+	local anytls_ai=""
+	local sni_arg=""
+	local verify_arg=""
+	local pass_file=""
+
+	case "${file}" in
+	/*)
+		file_path="${file}"
+		;;
+	*)
+		file_path="${TMP2}/${file}"
+		;;
+	esac
+	[ -f "${file_path}" ] || return 0
+	max_threads="${WT_ANYTLS_THREADS}"
+	[ -n "${max_threads}" ] || max_threads=1
+	wt_set_batch_state_from_file "${file_path}" "loading..." ""
+	wt_prepare_protocol_targets_workspace "${targets_file}" "${valid_nodes_file}" "${hooks_dir}" || return 1
+
+	while read -r nu
+	do
+		[ -n "${nu}" ] || continue
+		anytls_server=$(wt_node_get_plain anytls_server "${nu}")
+		anytls_port=$(wt_node_get_plain anytls_port "${nu}")
+		anytls_pass=$(wt_node_get_plain anytls_pass "${nu}")
+		anytls_sni=$(wt_node_get_plain anytls_sni "${nu}")
+		anytls_ai=$(wt_node_get_plain anytls_ai "${nu}")
+		[ -n "${anytls_server}" -a -n "${anytls_pass}" ] || {
+			wt_mark_failed_result "${nu}"
+			continue
+		}
+		[ -n "${anytls_port}" ] || anytls_port="443"
+		socks5_port=$(wt_get_reserved_port)
+		[ -n "${socks5_port}" ] || {
+			wt_mark_failed_result "${nu}"
+			continue
+		}
+		server_addr="$(wt_anytls_hostport "${anytls_server}" "${anytls_port}")"
+		pass_file="${TMP2}/conf/${nu}_anytls.pass"
+		printf '%s' "${anytls_pass}" > "${pass_file}"
+		sni_arg=""
+		[ -n "${anytls_sni}" ] && sni_arg=" -sni $(wt_shell_quote "${anytls_sni}")"
+		if [ "${anytls_ai}" = "1" ]; then
+			verify_arg=" --insecure"
+		else
+			verify_arg=" --verify"
+		fi
+		pid_file="${TMP2}/pids/anytls_${nu}.pid"
+		start_script="${hooks_dir}/${nu}.start.sh"
+		stop_script="${hooks_dir}/${nu}.stop.sh"
+		wt_write_pid_hook_scripts "${start_script}" "${stop_script}" "${pid_file}" "\"/koolshare/bin/anytls-zig\" -server $(wt_shell_quote "${server_addr}") --password-file $(wt_shell_quote "${pass_file}") -l $(wt_shell_quote "127.0.0.1:${socks5_port}")${sni_arg}${verify_arg}" || continue
+		wt_append_protocol_target_row "${targets_file}" "${valid_nodes_file}" "${nu}" "${socks5_port}" "${start_script}" "${stop_script}" "${socks5_port}" "5000" || continue
+	done < "${file_path}"
+	[ -s "${targets_file}" ] || return 0
+	wt_set_batch_state_from_file "${valid_nodes_file}" "booting..." ""
+	if wt_try_webtest_tool_targets_batch "${targets_file}" "${mark}" "${max_threads}"; then
+		rm -rf "${hooks_dir}"
+		return 0
+	fi
+
+	wt_mark_failed_from_nodes_file "${valid_nodes_file}"
+	rm -rf "${hooks_dir}"
+}
+
 creat_trojan_json(){
 	local nu=$1
 	local trojan_server=$(wt_node_get server ${nu})
@@ -3592,6 +3731,7 @@ single_test_node(){
 	WT_SSR_THREADS=1
 	WT_TUIC_THREADS=1
 	WT_NAIVE_THREADS=1
+	WT_ANYTLS_THREADS=1
 
 	mkdir -p ${TMP2}
 	mkdir -p ${TMP2}/conf
@@ -3626,6 +3766,9 @@ single_test_node(){
 		;;
 	7)
 		test_12_tc ${single_file}
+		;;
+	9)
+		test_13_at ${single_file} 09
 		;;
 	*)
 		wt_append_webtest_line "${test_node}>failed"

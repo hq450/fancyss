@@ -95,7 +95,7 @@ GET_PROXY_TOOL(){
 		echo "xray-core"
 		;;
 	9)
-		echo "xray-core"
+		echo "anytls-zig"
 		;;
 	esac
 }
@@ -127,7 +127,42 @@ GET_TYPE_NAME(){
 		echo "hysteria2"
 		;;
 	9)
-		echo "xray(json)"
+		echo "AnyTLS"
+		;;
+	*)
+		echo "未知"
+		;;
+	esac
+}
+
+GET_TYPE_DIST_NAME(){
+	case "$1" in
+	0)
+		echo "ss"
+		;;
+	1)
+		echo "ssr"
+		;;
+	3)
+		echo "vmess"
+		;;
+	4)
+		echo "vless"
+		;;
+	5)
+		echo "trojan"
+		;;
+	6)
+		echo "naive"
+		;;
+	7)
+		echo "tuic"
+		;;
+	8)
+		echo "hysteria2"
+		;;
+	9)
+		echo "anytls"
 		;;
 	*)
 		echo "未知"
@@ -146,6 +181,15 @@ GET_CURRENT_NODE_TYPE_ID(){
 }
 
 GET_NODES_TYPE(){
+	if [ -x "/koolshare/bin/node-tool" ];then
+		local node_tool_dist=""
+		node_tool_dist="$(/koolshare/bin/node-tool stat --format summary 2>/dev/null | sed -n '1p')"
+		if [ -n "${node_tool_dist}" ];then
+			echo "${node_tool_dist}"
+			return 0
+		fi
+	fi
+
 	local status=""
 	local line=""
 	local type=""
@@ -174,10 +218,10 @@ EOF
 	do
 		type="$(echo "${line}" | awk -F"|" '{print $2}')"
 		nums="$(echo "${line}" | awk -F"|" '{print $1}')"
-		result="${result}$(GET_TYPE_NAME "${type}")节点 ${nums}个 | "
+		result="${result}$(GET_TYPE_DIST_NAME "${type}")：${nums}个；"
 	done
 
-	result="$(echo "${result}" | sed 's/ | $//g' | sed 's/| $//g')"
+	result="${result%；}"
 	[ -n "${result}" ] && echo "${result}" || echo "无"
 }
 
@@ -252,7 +296,7 @@ GET_CURRENT_NODE_TYPE(){
 		fi
 		;;
 	9)
-		echo "xray(json)节点"
+		echo "AnyTLS节点"
 		;;
 	*)
 		echo "$(GET_TYPE_NAME "${current_type}")节点"
@@ -409,7 +453,7 @@ if [ "${current_type}" == "1" ]; then
 		else
 			echo "ssr-redir	未运行🔴		透明代理"
 		fi
-	elif [ "${current_type}" == "0" -o "${current_type}" == "3" -o "${current_type}" == "4" -o "${current_type}" == "5" -o "${current_type}" == "8" -o "${current_type}" == "9" ]; then
+	elif [ "${current_type}" == "0" -o "${current_type}" == "3" -o "${current_type}" == "4" -o "${current_type}" == "5" -o "${current_type}" == "8" ]; then
 		# xray
 		local XRAY_PID=$(pidof xray)
 		local XRAY_RSS=$(GET_VM_RSS_MULTI ${XRAY_PID})
@@ -427,6 +471,21 @@ if [ "${current_type}" == "1" ]; then
 			else
 				echo "obfs-local	未运行🔴		混淆插件"
 			fi
+		fi
+	elif [ "${current_type}" == "9" ]; then
+		local ANYTLS_PID=$(pidof anytls-zig)
+		local ANYTLS_RSS=$(GET_VM_RSS_MULTI ${ANYTLS_PID})
+		if [ -n "${ANYTLS_PID}" ]; then
+			echo "anytls-zig	运行中🟢		socks5		${ANYTLS_PID}		${ANYTLS_RSS}"
+		else
+			echo "anytls-zig	未运行🔴		socks5"
+		fi
+		local IPT2SOCKS_PID=$(pidof ipt2socks)
+		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
+		if [ -n "${IPT2SOCKS_PID}" ]; then
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}"
+		else
+			echo "ipt2socks	未运行🔴		透明代理"
 		fi
 	elif [ "${current_type}" == "6" ]; then
 		# naive
@@ -502,9 +561,9 @@ get_zig_tool_version() {
 	node-tool|sub-tool|xapi-tool)
 		"${bin}" version 2>&1 | sed '/^[[:space:]]*$/d; 1q' | tr -d '\r'
 		;;
-	geotool|status-tool|statusctl|webtest-tool|webtestctl|websocketd)
-		"${bin}" --version 2>&1 | sed '/^[[:space:]]*$/d; 1q' | tr -d '\r'
-		;;
+		anytls-zig|geotool|status-tool|statusctl|webtest-tool|webtestctl|websocketd)
+			"${bin}" --version 2>&1 | sed '/^[[:space:]]*$/d; 1q' | tr -d '\r'
+			;;
 	*)
 		return 1
 		;;
@@ -534,12 +593,15 @@ ECHO_VERSION(){
 	if [ -x "/koolshare/bin/naive" ];then
 		printf '%-16s %-16s %s\n' "naive" "$(run naive --version|awk '{print $NF}')" "https://github.com/klzgrad/naiveproxy"
 	fi
-	if [ -x "/koolshare/bin/tuic-client" ];then
-		printf '%-16s %-16s %s\n' "tuic-client" "$(run tuic-client -V|awk '{print $NF}')" "https://github.com/Itsusinn/tuic"
-	fi
-	if [ -x "/koolshare/bin/ipt2socks" ];then
-		printf '%-16s %-16s %s\n' "ipt2socks" "$(run /koolshare/bin/ipt2socks -V|awk '{print $2}')" "https://github.com/zfl9/ipt2socks"
-	fi
+		if [ -x "/koolshare/bin/tuic-client" ];then
+			printf '%-16s %-16s %s\n' "tuic-client" "$(run tuic-client -V|awk '{print $NF}')" "https://github.com/Itsusinn/tuic"
+		fi
+		if [ -x "/koolshare/bin/anytls-zig" ];then
+			print_bin_version_line "anytls-zig" "$(get_zig_tool_version /koolshare/bin/anytls-zig)" "fancyss Zig / AnyTLS 客户端"
+		fi
+		if [ -x "/koolshare/bin/ipt2socks" ];then
+			printf '%-16s %-16s %s\n' "ipt2socks" "$(run /koolshare/bin/ipt2socks -V|awk '{print $2}')" "https://github.com/zfl9/ipt2socks"
+		fi
 	if [ -x "/koolshare/bin/sslocal" ];then
 		local SSRUST_VER=$(run /koolshare/bin/sslocal --version|awk '{print $NF}' 2>/dev/null)
 		if [ -n "${SSRUST_VER}" ];then
@@ -611,6 +673,7 @@ check_status() {
 	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | sed 's/^[[:space:]]//g' | grep -Ec "^http")
 	local CURR_NODE=$(fss_list_node_ids | awk 'NF{c++} END{print c+0}')
 	local CURR_NODE_ID=$(fss_get_current_node_id)
+	local CURR_NODE_TYPE_DIST="$(GET_NODES_TYPE)"
 	local GFWVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.gfwlist.date')
 	local CHNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnroute.date')
 	local CDNVERSIN=$(cat /koolshare/ss/rules/rules.json.js|run jq -r '.chnlist.date')
@@ -633,7 +696,7 @@ check_status() {
 	echo "🟠 白名单数：域名 ${CURR_WHTD}条，IP/CIDR ${CURR_WHTI}条"
 	echo "🟠 订阅数量：${CURR_SUBS}个"
 	echo "🟠 节点数量：${CURR_NODE}个"
-	echo "🟠 节点分布：统计中..."
+	echo "🟠 节点分布：${CURR_NODE_TYPE_DIST}"
 	echo "🟠 规则版本：gfwlist ${GFWVERSIN} | chnlist ${CDNVERSIN} | chnroute ${CHNVERSIN}"
 	echo "🟠 规则更新：$(GET_RULE_UPDATE)"
 	echo "🟠 订阅更新：$(GET_SUBS_UPDATE)"
@@ -649,9 +712,6 @@ check_status() {
 		ECHO_IP6TABLES
 	fi
 
-	echo
-	echo "5️⃣节点分布统计："
-	echo "🟠 节点分布：$(GET_NODES_TYPE)"
 }
 
 if [ "$1" = "ws" ];then

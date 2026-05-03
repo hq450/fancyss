@@ -167,6 +167,7 @@ backup_tar(){
 		cp /koolshare/bin/naive ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/tuic-client ${TARGET_FOLDER}/bin/
 		[ -f "/koolshare/bin/tuic-client" ] && cp /koolshare/bin/tuic-client ${TARGET_FOLDER}/bin/
+		[ -f "/koolshare/bin/anytls-zig" ] && cp /koolshare/bin/anytls-zig ${TARGET_FOLDER}/bin/
 		cp /koolshare/bin/hysteria2 ${TARGET_FOLDER}/bin/
 	fi
 	cp /koolshare/webs/Module_shadowsocks*.asp ${TARGET_FOLDER}/webs/

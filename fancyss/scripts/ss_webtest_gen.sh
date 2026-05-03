@@ -80,6 +80,31 @@ wt_get_value_empty() {
 	fi
 }
 
+wt_shell_quote() {
+	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+wt_anytls_hostport() {
+	local host="$1"
+	local port="$2"
+
+	case "${host}" in
+	*:* )
+		case "${host}" in
+		\[*\])
+			printf '%s:%s' "${host}" "${port}"
+			;;
+		*)
+			printf '[%s]:%s' "${host}" "${port}"
+			;;
+		esac
+		;;
+	*)
+		printf '%s:%s' "${host}" "${port}"
+		;;
+	esac
+}
+
 wt_get_value_congestion() {
 	local _up="$1"
 	local _down="$2"
@@ -1000,4 +1025,91 @@ wt_gen_hy2_outbound() {
 	if [ "${LINUX_VER}" == "26" ]; then
 		sed -i '/tcpFastOpen/d' "${out_file}" 2>/dev/null
 	fi
+}
+
+wt_gen_anytls_outbound() {
+	local nu="$1"
+	local mark="$2"
+	local out_file=""
+	local start_file=""
+	local stop_file=""
+	local pass_file=""
+	local pid_file=""
+	local anytls_server=""
+	local anytls_port=""
+	local anytls_pass=""
+	local anytls_sni=""
+	local anytls_ai=""
+	local socks5_port=""
+	local server_addr=""
+	local sni_arg=""
+	local verify_arg=""
+
+	WT_LAST_START_PORT=""
+	anytls_server=$(wt_node_get_plain anytls_server "${nu}")
+	anytls_port=$(wt_node_get_plain anytls_port "${nu}")
+	anytls_pass=$(wt_node_get_plain anytls_pass "${nu}")
+	anytls_sni=$(wt_node_get_plain anytls_sni "${nu}")
+	anytls_ai=$(wt_node_get_plain anytls_ai "${nu}")
+	[ -n "${anytls_server}" ] || return 1
+	[ -n "${anytls_port}" ] || anytls_port="443"
+	[ -n "${anytls_pass}" ] || return 1
+
+	out_file=$(wt_get_out_file_path "${nu}" "${mark}")
+	start_file=$(wt_get_start_file_path "${nu}" "${mark}")
+	stop_file=$(wt_get_stop_file_path "${nu}" "${mark}")
+	socks5_port="${WT_PRESET_START_PORT}"
+	[ -n "${socks5_port}" ] || socks5_port=$(wt_get_reserved_port)
+	[ -n "${socks5_port}" ] || return 1
+	WT_LAST_START_PORT="${socks5_port}"
+	if [ -n "${WT_GEN_OUT_FILE}" ] && [ -n "${FSS_WEBTEST_CACHE_NODE_DIR}" ]; then
+		pass_file="${FSS_WEBTEST_CACHE_NODE_DIR}/${nu}_anytls.pass"
+		pid_file="${FSS_WEBTEST_CACHE_NODE_DIR}/${nu}_anytls.pid"
+	else
+		pass_file="${out_file%_outbounds.json}_anytls.pass"
+		pid_file="${out_file%_outbounds.json}_anytls.pid"
+	fi
+	server_addr="$(wt_anytls_hostport "${anytls_server}" "${anytls_port}")"
+	[ -n "${anytls_sni}" ] && sni_arg=" -sni $(wt_shell_quote "${anytls_sni}")"
+	if [ "${anytls_ai}" = "1" ]; then
+		verify_arg=" --insecure"
+	else
+		verify_arg=" --verify"
+	fi
+
+	cat >"${out_file}" <<-EOF
+		{
+			"tag": "proxy${nu}",
+			"protocol": "socks",
+			"settings": {
+				"servers": [{
+					"address": "127.0.0.1",
+					"port": ${socks5_port}
+				}]
+			},
+			"streamSettings": {
+				"network": "tcp"
+			}
+		}
+	EOF
+	printf '%s' "${anytls_pass}" > "${pass_file}"
+	cat >"${start_file}" <<-EOF
+		#!/bin/sh
+		if [ -s "${pid_file}" ]; then
+			_pid=\$(cat "${pid_file}" 2>/dev/null)
+			[ -n "\${_pid}" ] && kill "\${_pid}" >/dev/null 2>&1 || true
+			rm -f "${pid_file}"
+		fi
+		"/koolshare/bin/anytls-zig" -server $(wt_shell_quote "${server_addr}") --password-file $(wt_shell_quote "${pass_file}") -l $(wt_shell_quote "127.0.0.1:${socks5_port}")${sni_arg}${verify_arg} >/dev/null 2>&1 &
+		echo \$! > "${pid_file}"
+	EOF
+	cat >"${stop_file}" <<-EOF
+		#!/bin/sh
+		if [ -s "${pid_file}" ]; then
+			_pid=\$(cat "${pid_file}" 2>/dev/null)
+			[ -n "\${_pid}" ] && kill "\${_pid}" >/dev/null 2>&1 || true
+			rm -f "${pid_file}"
+		fi
+	EOF
+	chmod +x "${start_file}" "${stop_file}"
 }

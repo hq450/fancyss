@@ -36,7 +36,7 @@ pick_status_tool(){
 status_socks5_ready() {
 	netstat -nlp 2>/dev/null \
 		| grep -w "23456" \
-		| grep -Eq "xray|v2ray|naive|tuic|rss-local"
+		| grep -Eq "xray|v2ray|naive|tuic|anytls-zig|rss-local"
 }
 
 set_waiting_status(){

@@ -896,7 +896,7 @@ function openssHint(itemNum, flag) {
 		statusmenu += "<br /><br />";
 		statusmenu += "在可信DNS设定中，为了保证DNS解析结果可靠无污染，因此本插件默认会将所有的国外DNS请求都经过代理，即<b>远端DNS解析</b>。经过代理进行解析，相当于DNS请求是国外代理服务器自己发起的解析请求，国外DNS服务器会自动根据代理服务器的位置，返回地理位置最近（速度最快）的解析结果。因此，不论是udp、tcp还是dot协议，只要是远端DNS解析，解析效果理论上都是最佳的。";
 		statusmenu += "<br /><br />";
-		statusmenu += "对于udp DNS服务器而言，需要代理节点和代理软件都支持udp，缺一不可。如果代理节点不支持udp，或者代理软件不支持udp代理，比如naiveproxy节点，就无法使用udp DNS。对于tcp DNS和dot DNS而言，两者的解析都会走tcp协议，所以只要代理协议支持tcp代理就能保证解析。而目前几乎所有的代理软件都能代理tcp协议，所以建议至少设置一组tcp/dot协议的DNS作为可信DNS！";
+		statusmenu += "对于udp DNS服务器而言，需要代理节点和代理软件都支持udp，缺一不可。如果代理节点不支持udp，或者代理软件不支持udp代理，比如NaïveProxy/AnyTLS节点，就无法使用udp DNS。对于tcp DNS和dot DNS而言，两者的解析都会走tcp协议，所以只要代理协议支持tcp代理就能保证解析。而目前几乎所有的代理软件都能代理tcp协议，所以建议至少设置一组tcp/dot协议的DNS作为可信DNS！";
 		statusmenu += "<br /><br />";
 		statusmenu += "另外，即使你的代理软件和代理服务器都支持udp协议，也不建议在可信DNS中只设置一个udp DNS上游，因为udp协议本身“不可靠”的特点，加上可能存在的QoS等情况，可能会出现某次解析失败的问题，所以在可信DNS设置中，建议至少建议至少设置一组tcp/dot协议的DNS作为可信DNS！";
 		statusmenu += "<br /><br />";
@@ -914,7 +914,7 @@ function openssHint(itemNum, flag) {
 		statusmenu += "-----------------------------------------------------------------------<br />";
 		statusmenu += "1️⃣需要至少开启一组选可信DNS，以保证国外DNS的正常解析。<br />";
 		statusmenu += "2️⃣某些不支持udp的代理服务器，无法使用udp协议，此时可以考虑切换到tcp。<br />";
-		statusmenu += "3️⃣NaïveProxy由于自身特性，不支持udp代理，所以Naïve节点的可信DNS-1无法使用udp协议！<br />";
+		statusmenu += "3️⃣NaïveProxy/AnyTLS由于自身特性，不支持udp代理，所以Naïve/AnyTLS节点的可信DNS-1无法使用udp协议！<br />";
 		statusmenu += "4️⃣为避免udp协议DNS不可用，建议至少设置一组tcp/dot协议的DNS作为可信DNS！！<br />";
 		statusmenu += "</div>";
 		_caption = "说明：";

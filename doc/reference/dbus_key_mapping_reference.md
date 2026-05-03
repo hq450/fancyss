@@ -214,7 +214,7 @@
 | --- | --- | --- | --- | --- |
 | `ssconf_basic_name_<seq>` | `name` | ✔ | 全协议 | 节点显示名称 |
 | `ssconf_basic_group_<seq>` | `group` | ✔ | 订阅节点 | 订阅来源分组；新结构仍保留原值，例如 `Nexitally_abcd` |
-| `ssconf_basic_type_<seq>` | `type` | ✔ | 全协议 | 节点类型：`0=SS`、`1=SSR`、`3=V2Ray`、`4=Xray`、`5=Trojan`、`6=Naive`、`7=TUIC`、`8=Hysteria2` |
+| `ssconf_basic_type_<seq>` | `type` | ✔ | 全协议 | 节点类型：`0=SS`、`1=SSR`、`3=V2Ray`、`4=Xray`、`5=Trojan`、`6=Naive`、`7=TUIC`、`8=Hysteria2`、`9=AnyTLS` |
 | `ssconf_basic_mode_<seq>` | `mode` | ✔ | 全协议 | 节点代理模式 |
 | `ssconf_basic_server_<seq>` | `server` | ✔ | SS / SSR / V2Ray / Xray / Trojan | 节点服务器地址 |
 | `ssconf_basic_port_<seq>` | `port` | ✔ | SS / SSR / V2Ray / Xray / Trojan | 节点服务器端口 |
@@ -301,7 +301,7 @@
 
 ---
 
-## 11. 节点字段映射：Trojan / Naive / TUIC / Hysteria2
+## 11. 节点字段映射：Trojan / Naive / TUIC / Hysteria2 / AnyTLS
 
 ### 11.1 Trojan
 
@@ -343,6 +343,16 @@
 | `ssconf_basic_hy2_pass_<seq>` | `hy2_pass` | ✔ | Hysteria2 密码 |
 | `ssconf_basic_hy2_up_<seq>` / `ssconf_basic_hy2_dl_<seq>` | `hy2_up` / `hy2_dl` | ✔ | 上/下行速率 |
 | `ssconf_basic_hy2_obfs_<seq>` / `ssconf_basic_hy2_obfs_pass_<seq>` | `hy2_obfs` / `hy2_obfs_pass` | ✔ | Hysteria2 混淆类型和密码 |
+
+### 11.5 AnyTLS
+
+| 旧键模式 | 新键 | 变更 | 作用 / 备注 |
+| --- | --- | --- | --- |
+| `ssconf_basic_anytls_server_<seq>` | `anytls_server` | ✔ | AnyTLS 服务器地址 |
+| `ssconf_basic_anytls_port_<seq>` | `anytls_port` | ✔ | AnyTLS 服务器端口 |
+| `ssconf_basic_anytls_pass_<seq>` | `anytls_pass` | △ | AnyTLS 认证密码；旧结构单值为 base64，新结构 JSON 内存原文 |
+| `ssconf_basic_anytls_sni_<seq>` | `anytls_sni` | ✔ | TLS SNI；为空时由客户端按服务器地址处理 |
+| `ssconf_basic_anytls_ai_<seq>` | `anytls_ai` | △ | allowInsecure；新结构布尔值规范化为 `0/1` |
 | `ssconf_basic_hy2_sni_<seq>` | `hy2_sni` | ✔ | SNI |
 | `ssconf_basic_hy2_pcs_<seq>` | `hy2_pcs` | ✔ | `pinnedPeerCertSha256` |
 | `ssconf_basic_hy2_vcn_<seq>` | `hy2_vcn` | ✔ | `verifyPeerCertByName`；shell 环境层仍兼容旧别名 `hy2_svn` |

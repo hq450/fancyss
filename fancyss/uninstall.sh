@@ -102,6 +102,7 @@ rm -rf /koolshare/bin/curl-fancyss
 rm -rf /koolshare/bin/hysteria2
 rm -rf /koolshare/bin/haveged
 rm -rf /koolshare/bin/naive
+rm -rf /koolshare/bin/anytls-zig
 rm -rf /koolshare/bin/ipt2socks
 rm -rf /koolshare/bin/dnsclient
 rm -rf /koolshare/bin/sslocal
@@ -131,6 +132,7 @@ rm -rf /data/xray >/dev/null 2>&1
 rm -rf /data/v2ray >/dev/null 2>&1
 rm -rf /data/hysteria2 >/dev/null 2>&1
 rm -rf /data/naive >/dev/null 2>&1
+rm -rf /data/anytls-zig >/dev/null 2>&1
 rm -rf /data/sslocal >/dev/null 2>&1
 rm -rf /data/rss-local >/dev/null 2>&1
 rm -rf /data/rss-redir >/dev/null 2>&1
