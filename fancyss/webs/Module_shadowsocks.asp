@@ -4001,6 +4001,23 @@ function get_current_node_id() {
 	}
 	return get_saved_current_node_id();
 }
+function get_node_card_focus_node_id() {
+	var currentId = "";
+	var selectedId = "";
+	if (E("ss_basic_enable") && E("ss_basic_enable").checked) {
+		currentId = resolve_node_id(get_saved_current_node_id() || "", true);
+		if (currentId) {
+			return currentId;
+		}
+	}
+	if (E("ssconf_basic_node")) {
+		selectedId = resolve_node_id(E("ssconf_basic_node").value, true);
+		if (selectedId) {
+			return selectedId;
+		}
+	}
+	return resolve_node_id(get_saved_current_node_id() || "", true);
+}
 function sync_shunt_current_node_selection(nodeId) {
 	var resolved = resolve_node_id(nodeId || "", true);
 	if (!resolved) {
@@ -9841,17 +9858,132 @@ function set_node_table_scroll_top(scrollTop) {
 	el.scrollTop = Math.min(Math.max(parseInt(scrollTop || 0, 10), 0), maxScroll);
 }
 function scroll_current_node_into_view(nodeId) {
+	var container = null;
 	var el = null;
+	var containerRect = null;
+	var elRect = null;
+	var targetScrollTop = 0;
+	var maxScroll = 0;
 	nodeId = nodeId ? String(nodeId) : "";
 	if (!nodeId || !get_node_view_prefers_cards()) {
 		return false;
 	}
+	container = E("ss_node_list_table_main");
 	el = E("node_" + nodeId);
-	if (!el || !el.scrollIntoView) {
+	if (!container || !el || !el.getBoundingClientRect || !container.getBoundingClientRect) {
 		return false;
 	}
-	el.scrollIntoView({block: "nearest", inline: "nearest"});
+	containerRect = container.getBoundingClientRect();
+	elRect = el.getBoundingClientRect();
+	if (!containerRect.height || !elRect.height) {
+		return false;
+	}
+	targetScrollTop = container.scrollTop + (elRect.top - containerRect.top) - Math.max(0, (container.clientHeight - elRect.height) / 2);
+	maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+	container.scrollTop = Math.min(Math.max(Math.round(targetScrollTop), 0), maxScroll);
 	return true;
+}
+function get_visible_node_card_rows(container) {
+	var rows = [];
+	var cRect = null;
+	if (!container || !container.getBoundingClientRect) {
+		return rows;
+	}
+	cRect = container.getBoundingClientRect();
+	$(container).find(".node-card").each(function() {
+		var rect = this.getBoundingClientRect();
+		var row = null;
+		if (rect.bottom <= cRect.top + 1 || rect.top >= cRect.bottom - 1) {
+			return;
+		}
+		for (var i = 0; i < rows.length; i++) {
+			if (Math.abs(rows[i].top - rect.top) <= 2) {
+				row = rows[i];
+				break;
+			}
+		}
+		if (!row) {
+			row = {
+				top: rect.top,
+				bottom: rect.bottom
+			};
+			rows.push(row);
+		} else if (rect.bottom > row.bottom) {
+			row.bottom = rect.bottom;
+		}
+	});
+	rows.sort(function(a, b) {
+		return a.top - b.top;
+	});
+	return rows;
+}
+function fit_node_card_view_to_full_rows() {
+	var container = E("ss_node_list_table_main");
+	var $container = $(container);
+	var $shell = $(".node-card-shell").first();
+	var rows = [];
+	var cRect = null;
+	var firstRow = null;
+	var lastFullBottom = 0;
+	var clippedBottom = false;
+	var newHeight = 0;
+	var maxScroll = 0;
+	if (!container || !$shell.length || !get_node_view_prefers_cards() || !$container.is(":visible")) {
+		return false;
+	}
+	rows = get_visible_node_card_rows(container);
+	if (!rows.length) {
+		return false;
+	}
+	cRect = container.getBoundingClientRect();
+	firstRow = rows[0];
+	if (firstRow.top < cRect.top - 1 && firstRow.bottom > cRect.top + 1) {
+		maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+		container.scrollTop = Math.min(Math.max(container.scrollTop + firstRow.top - cRect.top, 0), maxScroll);
+		rows = get_visible_node_card_rows(container);
+		cRect = container.getBoundingClientRect();
+	}
+	for (var i = 0; i < rows.length; i++) {
+		if (rows[i].top >= cRect.top - 1 && rows[i].bottom <= cRect.bottom + 1) {
+			lastFullBottom = rows[i].bottom;
+		} else if (rows[i].top < cRect.bottom - 1 && rows[i].bottom > cRect.bottom + 1) {
+			clippedBottom = true;
+		}
+	}
+	if (!clippedBottom || !lastFullBottom) {
+		return true;
+	}
+	newHeight = Math.floor(lastFullBottom - cRect.top);
+	if (newHeight < 120 || newHeight >= container.clientHeight) {
+		return true;
+	}
+	$container.css({
+		height: newHeight + "px",
+		overflowY: container.scrollHeight > newHeight ? "auto" : "hidden"
+	});
+	$shell.css("height", newHeight + "px");
+	if (container.scrollHeight > newHeight) {
+		$("#ss_list_table").attr("style", "height:" + (newHeight + 56) + "px");
+	} else {
+		$("#ss_list_table").removeAttr("style");
+	}
+	return true;
+}
+var nodeCardCurrentScrollTimer = null;
+function schedule_current_node_card_scroll(delay) {
+	if (nodeCardCurrentScrollTimer) {
+		clearTimeout(nodeCardCurrentScrollTimer);
+		nodeCardCurrentScrollTimer = null;
+	}
+	nodeCardCurrentScrollTimer = setTimeout(function() {
+		nodeCardCurrentScrollTimer = null;
+		if (!$("#tablet_1").is(":visible") || !get_node_view_prefers_cards()) {
+			return;
+		}
+		if (scroll_current_node_into_view(get_node_card_focus_node_id())) {
+			fit_node_card_view_to_full_rows();
+		}
+	}, parseInt(delay || 30, 10) || 30);
 }
 function get_node_view_prefers_cards() {
 	if (E("ss_basic_node_cards")) {
@@ -13306,11 +13438,8 @@ var tab_actions = {
 		$(".nodeTable").show();
 		select_default_node(3);
 		if (get_node_view_prefers_cards()) {
-			var $nodeCardContainer = $("#ss_node_list_table_main");
-			if ($nodeCardContainer.length) {
-				$nodeCardContainer.scrollTop(0);
-			}
 			schedule_node_card_view_height_adjust(8);
+			schedule_current_node_card_scroll(30);
 		}
 		resume_node_latency_live_runtime();
 	},
@@ -15507,6 +15636,22 @@ function close_proc_status() {
 	clear_text_file_poll_state("proc_status");
 	$("#detail_status").fadeOut(200);
 }
+function set_proc_status_text(text) {
+	var procStatus = E("proc_status");
+	if (!procStatus) {
+		return;
+	}
+	procStatus.value = String(text || "");
+	procStatus.scrollTop = 0;
+}
+function append_proc_status_text(text) {
+	var procStatus = E("proc_status");
+	if (!procStatus) {
+		return;
+	}
+	procStatus.value += String(text || "");
+	procStatus.scrollTop = 0;
+}
 function get_proc_status() {
 	if (ws_flag == 1) {
 		return get_proc_status_ws();
@@ -15514,7 +15659,7 @@ function get_proc_status() {
 	return get_proc_status_httpd();
 }
 function get_proc_status_ws() {
-	$('#proc_status').val("请稍后，正在获取状态中...");
+	set_proc_status_text("请稍后，正在获取状态中...");
 	$("#detail_status").fadeIn(500);
 	if (window.procStatusWs) {
 		try {
@@ -15526,7 +15671,7 @@ function get_proc_status_ws() {
 	var ws = new WebSocket("ws://" + hostname + ":803/");
 	window.procStatusWs = ws;
 	ws.onopen = function() {
-		$('#proc_status').val("");
+		set_proc_status_text("");
 		ws.send("sh /koolshare/scripts/ss_proc_status.sh ws");
 	};
 	ws.onerror = function() {
@@ -15545,7 +15690,7 @@ function get_proc_status_ws() {
 			msg = msg.myReplace("XU6J03M6", " ").replace(/^\s+|\s+$/g, "");
 			if (msg) {
 				gotData = true;
-				$('#proc_status').val($('#proc_status').val() + msg + '\n');
+				append_proc_status_text(msg + '\n');
 			}
 			try {
 				ws.close();
@@ -15553,12 +15698,11 @@ function get_proc_status_ws() {
 			return;
 		}
 		gotData = true;
-		$('#proc_status').val($('#proc_status').val() + msg + '\n');
-		E("proc_status").scrollTop = E("proc_status").scrollHeight;
+		append_proc_status_text(msg + '\n');
 	};
 }
 function get_proc_status_httpd() {
-	$('#proc_status').val("请稍后，正在获取状态中...");
+	set_proc_status_text("请稍后，正在获取状态中...");
 	$("#detail_status").fadeIn(500);
 	var id = parseInt(Math.random() * 100000000);
 	var postData = {"id": id, "method": "ss_proc_status.sh", "params":[], "fields": ""};
@@ -15593,7 +15737,7 @@ function write_proc_status(reset) {
 			if (!text.trim() && state.attempt < 40) {
 				return {done: false, delay: 250};
 			}
-			$('#proc_status').val(text);
+			set_proc_status_text(text);
 			return {done: true};
 		},
 		onError: function(xhr, state) {
