@@ -1786,7 +1786,6 @@ wt_node_get_plain_from_cache() {
 		def is_b64_field($key):
 			$key == "password"
 			or $key == "naive_pass"
-			or $key == "anytls_pass"
 			or $key == "v2ray_json"
 			or $key == "xray_json"
 			or $key == "tuic_json";

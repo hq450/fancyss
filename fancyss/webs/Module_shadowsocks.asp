@@ -864,7 +864,7 @@ var smartdnsDnsCatalogMap = {chn: {}, gfw: {}};
 var smartdnsDnsOptionsReady = false;
 var smartdnsIpv6ServiceEnabled = ('<% nvram_get("ipv6_service"); %>' != "disabled");
 var NODE_BOOL_FIELDS = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "xray_show", "trojan_ai", "trojan_tfo", "hy2_ai", "hy2_tfo", "anytls_ai"];
-var NODE_B64_FIELDS = ["password", "naive_pass", "anytls_pass", "v2ray_json", "xray_json", "tuic_json"];
+var NODE_B64_FIELDS = ["password", "naive_pass", "v2ray_json", "xray_json", "tuic_json"];
 var NODE_RUNTIME_FIELDS = ["latency", "ping"];
 var NODE_EMPTY_DEFAULT_FIELDS_BY_TYPE = {
 	"0": {"mode": "2", "ss_obfs": "0"},
@@ -1443,6 +1443,9 @@ function is_node_bool_field(field) {
 function is_node_b64_field(field) {
 	return $.inArray(field, NODE_B64_FIELDS) !== -1;
 }
+function is_node_raw_secret_field(field) {
+	return field == "anytls_pass";
+}
 function is_node_runtime_field(field) {
 	return $.inArray(field, NODE_RUNTIME_FIELDS) !== -1;
 }
@@ -1781,6 +1784,8 @@ function normalize_fss_node_for_ui(nodeId, raw) {
 		var value = typeof raw[field] == "undefined" || raw[field] === null ? "" : String(raw[field]);
 		if (is_node_b64_field(field) && value) {
 			obj[field] = schema2_b64_value_for_ui(raw, field, value);
+		} else if (is_node_raw_secret_field(field)) {
+			obj[field] = value;
 		} else if (is_node_bool_field(field)) {
 			obj[field] = value == "1" ? "1" : "0";
 		} else {
@@ -4106,6 +4111,9 @@ function sanitize_node_payload_value(field, value) {
 		value = "";
 	}
 	value = String(value);
+	if (is_node_raw_secret_field(field)) {
+		return value;
+	}
 	if (is_node_b64_field(field) && value) {
 		try {
 			return Base64.decode(value);
@@ -6394,7 +6402,7 @@ function conf2obj(obj, action) {
 			continue;								//fancyss-full
 		}											//fancyss-full
 		if (field == "ss_basic_anytls_pass") {		//fancyss-full
-			el.value = Base64.decode(obj[field]);	//fancyss-full
+			el.value = obj[field];					//fancyss-full
 			continue;								//fancyss-full
 		}											//fancyss-full
 		// base64_decode then format json then fill
@@ -7080,11 +7088,11 @@ function save() {
 		}
 		// fancyss_anytls_1
 		if (node_type == "9" ){
-			dbus["ssconf_basic_anytls_pass_" + node_sel] = Base64.encode(E("ss_basic_anytls_pass").value);
 			var params_anytls_1 = ["mode", "anytls_server", "anytls_port", "anytls_sni"];
 			for (var i = 0; i < params_anytls_1.length; i++) {
 				dbus["ssconf_basic_" + params_anytls_1[i] + "_" + node_sel] = E("ss_basic_" + params_anytls_1[i]).value;
 			}
+			dbus["ssconf_basic_anytls_pass_" + node_sel] = E("ss_basic_anytls_pass").value;
 			dbus["ssconf_basic_anytls_ai_" + node_sel] = E("ss_basic_anytls_ai").checked ? '1' : '';
 		}
 		// fancyss_anytls_2
@@ -8605,7 +8613,7 @@ function add_ss_node_conf(flag) {
 			for (var i = 0; i < params9.length; i++) {
 				ns[p + "_" + params9[i] + "_" + node_id] = $.trim($('#ss_node_table' + "_" + params9[i]).val());
 			}
-			ns[p + "_anytls_pass_" + node_id] = Base64.encode($.trim($("#ss_node_table_anytls_pass").val()));
+			ns[p + "_anytls_pass_" + node_id] = $.trim($("#ss_node_table_anytls_pass").val());
 			ns[p + "_anytls_ai_" + node_id] = E("ss_node_table_anytls_ai").checked ? '1' : '';
 			ns[p + "_type_" + node_id] = "9";
 		}
@@ -9093,9 +9101,9 @@ function edit_conf_table(o) {
 		alert("提醒：这个节点正在运行！\n如果更改了其中的参数，需要重新点击【保存&应用】才能生效！")
 	}
 	var c = confs[id];
-	var params1_base64 = ["password", "naive_pass", "anytls_pass"];
+	var params1_base64 = ["password", "naive_pass"];
 	var params1_check = ["v2ray_use_json", "v2ray_mux_enable", "v2ray_network_security_ai", "v2ray_network_security_alpn_h2", "v2ray_network_security_alpn_http", "xray_use_json", "xray_network_security_ai", "xray_network_security_alpn_h2", "xray_network_security_alpn_http", "trojan_ai", "xray_show", "hy2_ai", "hy2_tfo", "anytls_ai"];
-	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg", "anytls_server", "anytls_port", "anytls_sni"];
+	var params1_input = ["name", "server", "mode", "port", "method", "ss_obfs", "ss_obfs_host", "rss_protocol", "rss_protocol_param", "rss_obfs", "rss_obfs_param", "v2ray_uuid", "v2ray_alterid", "v2ray_security", "v2ray_network", "v2ray_headtype_tcp", "v2ray_headtype_kcp", "v2ray_kcp_seed", "v2ray_headtype_quic", "v2ray_grpc_mode", "v2ray_grpc_authority", "v2ray_network_path", "v2ray_network_host", "v2ray_network_security", "v2ray_network_security_sni", "v2ray_mux_concurrency", "xray_uuid", "xray_encryption", "xray_flow", "xray_network", "xray_headtype_tcp", "xray_headtype_kcp", "xray_kcp_seed", "xray_headtype_quic", "xray_grpc_mode", "xray_grpc_authority", "xray_xhttp_mode", "xray_network_path", "xray_network_host", "xray_network_security", "xray_network_security_sni", "xray_pcs", "xray_vcn", "xray_fingerprint", "xray_publickey", "xray_shortid", "xray_spiderx", "trojan_uuid", "trojan_sni", "trojan_pcs", "trojan_vcn", "trojan_tfo", "naive_prot", "naive_server", "naive_port", "naive_user", "hy2_server", "hy2_port", "hy2_pass", "hy2_up", "hy2_dl", "hy2_obfs", "hy2_obfs_pass", "hy2_sni", "hy2_pcs", "hy2_vcn", "hy2_cg", "anytls_server", "anytls_port", "anytls_pass", "anytls_sni"];
 	if(c["v2ray_json"]){
 		E("ss_node_table_v2ray_json").value = do_js_beautify(Base64.decode(c["v2ray_json"]));
 	}
@@ -9391,7 +9399,7 @@ function edit_ss_node_conf(flag) {
 			for (var i = 0; i < params9.length; i++) {
 				ns[p + "_" + params9[i] + "_" + edit_id] = $.trim($('#ss_node_table' + "_" + params9[i]).val());
 			}
-			ns[p + "_anytls_pass_" + edit_id] = Base64.encode($.trim($("#ss_node_table_anytls_pass").val()));
+			ns[p + "_anytls_pass_" + edit_id] = $.trim($("#ss_node_table_anytls_pass").val());
 			ns[p + "_anytls_ai_" + edit_id] = E("ss_node_table_anytls_ai").checked ? "1" : "";
 			ns[p + "_type_" + edit_id] = "9";
 		}
@@ -11168,6 +11176,9 @@ function get_node_share_field(nodeId, conf, field) {
 	if (get_node_storage_schema() == 2) {
 		var raw = get_fss_raw_node(String(nodeId));
 		if (raw && typeof raw[field] != "undefined") {
+			if (is_node_raw_secret_field(field)) {
+				return raw[field];
+			}
 			return schema2_b64_value_for_ui(raw, field, raw[field]);
 		}
 	}
@@ -11473,12 +11484,7 @@ function build_anytls_standard_link(c) {																	//fancyss-full
 	if (!c || !c["anytls_server"] || !c["anytls_pass"]) {													//fancyss-full
 		return 8;																						//fancyss-full
 	}																									//fancyss-full
-	var password = "";																					//fancyss-full
-	try {																								//fancyss-full
-		password = Base64.decode(c["anytls_pass"]);														//fancyss-full
-	} catch (e) {																						//fancyss-full
-		password = "";																					//fancyss-full
-	}																									//fancyss-full
+	var password = String(c["anytls_pass"] || "");														//fancyss-full
 	if (!password) {																					//fancyss-full
 		return 8;																						//fancyss-full
 	}																									//fancyss-full

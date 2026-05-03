@@ -509,7 +509,7 @@ normalize_schema2_secret_fields_after_install() {
 	local changed_fields=0
 	local scanned_nodes=0
 	local total_nodes=0
-	local fields="password naive_pass anytls_pass"
+	local fields="password naive_pass"
 
 	[ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] || return 0
 	if [ "${force_scan}" != "1" ] && [ "$(dbus get fss_data_secret_mode 2>/dev/null)" = "raw" ];then

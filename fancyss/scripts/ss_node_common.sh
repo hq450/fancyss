@@ -26,7 +26,6 @@ anytls_ai
 FSS_NODE_B64_FIELDS="
 password
 naive_pass
-anytls_pass
 v2ray_json
 xray_json
 tuic_json
@@ -2178,7 +2177,6 @@ fss_legacy_node_dump_to_v2_tsv() {
 		def is_b64_field($key):
 			$key == "password"
 			or $key == "naive_pass"
-			or $key == "anytls_pass"
 			or $key == "v2ray_json"
 			or $key == "xray_json"
 			or $key == "tuic_json";
@@ -2321,7 +2319,6 @@ fss_node_legacy_to_v2_json() {
 						(
 							.key == "password"
 							or .key == "naive_pass"
-							or .key == "anytls_pass"
 							or .key == "v2ray_json"
 							or .key == "xray_json"
 							or .key == "tuic_json"
@@ -2503,7 +2500,7 @@ fss_node_v2_to_legacy_script_lines() {
 	printf '%s' "${node_json}" | jq -r --arg idx "${node_index}" '
 		def is_runtime: . == "server_ip" or . == "latency" or . == "ping";
 		def is_bool: . == "v2ray_use_json" or . == "v2ray_mux_enable" or . == "v2ray_network_security_ai" or . == "v2ray_network_security_alpn_h2" or . == "v2ray_network_security_alpn_http" or . == "xray_use_json" or . == "xray_network_security_ai" or . == "xray_network_security_alpn_h2" or . == "xray_network_security_alpn_http" or . == "xray_show" or . == "trojan_ai" or . == "trojan_tfo" or . == "hy2_ai" or . == "hy2_tfo" or . == "anytls_ai";
-		def is_b64: . == "password" or . == "naive_pass" or . == "anytls_pass" or . == "v2ray_json" or . == "xray_json" or . == "tuic_json";
+		def is_b64: . == "password" or . == "naive_pass" or . == "v2ray_json" or . == "xray_json" or . == "tuic_json";
 		def need_compact_json: . == "v2ray_json" or . == "xray_json" or . == "tuic_json";
 		def compact_json_string: try (fromjson | tojson) catch .;
 		to_entries[]
@@ -3692,7 +3689,6 @@ $(printf '%s' "${node_json}" | jq -r --rawfile meta "${meta_file}" '
 	def is_b64($f):
 		$f == "password"
 		or $f == "naive_pass"
-		or $f == "anytls_pass"
 		or $f == "v2ray_json"
 		or $f == "xray_json"
 		or $f == "tuic_json";
@@ -3720,7 +3716,7 @@ $(printf '%s' "${node_json}" | jq -r --rawfile meta "${meta_file}" '
 	| select($raw_value != "")
 	| (to_plain_value($root; $store_field; $raw_value)) as $plain_value
 	| (
-		if is_b64($store_field) and $store_field != "password" and $store_field != "naive_pass" and $store_field != "anytls_pass" then
+		if is_b64($store_field) and $store_field != "password" and $store_field != "naive_pass" then
 			(if need_compact_json($store_field) then ($plain_value | compact_json_string) else $plain_value end) | @base64
 		else
 			$plain_value

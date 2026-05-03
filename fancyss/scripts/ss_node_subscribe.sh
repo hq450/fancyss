@@ -2546,7 +2546,6 @@ sub_nodes_file_md5(){
 				end;
 		decode_b64_field("password")
 		| decode_b64_field("naive_pass")
-		| decode_b64_field("anytls_pass")
 		| decode_b64_field("v2ray_json")
 		| decode_b64_field("xray_json")
 		| decode_b64_field("tuic_json")
@@ -2584,7 +2583,6 @@ sub_nodes_file_sorted_md5(){
 				end;
 		decode_b64_field("password")
 		| decode_b64_field("naive_pass")
-		| decode_b64_field("anytls_pass")
 		| decode_b64_field("v2ray_json")
 		| decode_b64_field("xray_json")
 		| decode_b64_field("tuic_json")
@@ -2687,7 +2685,6 @@ sub_prepare_canonical_identity_view_file(){
 		with_entries(select(.value != "" and .value != null))
 		| decode_b64_field("password")
 		| decode_b64_field("naive_pass")
-		| decode_b64_field("anytls_pass")
 		| decode_b64_field("v2ray_json")
 		| decode_b64_field("xray_json")
 		| decode_b64_field("tuic_json")
@@ -3994,25 +3991,24 @@ sub_write_nodes_schema2(){
 		next_id=$((max_id + 1))
 	fi
 	now_ts=$(fss_now_ts_ms)
-		jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" --slurpfile old "${old_export_file}" '
-			def legacy_b64_mode:
-				((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
-			def decode_b64_field($field):
-				if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
-					.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
-				else
-					.
-				end;
-			def clean:
-				with_entries(select(.value != "" and .value != null))
+	jq -nr -r -c --argjson next "${next_id}" --argjson ts "${now_ts}" --slurpfile old "${old_export_file}" '
+		def legacy_b64_mode:
+			((._b64_mode // "") != "raw") and (((._source // "") == "") or ((._source // "") == "subscribe"));
+		def decode_b64_field($field):
+			if legacy_b64_mode and has($field) and (.[$field] // "") != "" then
+				.[$field] as $raw | .[$field] |= (try @base64d catch $raw)
+			else
+				.
+			end;
+		def clean:
+			with_entries(select(.value != "" and .value != null))
 				| decode_b64_field("password")
-			| decode_b64_field("naive_pass")
-			| decode_b64_field("anytls_pass")
-			| decode_b64_field("v2ray_json")
-			| decode_b64_field("xray_json")
-			| decode_b64_field("tuic_json")
-			| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
-			| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end;
+				| decode_b64_field("naive_pass")
+				| decode_b64_field("v2ray_json")
+				| decode_b64_field("xray_json")
+				| decode_b64_field("tuic_json")
+				| del(._schema, ._rev, ._source, ._updated_at, ._migrated_from, .server_ip, .latency, .ping)
+				| if ((.type // "") == "4" and ((.xray_prot // "") == "")) then .xray_prot = "vless" else . end;
 		(reduce $old[] as $item ({};
 			(($item._id // "") | tostring) as $id
 			| if $id != "" then
@@ -4218,7 +4214,6 @@ sub_append_nodes_schema2(){
 			with_entries(select(.value != "" and .value != null))
 			| decode_b64_field("password")
 			| decode_b64_field("naive_pass")
-			| decode_b64_field("anytls_pass")
 			| decode_b64_field("v2ray_json")
 			| decode_b64_field("xray_json")
 			| decode_b64_field("tuic_json")
@@ -4282,7 +4277,6 @@ sub_append_nodes_schema2(){
 			with_entries(select(.value != "" and .value != null))
 			| decode_b64_field("password")
 			| decode_b64_field("naive_pass")
-			| decode_b64_field("anytls_pass")
 			| decode_b64_field("v2ray_json")
 			| decode_b64_field("xray_json")
 			| decode_b64_field("tuic_json")
@@ -6722,8 +6716,6 @@ add_anytls_node(){
 	fi
 
 	sub_log_node_success "🟨AnyTLS节点：${anytls_remarks}"
-
-	anytls_pass=$(printf '%s' "${anytls_pass}" | base64_encode | sed 's/[[:space:]]//g')
 
 	json_init
 	json_add_string group "${anytls_group_hash}"
