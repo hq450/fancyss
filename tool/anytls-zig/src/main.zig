@@ -243,8 +243,23 @@ fn parseServerUri(allocator: Allocator, value: []const u8, cfg: *Config) !void {
 }
 
 fn readTextFileTrimmed(allocator: Allocator, path: []const u8) ![]const u8 {
-    const content = try std.fs.cwd().readFileAlloc(allocator, path, 64 * 1024);
-    return std.mem.trim(u8, content, " \t\r\n");
+    const max_bytes = 64 * 1024;
+    var file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const buffer = try allocator.alloc(u8, max_bytes);
+    errdefer allocator.free(buffer);
+
+    const size = try file.readAll(buffer);
+    if (size == max_bytes) {
+        var extra: [1]u8 = undefined;
+        if (try file.read(&extra) != 0) return error.FileTooBig;
+    }
+
+    const trimmed = std.mem.trim(u8, buffer[0..size], " \t\r\n");
+    const result = try allocator.dupe(u8, trimmed);
+    allocator.free(buffer);
+    return result;
 }
 
 fn parseArgs(allocator: Allocator) !Config {

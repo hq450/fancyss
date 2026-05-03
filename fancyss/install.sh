@@ -494,6 +494,15 @@ schema2_secret_decode_candidate() {
 	printf '%s' "${decoded}"
 }
 
+schema2_anytls_pass_decode_candidate() {
+	local value="$1"
+	local decoded=""
+
+	decoded="$(schema2_secret_decode_candidate "${value}")" || return 1
+	printf '%s' "${decoded}" | grep -Eq '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' || return 1
+	printf '%s' "${decoded}"
+}
+
 normalize_schema2_secret_fields_after_install() {
 	local reason="$1"
 	local force_scan="$2"
@@ -573,6 +582,54 @@ normalize_schema2_secret_fields_after_install() {
 		echo_date "已完成 schema2 密码字段校正：节点 ${changed_nodes} 个，字段 ${changed_fields} 项。"
 	else
 		echo_date "schema2 密码字段校正完成：未发现需要修正的节点。"
+	fi
+}
+
+normalize_schema2_anytls_pass_after_install() {
+	local reason="$1"
+	local node_id=""
+	local raw_value=""
+	local decoded=""
+	local node_json=""
+	local updated_json=""
+	local updated_at=""
+	local changed_nodes=0
+	local scanned_nodes=0
+	local total_nodes=0
+
+	[ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ] || return 0
+	total_nodes="$(fss_list_node_ids | awk 'NF{c++} END{print c+0}')"
+	[ -n "${total_nodes}" ] || total_nodes=0
+
+	for node_id in $(fss_list_node_ids)
+	do
+		[ -n "${node_id}" ] || continue
+		scanned_nodes=$((scanned_nodes + 1))
+		node_json="$(fss_v2_get_node_json_by_id "${node_id}" 2>/dev/null)" || continue
+		[ "$(printf '%s' "${node_json}" | jq -r '.type // empty' 2>/dev/null)" = "9" ] || continue
+		raw_value="$(printf '%s' "${node_json}" | jq -r '.anytls_pass // empty' 2>/dev/null)"
+		[ -n "${raw_value}" ] || continue
+		decoded="$(schema2_anytls_pass_decode_candidate "${raw_value}")" || decoded=""
+		[ -n "${decoded}" ] || continue
+		[ "${decoded}" != "${raw_value}" ] || continue
+
+		updated_at="$(fss_now_ts_ms)"
+		updated_json="$(printf '%s' "${node_json}" | jq -c \
+			--arg v "${decoded}" \
+			--argjson updated_at "${updated_at}" \
+			'.anytls_pass = $v
+			| ._b64_mode = "raw"
+			| ._rev = (((._rev // 0) | tonumber? // 0) + 1)
+			| ._updated_at = $updated_at' 2>/dev/null)" || continue
+		dbus set fss_node_${node_id}="$(fss_b64_encode "${updated_json}")"
+		changed_nodes=$((changed_nodes + 1))
+		echo_date "校正 AnyTLS 节点 ${node_id} 的认证密码：旧版 base64 -> raw（${reason}）"
+	done
+
+	if [ "${changed_nodes}" -gt 0 ]; then
+		fss_touch_node_catalog_ts >/dev/null 2>&1 || true
+		fss_touch_node_config_ts >/dev/null 2>&1 || true
+		echo_date "已完成 AnyTLS 认证密码校正：节点 ${changed_nodes} 个。"
 	fi
 }
 
@@ -1943,6 +2000,7 @@ install_now(){
 		elif [ "${FORCE_SCHEMA2_SECRET_NORMALIZE}" = "1" ]; then
 			normalize_schema2_secret_fields_after_install "旧版 schema2 数据纠偏" "1"
 		fi
+		normalize_schema2_anytls_pass_after_install "旧版 AnyTLS 数据纠偏"
 	fi
 
 	if [ -n "${MIGRATED_SUB_PROFILES}" ]; then

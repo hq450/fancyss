@@ -1446,6 +1446,20 @@ function is_node_b64_field(field) {
 function is_node_raw_secret_field(field) {
 	return field == "anytls_pass";
 }
+function decode_legacy_anytls_pass_if_needed(value) {
+	value = String(value || "");
+	if (!value || !/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) {
+		return value;
+	}
+	try {
+		var decoded = Base64.decode(value);
+		var uuidLike = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(decoded);
+		if (uuidLike && decoded != value && Base64.encode(decoded) == value) {
+			return decoded;
+		}
+	} catch (e) {}
+	return value;
+}
 function is_node_runtime_field(field) {
 	return $.inArray(field, NODE_RUNTIME_FIELDS) !== -1;
 }
@@ -1785,7 +1799,7 @@ function normalize_fss_node_for_ui(nodeId, raw) {
 		if (is_node_b64_field(field) && value) {
 			obj[field] = schema2_b64_value_for_ui(raw, field, value);
 		} else if (is_node_raw_secret_field(field)) {
-			obj[field] = value;
+			obj[field] = decode_legacy_anytls_pass_if_needed(value);
 		} else if (is_node_bool_field(field)) {
 			obj[field] = value == "1" ? "1" : "0";
 		} else {
@@ -4112,7 +4126,7 @@ function sanitize_node_payload_value(field, value) {
 	}
 	value = String(value);
 	if (is_node_raw_secret_field(field)) {
-		return value;
+		return decode_legacy_anytls_pass_if_needed(value);
 	}
 	if (is_node_b64_field(field) && value) {
 		try {
@@ -6402,7 +6416,7 @@ function conf2obj(obj, action) {
 			continue;								//fancyss-full
 		}											//fancyss-full
 		if (field == "ss_basic_anytls_pass") {		//fancyss-full
-			el.value = obj[field];					//fancyss-full
+			el.value = decode_legacy_anytls_pass_if_needed(obj[field]);	//fancyss-full
 			continue;								//fancyss-full
 		}											//fancyss-full
 		// base64_decode then format json then fill
@@ -11177,7 +11191,7 @@ function get_node_share_field(nodeId, conf, field) {
 		var raw = get_fss_raw_node(String(nodeId));
 		if (raw && typeof raw[field] != "undefined") {
 			if (is_node_raw_secret_field(field)) {
-				return raw[field];
+				return decode_legacy_anytls_pass_if_needed(raw[field]);
 			}
 			return schema2_b64_value_for_ui(raw, field, raw[field]);
 		}
@@ -11484,7 +11498,7 @@ function build_anytls_standard_link(c) {																	//fancyss-full
 	if (!c || !c["anytls_server"] || !c["anytls_pass"]) {													//fancyss-full
 		return 8;																						//fancyss-full
 	}																									//fancyss-full
-	var password = String(c["anytls_pass"] || "");														//fancyss-full
+	var password = decode_legacy_anytls_pass_if_needed(c["anytls_pass"]);								//fancyss-full
 	if (!password) {																					//fancyss-full
 		return 8;																						//fancyss-full
 	}																									//fancyss-full
