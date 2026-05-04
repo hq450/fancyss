@@ -1,6 +1,6 @@
 [submodule "tool/geotool"]
 	path = tool/geotool
-	url = https://github.com/hq450/geotool.git
+	url = git@github1.com:hq450/geotool.git
 [submodule "tool/xapi-tool"]
 	path = tool/xapi-tool
 	url = git@github1.com:hq450/xapi-tool.git
@@ -21,5 +21,9 @@
 	url = git@github1.com:hq450/sub-get.git
 [submodule "tool/anytls-zig"]
 	path = tool/anytls-zig
-	url = git@github.com:hq450/anytls-zig.git
+	url = git@github1.com:hq450/anytls-zig.git
+	branch = main
+[submodule "tool/webtest-tool"]
+	path = tool/webtest-tool
+	url = git@github1.com:hq450/webtest-tool.git
 	branch = main
