@@ -38,6 +38,8 @@ const DEFAULT_PADDING_SCHEME =
     "6=500-1000\n" ++
     "7=500-1000";
 
+var insecure_sni_disabled = std.atomic.Value(bool).init(false);
+
 const Config = struct {
     listen_host: []const u8 = "127.0.0.1",
     listen_port: u16 = 18081,
@@ -69,6 +71,24 @@ const TlsConn = struct {
     write_mutex: std.Thread.Mutex = .{},
 
     fn connect(allocator: Allocator, server_host: []const u8, server_port: u16, sni: []const u8, insecure: bool) !*TlsConn {
+        const tls_host = tlsHost(server_host, sni);
+        if (insecure and insecure_sni_disabled.load(.acquire)) {
+            return try connectWithTlsHost(allocator, server_host, server_port, "", insecure);
+        }
+        if (insecure and tls_host.len > 0) {
+            return connectWithTlsHost(allocator, server_host, server_port, tls_host, insecure) catch |err| switch (err) {
+                error.CertificateHostMismatch => {
+                    std.log.warn("TLS certificate host mismatch for SNI {s}, retrying without SNI in insecure mode", .{tls_host});
+                    insecure_sni_disabled.store(true, .release);
+                    return try connectWithTlsHost(allocator, server_host, server_port, "", insecure);
+                },
+                else => return err,
+            };
+        }
+        return try connectWithTlsHost(allocator, server_host, server_port, tls_host, insecure);
+    }
+
+    fn connectWithTlsHost(allocator: Allocator, server_host: []const u8, server_port: u16, tls_host: []const u8, insecure: bool) !*TlsConn {
         const self = try allocator.create(TlsConn);
         errdefer allocator.destroy(self);
 
@@ -90,7 +110,6 @@ const TlsConn = struct {
         self.stream_reader = self.stream.reader(socket_read_buffer);
         self.stream_writer = self.stream.writer(tls_write_buffer);
 
-        const tls_host = tlsHost(server_host, sni);
         if (!insecure) {
             self.ca_bundle = .{};
             try self.ca_bundle.?.rescan(allocator);

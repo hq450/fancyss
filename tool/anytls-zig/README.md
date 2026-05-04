@@ -13,7 +13,7 @@
 
 - 仅支持 TCP 代理，不支持 UDP/UoT；
 - 每个 SOCKS5 连接独立建立 AnyTLS session，尚未实现官方要求的 session 复用；
-- 默认 `--insecure` 关闭 CA 校验以兼容现有订阅节点；当前 Zig TLS API 中 SNI 与主机名校验耦合，因此带 SNI 时仍要求证书主机名匹配；可用 `--verify` 启用系统 CA 校验；
+- 默认 `--insecure` 关闭 CA 校验以兼容现有订阅节点；受 Zig TLS API 限制，带 SNI 时仍可能触发主机名校验，遇到证书主机名不匹配会自动退回不发送 SNI 重连；可用 `--verify` 启用系统 CA 校验和严格主机名校验；
 - 会解析但暂不应用服务端下发的 padding scheme 更新。
 
 常用命令：
