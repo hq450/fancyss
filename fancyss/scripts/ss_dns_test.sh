@@ -58,10 +58,9 @@ sigterm(){
 	exit 0
 }
 
-TARGET_SET=$(ipset -L chnroute)
-ENTTRIES=$(ipset -L chnroute| grep "Number of entries"|awk '{print $NF}')
+ENTRIES=$(ipset -L chnroute 2>/dev/null | awk '/Number of entries/{print $NF; exit}')
 
-if [ -z "${TARGET_SET}" -o "${ENTTRIES}" == "0" ];then
+if [ -z "${ENTRIES}" ] || [ "${ENTRIES}" = "0" ];then
 	echo "创建ipset chnroute"
 	ipset -! create chnroute nethash && ipset flush chnroute
 	sed -e "s/^/add chnroute &/g" /koolshare/ss/rules/chnroute.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
@@ -274,8 +273,19 @@ dig_test(){
 	# before test, we need to flush dnsmasq cache
 	killall -1 dnsmasq
 	local domain=$(dbus get ss_basic_dig_opt)
+	if [ "${domain}" = "99" ];then
+		domain=$(dbus get ss_basic_dig_opt_usr | tr -d '\r' | awk '{print $1}')
+	fi
+	if [ -z "${domain}" ];then
+		echo "错误：请选择要测试的域名，或填写自定义域名！"
+		return 1
+	fi
+	if ! echo "${domain}" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9.]$';then
+		echo "错误：自定义域名格式不正确：${domain}"
+		return 1
+	fi
 	echo "运行命令：dig ${domain}，请稍后..."
-	local ret=$(${DIG_BIN} ${domain} 2>/dev/null)
+	local ret=$("${DIG_BIN}" "${domain}" 2>/dev/null)
 	echo "--------------------------------------------------------------------------------------------------"
 	echo "${ret}"
 	echo "--------------------------------------------------------------------------------------------------"
