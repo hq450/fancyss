@@ -5,6 +5,7 @@ fancyss Changelog
    - update	`anytls-zig` 升级到 `0.1.5`，在 `--insecure` 模式下若带 SNI 连接触发 `CertificateHostMismatch`，会自动退回不发送 SNI 重连，并在进程内缓存该兼容路径，避免后续连接重复经历失败重试。
    - update	已重新编译 `anytls-zig` 全平台产物并同步进入 `binaries/anytls-zig` 分发链路：`x86_64 / aarch64 / armv5te / armv7a / armv7hf`；路由器平台产物已按脚本完成 UPX 压缩，并生成 `SHA256SUMS-v0.1.5` 校验文件。
    - fix	修复订阅中 `anytls://...&insecure=1&sni=apple.com`、`sni=ads.apple.com`、`sni=crl.apple.com` 等节点在官方 Go `anytls-client` 可用、但 fancyss 内置 `anytls-zig` 启动后出口检测失败的问题。
+   - fix	修复节点管理卡片视图中，点击节点卡片或收起/展开分组时列表会自动滚动回当前运行节点、导致用户视图位置跳动的问题；现在只有进入节点管理页或从其它标签切回时才自动定位当前节点，用户点击和分组操作会保持当前滚动位置。
    - test	已在本机使用官方 Go `anytls-client` 对照验证订阅 `123` 中 7 个 AnyTLS 节点本身可用；修复后使用 `anytls-zig 0.1.5` 验证同类节点可连通，并已同步到 GS7 实机验证 `L美国搬瓦工-AnyTLS` 启动出口检测恢复为 `104.224.159.55`。
 
 3.5.24（20260503）

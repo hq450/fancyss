@@ -10551,13 +10551,35 @@ function adjust_node_card_view_height(maxVisibleRows) {
 		$("#ss_list_table").removeAttr("style");
 	}
 }
+function find_node_card_section_head(sectionKey) {
+	sectionKey = String(sectionKey || "");
+	return $(".node-card-section-head").filter(function() {
+		return String($(this).attr("data-section-key") || "") == sectionKey;
+	}).first()[0] || null;
+}
 function toggle_node_card_section(sectionKey) {
 	sectionKey = String(sectionKey || "");
+	var container = E("ss_node_list_table_main");
+	var anchorTop = 0;
+	var anchor = null;
 	if (!sectionKey) {
 		return false;
 	}
+	if (container && container.getBoundingClientRect) {
+		anchor = find_node_card_section_head(sectionKey);
+		if (anchor && anchor.getBoundingClientRect) {
+			anchorTop = anchor.getBoundingClientRect().top - container.getBoundingClientRect().top;
+		}
+	}
 	nodeCardCollapseState[sectionKey] = nodeCardCollapseState[sectionKey] ? 0 : 1;
 	refresh_html();
+	container = E("ss_node_list_table_main");
+	if (container && anchor) {
+		anchor = find_node_card_section_head(sectionKey);
+		if (anchor && anchor.getBoundingClientRect) {
+			container.scrollTop += anchor.getBoundingClientRect().top - container.getBoundingClientRect().top - anchorTop;
+		}
+	}
 	return false;
 }
 function sync_node_card_current_state(nodeId) {
@@ -10605,7 +10627,7 @@ function select_node_card(nodeId) {
 	}
 	E("ssconf_basic_node").value = nodeId;
 	ss_node_sel();
-	select_default_node(2);
+	select_default_node(2, {scroll: false});
 	return false;
 }
 function open_node_card_qrcode(nodeId) {
@@ -10669,7 +10691,7 @@ function render_node_cards_html(nodeH, noserver, hasLatency) {
 			var section = sections[s];
 			var collapsed = nodeCardCollapseState[section.key] == 1;
 			html += '<div class="node-card-section' + (collapsed ? ' is-collapsed' : '') + '">';
-			html += '<div class="node-card-section-head" onclick="toggle_node_card_section(\'' + section.key + '\')">';
+			html += '<div class="node-card-section-head" data-section-key="' + htmlEscape(section.key) + '" onclick="toggle_node_card_section(\'' + section.key + '\')">';
 			html += '<div class="node-card-section-title">' + htmlEscape(section.label) + '</div>';
 			html += '<div class="node-card-section-meta">';
 			html += '<span class="node-card-section-count">' + section.nodes.length + '</span>';
@@ -10756,7 +10778,7 @@ function refresh_html() {
 				load_latency_cache();
 			}
 		}
-		select_default_node(2);
+		select_default_node(2, {scroll: false});
 		if(node_nu){
 			const dropdownBtn = E("dropdownbtn");
 			const dropdownMenu = E("dropdown");
@@ -11228,8 +11250,9 @@ function reorder_trs(){
 	}
 	//console.log("更改顺序OK");
 }
-function select_default_node(o){
+function select_default_node(o, opts){
 	var sel_node = resolve_node_id(E("ssconf_basic_node").value);
+	var allowScroll = !opts || opts.scroll !== false;
 	if (sel_node) {
 		E("ssconf_basic_node").value = sel_node;
 	}
@@ -11251,7 +11274,7 @@ function select_default_node(o){
 				E("ss_basic_enable").checked = true;
 			$("#apply_ss_node_" + get_saved_current_node_id()).addClass("activate_icon");
 			$("#apply_ss_node_" + get_saved_current_node_id()).removeClass("deactivate_icon");
-			if(!scroll_current_node_into_view(get_saved_current_node_id()) && node_idx && node_nu > nodeN){
+			if(allowScroll && !scroll_current_node_into_view(get_saved_current_node_id()) && node_idx && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
 			}
@@ -11266,7 +11289,7 @@ function select_default_node(o){
 			//用户点击开启了总开关，节点选择为db_ss["ssconf_basic_node"]，没有就默认选1
 			$("#apply_ss_node_" + sel_node).addClass("activate_icon");
 			$("#apply_ss_node_" + sel_node).removeClass("deactivate_icon");
-			if(!scroll_current_node_into_view(sel_node) && node_idx && node_nu > nodeN){
+			if(allowScroll && !scroll_current_node_into_view(sel_node) && node_idx && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
 			}
@@ -11277,7 +11300,7 @@ function select_default_node(o){
 			$("#apply_ss_node_" + sel_node).addClass("activate_icon");
 			$("#apply_ss_node_" + sel_node).removeClass("deactivate_icon");
 			node_idx_1 = $.inArray(E("ssconf_basic_node").value, ss_nodes) + 1;
-			if(!scroll_current_node_into_view(sel_node) && node_idx_1 && node_nu > nodeN){
+			if(allowScroll && !scroll_current_node_into_view(sel_node) && node_idx_1 && node_nu > nodeN){
 				var rows2scroll = parseInt(((node_idx_1*trsH - nodeH*0.5)/trsH));
 				E("ss_node_list_table_main").scrollTop = rows2scroll*trsH;
 			}
