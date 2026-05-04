@@ -7588,12 +7588,12 @@ function close_subscription_log_ws() {
 function finish_subscription_log_with_refresh() {
 	if (subscribeLogRefreshNodesAfterDone) {
 		subscribeLogRefreshNodesAfterDone = false;
-		fetch_subscription_profiles_dbus(function() {
-			render_subscription_manager();
-			refresh_table(function() {
+		refresh_table(function() {
+			fetch_subscription_profiles_dbus(function() {
+				render_subscription_manager();
 				maybe_start_node_latency_auto_refresh();
-			});
-		}, {silent: true});
+			}, {silent: true});
+		});
 	}
 }
 function poll_subscription_log(reset) {
