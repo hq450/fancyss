@@ -19,3 +19,7 @@
 [submodule "tool/sub-get"]
 	path = tool/sub-get
 	url = git@github1.com:hq450/sub-get.git
+[submodule "tool/anytls-zig"]
+	path = tool/anytls-zig
+	url = git@github.com:hq450/anytls-zig.git
+	branch = main
