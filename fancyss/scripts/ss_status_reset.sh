@@ -64,7 +64,7 @@ status_probe_mode() {
 		printf '%s' "${mode}"
 		;;
 	*)
-		printf '%s' "once"
+		printf '%s' "serve"
 		;;
 	esac
 }

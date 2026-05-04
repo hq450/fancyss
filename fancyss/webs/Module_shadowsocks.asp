@@ -3359,7 +3359,7 @@ function handle_shunt_stats_ws_payload(raw) {
 	return handled;
 }
 function start_shunt_stats_ws() {
-	if (!should_run_shunt_stats_live() || ws_flag != 1) {
+	if (!should_run_shunt_stats_live() || !is_ws_available()) {
 		return false;
 	}
 	if (shuntStatsWs) {
@@ -3422,7 +3422,7 @@ function schedule_shunt_stats_refresh(immediate) {
 		}, immediate ? 120 : 260);
 		return;
 	}
-	if (ws_flag == 1) {
+	if (is_ws_available()) {
 		if (start_shunt_stats_ws()) {
 			return;
 		}
@@ -5943,7 +5943,7 @@ function wait_ws_probe_then_start_status(retry){
 		}, 120);
 		return true;
 	}
-	get_ss_status(ws_flag == 1);
+	get_ss_status(is_ws_available());
 	return true;
 }
 function is_page_live_updates_allowed() {
@@ -6074,7 +6074,7 @@ function resume_node_latency_live_runtime() {
 		return false;
 	}
 	if (batch_test_running) {
-		if (ws_flag == 1) {
+		if (is_ws_available()) {
 			return start_latency_ws(2);
 		}
 		batchLatencyPollSeq += 1;
@@ -6082,7 +6082,7 @@ function resume_node_latency_live_runtime() {
 		return true;
 	}
 	if (single_test_running && single_test_node) {
-		if (ws_flag == 1) {
+		if (is_ws_available()) {
 			return start_single_latency_ws(single_test_node);
 		}
 		singleLatencyPollingNode = single_test_node;
@@ -6100,7 +6100,7 @@ function resume_page_live_runtime() {
 		if (ws_probe_pending) {
 			wait_ws_probe_then_start_status(0);
 		} else {
-			get_ss_status(ws_flag == 1);
+			get_ss_status(is_ws_available());
 		}
 	}
 	if (should_run_shunt_stats_live()) {
@@ -6172,7 +6172,7 @@ function schedule_next_front_status_poll(delayMs) {
 			stop_front_status_runtime();
 			return;
 		}
-		if (ws_flag == 1) {
+		if (is_ws_available()) {
 			get_ss_status_front_websocket();
 		} else {
 			get_ss_status_front_httpd();
@@ -6221,6 +6221,12 @@ function ws_host_allowed(host) {
 	}
 	return is_private_ipv4_host(host);
 }
+function is_ws_transport_allowed() {
+	return window.location.protocol == "http:";
+}
+function is_ws_available() {
+	return ws_flag == 1 && is_ws_transport_allowed() && ws_host_allowed(hostname);
+}
 function try_ws_connect(probeOnly){
 	probeOnly = (probeOnly === true);
 	if (ws_enable != 1){
@@ -6237,7 +6243,7 @@ function try_ws_connect(probeOnly){
 		}
 		return false;
 	}
-	if (window.location.protocol != "http:"){
+	if (!is_ws_transport_allowed()){
 		ws_probe_pending = false;
 		ws_flag = 0;
 		if (wss){
@@ -7166,7 +7172,7 @@ function save() {
 	//console.log("post_dbus", post_dbus);
 
 	if(dbus["ss_basic_enable"] == "1"){
-		if(ws_flag == 1){
+		if(is_ws_available()){
 			//console.log("push_data_ws");
 			push_data_ws("ss_config.sh", submit_arg,  post_dbus);
 		}else{
@@ -7174,7 +7180,7 @@ function save() {
 			push_data("ss_config.sh", submit_arg,  post_dbus);
 		}
 	}else{
-		if(ws_flag == 1){
+		if(is_ws_available()){
 			push_data_ws("ss_config.sh", "stop",  post_dbus);
 		}else{
 			push_data("ss_config.sh", "stop",  post_dbus);
@@ -7189,6 +7195,10 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 	var fallbackToHttp = function() {
 		push_data(script, arg, obj, flag);
 	};
+	if (!is_ws_available()) {
+		fallbackToHttp();
+		return;
+	}
 	if (script == "ss_config.sh") {
 		attach_schema2_postsave_marker(obj);
 		postData = {"id": id, "method": "dummy_script.sh", "params":[], "fields": obj};
@@ -7657,7 +7667,7 @@ function start_subscription_log_stream(action, profileId, fallbackRunner) {
 		}
 		start_subscription_log_http();
 	}
-	if (ws_flag != 1 || window.location.protocol != "http:" || !ws_host_allowed(hostname)) {
+	if (!is_ws_available()) {
 		fallback_to_http();
 		return;
 	}
@@ -7723,7 +7733,7 @@ function start_subscription_log_stream(action, profileId, fallbackRunner) {
 }
 function push_subscription_data(action, obj, title, profileId, affectsNodeList) {
 	var id = parseInt(Math.random() * 100000000);
-	var useWsLog = ws_flag == 1 && window.location.protocol == "http:" && ws_host_allowed(hostname);
+	var useWsLog = is_ws_available();
 	var postData = {"id": id, "method": "ss_node_subscribe.sh", "params": [action], "fields": obj || {}};
 	var fields = obj || {};
 	clear_text_file_poll_state("subscribe_log");
@@ -8261,7 +8271,7 @@ function verifyFields(r) {
 	if ( trid == "ss_basic_qrcode" || trid == "ss_basic_dragable" || trid == "ss_basic_tablet" || trid == "ss_basic_noserver" || trid == "ss_basic_node_cards") {
 		var dbus_post = {};
 		dbus_post[trid] = E(trid).checked ? '1' : '0';
-		if(ws_flag == 1){
+		if(is_ws_available()){
 			push_data_ws("ss_dummy.sh", "", dbus_post, "1");
 		}else{
 			push_data("dummy_script.sh", "", dbus_post, "1");
@@ -8273,7 +8283,7 @@ function verifyFields(r) {
 	if ( $(r).attr("id") == "ss_adv_sub" ) {
 		var dbus_post = {};
 		dbus_post["ss_adv_sub"] = E("ss_adv_sub").checked ? '1' : '0';
-		if(ws_flag == 1){
+		if(is_ws_available()){
 			push_data_ws("ss_dummy.sh", "", dbus_post, "2");
 		}else{
 			push_data("dummy_script.sh", "", dbus_post, "2");
@@ -11950,7 +11960,7 @@ function latency_table_is_fresh() {
 	return true;
 }
 function send_webtest_ws_command(command, onDone, onBusy, onError) {
-	if (ws_flag != 1) {
+	if (!is_ws_available()) {
 		if (typeof onError === "function") onError();
 		return false;
 	}
@@ -12014,7 +12024,7 @@ function read_webtest_file_ws(path, onSuccess, onError) {
 		webtestFileWsPending[path].push({success: onSuccess, error: onError});
 		return true;
 	}
-	if (ws_flag != 1 || window.location.protocol != "http:" || !ws_host_allowed(hostname)) {
+	if (!is_ws_available()) {
 		if (typeof onError === "function") onError();
 		return false;
 	}
@@ -12275,7 +12285,7 @@ function fallback_latency_ws(action) {
 	get_latency_data(action, batchLatencyPollSeq);
 }
 function start_latency_ws(action) {
-	if (ws_flag != 1 || !should_run_node_latency_live()){
+	if (!is_ws_available() || !should_run_node_latency_live()){
 		return false;
 	}
 	close_latency_ws();
@@ -12328,7 +12338,7 @@ function start_latency_ws(action) {
 	return true;
 }
 function start_single_latency_ws(node) {
-	if (ws_flag != 1 || !should_run_node_latency_live()){
+	if (!is_ws_available() || !should_run_node_latency_live()){
 		return false;
 	}
 	close_single_latency_ws();
@@ -12496,7 +12506,7 @@ function start_single_latency_ws(node) {
 		if(test_flag == 2){
 			cancel_schema2_postchange_jobs();
 		}
-		if(ws_flag == 1 && test_flag == 2){
+		if(is_ws_available() && test_flag == 2){
 			send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_start_batch", function() {
 				apply_latency_feature_enabled_ui();
 			}, null, function() {
@@ -12505,7 +12515,7 @@ function start_single_latency_ws(node) {
 			});
 			return;
 		}
-		if(ws_flag == 1 && test_flag == 0){
+		if(is_ws_available() && test_flag == 0){
 			send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_close_latency", function() {
 				apply_latency_feature_disabled_ui();
 			}, null, function() {
@@ -12520,7 +12530,7 @@ function stop_latency_batch() {
 	if(!batch_test_running || batch_stop_pending){
 		return;
 	}
-	if(ws_flag == 1){
+	if(is_ws_available()){
 		batch_stop_pending = true;
 		update_latency_action_links();
 		$("#ss_wts_show").html("<em>【停止中...】</em>");
@@ -12554,7 +12564,7 @@ function stop_latency_batch() {
 	});
 }
 function clear_latency_cache() {
-	if(ws_flag == 1){
+	if(is_ws_available()){
 		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_clear_cache", function() {
 			close_latency_ws();
 			close_single_latency_ws();
@@ -12625,7 +12635,7 @@ function test_latency_single(node){
 	singleLatencyPollingNode = null;
 	write_webtest([[String(node), "waiting"]]);
 	disable_latency_buttons(node);
-	if(ws_flag == 1){
+	if(is_ws_available()){
 		send_webtest_ws_command("sh /koolshare/scripts/ss_webtest.sh ws_single_test " + String(node), function() {
 			start_single_latency_ws(node);
 		}, function() {
@@ -13276,7 +13286,7 @@ function upload_ss_backup() {
 	});
 }
 function restore_ss_conf() {
-	if(ws_flag == 1){
+	if(is_ws_available()){
 		push_data_ws("ss_conf.sh", "4", {});
 		return;
 	}
@@ -13288,7 +13298,7 @@ function remove_SS_node() {
 }
 function restart_dnsmaq() {
 	db_ss["ss_basic_action"] = "21";
-	if(ws_flag == 1){
+	if(is_ws_available()){
 		push_data_ws("ss_conf.sh", "8", {});
 	}else{
 		push_data("ss_conf.sh", "8", "");
@@ -13886,7 +13896,7 @@ function setup_status_ws(onFail, with_heartbeat, onReady) {
 		}
 		return true;
 	}
-	if (ws_flag != 1){
+	if (!is_ws_available()){
 		onFail();
 		return false;
 	}
@@ -13966,7 +13976,7 @@ function setup_status_ws(onFail, with_heartbeat, onReady) {
 
 function get_ss_status(use_ws) {
 	if (typeof use_ws == "undefined"){
-		use_ws = (ws_flag == 1);
+		use_ws = (is_ws_available());
 	}
 	if (!should_run_front_status_live()) {
 		stop_front_status_runtime();
@@ -13997,7 +14007,11 @@ function get_ss_status(use_ws) {
 	}
 }
 function get_ss_status_front() {
-	get_ss_status_front_websocket();
+	if (is_ws_available()) {
+		get_ss_status_front_websocket();
+	} else {
+		get_ss_status_front_httpd();
+	}
 }
 
 function get_ss_status_front_httpd() {
@@ -14014,16 +14028,26 @@ function get_ss_status_front_httpd() {
 	}
 	statusFrontHttpPending = true;
 	var id = parseInt(Math.random() * 100000000);
-	var postData = {"id": id, "method": "ss_status.sh", "params":[], "fields": ""};
+	var postData = {"id": id, "method": "ss_status.sh", "params":[id], "fields": ""};
 	$.ajax({
 		type: "POST",
 		url: "/_api/",
 		async: true,
 		cache: false,
-		timeout: Math.max(10000, get_status_refresh_delay_ms() + 2000),
+		dataType: "json",
+		timeout: Math.max(8000, get_status_refresh_delay_ms() + 2000),
 		data: JSON.stringify(postData),
 		success: function(apiResponse) {
-			apply_ss_status(apiResponse.result, false);
+			var payload = "";
+			if (apiResponse && typeof apiResponse.result != "undefined") {
+				payload = apiResponse.result;
+			} else if (typeof apiResponse == "string") {
+				payload = apiResponse;
+			}
+			apply_ss_status(payload, false);
+		},
+		error: function() {
+			set_ss_status_waiting("Waiting ...");
 		},
 		complete: function() {
 			finish_front_status_poll();
@@ -14043,13 +14067,14 @@ function get_ss_status_front_websocket() {
 		return false;
 	}
 	statusFrontPending = true;
-	status_front_ws_direct = (String(typeof db_ss["ss_basic_status_mode"] == "undefined" ? "serve" : db_ss["ss_basic_status_mode"]) == "serve");
+	var statusMode = (typeof db_ss["ss_basic_status_mode"] == "undefined" || db_ss["ss_basic_status_mode"] === "") ? "serve" : String(db_ss["ss_basic_status_mode"]);
+	status_front_ws_direct = (statusMode == "serve");
 	clear_front_status_ws_watchdog();
 	statusFrontWsWatchdog = setTimeout(function() {
 		statusFrontPending = false;
 		status_front_ws_direct = false;
 		close_front_status_socket();
-		if (ws_flag == 1) {
+		if (is_ws_available()) {
 			schedule_next_front_status_poll(1000);
 		} else {
 			get_ss_status_front_httpd();
@@ -14139,7 +14164,7 @@ function get_ss_status_back_httpd() {
 	}else if(E("ss_basic_interval").value == "5"){
 		var time_wait = 63000;
 	}
-	setTimeout(get_ss_status_back_httpd, time_wait);
+	setTimeout(get_ss_status_back_httpd, 1000);
 }
 function close_dns_status() {
 	$("#dns_status_div").hide(200);
@@ -14345,6 +14370,10 @@ function append_status_log_chunk(s, chunk) {
 }
 function get_status_log_ws(s) {
 	if (STATUS_FLAG == 0) return false;
+	if (!is_ws_available()) {
+		get_status_log_httpd(s);
+		return false;
+	}
 	close_status_history_ws();
 	statusHistoryType = s;
 	var retArea = (s == 1) ? E("log_content_f") : E("log_content_c");
@@ -14407,7 +14436,7 @@ function lookup_status_log(s) {
 	$('html, body').css({overflow: 'hidden', height: '100%'});
 }
 function get_status_log(s) {
-	if (ws_flag == 1) {
+	if (is_ws_available()) {
 		return get_status_log_ws(s);
 	}
 	return get_status_log_httpd(s);
@@ -14480,7 +14509,7 @@ function switch_log_view(type) {
 	return false;
 }
 function get_log() {
-	if (ws_flag != 1){
+	if (!is_ws_available()){
 		get_log_httpd();
 		return false;
 	}
@@ -15653,7 +15682,7 @@ function append_proc_status_text(text) {
 	procStatus.scrollTop = 0;
 }
 function get_proc_status() {
-	if (ws_flag == 1) {
+	if (is_ws_available()) {
 		return get_proc_status_ws();
 	}
 	return get_proc_status_httpd();
@@ -15844,7 +15873,7 @@ function save_failover() {
 	for (var i = 0; i < fov_chk.length; i++) {
 		dbus_post[fov_chk[i]] = E(fov_chk[i]).checked ? '1' : '0';
 	}
-	if(ws_flag == 1){
+	if(is_ws_available()){
 		push_data_ws("ss_status_reset.sh", "", dbus_post);
 	}else{
 		push_data("ss_status_reset.sh", "", dbus_post);

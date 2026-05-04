@@ -1,6 +1,13 @@
 #!/bin/sh
 
+STATUS_HTTP_ID="$1"
+
 source /koolshare/scripts/ss_base.sh
+
+if [ -n "${STATUS_HTTP_ID}" ];then
+	ACTION="${STATUS_HTTP_ID}"
+	ID="${STATUS_HTTP_ID}"
+fi
 
 STATUS_FRONT_CACHE=/tmp/upload/ss_status_front.txt
 STATUS_BACK_CACHE=/tmp/upload/ss_status.txt
@@ -240,7 +247,7 @@ status_probe_mode(){
 		printf '%s' "${mode}"
 		;;
 	*)
-		printf '%s' "once"
+		printf '%s' "serve"
 		;;
 	esac
 }
@@ -390,29 +397,16 @@ ws)
 			set_waiting_status
 			payload="$(get_status_payload)"
 		else
-			if ! acquire_status_ws_lock; then
-				if payload="$(read_ws_cache)"; then
-					emit_status_payload "${payload}"
-				elif payload="$(wait_ws_cache)"; then
-					emit_status_payload "${payload}"
-				else
-					set_waiting_status
-					emit_status_payload "$(get_status_payload)"
-				fi
-				exit 0
-			fi
-			trap 'release_status_ws_lock' EXIT INT TERM
 			if [ "${ss_failover_enable}" = "1" ];then
 				payload="$(resolve_payload)"
 			else
 				payload="$(resolve_payload_once_only)"
 			fi
-			write_ws_cache "${payload}" >/dev/null 2>&1
 		fi
 		if [ "${ss_failover_enable}" = "1" ];then
 			printf '%s@@%s\n' "${payload}" "${HEART_STATUS}" > "${STATUS_BACK_CACHE}"
 		else
-			http_response "${payload}"
+			http_response "${payload}" >/dev/null 2>&1
 		fi
 		;;
 esac
