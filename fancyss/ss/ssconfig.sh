@@ -6843,7 +6843,9 @@ stop_status() {
 	local status_daemon_state="/tmp/upload/ss_status_daemon.json"
 	local status_daemon_legacy="/tmp/upload/ss_status_front.txt"
 	local status_serve_socket="/tmp/status-tool.sock"
+	local status_serve_args_file="/tmp/status-tool-serve.args"
 	local status_ws_lock_dir="/tmp/fancyss_status_ws.lock"
+	local status_http_lock_dir="/tmp/fancyss_status_http.lock"
 	local pids=""
 
 	pids="$(pidof ss_status_main.sh 2>/dev/null)"
@@ -6863,14 +6865,29 @@ stop_status() {
 		killall curl-status >/dev/null 2>&1
 	fi
 
+	if pidof statusctl >/dev/null 2>&1; then
+		echo_date "关闭statusctl进程..."
+		killall statusctl >/dev/null 2>&1
+	fi
+
+	pids="$(ps w | grep -F "/tmp/upload/ssf_status.stream" | grep -v grep | awk '{print $1}')"
+	stop_status_kill_pid_list "国外状态详情流tail进程" "${pids}" "-15" || true
+
+	pids="$(ps w | grep -F "/tmp/upload/ssc_status.stream" | grep -v grep | awk '{print $1}')"
+	stop_status_kill_pid_list "状态详情流tail进程" "${pids}" "-15" || true
+
+	pids="$(ps w | grep -F "sh /koolshare/scripts/ss_status_ws.sh" | grep -v grep | awk '{print $1}')"
+	stop_status_kill_pid_list "状态详情流脚本" "${pids}" "-15" || true
+
 	stop_status_kill_pidfile "status-tool daemon进程" "${status_daemon_pidfile}" || true
 	stop_status_kill_pidfile "status-tool serve进程" "${status_serve_pidfile}" || true
 
 	pids="$(ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve|fancyss)( |$)' | grep -v grep | awk '{print $1}')"
 	stop_status_kill_pid_list "status-tool残留进程" "${pids}" "-15" || true
 
-	rm -f "${status_daemon_pidfile}" "${status_serve_pidfile}" "${status_daemon_state}" "${status_daemon_legacy}" "${status_serve_socket}" >/dev/null 2>&1
+	rm -f "${status_daemon_pidfile}" "${status_serve_pidfile}" "${status_daemon_state}" "${status_daemon_legacy}" "${status_serve_socket}" "${status_serve_args_file}" >/dev/null 2>&1
 	rm -rf "${status_ws_lock_dir}" >/dev/null 2>&1
+	rm -rf "${status_http_lock_dir}" >/dev/null 2>&1
 	rm -rf /tmp/upload/ss_status.txt
 }
 

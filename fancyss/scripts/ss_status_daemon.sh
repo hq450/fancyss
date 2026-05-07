@@ -8,7 +8,21 @@ STATUS_SERVE_PIDFILE="/var/run/status-tool-serve.pid"
 STATUS_DAEMON_STATE="/tmp/upload/ss_status_daemon.json"
 STATUS_DAEMON_LEGACY="/tmp/upload/ss_status_front.txt"
 STATUS_SERVE_SOCKET="/tmp/status-tool.sock"
+STATUS_SERVE_ARGS_FILE="/tmp/status-tool-serve.args"
 STATUS_WS_LOCK_DIR="/tmp/fancyss_status_ws.lock"
+STATUS_HTTP_LOCK_DIR="/tmp/fancyss_status_http.lock"
+
+kill_status_stream_followers() {
+	ps w | grep -F "/tmp/upload/ssf_status.stream" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
+	done
+	ps w | grep -F "/tmp/upload/ssc_status.stream" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
+	done
+	ps w | grep -F "sh /koolshare/scripts/ss_status_ws.sh" | grep -v grep | awk '{print $1}' | while read -r pid; do
+		[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
+	done
+}
 
 status_tool_tz() {
 	local tz=""
@@ -48,13 +62,18 @@ write_waiting_cache() {
 	fi
 }
 
+ensure_waiting_cache() {
+	[ -s "${STATUS_DAEMON_LEGACY}" ] && return 0
+	write_waiting_cache
+}
+
 start_status_daemon() {
 	[ -x "${STATUS_TOOL_BIN}" ] || return 1
 	local chn_url
 	local frn_url
 	local interval_ms
 	local proxy_ipv6
-	write_waiting_cache
+	ensure_waiting_cache
 	{
 		read -r chn_url
 		read -r frn_url
@@ -90,8 +109,7 @@ start_status_serve() {
 	local chn_url
 	local frn_url
 	local proxy_ipv6
-	local cmd_pid
-	write_waiting_cache
+	ensure_waiting_cache
 	{
 		read -r chn_url
 		read -r frn_url
@@ -103,24 +121,28 @@ start_status_serve() {
 		[ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1
 	done
 	rm -f "${STATUS_SERVE_SOCKET}" "${STATUS_SERVE_PIDFILE}" >/dev/null 2>&1
-	env -i PATH="/koolshare/bin:/usr/sbin:/usr/bin:/sbin:/bin" TZ="$(status_tool_tz)" "${STATUS_TOOL_BIN}" serve \
+	{
+		printf 'china_url=%s\n' "${chn_url}"
+		printf 'foreign_url=%s\n' "${frn_url}"
+		printf 'proxy_ipv6=%s\n' "${proxy_ipv6:-0}"
+	} > "${STATUS_SERVE_ARGS_FILE}" 2>/dev/null
+	env TZ="$(status_tool_tz)" start-stop-daemon -S -q -b -m -p "${STATUS_SERVE_PIDFILE}" -x "${STATUS_TOOL_BIN}" -- serve \
 		--socket-path "${STATUS_SERVE_SOCKET}" \
 		--china-url "${chn_url}" \
 		--foreign-url "${frn_url}" \
 		--proxy-ipv6 "${proxy_ipv6:-0}" \
 		--foreign-proxy "socks5://127.0.0.1:23456" \
 		--state-file "${STATUS_DAEMON_STATE}" \
-		--legacy-file "${STATUS_DAEMON_LEGACY}" >/tmp/upload/status-tool-serve.log 2>&1 &
-	cmd_pid="$!"
-	echo "${cmd_pid}" > "${STATUS_SERVE_PIDFILE}"
+		--legacy-file "${STATUS_DAEMON_LEGACY}" >/tmp/upload/status-tool-serve.log 2>&1
 	sleep 1
-	if kill -0 "${cmd_pid}" >/dev/null 2>&1 && [ -S "${STATUS_SERVE_SOCKET}" ];then
+	if [ -f "${STATUS_SERVE_PIDFILE}" ] && [ -S "${STATUS_SERVE_SOCKET}" ];then
 		return 0
 	fi
 	return 1
 }
 
 stop_status_daemon() {
+	kill_status_stream_followers
 	if [ -f "${STATUS_DAEMON_PIDFILE}" ];then
 		start-stop-daemon -K -q -p "${STATUS_DAEMON_PIDFILE}" >/dev/null 2>&1
 	fi
@@ -130,8 +152,9 @@ stop_status_daemon() {
 	ps w | grep -E '(^| )(/koolshare/bin/status-tool|/tmp/status-tool-serve) (daemon|serve|fancyss)( |$)' | grep -v grep | awk '{print $1}' | while read -r pid; do
 		kill "${pid}" >/dev/null 2>&1
 	done
-	rm -f "${STATUS_DAEMON_PIDFILE}" "${STATUS_SERVE_PIDFILE}" "${STATUS_DAEMON_STATE}" "${STATUS_DAEMON_LEGACY}" "${STATUS_SERVE_SOCKET}" >/dev/null 2>&1
+	rm -f "${STATUS_DAEMON_PIDFILE}" "${STATUS_SERVE_PIDFILE}" "${STATUS_DAEMON_STATE}" "${STATUS_DAEMON_LEGACY}" "${STATUS_SERVE_SOCKET}" "${STATUS_SERVE_ARGS_FILE}" >/dev/null 2>&1
 	rm -rf "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
+	rm -rf "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1
 }
 
 restart_status_daemon() {

@@ -14,11 +14,17 @@ STATUS_BACK_CACHE=/tmp/upload/ss_status.txt
 STATUS_WS_CACHE_FILE=/tmp/upload/ss_status_ws.txt
 STATUS_WS_LOCK_DIR=/tmp/fancyss_status_ws.lock
 STATUS_WS_LOCK_PID_FILE=${STATUS_WS_LOCK_DIR}/pid
+STATUS_HTTP_LOCK_DIR=/tmp/fancyss_status_http.lock
+STATUS_HTTP_LOCK_PID_FILE=${STATUS_HTTP_LOCK_DIR}/pid
 STATUS_SERVE_SOCKET=/tmp/status-tool.sock
+STATUS_SERVE_ARGS_FILE=/tmp/status-tool-serve.args
 STATUS_CTL_BIN=/koolshare/bin/statusctl
 STATUS_DAEMON_SCRIPT=/koolshare/scripts/ss_status_daemon.sh
 STATUS_WS_LOCK_MAX_AGE=60
+STATUS_HTTP_LOCK_MAX_AGE=20
 STATUS_CACHE_MAX_AGE=120
+STATUS_CTL_TIMEOUT=8
+STATUS_ONCE_TIMEOUT=15
 
 LOGTIME=$(TZ=UTC-8 date -R "+%Y-%m-%d %H:%M:%S")
 HEART_STATUS=$(dbus get ss_heart_beat)
@@ -202,6 +208,48 @@ release_status_ws_lock(){
 	rmdir "${STATUS_WS_LOCK_DIR}" >/dev/null 2>&1
 }
 
+acquire_status_http_lock(){
+	local pid=""
+	local lock_mtime=""
+	local now=""
+	if mkdir "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1;then
+		echo "$$" > "${STATUS_HTTP_LOCK_PID_FILE}" 2>/dev/null
+		return 0
+	fi
+	if [ -f "${STATUS_HTTP_LOCK_PID_FILE}" ];then
+		pid="$(cat "${STATUS_HTTP_LOCK_PID_FILE}" 2>/dev/null)"
+		if [ -z "${pid}" ] || ! kill -0 "${pid}" >/dev/null 2>&1;then
+			rm -rf "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1
+			if mkdir "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1;then
+				echo "$$" > "${STATUS_HTTP_LOCK_PID_FILE}" 2>/dev/null
+				return 0
+			fi
+		else
+			lock_mtime="$(date -r "${STATUS_HTTP_LOCK_PID_FILE}" +%s 2>/dev/null)"
+			now="$(date +%s 2>/dev/null)"
+			if [ -n "${lock_mtime}" ] && [ -n "${now}" ] && [ $((now - lock_mtime)) -gt "${STATUS_HTTP_LOCK_MAX_AGE}" ];then
+				rm -rf "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1
+				if mkdir "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1;then
+					echo "$$" > "${STATUS_HTTP_LOCK_PID_FILE}" 2>/dev/null
+					return 0
+				fi
+			fi
+		fi
+	else
+		rm -rf "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1
+		if mkdir "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1;then
+			echo "$$" > "${STATUS_HTTP_LOCK_PID_FILE}" 2>/dev/null
+			return 0
+		fi
+	fi
+	return 1
+}
+
+release_status_http_lock(){
+	rm -f "${STATUS_HTTP_LOCK_PID_FILE}" >/dev/null 2>&1
+	rmdir "${STATUS_HTTP_LOCK_DIR}" >/dev/null 2>&1
+}
+
 json_probe_line(){
 	local json_text="$1"
 	local probe_name="$2"
@@ -234,9 +282,9 @@ json_probe_line(){
 refresh_payload_once(){
 	local status_tool="$1"
 	if [ "${PROXY_IPV6}" = "1" ];then
-		TZ="$(status_tool_tz)" "${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 1 2>/dev/null || return 1
+		TZ="$(status_tool_tz)" __timeout_run "${STATUS_ONCE_TIMEOUT}" "${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 1 2>/dev/null || return 1
 	else
-		TZ="$(status_tool_tz)" "${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 0 --foreign-proxy "socks5://127.0.0.1:23456" 2>/dev/null || return 1
+		TZ="$(status_tool_tz)" __timeout_run "${STATUS_ONCE_TIMEOUT}" "${status_tool}" fancyss --china-url "${CHN_TEST_SITE}" --foreign-url "${FRN_TEST_SITE}" --proxy-ipv6 0 --foreign-proxy "socks5://127.0.0.1:23456" 2>/dev/null || return 1
 	fi
 }
 
@@ -256,10 +304,10 @@ refresh_payload_via_ctl(){
 	local payload=""
 	[ -x "${STATUS_CTL_BIN}" ] || return 1
 	[ -S "${STATUS_SERVE_SOCKET}" ] || return 1
-	payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" probe-once 2>/dev/null)" || payload=""
+	payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" --timeout-ms $((STATUS_CTL_TIMEOUT * 1000)) probe-once 2>/dev/null)" || payload=""
 	case "${payload}" in
 	""|cache-miss*|error:*|unknown-command*)
-		payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" get-cache 2>/dev/null)" || return 1
+		payload="$("${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" --timeout-ms 1000 get-cache 2>/dev/null)" || return 1
 		;;
 	esac
 	payload="$(printf '%s' "${payload}" | sed 's/[[:space:]]*$//')"
@@ -267,17 +315,34 @@ refresh_payload_via_ctl(){
 	printf '%s' "${payload}"
 }
 
+status_serve_args_match(){
+	[ -f "${STATUS_SERVE_ARGS_FILE}" ] || return 1
+	grep -Fxq "china_url=${CHN_TEST_SITE}" "${STATUS_SERVE_ARGS_FILE}" || return 1
+	grep -Fxq "foreign_url=${FRN_TEST_SITE}" "${STATUS_SERVE_ARGS_FILE}" || return 1
+	grep -Fxq "proxy_ipv6=${PROXY_IPV6:-0}" "${STATUS_SERVE_ARGS_FILE}" || return 1
+	return 0
+}
+
+status_serve_process_running(){
+	local pid=""
+	if [ -f "/var/run/status-tool-serve.pid" ];then
+		pid="$(cat /var/run/status-tool-serve.pid 2>/dev/null)"
+		[ -n "${pid}" ] && kill -0 "${pid}" >/dev/null 2>&1 && return 0
+	fi
+	ps w | grep -E '(^| )/koolshare/bin/status-tool serve( |$)' | grep -v grep >/dev/null 2>&1
+}
+
 ensure_status_serve_runtime(){
 	[ "${ss_failover_enable}" != "1" ] || return 1
 	[ -x "${STATUS_CTL_BIN}" ] || return 1
-	if [ -S "${STATUS_SERVE_SOCKET}" ];then
-		"${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" ping >/dev/null 2>&1 && return 0
+	if [ -S "${STATUS_SERVE_SOCKET}" ] && status_serve_args_match;then
+		status_serve_process_running && return 0
 	fi
 	[ -x "${STATUS_DAEMON_SCRIPT}" ] || return 1
-	sh "${STATUS_DAEMON_SCRIPT}" start >/dev/null 2>&1 || return 1
+	sh "${STATUS_DAEMON_SCRIPT}" restart >/dev/null 2>&1 || return 1
 	sleep 1
 	[ -S "${STATUS_SERVE_SOCKET}" ] || return 1
-	"${STATUS_CTL_BIN}" --socket-path "${STATUS_SERVE_SOCKET}" ping >/dev/null 2>&1
+	status_serve_process_running
 }
 
 prepare(){
@@ -326,6 +391,13 @@ resolve_payload_once_only(){
 			printf '%s' "${payload}"
 			return 0
 		fi
+		if payload="$(read_front_cache)"; then
+			printf '%s' "${payload}"
+			return 0
+		fi
+		set_waiting_status
+		get_status_payload
+		return 0
 	fi
 	if status_tool_bin="$(pick_status_tool)"; then
 		if payload="$(refresh_payload_once "${status_tool_bin}")"; then
@@ -400,7 +472,15 @@ ws)
 			if [ "${ss_failover_enable}" = "1" ];then
 				payload="$(resolve_payload)"
 			else
-				payload="$(resolve_payload_once_only)"
+				if ! acquire_status_http_lock; then
+					payload="$(read_front_cache)" || payload="$(read_ws_cache)" || {
+						set_waiting_status
+						payload="$(get_status_payload)"
+					}
+				else
+					trap 'release_status_http_lock' EXIT INT TERM
+					payload="$(resolve_payload_once_only)"
+				fi
 			fi
 		fi
 		if [ "${ss_failover_enable}" = "1" ];then

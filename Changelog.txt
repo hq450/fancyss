@@ -1,5 +1,15 @@
 fancyss Changelog
 
+3.5.26（20260507）
+   - note	本次更新针对 HTTPS 访问路由器后台时顶部“插件运行状态”长期 Waiting 或刷新不稳定的问题做补丁收口，并继续优化 `status-tool serve` 在弱性能机型上的按需探测链路。
+   - update	HTTPS 访问 `Module_shadowsocks.asp` 时全局禁用 WebSocket 通道，顶部运行状态、webtest、提交日志等前后端交互统一走 HTTP(S) API fallback，避免浏览器阻止不安全 `ws://` 导致状态请求卡住。
+   - update	未开启故障转移且运行状态检测模式为 `serve` 时，HTTP(S) API 会通过 `ss_status.sh` 调用 `statusctl probe-once` 从常驻 `status-tool serve` 获取结果；前端只在首次进入页面/刷新时显示 Waiting，后台标签页切回不再额外重置状态。
+   - update	`status-tool` 升级到 `0.1.3`，为 TCP connect、读写和 `statusctl` Unix socket 客户端补充超时控制，避免 IPv6 探测失败或 `serve` 单线程忙碌时导致 `statusctl`、`ss_status.sh` 和 HTTP 请求堆积。
+   - update	已重新编译 `status-tool/statusctl` 全平台产物并同步进入 `binaries/status-tool` 分发链路：`x86_64 / aarch64 / armv5te / armv7a / armv7hf`；路由器平台产物已按脚本完成 UPX 压缩，并生成 `SHA256SUMS-v0.1.3` 校验文件。
+   - fix	修复 `status-tool serve` 正在执行探测时，`ss_status.sh` 使用 `statusctl ping` 判断存活会误判失败并反复重启 `serve`，导致首次开启 IPv6 代理后三行状态持续 Waiting 的问题；现在按 socket、启动参数和进程状态判断常驻服务是否有效。
+   - fix	修复 HTTPS + 非故障转移场景下前端 HTTP 状态请求可能读取旧 `ss_status_daemon.json` / `ss_status.txt` 或与 WebSocket 状态请求并发的问题；现在关闭故障转移时由前端按间隔主动触发 `ss_status.sh`，开启故障转移时才轮询 daemon 写出的状态文件。
+   - fix	修复插件停止、重启或状态 runtime reset 后可能残留 `statusctl`、`ss_status.sh`、状态历史 `tail -f`、`ss_status_ws.sh follow_*` 和状态锁目录的问题；停止链路会统一清理 HTTP/WS lock、serve 参数记录和状态历史流跟随进程。
+
 3.5.25（20260504）
    - note	本次更新针对 AnyTLS 订阅节点兼容性做补丁收口，重点修复部分机场使用伪装 SNI 与不匹配证书时，`anytls-zig` 在 `--insecure` 模式下仍触发证书主机名校验导致节点不可用的问题。
    - update	`anytls-zig` 升级到 `0.1.5`，在 `--insecure` 模式下若带 SNI 连接触发 `CertificateHostMismatch`，会自动退回不发送 SNI 重连，并在进程内缓存该兼容路径，避免后续连接重复经历失败重试。
