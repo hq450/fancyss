@@ -896,3 +896,8 @@ zz8r2o83on.adobestats.io
 adobeid-na1.services.adobe.com
 auth.services.adobe.com
 hbrcv.adobe.com
+dcs.adobedc.net
+prod.adobeccstatic.com
+streaming-ingest-prod-flex.ethos12-prod-va7.ethos.adobe.net
+www.adobe.com
+zn3n5vyia1vy8b4ly-adobe.siteintercept.qualtrics.com

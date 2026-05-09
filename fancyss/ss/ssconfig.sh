@@ -1931,9 +1931,8 @@ $(fss_airport_special_iter_active_tsv 2>/dev/null)
 	[ -n "${shunt_proxy_file}" ] && [ -s "${shunt_proxy_file}" ] && echo "domain-set -name shunt_proxy -file ${shunt_proxy_file}" >> "${outfile}"
 
 	[ "${mode}" = "3" ] && echo "conf-file /tmp/whitelist_ip.txt" >> "${outfile}"
-	cat >> "${outfile}" <<-'EOF'
-
-EOF
+	echo "" >> "${outfile}"
+	[ "${ss_basic_block_resov}" = "1" ] && echo "address /domain-set:block_list/#" >> "${outfile}"
 	while IFS="$(printf '\037')" read -r airport_identity airport_label airport_plan
 	do
 		[ -n "${airport_identity}" ] || continue
@@ -1960,7 +1959,6 @@ domain-rules /domain-set:gfwlist/ -p #4:gfwlist,#6:gfwlist6 -c none -n gfw
 domain-rules /domain-set:black_list/ -p #4:black_list,#6:black_list6 -c none -n gfw
 domain-rules /domain-set:rotlist/ -p #4:router,#6:router6 -c none -n gfw
 EOF
-	[ "${ss_basic_block_resov}" = "1" ] && echo "domain-rules /domain-set:block_list/ -a #" >> "${outfile}"
 	case "${mode}" in
 	1)
 		cat >> "${outfile}" <<-'EOF'

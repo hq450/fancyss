@@ -1,5 +1,11 @@
 fancyss Changelog
 
+3.5.27（20260509）
+   - note	本次更新针对 SmartDNS “屏蔽 BlockList 域名解析”优先级做补丁收口，避免 Adobe 等屏蔽域名被 chnlist/white_list 等更具体分流规则抢先命中后仍然解析成功。
+   - update	SmartDNS 运行配置生成时，将 BlockList 屏蔽规则改为前置 `address /domain-set:block_list/#` 硬屏蔽，并放在所有机场特调、节点域名、chnlist、white_list、gfwlist、black_list 和 rotlist 分流规则之前；只要开启广告屏蔽/BlockList 域名解析屏蔽，该规则始终拥有最高优先级。
+   - fix	修复 `www.adobe.com` 等域名同时存在于 `chnlist` 时，`block_list` 中的父域 `adobe.com` 可能无法覆盖更具体分流规则、导致仍走国内组解析的问题；现在 BlockList 不再与分流规则竞争。
+   - update	补充 Adobe 相关成功解析域名到 `rules_ng/block_list.txt` 与打包源 `fancyss/ss/rules/block_list.txt`：`dcs.adobedc.net`、`prod.adobeccstatic.com`、`streaming-ingest-prod-flex.ethos12-prod-va7.ethos.adobe.net`、`www.adobe.com`、`zn3n5vyia1vy8b4ly-adobe.siteintercept.qualtrics.com`。
+
 3.5.26（20260507）
    - note	本次更新针对 HTTPS 访问路由器后台时顶部“插件运行状态”长期 Waiting 或刷新不稳定的问题做补丁收口，并继续优化 `status-tool serve` 在弱性能机型上的按需探测链路。
    - update	HTTPS 访问 `Module_shadowsocks.asp` 时全局禁用 WebSocket 通道，顶部运行状态、webtest、提交日志等前后端交互统一走 HTTP(S) API fallback，避免浏览器阻止不安全 `ws://` 导致状态请求卡住。
