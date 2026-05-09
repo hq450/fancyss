@@ -1,10 +1,11 @@
 fancyss Changelog
 
 3.5.27（20260509）
-   - note	本次更新针对 SmartDNS “屏蔽 BlockList 域名解析”优先级做补丁收口，避免 Adobe 等屏蔽域名被 chnlist/white_list 等更具体分流规则抢先命中后仍然解析成功。
    - update	SmartDNS 运行配置生成时，将 BlockList 屏蔽规则改为前置 `address /domain-set:block_list/#` 硬屏蔽，并放在所有机场特调、节点域名、chnlist、white_list、gfwlist、black_list 和 rotlist 分流规则之前；只要开启广告屏蔽/BlockList 域名解析屏蔽，该规则始终拥有最高优先级。
-   - fix	修复 `www.adobe.com` 等域名同时存在于 `chnlist` 时，`block_list` 中的父域 `adobe.com` 可能无法覆盖更具体分流规则、导致仍走国内组解析的问题；现在 BlockList 不再与分流规则竞争。
-   - update	补充 Adobe 相关成功解析域名到 `rules_ng/block_list.txt` 与打包源 `fancyss/ss/rules/block_list.txt`：`dcs.adobedc.net`、`prod.adobeccstatic.com`、`streaming-ingest-prod-flex.ethos12-prod-va7.ethos.adobe.net`、`www.adobe.com`、`zn3n5vyia1vy8b4ly-adobe.siteintercept.qualtrics.com`。
+   - update	补充 Adobe 相关成功解析域名到 `rules_ng/block_list.txt`。
+   - update	`anytls-zig` 升级到 `0.1.6`，改用固定连接 worker 池和固定 relay worker 池处理 SOCKS5 连接，显式限制线程栈大小，并在连接结束时主动 shutdown 远端 TLS socket，降低长时间运行内存占用。
+   - update	已重新编译 `anytls-zig` 全平台产物并同步进入 `binaries/anytls-zig` 分发链路：`x86_64 / aarch64 / armv5te / armv7a / armv7hf`；路由器平台产物已按脚本完成 UPX 压缩，并生成 `SHA256SUMS-v0.1.6` 校验文件。
+   - fix	修复 AnyTLS 节点长时间使用或频繁短连接请求后，`anytls-zig` 因每连接动态创建线程和连接退出不够主动导致内存占用持续增长，极端情况下可能占满路由器可用内存并触发重启的问题。
 
 3.5.26（20260507）
    - note	本次更新针对 HTTPS 访问路由器后台时顶部“插件运行状态”长期 Waiting 或刷新不稳定的问题做补丁收口，并继续优化 `status-tool serve` 在弱性能机型上的按需探测链路。
