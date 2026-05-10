@@ -3440,6 +3440,21 @@ get_ws_header() {
 	fi
 }
 
+get_xray_ws_settings() {
+	local _path="$1"
+	local _host="$2"
+	if [ -z "${_path}" -a -z "${_host}" ]; then
+		echo "{}"
+	else
+		cat <<-EOF
+			{
+				"path": $(get_value_null "${_path}"),
+				"host": $(get_value_null "${_host}")
+			}
+		EOF
+	fi
+}
+
 get_host() {
 	if [ -n "$1" ]; then
 		echo [\"$1\"]
@@ -3508,6 +3523,78 @@ get_hy2_udphop_port(){
 		# multi port or port range
 		echo \"$1\"
 	fi
+}
+
+get_hy2_quic_params(){
+	local _port="$1"
+	local _congestion="$(get_value_congestion ${ss_basic_hy2_cg})"
+	local _brutal_up="$(get_value_speed ${ss_basic_hy2_up})"
+	local _brutal_down="$(get_value_speed ${ss_basic_hy2_dl})"
+	local _hop_ports="$(get_hy2_udphop_port "${_port}")"
+	local _need_comma=""
+
+	if [ "${_congestion}" = "null" -a "${_brutal_up}" = "null" -a "${_brutal_down}" = "null" -a "${_hop_ports}" = "\"\"" ]; then
+		echo "null"
+		return 0
+	fi
+
+	echo "{"
+	if [ "${_congestion}" != "null" ]; then
+		echo "						\"congestion\": ${_congestion}"
+		_need_comma=","
+	fi
+	if [ "${_brutal_up}" != "null" ]; then
+		echo "						${_need_comma}\"brutalUp\": ${_brutal_up}"
+		_need_comma=","
+	fi
+	if [ "${_brutal_down}" != "null" ]; then
+		echo "						${_need_comma}\"brutalDown\": ${_brutal_down}"
+		_need_comma=","
+	fi
+	if [ "${_hop_ports}" != "\"\"" ]; then
+		echo "						${_need_comma}\"udpHop\": {"
+		echo "							\"ports\": ${_hop_ports},"
+		echo "							\"interval\": 30"
+		echo "						}"
+	fi
+	echo "					}"
+}
+
+append_hy2_finalmask(){
+	local _target_file="$1"
+	local _quic_params="$(get_hy2_quic_params "${ss_basic_hy2_port}")"
+
+	if [ "${_quic_params}" = "null" -a ! \( "${ss_basic_hy2_obfs}" = "1" -a -n "${ss_basic_hy2_obfs_pass}" \) ]; then
+		return 0
+	fi
+
+	cat >>"${_target_file}" <<-EOF
+					,"finalmask": {
+	EOF
+	if [ "${_quic_params}" != "null" ]; then
+		cat >>"${_target_file}" <<-EOF
+						"quicParams": ${_quic_params}
+		EOF
+	fi
+	if [ "${ss_basic_hy2_obfs}" = "1" -a -n "${ss_basic_hy2_obfs_pass}" ]; then
+		if [ "${_quic_params}" != "null" ]; then
+			cat >>"${_target_file}" <<-EOF
+						,
+			EOF
+		fi
+		cat >>"${_target_file}" <<-EOF
+						"udp": [
+						{
+							"type": "salamander",
+							"settings": {
+								"password": "${ss_basic_hy2_obfs_pass}"
+							}
+						}]
+		EOF
+	fi
+	cat >>"${_target_file}" <<-EOF
+					}
+	EOF
 }
 
 creat_vmess_json() {
@@ -3596,9 +3683,11 @@ creat_vmess_json() {
 			local tls="null"
 		fi
 
+		local ss_basic_v2ray_network_host_raw="${ss_basic_v2ray_network_host}"
+		local ss_basic_v2ray_network_host_list="${ss_basic_v2ray_network_host_raw}"
 		# incase multi-domain input
-		if [ "$(echo $ss_basic_v2ray_network_host | grep ",")" ]; then
-			ss_basic_v2ray_network_host=$(echo $ss_basic_v2ray_network_host | sed 's/,/", "/g')
+		if [ "$(echo $ss_basic_v2ray_network_host_list | grep ",")" ]; then
+			ss_basic_v2ray_network_host_list=$(echo $ss_basic_v2ray_network_host_list | sed 's/,/", "/g')
 		fi
 
 		case "$ss_basic_v2ray_network" in
@@ -3612,7 +3701,7 @@ creat_vmess_json() {
 					,\"method\": \"GET\"
 					,\"path\": $(get_path_empty $ss_basic_v2ray_network_path)
 					,\"headers\": {
-					\"Host\": $(get_host_empty $ss_basic_v2ray_network_host),
+					\"Host\": $(get_host_empty $ss_basic_v2ray_network_host_list),
 					\"User-Agent\": [
 					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
 					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
@@ -3644,33 +3733,18 @@ creat_vmess_json() {
 				}"
 			;;
 		ws)
-			if [ -z "$ss_basic_v2ray_network_path" -a -z "$ss_basic_v2ray_network_host" ]; then
-				local ws="{}"
-			elif [ -z "$ss_basic_v2ray_network_path" -a -n "$ss_basic_v2ray_network_host" ]; then
-				local ws="{
-					\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
-					}"
-			elif [ -n "$ss_basic_v2ray_network_path" -a -z "$ss_basic_v2ray_network_host" ]; then
-				local ws="{
-					\"path\": $(get_value_null $ss_basic_v2ray_network_path)
-					}"
-			elif [ -n "$ss_basic_v2ray_network_path" -a -n "$ss_basic_v2ray_network_host" ]; then
-				local ws="{
-					\"path\": $(get_value_null $ss_basic_v2ray_network_path),
-					\"headers\": $(get_ws_header $ss_basic_v2ray_network_host)
-					}"
-			fi
+			local ws="$(get_xray_ws_settings "${ss_basic_v2ray_network_path}" "${ss_basic_v2ray_network_host_raw}")"
 			;;
 		h2)
 
 			local h2="{
 				\"path\": $(get_value_empty $ss_basic_v2ray_network_path)
-				,\"host\": $(get_host $ss_basic_v2ray_network_host)
+				,\"host\": $(get_host $ss_basic_v2ray_network_host_list)
 				}"
 			;;
 		quic)
 			local qc="{
-				\"security\": $(get_value_empty $ss_basic_v2ray_network_host),
+				\"security\": $(get_value_empty $ss_basic_v2ray_network_host_raw),
 				\"key\": $(get_value_empty $ss_basic_v2ray_network_path),
 				\"header\": {
 				\"type\": \"${ss_basic_v2ray_headtype_quic}\"
@@ -4159,9 +4233,11 @@ creat_vless_json() {
 		else
 			local reali="null"		
 		fi
+		local ss_basic_xray_network_host_raw="${ss_basic_xray_network_host}"
+		local ss_basic_xray_network_host_list="${ss_basic_xray_network_host_raw}"
 		# incase multi-domain input
-		if [ "$(echo $ss_basic_xray_network_host | grep ",")" ]; then
-			ss_basic_xray_network_host=$(echo ${ss_basic_xray_network_host} | sed 's/,/", "/g')
+		if [ "$(echo $ss_basic_xray_network_host_list | grep ",")" ]; then
+			ss_basic_xray_network_host_list=$(echo ${ss_basic_xray_network_host_list} | sed 's/,/", "/g')
 		fi
 
 		case "${ss_basic_xray_network}" in
@@ -4175,7 +4251,7 @@ creat_vless_json() {
 					,\"method\": \"GET\"
 					,\"path\": $(get_path_empty $ss_basic_xray_network_path)
 					,\"headers\": {
-					\"Host\": $(get_host_empty $ss_basic_xray_network_host),
+					\"Host\": $(get_host_empty $ss_basic_xray_network_host_list),
 					\"User-Agent\": [
 					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
 					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
@@ -4207,32 +4283,17 @@ creat_vless_json() {
 				}"
 			;;
 		ws)
-			if [ -z "$ss_basic_xray_network_path" -a -z "$ss_basic_xray_network_host" ]; then
-				local ws="{}"
-			elif [ -z "$ss_basic_xray_network_path" -a -n "$ss_basic_xray_network_host" ]; then
-				local ws="{
-					\"headers\": $(get_ws_header $ss_basic_xray_network_host)
-					}"
-			elif [ -n "$ss_basic_xray_network_path" -a -z "$ss_basic_xray_network_host" ]; then
-				local ws="{
-					\"path\": $(get_value_null $ss_basic_xray_network_path)
-					}"
-			elif [ -n "$ss_basic_xray_network_path" -a -n "$ss_basic_xray_network_host" ]; then
-				local ws="{
-					\"path\": $(get_value_null $ss_basic_xray_network_path),
-					\"headers\": $(get_ws_header $ss_basic_xray_network_host)
-					}"
-			fi
+			local ws="$(get_xray_ws_settings "${ss_basic_xray_network_path}" "${ss_basic_xray_network_host_raw}")"
 			;;
 		h2)
 			local h2="{
 				\"path\": $(get_value_empty $ss_basic_xray_network_path)
-				,\"host\": $(get_host $ss_basic_xray_network_host)
+				,\"host\": $(get_host $ss_basic_xray_network_host_list)
 				}"
 			;;
 		quic)
 			local qc="{
-				\"security\": $(get_value_empty $ss_basic_xray_network_host),
+				\"security\": $(get_value_empty $ss_basic_xray_network_host_raw),
 				\"key\": $(get_value_empty $ss_basic_xray_network_path),
 				\"header\": {
 				\"type\": \"${ss_basic_xray_headtype_quic}\"
@@ -4249,14 +4310,14 @@ creat_vless_json() {
 		xhttp)
 			local xht="{
 				\"path\": $(get_value_empty $ss_basic_xray_network_path)
-				,\"host\": $(get_value_empty $ss_basic_xray_network_host)
+				,\"host\": $(get_value_empty $ss_basic_xray_network_host_raw)
 				,\"mode\": \"${ss_basic_xray_xhttp_mode}\"
 				}"
 			;;
 		httpupgrade)
 			local htup="{
 				\"path\": $(get_value_empty $ss_basic_xray_network_path)
-				,\"host\": $(get_value_empty $ss_basic_xray_network_host)
+				,\"host\": $(get_value_empty $ss_basic_xray_network_host_raw)
 				}"
 			;;
 		esac
@@ -4615,11 +4676,9 @@ creat_trojan_json(){
 		echo_date "检测到该trojan节点为obfs-local WebSocket伪装，继续！"
 		local _trojan_network="ws"
 		local _trojan_ws="{
-						 	\"path\": \"${ss_basic_trojan_obfsuri}\",
-						 	\"headers\": {
-						 		\"Host\": \"${ss_basic_trojan_obfshost}\"
-						 	}
-						 }"
+			\"path\": \"${ss_basic_trojan_obfsuri}\",
+			\"host\": \"${ss_basic_trojan_obfshost}\"
+		}"
 	else
 		local _trojan_network="tcp"
 		local _trojan_ws=null
@@ -4808,13 +4867,6 @@ creat_hy2_json(){
 					"hysteriaSettings": {
 						"version": 2
 						,"auth": $(get_value_empty ${ss_basic_hy2_pass})
-						,"congestion": $(get_value_empty ${ss_basic_hy2_cg})
-						,"up": $(get_value_speed ${ss_basic_hy2_up})
-						,"down": $(get_value_speed ${ss_basic_hy2_dl})
-						,"udphop": {
-							"port": $(get_hy2_udphop_port ${ss_basic_hy2_port}),
-							"interval": 30
-						}
 					}
 					,"security": "tls"
 					,"tlsSettings": {
@@ -4839,19 +4891,7 @@ creat_hy2_json(){
 					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_hy2_tfo})}
 	EOF
 
-	if [ "${ss_basic_hy2_obfs}" == "1" -a -n "${ss_basic_hy2_obfs_pass}" ];then
-		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
-					,"finalmask": {
-						"udp": [
-						{
-							"type": "salamander",
-							"settings": {
-								"password": "${ss_basic_hy2_obfs_pass}"
-							}
-						}]
-					}
-		EOF
-	fi
+	append_hy2_finalmask "${HY2_CONFIG_TEMP}"
 					
 	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
 				}
@@ -4961,7 +5001,7 @@ start_tuic(){
 	local RELAY=$(cat /tmp/tuic_tmp_1.json | run jq '.relay')
 
 	echo_date "解析tuic配置文件..."
-	echo "{\"local\": {\"server\": \"127.0.0.1:23456\"},\"log_level\": \"warn\"}" | run jq --argjson args "$RELAY" '. + {relay: $args}' >/koolshare/ss/tuic.json
+	echo "{\"local\": {\"server\": \"127.0.0.1:23456\"},\"log_level\": \"warn\"}" | run jq --argjson args "$RELAY" '. + {relay: ($args + {startup_mode: "eager"})}' >/koolshare/ss/tuic.json
 
 	# 检测用户是否配置了ip地址
 	local tuic_server_raw=$(cat /koolshare/ss/tuic.json | run jq -r '.relay.server')

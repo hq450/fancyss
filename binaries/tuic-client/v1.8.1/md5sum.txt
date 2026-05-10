@@ -1,0 +1,2 @@
+5df92799e0c73f5dfeed0af025ca1a8b  tuic-client_arm64
+d3e4b06792a424029085ac90bd83980d  tuic-client_armv7

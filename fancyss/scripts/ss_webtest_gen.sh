@@ -48,6 +48,24 @@ wt_get_ws_header() {
 	fi
 }
 
+wt_get_xray_ws_settings() {
+	local path="$1"
+	local host="$2"
+	local path_json="$(wt_get_value_null "${path}")"
+	local host_json="$(wt_get_value_null "${host}")"
+
+	if [ -z "${path}" -a -z "${host}" ]; then
+		echo "{}"
+	else
+		cat <<-EOF
+			{
+				"path": ${path_json},
+				"host": ${host_json}
+			}
+		EOF
+	fi
+}
+
 wt_get_host() {
 	if [ -n "$1" ]; then
 		echo [\"$1\"]
@@ -140,6 +158,87 @@ wt_get_hy2_udphop_port() {
 	else
 		echo \"$1\"
 	fi
+}
+
+wt_get_hy2_quic_params() {
+	local up="$1"
+	local down="$2"
+	local cg="$3"
+	local port="$4"
+	local congestion="$(wt_get_value_congestion "${up}" "${down}" "${cg}")"
+	local brutal_up="$(wt_get_value_speed "${up}")"
+	local brutal_down="$(wt_get_value_speed "${down}")"
+	local hop_ports="$(wt_get_hy2_udphop_port "${port}")"
+	local need_comma=""
+
+	if [ "${congestion}" = "null" -a "${brutal_up}" = "null" -a "${brutal_down}" = "null" -a "${hop_ports}" = "\"\"" ]; then
+		echo "null"
+		return 0
+	fi
+
+	echo "{"
+	if [ "${congestion}" != "null" ]; then
+		echo "						\"congestion\": ${congestion}"
+		need_comma=","
+	fi
+	if [ "${brutal_up}" != "null" ]; then
+		echo "						${need_comma}\"brutalUp\": ${brutal_up}"
+		need_comma=","
+	fi
+	if [ "${brutal_down}" != "null" ]; then
+		echo "						${need_comma}\"brutalDown\": ${brutal_down}"
+		need_comma=","
+	fi
+	if [ "${hop_ports}" != "\"\"" ]; then
+		echo "						${need_comma}\"udpHop\": {"
+		echo "							\"ports\": ${hop_ports},"
+		echo "							\"interval\": 30"
+		echo "						}"
+	fi
+	echo "					}"
+}
+
+wt_append_hy2_finalmask() {
+	local target_file="$1"
+	local up="$2"
+	local down="$3"
+	local cg="$4"
+	local port="$5"
+	local obfs_enable="$6"
+	local obfs_pass="$7"
+	local quic_params="$(wt_get_hy2_quic_params "${up}" "${down}" "${cg}" "${port}")"
+
+	if [ "${quic_params}" = "null" -a ! \( "${obfs_enable}" = "1" -a -n "${obfs_pass}" \) ]; then
+		return 0
+	fi
+
+	cat >>"${target_file}" <<-EOF
+					,"finalmask": {
+	EOF
+	if [ "${quic_params}" != "null" ]; then
+		cat >>"${target_file}" <<-EOF
+						"quicParams": ${quic_params}
+		EOF
+	fi
+	if [ "${obfs_enable}" = "1" -a -n "${obfs_pass}" ]; then
+		if [ "${quic_params}" != "null" ]; then
+			cat >>"${target_file}" <<-EOF
+						,
+			EOF
+		fi
+		cat >>"${target_file}" <<-EOF
+						"udp": [
+						{
+							"type": "salamander",
+							"settings": {
+								"password": "${obfs_pass}"
+							}
+						}]
+		EOF
+	fi
+	cat >>"${target_file}" <<-EOF
+					}
+	EOF
 }
 
 wt_get_out_file_path() {
@@ -395,7 +494,7 @@ wt_gen_vmess_outbound() {
 		local v2ray_network=$(wt_node_get_plain v2ray_network ${nu})
 		[ -z "${v2ray_network}" ] && v2ray_network="tcp"
 		local v2ray_network_host_raw=$(wt_node_get_plain v2ray_network_host ${nu})
-		local v2ray_network_host=$(echo ${v2ray_network_host_raw} | sed 's/,/", "/g')
+		local v2ray_network_host_list=$(echo ${v2ray_network_host_raw} | sed 's/,/", "/g')
 		local v2ray_network_path=$(wt_node_get_plain v2ray_network_path ${nu})
 		local v2ray_grpc_authority=$(wt_node_get_plain v2ray_grpc_authority ${nu})
 		local v2ray_network_security=$(wt_node_get_plain v2ray_network_security ${nu})
@@ -464,7 +563,7 @@ wt_gen_vmess_outbound() {
 					,\"method\": \"GET\"
 					,\"path\": $(wt_get_path_empty ${v2ray_network_path})
 					,\"headers\": {
-					\"Host\": $(wt_get_host_empty ${v2ray_network_host}),
+					\"Host\": $(wt_get_host_empty ${v2ray_network_host_list}),
 					\"User-Agent\": [
 					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
 					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
@@ -494,32 +593,17 @@ wt_gen_vmess_outbound() {
 				}"
 			;;
 		ws)
-			if [ -z "${v2ray_network_path}" -a -z "${v2ray_network_host}" ]; then
-				local ws="{}"
-			elif [ -z "${v2ray_network_path}" -a -n "${v2ray_network_host}" ]; then
-				local ws="{
-					\"headers\": $(wt_get_ws_header ${v2ray_network_host})
-					}"
-			elif [ -n "${v2ray_network_path}" -a -z "${v2ray_network_host}" ]; then
-				local ws="{
-					\"path\": $(wt_get_value_null ${v2ray_network_path})
-					}"
-			else
-				local ws="{
-					\"path\": $(wt_get_value_null ${v2ray_network_path}),
-					\"headers\": $(wt_get_ws_header ${v2ray_network_host})
-					}"
-			fi
+			local ws="$(wt_get_xray_ws_settings "${v2ray_network_path}" "${v2ray_network_host_raw}")"
 			;;
 		h2)
 			local h2="{
 				\"path\": $(wt_get_value_empty ${v2ray_network_path})
-				,\"host\": $(wt_get_host ${v2ray_network_host})
+				,\"host\": $(wt_get_host ${v2ray_network_host_list})
 				}"
 			;;
 		quic)
 			local qc="{
-				\"security\": $(wt_get_value_empty ${v2ray_network_host}),
+				\"security\": $(wt_get_value_empty ${v2ray_network_host_raw}),
 				\"key\": $(wt_get_value_empty ${v2ray_network_path}),
 				\"header\": {
 				\"type\": \"$(wt_node_get_plain v2ray_headtype_quic ${nu})\"
@@ -611,7 +695,7 @@ wt_gen_vless_outbound() {
 		local htup="null"
 
 		local xray_network_host_raw=$(wt_node_get_plain xray_network_host ${nu})
-		local xray_network_host=$(echo ${xray_network_host_raw} | sed 's/,/", "/g')
+		local xray_network_host_list=$(echo ${xray_network_host_raw} | sed 's/,/", "/g')
 		local xray_network_path=$(wt_node_get_plain xray_network_path ${nu})
 		local xray_grpc_authority=$(wt_node_get_plain xray_grpc_authority ${nu})
 		local xray_network_security_sni=$(wt_node_get_plain xray_network_security_sni ${nu})
@@ -711,7 +795,7 @@ wt_gen_vless_outbound() {
 					,\"method\": \"GET\"
 					,\"path\": $(wt_get_path_empty ${xray_network_path})
 					,\"headers\": {
-					\"Host\": $(wt_get_host_empty ${xray_network_host}),
+					\"Host\": $(wt_get_host_empty ${xray_network_host_list}),
 					\"User-Agent\": [
 					\"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36\"
 					,\"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46\"
@@ -741,32 +825,17 @@ wt_gen_vless_outbound() {
 				}"
 			;;
 		ws)
-			if [ -z "${xray_network_path}" -a -z "${xray_network_host}" ]; then
-				local ws="{}"
-			elif [ -z "${xray_network_path}" -a -n "${xray_network_host}" ]; then
-				local ws="{
-					\"headers\": $(wt_get_ws_header ${xray_network_host})
-					}"
-			elif [ -n "${xray_network_path}" -a -z "${xray_network_host}" ]; then
-				local ws="{
-					\"path\": $(wt_get_value_null ${xray_network_path})
-					}"
-			else
-				local ws="{
-					\"path\": $(wt_get_value_null ${xray_network_path}),
-					\"headers\": $(wt_get_ws_header ${xray_network_host})
-					}"
-			fi
+			local ws="$(wt_get_xray_ws_settings "${xray_network_path}" "${xray_network_host_raw}")"
 			;;
 		h2)
 			local h2="{
 				\"path\": $(wt_get_value_empty ${xray_network_path})
-				,\"host\": $(wt_get_host ${xray_network_host})
+				,\"host\": $(wt_get_host ${xray_network_host_list})
 				}"
 			;;
 		quic)
 			local qc="{
-				\"security\": $(wt_get_value_empty ${xray_network_host}),
+				\"security\": $(wt_get_value_empty ${xray_network_host_raw}),
 				\"key\": $(wt_get_value_empty ${xray_network_path}),
 				\"header\": {
 				\"type\": \"$(wt_node_get_plain xray_headtype_quic ${nu})\"
@@ -783,14 +852,14 @@ wt_gen_vless_outbound() {
 		xhttp)
 			local xht="{
 				\"path\": $(wt_get_value_empty ${xray_network_path})
-				,\"host\": $(wt_get_value_empty ${xray_network_host})
+				,\"host\": $(wt_get_value_empty ${xray_network_host_raw})
 				,\"mode\": \"${xray_xhttp_mode}\"
 				}"
 			;;
 		httpupgrade)
 			local htup="{
 				\"path\": $(wt_get_value_empty ${xray_network_path})
-				,\"host\": $(wt_get_value_empty ${xray_network_host})
+				,\"host\": $(wt_get_value_empty ${xray_network_host_raw})
 				}"
 			;;
 		esac
@@ -891,9 +960,7 @@ wt_gen_trojan_outbound() {
 		local _trojan_network="ws"
 		local _trojan_ws="{
 							\"path\": \"$(wt_node_get_plain trojan_obfsuri ${nu})\",
-							\"headers\": {
-								\"Host\": \"$(wt_node_get_plain trojan_obfshost ${nu})\"
-							}
+							\"host\": \"$(wt_node_get_plain trojan_obfshost ${nu})\"
 						 }"
 	else
 		local _trojan_network="tcp"
@@ -977,13 +1044,6 @@ wt_gen_hy2_outbound() {
 				"hysteriaSettings": {
 					"version": 2
 					,"auth": $(wt_get_value_empty ${hy2_pass})
-					,"congestion": $(wt_get_value_congestion ${hy2_up} ${hy2_dl} ${hy2_cg})
-					,"up": $(wt_get_value_speed ${hy2_up})
-					,"down": $(wt_get_value_speed ${hy2_dl})
-					,"udphop": {
-						"port": $(wt_get_hy2_udphop_port ${hy2_port}),
-						"interval": 30
-					}
 				}
 				,"security": "tls"
 				,"tlsSettings": {
@@ -1004,19 +1064,7 @@ wt_gen_hy2_outbound() {
 					}
 					,"sockopt": {"tcpFastOpen": $(get_function_switch ${hy2_tfo})}
 	EOF
-	if [ "${hy2_obfs}" == "1" -a -n "${hy2_obfs_pass}" ];then
-		cat >>"${out_file}" <<-EOF
-					,"finalmask": {
-						"udp": [
-						{
-							"type": "salamander",
-							"settings": {
-								"password": "${hy2_obfs_pass}"
-							}
-						}]
-			}
-		EOF
-	fi
+	wt_append_hy2_finalmask "${out_file}" "${hy2_up}" "${hy2_dl}" "${hy2_cg}" "${hy2_port}" "${hy2_obfs}" "${hy2_obfs_pass}"
 	cat >>"${out_file}" <<-EOF
 				}
 		}

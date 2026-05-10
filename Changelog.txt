@@ -1,5 +1,17 @@
 fancyss Changelog
 
+3.5.28（20260510）
+   - note	本次更新重点刷新核心代理二进制，并针对 Xray-core 新版配置字段变化、详细状态展示和 TUIC/Naïve 运行兼容做补丁收口。
+   - update	Xray-core 升级到自编译 `v26.3.27-d2758a0`，使用 Go `1.26.3` 构建，已重新编译并 UPX 压缩 `arm64 / armv7 / armv5` 产物，同步进入 `binaries/xray` 与对应 `fancyss/bin-*` 分发链路。
+   - update	`binaries/xray/make_latest.sh` 支持显式指定 tag 构建，并会检测本地 Go 工具链版本，不匹配时自动替换为脚本指定版本，避免复用旧 Go 重新编译 Xray。
+   - update	适配 Xray-core `v26.3.27` 配置变更：VMess/VLESS/Trojan WebSocket 配置改用 `wsSettings.host`，Hysteria2 的拥塞、上下行和 UDP Hop 参数迁移到 `finalmask.quicParams`，减少新版 Xray 的弃用警告并保持后续兼容。
+   - update	`node-tool` 升级到 `0.1.13`，native webtest 生成器同步适配新版 Xray WS/HY2 配置结构；已重新编译 `x86_64 / aarch64 / armv5te / armv7a / armv7hf` 全平台产物，路由器平台产物已按脚本完成 UPX 压缩并生成 `SHA256SUMS-v0.1.13`。
+   - update	`tuic-client` 升级到 `v1.8.1`，并在 TUIC 启动与 webtest 临时运行配置中写入 `startup_mode: eager`，减少首次建连等待对启动和测速的影响。
+   - update	NaïveProxy 升级到 `v148.0.7778.96-2`，已刷新 `arm64 / armv7 / armv5` 分发产物并同步到对应平台 `fancyss/bin-*`。
+   - update	“详细状态”中的订阅数量改为读取订阅 profile，显示总数、启用数量和关闭数量；进程状态表新增运行时长列，并将 `status-tool` 和 `websocketd` 纳入检测，`status-tool` 仅在 serve/daemon 模式下显示对应运行状态和内存占用。
+   - fix	修复 Xray-core 新版中 Hysteria2 旧字段仍可解析但只输出弃用警告的问题；运行配置和 webtest 生成配置现在统一写入新字段，避免未来版本移除旧字段后启动失败。
+   - test	已在本机使用 Xray `v26.3.27` 对 VLESS WS、Trojan WS、Hysteria2 finalmask 样例配置执行 `run -test` 验证通过；已将 Xray/node-tool/配置生成脚本同步到 GS7 并完成版本、MD5 和脚本语法验证。
+
 3.5.27（20260509）
    - update	SmartDNS 运行配置生成时，将 BlockList 屏蔽规则改为前置 `address /domain-set:block_list/#` 硬屏蔽，该规则始终拥有最高优先级。
    - update	补充 Adobe 相关成功解析域名到 `rules_ng/block_list.txt`。

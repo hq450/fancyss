@@ -3941,6 +3941,7 @@ wt_build_tuic_runtime_json() {
 
 	raw_json=$(printf '%s' "${raw_json}" | sed 's/,"local"[[:space:]]*:[[:space:]]*{[^}]*}//; s/"local"[[:space:]]*:[[:space:]]*{[^}]*},//')
 	raw_json=$(printf '%s' "${raw_json}" | sed 's/,"ip"[[:space:]]*:[[:space:]]*"[^"]*"//; s/"ip"[[:space:]]*:[[:space:]]*"[^"]*",//')
+	raw_json=$(printf '%s' "${raw_json}" | sed 's/,"startup_mode"[[:space:]]*:[[:space:]]*"[^"]*"//; s/"startup_mode"[[:space:]]*:[[:space:]]*"[^"]*",//')
 
 	if [ -n "${relay_ip}" ]; then
 		escaped_relay_ip=$(wt_json_escape_simple "${relay_ip}")
@@ -3948,6 +3949,7 @@ wt_build_tuic_runtime_json() {
 	fi
 
 	escaped_local_addr=$(wt_json_escape_simple "${local_addr}")
+	raw_json=$(printf '%s' "${raw_json}" | sed '0,/"relay"[[:space:]]*:[[:space:]]*{/s//&"startup_mode":"eager",/')
 	raw_json=$(printf '%s' "${raw_json}" | sed 's/}[[:space:]]*$/,"local":{"server":"'"${escaped_local_addr}"'"}}/')
 	printf '%s' "${raw_json}" > "${out_file}"
 }

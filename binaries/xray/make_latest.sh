@@ -6,18 +6,24 @@ DIR="$(cd "$(dirname "$BASH_SOURCE[0]")" && pwd)"
 base_dir="${DIR}/.build_xray"
 mkdir -p "${base_dir}"
 
-GO_VERSION="1.25.6"
+GO_VERSION="1.26.3"
 
 BUILD_REF="tag" # tag | main
+BUILD_TAG=""
 case "${1-}" in
 	--main|main)
 		BUILD_REF="main"
+		shift
+		;;
+	v*)
+		BUILD_TAG="$1"
 		shift
 		;;
 	--help|-h)
 		cat <<-EOF
 		Usage:
 		  $(basename "$0")            # build latest tag (full build)
+		  $(basename "$0") v26.3.27   # build specified tag (full build)
 		  $(basename "$0") --main     # build latest commit of main (full build)
 		EOF
 		exit 0
@@ -27,10 +33,12 @@ esac
 echo "-----------------------------------------------------------------"
 
 # prepare golang (local toolchain under .build_xray/)
-if [ ! -x "${base_dir}/go/bin/go" ]; then
-	[ ! -f "${base_dir}/go${GO_VERSION}.linux-amd64.tar.gz" ] && \
-		wget "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" -O "${base_dir}/go${GO_VERSION}.linux-amd64.tar.gz"
-	tar -C "${base_dir}" -xzf "${base_dir}/go${GO_VERSION}.linux-amd64.tar.gz"
+GO_TARBALL="${base_dir}/go${GO_VERSION}.linux-amd64.tar.gz"
+if [ ! -x "${base_dir}/go/bin/go" ] || ! "${base_dir}/go/bin/go" version 2>/dev/null | grep -q "go${GO_VERSION} "; then
+	rm -rf "${base_dir}/go"
+	[ ! -f "${GO_TARBALL}" ] && \
+		wget "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" -O "${GO_TARBALL}"
+	tar -C "${base_dir}" -xzf "${GO_TARBALL}"
 fi
 
 export PATH="${base_dir}/go/bin:${PATH}"
@@ -54,9 +62,13 @@ git fetch --tags origin || true
 git pull --ff-only || git pull || echo "WARNING: git pull failed, continue with existing local repo state..."
 
 if [ "${BUILD_REF}" = "tag" ]; then
-	# Latest tag, version-sort aware (v26.1.13 > v25.12.8)
-	VERSIONTAG="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
-	[ -z "${VERSIONTAG}" ] && VERSIONTAG="$(git describe --abbrev=0 --tags)"
+	if [ -n "${BUILD_TAG}" ]; then
+		VERSIONTAG="${BUILD_TAG}"
+	else
+		# Latest tag, version-sort aware (v26.1.13 > v25.12.8)
+		VERSIONTAG="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
+		[ -z "${VERSIONTAG}" ] && VERSIONTAG="$(git describe --abbrev=0 --tags)"
+	fi
 	echo "Checkout latest tag: ${VERSIONTAG}"
 	git checkout -f "${VERSIONTAG}"
 else

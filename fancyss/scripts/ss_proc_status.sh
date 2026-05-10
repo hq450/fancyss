@@ -3,6 +3,7 @@
 # fancyss script for asuswrt/merlin based router with software center
 
 source /koolshare/scripts/ss_base.sh
+[ -f /koolshare/scripts/ss_subscribe_profile_lib.sh ] && source /koolshare/scripts/ss_subscribe_profile_lib.sh
 
 run(){
 	env -i PATH=${PATH} "$@"
@@ -273,6 +274,48 @@ GET_SUBS_UPDATE(){
 	fi
 }
 
+GET_SUBS_COUNT(){
+	local profile_id=""
+	local profile_key=""
+	local profile_json=""
+	local enabled=""
+	local total=0
+	local enabled_count=0
+	local disabled_count=0
+	local legacy_count=0
+	local jq_bin=""
+
+	if type subprof_list_profile_ids >/dev/null 2>&1 && type subprof_profile_key >/dev/null 2>&1 && type subprof_dbus_get_json_by_key >/dev/null 2>&1; then
+		jq_bin="$(subprof_jq_bin 2>/dev/null)" || jq_bin=""
+		for profile_id in $(subprof_list_profile_ids 2>/dev/null)
+		do
+			[ -n "${profile_id}" ] || continue
+			profile_key="$(subprof_profile_key "${profile_id}" 2>/dev/null)" || continue
+			profile_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || profile_json=""
+			[ -n "${profile_json}" ] || continue
+			total=$((total + 1))
+			if [ -n "${jq_bin}" ]; then
+				enabled="$(printf '%s' "${profile_json}" | "${jq_bin}" -r 'if .enabled == null then "true" else (.enabled|tostring) end' 2>/dev/null | sed -n '1p')"
+			else
+				enabled="true"
+			fi
+			if [ "${enabled}" = "false" ]; then
+				disabled_count=$((disabled_count + 1))
+			else
+				enabled_count=$((enabled_count + 1))
+			fi
+		done
+	fi
+
+	if [ "${total}" -gt 0 ]; then
+		printf '%s个（启用%s个，关闭%s个）\n' "${total}" "${enabled_count}" "${disabled_count}"
+		return 0
+	fi
+
+	legacy_count="$(echo "${ss_online_links}" | base64_decode | sed 's/^[[:space:]]//g' | grep -Ec "^http")"
+	printf '%s个\n' "${legacy_count}"
+}
+
 GET_CURRENT_NODE_TYPE(){
 	local current_type="$(GET_CURRENT_NODE_TYPE_ID)"
 	case "${current_type}" in
@@ -436,20 +479,152 @@ GET_VM_RSS_MULTI() {
 	fi
 }
 
+__format_duration() {
+	local total="${1:-0}"
+	local days hours mins secs
+	[ -n "${total}" ] || total=0
+	days=$((total / 86400))
+	hours=$(((total % 86400) / 3600))
+	mins=$(((total % 3600) / 60))
+	secs=$((total % 60))
+	if [ "${days}" -gt 0 ]; then
+		printf '%sd%02dh%02dm' "${days}" "${hours}" "${mins}"
+	elif [ "${hours}" -gt 0 ]; then
+		printf '%dh%02dm%02ds' "${hours}" "${mins}" "${secs}"
+	elif [ "${mins}" -gt 0 ]; then
+		printf '%dm%02ds' "${mins}" "${secs}"
+	else
+		printf '%ds' "${secs}"
+	fi
+}
+
+__get_system_hz() {
+	local hz=""
+	hz="$(getconf CLK_TCK 2>/dev/null)"
+	case "${hz}" in
+	''|*[!0-9]*)
+		hz=100
+		;;
+	esac
+	echo "${hz}"
+}
+
+GET_PROC_UPTIME() {
+	local pid="$1"
+	local uptime start_ticks hz now_seconds start_seconds run_seconds
+	[ -n "${pid}" ] || return 1
+	[ -r "/proc/${pid}/stat" ] || return 1
+	uptime="$(awk '{print int($1)}' /proc/uptime 2>/dev/null)"
+	start_ticks="$(awk '{print $22}' "/proc/${pid}/stat" 2>/dev/null)"
+	hz="$(__get_system_hz)"
+	case "${uptime}:${start_ticks}:${hz}" in
+	*[^0-9:]*|:*|*:)
+		return 1
+		;;
+	esac
+	now_seconds="${uptime}"
+	start_seconds=$((start_ticks / hz))
+	run_seconds=$((now_seconds - start_seconds))
+	[ "${run_seconds}" -lt 0 ] && run_seconds=0
+	__format_duration "${run_seconds}"
+}
+
+GET_PROC_UPTIME_MULTI() {
+	local pid uptime first=""
+	for pid in "$@"; do
+		[ -n "${pid}" ] || continue
+		uptime="$(GET_PROC_UPTIME "${pid}")"
+		[ -n "${uptime}" ] || uptime="-"
+		if [ -z "${first}" ]; then
+			first="${uptime}"
+		else
+			first="${first} ${uptime}"
+		fi
+	done
+	[ -n "${first}" ] && echo "${first}" || echo "-"
+}
+
+GET_STATUS_TOOL_MODE() {
+	if [ "${ss_failover_enable}" = "1" ]; then
+		echo "daemon"
+		return 0
+	fi
+	case "$(dbus get ss_basic_status_mode 2>/dev/null)" in
+	serve|"")
+		echo "serve"
+		return 0
+		;;
+	esac
+	return 1
+}
+
+GET_STATUS_TOOL_PID() {
+	local mode="$1"
+	local pidfile=""
+	local pid=""
+	case "${mode}" in
+	daemon)
+		pidfile="/var/run/status-tool.pid"
+		;;
+	serve)
+		pidfile="/var/run/status-tool-serve.pid"
+		;;
+	*)
+		return 1
+		;;
+	esac
+
+	if [ -f "${pidfile}" ]; then
+		pid="$(cat "${pidfile}" 2>/dev/null)"
+		if [ -n "${pid}" ] && [ -r "/proc/${pid}/cmdline" ]; then
+			tr '\0' ' ' < "/proc/${pid}/cmdline" | grep -Eq '(^| )/koolshare/bin/status-tool[[:space:]]+'"${mode}"'([[:space:]]|$)' && {
+				echo "${pid}"
+				return 0
+			}
+		fi
+	fi
+
+	ps w | grep -E '(^| )/koolshare/bin/status-tool '"${mode}"'( |$)' | grep -v grep | awk '{print $1}'
+}
+
+GET_WEBSOCKETD_PID() {
+	local pidfile="/var/run/fancyss-websocketd.pid"
+	local pid=""
+	if [ -f "${pidfile}" ]; then
+		pid="$(cat "${pidfile}" 2>/dev/null)"
+		if [ -n "${pid}" ] && [ -r "/proc/${pid}/cmdline" ]; then
+			tr '\0' ' ' < "/proc/${pid}/cmdline" | grep -Fq "/koolshare/ss/websocket" && {
+				echo "${pid}"
+				return 0
+			}
+		fi
+	fi
+
+	ps w | grep -F "/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket" | grep -v grep | awk '{print $1}'
+}
+
 GET_PROG_STAT(){
 	local current_type="$(GET_CURRENT_NODE_TYPE_ID)"
+	local status_tool_mode=""
+	local STATUS_TOOL_PID=""
+	local STATUS_TOOL_RSS=""
+	local STATUS_TOOL_UPTIME=""
+	local WEBSOCKETD_PID=""
+	local WEBSOCKETD_RSS=""
+	local WEBSOCKETD_UPTIME=""
 	echo
 	echo "1️⃣ 检测当前相关进程工作状态："
 	echo "--------------------------------------------------------------------------------------------------------"
-	echo "程序		状态		作用		PID		内存"
+	echo "程序		状态		作用		PID		内存		运行时长"
 
 	# proxy core program
 if [ "${current_type}" == "1" ]; then
 		# ssr
 		local SSR_REDIR_PID=$(pidof rss-redir)
 		local SSR_REDIR_RSS=$(GET_VM_RSS_MULTI ${SSR_REDIR_PID})
+		local SSR_REDIR_UPTIME=$(GET_PROC_UPTIME_MULTI ${SSR_REDIR_PID})
 		if [ -n "${SSR_REDIR_PID}" ];then
-			echo "ssr-redir	运行中🟢		透明代理		${SSR_REDIR_PID}		${SSR_REDIR_RSS}"
+			echo "ssr-redir	运行中🟢		透明代理		${SSR_REDIR_PID}		${SSR_REDIR_RSS}		${SSR_REDIR_UPTIME}"
 		else
 			echo "ssr-redir	未运行🔴		透明代理"
 		fi
@@ -457,8 +632,9 @@ if [ "${current_type}" == "1" ]; then
 		# xray
 		local XRAY_PID=$(pidof xray)
 		local XRAY_RSS=$(GET_VM_RSS_MULTI ${XRAY_PID})
+		local XRAY_UPTIME=$(GET_PROC_UPTIME_MULTI ${XRAY_PID})
 		if [ -n "${XRAY_PID}" ];then
-			echo "Xray		运行中🟢		透明代理		${XRAY_PID}		${XRAY_RSS}"
+			echo "Xray		运行中🟢		透明代理		${XRAY_PID}		${XRAY_RSS}		${XRAY_UPTIME}"
 		else
 			echo "Xray	未运行🔴"
 		fi
@@ -466,8 +642,9 @@ if [ "${current_type}" == "1" ]; then
 		if [ -n "${OBFS_SWITCH}" -a "${OBFS_SWITCH}" != "0" ]; then
 			local SIMPLEOBFS_PID=$(pidof obfs-local)
 			local SIMPLEOBFS_RSS=$(GET_VM_RSS_MULTI ${SIMPLEOBFS_PID})
+			local SIMPLEOBFS_UPTIME=$(GET_PROC_UPTIME_MULTI ${SIMPLEOBFS_PID})
 			if [ -n "${SIMPLEOBFS_PID}" ]; then
-				echo "obfs-local	运行中🟢		混淆插件		${SIMPLEOBFS_PID}		${SIMPLEOBFS_RSS}"
+				echo "obfs-local	运行中🟢		混淆插件		${SIMPLEOBFS_PID}		${SIMPLEOBFS_RSS}		${SIMPLEOBFS_UPTIME}"
 			else
 				echo "obfs-local	未运行🔴		混淆插件"
 			fi
@@ -475,15 +652,17 @@ if [ "${current_type}" == "1" ]; then
 	elif [ "${current_type}" == "9" ]; then
 		local ANYTLS_PID=$(pidof anytls-zig)
 		local ANYTLS_RSS=$(GET_VM_RSS_MULTI ${ANYTLS_PID})
+		local ANYTLS_UPTIME=$(GET_PROC_UPTIME_MULTI ${ANYTLS_PID})
 		if [ -n "${ANYTLS_PID}" ]; then
-			echo "anytls-zig	运行中🟢		socks5		${ANYTLS_PID}		${ANYTLS_RSS}"
+			echo "anytls-zig	运行中🟢		socks5		${ANYTLS_PID}		${ANYTLS_RSS}		${ANYTLS_UPTIME}"
 		else
 			echo "anytls-zig	未运行🔴		socks5"
 		fi
 		local IPT2SOCKS_PID=$(pidof ipt2socks)
 		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
+		local IPT2SOCKS_UPTIME=$(GET_PROC_UPTIME_MULTI ${IPT2SOCKS_PID})
 		if [ -n "${IPT2SOCKS_PID}" ]; then
-			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}"
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}		${IPT2SOCKS_UPTIME}"
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
@@ -491,15 +670,17 @@ if [ "${current_type}" == "1" ]; then
 		# naive
 		local NAIVE_PID=$(pidof naive)
 		local NAIVE_RSS=$(GET_VM_RSS_MULTI ${NAIVE_PID})
+		local NAIVE_UPTIME=$(GET_PROC_UPTIME_MULTI ${NAIVE_PID})
 		if [ -n "${NAIVE_PID}" ]; then
-			echo "naive		运行中🟢		socks5		${NAIVE_PID}		${NAIVE_RSS}"
+			echo "naive		运行中🟢		socks5		${NAIVE_PID}		${NAIVE_RSS}		${NAIVE_UPTIME}"
 		else
 			echo "naive		未运行🔴		socks5"
 		fi
 		local IPT2SOCKS_PID=$(pidof ipt2socks)
 		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
+		local IPT2SOCKS_UPTIME=$(GET_PROC_UPTIME_MULTI ${IPT2SOCKS_PID})
 		if [ -n "${IPT2SOCKS_PID}" ]; then
-			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}"
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}		${IPT2SOCKS_UPTIME}"
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
@@ -507,15 +688,17 @@ if [ "${current_type}" == "1" ]; then
 		# tuic
 		local TUIC_PID=$(pidof tuic-client)
 		local TUIC_RSS=$(GET_VM_RSS_MULTI ${TUIC_PID})
+		local TUIC_UPTIME=$(GET_PROC_UPTIME_MULTI ${TUIC_PID})
 		if [ -n "${TUIC_PID}" ]; then
-			echo "tuic-client	运行中🟢		socks5		${TUIC_PID}		${TUIC_RSS}"
+			echo "tuic-client	运行中🟢		socks5		${TUIC_PID}		${TUIC_RSS}		${TUIC_UPTIME}"
 		else
 			echo "tuic-client	未运行🔴		socks5"
 		fi
 		local IPT2SOCKS_PID=$(pidof ipt2socks)
 		local IPT2SOCKS_RSS=$(GET_VM_RSS_MULTI ${IPT2SOCKS_PID})
+		local IPT2SOCKS_UPTIME=$(GET_PROC_UPTIME_MULTI ${IPT2SOCKS_PID})
 		if [ -n "${IPT2SOCKS_PID}" ]; then
-			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}"
+			echo "ipt2socks	运行中🟢		透明代理		${IPT2SOCKS_PID}		${IPT2SOCKS_RSS}		${IPT2SOCKS_UPTIME}"
 		else
 			echo "ipt2socks	未运行🔴		透明代理"
 		fi
@@ -526,8 +709,9 @@ if [ "${current_type}" == "1" ]; then
 		# chinadns-ng
 		local CHNG_PID=$(pidof chinadns-ng)
 		local CHNG_RSS=$(GET_VM_RSS_MULTI ${CHNG_PID})
+		local CHNG_UPTIME=$(GET_PROC_UPTIME_MULTI ${CHNG_PID})
 		if [ -n "${CHNG_PID}" ];then
-			echo "chinadns-ng	运行中🟢		DNS分流		${CHNG_PID}		${CHNG_RSS}"
+			echo "chinadns-ng	运行中🟢		DNS分流		${CHNG_PID}		${CHNG_RSS}		${CHNG_UPTIME}"
 		else
 			echo "chinadns-ng	未运行🔴		DNS分流"
 		fi
@@ -535,8 +719,9 @@ if [ "${current_type}" == "1" ]; then
 		# smartdns
 		local SMRT_PID=$(pidof smartdns)
 		local SMRT_RSS=$(GET_VM_RSS_MULTI ${SMRT_PID})
+		local SMRT_UPTIME=$(GET_PROC_UPTIME_MULTI ${SMRT_PID})
 		if [ -n "${SMRT_PID}" ];then
-			echo "smartdns	运行中🟢		DNS分流		${SMRT_PID}		${SMRT_RSS}"
+			echo "smartdns	运行中🟢		DNS分流		${SMRT_PID}		${SMRT_RSS}		${SMRT_UPTIME}"
 		else
 			echo "smartdns	未运行🔴		DNS分流"
 		fi
@@ -545,11 +730,33 @@ if [ "${current_type}" == "1" ]; then
 	if [ "${ss_basic_dns_serverx}" != "1" ];then
 		local DMQ_PID=$(pidof dnsmasq)
 		local DMQ_RSS=$(GET_VM_RSS_MULTI ${DMQ_PID})
+		local DMQ_UPTIME=$(GET_PROC_UPTIME_MULTI ${DMQ_PID})
 		if [ -n "${DMQ_PID}" ];then
-			echo "dnsmasq		运行中🟢		DNS解析		${DMQ_PID}	${DMQ_RSS}"
+			echo "dnsmasq		运行中🟢		DNS解析		${DMQ_PID}	${DMQ_RSS}		${DMQ_UPTIME}"
 		else
 			echo "dnsmasq	未运行🔴		DNS解析"
 		fi
+	fi
+
+	status_tool_mode="$(GET_STATUS_TOOL_MODE)"
+	if [ -n "${status_tool_mode}" ]; then
+		STATUS_TOOL_PID="$(GET_STATUS_TOOL_PID "${status_tool_mode}")"
+		STATUS_TOOL_RSS=$(GET_VM_RSS_MULTI ${STATUS_TOOL_PID})
+		STATUS_TOOL_UPTIME=$(GET_PROC_UPTIME_MULTI ${STATUS_TOOL_PID})
+		if [ -n "${STATUS_TOOL_PID}" ]; then
+			echo "status-tool	运行中🟢		状态探测(${status_tool_mode})	${STATUS_TOOL_PID}		${STATUS_TOOL_RSS}		${STATUS_TOOL_UPTIME}"
+		else
+			echo "status-tool	未运行🔴		状态探测(${status_tool_mode})"
+		fi
+	fi
+
+	WEBSOCKETD_PID="$(GET_WEBSOCKETD_PID)"
+	WEBSOCKETD_RSS=$(GET_VM_RSS_MULTI ${WEBSOCKETD_PID})
+	WEBSOCKETD_UPTIME=$(GET_PROC_UPTIME_MULTI ${WEBSOCKETD_PID})
+	if [ -n "${WEBSOCKETD_PID}" ]; then
+		echo "websocketd	运行中🟢		WebSocket通道	${WEBSOCKETD_PID}		${WEBSOCKETD_RSS}		${WEBSOCKETD_UPTIME}"
+	else
+		echo "websocketd	未运行🔴		WebSocket通道"
 	fi
 	echo --------------------------------------------------------------------------------------------------------
 }
@@ -670,7 +877,7 @@ check_status() {
 	local CURR_BAKI=$(echo ${ss_wan_black_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_WHTD=$(echo ${ss_wan_white_domain} | base64_decode |sed '/^#/d'|sed 's/$/\n/' | sed '/^$/d' | wc -l)
 	local CURR_WHTI=$(echo ${ss_wan_white_ip} | base64_decode | sed '/^#/d' | sed 's/$/\n/' | sed '/^$/d' | wc -l)
-	local CURR_SUBS=$(echo ${ss_online_links} | base64_decode | sed 's/^[[:space:]]//g' | grep -Ec "^http")
+	local CURR_SUBS="$(GET_SUBS_COUNT)"
 	local CURR_NODE=$(fss_list_node_ids | awk 'NF{c++} END{print c+0}')
 	local CURR_NODE_ID=$(fss_get_current_node_id)
 	local CURR_NODE_TYPE_DIST="$(GET_NODES_TYPE)"
@@ -694,7 +901,7 @@ check_status() {
 	echo "🟠 IPv6代理：$(GET_SWITCH_NAME "${ss_basic_proxy_ipv6}")"
 	echo "🟠 黑名单数：域名 ${CURR_BAKD}条，IP/CIDR ${CURR_BAKI}条"
 	echo "🟠 白名单数：域名 ${CURR_WHTD}条，IP/CIDR ${CURR_WHTI}条"
-	echo "🟠 订阅数量：${CURR_SUBS}个"
+	echo "🟠 订阅数量：${CURR_SUBS}"
 	echo "🟠 节点数量：${CURR_NODE}个"
 	echo "🟠 节点分布：${CURR_NODE_TYPE_DIST}"
 	echo "🟠 规则版本：gfwlist ${GFWVERSIN} | chnlist ${CDNVERSIN} | chnroute ${CHNVERSIN}"
