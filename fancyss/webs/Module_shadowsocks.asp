@@ -344,6 +344,23 @@ body .submgr-editor-layer .layui-layer-btn a{border-radius:5px !important;}
 body .submgr-editor-layer .layui-layer-btn .layui-layer-btn1{background:linear-gradient(135deg,#159957,#38d27a) !important;border-color:#159957 !important;color:#fff !important;box-shadow:0 10px 20px rgba(0,0,0,0.18) !important;font-weight:700 !important;}
 body .submgr-layer .ss_btn{border-radius:5px !important;}
 body .submgr-log-layer .layui-layer-btn a.submgr-log-close-disabled{background:#6b7280 !important;border-color:#6b7280 !important;color:#eef2f7 !important;cursor:not-allowed !important;pointer-events:none !important;opacity:.72 !important;}
+.sslinks-login-box{padding:18px 22px 20px;color:#e6eef8;font-size:13px;max-height:calc(82vh - 58px);overflow-y:auto;box-sizing:border-box;}
+.sslinks-login-note{padding:12px 14px;margin-bottom:14px;border-radius:8px;background:rgba(37,99,235,0.13);border:1px solid rgba(96,165,250,0.24);line-height:1.7;color:#dcecff;}
+.sslinks-login-row{display:flex;align-items:center;gap:12px;margin:12px 0;}
+.sslinks-login-label{width:58px;color:#b7c6d8;text-align:right;}
+.sslinks-login-control{flex:1;}
+.sslinks-login-control input{width:100%;height:34px;box-sizing:border-box;border-radius:5px;border:1px solid rgba(255,255,255,0.14);background:rgba(0,0,0,0.2);color:#f8fbff;padding:0 10px;outline:none;}
+.sslinks-login-control input:focus{border-color:rgba(96,165,250,0.7);box-shadow:0 0 0 2px rgba(37,99,235,0.18);}
+.sslinks-login-actions{padding-top:6px;text-align:center;}
+.sslinks-login-btn{display:inline-flex;align-items:center;justify-content:center;min-width:108px;height:34px;border-radius:5px;border:1px solid #159957;background:linear-gradient(135deg,#159957,#38d27a);color:#fff;font-weight:700;cursor:pointer;}
+.sslinks-login-btn.is-loading{opacity:.72;cursor:wait;pointer-events:none;}
+.sslinks-login-result{margin-top:14px;padding:12px 14px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);line-height:1.8;}
+.sslinks-login-result.warn{border-color:rgba(245,158,11,0.38);background:rgba(245,158,11,0.1);}
+.sslinks-login-result.ok{border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.1);}
+.sslinks-info-grid{display:grid;grid-template-columns:88px 1fr;gap:6px 10px;}
+.sslinks-info-label{color:#b7c6d8;text-align:right;}
+.sslinks-info-value{color:#f8fbff;word-break:break-all;}
+body .shunt-editor-layer .sslinks-login-mask{inset:43px 0 0;}
 body .submgr-log-layer .layui-layer-close.submgr-log-close-disabled{cursor:not-allowed !important;pointer-events:none !important;opacity:.28 !important;}
 body .shunt-editor-layer input,body .shunt-editor-layer select,body .shunt-editor-layer textarea{border-radius:5px !important;}
 @media (max-width: 900px){
@@ -841,6 +858,7 @@ var subscribeProfileMap = {};
 var subscribeProfileScopeMap = {};
 var subscribeManagerLayerIndex = null;
 var subscribeProfileEditorLayerIndex = null;
+var ssLinksLayerIndex = null;
 var subscribeManagerActiveTab = "profiles";
 var subscribeProfilesLoading = false;
 var subscribeLogLayerIndex = null;
@@ -851,6 +869,7 @@ var subscribeLogTaskDone = false;
 var subscribeLogCloseCountdown = -1;
 var subscribeLogCloseTimer = null;
 var subscribeLogUserInteracted = false;
+var subscribeLogDoneCallback = null;
 var SHUNT_STATS_REFRESH_INTERVAL = 6000;
 var ACL_DEFAULT_MODE_FORMAT_KEY = "ss_acl_default_mode_format";
 var SMARTDNS_STORAGE_PREFIX = "j1:";
@@ -4803,6 +4822,7 @@ function render_subscription_manager_entry() {
 		'<div class="submgr-entry">' +
 		'<div class="submgr-entry-actions">' +
 		'<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;" onclick="open_subscription_manager()">打开订阅管理</a>' +
+		'<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;margin-left:8px;" onclick="open_sslinks_login_layer()">ssLinks</a>' +
 		'</div>' +
 		'</div>' +
 		'</td>' +
@@ -5044,12 +5064,15 @@ function fetch_subscription_profiles_dbus(cb, options) {
 	});
 }
 function call_subscription_profile_api(action, fields, cb) {
+	call_script_api("ss_subscribe_profile.sh", [action], fields || {}, cb);
+}
+function call_script_api(method, params, fields, cb) {
 	var id = parseInt(Math.random() * 100000000);
 	$.ajax({
 		type: "POST",
 		cache: false,
 		url: "/_api/",
-		data: JSON.stringify({"id": id, "method": "ss_subscribe_profile.sh", "params": [action], "fields": fields || {}}),
+		data: JSON.stringify({"id": id, "method": method, "params": params || [], "fields": fields || {}}),
 		dataType: "json",
 		success: function(response) {
 			if (response && String(response.result) == String(id)) {
@@ -5064,6 +5087,332 @@ function call_subscription_profile_api(action, fields, cb) {
 			if (typeof cb === "function") {
 				cb(false, null, null);
 			}
+		}
+	});
+}
+function fetch_sslinks_login_result(cb) {
+	$.ajax({
+		type: "GET",
+		url: "/_api/sslinks_login_result",
+		dataType: "json",
+		cache: false,
+		success: function(data) {
+			var result = (data && data.result && data.result[0]) ? data.result[0] : {};
+			var raw = result["sslinks_login_result"] || "";
+			var payload = null;
+			try {
+				payload = JSON.parse(base64_decode_utf8(raw) || "{}");
+			} catch (e) {
+				payload = null;
+			}
+			if (typeof cb === "function") {
+				cb(payload || {ok: false, message: "读取 ssLinks 登录结果失败。"});
+			}
+		},
+		error: function() {
+			if (typeof cb === "function") {
+				cb({ok: false, message: "读取 ssLinks 登录结果失败。"});
+			}
+		}
+	});
+}
+function format_sslinks_epoch(ts) {
+	var num = parseInt(ts, 10);
+	if (isNaN(num) || num <= 0) {
+		return "未知";
+	}
+	var d = new Date(num * 1000);
+	var pad = function(v) { return v < 10 ? "0" + v : "" + v; };
+	return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+function format_sslinks_bytes(bytes) {
+	var num = Number(bytes || 0);
+	var units = ["B", "KB", "MB", "GB", "TB"];
+	var idx = 0;
+	while (num >= 1024 && idx < units.length - 1) {
+		num = num / 1024;
+		idx++;
+	}
+	return (idx === 0 ? String(Math.round(num)) : num.toFixed(num >= 100 ? 0 : 2)) + " " + units[idx];
+}
+function format_sslinks_duration(seconds) {
+	var num = parseInt(seconds, 10);
+	if (isNaN(num) || num <= 0) {
+		return "已过期";
+	}
+	var hours = Math.floor(num / 3600);
+	var minutes = Math.floor((num % 3600) / 60);
+	if (hours >= 24) {
+		return Math.floor(hours / 24) + "天 " + (hours % 24) + "小时";
+	}
+	return hours + "小时 " + minutes + "分";
+}
+function render_sslinks_login_result(payload) {
+	payload = payload || {};
+	if (!payload.ok) {
+		return '<div class="sslinks-login-result warn">' + htmlEscape(payload.message || "登录失败，请检查账号或密码。") + '</div>';
+	}
+	var expire = payload.expire_day || {};
+	var reset = payload.reset_day || {};
+	var used = Number(payload.transfer_used || 0);
+	var total = Number(payload.transfer_enable || 0);
+	var remainText = "";
+	if (typeof expire.days != "undefined") {
+		remainText = String(expire.days || 0) + "天 " + String(expire.hours || 0) + "小时 " + String(expire.minutes || 0) + "分";
+	}
+	var resetText = "";
+	if (typeof reset.days != "undefined") {
+		resetText = String(reset.days || 0) + "天 " + String(reset.hours || 0) + "小时 " + String(reset.minutes || 0) + "分";
+	}
+	var html = '<div class="sslinks-login-result ' + (payload.expired ? 'warn' : 'ok') + '">';
+	html += '<div style="font-weight:700;margin-bottom:8px;">' + htmlEscape(payload.message || "登录成功") + '</div>';
+	html += '<div class="sslinks-info-grid">';
+	html += '<div class="sslinks-info-label">用户名</div><div class="sslinks-info-value">' + htmlEscape(payload.email || "") + '</div>';
+	html += '<div class="sslinks-info-label">套餐名</div><div class="sslinks-info-value">' + htmlEscape(payload.plan_name || "未知套餐") + '</div>';
+	html += '<div class="sslinks-info-label">有效期</div><div class="sslinks-info-value">' + htmlEscape(format_sslinks_epoch(payload.expired_at)) + (payload.expired ? '（已过期）' : '') + '</div>';
+	if (remainText) {
+		html += '<div class="sslinks-info-label">剩余时间</div><div class="sslinks-info-value">' + htmlEscape(remainText) + '</div>';
+	}
+	if (resetText) {
+		html += '<div class="sslinks-info-label">流量重置</div><div class="sslinks-info-value">' + htmlEscape(resetText) + '</div>';
+	}
+	if (total > 0) {
+		html += '<div class="sslinks-info-label">流量</div><div class="sslinks-info-value">' + htmlEscape(format_sslinks_bytes(used) + " / " + format_sslinks_bytes(total)) + '</div>';
+	}
+	html += '<div class="sslinks-info-label">订阅配置</div><div class="sslinks-info-value">' + htmlEscape(payload.profile_id || "已写入") + '</div>';
+	if (payload.session_valid) {
+		html += '<div class="sslinks-info-label">登录状态</div><div class="sslinks-info-value">已登录，剩余 ' + htmlEscape(format_sslinks_duration(payload.session_remain || 0)) + '</div>';
+	}
+	html += '</div>';
+	html += '</div>';
+	return html;
+}
+function render_sslinks_login_form() {
+	var html = "";
+	html += '<div class="sslinks-login-note">ssLinks用户通过此处登录将订阅节点导入到fancyss。</div>';
+	html += '<div class="sslinks-login-row"><div class="sslinks-login-label">账号</div><div class="sslinks-login-control"><input type="text" id="sslinks_login_email" autocomplete="username" placeholder="请输入 ssLinks 登录邮箱"></div></div>';
+	html += '<div class="sslinks-login-row"><div class="sslinks-login-label">密码</div><div class="sslinks-login-control"><input type="password" id="sslinks_login_password" autocomplete="current-password" placeholder="请输入 ssLinks 登录密码"></div></div>';
+	html += '<div class="sslinks-login-actions"><button type="button" id="sslinks_login_submit" class="sslinks-login-btn" onclick="submit_sslinks_login()">登录</button></div>';
+	html += '<div id="sslinks_login_result"></div>';
+	return html;
+}
+function render_sslinks_logged_in_panel(payload) {
+	var html = "";
+	html += render_sslinks_login_result(payload || {});
+	html += '<div class="sslinks-login-actions">';
+	html += '<button type="button" id="sslinks_sync_profile" class="sslinks-login-btn" data-profile-id="' + htmlEscape(String((payload || {}).profile_id || "")) + '">同步订阅</button>';
+	html += '<button type="button" class="sslinks-login-btn" style="margin-left:10px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18);" onclick="show_sslinks_login_form()">重新登录</button>';
+	html += '</div>';
+	html += '<div id="sslinks_login_result"></div>';
+	return html;
+}
+function set_sslinks_layer_overlay(show, text, done) {
+	if (ssLinksLayerIndex === null || typeof layer == "undefined") {
+		return;
+	}
+	var layero = $("#layui-layer" + ssLinksLayerIndex);
+	if (!layero.length) {
+		return;
+	}
+	layero.find(".submgr-editor-saving-mask.sslinks-login-mask").remove();
+	if (!show) {
+		return;
+	}
+	layero.append('<div class="submgr-editor-saving-mask sslinks-login-mask"><div class="submgr-editor-saving-box">' + (done ? '' : '<span class="submgr-editor-saving-spinner"></span>') + '<span>' + htmlEscape(text || "登录中，请稍后...") + '</span></div></div>');
+}
+function resize_sslinks_layer() {
+	if (ssLinksLayerIndex === null || typeof layer == "undefined") {
+		return;
+	}
+	var layero = $("#layui-layer" + ssLinksLayerIndex);
+	var box = layero.find(".sslinks-login-box").first();
+	if (!layero.length || !box.length) {
+		return;
+	}
+	var titleHeight = layero.children(".layui-layer-title").outerHeight() || 43;
+	var borderExtra = 2;
+	var maxLayerHeight = Math.floor($(window).height() * 0.82);
+	var contentHeight = Math.ceil(box.outerHeight(true));
+	var targetHeight = Math.min(maxLayerHeight, Math.max(210, titleHeight + contentHeight + borderExtra));
+	layer.style(ssLinksLayerIndex, {
+		height: targetHeight + "px"
+	});
+	layero.children(".layui-layer-content").css({
+		height: Math.max(120, targetHeight - titleHeight - borderExtra) + "px",
+		overflowY: "auto"
+	});
+}
+function refresh_sslinks_logged_in_panel() {
+	call_script_api("sslinks_login.sh", ["status"], {}, function() {
+		fetch_sslinks_login_result(function(payload) {
+			set_sslinks_layer_overlay(false);
+			if (payload && payload.logged_in && payload.session_valid) {
+				$("#sslinks_login_content").html(render_sslinks_logged_in_panel(payload));
+				bind_sslinks_logged_in_actions();
+				resize_sslinks_layer();
+			} else {
+				show_sslinks_login_form();
+			}
+		});
+	});
+}
+function bind_sslinks_logged_in_actions() {
+	$("#sslinks_sync_profile").off("click").on("click", function() {
+		sync_subscription_profiles($(this).attr("data-profile-id") || "");
+	});
+}
+function poll_sslinks_auto_subscribe(profileId, startTs, attempt) {
+	attempt = attempt || 0;
+	$.ajax({
+		type: "GET",
+		url: '/_temp/ss_subscribe_log.txt?_=' + new Date().getTime(),
+		dataType: 'text',
+		cache: false,
+		success: function(response) {
+			response = String(response || "");
+			if (response.indexOf("XU6J03M6") != -1) {
+				set_sslinks_layer_overlay(true, "自动订阅完成，正在刷新 ssLinks 状态...", false);
+				refresh_table(function() {
+					fetch_subscription_profiles_dbus(function() {
+						render_subscription_manager();
+						maybe_start_node_latency_auto_refresh();
+						refresh_sslinks_logged_in_panel();
+					}, {silent: true});
+				});
+				return;
+			}
+			if (attempt > 800) {
+				set_sslinks_layer_overlay(false);
+				$("#sslinks_login_result").html(render_sslinks_login_result({ok: false, message: "自动订阅长时间无响应，请稍后在订阅管理中手动同步。"}));
+				return;
+			}
+			setTimeout(function() {
+				poll_sslinks_auto_subscribe(profileId, startTs, attempt + 1);
+			}, attempt < 10 ? 300 : 600);
+		},
+		error: function() {
+			if (attempt > 80) {
+				set_sslinks_layer_overlay(false);
+				$("#sslinks_login_result").html(render_sslinks_login_result({ok: false, message: "自动订阅日志读取失败，请稍后在订阅管理中手动同步。"}));
+				return;
+			}
+			setTimeout(function() {
+				poll_sslinks_auto_subscribe(profileId, startTs, attempt + 1);
+			}, 500);
+		}
+	});
+}
+function start_sslinks_auto_subscribe(profileId) {
+	if (!profileId) {
+		refresh_sslinks_logged_in_panel();
+		return;
+	}
+	set_sslinks_layer_overlay(true, "登录成功，检测ssLinks账户信息，获得有效订阅1个，开始自动订阅。", false);
+	clear_text_file_poll_state("subscribe_log");
+	var id = parseInt(Math.random() * 100000000);
+	var fields = {"ss_subscribe_profile_selected": profileId};
+	$.ajax({
+		type: "POST",
+		cache: false,
+		url: "/_api/",
+		data: JSON.stringify({"id": id, "method": "ss_node_subscribe.sh", "params": ["3"], "fields": fields}),
+		dataType: "json",
+		success: function(response) {
+			if (response && String(response.result) == String(id)) {
+				poll_sslinks_auto_subscribe(profileId, Date.now(), 0);
+				return;
+			}
+			set_sslinks_layer_overlay(false);
+			$("#sslinks_login_result").html(render_sslinks_login_result({ok: false, message: "自动订阅任务提交异常，请稍后在订阅管理中手动同步。"}));
+		},
+		error: function() {
+			set_sslinks_layer_overlay(false);
+			$("#sslinks_login_result").html(render_sslinks_login_result({ok: false, message: "自动订阅任务提交失败，请检查软件中心接口。"}));
+		}
+	});
+}
+function show_sslinks_login_form() {
+	$("#sslinks_login_content").html(render_sslinks_login_form());
+	resize_sslinks_layer();
+	setTimeout(function() {
+		$("#sslinks_login_email").focus();
+	}, 80);
+}
+function set_sslinks_login_loading(isLoading, text) {
+	var btn = $("#sslinks_login_submit");
+	btn.toggleClass("is-loading", !!isLoading).text(isLoading ? (text || "登录中...") : "登录");
+	$("#sslinks_login_email,#sslinks_login_password").prop("disabled", !!isLoading);
+}
+function submit_sslinks_login() {
+	var email = $.trim($("#sslinks_login_email").val() || "");
+	var password = $("#sslinks_login_password").val() || "";
+	if (!email || !password) {
+		$("#sslinks_login_result").html(render_sslinks_login_result({ok: false, message: "请填写 ssLinks 账号和密码。"}));
+		return false;
+	}
+	set_sslinks_login_loading(true);
+	$("#sslinks_login_result").html("");
+	set_sslinks_layer_overlay(true, "登录中，请稍后...", false);
+	call_script_api("sslinks_login.sh", ["login"], {
+		"sslinks_login_email": email,
+		"sslinks_login_password": password,
+		"sslinks_login_result": ""
+	}, function(ok) {
+		if (!ok) {
+			set_sslinks_login_loading(false);
+			set_sslinks_layer_overlay(false);
+			$("#sslinks_login_result").html(render_sslinks_login_result({ok: false, message: "登录失败，请检查账号或密码。"}));
+			return;
+		}
+		fetch_sslinks_login_result(function(payload) {
+			set_sslinks_login_loading(false);
+			if (payload && payload.ok) {
+				fetch_subscription_profiles_dbus(function() {
+					render_subscription_manager();
+				}, {silent: true});
+				if (payload.sync_allowed !== false) {
+					start_sslinks_auto_subscribe(payload.profile_id || "");
+				} else {
+					set_sslinks_layer_overlay(false);
+					refresh_sslinks_logged_in_panel();
+				}
+			} else {
+				set_sslinks_layer_overlay(false);
+				$("#sslinks_login_result").html(render_sslinks_login_result(payload));
+			}
+		});
+	});
+	return false;
+}
+function open_sslinks_login_layer() {
+	var html = "";
+	html += '<div class="sslinks-login-box">';
+	html += '<div id="sslinks_login_content"><div class="sslinks-login-result">正在读取 ssLinks 登录状态...</div></div>';
+	html += '</div>';
+	layer.open({
+		type: 1,
+		title: "ssLinks",
+		skin: "shunt-editor-layer",
+		area: [$(window).width() < 760 ? '92%' : '560px', $(window).height() < 640 ? '82vh' : '260px'],
+		shade: 0.8,
+		shadeClose: true,
+		content: html,
+		success: function(layero, index) {
+			ssLinksLayerIndex = index;
+			call_script_api("sslinks_login.sh", ["status"], {}, function() {
+				fetch_sslinks_login_result(function(payload) {
+					if (payload && payload.logged_in && payload.session_valid) {
+						$("#sslinks_login_content").html(render_sslinks_logged_in_panel(payload));
+						bind_sslinks_logged_in_actions();
+						resize_sslinks_layer();
+					} else {
+						show_sslinks_login_form();
+					}
+				});
+			});
+		},
+		end: function() {
+			ssLinksLayerIndex = null;
 		}
 	});
 }
