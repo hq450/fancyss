@@ -27,7 +27,7 @@ WT_BATCH_ACTIVE=0
 WT_BATCH_FINALIZED=0
 WT_BATCH_ABORT_REASON=""
 WT_WEBTEST_CACHE_REV="1"
-WT_WEBTEST_CACHE_GEN_REV="20260409_1"
+WT_WEBTEST_CACHE_GEN_REV="20260513_1"
 WT_WEBTEST_CACHE_LOCK="/tmp/fss_webtest_cache.lock"
 WT_WEBTEST_CACHE_STATE_DIR="/tmp/fancyss_cache_state"
 WT_WEBTEST_CACHE_STATE_FILE="${WT_WEBTEST_CACHE_STATE_DIR}/webtest.state"
@@ -1718,7 +1718,7 @@ wt_assign_webtest_cache_start_ports() {
 	: > "${WT_CACHE_START_PORT_MAP_FILE}"
 	: > "${ids_tmp}"
 	if [ -s "${FSS_NODE_JSON_INDEX_FILE}" ]; then
-		awk -F '|' 'NR == FNR {want[$1]=1; next} ($1 in want) && $2 == "00" && ($3 == "http" || $3 == "tls") {print $1}' "${ids_file}" "${FSS_NODE_JSON_INDEX_FILE}" > "${ids_tmp}" 2>/dev/null || true
+		awk -F '|' 'NR == FNR {want[$1]=1; next} ($1 in want) && $2 == "00" && $3 == "tls" {print $1}' "${ids_file}" "${FSS_NODE_JSON_INDEX_FILE}" > "${ids_tmp}" 2>/dev/null || true
 	else
 		while IFS= read -r node_id
 		do
@@ -1727,7 +1727,7 @@ wt_assign_webtest_cache_start_ports() {
 			[ "${node_type}" = "0" ] || continue
 			ss_obfs=$(wt_node_get_plain ss_obfs "${node_id}")
 			case "${ss_obfs}" in
-			http|tls)
+			tls)
 				printf '%s\n' "${node_id}" >> "${ids_tmp}"
 				;;
 			esac
@@ -3001,16 +3001,8 @@ webtest_web(){
 		fi
 	fi
 
-	# 3. 如果有结果该文件，且没有lock（webtest完成了的），需要检测下节点数量和webtest数量是否一致，避免新增节点没有webtest
-	local webtest_nu=$(cat "${WT_WEBTEST_FILE}" | awk -F ">" '{print $1}' | sort -un | sed '/stop/d' | wc -l)
-	local node_nu=$(wt_node_count)
-	if [ "${webtest_nu}" -ne "${node_nu}" ];then
-		clean_webtest
-		start_webtest
-		return 0
-	fi
-
-	# 4. 如果有结果该文件，且没有lock（webtest完成了的），且节点数和webtest结果数一致，比较下上次webtest结果生成的时间，如果是15分钟以内，则不需要重新webtest
+	# 3. 如果有结果文件，且没有lock（webtest完成了的），优先比较上次webtest结果生成时间。
+	# 即使节点数量/结果数量不一致，也不能绕过自动刷新时间立即启动全量测速。
 	if [ "${ss_basic_lt_cru_opts}" = "1" ] || [ "${ss_basic_lt_web_time}" = "0" ];then
 		wt_http_response "ok2, webtest auto refresh disabled!"
 		return 0
@@ -3022,6 +3014,7 @@ webtest_web(){
 	if [ "${TS_DUR}" -lt "${web_refresh_secs}" ];then
 		wt_http_response "ok2, webtest result in ${ss_basic_lt_web_time}min, do not refresh!"
 	else
+		# 4. 结果已过期后再重新测速；节点数量/覆盖率不作为提前触发条件。
 		clean_webtest
 		start_webtest
 	fi

@@ -639,7 +639,7 @@ if [ "${current_type}" == "1" ]; then
 			echo "Xray	未运行🔴"
 		fi
 		local OBFS_SWITCH="${ss_basic_ss_obfs}"
-		if [ -n "${OBFS_SWITCH}" -a "${OBFS_SWITCH}" != "0" ]; then
+		if [ -n "${OBFS_SWITCH}" -a "${OBFS_SWITCH}" != "0" -a "${OBFS_SWITCH}" != "http" ]; then
 			local SIMPLEOBFS_PID=$(pidof obfs-local)
 			local SIMPLEOBFS_RSS=$(GET_VM_RSS_MULTI ${SIMPLEOBFS_PID})
 			local SIMPLEOBFS_UPTIME=$(GET_PROC_UPTIME_MULTI ${SIMPLEOBFS_PID})

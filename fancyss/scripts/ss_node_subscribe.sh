@@ -1334,13 +1334,43 @@ sub_validate_downloaded_payload_with_tool(){
 	esac
 }
 
+sub_payload_is_base64_candidate(){
+	local payload_file="$1"
+	local encoded_len="0"
+	local mod_len="0"
+	[ -f "${payload_file}" ] || return 1
+	if tr -d ' \t\r\n' < "${payload_file}" | grep -q '[^A-Za-z0-9+/=_-]' 2>/dev/null;then
+		return 1
+	fi
+	encoded_len=$(tr -d ' \t\r\n' < "${payload_file}" | wc -c | awk '{print $1}')
+	[ -n "${encoded_len}" ] || encoded_len=0
+	[ "${encoded_len}" -gt "0" ] || return 1
+	mod_len=$((encoded_len % 4))
+	[ "${mod_len}" -ne "1" ] || return 1
+	return 0
+}
+
+sub_decode_base64_payload_file(){
+	local payload_file="$1"
+	local decoded_file="$2"
+	[ -f "${payload_file}" ] || return 1
+	[ -n "${decoded_file}" ] || return 1
+	sub_payload_is_base64_candidate "${payload_file}" || return 1
+	{
+		tr -d ' \t\r\n' < "${payload_file}" | sed 's/-/+/g;s/_/\//g;s/$/===/'
+		printf '\n'
+	} | base64 -d > "${decoded_file}" 2>/dev/null
+}
+
 sub_validate_downloaded_payload_legacy(){
 	local sub_link="$1"
 	local short_hash="$2"
 	local download_mode="$3"
 	local payload_file="${DIR}/sub_file_encode_${short_hash}.txt"
+	local decoded_test_file="${DIR}/sub_file_decode_test_${short_hash}.$$"
 	local wrong=""
 	local jump=""
+	local preview=""
 
 	[ -f "${payload_file}" ] || return 1
 	SUB_PAYLOAD_KIND=""
@@ -1386,12 +1416,16 @@ sub_validate_downloaded_payload_legacy(){
 		return 1
 	fi
 
-	dec64 $(cat "${payload_file}") >/dev/null 2>&1
+	sub_decode_base64_payload_file "${payload_file}" "${decoded_test_file}"
 	if [ "$?" != "0" ];then
+		rm -f "${decoded_test_file}" >/dev/null 2>&1
 		echo_date "⚠️解析错误！原因：该订阅链接获取的内容并非正确的base64编码内容！"
+		preview=$(sub_payload_preview "${payload_file}")
+		[ -n "${preview}" ] && echo_date "⚠️返回内容摘要：${preview}"
 		echo_date "⚠️请尝试将用浏览器打开订阅链接，看内容是否正常！"
 		return 1
 	fi
+	rm -f "${decoded_test_file}" >/dev/null 2>&1
 
 	return 0
 }
@@ -2121,7 +2155,7 @@ sub_prepare_decoded_file(){
 		echo_date "📄检测到明文的订阅格式，无需解码，继续！"
 		cp -f "${encoded_file}" "${decoded_file}"
 	else
-		tr -d '\n' < "${encoded_file}" | sed 's/-/+/g;s/_/\//g' | sed 's/$/===/' | base64 -d > "${decoded_file}"
+		sub_decode_base64_payload_file "${encoded_file}" "${decoded_file}"
 		if [ "$?" != "0" ];then
 			echo_date "⚠️解析错误！原因：解析后检测到乱码！请检查你的订阅地址！"
 			return 1

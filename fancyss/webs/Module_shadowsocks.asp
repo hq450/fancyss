@@ -2027,12 +2027,14 @@ function current_mode_is_shunt() {
 }
 function is_shunt_supported_node(nodeId) {
 	var c = confs[nodeId];
+	var ssObfs = "";
 	if (!c) {
 		return false;
 	}
 	switch (String(c["type"] || "")) {
 	case "0":
-		return !(c["ss_obfs"] == "http" || c["ss_obfs"] == "tls");
+		ssObfs = String(c["ss_obfs"] || "0");
+		return ssObfs == "" || ssObfs == "0" || ssObfs == "http";
 	case "3":
 	case "4":
 	case "5":
@@ -2045,6 +2047,9 @@ function is_shunt_supported_node(nodeId) {
 function get_shunt_node_block_message(nodeId) {
 	var c = confs[nodeId] || {};
 	var typeLabel = get_node_display_type_label(c) || "该";
+	if (String(c["type"] || "") == "0" && String(c["ss_obfs"] || "0") == "tls") {
+		return "SS[tls obfs]协议节点暂不支持xray分流，请选择SS无obfs/http obfs节点或者使用其它分流模式！";
+	}
 	switch (String(typeLabel || "").toLowerCase()) {
 	case "tuic":
 		typeLabel = "Tuic";
@@ -3658,7 +3663,7 @@ function render_shunt_rule_list() {
 	var supportedNodes = get_shunt_supported_target_nodes();
 	var ingressMode = get_shunt_ingress_mode();
 	if (!supportedNodes.length) {
-		html += '<div style="padding:10px 0;color:#ffb300;">当前没有可用于 xray 分流的节点。仅支持 SS(无obfs)/VMess/VLESS/Trojan/Hysteria2 节点。</div>';
+		html += '<div style="padding:10px 0;color:#ffb300;">当前没有可用于 xray 分流的节点。仅支持 SS(无obfs/http obfs)/VMess/VLESS/Trojan/Hysteria2 节点。</div>';
 		$("#shunt_panel").html(html);
 		return;
 	}
@@ -6423,7 +6428,8 @@ function maybe_start_node_latency_auto_refresh() {
 	latency_test(db_ss["ss_basic_latency_val"]);
 	return true;
 }
-function resume_node_latency_live_runtime() {
+function resume_node_latency_live_runtime(options) {
+	options = options || {};
 	if (!should_run_node_latency_live()) {
 		return false;
 	}
@@ -6448,9 +6454,14 @@ function resume_node_latency_live_runtime() {
 		get_latency_data_single(single_test_node, 0, singleLatencyPollSeq);
 		return true;
 	}
+	if (options.noAutoStart) {
+		load_latency_cache();
+		return true;
+	}
 	return maybe_start_node_latency_auto_refresh();
 }
-function resume_page_live_runtime() {
+function resume_page_live_runtime(options) {
+	options = options || {};
 	if (!is_page_live_updates_allowed()) {
 		return false;
 	}
@@ -6458,14 +6469,18 @@ function resume_page_live_runtime() {
 		schedule_shunt_stats_refresh(true);
 	}
 	if (should_run_node_latency_live()) {
-		resume_node_latency_live_runtime();
+		resume_node_latency_live_runtime({
+			noAutoStart: !!options.noAutoStartLatency
+		});
 	}
 	return true;
 }
 function handle_page_live_runtime_state() {
 	if (is_page_live_updates_allowed()) {
 		setTimeout(function() {
-			resume_page_live_runtime();
+			resume_page_live_runtime({
+				noAutoStartLatency: true
+			});
 		}, 120);
 	} else {
 		stop_page_background_runtime();
@@ -13825,7 +13840,9 @@ var tab_actions = {
 			schedule_node_card_view_height_adjust(8);
 			schedule_current_node_card_scroll(30);
 		}
-		resume_node_latency_live_runtime();
+		resume_node_latency_live_runtime({
+			noAutoStart: true
+		});
 	},
 	2: function() {
 		$('#apply_button').show();
@@ -13879,7 +13896,9 @@ var tab_actions = {
 		$('#apply_button').show();
 		$('#ss_failover_save').hide();
 		refresh_shunt_ui();
-		resume_node_latency_live_runtime();
+		resume_node_latency_live_runtime({
+			noAutoStart: true
+		});
 	},
 	7: function() {
 		$('#apply_button').hide();

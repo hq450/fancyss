@@ -1,11 +1,15 @@
 fancyss Changelog
 
 3.5.29（20260512）
-   - add	更新管理 - 订阅管理旁新增 `ssLinks` 登录入口，支持 ssLinks 用户登录后自动获取订阅地址并写入独立订阅配置。
-   - add	新增独立脚本 `sslinks_login.sh` 负责 ssLinks 登录、账户信息获取、订阅地址写入和 24 小时登录态缓存；当前测试阶段通过本地 `127.0.0.1:23456` SOCKS5 访问 ssLinks API，后续可切换为 ssLinks 提供的直连域名。
-   - update	ssLinks 登录弹窗会根据登录态显示不同内容：未登录显示账号密码输入；已登录显示用户名、套餐名、有效期、流量、订阅配置和登录状态，并提供同步订阅/重新登录操作。
-   - update	ssLinks 登录过程改为弹窗内覆盖式状态提示：登录中、检测账户信息、获取有效订阅并自动订阅；自动订阅完成后重新渲染弹窗为最终登录状态，避免账号密码表单和临时提示残留。
-   - fix	修复 ssLinks 弹窗异步加载内容后高度不随内容重新计算的问题；现在弹窗按实际内容动态收缩/扩展，并在内容较多时使用内部滚动。
+   - add	更新管理新增 ssLinks 登录入口，支持登录后自动获取订阅地址并导入 fancyss。
+   - update	SS http obfs 改为纯 Xray TCP HTTP header，不再启动 obfs-local。
+   - update	node-tool 升级到 0.1.14，全平台产物进入 binaries/node-tool。
+   - update	sub-tool 升级到 0.1.17，支持 Clash/Mihomo AnyTLS 节点解析，全平台产物进入 binaries/sub-tool。
+   - fix	Xray 分流支持 SS 无 obfs / http obfs，继续拒绝 tls obfs。
+   - fix	清理/切换 obfs helper 残留，避免 start-obfs.sh 或 obfs-local 在切换节点后继续存在。
+   - fix	修复节点管理/节点分流互切和浏览器标签页切回导致重复批量 webtest。
+   - fix	修复节点数与 webtest 结果数不一致时绕过刷新时间立即测速。
+   - fix	修复订阅返回登录/错误提示页时，legacy base64 校验可能拉起常驻 `base64 -d` 并占满单核的问题。
 
 3.5.28（20260510）
    - note	本次更新重点刷新核心代理二进制，并针对 Xray-core 新版配置字段变化、详细状态展示和 TUIC/Naïve 运行兼容做补丁收口。

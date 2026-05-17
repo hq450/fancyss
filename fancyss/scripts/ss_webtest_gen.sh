@@ -74,6 +74,34 @@ wt_get_host() {
 	fi
 }
 
+wt_get_xray_ss_http_obfs_tcp_settings() {
+	local host="$1"
+	local host_json="[]"
+
+	[ -n "${host}" ] && host_json="[\"${host}\"]"
+	cat <<-EOF
+		{
+			"header": {
+				"type": "http",
+				"request": {
+					"version": "1.1",
+					"method": "GET",
+					"path": ["/"],
+					"headers": {
+						"Host": ${host_json},
+						"User-Agent": [
+							"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36"
+						],
+						"Accept-Encoding": ["gzip, deflate"],
+						"Connection": ["keep-alive"],
+						"Pragma": ["no-cache"]
+					}
+				}
+			}
+		}
+	EOF
+}
+
 wt_get_value_null() {
 	if [ -n "$1" ]; then
 		echo \"$1\"
@@ -380,6 +408,9 @@ wt_gen_ss_outbound() {
 	local _server_ip_tmp=""
 	local _server_port_tmp=""
 	local _uot=""
+	local _network="raw"
+	local _tcp_settings=""
+	local _tcp_settings_line=""
 
 	WT_LAST_START_PORT=""
 	ss_server=$(wt_node_get_plain server "${nu}")
@@ -398,7 +429,15 @@ wt_gen_ss_outbound() {
 		echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 	fi
 
-	if [ "${ss_obfs}" = "http" -o "${ss_obfs}" = "tls" ]; then
+	rm -f "${start_file}" "${stop_file}" >/dev/null 2>&1
+	if [ "${ss_obfs}" = "http" ]; then
+		_server_ip_tmp="${_server_ip}"
+		_server_port_tmp="${ss_port}"
+		_uot="true"
+		_network="tcp"
+		_tcp_settings="$(wt_get_xray_ss_http_obfs_tcp_settings "${ss_obfs_host}")"
+		_tcp_settings_line=',"tcpSettings": '"${_tcp_settings}"
+	elif [ "${ss_obfs}" = "tls" ]; then
 		local obfs_port="${WT_PRESET_START_PORT}"
 		[ -n "${obfs_port}" ] || obfs_port=$(wt_get_reserved_port)
 		WT_LAST_START_PORT="${obfs_port}"
@@ -459,7 +498,8 @@ wt_gen_ss_outbound() {
 				]
 			},
 			"streamSettings": {
-				"network": "raw"
+				"network": "${_network}"
+				${_tcp_settings_line}
 			},
 			"sockopt": {
 				"tcpFastOpen": $(get_function_switch ${ss_basic_tfo}),

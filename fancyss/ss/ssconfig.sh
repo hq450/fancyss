@@ -1234,6 +1234,7 @@ restore_conf() {
 		rm -f /koolshare/ss/v2ray.json
 		rm -f /koolshare/ss/ssr.json
 		rm -f /koolshare/ss/tuic.json
+		rm -f /koolshare/ss/start-obfs.sh
 	fi
 }
 
@@ -1334,6 +1335,7 @@ kill_process() {
 		echo_date "关闭obfs-local进程..."
 		killall obfs-local
 	fi
+	rm -f /koolshare/ss/start-obfs.sh >/dev/null 2>&1
 	
 	# close tcp_fastopen
 	if [ "${LINUX_VER}" != "26" ]; then
@@ -3463,6 +3465,84 @@ get_host() {
 	fi
 }
 
+get_xray_ss_http_obfs_tcp_settings() {
+	local _host="$1"
+	local _host_json="[]"
+
+	[ -n "${_host}" ] && _host_json="[\"${_host}\"]"
+	cat <<-EOF
+		{
+			"header": {
+				"type": "http",
+				"request": {
+					"version": "1.1",
+					"method": "GET",
+					"path": ["/"],
+					"headers": {
+						"Host": ${_host_json},
+						"User-Agent": [
+							"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36"
+						],
+						"Accept-Encoding": ["gzip, deflate"],
+						"Connection": ["keep-alive"],
+						"Pragma": ["no-cache"]
+					}
+				}
+			}
+		}
+	EOF
+}
+
+write_ss_obfs_start_script() {
+	local _script="$1"
+	local _server="$2"
+	local _port="$3"
+	local _local_port="$4"
+	local _obfs="$5"
+	local _host="$6"
+	local _obfs_arg="$7"
+
+	[ -n "${_script}" ] || return 1
+	[ -n "${_server}" ] || return 1
+	[ -n "${_port}" ] || return 1
+	[ -n "${_local_port}" ] || return 1
+	[ -n "${_obfs}" ] || return 1
+	cat > "${_script}" <<-EOF
+		#!/bin/sh
+		_server='${_server}'
+		_port='${_port}'
+		_local_port='${_local_port}'
+		_obfs='${_obfs}'
+		_host='${_host}'
+		_obfs_arg='${_obfs_arg}'
+		if ps w | grep "obfs-local" | grep -w "\${_server}" | grep -w "\${_port}" | grep -w "\${_local_port}" | grep -v grep >/dev/null 2>&1; then
+			exit 0
+		fi
+		if [ -n "\${_host}" ]; then
+			obfs-local -s "\${_server}" -p "\${_port}" -l "\${_local_port}" --obfs "\${_obfs}" --obfs-host "\${_host}" \${_obfs_arg} -f /var/run/obfs_local.pid >/dev/null 2>&1 &
+		else
+			obfs-local -s "\${_server}" -p "\${_port}" -l "\${_local_port}" --obfs "\${_obfs}" \${_obfs_arg} -f /var/run/obfs_local.pid >/dev/null 2>&1 &
+		fi
+		_i=20
+		while [ \${_i} -gt 0 ]; do
+			netstat -nl 2>/dev/null | awk '{print \$4}' | grep -E "[:\\\\.]\${_local_port}\$" >/dev/null 2>&1 && exit 0
+			usleep 100000
+			_i=\$((\${_i} - 1))
+		done
+		exit 1
+	EOF
+	chmod 755 "${_script}"
+}
+
+start_ss_obfs_helper() {
+	local _script="/koolshare/ss/start-obfs.sh"
+
+	[ -x "${_script}" ] || return 0
+	echo_date "开启simple-obfs混淆辅助进程..."
+	sh "${_script}"
+	detect_running_status obfs-local /var/run/obfs_local.pid
+}
+
 get_value_null(){
 	if [ -n "$1" ]; then
 		echo \"$1\"
@@ -3967,11 +4047,13 @@ creat_xray_ss_json() {
 		# 非web提交
 		if [ -n "${WAN_ACTION}" ]; then
 			echo_date "检测到网络拨号/开机触发启动，不创建$(__get_type_abbr_name)配置文件，使用上次的配置文件！"
+			start_ss_obfs_helper
 			return 0
 		fi
 	else
 		echo_date "创建$(__get_type_abbr_name)节点配置文件到${VLESS_CONFIG_FILE}"
 	fi
+	rm -f /koolshare/ss/start-obfs.sh >/dev/null 2>&1
 
 	# log area
 	cat >"${SS_CONFIG_TEMP}" <<-EOF
@@ -4014,24 +4096,36 @@ creat_xray_ss_json() {
 		],
 	EOF
 	# outbounds area
-	if [ "${ss_basic_ss_obfs}" == "http" -o "${ss_basic_ss_obfs}" == "tls" ]; then
-		# start obfs-local first
-		echo_date "开启simple-obfs混淆..."
+	local _xray_ss_server="${ss_basic_server}"
+	local _xray_ss_port="${ss_basic_port}"
+	local _xray_ss_uot="false"
+	local _xray_ss_network="raw"
+	local _xray_ss_tcp_settings=""
+	local _xray_ss_tcp_settings_line=""
 
+	if [ "${ss_basic_ss_obfs}" = "http" ]; then
+		echo_date "检测到SS http obfs，使用Xray原生HTTP伪装运行。"
+		_xray_ss_network="tcp"
+		_xray_ss_uot="true"
+		_xray_ss_tcp_settings="$(get_xray_ss_http_obfs_tcp_settings "${ss_basic_ss_obfs_host}")"
+		_xray_ss_tcp_settings_line=',"tcpSettings": '"${_xray_ss_tcp_settings}"
+	elif [ "${ss_basic_ss_obfs}" = "tls" ]; then
+		echo_date "检测到SS tls obfs，生成/koolshare/ss/start-obfs.sh辅助启动脚本。"
 		if [ "${ss_basic_tfo}" == "1" -a "${LINUX_VER}" != "26" ]; then
 			local OBFS_ARG="--fast-open"
 			echo 3 >/proc/sys/net/ipv4/tcp_fastopen
 		else
 			local OBFS_ARG=""
 		fi
-
 		local obfs_port=$(get_rand_port)
-		if [ -n "${ss_basic_ss_obfs_host}" ]; then
-			run_bg obfs-local -s ${ss_basic_server} -p ${ss_basic_port} -l ${obfs_port} --obfs ${ss_basic_ss_obfs} --obfs-host ${ss_basic_ss_obfs_host} ${OBFS_ARG} -f /var/run/obfs_local.pid
-		else
-			run_bg obfs-local -s ${ss_basic_server} -p ${ss_basic_port} -l ${obfs_port} --obfs ${ss_basic_ss_obfs} ${OBFS_ARG} -f /var/run/obfs_local.pid
-		fi
-		detect_running_status obfs-local /var/run/obfs_local.pid
+		write_ss_obfs_start_script "/koolshare/ss/start-obfs.sh" "${ss_basic_server}" "${ss_basic_port}" "${obfs_port}" "${ss_basic_ss_obfs}" "${ss_basic_ss_obfs_host}" "${OBFS_ARG}"
+		start_ss_obfs_helper
+		_xray_ss_server="127.0.0.1"
+		_xray_ss_port="${obfs_port}"
+		_xray_ss_uot="true"
+	fi
+
+	if [ "${ss_basic_ss_obfs}" = "http" -o "${ss_basic_ss_obfs}" = "tls" ]; then
 		# gen xray outbound
 		cat >>"${SS_CONFIG_TEMP}" <<-EOF
 			"outbounds": [
@@ -4041,16 +4135,17 @@ creat_xray_ss_json() {
 					"settings": {
 						"servers": [
 							{
-								"address": "127.0.0.1"
-								,"port": ${obfs_port}
+								"address": "${_xray_ss_server}"
+								,"port": ${_xray_ss_port}
 								,"password": "${ss_basic_password}"
 								,"method": "${ss_basic_method}"
-								,"uot": true
+								,"uot": ${_xray_ss_uot}
 							}
 						]
 					},
 					"streamSettings": {
-						"network": "raw"
+						"network": "${_xray_ss_network}"
+						${_xray_ss_tcp_settings_line}
 					},
 					"sockopt": {
 						"tcpFastOpen": $(get_function_switch ${ss_basic_tfo}),
@@ -4554,6 +4649,7 @@ creat_shunt_json() {
 	current_id="$(fss_shunt_get_default_node_id)"
 	[ -n "${current_id}" ] || current_id="${ssconf_basic_node}"
 	echo_date "创建xray分流配置文件到${shunt_config}"
+	rm -f /koolshare/ss/start-obfs.sh >/dev/null 2>&1
 	rm -f "${shunt_config}"
 	fss_shunt_build_xray_config "${shunt_config}" "${current_id}" || {
 		echo_date "错误：xray分流配置生成失败，请检查兜底节点和分流规则设置。"

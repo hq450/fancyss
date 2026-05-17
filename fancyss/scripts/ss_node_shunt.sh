@@ -719,7 +719,7 @@ fss_shunt_node_supported() {
 		if [ "${schema}" != "2" ]; then
 			ss_obfs="$(fss_get_node_field_plain "${node_id}" ss_obfs)"
 		fi
-		[ -z "${ss_obfs}" ] || [ "${ss_obfs}" = "0" ]
+		[ -z "${ss_obfs}" ] || [ "${ss_obfs}" = "0" ] || [ "${ss_obfs}" = "http" ]
 		;;
 	3|4|5|8)
 		return 0
@@ -925,12 +925,12 @@ fss_shunt_validate_current_node() {
 	node_type="$(fss_get_node_field_plain "${node_id}" type)"
 	if [ "${node_type}" = "0" ]; then
 		ss_obfs="$(fss_get_node_field_plain "${node_id}" ss_obfs)"
-		if [ -n "${ss_obfs}" ] && [ "${ss_obfs}" != "0" ]; then
-			fss_shunt_log "错误：xray分流模式暂不支持将带obfs的SS节点作为运行节点。"
+		if [ -n "${ss_obfs}" ] && [ "${ss_obfs}" != "0" ] && [ "${ss_obfs}" != "http" ]; then
+			fss_shunt_log "错误：xray分流模式暂不支持将带${ss_obfs} obfs的SS节点作为运行节点。"
 			return 1
 		fi
 	fi
-	fss_shunt_log "错误：xray分流模式当前仅支持 SS(无obfs)/VMess/VLESS/Trojan/Hysteria2 节点作为运行节点。"
+	fss_shunt_log "错误：xray分流模式当前仅支持 SS(无obfs/http obfs)/VMess/VLESS/Trojan/Hysteria2 节点作为运行节点。"
 	return 1
 }
 
