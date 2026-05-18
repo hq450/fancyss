@@ -709,7 +709,7 @@ platform_test(){
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_ipq64"
 						exit_install 1
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
 						exit_install 1
@@ -773,7 +773,7 @@ platform_test(){
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_ipq64"
 						exit_install 1
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
 						exit_install 1
@@ -834,7 +834,7 @@ platform_test(){
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_ipq64"
 						exit_install 1
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
 						exit_install 1
@@ -893,7 +893,7 @@ platform_test(){
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_ipq64"
 						exit_install 1
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
 						exit_install 1
@@ -926,7 +926,7 @@ platform_test(){
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_ipq64"
 						exit_install 1
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_${PKG_ARCH}_${PKG_TYPE}！"
 						;;
 					*)
@@ -983,7 +983,7 @@ platform_test(){
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_ipq64"
 						exit_install 1
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
 						exit_install 1
@@ -1042,7 +1042,7 @@ platform_test(){
 					"TUF_6500")
 						echo_date "内核：${KEL_VERS}，架构：${ROT_ARCH}，安装fancyss_${PKG_ARCH}_${PKG_TYPE}！"
 						;;
-					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air")
+					"TX-AX6000"|"TUF-AX4200Q"|"RT-AX57_Go"|"GS7"|"ZenWiFi_BT8P"|"GS7_Air"|"GS-BE7200X")
 						echo_date "建议使用fancyss_mtk_full或者fancyss_mtk_lite！"		
 						echo_date "下载地址：https://github.com/hq450/fancyss_history_package/tree/master/fancyss_mtk"
 						exit_install 1

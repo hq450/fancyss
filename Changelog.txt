@@ -3,6 +3,7 @@ fancyss Changelog
 3.5.29（20260512）
    - add	更新管理新增 ssLinks 登录入口，支持登录后自动获取订阅地址并导入 fancyss。
    - update	SS http obfs 改为纯 Xray TCP HTTP header，不再启动 obfs-local。
+   - update	安装脚本新增 MTK 机型 GS-BE7200X 支持，可安装 fancyss_mtk_full/lite。
    - update	node-tool 升级到 0.1.14，全平台产物进入 binaries/node-tool。
    - update	sub-tool 升级到 0.1.17，支持 Clash/Mihomo AnyTLS 节点解析，全平台产物进入 binaries/sub-tool。
    - fix	Xray 分流支持 SS 无 obfs / http obfs，继续拒绝 tls obfs。
