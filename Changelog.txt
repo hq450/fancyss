@@ -7,7 +7,6 @@ fancyss Changelog
    - update	node-tool 升级到 0.1.14。
    - update	sub-tool 升级到 0.1.17，支持 Clash/Mihomo AnyTLS。
    - update	订阅节点主身份改为 `profile_<profile_id>`，重新订阅后优先按 profile 恢复节点映射。
-   - update	ssLinks 登录入口暂不开放。
    - fix	Xray 分流支持 SS 无 obfs / http obfs。
    - fix	Xray 分流继续拒绝 tls obfs。
    - fix	切换节点时清理 obfs helper 残留。
