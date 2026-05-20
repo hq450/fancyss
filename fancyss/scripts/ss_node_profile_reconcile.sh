@@ -47,8 +47,7 @@ reconcile_profile_scope_row() {
 	[ -n "${last_group}" ] || return 1
 	airport_identity="$(fss_identity_slugify "${last_group}" "sub" 2>/dev/null)"
 	[ -n "${airport_identity}" ] || return 1
-	source_scope="${airport_identity}"
-	[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
+	source_scope="profile_${profile_id}"
 	printf '%s\t%s\t%s\t%s\n' "${source_scope}" "${profile_id}" "${last_group}" "${last_url_hash}"
 }
 

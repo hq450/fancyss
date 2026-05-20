@@ -4825,10 +4825,11 @@ function render_subscription_manager_entry() {
 		'<th>订阅管理</th>' +
 		'<td>' +
 		'<div class="submgr-entry">' +
-		'<div class="submgr-entry-actions">' +
-		'<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;" onclick="open_subscription_manager()">打开订阅管理</a>' +
-		'<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;margin-left:8px;" onclick="open_sslinks_login_layer()">ssLinks</a>' +
-		'</div>' +
+			'<div class="submgr-entry-actions">' +
+			'<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;" onclick="open_subscription_manager()">打开订阅管理</a>' +
+			// ssLinks 专用 API 尚未 ready，入口暂不开放。
+			// '<a type="button" class="ss_btn" style="cursor:pointer;width:auto;min-width:auto;display:inline-block;white-space:nowrap;margin-left:8px;" onclick="open_sslinks_login_layer()">ssLinks</a>' +
+			'</div>' +
 		'</div>' +
 		'</td>' +
 		'</tr>';
@@ -4903,6 +4904,9 @@ function set_subscription_profiles_state(payload) {
 		if (scope) {
 			subscribeProfileScopeMap[scope] = item;
 		}
+		if (item.id) {
+			subscribeProfileScopeMap["profile_" + item.id] = item;
+		}
 	}
 }
 function upsert_subscription_profile_state(item) {
@@ -4944,6 +4948,7 @@ function count_subscription_profile_nodes(item) {
 	var ids = get_fss_node_ids();
 	var count = 0;
 	var profileId = String((item || {}).id || "");
+	var profileScope = profileId ? "profile_" + profileId : "";
 	var scope = build_subscription_profile_scope(item);
 	for (var i = 0; i < ids.length; i++) {
 		var raw = get_fss_raw_node(ids[i]);
@@ -4951,6 +4956,10 @@ function count_subscription_profile_nodes(item) {
 			continue;
 		}
 		if (profileId && String(raw["_profile_id"] || "") == profileId) {
+			count++;
+			continue;
+		}
+		if (profileScope && String(raw["_source_scope"] || "") == profileScope) {
 			count++;
 			continue;
 		}
@@ -7229,7 +7238,9 @@ function save() {
 		return false;
 	}
 	dbus["ss_basic_shunt_custom_presets"] = shuntCustomPresetsPayload;
-	dbus["ss_basic_shunt_rule_ts"] = String(new Date().getTime());
+	if (should_touch_shunt_rule_ts(dbus)) {
+		dbus["ss_basic_shunt_rule_ts"] = String(new Date().getTime());
+	}
 	// collect values in acl table
 	if(E("ACL_table")){
 		var tr = E("ACL_table").getElementsByTagName("tr");
@@ -7558,8 +7569,41 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 	var id = parseInt(Math.random() * 100000000);
 	var postData;
 	var resolvedWsCmd = ws_cmd || "";
+	var wsCommandStarted = false;
+	var wsCommandFinished = false;
+	var wsFallbackStarted = false;
+	var wsFallbackTimer = null;
 	var fallbackToHttp = function() {
 		push_data(script, arg, obj, flag);
+	};
+	var clearWsFallbackTimer = function() {
+		if (wsFallbackTimer) {
+			clearTimeout(wsFallbackTimer);
+			wsFallbackTimer = null;
+		}
+	};
+	var startLogPollFallback = function(reason) {
+		if (wsFallbackStarted || wsCommandFinished) {
+			return;
+		}
+		wsFallbackStarted = true;
+		clearWsFallbackTimer();
+		if (reason) {
+			E('log_content3').value += reason + '\n';
+			E("log_content3").scrollTop = E("log_content3").scrollHeight;
+		}
+		get_realtime_log();
+	};
+	var armWsFallbackTimer = function() {
+		clearWsFallbackTimer();
+		if (!wsCommandStarted || wsCommandFinished) {
+			return;
+		}
+		wsFallbackTimer = setTimeout(function() {
+			if (wsCommandStarted && !wsCommandFinished) {
+				startLogPollFallback("WebSocket日志长时间无更新，切换为日志文件轮询...");
+			}
+		}, 15000);
 	};
 	if (!is_ws_available()) {
 		fallbackToHttp();
@@ -7590,21 +7634,38 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 					} else {
 						ws.send(". " + script + " " + arg);
 					}
+					wsCommandStarted = true;
+					armWsFallbackTimer();
 					if (flag != "1" && flag != "2"){
 						showSSLoadingBar();
 					}
 				};
-				//ws.onclose = function() {
-				//	console.log('ws： DISCONNECT');
-				//};
+				ws.onclose = function() {
+					if (wsCommandStarted && !wsCommandFinished) {
+						startLogPollFallback("WebSocket日志连接已断开，切换为日志文件轮询...");
+					}
+				};
 				ws.onerror = function(event) {
-					// fallback to httpd method
-					//console.log('WS Error: ' + event.data);
-					push_data(script, arg, obj, flag);
+					if (wsCommandStarted) {
+						startLogPollFallback("WebSocket日志连接异常，切换为日志文件轮询...");
+					} else {
+						fallbackToHttp();
+					}
 				};
 				ws.onmessage = function(event) {
+					armWsFallbackTimer();
 					var wsMsg = String(event.data || "");
+					if (wsFallbackStarted) {
+						if(wsMsg.indexOf("XU6J03M6") != -1 || wsMsg == "fancyss"){
+							wsCommandFinished = true;
+							clearWsFallbackTimer();
+							try { ws.close(); } catch (e) {}
+						}
+						return;
+					}
 					if(wsMsg.indexOf("XU6J03M6") != -1){
+						wsCommandFinished = true;
+						clearWsFallbackTimer();
 						var cleanMsg = wsMsg.myReplace("XU6J03M6", " ").replace(/^\s+|\s+$/g, "");
 						if(cleanMsg){
 							E('log_content3').value += cleanMsg + '\n';
@@ -7613,6 +7674,8 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 						count_down_close();
 						ws.close();
 					}else if(wsMsg == "fancyss"){
+						wsCommandFinished = true;
+						clearWsFallbackTimer();
 						ws.close();
 						if (flag == "1"){
 							refreshpage();
@@ -7630,6 +7693,25 @@ function push_data_ws(script, arg, obj, flag, ws_cmd){
 			fallbackToHttp();
 		}
 	});
+}
+
+function should_touch_shunt_rule_ts(nextFields){
+	if (!nextFields) return false;
+	if (!db_ss["ss_basic_shunt_rule_ts"]) return true;
+	var watched = [
+		"ss_basic_shunt_rules",
+		"ss_basic_shunt_custom_presets",
+		"ss_basic_shunt_default_node",
+		"ss_basic_shunt_default_node_identity",
+		"ss_basic_shunt_ingress_mode"
+	];
+	for (var i = 0; i < watched.length; i++) {
+		var key = watched[i];
+		if (String(nextFields[key] || "") != String(db_ss[key] || "")) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function should_use_shunt_hot_reload(post_dbus){

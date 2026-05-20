@@ -21,6 +21,8 @@ reconcile_usage() {
 	Reasons:
 	  identity
 	  primary
+	  profile_name
+	  profile_secondary
 	  airport_name
 	  airport_secondary
 	  secondary
@@ -60,8 +62,11 @@ reconcile_build_old_map() {
 		._identity // "",
 		._identity_primary // "",
 		._identity_secondary // "",
+		._profile_id // "",
 		._airport_identity // "",
 		.name // "",
+		(if ((._profile_id // "") != "" and (.name // "") != "") then ((._profile_id // "") + "\u001f" + (.name // "")) else "" end),
+		(if ((._profile_id // "") != "" and (._identity_secondary // "") != "") then ((._profile_id // "") + "\u001f" + (._identity_secondary // "")) else "" end),
 		((._airport_identity // "") + "\u001f" + (.name // "")),
 		((._airport_identity // "") + "\u001f" + (._identity_secondary // ""))
 	] | @tsv' "${old_file}" 2>/dev/null > "${map_file}"
@@ -75,8 +80,11 @@ reconcile_build_new_map() {
 		._identity // "",
 		._identity_primary // "",
 		._identity_secondary // "",
+		._profile_id // "",
 		._airport_identity // "",
 		.name // "",
+		(if ((._profile_id // "") != "" and (.name // "") != "") then ((._profile_id // "") + "\u001f" + (.name // "")) else "" end),
+		(if ((._profile_id // "") != "" and (._identity_secondary // "") != "") then ((._profile_id // "") + "\u001f" + (._identity_secondary // "")) else "" end),
 		((._airport_identity // "") + "\u001f" + (.name // "")),
 		((._airport_identity // "") + "\u001f" + (._identity_secondary // ""))
 	] | @tsv' "${new_file}" 2>/dev/null | awk -F '\t' 'BEGIN{OFS="\t"} { if ($1 == "") $1 = NR; print }' > "${map_file}"
@@ -93,8 +101,11 @@ reconcile_assign_unique_matches() {
 	local old_identity=""
 	local old_primary=""
 	local old_secondary=""
+	local old_profile=""
 	local old_airport=""
 	local old_name=""
+	local old_profile_name=""
+	local old_profile_secondary=""
 	local old_airport_name=""
 	local old_airport_secondary=""
 	local old_value=""
@@ -106,12 +117,15 @@ reconcile_assign_unique_matches() {
 	local new_identity=""
 	local new_primary=""
 	local new_secondary=""
+	local new_profile=""
 	local new_airport=""
 	local new_name=""
+	local new_profile_name=""
+	local new_profile_secondary=""
 	local new_airport_name=""
 	local new_airport_secondary=""
 
-	while IFS='	' read -r old_id old_identity old_primary old_secondary old_airport old_name old_airport_name old_airport_secondary
+	while IFS='	' read -r old_id old_identity old_primary old_secondary old_profile old_airport old_name old_profile_name old_profile_secondary old_airport_name old_airport_secondary
 	do
 		[ -n "${old_id}" ] || continue
 		grep -Fxq "${old_id}" "${old_used}" 2>/dev/null && continue
@@ -121,6 +135,12 @@ reconcile_assign_unique_matches() {
 			;;
 		primary)
 			old_value="${old_primary}"
+			;;
+		profile_name)
+			old_value="${old_profile_name}"
+			;;
+		profile_secondary)
+			old_value="${old_profile_secondary}"
 			;;
 		airport_name)
 			old_value="${old_airport_name}"
@@ -141,15 +161,17 @@ reconcile_assign_unique_matches() {
 				if (field == "identity" && $2 == value) c++
 				else if (field == "primary" && $3 == value) c++
 				else if (field == "secondary" && $4 == value) c++
-				else if (field == "airport_name" && $7 == value) c++
-				else if (field == "airport_secondary" && $8 == value) c++
+				else if (field == "profile_name" && $8 == value) c++
+				else if (field == "profile_secondary" && $9 == value) c++
+				else if (field == "airport_name" && $10 == value) c++
+				else if (field == "airport_secondary" && $11 == value) c++
 			}
 			END {print c + 0}
 		' "${new_map}" 2>/dev/null)
 		[ "${new_count}" = "1" ] || continue
 		match_count=0
 		chosen_new_id=""
-		while IFS='	' read -r new_id new_identity new_primary new_secondary new_airport new_name new_airport_name new_airport_secondary
+		while IFS='	' read -r new_id new_identity new_primary new_secondary new_profile new_airport new_name new_profile_name new_profile_secondary new_airport_name new_airport_secondary
 		do
 			[ -n "${new_id}" ] || continue
 			grep -Fxq "${new_id}" "${new_used}" 2>/dev/null && continue
@@ -159,6 +181,12 @@ reconcile_assign_unique_matches() {
 				;;
 			primary)
 				new_value="${new_primary}"
+				;;
+			profile_name)
+				new_value="${new_profile_name}"
+				;;
+			profile_secondary)
+				new_value="${new_profile_secondary}"
 				;;
 			airport_name)
 				new_value="${new_airport_name}"
@@ -251,6 +279,8 @@ reconcile_main() {
 
 	reconcile_assign_unique_matches "identity" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"
 	reconcile_assign_unique_matches "primary" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"
+	reconcile_assign_unique_matches "profile_name" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"
+	reconcile_assign_unique_matches "profile_secondary" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"
 	reconcile_assign_unique_matches "airport_name" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"
 	reconcile_assign_unique_matches "airport_secondary" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"
 	reconcile_assign_unique_matches "secondary" "${old_map}" "${new_map}" "${old_used}" "${new_used}" "${out_file}"

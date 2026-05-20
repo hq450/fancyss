@@ -210,7 +210,15 @@ sub_get_online_urls(){
 		printf '%s\n' "${SUB_ONLINE_URLS}" | sed '/^$/d'
 		return 0
 	fi
-	SUB_ONLINE_URLS=$(dbus get ss_online_links | base64 -d | sed '/^$/d' | sed '/^#/d' | sed 's/^[[:space:]]//g' | sed 's/[[:space:]]$//g' | grep -E "^http" | sed 's/[[:space:]]/%20/g')
+	SUB_ONLINE_URLS=$(
+		fss_b64_decode "$(dbus get ss_online_links 2>/dev/null)" 2>/dev/null \
+			| sed '/^$/d' \
+			| sed '/^#/d' \
+			| sed 's/^[[:space:]]//g' \
+			| sed 's/[[:space:]]$//g' \
+			| grep -E "^http" \
+			| sed 's/[[:space:]]/%20/g'
+	)
 	SUB_ONLINE_URLS_READY=1
 	printf '%s\n' "${SUB_ONLINE_URLS}" | sed '/^$/d'
 }
@@ -318,7 +326,11 @@ sub_prepare_enabled_profiles_file() {
 	local tmp_file=""
 
 	[ -n "${output_file}" ] || return 1
-	subprof_collect_enabled_profiles_tsv "${output_file}" >/dev/null 2>&1 || return 1
+	if type subprof_collect_enabled_profiles_exec_tsv >/dev/null 2>&1; then
+		subprof_collect_enabled_profiles_exec_tsv "${output_file}" >/dev/null 2>&1 || return 1
+	else
+		subprof_collect_enabled_profiles_tsv "${output_file}" >/dev/null 2>&1 || return 1
+	fi
 	if [ -n "${selected_id}" ]; then
 		tmp_file="${output_file}.tmp.$$"
 		awk -F '\t' -v selected_id="${selected_id}" '$1 == selected_id {print}' "${output_file}" > "${tmp_file}" 2>/dev/null || true
@@ -441,8 +453,14 @@ sub_build_airport_identity(){
 sub_build_source_scope(){
 	local airport_identity="$1"
 	local short_url_hash="$2"
-	local scope="${airport_identity}"
-	[ -n "${short_url_hash}" ] && scope="${scope}_${short_url_hash}"
+	local profile_id="${3:-${SUB_ACTIVE_PROFILE_ID}}"
+	local scope=""
+	if [ -n "${profile_id}" ];then
+		scope="profile_${profile_id}"
+	else
+		scope="${airport_identity}"
+		[ -n "${short_url_hash}" ] && scope="${scope}_${short_url_hash}"
+	fi
 	printf '%s' "${scope}"
 }
 
@@ -460,7 +478,7 @@ sub_rewrite_identity_fields_for_file(){
 	[ -n "${source_type}" ] || source_type="subscribe"
 	if [ "${source_type}" = "subscribe" ];then
 		airport_identity=$(sub_build_airport_identity "${airport_label}" "${source_tag}")
-		source_scope=$(sub_build_source_scope "${airport_identity}" "${short_url_hash}")
+		source_scope=$(sub_build_source_scope "${airport_identity}" "${short_url_hash}" "${SUB_ACTIVE_PROFILE_ID}")
 	else
 		airport_identity="local"
 		source_scope="local"
@@ -470,7 +488,7 @@ sub_rewrite_identity_fields_for_file(){
 		return 0
 	fi
 	tmp_file="${file_path}.identity.$$"
-	fss_enrich_node_identity_file "${file_path}" "${tmp_file}" "${airport_identity}" "${source_scope}" "${short_url_hash}" "${source_type}" || {
+	fss_enrich_node_identity_file "${file_path}" "${tmp_file}" "${airport_identity}" "${source_scope}" "${short_url_hash}" "${source_type}" "${SUB_ACTIVE_PROFILE_ID}" || {
 		rm -f "${tmp_file}"
 		return 1
 	}
@@ -2392,9 +2410,11 @@ sub_first_line_meta_tsv(){
 }
 
 sub_refresh_node_state(){
-	NODES_SEQ=$(sub_list_node_ids | tr '\n' ' ' | sed 's/[[:space:]]$//')
-	NODE_INDEX=$(sub_list_node_ids | sed -n '$p')
-	SEQ_NU=$(sub_list_node_ids | sed '/^$/d' | wc -l)
+	local node_ids=""
+	node_ids="$(sub_list_node_ids | sed '/^$/d')"
+	NODES_SEQ=$(printf '%s\n' "${node_ids}" | tr '\n' ' ' | sed 's/[[:space:]]$//')
+	NODE_INDEX=$(printf '%s\n' "${node_ids}" | sed -n '$p')
+	SEQ_NU=$(printf '%s\n' "${node_ids}" | wc -l)
 	if [ "${SUB_STORAGE_SCHEMA}" = "2" ];then
 		CURR_NODE=$(fss_get_current_node_id)
 		FAILOVER_NODE=$(fss_get_failover_node_id)
@@ -2402,9 +2422,9 @@ sub_refresh_node_state(){
 		CURR_NODE=$(dbus get ssconf_basic_node)
 		FAILOVER_NODE=$(dbus get ss_failover_s4_3)
 	fi
-	[ -z "${CURR_NODE}" ] && CURR_NODE=$(sub_list_node_ids | sed -n '1p')
-	if [ -n "${CURR_NODE}" ] && ! sub_node_exists_in_order "${CURR_NODE}";then
-		CURR_NODE=$(sub_list_node_ids | sed -n '1p')
+	[ -z "${CURR_NODE}" ] && CURR_NODE=$(printf '%s\n' "${node_ids}" | sed -n '1p')
+	if [ -n "${CURR_NODE}" ] && ! printf '%s\n' "${node_ids}" | grep -Fxq "${CURR_NODE}";then
+		CURR_NODE=$(printf '%s\n' "${node_ids}" | sed -n '1p')
 	fi
 }
 
@@ -3922,20 +3942,66 @@ sub_apply_existing_ids_by_identity(){
 	fi
 	run jq -n -c \
 		--slurpfile src "${source_map_file}" '
-		(reduce $src[] as $item ({};
-			($item._identity // "") as $identity
-			| if $identity != "" then
-				.[$identity] = {
-					id: (($item._id // "") | tostring),
-					created: (($item._created_at // "") | tostring)
-				}
-			else
+		def ref($item):
+			{
+				id: (($item._id // "") | tostring),
+				created: (($item._created_at // "") | tostring)
+			};
+		def add_unique($item; $key):
+			if $key == "" then
 				.
-			end
-		)) as $identity_map
+			elif has($key) then
+				.[$key] = {"ambiguous": true}
+			else
+				.[$key] = ref($item)
+			end;
+		(reduce $src[] as $item ({}; add_unique($item; ($item._identity // "")))
+			| with_entries(select((.value.ambiguous // false) != true))) as $identity_map
+		| (reduce $src[] as $item ({}; add_unique($item; ($item._identity_primary // "")))
+			| with_entries(select((.value.ambiguous // false) != true))) as $primary_map
+		| (reduce $src[] as $item ({};
+				($item._profile_id // "") as $profile_id
+				| ($item.name // "") as $name
+				| if $profile_id == "" or $name == "" then
+					.
+				else
+					add_unique($item; ($profile_id + "\u001f" + $name))
+				end
+			)
+			| with_entries(select((.value.ambiguous // false) != true))) as $profile_name_map
+		| (reduce $src[] as $item ({};
+				($item._profile_id // "") as $profile_id
+				| ($item._identity_secondary // "") as $secondary
+				| if $profile_id == "" or $secondary == "" then
+					.
+				else
+					add_unique($item; ($profile_id + "\u001f" + $secondary))
+				end
+			)
+			| with_entries(select((.value.ambiguous // false) != true))) as $profile_secondary_map
+		| (reduce $src[] as $item ({};
+				($item._source_scope // "") as $source_scope
+				| ($item._identity_secondary // "") as $secondary
+				| if $source_scope == "" or $secondary == "" then
+					.
+				else
+					add_unique($item; ($source_scope + "\u001f" + $secondary))
+				end
+			)
+			| with_entries(select((.value.ambiguous // false) != true))) as $scope_secondary_map
 		| foreach inputs as $node (null;
 			($node._identity // "") as $identity
-			| ($identity_map[$identity] // null) as $mapped
+			| ($node._identity_primary // "") as $primary
+			| (if (($node._profile_id // "") != "" and ($node.name // "") != "") then (($node._profile_id // "") + "\u001f" + ($node.name // "")) else "" end) as $profile_name
+			| (if (($node._profile_id // "") != "" and ($node._identity_secondary // "") != "") then (($node._profile_id // "") + "\u001f" + ($node._identity_secondary // "")) else "" end) as $profile_secondary
+			| (if (($node._source_scope // "") != "" and ($node._identity_secondary // "") != "") then (($node._source_scope // "") + "\u001f" + ($node._identity_secondary // "")) else "" end) as $scope_secondary
+			| (
+				($identity_map[$identity] // null)
+				// ($primary_map[$primary] // null)
+				// ($profile_name_map[$profile_name] // null)
+				// ($profile_secondary_map[$profile_secondary] // null)
+				// ($scope_secondary_map[$scope_secondary] // null)
+			) as $mapped
 			| if $mapped != null and (($mapped.id // "") != "") then
 				($node + {
 					"_id": ($mapped.id | tostring)
@@ -4488,7 +4554,7 @@ sub_restore_active_nodes_after_rewrite(){
 	fss_set_failover_node_id "${restore_failover}"
 }
 
-sub_refresh_node_state
+# 节点状态刷新放到具体订阅流程内执行，避免脚本加载阶段无日志阻塞。
 
 # 订阅流程说明：
 # 1. 导出本地节点并按来源拆分为文件；
@@ -4501,7 +4567,10 @@ set_lock(){
 	if [ "${FSS_SUBSCRIBE_LOCK_WAIT}" = "1" ]; then
 		if ! flock -n 233; then
 			echo_date "检测到订阅脚本已经在运行，等待当前任务完成..."
-			flock 233
+			if ! __timeout_run 120 flock 233; then
+				echo_date "⚠️订阅锁等待超时，可能存在上一次任务残留，请稍后重试。"
+				exit 1
+			fi
 			echo_date "订阅锁已释放，继续执行当前订阅任务。"
 		fi
 		return 0
@@ -7450,7 +7519,7 @@ get_online_rule_now(){
 	DOMAIN_MAPPED_GROUP="$(sub_conf_lookup_domain_airport_label "${DOMAIN_NAME}" 2>/dev/null)"
 	[ -n "${DOMAIN_MAPPED_GROUP}" ] || DOMAIN_MAPPED_GROUP="${DOMAIN_NAME}"
 	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${DOMAIN_MAPPED_GROUP}" "${SUB_SOURCE_TAG}")
-	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
+	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}" "${SUB_ACTIVE_PROFILE_ID}")
 	if [ -f "/$DIR/sublink_md5.txt" ];then
 		local IS_ADD=$(cat /$DIR/sublink_md5.txt | grep -Eo ${SUB_LINK_HASH})
 		if [ -n "${IS_ADD}" ];then
@@ -7621,7 +7690,7 @@ get_online_rule_now(){
 		SUB_SOURCE_TAG="${CANONICAL_SOURCE_TAG}"
 	fi
 	SUB_AIRPORT_IDENTITY=$(sub_build_airport_identity "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}")
-	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}")
+	SUB_SOURCE_SCOPE=$(sub_build_source_scope "${SUB_AIRPORT_IDENTITY}" "${SUB_SOURCE_URL_HASH}" "${SUB_ACTIVE_PROFILE_ID}")
 	sub_rewrite_identity_fields_for_file "${DIR}/online_${sub_count}_${SUB_SOURCE_TAG}.txt" "${ONLINE_GROUP}" "${SUB_SOURCE_TAG}" "${SUB_SOURCE_URL_HASH}" "subscribe" >/dev/null 2>&1 || true
 	sub_register_source_identity "${RAW_SOURCE_TAG}" "${SUB_SOURCE_TAG}" "${ONLINE_GROUP}" >/dev/null 2>&1
 	if [ -s "${ACTIVE_SOURCE_TAGS}" ] && grep -Fxq "${SUB_SOURCE_TAG}" "${ACTIVE_SOURCE_TAGS}";then
@@ -7713,18 +7782,25 @@ start_node_subscribe(){
 	# echo_date "⚙️test: 脚本环境变量：$(env | wc -l)个"
 	
 	# 0. var define
+	echo_date "⚙️初始化订阅环境..."
 	sub_refresh_node_state
 	sub_reset_active_profile_context
 	selected_profile_id="${SUB_SELECTED_PROFILE_ID:-$(dbus get ${SUB_PROFILE_TMP_SYNC_ID_KEY})}"
 	SUB_SINGLE_PROFILE_SYNC=0
 	profiles_file="${DIR}/active_profiles.tsv"
-	enabled_profile_count="$(subprof_enabled_profile_count 2>/dev/null)"
+	if type subprof_enabled_profile_count_fast >/dev/null 2>&1; then
+		enabled_profile_count="$(subprof_enabled_profile_count_fast 2>/dev/null)"
+	else
+		enabled_profile_count="$(subprof_enabled_profile_count 2>/dev/null)"
+	fi
 	if [ -n "${enabled_profile_count}" ] && [ "${enabled_profile_count}" -gt "0" ] 2>/dev/null; then
 		use_profiles=1
 		online_url_nu="${enabled_profile_count}"
+		echo_date "ℹ️检测到启用中的订阅配置：${online_url_nu} 个"
 	else
 		online_urls=$(sub_get_online_urls)
 		online_url_nu=$(printf '%s\n' "${online_urls}" | sed '/^$/d' | wc -l)
+		echo_date "ℹ️检测到旧版订阅地址：${online_url_nu} 个"
 	fi
 
 	# 1. 检查订阅链接是否有效

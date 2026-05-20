@@ -316,6 +316,9 @@ gen_folder(){
 	cd ${CURR_PATH}
 	rm -rf shadowsocks
 	cp -rf fancyss shadowsocks
+	# ssLinks dedicated API is not ready yet; keep the UI/helper code in source,
+	# but do not ship the login backend in release packages for now.
+	rm -rf ./shadowsocks/scripts/sslinks_login.sh
 
 	# different platform	
 	if [ "${platform}" == "hnd" ];then

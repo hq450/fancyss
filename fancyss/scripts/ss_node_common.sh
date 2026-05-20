@@ -474,7 +474,12 @@ fss_b64_encode() {
 }
 
 fss_b64_decode() {
-	printf '%s' "$1" | base64 -d 2>/dev/null || printf '%s' "$1" | base64 --decode 2>/dev/null
+	local compact=""
+	compact="$(printf '%s' "$1" | tr -d ' \t\r\n')"
+	[ -n "${compact}" ] || return 1
+	printf '%s' "${compact}" | grep -Eq '^[A-Za-z0-9+/=_-]+$' || return 1
+	[ "$(( ${#compact} % 4 ))" -ne "1" ] 2>/dev/null || return 1
+	printf '%s' "${compact}" | base64 -d 2>/dev/null || printf '%s' "${compact}" | base64 --decode 2>/dev/null
 }
 
 fss_node_json_meta_assignments() {
@@ -820,8 +825,12 @@ fss_legacy_subscribe_emit_meta_row() {
 	[ -n "${group_label}" ] || group_label="${source_tag}"
 	[ -n "${airport_identity}" ] || airport_identity="$(fss_identity_slugify "${group_label}" "${source_tag}")"
 	if [ -z "${source_scope}" ];then
-		source_scope="${airport_identity}"
-		[ -n "${url_hash}" ] && source_scope="${source_scope}_${url_hash}"
+		if [ -n "${profile_id}" ];then
+			source_scope="profile_${profile_id}"
+		else
+			source_scope="${airport_identity}"
+			[ -n "${url_hash}" ] && source_scope="${source_scope}_${url_hash}"
+		fi
 	fi
 	printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${source_tag}" "${profile_id}" "${airport_identity}" "${source_scope}" "${url_hash}" "${group_label}"
 }
@@ -860,8 +869,7 @@ fss_collect_legacy_subscribe_source_meta_from_profiles() {
 		[ -n "${group_label}" ] || group_label="${profile_name}"
 		[ -n "${group_label}" ] || group_label="$(fss_legacy_subscribe_host_from_url "${profile_url}" 2>/dev/null)"
 		airport_identity="$(fss_identity_slugify "${group_label}" "${canonical_tag:-${raw_tag:-sub}}")"
-		source_scope="${airport_identity}"
-		[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
+		source_scope="profile_${profile_id}"
 		fss_legacy_subscribe_emit_meta_row "${canonical_tag}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
 		[ "${raw_tag}" != "${canonical_tag}" ] && fss_legacy_subscribe_emit_meta_row "${raw_tag}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
 		[ "${legacy_tag}" != "${canonical_tag}" ] && [ "${legacy_tag}" != "${raw_tag}" ] && fss_legacy_subscribe_emit_meta_row "${legacy_tag}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
@@ -879,7 +887,7 @@ fss_collect_legacy_subscribe_source_meta_from_profiles() {
 			esac
 			[ "${profile_count}" = "1" ] && match_group=1
 			[ "${match_group}" = "1" ] || continue
-			fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_base}" "${suffix}" "${airport_identity}" "${airport_identity}_${suffix}"
+			fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_base}" "${suffix}" "${airport_identity}" "profile_${profile_id}"
 		done
 	done
 }
@@ -915,8 +923,7 @@ fss_collect_schema2_subscribe_group_meta_from_profiles() {
 		[ -n "${group_label}" ] || group_label="$(fss_legacy_subscribe_host_from_url "${profile_url}" 2>/dev/null)"
 		[ -n "${group_label}" ] || continue
 		airport_identity="$(fss_identity_slugify "${group_label}" "${canonical_tag:-${raw_tag:-sub}}")"
-		source_scope="${airport_identity}"
-		[ -n "${last_url_hash}" ] && source_scope="${source_scope}_${last_url_hash}"
+		source_scope="profile_${profile_id}"
 		fss_legacy_subscribe_emit_meta_row "${group_label}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
 		{
 			dbus list ssconf_basic_group_ 2>/dev/null | cut -d "=" -f 2-
@@ -935,7 +942,7 @@ fss_collect_schema2_subscribe_group_meta_from_profiles() {
 			case "${group_value}" in
 			"${group_label}"_*)
 				suffix="${group_value##*_}"
-				fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "${source_scope}"
+				fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_label}" "${last_url_hash}" "${airport_identity}" "profile_${profile_id}"
 				;;
 			esac
 		done
@@ -966,8 +973,12 @@ fss_collect_legacy_subscribe_source_meta_from_links() {
 			group_label="${host}"
 		fi
 		airport_identity="$(fss_identity_slugify "${group_label}" "${canonical_tag:-${raw_tag:-sub}}")"
-		source_scope="${airport_identity}"
-		[ -n "${legacy_tag}" ] && source_scope="${source_scope}_${legacy_tag}"
+		if [ -n "${profile_id}" ];then
+			source_scope="profile_${profile_id}"
+		else
+			source_scope="${airport_identity}"
+			[ -n "${legacy_tag}" ] && source_scope="${source_scope}_${legacy_tag}"
+		fi
 		fss_legacy_subscribe_emit_meta_row "${canonical_tag}" "${profile_id}" "${group_label}" "${legacy_tag}" "${airport_identity}" "${source_scope}"
 		[ "${raw_tag}" != "${canonical_tag}" ] && fss_legacy_subscribe_emit_meta_row "${raw_tag}" "${profile_id}" "${group_label}" "${legacy_tag}" "${airport_identity}" "${source_scope}"
 		[ "${legacy_tag}" != "${canonical_tag}" ] && [ "${legacy_tag}" != "${raw_tag}" ] && fss_legacy_subscribe_emit_meta_row "${legacy_tag}" "${profile_id}" "${group_label}" "${legacy_tag}" "${airport_identity}" "${source_scope}"
@@ -979,7 +990,7 @@ fss_collect_legacy_subscribe_source_meta_from_links() {
 			group_base="${group_value%_*}"
 			case "${group_base}" in
 			"${group_label}"|"${host}")
-				fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_base}" "${suffix}" "${airport_identity}" "${airport_identity}_${suffix}"
+				fss_legacy_subscribe_emit_meta_row "${suffix}" "${profile_id}" "${group_base}" "${suffix}" "${airport_identity}" "profile_${profile_id}"
 				;;
 			esac
 		done
@@ -1236,11 +1247,19 @@ fss_enrich_node_identity_json() {
 			airport_identity=$(fss_identity_slugify "${group_base}" "sub")
 		fi
 		if [ -z "${explicit_scope}" ]; then
-			source_scope="${airport_identity}"
-			[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
+			if [ -n "${profile_id}" ];then
+				source_scope="profile_${profile_id}"
+			else
+				source_scope="${airport_identity}"
+				[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
+			fi
 		elif [ -z "${source_scope}" ]; then
-			source_scope="${airport_identity}"
-			[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
+			if [ -n "${profile_id}" ];then
+				source_scope="profile_${profile_id}"
+			else
+				source_scope="${airport_identity}"
+				[ -n "${source_url_hash}" ] && source_scope="${source_scope}_${source_url_hash}"
+			fi
 		fi
 	else
 		[ -n "${airport_identity}" ] || airport_identity="local"

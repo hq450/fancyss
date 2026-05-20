@@ -47,6 +47,8 @@ subprof_b64_decode_loose() {
 	local decoded=""
 	compact="$(subprof_b64_compact "$1")"
 	[ -n "${compact}" ] || return 1
+	printf '%s' "${compact}" | grep -Eq '^[A-Za-z0-9+/=_-]+$' || return 1
+	[ "$(( ${#compact} % 4 ))" -ne "1" ] 2>/dev/null || return 1
 	decoded="$(printf '%s' "${compact}" | base64 -d 2>/dev/null)" && {
 		printf '%s' "${decoded}"
 		return 0
@@ -716,6 +718,69 @@ subprof_collect_enabled_profiles_tsv() {
 			.schedule_custom_hours
 		] | @tsv' 2>/dev/null >> "${output_file}" || return 1
 	done
+}
+
+subprof_profile_exec_tsv() {
+	local profile_id="$1"
+	local profile_key=""
+	local profile_json=""
+
+	[ -n "${profile_id}" ] || return 1
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	profile_json="$(subprof_dbus_get_json_by_key "${profile_key}" 2>/dev/null)" || return 1
+	[ -n "${profile_json}" ] || return 1
+	printf '%s' "${profile_json}" | "$(subprof_jq_bin)" -r '
+		if ((.enabled // true) == true) then
+			[
+				(.id // ""),
+				(.name // ""),
+				(.url // ""),
+				(.subscribe_mode // "2"),
+				(.download.policy // "auto"),
+				(.ua.mode // "fixed"),
+				(.ua.preset // "default"),
+				(.ua.custom // ""),
+				(.filter.exclude // ""),
+				(.filter.include // ""),
+				(.flags.allow_insecure // false),
+				(.flags.node_log // true),
+				(.filter.keep_info_node // true),
+				(.hy2.up // ""),
+				(.hy2.dl // ""),
+				(.hy2.tfo_switch // "2"),
+				(.hy2.cg_opt // "bbr")
+			] | @tsv
+		else
+			empty
+		end
+	' 2>/dev/null
+}
+
+subprof_collect_enabled_profiles_exec_tsv() {
+	local output_file="$1"
+	local profile_id=""
+
+	[ -n "${output_file}" ] || return 1
+	: > "${output_file}"
+	for profile_id in $(subprof_list_profile_ids)
+	do
+		[ -n "${profile_id}" ] || continue
+		subprof_profile_exec_tsv "${profile_id}" >> "${output_file}" || true
+	done
+}
+
+subprof_enabled_profile_count_fast() {
+	local profile_id=""
+	local count=0
+
+	for profile_id in $(subprof_list_profile_ids)
+	do
+		[ -n "${profile_id}" ] || continue
+		if [ -n "$(subprof_profile_exec_tsv "${profile_id}" 2>/dev/null | sed -n '1p')" ]; then
+			count=$((count + 1))
+		fi
+	done
+	printf '%s\n' "${count}"
 }
 
 subprof_cron_job_name() {

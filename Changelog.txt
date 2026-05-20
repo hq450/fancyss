@@ -1,17 +1,20 @@
 fancyss Changelog
 
 3.5.29（20260512）
-   - add	更新管理新增 ssLinks 登录入口，支持登录后自动获取订阅地址并导入 fancyss。
-   - update	SS http obfs 改为纯 Xray TCP HTTP header，不再启动 obfs-local。
-   - update	安装脚本新增 MTK 机型 GS-BE7200X 支持，可安装 fancyss_mtk_full/lite。
-   - update	Xray-core 升级到自编译 pre-release `v26.5.9-1bdb488`，已重新编译并 UPX 压缩 `arm64 / armv7 / armv5` 产物，同步进入 `binaries/xray` 与对应 `fancyss/bin-*` 分发链路。
-   - update	node-tool 升级到 0.1.14，全平台产物进入 binaries/node-tool。
-   - update	sub-tool 升级到 0.1.17，支持 Clash/Mihomo AnyTLS 节点解析，全平台产物进入 binaries/sub-tool。
-   - fix	Xray 分流支持 SS 无 obfs / http obfs，继续拒绝 tls obfs。
-   - fix	清理/切换 obfs helper 残留，避免 start-obfs.sh 或 obfs-local 在切换节点后继续存在。
-   - fix	修复节点管理/节点分流互切和浏览器标签页切回导致重复批量 webtest。
-   - fix	修复节点数与 webtest 结果数不一致时绕过刷新时间立即测速。
-   - fix	修复订阅返回登录/错误提示页时，legacy base64 校验可能拉起常驻 `base64 -d` 并占满单核的问题。
+   - update	SS http obfs 改为纯 Xray TCP HTTP header。
+   - update	新增 MTK 机型 GS-BE7200X 安装支持。
+   - update	Xray-core 升级到 `v26.5.9-1bdb488`。
+   - update	node-tool 升级到 0.1.14。
+   - update	sub-tool 升级到 0.1.17，支持 Clash/Mihomo AnyTLS。
+   - update	订阅节点主身份改为 `profile_<profile_id>`，重新订阅后优先按 profile 恢复节点映射。
+   - update	ssLinks 登录入口暂不开放。
+   - fix	Xray 分流支持 SS 无 obfs / http obfs。
+   - fix	Xray 分流继续拒绝 tls obfs。
+   - fix	切换节点时清理 obfs helper 残留。
+   - fix	修复节点管理/节点分流互切重复 webtest。
+   - fix	修复节点数变化绕过刷新时间触发 webtest。
+   - fix	修复订阅启动阶段可能卡住的问题。
+   - fix	修复订阅错误页触发 `base64 -d` 常驻占用 CPU。
 
 3.5.28（20260510）
    - note	本次更新重点刷新核心代理二进制，并针对 Xray-core 新版配置字段变化、详细状态展示和 TUIC/Naïve 运行兼容做补丁收口。
