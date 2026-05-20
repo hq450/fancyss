@@ -1,6 +1,6 @@
 fancyss Changelog
 
-3.5.29（20260512）
+3.5.29（20260520）
    - update	SS http obfs 改为纯 Xray TCP HTTP header。
    - update	新增 MTK 机型 GS-BE7200X 安装支持。
    - update	Xray-core 升级到 `v26.5.9-1bdb488`。
