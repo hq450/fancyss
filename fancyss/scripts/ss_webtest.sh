@@ -27,7 +27,7 @@ WT_BATCH_ACTIVE=0
 WT_BATCH_FINALIZED=0
 WT_BATCH_ABORT_REASON=""
 WT_WEBTEST_CACHE_REV="1"
-WT_WEBTEST_CACHE_GEN_REV="20260513_1"
+WT_WEBTEST_CACHE_GEN_REV="20260601_1"
 WT_WEBTEST_CACHE_LOCK="/tmp/fss_webtest_cache.lock"
 WT_WEBTEST_CACHE_STATE_DIR="/tmp/fancyss_cache_state"
 WT_WEBTEST_CACHE_STATE_FILE="${WT_WEBTEST_CACHE_STATE_DIR}/webtest.state"
@@ -3566,6 +3566,8 @@ creat_trojan_json(){
 	local trojan_uuid=$(wt_node_get trojan_uuid ${nu})
 	local trojan_sni=$(wt_node_get trojan_sni ${nu})
 	local trojan_ai=$(wt_node_get trojan_ai ${nu})
+	local trojan_pcs=$(wt_node_get_plain trojan_pcs ${nu})
+	local trojan_vcn=$(wt_node_get_plain trojan_vcn ${nu})
 	local trojan_ai_global=$(dbus get ss_basic_tjai${nu})
 	if [ "${trojan_ai_global}" == "1" ];then
 		local trojan_ai="1"
@@ -3596,7 +3598,8 @@ creat_trojan_json(){
 					"security": "tls",
 					"tlsSettings": {
 						"serverName": $(get_value_null ${trojan_sni}),
-						"allowInsecure": $(get_function_switch ${trojan_ai})
+						"pinnedPeerCertSha256": $(get_value_empty ${trojan_pcs}),
+						"verifyPeerCertByName": $(get_value_empty ${trojan_vcn})
     				}
     				,"sockopt": {"tcpFastOpen": $(get_function_switch ${trojan_tfo})}
     			}

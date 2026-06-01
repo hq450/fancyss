@@ -1,5 +1,12 @@
 fancyss Changelog
 
+3.5.30（20260601）
+   - update	Xray-core 升级到自编译 `v26.6.1-94ffd50`。
+   - update	node-tool 升级到 0.1.16，全平台产物进入 binaries/node-tool。
+   - update	webtest 缓存生成版本更新到 `20260601_1`，避免升级后复用旧测速运行产物。
+   - fix	适配 Xray-core `v26.5.9` 在 2026-06-01 后移除 `allowInsecure`：主配置、webtest shell 生成器和 node-tool 原生 webtest 产物不再写入该字段，继续保留 `pinnedPeerCertSha256 / verifyPeerCertByName`。
+   - fix	修复已使用新版 Xray 的机型上，批量 webtest 因临时 `wt-xray` 配置启动失败而导致所有节点显示 `failed` 的问题。
+
 3.5.29（20260520）
    - update	SS http obfs 改为纯 Xray TCP HTTP header。
    - update	新增 MTK 机型 GS-BE7200X 安装支持。

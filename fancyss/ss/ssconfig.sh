@@ -3755,8 +3755,7 @@ creat_vmess_json() {
 
 		if [ "${ss_basic_v2ray_network_security}" == "tls" ];then
 			local tls="{
-					\"allowInsecure\": $(get_function_switch $ss_basic_v2ray_network_security_ai)
-					,\"alpn\": ${apln}
+					\"alpn\": ${apln}
 					,\"serverName\": $(get_value_null $ss_basic_v2ray_network_security_sni)
 					}"
 		else
@@ -4295,23 +4294,13 @@ creat_vless_json() {
 				ss_basic_xray_fingerprint="chrome"
 				fss_set_current_node_field_plain xray_fingerprint "chrome"
 			fi
-			# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and vcn as soon as possible.
-			if [ "${ss_basic_xray_network_security_ai}" != "1" ];then
-				local tls="{
-						\"alpn\": ${apln}
-						,\"serverName\": $(get_value_null ${ss_basic_xray_network_security_sni})
-						,\"fingerprint\": $(get_value_empty ${ss_basic_xray_fingerprint})
-						,\"pinnedPeerCertSha256\": $(get_value_empty ${ss_basic_xray_pcs})
-						,\"verifyPeerCertByName\": $(get_value_empty ${ss_basic_xray_vcn})
-						}"
-			else
-				local tls="{
-						\"allowInsecure\": true
-						,\"alpn\": ${apln}
-						,\"serverName\": $(get_value_null ${ss_basic_xray_network_security_sni})
-						,\"fingerprint\": $(get_value_empty ${ss_basic_xray_fingerprint})
-						}"
-			fi
+			local tls="{
+					\"alpn\": ${apln}
+					,\"serverName\": $(get_value_null ${ss_basic_xray_network_security_sni})
+					,\"fingerprint\": $(get_value_empty ${ss_basic_xray_fingerprint})
+					,\"pinnedPeerCertSha256\": $(get_value_empty ${ss_basic_xray_pcs})
+					,\"verifyPeerCertByName\": $(get_value_empty ${ss_basic_xray_vcn})
+					}"
 		else
 			local tls="null"
 		fi
@@ -4798,8 +4787,7 @@ creat_trojan_json(){
 					"tlsSettings": {
 						"serverName": $(get_value_null ${ss_basic_trojan_sni}),
 						"pinnedPeerCertSha256": $(get_value_empty ${ss_basic_trojan_pcs}),
-						"verifyPeerCertByName": $(get_value_empty ${ss_basic_trojan_vcn}),
-						"allowInsecure": $(get_function_switch ${ss_basic_trojan_ai})
+						"verifyPeerCertByName": $(get_value_empty ${ss_basic_trojan_vcn})
 					}
 					,"wsSettings": ${_trojan_ws}
 					,"sockopt": {"tcpFastOpen": $(get_function_switch ${ss_basic_trojan_tfo})}
@@ -4969,17 +4957,10 @@ creat_hy2_json(){
 						"serverName": "${ss_basic_hy2_sni}"
 	EOF
 
-	# !!! warning: from 2026.06.1, allowInsecure will be removed, please use pcs and vcn as soon as possible.
-	if [ "${ss_basic_hy2_ai}" != "1" ];then
-		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
-							,"pinnedPeerCertSha256": $(get_value_empty ${ss_basic_hy2_pcs})
-							,"verifyPeerCertByName": $(get_value_empty ${ss_basic_hy2_vcn})
-		EOF
-	else
-		cat >>"${HY2_CONFIG_TEMP}" <<-EOF
-							,"allowInsecure": true
-		EOF
-	fi
+	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
+						,"pinnedPeerCertSha256": $(get_value_empty ${ss_basic_hy2_pcs})
+						,"verifyPeerCertByName": $(get_value_empty ${ss_basic_hy2_vcn})
+	EOF
 	
 	cat >>"${HY2_CONFIG_TEMP}" <<-EOF
 						,"alpn": ["h3"]

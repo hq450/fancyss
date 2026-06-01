@@ -586,8 +586,7 @@ wt_gen_vmess_outbound() {
 			fi
 
 			local tls="{
-				\"allowInsecure\": $(get_function_switch ${v2ray_network_security_ai})
-				,\"alpn\": ${apln}
+				\"alpn\": ${apln}
 				,\"serverName\": $(wt_get_value_null ${v2ray_network_security_sni})
 				}"
 		fi
@@ -784,22 +783,13 @@ wt_gen_vless_outbound() {
 				local apln="null"
 			fi
 
-			if [ "${xray_network_security_ai}" != "1" ];then
-				local _tmp="{
-						\"alpn\": ${apln}
-						,\"serverName\": $(wt_get_value_null ${xray_network_security_sni})
-						,\"fingerprint\": $(wt_get_value_empty ${xray_fingerprint})
-						,\"pinnedPeerCertSha256\": $(wt_get_value_empty ${xray_pcs})
-						,\"verifyPeerCertByName\": $(wt_get_value_empty ${xray_vcn})
-						}"
-			else
-				local _tmp="{
-						\"allowInsecure\": true
-						,\"alpn\": ${apln}
-						,\"serverName\": $(wt_get_value_null ${xray_network_security_sni})
-						,\"fingerprint\": $(wt_get_value_empty ${xray_fingerprint})
-						}"
-			fi
+			local _tmp="{
+					\"alpn\": ${apln}
+					,\"serverName\": $(wt_get_value_null ${xray_network_security_sni})
+					,\"fingerprint\": $(wt_get_value_empty ${xray_fingerprint})
+					,\"pinnedPeerCertSha256\": $(wt_get_value_empty ${xray_pcs})
+					,\"verifyPeerCertByName\": $(wt_get_value_empty ${xray_vcn})
+					}"
 			if [ "${xray_network_security}" == "tls" ];then
 				local tls="${_tmp}"
 			else
@@ -1025,8 +1015,7 @@ wt_gen_trojan_outbound() {
 				"tlsSettings": {
 					"serverName": $(wt_get_value_null ${trojan_sni}),
 					"pinnedPeerCertSha256": $(wt_get_value_empty ${trojan_pcs}),
-					"verifyPeerCertByName": $(wt_get_value_empty ${trojan_vcn}),
-					"allowInsecure": $(get_function_switch ${trojan_ai})
+					"verifyPeerCertByName": $(wt_get_value_empty ${trojan_vcn})
 				},
 				"wsSettings": ${_trojan_ws},
 				"sockopt": {"tcpFastOpen": $(get_function_switch ${trojan_tfo})}
@@ -1089,16 +1078,10 @@ wt_gen_hy2_outbound() {
 				,"tlsSettings": {
 					"serverName": "${hy2_sni}"
 	EOF
-	if [ "${hy2_ai}" != "1" ];then
-		cat >>"${out_file}" <<-EOF
-						,"pinnedPeerCertSha256": $(wt_get_value_empty ${hy2_pcs})
-						,"verifyPeerCertByName": $(wt_get_value_empty ${hy2_vcn})
-		EOF
-	else
-		cat >>"${out_file}" <<-EOF
-						,"allowInsecure": true
-		EOF
-	fi
+	cat >>"${out_file}" <<-EOF
+					,"pinnedPeerCertSha256": $(wt_get_value_empty ${hy2_pcs})
+					,"verifyPeerCertByName": $(wt_get_value_empty ${hy2_vcn})
+	EOF
 	cat >>"${out_file}" <<-EOF
 						,"alpn": ["h3"]
 					}
