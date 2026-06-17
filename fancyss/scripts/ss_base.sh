@@ -129,6 +129,34 @@ fss_require_base_dns() {
 	FSS_BASE_DNS_LIB_LOADED=1
 }
 
+fss_base_refresh_node_mappings() {
+	# naive/AnyTLS 节点不支持udp
+	if [ "${ss_basic_type}" == "6" ] || [ "${ss_basic_type}" == "9" ];then
+		mangle=0
+	fi
+
+	if [ "${ss_basic_type}" == "6" ];then
+		if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
+			ss_basic_password="${ss_basic_naive_pass}"
+		else
+			ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
+		fi
+		ss_basic_server=${ss_basic_naive_server}
+	elif [ "${ss_basic_type}" == "8" ];then
+		ss_basic_server=${ss_basic_hy2_server}
+	elif [ "${ss_basic_type}" == "9" ];then
+		ss_basic_password="${ss_basic_anytls_pass}"
+		ss_basic_server=${ss_basic_anytls_server}
+	else
+		if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
+			:
+		else
+			ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
+		fi
+	fi
+	ss_basic_server_orig=${ss_basic_server}
+}
+
 fss_base_load_current_node_env() {
 	[ "${FSS_CURRENT_NODE_ENV_LOADED:-0}" = "1" ] && return 0
 	local cur_node=""
@@ -157,6 +185,7 @@ fss_base_load_current_node_env() {
 		ss_failover_s4_3=$(fss_get_failover_node_id)
 		export ss_failover_s4_3
 	fi
+	fss_base_refresh_node_mappings
 	FSS_CURRENT_NODE_ENV_LOADED=1
 }
 
@@ -470,32 +499,7 @@ do
 	fi
 done
 
-# naive/AnyTLS 节点不支持udp
-if [ "${ss_basic_type}" == "6" ] || [ "${ss_basic_type}" == "9" ];then
-	mangle=0
-fi
-
-if [ "${ss_basic_type}" == "6" ];then
-	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
-		ss_basic_password="${ss_basic_naive_pass}"
-	else
-		ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
-	fi
-	ss_basic_server=${ss_basic_naive_server}
-elif [ "${ss_basic_type}" == "8" ];then
-	ss_basic_server=${ss_basic_hy2_server}
-elif [ "${ss_basic_type}" == "9" ];then
-	ss_basic_password="${ss_basic_anytls_pass}"
-	ss_basic_server=${ss_basic_anytls_server}
-else
-	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
-		:
-	else
-		ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
-	fi
-fi
-
-ss_basic_server_orig=${ss_basic_server}
+fss_base_refresh_node_mappings
 
 [ -z "$(dbus get ss_basic_furl)" ] && ss_basic_furl="$(get_fancyss_default_furl)"
 [ -z "$(dbus get ss_basic_curl)" ] && ss_basic_curl="$(get_fancyss_default_curl)"
