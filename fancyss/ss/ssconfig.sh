@@ -1126,7 +1126,6 @@ refresh_node_direct_domain_file() {
 	fss_refresh_node_direct_cache
 	fss_airport_dns_override_load >/dev/null 2>&1 || true
 	if [ "${AIRPORT_DNS_ACTIVE}" = "1" ];then
-		fss_refresh_airport_special_runtime_domain_files >/dev/null 2>&1 || true
 		if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
 			cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 		else
