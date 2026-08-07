@@ -811,6 +811,16 @@ detect_running_status3(){
 		usleep 100000
 		i=$(($i - 1))
 		RET=$(netstat -nlp 2>/dev/null|grep -Ew "${PORT}"|grep -Eo "${BINNAME}"|head -n1)
+		# fallback for firmwares where netstat -nlp doesn't expose process names
+		if [ -z "${RET}" ]; then
+			local _pid
+			_pid="$(pidof ${BINNAME} 2>/dev/null)"
+			if [ -n "${_pid}" ]; then
+				RET="${BINNAME}"
+			elif netstat -an 2>/dev/null | grep -E ":${PORT}\b" >/dev/null 2>&1; then
+				RET="listen"
+			fi
+		fi
 		if [ "$i" -lt 1 ]; then
 			echo_date "$1进程启动失败，请检查你的配置！"
 			#return 1
