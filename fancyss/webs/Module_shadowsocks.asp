@@ -865,6 +865,7 @@ var subscribeLogLayerIndex = null;
 var subscribeLogWs = null;
 var subscribeLogWsFallbackTimer = null;
 var subscribeLogRefreshNodesAfterDone = false;
+var submgrDroppedFile = null;
 var subscribeLogTaskDone = false;
 var subscribeLogCloseCountdown = -1;
 var subscribeLogCloseTimer = null;
@@ -5751,10 +5752,22 @@ function render_subscription_manager_body() {
 	html += '<div class="submgr-tabs">';
 	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "profiles" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'profiles\')">订阅配置管理</a>';
 	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "uri" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'uri\')">分享链接导入</a>';
+	html += '<a href="javascript:void(0);" class="submgr-tab' + (subscribeManagerActiveTab == "yaml" ? ' active' : '') + '" onclick="handle_subscription_manager_tab(\'yaml\')">本地文件导入</a>';
 	html += '</div>';
 	if (subscribeManagerActiveTab == "uri") {
 		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">用于快速解析单条或多条分享链接，沿用现有 URI 导入逻辑，不进入订阅 profile。</div></div>';
 		html += '<div class="submgr-uri-box"><textarea id="submgr_uri_input" placeholder="填入 ss://、ssr://、vmess://、vless://、trojan://、hy2://、hysteria2://、tuic://、naive+https://、naive+quic://、anytls:// 等链接，支持多行。"></textarea></div>';
+	} else if (subscribeManagerActiveTab == "yaml") {
+		html += '<div class="submgr-toolbar"><div class="submgr-toolbar-note">上传本地 Clash/Mihomo YAML 配置文件，自动解析其中的代理节点并导入。支持标准 Clash proxy-groups 格式。</div></div>';
+		html += '<div class="submgr-uri-box" style="padding:20px;text-align:center;">';
+		html += '<input type="file" id="submgr_yaml_file" accept=".yaml,.yml,.txt" style="display:none;" onchange="on_submgr_yaml_file_selected()">';
+		html += '<div id="submgr_yaml_drop_zone" style="border:2px dashed rgba(255,255,255,0.15);border-radius:8px;padding:40px 20px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor=\'rgba(70,160,255,0.5)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.15)\'" onclick="$(\'#submgr_yaml_file\').click();" ondragover="event.preventDefault();this.style.borderColor=\'rgba(70,160,255,0.8)\'" ondragleave="this.style.borderColor=\'rgba(255,255,255,0.15)\'" ondrop="event.preventDefault();this.style.borderColor=\'rgba(255,255,255,0.15)\';on_submgr_yaml_file_dropped(event);">';
+		html += '<div style="font-size:32px;margin-bottom:10px;">📄</div>';
+		html += '<div style="font-size:13px;color:#cfe0f1;margin-bottom:8px;">点击选择文件或拖拽文件到此处</div>';
+		html += '<div style="font-size:11px;color:#8899aa;">支持 .yaml / .yml / .txt 格式</div>';
+		html += '<div id="submgr_yaml_file_info" style="display:none;margin-top:12px;font-size:12px;color:#37c67f;"></div>';
+		html += '</div>';
+		html += '</div>';
 	} else {
 		html += render_subscription_profiles_cards();
 	}
@@ -5778,6 +5791,10 @@ function update_subscription_manager_buttons() {
 	var btn2 = btnBox.find(".layui-layer-btn2");
 	if (subscribeManagerActiveTab == "uri") {
 		btn0.text("解析并保存为节点").show();
+		btn1.hide();
+		btn2.text("关闭窗口").show();
+	} else if (subscribeManagerActiveTab == "yaml") {
+		btn0.text("上传并解析节点").show();
 		btn1.hide();
 		btn2.text("关闭窗口").show();
 	} else {
@@ -5811,7 +5828,11 @@ function wait_subscription_profiles_until(checkFn, cb, attempt) {
 	});
 }
 function handle_subscription_manager_tab(tabKey) {
-	subscribeManagerActiveTab = tabKey == "uri" ? "uri" : "profiles";
+	if (tabKey == "uri" || tabKey == "yaml") {
+		subscribeManagerActiveTab = tabKey;
+	} else {
+		subscribeManagerActiveTab = "profiles";
+	}
 	render_subscription_manager();
 }
 function open_subscription_manager() {
@@ -5841,13 +5862,15 @@ function open_subscription_manager() {
 		yes: function(index) {
 			if (subscribeManagerActiveTab == "uri") {
 				submit_subscription_uri_from_manager();
+			} else if (subscribeManagerActiveTab == "yaml") {
+				submit_subscription_yaml_from_manager();
 			} else {
 				open_subscription_profile_editor('');
 			}
 			return false;
 		},
 		btn2: function(index) {
-			if (subscribeManagerActiveTab == "uri") {
+			if (subscribeManagerActiveTab == "uri" || subscribeManagerActiveTab == "yaml") {
 				return false;
 			}
 			sync_subscription_profiles('');
@@ -6220,6 +6243,71 @@ function submit_subscription_uri_from_manager() {
 		"ss_base64_links": Base64.encode(encodeURIComponent(value))
 	};
 	push_subscription_data("4", dbus_post, "分享链接导入日志", "", true);
+	return false;
+}
+function on_submgr_yaml_file_dropped(event) {
+	var files = event.dataTransfer && event.dataTransfer.files;
+	if (!files || files.length === 0) return;
+	var file = files[0];
+	var ext = file.name.split('.').pop().toLowerCase();
+	if (ext !== "yaml" && ext !== "yml" && ext !== "txt") {
+		alert("文件格式不正确，请选择 .yaml、.yml 或 .txt 文件！");
+		return;
+	}
+	submgrDroppedFile = file;
+	$("#submgr_yaml_file_info").text("已选择: " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)").show();
+}
+function on_submgr_yaml_file_selected() {
+	var fileInput = $("#submgr_yaml_file")[0];
+	if (fileInput && fileInput.files && fileInput.files.length > 0) {
+		var file = fileInput.files[0];
+		var ext = file.name.split('.').pop().toLowerCase();
+		if (ext !== "yaml" && ext !== "yml" && ext !== "txt") {
+			alert("文件格式不正确，请选择 .yaml、.yml 或 .txt 文件！");
+			fileInput.value = "";
+			return;
+		}
+		$("#submgr_yaml_file_info").text("已选择: " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)").show();
+	}
+}
+function submit_subscription_yaml_from_manager() {
+	var file = null;
+	if (submgrDroppedFile) {
+		file = submgrDroppedFile;
+		submgrDroppedFile = null;
+	} else {
+		var fileInput = $("#submgr_yaml_file")[0];
+		if (fileInput && fileInput.files && fileInput.files.length > 0) {
+			file = fileInput.files[0];
+		}
+	}
+	if (!file) {
+		alert("请先选择一个 YAML 配置文件。");
+		return false;
+	}
+	var ext = file.name.split('.').pop().toLowerCase();
+	if (ext !== "yaml" && ext !== "yml" && ext !== "txt") {
+		alert("文件格式不正确，请选择 .yaml、.yml 或 .txt 文件！");
+		return false;
+	}
+	db_ss["ss_basic_action"] = "13";
+	var formData = new FormData();
+	formData.append("ss_yaml_upload.yaml", file);
+	$.ajax({
+		url: '/_upload',
+		type: 'POST',
+		cache: false,
+		data: formData,
+		processData: false,
+		contentType: false,
+		complete: function(res) {
+			if (res.status == 200) {
+				push_subscription_data("5", {}, "本地文件导入日志", "", true);
+			} else {
+				alert("文件上传失败，请重试。");
+			}
+		}
+	});
 	return false;
 }
 function get_legacy_node_ids() {
@@ -8036,6 +8124,7 @@ function close_subscription_log_ws() {
 function finish_subscription_log_with_refresh() {
 	if (subscribeLogRefreshNodesAfterDone) {
 		subscribeLogRefreshNodesAfterDone = false;
+		subscribeManagerActiveTab = "profiles";
 		refresh_table(function() {
 			fetch_subscription_profiles_dbus(function() {
 				render_subscription_manager();

@@ -8099,6 +8099,202 @@ start_offline_update() {
 	echo_date "==================================================================="
 }
 
+# 创建本地导入的订阅配置 profile
+subprof_create_local_import_profile() {
+	local profile_name="$1"
+	local profile_id=""
+	local profile_key=""
+	local state_key=""
+	local normalized_json=""
+	local state_json=""
+	local jq_bin=""
+
+	profile_id="$(subprof_generate_profile_id 2>/dev/null)" || return 1
+	profile_key="$(subprof_profile_key "${profile_id}")" || return 1
+	state_key="$(subprof_state_key "${profile_id}")" || return 1
+	jq_bin="$(subprof_jq_bin)" || jq_bin="jq"
+
+	normalized_json="$(printf '%s' "{}" | "${jq_bin}" -c \
+		--arg id "${profile_id}" \
+		--arg name "${profile_name}" \
+		'{
+			version: 1,
+			id: $id,
+			name: $name,
+			url: "",
+			enabled: true,
+			subscribe_mode: "2",
+			download: { policy: "auto" },
+			ua: { mode: "fixed", preset: "default", custom: "" },
+			filter: { exclude: "", include: "", keep_info_node: true },
+			flags: { allow_insecure: false, node_log: true },
+			hy2: { up: "", dl: "", tfo_switch: "2", cg_opt: "bbr" },
+			schedule: {
+				enabled: false,
+				type: "1",
+				week: "1",
+				day: "7",
+				hour: "3",
+				minute: "5",
+				interval_value: "1",
+				interval_unit: "2",
+				custom_hours: ""
+			}
+		}')" || return 1
+
+	subprof_dbus_set_json_by_key "${profile_key}" "${normalized_json}" || return 1
+
+	state_json="$(printf '%s' "{}" | "${jq_bin}" -c \
+		--arg id "${profile_id}" \
+		'{version:1,id:$id,last_ok_ts:0,last_error_ts:0,last_error:"",last_url_hash:"",last_group:""}')" || true
+	subprof_dbus_set_json_by_key "${state_key}" "${state_json}" >/dev/null 2>&1 || true
+
+	subprof_add_profile_id "${profile_id}"
+	printf '%s\n' "${profile_id}"
+}
+
+# 从本地上传的 YAML 配置文件导入节点
+start_yaml_file_import() {
+	echo_date "==================================================================="
+	echo_date "ℹ️通过本地 YAML 配置文件导入节点..."
+	mkdir -p $DIR
+	rm -rf $DIR/*
+
+	# 查找上传的 YAML 文件
+	local yaml_file=""
+	for candidate in /tmp/upload/ss_yaml_upload.yaml /tmp/upload/ss_yaml_upload.yml; do
+		if [ -f "${candidate}" ]; then
+			yaml_file="${candidate}"
+			break
+		fi
+	done
+
+	# 也尝试查找任何最近上传的 yaml 文件
+	if [ -z "${yaml_file}" ]; then
+		yaml_file=$(find /tmp/upload -maxdepth 1 -name "*.yaml" -o -name "*.yml" 2>/dev/null | head -n1)
+	fi
+
+	if [ -z "${yaml_file}" ] || [ ! -f "${yaml_file}" ]; then
+		echo_date "❌未找到上传的 YAML 文件！"
+		echo_date "请确保文件已正确上传。"
+		echo_date "==================================================================="
+		return 1
+	fi
+
+	echo_date "📁找到上传的文件：${yaml_file}"
+
+	# 检查文件大小
+	local file_size=$(wc -c < "${yaml_file}" 2>/dev/null | tr -d ' ')
+	if [ -z "${file_size}" ] || [ "${file_size}" -lt 10 ]; then
+		echo_date "❌文件内容为空或过小，无法解析。"
+		rm -f "${yaml_file}"
+		echo_date "==================================================================="
+		return 1
+	fi
+
+	echo_date "📊文件大小：${file_size} 字节"
+
+	# 先创建订阅配置 profile，以便节点写入时关联到此 profile
+	local profile_name="本地YAML导入"
+	local import_profile_id=""
+	import_profile_id="$(subprof_create_local_import_profile "${profile_name}" 2>/dev/null)"
+	if [ -z "${import_profile_id}" ]; then
+		echo_date "⚠️创建订阅配置失败，节点将作为独立导入写入..."
+		import_profile_id=""
+	else
+		echo_date "📋已创建订阅配置：${profile_name} (${import_profile_id})"
+	fi
+
+	# 设置 profile ID 以便节点解析时关联
+	SUB_ACTIVE_PROFILE_ID="${import_profile_id}"
+
+	# 使用 sub-tool 检测文件格式
+	local sub_tool=""
+	sub_tool="$(pick_sub_tool 2>/dev/null)"
+	local payload_kind="unknown"
+
+	if [ -n "${sub_tool}" ]; then
+		echo_date "🔧使用 sub-tool 检测文件格式..."
+		local inspect_file="${DIR}/yaml_inspect.json"
+		if "${sub_tool}" inspect --input "${yaml_file}" > "${inspect_file}" 2>/dev/null; then
+			payload_kind=$(jq -r '.kind // ""' "${inspect_file}" 2>/dev/null)
+			echo_date "📋文件格式检测：${payload_kind}"
+		fi
+		rm -f "${inspect_file}" 2>/dev/null
+	fi
+
+	# 根据文件类型选择解析方式
+	local parsed_file="${DIR}/yaml_parsed_nodes.txt"
+	local pkg_type=$(dbus get ss_basic_pkg_type)
+	[ -n "${pkg_type}" ] || pkg_type="full"
+
+	case "${payload_kind}" in
+	clash-yaml)
+		echo_date "✅检测到 Clash/Mihomo YAML 配置文件"
+		echo_date "🔍开始解析 Clash YAML 中的代理节点..."
+		if [ -n "${sub_tool}" ]; then
+			local default_group="YAML导入"
+			sub_try_parse_uri_lines_with_tool "${yaml_file}" "${parsed_file}" "${default_group}" "yaml_import" "${pkg_type}"
+			if [ $? -eq 0 ] && [ -s "${parsed_file}" ]; then
+				echo_date "✅sub-tool 解析成功"
+			else
+				echo_date "⚠️sub-tool 解析失败，尝试直接使用 URI 解析..."
+				rm -f "${parsed_file}" 2>/dev/null
+			fi
+		fi
+		;;
+	uri-lines|base64-uri-lines)
+		echo_date "✅检测到 URI 列表格式"
+		local default_group="YAML导入"
+		sub_try_parse_uri_lines_with_tool "${yaml_file}" "${parsed_file}" "${default_group}" "yaml_import" "${pkg_type}"
+		;;
+	*)
+		echo_date "⚠️未识别的文件格式：${payload_kind}"
+		echo_date "📋尝试作为 URI 列表解析..."
+		local default_group="YAML导入"
+		sub_try_parse_uri_lines_with_tool "${yaml_file}" "${parsed_file}" "${default_group}" "yaml_import" "${pkg_type}"
+		;;
+	esac
+
+	# 处理解析结果
+	echo_date "-------------------------------------------------------------------"
+	if [ -f "${parsed_file}" ] && [ -s "${parsed_file}" ]; then
+		local node_count=$(wc -l < "${parsed_file}" 2>/dev/null | tr -d ' ')
+		echo_date "📊共解析出 ${node_count} 个节点"
+
+		sub_filter_offline_duplicate_nodes "${parsed_file}"
+		[ -f "${parsed_file}" ] && echo_date "ℹ️YAML 文件解析完毕，开始写入节点..."
+		SUB_FAST_APPEND=1
+		SUB_FAST_APPEND_REUSE=0
+		if [ -f "${parsed_file}" ] && json2skipd "yaml_parsed_nodes"; then
+			sub_after_nodes_written "${parsed_file}"
+			echo_date "✅本地 YAML 文件节点导入成功！"
+			if [ -n "${import_profile_id}" ]; then
+				echo_date "📋节点已关联到订阅配置：${profile_name}"
+				echo_date "💡您可以在「订阅配置管理」中编辑此配置，设置订阅链接后即可自动更新。"
+			fi
+		else
+			echo_date "❌节点写入失败！"
+		fi
+	else
+		echo_date "❌YAML 文件解析失败，未找到可用的代理节点。"
+		echo_date "ℹ️请确保 YAML 文件包含标准的 Clash/Mihomo 代理配置（proxies 字段）。"
+		echo_date "ℹ️支持的格式："
+		echo_date "  - Clash/Mihomo YAML 配置文件（包含 proxies 字段）"
+		echo_date "  - URI 列表文件（每行一个 ss://、vmess:// 等链接）"
+		echo_date "  - Base64 编码的 URI 列表"
+		# 解析失败时移除空 profile
+		if [ -n "${import_profile_id}" ]; then
+			subprof_remove_profile "${import_profile_id}" 2>/dev/null || true
+			echo_date "🧹已清理空的订阅配置。"
+		fi
+	fi
+
+	# 清理临时文件
+	rm -f "${yaml_file}" 2>/dev/null
+	echo_date "==================================================================="
+}
+
 SUB_SELECTED_PROFILE_ID=""
 if [ "$1" = "3" ] && [ -n "$2" ]; then
 	SUB_SELECTED_PROFILE_ID="$2"
@@ -8174,6 +8370,15 @@ case $SH_ARG in
 	true > $LOG_FILE
 	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
 	start_offline_update | tee -a $LOG_FILE
+	echo XU6J03M6 | tee -a $LOG_FILE
+	unset_lock
+	;;
+5)
+	# 上传本地 YAML 配置文件导入节点
+	set_lock
+	true > $LOG_FILE
+	[ "${WEB_ACTION}" == "1" ] && http_response "$1"
+	start_yaml_file_import | tee -a $LOG_FILE
 	echo XU6J03M6 | tee -a $LOG_FILE
 	unset_lock
 	;;
