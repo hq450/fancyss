@@ -2697,7 +2697,7 @@ start_chinadns_ng(){
 
 	# for hosts file
 	cp -rf /tmp/etc/hosts /tmp/etc/chng_hosts
-	sed -i 's/\.[[:space:]]/ /g' /etc/chng_hosts
+	sed -i -e 's/\.[[:space:]]/ /g' -e 's/\.$//' /etc/chng_hosts
 	
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 	
