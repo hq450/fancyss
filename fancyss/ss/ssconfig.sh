@@ -2697,7 +2697,7 @@ start_chinadns_ng(){
 
 	# for hosts file
 	cp -rf /tmp/etc/hosts /tmp/etc/chng_hosts
-	sed -i 's/\.[[:space:]]/ /g' /etc/chng_hosts
+	sed -i -e 's/\.[[:space:]]/ /g' -e 's/\.$//' /tmp/etc/chng_hosts
 	
 	cat >>"/tmp/chinadns_ng.conf" <<-EOF
 	
@@ -2705,7 +2705,7 @@ start_chinadns_ng(){
 		filter-qtype 64,65
 
 		# hosts
-		hosts /etc/chng_hosts
+		hosts /tmp/etc/chng_hosts
 		
 		# dns 缓存
 		cache 8192
