@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2026-09-05
+-e ## Last update: 2026-09-07
 
 .*\b0\.xn--czrs0t
 .*\b0\.xn--unup4y
@@ -6726,6 +6726,7 @@
 .*\b602ab6ff810251\.beer
 .*\b602img\.com
 .*\b60301c31eca86940\.com
+.*\b60353595\.com
 .*\b603603b\.com
 .*\b603603d\.com
 .*\b603966\.com
@@ -32383,6 +32384,7 @@
 .*\beqxiuzhan\.com
 .*\beqyn\.com
 .*\ber07\.com
+.*\ber3w\.com
 .*\beraclean\.com
 .*\beraedu\.com
 .*\beral\.com
@@ -38321,6 +38323,7 @@
 .*\bgomegj\.com
 .*\bgomeholdings\.com
 .*\bgomehome\.com
+.*\bgomeishop\.com
 .*\bgomeplus\.com
 .*\bgomo\.com
 .*\bgomocdn\.com
@@ -39091,6 +39094,7 @@
 .*\bgu166\.com
 .*\bgu360\.com
 .*\bgua123\.com
+.*\bgua9\.com
 .*\bguabu\.com
 .*\bguaguay\.com
 .*\bguahao-inc\.com
@@ -48291,6 +48295,7 @@
 .*\bhyhro\.com
 .*\bhyhscm\.com
 .*\bhyht\.fun
+.*\bhyhudong\.com
 .*\bhyhuo\.com
 .*\bhyhxt\.net
 .*\bhyhy\.cc
@@ -50226,6 +50231,7 @@
 .*\bimg16888\.com
 .*\bimg4399\.com
 .*\bimg898\.com
+.*\bimg9g2026\.com
 .*\bimgbed\.link
 .*\bimgcdc\.com
 .*\bimgchr\.com
@@ -57912,6 +57918,7 @@
 .*\bkscloudapi\.com
 .*\bksco\.cc
 .*\bksdedu\.com
+.*\bksdyob\.store
 .*\bksecit\.com
 .*\bksedt\.com
 .*\bkseibitools\.com
@@ -62510,6 +62517,7 @@
 .*\blygsgt\.com
 .*\blygshjd\.com
 .*\blygshlxh\.com
+.*\blygtylk\.com
 .*\blygxwmarathon\.com
 .*\blygxwxqrmyy\.com
 .*\blygyyjt\.com
@@ -63712,6 +63720,7 @@
 .*\bmcfun\.tv
 .*\bmcfxw\.com
 .*\bmcgsjt\.com
+.*\bmcgyaht1023\.com
 .*\bmchifi\.com
 .*\bmchim\.net
 .*\bmchost\.guru
@@ -63853,6 +63862,7 @@
 .*\bmediav\.com
 .*\bmediaxinan\.com
 .*\bmedical-union\.com
+.*\bmedicalimagecloud\.com
 .*\bmedicalqc\.com
 .*\bmedicexam\.net
 .*\bmediecogroup\.com
@@ -69001,6 +69011,7 @@
 .*\bnordkete\.com
 .*\bnordonfire\.com
 .*\bnordritools\.com
+.*\bnorglo\.com
 .*\bnorinco-vehicle\.com
 .*\bnorinco\.com
 .*\bnorincogroup-ebuy\.com
@@ -69567,6 +69578,7 @@
 .*\boborad\.com
 .*\bobowin\.com
 .*\bobrao\.com
+.*\bobriccloud\.com
 .*\bobsapp\.net
 .*\bobsbot\.com
 .*\bobsidian-display\.com
@@ -80686,6 +80698,7 @@
 .*\bshougongke\.net
 .*\bshougoumingbiao\.com
 .*\bshouhaoche\.com
+.*\bshouhou\.xin
 .*\bshouhougou\.com
 .*\bshouhui\.com
 .*\bshouhuigroup\.com
@@ -92372,6 +92385,7 @@
 .*\bvvbin\.com
 .*\bvvebo\.vip
 .*\bvvfeng\.com
+.*\bvvghj1023\.com
 .*\bvvgroup\.com
 .*\bvvhan\.com
 .*\bvvhunter\.com
@@ -94365,6 +94379,7 @@
 .*\bwhjuren\.com
 .*\bwhjxbaby\.com
 .*\bwhjy\.net
+.*\bwhjyapp\.com
 .*\bwhjyx\.com
 .*\bwhjyxh\.com
 .*\bwhjyxx\.com
@@ -99178,6 +99193,7 @@
 .*\bxmalaya\.com
 .*\bxmamiga\.com
 .*\bxmanblog\.net
+.*\bxmaosms\.com
 .*\bxmasg\.com
 .*\bxmayitxt\.com
 .*\bxmbankonline\.com
@@ -101736,6 +101752,7 @@
 .*\byetu\.net
 .*\byew734\.com
 .*\byewanba\.com
+.*\byewcdn\.com
 .*\byewen\.us
 .*\byewuyuan\.com
 .*\byexinggroup\.com
@@ -107544,6 +107561,7 @@
 .*\bzhongguowangshi\.com
 .*\bzhongguoym\.com
 .*\bzhonggushipping\.com
+.*\bzhonghaiqishengkeji\.xyz
 .*\bzhonghaitech\.com
 .*\bzhonghaojituan\.com
 .*\bzhonghengyiyao\.com
