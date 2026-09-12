@@ -2,7 +2,7 @@
 ## China mainland domains
 ## Get the latest database: https://github.com/xinhugo/Free-List/blob/master/WhiteList.txt
 ## Report an issue: https://github.com/xinhugo/Free-List/issues
--e ## Last update: 2026-09-09
+-e ## Last update: 2026-09-12
 
 .*\b0\.xn--czrs0t
 .*\b0\.xn--unup4y
