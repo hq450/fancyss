@@ -129,6 +129,39 @@ fss_require_base_dns() {
 	FSS_BASE_DNS_LIB_LOADED=1
 }
 
+# naive/AnyTLS 节点不支持udp
+fss_base_apply_node_no_udp() {
+	if [ "${ss_basic_type}" == "6" ] || [ "${ss_basic_type}" == "9" ];then
+		mangle=0
+	fi
+}
+
+# 由各协议字段派生通用的 ss_basic_password / ss_basic_server
+# 必须在当前节点环境加载后执行，且只能执行一次（legacy 路径的 base64 解码不可重复）
+fss_base_apply_node_derived_env() {
+	if [ "${ss_basic_type}" == "6" ];then
+		if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
+			ss_basic_password="${ss_basic_naive_pass}"
+		else
+			ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
+		fi
+		ss_basic_server=${ss_basic_naive_server}
+	elif [ "${ss_basic_type}" == "8" ];then
+		ss_basic_server=${ss_basic_hy2_server}
+	elif [ "${ss_basic_type}" == "9" ];then
+		ss_basic_password="${ss_basic_anytls_pass}"
+		ss_basic_server=${ss_basic_anytls_server}
+	else
+		if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
+			:
+		else
+			ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
+		fi
+	fi
+	ss_basic_server_orig=${ss_basic_server}
+	fss_base_apply_node_no_udp
+}
+
 fss_base_load_current_node_env() {
 	[ "${FSS_CURRENT_NODE_ENV_LOADED:-0}" = "1" ] && return 0
 	local cur_node=""
@@ -157,6 +190,7 @@ fss_base_load_current_node_env() {
 		ss_failover_s4_3=$(fss_get_failover_node_id)
 		export ss_failover_s4_3
 	fi
+	fss_base_apply_node_derived_env
 	FSS_CURRENT_NODE_ENV_LOADED=1
 }
 
@@ -470,32 +504,9 @@ do
 	fi
 done
 
-# naive/AnyTLS 节点不支持udp
-if [ "${ss_basic_type}" == "6" ] || [ "${ss_basic_type}" == "9" ];then
-	mangle=0
-fi
-
-if [ "${ss_basic_type}" == "6" ];then
-	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
-		ss_basic_password="${ss_basic_naive_pass}"
-	else
-		ss_basic_password=$(echo ${ss_basic_naive_pass} | base64_decode)
-	fi
-	ss_basic_server=${ss_basic_naive_server}
-elif [ "${ss_basic_type}" == "8" ];then
-	ss_basic_server=${ss_basic_hy2_server}
-elif [ "${ss_basic_type}" == "9" ];then
-	ss_basic_password="${ss_basic_anytls_pass}"
-	ss_basic_server=${ss_basic_anytls_server}
-else
-	if [ "$(fss_detect_storage_schema 2>/dev/null)" = "2" ]; then
-		:
-	else
-		ss_basic_password=$(echo ${ss_basic_password} | base64_decode)
-	fi
-fi
-
-ss_basic_server_orig=${ss_basic_server}
+# eager 加载时节点环境在上面已派生完成，这里在acl计算mangle之后再次应用naive/AnyTLS的udp限制；
+# 懒加载（ssconfig.sh）时由 fss_base_load_current_node_env 在加载节点后统一派生
+fss_base_apply_node_no_udp
 
 [ -z "$(dbus get ss_basic_furl)" ] && ss_basic_furl="$(get_fancyss_default_furl)"
 [ -z "$(dbus get ss_basic_curl)" ] && ss_basic_curl="$(get_fancyss_default_curl)"
