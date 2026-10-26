@@ -163,7 +163,7 @@ detect_dig(){
 		return
 	fi
 	
-	JFFS_AVAIL1=$(df | grep -w "/jffs" | awk '{print $4}')
+	JFFS_AVAIL1=$(df | awk '$NF == "/jffs" {print $4; exit}')
 	JFFS_AVAIL2=$((${JFFS_AVAIL1} - 2048))
 	JFFS_NEEDED="6108"
 
