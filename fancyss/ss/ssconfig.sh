@@ -5249,7 +5249,7 @@ kill_cron_job() {
 		sed -i '/ssnodeupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 	if [ -n "$(cru l | grep sslatencyjob)" ]; then
-		echo_date 删除SSR定时订阅任务...
+		echo_date 删除SSR定时订阅任务
 		sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 }
