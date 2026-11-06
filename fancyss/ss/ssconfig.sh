@@ -5241,7 +5241,7 @@ write_cron_job() {
 
 kill_cron_job() {
 	if [ -n "$(cru l | grep ssupdate)" ]; then
-		echo_date "删除fancyss规则定时更新任务..."
+		echo_date "删除fancyss规则定时更新任务"
 		sed -i '/ssupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 	if [ -n "$(cru l | grep ssnodeupdate)" ]; then
@@ -5289,7 +5289,7 @@ flush_ipset() {
 ${existing_sets}
 EOF
 		if [ -s "${restore_file}" ]; then
-			echo_date "清除ipset规则集..."
+			echo_date "清除ipset规则集"
 			if ipset -R < "${restore_file}" >/dev/null 2>&1; then
 				restore_ok="1"
 			fi
@@ -5298,7 +5298,7 @@ EOF
 	fi
 
 	if [ "${restore_ok}" != "1" ]; then
-		echo_date "清除ipset规则集..."
+		echo_date "清除ipset规则集"
 		ipset -F ignlist >/dev/null 2>&1 && ipset -X ignlist >/dev/null 2>&1
 		ipset -F ignlist6 >/dev/null 2>&1 && ipset -X ignlist6 >/dev/null 2>&1
 
@@ -5997,12 +5997,12 @@ flush_iptables() {
 
 	: > "${restore_v4}" || true
 	: > "${restore_v6}" || true
-	flush_iptables_restore_append iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则..." "${restore_v4}" && need_v4="1"
-	flush_iptables_restore_append iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则..." "${restore_v4}" && need_v4="1"
-	flush_iptables_restore_append iptables filter "SHADOWSOCKS" "清除iptables filter规则..." "${restore_v4}" && need_v4="1"
-	flush_iptables_restore_append ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则..." "${restore_v6}" && need_v6="1"
-	flush_iptables_restore_append ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则..." "${restore_v6}" && need_v6="1"
-	flush_iptables_restore_append ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则..." "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则" "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则" "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append iptables filter "SHADOWSOCKS" "清除iptables filter规则" "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则" "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则" "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则" "${restore_v6}" && need_v6="1"
 	if [ "${need_v4}" = "1" ] && iptables-restore -n < "${restore_v4}" >/dev/null 2>&1; then
 		restore_v4_ok="1"
 	fi
@@ -6011,14 +6011,14 @@ flush_iptables() {
 	fi
 	rm -f "${restore_v4}" "${restore_v6}" >/dev/null 2>&1
 	if [ "${need_v4}" = "1" ] && [ "${restore_v4_ok}" != "1" ]; then
-		flush_iptables_legacy_table iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则..."
-		flush_iptables_legacy_table iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则..."
-		flush_iptables_legacy_table iptables filter "SHADOWSOCKS" "清除iptables filter规则..."
+		flush_iptables_legacy_table iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则"
+		flush_iptables_legacy_table iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则"
+		flush_iptables_legacy_table iptables filter "SHADOWSOCKS" "清除iptables filter规则"
 	fi
 	if [ "${need_v6}" = "1" ] && [ "${restore_v6_ok}" != "1" ]; then
-		flush_iptables_legacy_table ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则..."
-		flush_iptables_legacy_table ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则..."
-		flush_iptables_legacy_table ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则..."
+		flush_iptables_legacy_table ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则"
+		flush_iptables_legacy_table ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则"
+		flush_iptables_legacy_table ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则"
 	fi
 
 	local ip6_rule_exist=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | grep -c 310)
@@ -6059,7 +6059,7 @@ flush_ip6tables() {
 
 	local NAT6_RULES=$(ip6tables -t nat -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334" | sort)
 	if [ -n "${NAT6_RULES}" ];then
-		echo_date "清除ip6tables nat规则..."
+		echo_date "清除ip6tables nat规则"
 		echo "${NAT6_RULES}" | while read line
 		do
 			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
@@ -6077,7 +6077,7 @@ flush_ip6tables() {
 
 	local MANGLE6_RULES=$(ip6tables -t mangle -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334|0x7" | sort)
 	if [ -n "${MANGLE6_RULES}" ];then
-		echo_date "清除ip6tables mangle规则..."
+		echo_date "清除ip6tables mangle规则"
 		echo "${MANGLE6_RULES}" | while read line
 		do
 			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
@@ -6095,7 +6095,7 @@ flush_ip6tables() {
 
 	local FILTER6_RULES=$(ip6tables -t filter -S 2>/dev/null | grep -E "SHADOWSOCKS6" | sort)
 	if [ -n "${FILTER6_RULES}" ];then
-		echo_date "清除ip6tables filter规则..."
+		echo_date "清除ip6tables filter规则"
 		echo "${FILTER6_RULES}" | while read line
 		do
 			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
