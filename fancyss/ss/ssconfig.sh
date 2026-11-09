@@ -5241,7 +5241,7 @@ write_cron_job() {
 
 kill_cron_job() {
 	if [ -n "$(cru l | grep ssupdate)" ]; then
-		echo_date "删除fancyss规则定时更新任务..."
+		echo_date "删除fancyss规则定时更新任务"
 		sed -i '/ssupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 	if [ -n "$(cru l | grep ssnodeupdate)" ]; then
@@ -5249,7 +5249,7 @@ kill_cron_job() {
 		sed -i '/ssnodeupdate/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 	if [ -n "$(cru l | grep sslatencyjob)" ]; then
-		echo_date 删除SSR定时订阅任务...
+		echo_date 删除SSR定时订阅任务
 		sed -i '/sslatencyjob/d' /var/spool/cron/crontabs/* >/dev/null 2>&1
 	fi
 }
@@ -5289,7 +5289,7 @@ flush_ipset() {
 ${existing_sets}
 EOF
 		if [ -s "${restore_file}" ]; then
-			echo_date "清除ipset规则集..."
+			echo_date "清除ipset规则集"
 			if ipset -R < "${restore_file}" >/dev/null 2>&1; then
 				restore_ok="1"
 			fi
@@ -5298,7 +5298,7 @@ EOF
 	fi
 
 	if [ "${restore_ok}" != "1" ]; then
-		echo_date "清除ipset规则集..."
+		echo_date "清除ipset规则集"
 		ipset -F ignlist >/dev/null 2>&1 && ipset -X ignlist >/dev/null 2>&1
 		ipset -F ignlist6 >/dev/null 2>&1 && ipset -X ignlist6 >/dev/null 2>&1
 
@@ -5992,14 +5992,17 @@ flush_iptables() {
 		export XTABLES_LIBDIR=/tmp/.xt
 	fi
 
+	# AnyTLS 与 merlin-box 同时运行时，先移除上一次启动留下的 TCP 旁路规则。
+	remove_anytls_merlinbox_compat
+
 	: > "${restore_v4}" || true
 	: > "${restore_v6}" || true
-	flush_iptables_restore_append iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则..." "${restore_v4}" && need_v4="1"
-	flush_iptables_restore_append iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则..." "${restore_v4}" && need_v4="1"
-	flush_iptables_restore_append iptables filter "SHADOWSOCKS" "清除iptables filter规则..." "${restore_v4}" && need_v4="1"
-	flush_iptables_restore_append ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则..." "${restore_v6}" && need_v6="1"
-	flush_iptables_restore_append ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则..." "${restore_v6}" && need_v6="1"
-	flush_iptables_restore_append ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则..." "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则" "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则" "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append iptables filter "SHADOWSOCKS" "清除iptables filter规则" "${restore_v4}" && need_v4="1"
+	flush_iptables_restore_append ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则" "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则" "${restore_v6}" && need_v6="1"
+	flush_iptables_restore_append ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则" "${restore_v6}" && need_v6="1"
 	if [ "${need_v4}" = "1" ] && iptables-restore -n < "${restore_v4}" >/dev/null 2>&1; then
 		restore_v4_ok="1"
 	fi
@@ -6008,14 +6011,14 @@ flush_iptables() {
 	fi
 	rm -f "${restore_v4}" "${restore_v6}" >/dev/null 2>&1
 	if [ "${need_v4}" = "1" ] && [ "${restore_v4_ok}" != "1" ]; then
-		flush_iptables_legacy_table iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则..."
-		flush_iptables_legacy_table iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则..."
-		flush_iptables_legacy_table iptables filter "SHADOWSOCKS" "清除iptables filter规则..."
+		flush_iptables_legacy_table iptables nat "SHADOWSOCKS|3333" "清除iptables nat规则"
+		flush_iptables_legacy_table iptables mangle "SHADOWSOCKS|3333|0x7" "清除iptables mangle规则"
+		flush_iptables_legacy_table iptables filter "SHADOWSOCKS" "清除iptables filter规则"
 	fi
 	if [ "${need_v6}" = "1" ] && [ "${restore_v6_ok}" != "1" ]; then
-		flush_iptables_legacy_table ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则..."
-		flush_iptables_legacy_table ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则..."
-		flush_iptables_legacy_table ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则..."
+		flush_iptables_legacy_table ip6tables nat "SHADOWSOCKS6|3333|3334" "清除ip6tables nat规则"
+		flush_iptables_legacy_table ip6tables mangle "SHADOWSOCKS6|3333|3334|0x7" "清除ip6tables mangle规则"
+		flush_iptables_legacy_table ip6tables filter "SHADOWSOCKS6" "清除ip6tables filter规则"
 	fi
 
 	local ip6_rule_exist=$(ip -6 rule show 2>/dev/null | grep "lookup 310" | grep -c 310)
@@ -6056,7 +6059,7 @@ flush_ip6tables() {
 
 	local NAT6_RULES=$(ip6tables -t nat -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334" | sort)
 	if [ -n "${NAT6_RULES}" ];then
-		echo_date "清除ip6tables nat规则..."
+		echo_date "清除ip6tables nat规则"
 		echo "${NAT6_RULES}" | while read line
 		do
 			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
@@ -6074,7 +6077,7 @@ flush_ip6tables() {
 
 	local MANGLE6_RULES=$(ip6tables -t mangle -S 2>/dev/null | grep -E "SHADOWSOCKS6|3333|3334|0x7" | sort)
 	if [ -n "${MANGLE6_RULES}" ];then
-		echo_date "清除ip6tables mangle规则..."
+		echo_date "清除ip6tables mangle规则"
 		echo "${MANGLE6_RULES}" | while read line
 		do
 			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
@@ -6092,7 +6095,7 @@ flush_ip6tables() {
 
 	local FILTER6_RULES=$(ip6tables -t filter -S 2>/dev/null | grep -E "SHADOWSOCKS6" | sort)
 	if [ -n "${FILTER6_RULES}" ];then
-		echo_date "清除ip6tables filter规则..."
+		echo_date "清除ip6tables filter规则"
 		echo "${FILTER6_RULES}" | while read line
 		do
 			local TYPE=$(echo "$line" | awk '{print $1}' | sed 's/^-//g')
@@ -6201,6 +6204,59 @@ append_if_not_exists_with_cmd() {
 	fi
 }
 
+remove_anytls_merlinbox_compat_one() {
+	local cmd="$1"
+	local proxy_chain="$2"
+	local bypass_chain="$3"
+
+	while "${cmd}" -t mangle -C "${proxy_chain}" -j "${bypass_chain}" >/dev/null 2>&1; do
+		"${cmd}" -t mangle -D "${proxy_chain}" -j "${bypass_chain}" >/dev/null 2>&1 || break
+	done
+	"${cmd}" -t mangle -F "${bypass_chain}" >/dev/null 2>&1
+	"${cmd}" -t mangle -X "${bypass_chain}" >/dev/null 2>&1
+}
+
+remove_anytls_merlinbox_compat() {
+	remove_anytls_merlinbox_compat_one iptables MERLINKBOX_PROXY FSS_ANYTLS_MB4
+	remove_anytls_merlinbox_compat_one ip6tables MERLINKBOX_PROXY_V6 FSS_ANYTLS_MB6
+}
+
+prepare_anytls_merlinbox_compat() {
+	local detected="0"
+
+	if [ "${ss_basic_type}" != "9" ]; then
+		remove_anytls_merlinbox_compat
+		return 0
+	fi
+
+	# merlin-box 在 mangle PREROUTING 中先于 fancyss 的 nat REDIRECT 执行 TPROXY。
+	# AnyTLS 只接管 TCP；UDP 仍交由 merlin-box 处理。
+	if iptables -t mangle -C PREROUTING -i br+ -j MERLINKBOX_PROXY >/dev/null 2>&1; then
+		ensure_chain_with_cmd iptables mangle FSS_ANYTLS_MB4 || return 1
+		iptables -t mangle -F FSS_ANYTLS_MB4 >/dev/null 2>&1 || return 1
+		iptables -t mangle -A FSS_ANYTLS_MB4 -p tcp -j ACCEPT >/dev/null 2>&1 || return 1
+		if ! iptables -t mangle -C MERLINKBOX_PROXY -j FSS_ANYTLS_MB4 >/dev/null 2>&1; then
+			iptables -t mangle -I MERLINKBOX_PROXY 1 -j FSS_ANYTLS_MB4 >/dev/null 2>&1 || return 1
+		fi
+		detected="1"
+	fi
+
+	if ip6tables -t mangle -C PREROUTING -i br+ -j MERLINKBOX_PROXY_V6 >/dev/null 2>&1; then
+		ensure_chain_with_cmd ip6tables mangle FSS_ANYTLS_MB6 || return 1
+		ip6tables -t mangle -F FSS_ANYTLS_MB6 >/dev/null 2>&1 || return 1
+		ip6tables -t mangle -A FSS_ANYTLS_MB6 -p tcp -j ACCEPT >/dev/null 2>&1 || return 1
+		if ! ip6tables -t mangle -C MERLINKBOX_PROXY_V6 -j FSS_ANYTLS_MB6 >/dev/null 2>&1; then
+			ip6tables -t mangle -I MERLINKBOX_PROXY_V6 1 -j FSS_ANYTLS_MB6 >/dev/null 2>&1 || return 1
+		fi
+		detected="1"
+	fi
+
+	if [ "${detected}" = "1" ]; then
+		echo_date "检测到 merlin-box TPROXY：AnyTLS 的 TCP 流量交由 fancyss 处理，UDP 仍由 merlin-box 处理。"
+	fi
+	return 0
+}
+
 insert_if_not_exists() {
 	table="$1"
 	shift
@@ -6300,6 +6356,11 @@ init_shunt_chain_v6() {
 }
 
 _start_iptables() {
+	if ! prepare_anytls_merlinbox_compat; then
+		echo_date "错误：配置 AnyTLS 与 merlin-box 的透明代理兼容规则失败。"
+		return 1
+	fi
+
 	#----------------------BASIC RULES---------------------
 	echo_date "写入iptables规则到nat表中..."
 	local VLAN_INDEXS=$(ifconfig | grep -E "^br" | awk '{print $1}' | sed 's/^br//g')
