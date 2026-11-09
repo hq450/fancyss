@@ -804,7 +804,7 @@ ECHO_VERSION(){
 			printf '%-16s %-16s %s\n' "tuic-client" "$(run tuic-client -V|awk '{print $NF}')" "https://github.com/Itsusinn/tuic"
 		fi
 		if [ -x "/koolshare/bin/anytls-zig" ];then
-			print_bin_version_line "anytls-zig" "$(get_zig_tool_version /koolshare/bin/anytls-zig)" "fancyss Zig / AnyTLS 客户端"
+			print_bin_version_line "anytls-zig" "$(get_zig_tool_version /koolshare/bin/anytls-zig)" "AnyTLS 客户端（兼容程序名，版本标识后端）"
 		fi
 		if [ -x "/koolshare/bin/ipt2socks" ];then
 			printf '%-16s %-16s %s\n' "ipt2socks" "$(run /koolshare/bin/ipt2socks -V|awk '{print $2}')" "https://github.com/zfl9/ipt2socks"

@@ -59,7 +59,55 @@ set_pkg_web_meta(){
 	sed -i "s/^var PKG_EXTA=.*/var PKG_EXTA=\"${pkg_exta}\"/" "${file_path}"
 }
 
+anytls_binary_source(){
+	local platform="$1"
+	local arch=""
+	local backend="${ANYTLS_BACKEND:-go}"
+	case "${backend}" in
+		go|zig) ;;
+		*) echo "!!! unsupported ANYTLS_BACKEND: ${backend}" >&2; return 1 ;;
+	esac
+	case "${platform}" in
+		mtk|hnd_v8|ipq64) arch=aarch64 ;;
+		ipq32|qca) arch=armv7a ;;
+		hnd) arch=armv7hf ;;
+		arm) arch=armv5te; backend=zig ;; # Linux 2.6 keeps the legacy runtime.
+		*) echo "!!! unsupported AnyTLS platform: ${platform}" >&2; return 1 ;;
+	esac
+	if [ "${backend}" = "go" ]; then
+		printf '%s/tool/anytls-go/dist/anytls-go-v%s-linux-%s\n' "${CURR_PATH}" "$(zig_tool_version anytls-go)" "${arch}"
+	else
+		printf '%s/binaries/anytls-zig/anytls-zig-v%s-linux-%s\n' "${CURR_PATH}" "$(zig_tool_version anytls-zig)" "${arch}"
+	fi
+}
+
+sync_anytls_binaries(){
+	local platform source_file
+	# Validate selection before building or changing package assets.
+	anytls_binary_source mtk >/dev/null || return 1
+	if [ "${ANYTLS_BACKEND:-go}" = "go" ]; then
+		"${CURR_PATH}/tool/anytls-go/scripts/build-release.sh" aarch64 armv7a armv7hf --no-upx || return 1
+	fi
+	for platform in mtk hnd_v8 ipq64 ipq32 hnd qca arm; do
+		source_file="$(anytls_binary_source "${platform}")" || return 1
+		cp -f "${source_file}" "${CURR_PATH}/fancyss/bin-${platform}/anytls-zig" || return 1
+	done
+}
+
+verify_anytls_binaries(){
+	local platform source_file target_file
+	for platform in mtk hnd_v8 ipq64 ipq32 hnd qca arm; do
+		source_file="$(anytls_binary_source "${platform}")" || return 1
+		target_file="${CURR_PATH}/fancyss/bin-${platform}/anytls-zig"
+		if [ ! -x "${target_file}" ] || ! cmp -s "${source_file}" "${target_file}"; then
+			echo "!!! missing or stale AnyTLS binary: ${target_file} != ${source_file}" >&2
+			return 1
+		fi
+	done
+}
+
 sync_binary(){
+	sync_anytls_binaries || return 1
 	# BINS_REMOVE="naive"
 	# for BIN_REMOVE in $BINS_REMOVE;
 	# do
@@ -145,15 +193,6 @@ sync_binary(){
 	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/node-tool
 	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/node-tool
 	cp -rf ${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/node-tool
-
-	local ANYTLS_ZIG_VER="v$(zig_tool_version anytls-zig)"
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/anytls-zig
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-hnd_v8/anytls-zig
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-ipq64/anytls-zig
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-ipq32/anytls-zig
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv7hf ${CURR_PATH}/fancyss/bin-hnd/anytls-zig
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv7a ${CURR_PATH}/fancyss/bin-qca/anytls-zig
-	cp -rf ${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv5te ${CURR_PATH}/fancyss/bin-arm/anytls-zig
 
 	local WEBSOCKETD_VER="v$(zig_tool_version ws-tool)"
 	cp -rf ${CURR_PATH}/binaries/websocketd/websocketd-${WEBSOCKETD_VER}-linux-aarch64 ${CURR_PATH}/fancyss/bin-mtk/websocketd
@@ -255,14 +294,7 @@ verify_zig_tool_binaries(){
 	verify_zig_copy "${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv7a" qca node-tool
 	verify_zig_copy "${CURR_PATH}/binaries/node-tool/node-tool-${NODETOOL_VER}-linux-armv5te" arm node-tool
 
-	local ANYTLS_ZIG_VER="v$(zig_tool_version anytls-zig)"
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-aarch64" mtk anytls-zig
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-aarch64" hnd_v8 anytls-zig
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-aarch64" ipq64 anytls-zig
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv7a" ipq32 anytls-zig
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv7hf" hnd anytls-zig
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv7a" qca anytls-zig
-	verify_zig_copy "${CURR_PATH}/binaries/anytls-zig/anytls-zig-${ANYTLS_ZIG_VER}-linux-armv5te" arm anytls-zig
+	verify_anytls_binaries || missing=1
 
 	local WEBSOCKETD_VER="v$(zig_tool_version ws-tool)"
 	verify_zig_copy "${CURR_PATH}/binaries/websocketd/websocketd-${WEBSOCKETD_VER}-linux-aarch64" mtk websocketd
@@ -581,7 +613,7 @@ papare(){
 	cp_rules
 	prepare_geodata_assets
 	cp_rules_ng2
-	sync_binary
+	sync_binary || exit 1
 	verify_zig_tool_binaries || exit 1
 	cat >${CURR_PATH}/packages/version_tmp.json.js <<-EOF
 	{
