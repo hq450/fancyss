@@ -1,0 +1,64 @@
+name: AnyTLS runtime regression
+
+on:
+  push:
+    paths: ['tool/anytls-go/**', 'tests/**', 'build.sh', 'fancyss/scripts/**', 'fancyss/ss/ssconfig.sh', '.github/workflows/anytls-runtime.yml']
+  pull_request:
+    paths: ['tool/anytls-go/**', 'tests/**', 'build.sh', 'fancyss/scripts/**', 'fancyss/ss/ssconfig.sh', '.github/workflows/anytls-runtime.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          sparse-checkout: |
+            tool/anytls-go
+            tests
+            fancyss/scripts
+            fancyss/ss
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.3'
+          cache-dependency-path: tool/anytls-go/go.sum
+      - name: Verify Go dependencies and unit tests
+        working-directory: tool/anytls-go
+        run: |
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test -race -count=3 -timeout 90s ./...
+      - name: Shell syntax and fixture integration
+        run: |
+          bash -n build.sh fancyss/scripts/ss_base.sh fancyss/scripts/ss_proc_status.sh fancyss/ss/ssconfig.sh tool/anytls-go/scripts/build-release.sh
+          python3 tests/test_anytls_integration.py -v
+      - name: Race-instrumented CLI workload
+        env:
+          ANYTLS_BIN: ${{ github.workspace }}/tool/anytls-go/dist/anytls-zig-race
+          ANYTLS_SOAK_SECONDS: '5'
+          GORACE: halt_on_error=1
+        run: |
+          cd tool/anytls-go
+          go build -race -o dist/anytls-zig-race .
+          cd ../..
+          python3 tests/test_anytls_runtime.py -v \
+            AnyTLSRuntimeTests.test_128_negotiated_connections_and_responsive_probe \
+            AnyTLSRuntimeTests.test_upstream_disconnect_allows_new_sessions \
+            AnyTLSRuntimeTests.test_repeated_close_batches_allow_new_connections \
+            AnyTLSRuntimeTests.test_short_concurrent_soak
+      - name: Native CLI load, reconnect and resource cleanup
+        env:
+          ANYTLS_SOAK_SECONDS: '30'
+        run: |
+          cd tool/anytls-go
+          go build -o dist/anytls-zig-native .
+          cd ../..
+          python3 -m unittest discover -s tests -v
+      - name: Cross-build supported architectures
+        run: bash tool/anytls-go/scripts/build-release.sh --no-upx

@@ -1126,7 +1126,6 @@ refresh_node_direct_domain_file() {
 	fss_refresh_node_direct_cache
 	fss_airport_dns_override_load >/dev/null 2>&1 || true
 	if [ "${AIRPORT_DNS_ACTIVE}" = "1" ];then
-		fss_refresh_airport_special_runtime_domain_files >/dev/null 2>&1 || true
 		if [ -s "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" ];then
 			cp -f "${FSS_NODE_DIRECT_RUNTIME_OTHER_FILE}" "${FSS_NODE_DIRECT_RUNTIME_FILE}"
 		else
@@ -5184,7 +5183,12 @@ start_anytls(){
 	}
 
 	server_addr="$(anytls_hostport "${ss_basic_anytls_server}" "${ss_basic_anytls_port}")"
-	printf '%s' "${ss_basic_anytls_pass}" > "${pass_file}"
+	# Recreate privately; noclobber refuses a raced-in file or symlink.
+	if ! (umask 077; rm -f "${pass_file}" && set -C && printf '%s' "${ss_basic_anytls_pass}" > "${pass_file}"); then
+		echo_date "无法安全写入AnyTLS密码文件，退出！"
+		close_in_five flag
+		return 1
+	fi
 	if [ "${ss_basic_anytls_ai}" = "1" ]; then
 		verify_arg="--insecure"
 	else
@@ -5192,14 +5196,14 @@ start_anytls(){
 	fi
 
 	echo_date "开启ipt2socks进程..."
-	run_bg ipt2socks -p 23456 -l 3333 -b 0.0.0.0 -B :: -n 10000 -R
+	run_bg_detached ipt2socks -p 23456 -l 3333 -b 0.0.0.0 -B :: -n 10000 -R
 	detect_running_status2 ipt2socks 23456
 
 	echo_date "开启AnyTLS客户端进程..."
 	if [ -n "${ss_basic_anytls_sni}" ]; then
-		run_bg /koolshare/bin/anytls-zig -server "${server_addr}" --password-file "${pass_file}" -l 127.0.0.1:23456 -sni "${ss_basic_anytls_sni}" "${verify_arg}"
+		run_bg_detached /koolshare/bin/anytls-zig -server "${server_addr}" --password-file "${pass_file}" -l 127.0.0.1:23456 -sni "${ss_basic_anytls_sni}" "${verify_arg}"
 	else
-		run_bg /koolshare/bin/anytls-zig -server "${server_addr}" --password-file "${pass_file}" -l 127.0.0.1:23456 "${verify_arg}"
+		run_bg_detached /koolshare/bin/anytls-zig -server "${server_addr}" --password-file "${pass_file}" -l 127.0.0.1:23456 "${verify_arg}"
 	fi
 	detect_running_status3 anytls-zig 23456 1 force
 }

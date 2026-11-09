@@ -530,6 +530,10 @@ run_bg(){
 	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
 }
 
+run_bg_detached(){
+	env -i PATH=${PATH} nohup "$@" </dev/null >/dev/null 2>&1 &
+}
+
 __timeout_init() {
 	# Determine best available timeout implementation:
 	# 1) system timeout (GNU/coreutils or BusyBox applet)
