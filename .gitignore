@@ -14,3 +14,4 @@ AGENTS.md
 CLAUDE.md
 tmp_test_file/
 doc/migration/
+/tests/__pycache__/

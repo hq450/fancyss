@@ -1382,15 +1382,66 @@ wt_record_batch_result_file() {
 	done < "${src}"
 }
 
+wt_anytls_pid_matches() {
+	local pid="$1"
+	local pid_file="$2"
+	local node_id=""
+	local pass_file=""
+	local expected_exe=""
+	local actual_exe=""
+
+	case "${pid}" in
+	''|*[!0-9]*) return 1 ;;
+	esac
+	[ "${pid}" -gt 1 ] 2>/dev/null || return 1
+	case "${pid_file}" in
+	"${TMP2}"/pids/anytls_*.pid)
+		node_id="${pid_file##*/anytls_}"
+		node_id="${node_id%.pid}"
+		case "${node_id}" in
+		''|*[!0-9]*) return 1 ;;
+		esac
+		pass_file="${TMP2}/conf/${node_id}_anytls.pass"
+		;;
+	"${FSS_WEBTEST_CACHE_NODE_DIR}"/*_anytls.pid|"${TMP2}"/*_anytls.pid)
+		pass_file="${pid_file%.pid}.pass"
+		;;
+	*) return 1 ;;
+	esac
+	expected_exe="$(readlink -f "/koolshare/bin/anytls-zig" 2>/dev/null)" || return 1
+	actual_exe="$(readlink -f "/proc/${pid}/exe" 2>/dev/null)" || return 1
+	[ -n "${expected_exe}" ] && [ "${actual_exe}" = "${expected_exe}" ] || return 1
+	[ -r "/proc/${pid}/cmdline" ] || return 1
+	# Keep NUL argv boundaries; embedded newlines must not become fake options.
+	tr '\000\n' '\n\r' < "/proc/${pid}/cmdline" | awk -v expected="${pass_file}" '
+		pending != "" {
+			if (pending == "password") password = $0; else listen = $0
+			pending = ""
+			next
+		}
+		$0 == "--password-file" || $0 == "-password-file" { passwords++; pending = "password"; next }
+		/^--?password-file=/ { passwords++; password = $0; sub(/^--?password-file=/, "", password); next }
+		$0 == "-l" || $0 == "--listen" || $0 == "-listen" { listeners++; pending = "listen"; next }
+		/^(-l|--?listen)=/ { listeners++; listen = $0; sub(/^[^=]*=/, "", listen) }
+		END {
+			port = listen
+			sub(/^.*:/, "", port)
+			loopback = (listen ~ /^127[.]0[.]0[.]1:[0-9]+$/ || listen ~ /^\[::1\]:[0-9]+$/)
+			exit !(pending == "" && passwords == 1 && password == expected && listeners == 1 &&
+				loopback && port + 0 > 0 && port + 0 <= 65535 && port + 0 != 23456)
+		}
+	' 2>/dev/null
+}
+
 wt_runtime_cleanup() {
-	find "${FSS_WEBTEST_CACHE_NODE_DIR}" "${TMP2}" -name '*_anytls.pid' -type f 2>/dev/null | while read -r pid_file
+	find "${FSS_WEBTEST_CACHE_NODE_DIR}" "${TMP2}" -type f \( -name '*_anytls.pid' -o -name 'anytls_*.pid' \) 2>/dev/null | while read -r pid_file
 	do
 		[ -s "${pid_file}" ] || {
 			rm -f "${pid_file}" >/dev/null 2>&1
 			continue
 		}
 		_pid="$(cat "${pid_file}" 2>/dev/null)"
-		[ -n "${_pid}" ] && kill "${_pid}" >/dev/null 2>&1 || true
+		wt_anytls_pid_matches "${_pid}" "${pid_file}" && kill "${_pid}" >/dev/null 2>&1 || true
 		rm -f "${pid_file}" >/dev/null 2>&1
 	done
 	killall wt-ss >/dev/null 2>&1

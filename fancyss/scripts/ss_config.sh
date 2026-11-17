@@ -38,10 +38,7 @@ pre_stop(){
 		done
 	fi
 
-	if [ -f "/var/lock/koolss.lock" ];then
-		rm -rf /var/lock/koolss.lock
-	fi
-	
+	# Keep the shared flock pathname stable across queued restart callers.
 	if [ -f "/var/lock/fancyss.lock" ];then
 		rm -rf /var/lock/fancyss.lock
 	fi
@@ -63,12 +60,6 @@ pre_start(){
 		for ssconfig_pid in ${ssconfig_pids}; do
 			kill -9 ${ssconfig_pid} >/dev/null 2>&1
 		done
-		let flag_count+=1
-	fi
-
-	# 移除ssconfig.sh的文件锁
-	if [ -f "/var/lock/koolss.lock" ];then
-		rm -rf /var/lock/koolss.lock
 		let flag_count+=1
 	fi
 
