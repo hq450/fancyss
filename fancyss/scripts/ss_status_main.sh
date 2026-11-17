@@ -384,7 +384,7 @@ main(){
 		if [ "$(ps|grep ssconfig.sh|grep -v grep)" ];then
 			# wait until ssconfig.sh finished running
 			echo ${LOGTIME1} ssconfig.sh running "[$(get_node_name_by_id "$(fss_get_current_node_id)")]" >> $LOGFILE_F
-			#continue
+			continue
 		else
 			refresh_status_cache_files >/dev/null 2>&1
 		fi

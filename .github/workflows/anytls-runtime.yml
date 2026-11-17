@@ -36,7 +36,9 @@ jobs:
           go test -race -count=3 -timeout 90s ./...
       - name: Shell syntax and fixture integration
         run: |
-          bash -n build.sh fancyss/scripts/ss_base.sh fancyss/scripts/ss_proc_status.sh fancyss/ss/ssconfig.sh tool/anytls-go/scripts/build-release.sh
+          for script in build.sh fancyss/scripts/ss_base.sh fancyss/scripts/ss_config.sh fancyss/scripts/ss_status_main.sh fancyss/scripts/ss_webtest.sh fancyss/scripts/ss_proc_status.sh fancyss/ss/ssconfig.sh tool/anytls-go/scripts/build-release.sh; do
+            bash -n "$script" || exit "$?"
+          done
           python3 tests/test_anytls_integration.py -v
       - name: Race-instrumented CLI workload
         env:

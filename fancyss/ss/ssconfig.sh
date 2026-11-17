@@ -37,7 +37,7 @@ set_lock() {
 
 unset_lock() {
 	flock -u 1000
-	rm -rf "$LOCK_FILE"
+	exec 1000>&-
 }
 
 refresh_runtime_context() {
@@ -2745,9 +2745,9 @@ start_chinadns_ng(){
 	if [ "${_debug_mode}" == "1" ];then
 		ulimit -c unlimited
 		cd /tmp
-		env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/tmp/chinadns_log.txt 2>&1 &
+		env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf 1000>&- >/tmp/chinadns_log.txt 2>&1 &
 	else
-		env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf >/dev/null 2>&1 &
+		env -i PATH=${PATH} chinadns-ng -C /tmp/chinadns_ng.conf 1000>&- >/dev/null 2>&1 &
 	fi
 	
 	detect_running_status chinadns-ng
@@ -3538,7 +3538,7 @@ start_ss_obfs_helper() {
 
 	[ -x "${_script}" ] || return 0
 	echo_date "开启simple-obfs混淆辅助进程..."
-	sh "${_script}"
+	sh "${_script}" 1000>&-
 	detect_running_status obfs-local /var/run/obfs_local.pid
 }
 
@@ -6805,7 +6805,7 @@ restart_dnsmasq() {
 	fi
 	# Restart dnsmasq
 	echo_date "重启dnsmasq服务..."
-	service restart_dnsmasq >/dev/null 2>&1 &
+	service restart_dnsmasq 1000>&- >/dev/null 2>&1 &
 	detect_running_status dnsmasq
 }
 
@@ -6906,7 +6906,7 @@ ss_post_start() {
 		trap "" INT QUIT TSTP EXIT
 		echo_date ------------- 【科学上网】 启动后触发脚本: $i -------------
 		if [ -r "$i" ]; then
-			$i start
+			$i start 1000>&-
 		fi
 		echo_date ----------------- 触发脚本: $i 运行完毕 -----------------
 	done
@@ -6920,7 +6920,7 @@ ss_pre_stop() {
 		trap "" INT QUIT TSTP EXIT
 		echo_date ------------- 【科学上网】 关闭前触发脚本: $i ------------
 		if [ -r "$i" ]; then
-			$i stop
+			$i stop 1000>&-
 		fi
 		echo_date ----------------- 触发脚本: $i 运行完毕 -----------------
 	done
@@ -7139,15 +7139,16 @@ finish_start(){
 check_status() {
 	dbus remove ss_basic_wait
 	if [ "$ss_failover_enable" == "1" ]; then
-		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
+		sh /koolshare/scripts/ss_status_daemon.sh restart 1000>&- >/dev/null 2>&1
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssf_status.txt
 		echo "=========================================== start/restart ==========================================" >>/tmp/upload/ssc_status.txt
-		sh /koolshare/scripts/ss_status_main.sh >/dev/null 2>&1 &
+		sh /koolshare/scripts/ss_status_main.sh 1000>&- >/dev/null 2>&1 &
 	else
-		sh /koolshare/scripts/ss_status_daemon.sh restart >/dev/null 2>&1
+		sh /koolshare/scripts/ss_status_daemon.sh restart 1000>&- >/dev/null 2>&1
 	fi
 
 	(
+		exec 1000>&-
 		# 对一些域名进行预解析，如果本地有解析缓存，解析没有走路由器，则ipset没有写入导致无法走代理，所以一些域名可以预解析一次
 		run_bg dnsclient -46 -t 5 -i 2 @127.0.0.1 openai.com
 		run_bg dnsclient -46 -t 5 -i 2 @127.0.0.1 chat.openai.com
@@ -7403,9 +7404,9 @@ start_ws(){
 		ssd="$(pick_start_stop_daemon 2>/dev/null)"
 		rm -f "${WS_PIDFILE}" >/dev/null 2>&1 || true
 		if [ -n "${ssd}" ]; then
-			"${ssd}" -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket
+			"${ssd}" -S -q -b -m -p "${WS_PIDFILE}" -x /koolshare/bin/websocketd -- --port=803 /koolshare/ss/websocket 1000>&-
 		else
-			/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket >/tmp/upload/websocketd.log 2>&1 &
+			/koolshare/bin/websocketd --port=803 /koolshare/ss/websocket 1000>&- >/tmp/upload/websocketd.log 2>&1 &
 			echo $! > "${WS_PIDFILE}"
 		fi
 	fi

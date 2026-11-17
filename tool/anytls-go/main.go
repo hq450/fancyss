@@ -16,9 +16,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	anytlsutil "github.com/anytls/sing-anytls/util"
 )
 
-var version = "0.1.0"
+var version = "0.1.1"
 
 func parseConfig(args []string) (config, error) {
 	cfg := config{}
@@ -111,6 +113,7 @@ func run(args []string) error {
 		return nil
 	}
 	debug.SetMemoryLimit(64 << 20)
+	anytlsutil.Version = "fancyss-anytls-go/" + version
 	s, err := newServer(cfg)
 	if err != nil {
 		return err

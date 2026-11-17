@@ -518,7 +518,8 @@ cmd() {
 }
 
 run(){
-	env -i PATH=${PATH} "$@"
+	# FD1000 belongs to the caller's lifecycle lock, never to its services.
+	env -i PATH=${PATH} "$@" 1000>&-
 }
 
 run_loud(){
@@ -527,11 +528,11 @@ run_loud(){
 }
 
 run_bg(){
-	env -i PATH=${PATH} "$@" >/dev/null 2>&1 &
+	env -i PATH=${PATH} "$@" 1000>&- >/dev/null 2>&1 &
 }
 
 run_bg_detached(){
-	env -i PATH=${PATH} nohup "$@" </dev/null >/dev/null 2>&1 &
+	env -i PATH=${PATH} nohup "$@" 1000>&- </dev/null >/dev/null 2>&1 &
 }
 
 __timeout_init() {

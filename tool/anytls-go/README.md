@@ -9,6 +9,13 @@ contract used by existing shell and compiled fancyss helpers. `--version`
 reports `anytls-go` and the library version explicitly. No source Zig binary
 is misidentified as a newer release.
 
+The encrypted AnyTLS settings identify this client as
+`fancyss-anytls-go/<runtime version>`, rather than inheriting the library's
+`sing-anytls` identity. This is distinct from the subscription download
+User-Agent and does not change authentication, SNI, or certificate policy.
+Some services apply policy to this field; this client reports its own name,
+not the identity of another implementation.
+
 ## Runtime Guarantees And Limits
 
 - Go network polling replaces the old 32 whole-session native-worker ceiling.

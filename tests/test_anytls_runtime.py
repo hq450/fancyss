@@ -76,9 +76,10 @@ def close_socket(conn):
 class EchoPeer:
     """Concurrent TLS sessions, with independent target state for each stream."""
 
-    def __init__(self, context, password):
+    def __init__(self, context, password, required_client=None):
         self.context = context
         self.digest = hashlib.sha256(password).digest()
+        self.required_client = required_client
         self.stop = threading.Event()
         self.lock = threading.Lock()
         self.connections = set()
@@ -134,14 +135,23 @@ class EchoPeer:
             receive(conn, int.from_bytes(auth[32:], "big"))
             conn.settimeout(None)  # Held sessions end only on CLI close or teardown.
             streams = {}
+            settings_accepted = self.required_client is None
             while not self.stop.is_set():
                 command, sid, length = HEADER.unpack(receive(conn, HEADER.size))
                 data = receive(conn, length)
                 if command == CMD_WASTE:
                     continue
                 if command == CMD_SETTINGS:
+                    settings = dict(item.split(b"=", 1) for item in data.splitlines()
+                                    if b"=" in item)
+                    if (self.required_client is not None
+                            and settings.get(b"client") != self.required_client):
+                        raise ValueError("unexpected client identity in protocol settings")
+                    settings_accepted = True
                     self.frame(conn, CMD_SERVER_SETTINGS, 0, b"v=2")
                 elif command == CMD_SYN:
+                    if not settings_accepted:
+                        raise ValueError("missing client identity before stream open")
                     if sid in streams:
                         raise ValueError("duplicate live stream")
                     streams[sid] = bytearray()
@@ -227,7 +237,7 @@ def stop_process(process, log):
 
 
 @contextlib.contextmanager
-def runtime(state=None):
+def runtime(state=None, *, required_client=None):
     with tempfile.TemporaryDirectory(prefix="anytls-runtime-") as directory:
         directory = Path(directory)
         cert, key = directory / "cert.pem", directory / "key.pem"
@@ -247,7 +257,7 @@ def runtime(state=None):
         password_file.touch(mode=0o600)
         password_file.write_bytes(password)
         with contextlib.ExitStack() as stack:
-            peer = EchoPeer(context, password)
+            peer = EchoPeer(context, password, required_client)
             peer.start()
             stack.callback(peer.close)
             # The CLI has no inherited-listener option, so reserve an ephemeral
@@ -329,6 +339,14 @@ class AnyTLSRuntimeTests(unittest.TestCase):
 
     def test_64_negotiated_connections_and_responsive_probe(self):
         self.hold_connections(64)
+
+    def test_client_identity_accepted_by_policy_peer(self):
+        version_output = subprocess.check_output([str(BINARY), "--version"],
+                                                 text=True, timeout=5)
+        version = version_output.split()[1].encode("ascii")
+        with runtime(required_client=b"fancyss-anytls-go/" + version) as port:
+            with contextlib.ExitStack() as stack:
+                self.connect(port, stack, "truthful client identity")
 
     def test_128_negotiated_connections_and_responsive_probe(self):
         self.hold_connections(128)
