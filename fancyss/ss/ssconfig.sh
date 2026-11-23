@@ -6395,6 +6395,12 @@ _start_iptables() {
 
 	# IP/cidr/白域名 白名单控制（不go proxy）
 	append_if_not_exists mangle -A SHADOWSOCKS -p udp -m set --match-set ignlist dst -j RETURN
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		for VLAN_INDEX in ${VLAN_INDEXS}
+		do
+			append_if_not_exists mangle -A SHADOWSOCKS -i br${VLAN_INDEX} -p udp --dport 53 -j RETURN
+		done
+	fi
 
 	# 创建gfw模式udp rule
 	ensure_chain mangle SHADOWSOCKS_GFW
@@ -6651,6 +6657,14 @@ _start_ipv6_iptables() {
 
 	ensure_chain6 mangle SHADOWSOCKS6 || return 1
 	append_if_not_exists6 mangle -A SHADOWSOCKS6 -p udp -m set --match-set ignlist6 dst -j RETURN || return 1
+	if [ "$ss_basic_dns_hijack" == "1" ]; then
+		for VLAN_INDEX in ${VLAN_INDEXS}
+		do
+			local br_ipv6=$(ip -6 addr show dev br${VLAN_INDEX} scope global 2>/dev/null | awk '/inet6/ {print $2}' | head -n1)
+			[ -z "${br_ipv6}" ] && continue
+			append_if_not_exists6 mangle -A SHADOWSOCKS6 -i br${VLAN_INDEX} -p udp --dport 53 -j RETURN || return 1
+		done
+	fi
 
 	ensure_chain6 mangle SHADOWSOCKS6_GFW || return 1
 	append_if_not_exists6 mangle -A SHADOWSOCKS6_GFW -p udp -m set --match-set white_list6 dst -j RETURN || return 1
